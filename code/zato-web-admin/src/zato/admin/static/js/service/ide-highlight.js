@@ -220,12 +220,7 @@ $.fn.zato.ide.highlight.install_value_hook = function() {
 
         for(const pane_name of $.fn.zato.ide.highlight.config.pane_names) {
             if(element.id == `data-${pane_name}`) {
-
                 $.fn.zato.ide.highlight.refresh(pane_name);
-
-                // The view links follow the new payload too, so a programmatic
-                // update, e.g. history browsing, offers the right views right away
-                $.fn.zato.ide.refresh_view_links(pane_name);
             }
         }
 

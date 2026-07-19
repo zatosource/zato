@@ -2,32 +2,14 @@
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 // View switching for the invoker panes - each pane offers its payload as the tree,
-// pretty or raw view, remembers the choice per service and keeps its view links
-// in step with whatever is pasted or typed into it.
+// pretty or raw view and remembers the choice per service, parsing whatever
+// the pane holds at the moment a view link is clicked.
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
 $.fn.zato.ide.get_pane_view_key = function(pane_name) {
     let service_name = $.fn.zato.ide.get_current_service_name();
     return $.fn.zato.ide.config.pane_view_key_prefix + pane_name + "." + service_name;
-}
-
-/* ---------------------------------------------------------------------------------------------------------------------------- */
-
-// Keeps a pane's view links in step with its payload - the pretty link exists
-// only for the formats that have a textual rendering, so it comes and goes
-// as the content changes. Returns whether the payload has a pretty view.
-$.fn.zato.ide.refresh_view_links = function(pane_name) {
-
-    let text_elem = pane_name == "request" ? $("#data-request") : $("#data-response");
-    let data = text_elem.val();
-
-    let has_pretty = $.fn.zato.ide.highlight.has_pretty_view(data);
-
-    $(`#${pane_name}-view-pretty`).toggleClass("hidden", !has_pretty);
-    $(`#${pane_name}-view-pretty-separator`).toggleClass("hidden", !has_pretty);
-
-    return has_pretty;
 }
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
@@ -65,9 +47,6 @@ $.fn.zato.ide.show_pane_view = function(pane_name, view_name, should_persist) {
 
     let data = text_elem.val();
 
-    // The links always reflect what the payload offers
-    let has_pretty = $.fn.zato.ide.refresh_view_links(pane_name);
-
     // An empty pane has nothing to parse, so it shows as raw without
     // overwriting whatever view is remembered ..
     if(!data) {
@@ -75,8 +54,10 @@ $.fn.zato.ide.show_pane_view = function(pane_name, view_name, should_persist) {
         should_persist = false;
     }
 
-    // .. and a remembered pretty view of a payload without one shows as the tree.
+    // .. and the pretty view of a payload without a textual rendering
+    // shows as the tree instead.
     if(view_name == "pretty") {
+        let has_pretty = $.fn.zato.ide.highlight.has_pretty_view(data);
         if(!has_pretty) {
             view_name = "tree";
         }
@@ -89,9 +70,6 @@ $.fn.zato.ide.show_pane_view = function(pane_name, view_name, should_persist) {
             localStorage.setItem($.fn.zato.ide.get_pane_view_key(pane_name), view_name);
         }
     }
-
-    // The drag-to-resize indicator belongs to the raw request view only
-    let resize_indicator = $("#data-request-resize-indicator");
 
     // Only one link reads as the current one
     let mark_current = function(link) {
@@ -108,15 +86,12 @@ $.fn.zato.ide.show_pane_view = function(pane_name, view_name, should_persist) {
 
         // The overlay repaints in case the payload changed while another view was up
         $.fn.zato.ide.highlight.refresh(pane_name);
-
-        if(pane_name == "request") {
-            resize_indicator.removeClass("hidden");
-        }
         return;
     }
 
-    // The rendered views take over the exact height of the raw one,
-    // so the swap never moves anything below the pane
+    // The rendered views take over the exact height of the raw one, so the swap
+    // never moves anything below the pane - the drag-to-resize indicator included,
+    // which is why every view of the request pane resizes by the same edge
     if(pane_name == "request") {
         let raw_height = text_elem[0].style.height;
         if(raw_height) {
@@ -129,10 +104,6 @@ $.fn.zato.ide.show_pane_view = function(pane_name, view_name, should_persist) {
         text_elem.addClass("hidden");
         pretty_elem.removeClass("hidden");
         mark_current(link);
-
-        if(pane_name == "request") {
-            resize_indicator.addClass("hidden");
-        }
     }
 
     // Both remaining views get their content from the parse endpoint,
@@ -228,18 +199,5 @@ $.fn.zato.ide.update_view_toggles = function() {
         $("#insert-sample-link").removeClass("hidden");
     }
 }
-
-/* ---------------------------------------------------------------------------------------------------------------------------- */
-
-$(document).ready(function() {
-
-    // Pasting or typing into a pane updates its view links right away,
-    // so a freshly pasted message can go straight to its tree or pretty view
-    for(const pane_name of $.fn.zato.ide.highlight.config.pane_names) {
-        $(`#data-${pane_name}`).on("input", function() {
-            $.fn.zato.ide.refresh_view_links(pane_name);
-        });
-    }
-});
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

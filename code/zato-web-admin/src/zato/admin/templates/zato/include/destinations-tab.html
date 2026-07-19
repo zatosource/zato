@@ -1,0 +1,48 @@
+{% comment %}
+Destinations tab - reusable panel for a channel's destination list.
+
+A destination is an outgoing connection the platform delivers each message to
+after the channel's service runs. Works together with
+/static/js/shared/destinations.js and /static/css/shared/destinations.css.
+
+Expects in the context:
+* form   - the create or edit form, it must have hidden "destinations"
+           and "respond_from" fields
+* action - "create" or "edit"
+
+The page's create and edit functions call $.fn.zato.destinations.init(action)
+after the dialog is open.
+{% endcomment %}
+
+<table class="form-data">
+
+    <tr>
+        <td class="destinations-list-cell">
+            {{ form.destinations }}
+            {{ form.respond_from }}
+            <table class="destinations-table">
+                <thead>
+                    <tr>
+                        <th>Active</th>
+                        <th>Type</th>
+                        <th>Connection</th>
+                        <th>Options</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="destinations-rows-{{ action }}"></tbody>
+            </table>
+            <a href="javascript:$.fn.zato.destinations.addRow('{{ action }}')">Add a destination</a>
+        </td>
+    </tr>
+
+    <tr class="destinations-respond-from-row">
+        <td>
+            <label for="destinations-respond-from-{{ action }}">Respond from</label>
+            &nbsp;
+            <select id="destinations-respond-from-{{ action }}" class="destinations-respond-from"></select>
+            <span class="form_hint">What the caller receives - the service's response or one destination's</span>
+        </td>
+    </tr>
+
+</table>

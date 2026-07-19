@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from http import HTTPStatus
+from itertools import chain
 from logging import getLogger
 from socket import AF_INET, SOCK_STREAM, socket as socket_
 from time import time
@@ -16,20 +17,23 @@ from urllib.parse import urlparse
 
 # Django
 from django.http import HttpResponse, JsonResponse
+from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.forms.channel.hl7.mllp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, \
-    get_security_id_from_select, get_security_groups_from_checkbox_list
+    get_security_id_from_select, get_security_groups_from_checkbox_list, SecurityList
 from zato.common.api import GENERIC, generic_attrs, HL7, SEC_DEF_TYPE
+from zato.common.json_internal import dumps
 from zato.common.model.hl7 import HL7MLLPConfigObject
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, stranydict
     any_ = any_
+    stranydict = stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,6 +42,9 @@ logger = getLogger(__name__)
 
 # .. name prefix for backing REST channels ..
 _REST_Channel_Name_Prefix = 'hl7.rest.'
+
+# .. the full-page editor template shared by the create and edit pages ..
+_Editor_Template = 'zato/channel/hl7/mllp-editor.html'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -290,6 +297,82 @@ class Delete(_Delete):
     url_name = 'channel-hl7-mllp-delete'
     error_message = 'Could not delete HL7 MLLP channel'
     service_name = 'zato.generic.connection.delete'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('GET')
+def editor_create(req:'any_') -> 'TemplateResponse':
+    """ A full-page editor for a new HL7 MLLP channel.
+    """
+    security_list = SecurityList.from_service(req.zato.client, req.zato.cluster.id, SEC_DEF_TYPE.BASIC_AUTH)
+
+    return_data = {
+        'cluster_id': req.zato.cluster_id,
+        'action': 'create',
+        'field_prefix': '',
+        'form': CreateForm(req=req, security_list=security_list),
+        'item_name': '',
+        'item_id': '',
+        'item_json': 'null',
+    }
+
+    out = TemplateResponse(req, _Editor_Template, return_data)
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class EditorEdit(Index):
+    """ A full-page editor for one existing HL7 MLLP channel.
+    """
+    url_name = 'channel-hl7-mllp-editor-edit'
+    template = _Editor_Template
+    paginate = False
+
+    def __call__(self, req:'any_', *args:'any_', **kwargs:'any_') -> 'any_':
+
+        # The editor always works with MLLP channels - the type is fixed instead of being read from the query string.
+        kwargs['type_'] = GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP
+
+        out = super().__call__(req, *args, **kwargs)
+        return out
+
+# ################################################################################################################################
+
+    def handle(self) -> 'stranydict':
+
+        # The URL points to one channel - find it in the list that the service returned ..
+        item_id = int(self.req.zato.args['id'])
+
+        for candidate in self.items:
+            if candidate.id == item_id:
+                item = candidate
+                break
+        else:
+            raise Exception(f'HL7 MLLP channel with id `{item_id}` not found')
+
+        # .. serialize it for the client-side populate call, including only the attributes actually set ..
+        item_dict = {}
+
+        for name in chain(self.output_required, self.output_optional):
+            value = getattr(item, name, None)
+            if value is not None:
+                item_dict[name] = value
+
+        # .. and hand everything over to the editor template.
+        security_list = self.get_sec_def_list(SEC_DEF_TYPE.BASIC_AUTH)
+
+        out = {
+            'action': 'edit',
+            'field_prefix': 'edit-',
+            'form': EditForm(prefix='edit', req=self.req, security_list=security_list),
+            'item_name': item_dict['name'],
+            'item_id': item_dict['id'],
+            'item_json': dumps(item_dict),
+        }
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

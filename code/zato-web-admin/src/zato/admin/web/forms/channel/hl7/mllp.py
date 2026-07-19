@@ -111,6 +111,10 @@ class CreateForm(forms.Form):
     allow_short_encoding_characters     = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     fix_off_by_one_field_index          = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
+    # Destinations - serialized by JS to hidden JSON fields
+    destinations = forms.CharField(required=False, widget=forms.HiddenInput())
+    respond_from = forms.CharField(required=False, widget=forms.HiddenInput())
+
     # REST bridge
     use_rest         = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     rest_only        = forms.BooleanField(required=False, widget=forms.CheckboxInput())

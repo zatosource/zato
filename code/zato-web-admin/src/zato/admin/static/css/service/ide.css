@@ -326,8 +326,10 @@ td.data-input-field-name {
     padding-bottom: 0 !important;
 }
 
+/* The current link reads bolder through a shadow, not font-weight -
+   real bolding widens the text and shifts the whole row */
 .invoker-view-link.current {
-    font-weight: 600;
+    text-shadow: 0 0 0.65px currentColor, 0 0 0.65px currentColor;
 }
 
 /* The gap between a button and the status text that follows it and the
@@ -747,6 +749,12 @@ input[type="button"]:focus:not(:active) {
    the overflow override above would let their content spill below the pane */
 #action-area .invoker-pretty-pane {
     overflow: auto !important;
+}
+
+/* The raw view's highlight overlay clips to its pane the same way -
+   otherwise a long payload would paint right through whatever sits below */
+#action-area .highlight-backdrop {
+    overflow: hidden !important;
 }
 
 /* The status texts follow the Invoke button at the same distance

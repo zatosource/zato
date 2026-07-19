@@ -1,0 +1,45 @@
+/*
+ * HL7 MLLP channel editor - the full-page create and edit forms.
+ *
+ * The page reuses the popup dialogs' styling by carrying the data-popup
+ * class on its container, so the shared form-tabs and destinations rules
+ * apply as they are. This file only shapes the container into a page card
+ * and styles the actions row at the bottom.
+ */
+
+/* ------------------------------------------------------------ */
+/* MLLP editor - variables                                       */
+/* ------------------------------------------------------------ */
+
+#mllp-editor {
+    --mllp-editor-max-width: 60em;
+    --mllp-editor-border-color: #d0d0d0;
+    --mllp-editor-background: #ffffff;
+    --mllp-editor-shadow: #00000022;
+}
+
+/* ------------------------------------------------------------ */
+/* MLLP editor - the page card                                   */
+/* ------------------------------------------------------------ */
+
+#mllp-editor {
+    max-width: var(--mllp-editor-max-width);
+    margin-top: 10px;
+    border: 1px solid var(--mllp-editor-border-color);
+    background: var(--mllp-editor-background);
+    box-shadow: 0 2px 8px var(--mllp-editor-shadow);
+}
+
+/* ------------------------------------------------------------ */
+/* MLLP editor - the actions row                                 */
+/* ------------------------------------------------------------ */
+
+#mllp-editor .mllp-editor-actions td {
+    padding-top: 10px;
+    padding-bottom: 8px;
+    border-top: 1px solid var(--mllp-editor-border-color);
+}
+
+#mllp-editor .status-message {
+    margin-right: 10px;
+}

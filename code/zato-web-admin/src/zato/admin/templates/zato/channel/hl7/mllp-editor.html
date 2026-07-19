@@ -1,0 +1,291 @@
+{% extends "zato/index.html" %}
+
+{% comment %}
+Full-page editor for HL7 MLLP channels - one template serves both the create
+and the edit page. The view provides:
+
+* action       - "create" or "edit"
+* field_prefix - "" or "edit-", matching the form's field id prefix
+* form         - CreateForm or EditForm(prefix="edit")
+* item_name    - the channel's name, empty when creating
+* item_id      - the channel's id, empty when creating
+* item_json    - the channel serialized to JSON for client-side populate,
+                 the string "null" when creating
+
+The form posts to the same create/edit endpoints the former popup dialogs used.
+{% endcomment %}
+
+{% block html_title %}HL7 MLLP channel - {% if item_name %}{{ item_name }}{% else %}Create a new channel{% endif %}{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/destinations.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/status-message.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/channel/hl7/mllp-editor.css">
+{% endblock %}
+
+{% block "extra_js" %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/destinations.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-editor.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    $(document).ready(function() {
+        $.fn.zato.channel.hl7.mllp.editor.init({
+            action: '{{ action }}',
+            item: {{ item_json|safe }},
+            list_url: '{% url "channel-hl7-mllp" %}?cluster={{ cluster_id }}&type_=channel-hl7-mllp'
+        });
+    });
+    </script>
+{% endblock %}
+
+{% block "content" %}
+
+<div id="markup">
+
+<h2 class="zato">HL7 MLLP channel | <a href="{% url "channel-hl7-mllp" %}?cluster={{ cluster_id }}&amp;type_=channel-hl7-mllp">HL7 MLLP channels</a> | {% if item_name %}{{ item_name }}{% else %}Create a new channel{% endif %}</h2>
+
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+<div class="data-popup" id="mllp-editor">
+    <div class="bd">
+        <form novalidate action="{% if action == 'edit' %}{% url "channel-hl7-mllp-edit" %}{% else %}{% url "channel-hl7-mllp-create" %}{% endif %}" method="post" id="{{ action }}-form">
+
+            <div class="dashboard-tabs" role="tablist" aria-label="Channel settings">
+                <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="main" role="tab" aria-selected="true">Main</button>
+                <button type="button" class="dashboard-tab" data-tab="destinations" role="tab" aria-selected="false">Destinations</button>
+                <button type="button" class="dashboard-tab" data-tab="routing" role="tab" aria-selected="false">Routing</button>
+                <button type="button" class="dashboard-tab" data-tab="protocol" role="tab" aria-selected="false">Protocol</button>
+                <button type="button" class="dashboard-tab" data-tab="tolerance" role="tab" aria-selected="false">Tolerance</button>
+                <button type="button" class="dashboard-tab" data-tab="dedup" role="tab" aria-selected="false">Deduplication</button>
+                <button type="button" class="dashboard-tab" data-tab="logging" role="tab" aria-selected="false">Logging</button>
+            </div>
+
+            <div class="dashboard-tab-panel" id="mllp-editor-tab-panel-main" role="tabpanel">
+                <table class="form-data">
+                    <tr>
+                        <td style="width:11%"><label for="id_{{ field_prefix }}name">Name</label></td>
+                        <td>{{ form.name }}</td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}is_active">Active</label></td>
+                        <td>{{ form.is_active }}</td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}service">Service</label></td>
+                        <td>{{ form.service }}</td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}use_rest">Use REST</label></td>
+                        <td>{{ form.use_rest }}</td>
+                    </tr>
+                    <tr class="rest-field" style="display:none">
+                        <td><label for="id_{{ field_prefix }}rest_only">REST only?</label></td>
+                        <td>{{ form.rest_only }}</td>
+                    </tr>
+                    <tr class="rest-field" style="display:none">
+                        <td><label for="id_{{ field_prefix }}rest_url_path">URL path</label></td>
+                        <td>{{ form.rest_url_path }}</td>
+                    </tr>
+                    <tr class="rest-field" style="display:none">
+                        <td><label for="id_{{ field_prefix }}rest_security_id">Security</label></td>
+                        <td>{{ form.rest_security_id }}</td>
+                    </tr>
+                    <tr class="rest-field" style="display:none">
+                        <td style="vertical-align:middle"><label for="id_{{ field_prefix }}rest_security_groups">Security groups</label></td>
+                        <td>
+                            <a id="id_{{ field_prefix }}rest_security_groups" href="javascript:$.fn.zato.channel.hl7.mllp.editor._toggle_groups('.mllp-{{ action }}-groups-block')">Toggle options</a>
+                        </td>
+                    </tr>
+                    <tr class="mllp-{{ action }}-groups-block" style="display:none">
+                        <td class="to-ignore"></td>
+                        <td>
+                            <div class="multi-select-div" id="mllp-multi-select-div-{{ action }}"></div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="dashboard-tab-panel" id="mllp-editor-tab-panel-destinations" role="tabpanel" hidden>
+                {% include "zato/include/destinations-tab.html" with form=form action=action %}
+            </div>
+
+            <div class="dashboard-tab-panel" id="mllp-editor-tab-panel-routing" role="tabpanel" hidden>
+                <table class="form-data">
+                    <tr>
+                        <td style="width:16%"><label for="id_{{ field_prefix }}is_default">Default</label></td>
+                        <td>{{ form.is_default }}</td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}msh3_sending_app">Sending app</label></td>
+                        <td>{{ form.msh3_sending_app }} <span class="form_hint">MSH-3</span></td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}msh4_sending_facility">Sending facility</label></td>
+                        <td>{{ form.msh4_sending_facility }} <span class="form_hint">MSH-4</span></td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}msh5_receiving_app">Receiving app</label></td>
+                        <td>{{ form.msh5_receiving_app }} <span class="form_hint">MSH-5</span></td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}msh6_receiving_facility">Receiving facility</label></td>
+                        <td>{{ form.msh6_receiving_facility }} <span class="form_hint">MSH-6</span></td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}msh9_message_type">Message type</label></td>
+                        <td>{{ form.msh9_message_type }} <span class="form_hint">MSH-9.1</span></td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}msh9_trigger_event">Trigger event</label></td>
+                        <td>{{ form.msh9_trigger_event }} <span class="form_hint">MSH-9.2</span></td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}msh11_processing_id">Processing ID</label></td>
+                        <td>{{ form.msh11_processing_id }} <span class="form_hint">MSH-11</span></td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}msh12_version_id">Version</label></td>
+                        <td>{{ form.msh12_version_id }} <span class="form_hint">MSH-12</span></td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="dashboard-tab-panel" id="mllp-editor-tab-panel-protocol" role="tabpanel" hidden>
+                <table class="form-data">
+                    <tr>
+                        <td style="width:16%"><label for="id_{{ field_prefix }}use_msh18_encoding">Use MSH-18 encoding</label></td>
+                        <td>{{ form.use_msh18_encoding }}</td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}default_character_encoding">Encoding</label></td>
+                        <td>{{ form.default_character_encoding }}</td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}recv_timeout">Recv. timeout</label></td>
+                        <td>{{ form.recv_timeout }}</td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}max_msg_size">Max. msg. size</label></td>
+                        <td>{{ form.max_msg_size }} {{ form.max_msg_size_unit }}</td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}start_seq">Start separator</label></td>
+                        <td>{{ form.start_seq }}</td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}end_seq">End separator</label></td>
+                        <td>{{ form.end_seq }}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="dashboard-tab-panel" id="mllp-editor-tab-panel-tolerance" role="tabpanel" hidden>
+                <table class="form-data">
+                    <tr>
+                        <td style="width:30%"><label for="id_{{ field_prefix }}normalize_line_endings">Normalize line endings</label></td>
+                        <td>{{ form.normalize_line_endings }}</td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}force_standard_delimiters">Force standard delimiters</label></td>
+                        <td>{{ form.force_standard_delimiters }}</td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}repair_truncated_msh">Repair truncated MSH</label></td>
+                        <td>{{ form.repair_truncated_msh }}</td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}split_concatenated_messages">Split concatenated messages</label></td>
+                        <td>{{ form.split_concatenated_messages }}</td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}normalize_obx2_value_type">Fill empty OBX-2 value type</label></td>
+                        <td>{{ form.normalize_obx2_value_type }}</td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}replace_invalid_obx2_value_type">Replace invalid OBX-2 value type</label></td>
+                        <td>{{ form.replace_invalid_obx2_value_type }}</td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}normalize_invalid_escape_sequences">Strip orphan escape characters</label></td>
+                        <td>{{ form.normalize_invalid_escape_sequences }}</td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}normalize_obx8_abnormal_flags">Clear OBX-8 literal null</label></td>
+                        <td>{{ form.normalize_obx8_abnormal_flags }}</td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}normalize_quadruple_quoted_empty">Strip multi-quote sequences</label></td>
+                        <td>{{ form.normalize_quadruple_quoted_empty }}</td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}allow_short_encoding_characters">Pad short encoding characters</label></td>
+                        <td>{{ form.allow_short_encoding_characters }}</td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}fix_off_by_one_field_index">Fix off-by-one field index</label></td>
+                        <td>{{ form.fix_off_by_one_field_index }}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="dashboard-tab-panel" id="mllp-editor-tab-panel-dedup" role="tabpanel" hidden>
+                <table class="form-data">
+                    <tr>
+                        <td style="width:6%"><label for="id_{{ field_prefix }}dedup_ttl_value">TTL</label></td>
+                        <td>{{ form.dedup_ttl_value }}</td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}dedup_ttl_unit">Unit</label></td>
+                        <td>{{ form.dedup_ttl_unit }}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="dashboard-tab-panel" id="mllp-editor-tab-panel-logging" role="tabpanel" hidden>
+                <table class="form-data">
+                    <tr>
+                        <td style="width:9%"><label for="id_{{ field_prefix }}should_return_errors">Return errors</label></td>
+                        <td>{{ form.should_return_errors }}</td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}should_log_messages">Log I/O</label></td>
+                        <td>{{ form.should_log_messages }}</td>
+                    </tr>
+                    <tr>
+                        <td><label for="id_{{ field_prefix }}logging_level">Log level</label></td>
+                        <td>{{ form.logging_level }}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <table class="form-data mllp-editor-actions">
+                <tr>
+                    <td style="text-align:left;vertical-align:middle">
+                        <span class="how-it-works-badge" id="mllp-editor-how-it-works">How does it work?</span>
+                    </td>
+                    <td style="text-align:right;vertical-align:middle">
+                        <span class="status-message" id="mllp-editor-status"></span>
+                        <input type="submit" value="OK" />
+                        <button type="button" id="mllp-editor-cancel">Cancel</button>
+                    </td>
+                </tr>
+            </table>
+
+            <input type="hidden" id="id_{{ field_prefix }}cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+            {% if action == 'edit' %}
+            <input type="hidden" id="id_edit-id" name="id" value="{{ item_id }}" />
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+</div>
+
+{% endblock %}
