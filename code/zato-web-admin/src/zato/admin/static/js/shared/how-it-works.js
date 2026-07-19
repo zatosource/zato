@@ -838,14 +838,21 @@ $.fn.zato.how_it_works._collectFields = function(container, config) {
                 }
             }
 
-            // .. with several fields in one row the tooltip goes above the field,
-            // .. otherwise it would cover the neighboring fields to the left ..
-            var placement = labels.length > 1 ? 'top' : null;
+            // .. an explicit placement in the config rules every field -
+            // .. the heuristics below only run when nothing was configured ..
+            var placement = null;
 
-            // .. a tooltip beside a toggle would sit right on top of it,
-            // .. so it always goes above, leaving the slider free to click ..
-            if (control && control.type === 'checkbox') {
-                placement = 'top';
+            if (!config.placement) {
+
+                // .. with several fields in one row the tooltip goes above the field,
+                // .. otherwise it would cover the neighboring fields to the left ..
+                placement = labels.length > 1 ? 'top' : null;
+
+                // .. a tooltip beside a toggle would sit right on top of it,
+                // .. so it always goes above, leaving the slider free to click ..
+                if (control && control.type === 'checkbox') {
+                    placement = 'top';
+                }
             }
 
             fields.push({

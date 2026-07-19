@@ -150,6 +150,10 @@ $.fn.zato.channel.hl7.mllp.wizard.init = function(options) {
         badgeId: 'mllp-wizard-how-it-works',
         divId: '#mllp-wizard',
         fieldSelector: config.helpRowSelector,
+
+        // The card has empty margin on its left, so the tooltips go there
+        // instead of covering the rows above the described field
+        placement: 'left',
         descriptions: wizard.helpDescriptions()
     });
 
