@@ -1079,7 +1079,12 @@ div.action-panel span.previous-next {
     white-space: nowrap;
     pointer-events: none;
     animation: zatoFadeIn 0.25s ease-in;
-    transition: opacity 0.2s ease-out
+    transition: opacity 0.2s ease-out;
+
+    /* Above the field it annotates - formalize.css raises every focused
+       input to z-index 1 and inside a flex wrapper, like the wizard's name
+       field, that actually takes effect and would cover the indicator */
+    z-index: 2;
 }
 
 .zato-unique-ok {

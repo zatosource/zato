@@ -128,7 +128,10 @@ $.fn.zato.channel.hl7.mllp.wizard.review._transportSummary = function() {
     var endSeq = wizard.field('end_seq').val();
     var maxSize = wizard.field('max_msg_size').val();
     var maxSizeUnit = wizard.field('max_msg_size_unit').find('option:selected').text();
-    var encoding = wizard.field('default_character_encoding').val();
+
+    // With the MSH-18 flag on, each message names its own encoding
+    var useMsh18 = wizard.field('use_msh18_encoding').prop('checked');
+    var encoding = useMsh18 ? 'MSH-18' : wizard.field('default_character_encoding').val();
 
     var out = startSeq + ' / ' + endSeq + ', ' + maxSize + ' ' + maxSizeUnit + ' max, ' + encoding;
     return out;
