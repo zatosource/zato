@@ -123,10 +123,14 @@
 
 /* The chrome itself comes from the shared dashboard tabs the posture
    page uses - here it is only recolored with the wizard accent */
+/* The bottom margin is the one gap between the step strip and whatever
+   a step body starts with, so every step opens at the same height and
+   no first row needs a margin of its own. Only this wizard's tabs -
+   the shared dashboard tabs elsewhere keep their own spacing. */
 .mllp-wizard-steps {
     --tab-active-color: var(--wizard-accent);
     --tab-active-border-color: var(--wizard-accent);
-    margin: 6px 0 22px;
+    margin: 6px 0 29px;
 }
 
 /* The number sits inline before the label, hence the flex layout -
@@ -167,7 +171,6 @@
     align-items: center;
     gap: 20px;
     padding: 0;
-    margin-top: 10px;
     margin-bottom: 4px;
     max-width: 560px;
 }
@@ -390,7 +393,7 @@ a.mllp-wizard-toggle-edit {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    margin-top: 16px;
+    margin-top: 8px;
     padding: 16px 0 4px;
     border-top: 1px solid var(--wizard-border);
 }
