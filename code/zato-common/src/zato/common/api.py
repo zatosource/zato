@@ -1107,6 +1107,7 @@ class GENERIC:
             OUTCONN_AS2 = 'outconn-as2'
             OUTCONN_ES = 'outconn-es'
             OUTCONN_LDAP = 'outconn-ldap'
+            OUTCONN_LLM = 'outconn-llm'
             CHANNEL_HL7_MLLP = 'channel-hl7-mllp'
             OUTCONN_HL7_FHIR = 'outconn-hl7-fhir'
             OUTCONN_HL7_MLLP = 'outconn-hl7-mllp'
@@ -1249,6 +1250,28 @@ class LDAP:
 
         def __iter__(self):
             return iter((self.EXTERNAL, self.GSSAPI))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class LLM:
+
+    class DEFAULT:
+        POOL_SIZE = 10
+        TIMEOUT = 60
+        MAX_TOKENS = 1024
+        MAX_HISTORY_TURNS = 20
+        CHAT_EXPIRY = 86400
+        Address = 'https://api.openai.com/v1'
+        Model = 'gpt-4o-mini'
+
+    class PROVIDER:
+        OPENAI = NameId('OpenAI', 'openai')
+        CLAUDE = NameId('Claude', 'claude')
+        GEMINI = NameId('Gemini', 'gemini')
+
+        def __iter__(self):
+            return iter((self.OPENAI, self.CLAUDE, self.GEMINI))
 
 # ################################################################################################################################
 # ################################################################################################################################

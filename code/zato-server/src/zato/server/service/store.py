@@ -571,6 +571,7 @@ class ServiceStore:
                 class_.odb = service_store.server.odb
                 class_.schedule = SchedulerFacade(service_store.server)
                 class_.aws.conn_dict = service_store.server.config_manager.cloud_aws
+                class_.llm.conn_dict = service_store.server.config_manager.outconn_llm
                 class_.cloud.confluence = service_store.server.config_manager.cloud_confluence
                 class_.cloud.jira = service_store.server.config_manager.cloud_jira
                 class_.cloud.salesforce = service_store.server.config_manager.cloud_salesforce

@@ -52,6 +52,7 @@ if 0:
     from zato.server.connection.email import EMailAPI
     from zato.server.connection.facade import GraphQLFacade, KafkaFacade
     from zato.server.connection.ftp import FTPStore
+    from zato.server.generic.api.outconn_llm import OutconnLLMWrapper
     from zato.server.service import AMQPFacade, Service
 
     # Zato
@@ -73,6 +74,7 @@ if 0:
     KafkaFacade = KafkaFacade
     KombuAMQPMessage = KombuAMQPMessage
     Logger = Logger
+    OutconnLLMWrapper = OutconnLLMWrapper
     PoolStore = PoolStore
     Service = Service
 
@@ -447,6 +449,25 @@ class AWSFacade:
 
         # .. and hand back the client that its wrapper maintains.
         out = item.conn.shared_client
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class LLMFacade:
+    """ The API through which LLM connections are accessed by their names, e.g. self.llm['My OpenAI'].
+    """
+    __slots__ = ('conn_dict',)
+
+    conn_dict: 'stranydict'
+
+    def __getitem__(self, name:'str') -> 'OutconnLLMWrapper':
+
+        # Look up the connection's configuration ..
+        item = self.conn_dict[name]
+
+        # .. and hand back its wrapper, whose invoke, chat and ping check a client out of the queue internally.
+        out = item.conn
         return out
 
 # ################################################################################################################################

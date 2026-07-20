@@ -46,6 +46,7 @@ from zato.admin.web.views.outgoing import as2 as out_as2
 from zato.admin.web.views.outgoing import as4 as out_as4
 from zato.admin.web.views.outgoing import es as out_es
 from zato.admin.web.views.outgoing import ldap as out_ldap
+from zato.admin.web.views.outgoing import llm as out_llm
 from zato.admin.web.views.outgoing import mongodb as out_mongodb
 from zato.admin.web.views.outgoing import odata as out_odata
 from zato.admin.web.views.outgoing import odoo as out_odoo
@@ -584,6 +585,26 @@ urlpatterns += [
         login_required(out_ldap.change_password), name='out-ldap-change-password'),
     url(r'^zato/outgoing/ldap/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_ldap.ping), name='out-ldap-ping'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. LLM
+
+    url(r'^zato/outgoing/llm/$',
+        login_required(out_llm.Index()), name=out_llm.Index.url_name),
+    url(r'^zato/outgoing/llm/create/$',
+        login_required(out_llm.Create()), name=out_llm.Create.url_name),
+    url(r'^zato/outgoing/llm/edit/$',
+        login_required(out_llm.Edit()), name=out_llm.Edit.url_name),
+    url(r'^zato/outgoing/llm/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_llm.Delete()), name=out_llm.Delete.url_name),
+    url(r'^zato/outgoing/llm/change-password/$',
+        login_required(out_llm.change_password), name='out-llm-change-password'),
+    url(r'^zato/outgoing/llm/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_llm.ping), name='out-llm-ping'),
     ]
 
 # ################################################################################################################################

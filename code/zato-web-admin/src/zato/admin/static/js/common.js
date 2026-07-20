@@ -141,6 +141,8 @@ $.namespace('zato.outgoing.ibm_mq.data_table');
 $.namespace('zato.outgoing.kafka');
 $.namespace('zato.outgoing.kafka.data_table');
 $.namespace('zato.outgoing.ldap');
+$.namespace('zato.outgoing.llm');
+$.namespace('zato.outgoing.llm.data_table');
 $.namespace('zato.outgoing.odata');
 $.namespace('zato.outgoing.odata.data_table');
 $.namespace('zato.outgoing.odoo');

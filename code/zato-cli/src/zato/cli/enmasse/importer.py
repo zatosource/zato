@@ -43,6 +43,7 @@ from zato.cli.enmasse.importers.kafka import ChannelKafkaImporter, OutgoingKafka
 from zato.cli.enmasse.importers.mcp import GatewayMCPImporter
 from zato.cli.enmasse.importers.as2 import AS2Importer
 from zato.cli.enmasse.importers.ldap import LDAPImporter
+from zato.cli.enmasse.importers.llm import LLMImporter
 from zato.cli.enmasse.importers.microsoft_cloud import MicrosoftCloudImporter
 from zato.cli.enmasse.importers.microsoft_fabric import MicrosoftFabricImporter
 from zato.cli.enmasse.importers.microsoft_power_automate import MicrosoftPowerAutomateImporter
@@ -92,7 +93,8 @@ for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse
                         'zato.cli.enmasse.importers.ibm_mq',
                         'zato.cli.enmasse.importers.kafka',
                         'zato.cli.enmasse.importers.as2',
-                        'zato.cli.enmasse.importers.ldap', 'zato.cli.enmasse.importers.microsoft_cloud',
+                        'zato.cli.enmasse.importers.ldap', 'zato.cli.enmasse.importers.llm',
+                        'zato.cli.enmasse.importers.microsoft_cloud',
                         'zato.cli.enmasse.importers.microsoft_fabric',
                         'zato.cli.enmasse.importers.microsoft_power_automate',
                         'zato.cli.enmasse.importers.mongodb',
@@ -142,6 +144,7 @@ class EnmasseYAMLImporter:
         self.outgoing_ibm_mq_defs = {}
         self.outgoing_kafka_defs = {}
         self.ldap_defs = {}
+        self.llm_defs = {}
         self.mongodb_defs = {}
         self.odata_defs = {}
         self.sap_defs = {}
@@ -196,6 +199,7 @@ class EnmasseYAMLImporter:
         self.outgoing_ibm_mq_importer = OutgoingIBMMQImporter(self)
         self.outgoing_kafka_importer = OutgoingKafkaImporter(self)
         self.ldap_importer = LDAPImporter(self)
+        self.llm_importer = LLMImporter(self)
         self.mongodb_importer = MongoDBImporter(self)
         self.odata_importer = ODataImporter(self, 'odata')
         self.sap_importer = ODataImporter(self, 'sap')
@@ -736,6 +740,30 @@ class EnmasseYAMLImporter:
         logger.info('Processed LDAP connection definitions: created=%d updated=%d', len(ldap_created), len(ldap_updated))
 
         return ldap_created, ldap_updated
+
+# ################################################################################################################################
+
+    def sync_llm(self, llm_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes LLM connection definitions from a YAML configuration with the database.
+        """
+        if not llm_list:
+            return [], []
+
+        count = len(llm_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} LLM connection {noun}')
+
+        # Examine each LLM connection item
+        for idx, item in enumerate(llm_list):
+            logger.info('LLM connection item %d: %s', idx, item)
+
+        llm_created, llm_updated = self.llm_importer.sync_definitions(llm_list, session)
+
+        # Get LLM definitions from the LLM importer
+        self.llm_defs = self.llm_importer.connection_defs
+        logger.info('Processed LLM connection definitions: created=%d updated=%d', len(llm_created), len(llm_updated))
+
+        return llm_created, llm_updated
 
 # ################################################################################################################################
 
@@ -1475,6 +1503,14 @@ class EnmasseYAMLImporter:
             self.created_objects['ldap'] = ldap_created
         if ldap_updated:
             self.updated_objects['ldap'] = ldap_updated
+
+        # Process LLM connection definitions
+        llm_list = yaml_config.get('llm', [])
+        llm_created, llm_updated = self.sync_llm(llm_list, session)
+        if llm_created:
+            self.created_objects['llm'] = llm_created
+        if llm_updated:
+            self.updated_objects['llm'] = llm_updated
 
         # Process OData connection definitions
         odata_list = yaml_config.get('odata') or yaml_config.get('outgoing_odata', [])

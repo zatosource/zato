@@ -428,6 +428,23 @@ ldap:
     server_list: 127.0.0.1:389
     password: Zato_Enmasse_Env.Enmasse_LDAP_Password
 
+llm:
+
+  - name: enmasse.llm.1
+    provider: openai
+    address: https://api.openai.com/v1
+    model: gpt-4o-mini
+    secret: Zato_Enmasse_Env.Enmasse_LLM_API_Key
+    timeout: 30
+    max_tokens: 2048
+    max_history_turns: 10
+    chat_expiry: 3600
+
+  - name: enmasse.llm.2
+    provider: claude
+    address: https://api.anthropic.com
+    model: claude-sonnet-4-5
+
 odata:
 
   - name: enmasse.odata.1

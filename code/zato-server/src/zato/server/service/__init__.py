@@ -50,7 +50,7 @@ from zato.server.connection.facade import AS2Facade, AS4Facade, ESFacade, FHIRFa
 from zato.server.pattern.api import FanOut
 from zato.server.pattern.api import InvokeRetry
 from zato.server.pattern.api import ParallelExec
-from zato.server.service.reqresp import AMQPRequestData, AWSFacade, Cloud, Microsoft, Outgoing, Request
+from zato.server.service.reqresp import AMQPRequestData, AWSFacade, Cloud, LLMFacade, Microsoft, Outgoing, Request
 
 # Zato
 from zato.server.reqresp.payload import IOPayload
@@ -375,6 +375,7 @@ class Service:
     # Class-wide attributes shared by all services thus created here instead of assigning to self.
     aws = AWSFacade()
     cloud = Cloud()
+    llm = LLMFacade()
     microsoft = Microsoft()
     odb:'ODBManager'
     static_config:'Bunch'
