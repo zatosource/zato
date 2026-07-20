@@ -49,10 +49,10 @@ _field_defaults = {
 
 class LLMExporter:
 
-    def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
+    def __init__(self, exporter:'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, session: 'SASession', cluster_id: 'int') -> 'llm_def_list':
+    def export(self, session:'SASession', cluster_id:'int') -> 'llm_def_list':
         """ Exports LLM connection definitions.
         """
         logger.info('Exporting LLM connection definitions')
