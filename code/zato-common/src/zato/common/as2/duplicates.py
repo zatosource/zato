@@ -19,7 +19,6 @@ from zato.common.api import AS2
 from zato.common.as2.inbound import StoredMDN
 from zato.common.audit_log.api import get_audit_engine
 from zato.common.json_internal import dumps, loads
-from zato.common.typing_ import optional
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
@@ -32,13 +31,6 @@ if 0:
     datetime = datetime
     Engine = Engine
     strstrdict = strstrdict
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-#  Type aliases
-enginenone    = optional['Engine']
-storedmdnnone = optional['StoredMDN']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -83,7 +75,7 @@ class DuplicateStore:
     and the angle brackets are already stripped by the inbound pipeline.
     """
 
-    def __init__(self, window_days:'int'=AS2.Default.Duplicate_Window_Days, engine:'enginenone'=None) -> 'None':
+    def __init__(self, window_days:'int'=AS2.Default.Duplicate_Window_Days, engine:'Engine | None'=None) -> 'None':
 
         self.window_days = window_days
 
@@ -101,7 +93,7 @@ class DuplicateStore:
 
 # ################################################################################################################################
 
-    def get(self, as2_from:'str', as2_to:'str', message_id:'str') -> 'storedmdnnone':
+    def get(self, as2_from:'str', as2_to:'str', message_id:'str') -> 'StoredMDN | None':
         """ Returns the stored MDN of an earlier delivery of the same message, or None
         when the message was never seen - the is_duplicate callable of the inbound pipeline.
         """

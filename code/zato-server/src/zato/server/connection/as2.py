@@ -24,7 +24,6 @@ from zato.common.as2.config import build_keystore, build_partnerships
 from zato.common.as2.duplicates import DuplicateStore
 from zato.common.as2.inbound import handle as inbound_handle
 from zato.common.audit_log.api import AuditLog
-from zato.common.typing_ import optional
 from zato.edi.envelope import read_envelope
 
 # ################################################################################################################################
@@ -40,13 +39,6 @@ if 0:
     InboundResult = InboundResult
     Partnership = Partnership
     PendingAsyncMDN = PendingAsyncMDN
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-#  Type aliases
-keystorenone = optional['Keystore']
-auditlognone = optional[AuditLog]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -71,11 +63,11 @@ class AS2ChannelRuntime:
         # The runtime keystore is built lazily, on first use,
         # so that incomplete configuration does not break config propagation.
         self._lock = RLock()
-        self._keystore:'keystorenone' = None
+        self._keystore:'Keystore | None' = None
 
         # The audit log is built lazily too - opening the shared database can wait
         # until the first message actually arrives.
-        self._audit_log:'auditlognone' = None
+        self._audit_log:'AuditLog | None' = None
 
         # For how many days an already-processed message and its stored MDN are remembered.
         # The opaque column genuinely stores a null when the channel was saved without one.

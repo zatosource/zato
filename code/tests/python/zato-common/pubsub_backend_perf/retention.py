@@ -7,12 +7,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 import sys
+from tempfile import TemporaryFile
 from time import monotonic
 
 # gevent
 from gevent import joinall, sleep, spawn
-from gevent.subprocess import run as subprocess_run
 
 # humanize
 from humanize import intcomma
@@ -57,6 +58,9 @@ _consumer_block_ms = 500
 
 # How far in the past the aged traces are placed - well past the default retention of days.
 _aged_days = 30
+
+# How long one polling sleep is while waiting for the sweep process, in seconds.
+_sweep_poll_interval_seconds = 0.05
 
 # How many milliseconds one second and one day have.
 _ms_per_second = 1000
@@ -207,14 +211,31 @@ def run_retention_scenario() -> 'None':
     for _publisher_index in range(_publisher_greenlet_count):
         greenlets.append(spawn(_publish_traffic, backend, live_topic_names, stop, publish_counts))
 
-    # .. the sweep runs as its own process against the very database the traffic above is hitting ..
+    # .. the sweep runs as its own process against the very database the traffic above
+    # .. is hitting - spawned without a fork, which a process full of greenlets must
+    # .. never issue, and waited for with a non-blocking poll so the traffic keeps running ..
     sweep_args = [sys.executable, '-m', 'zato.common.pubsub.sql.cleanup', '--once']
 
-    start = monotonic()
-    completed = subprocess_run(sweep_args, capture_output=True)
-    elapsed = monotonic() - start
+    with TemporaryFile() as sweep_output:
 
-    assert completed.returncode == 0, completed.stderr
+        file_actions = [
+            (os.POSIX_SPAWN_DUP2, sweep_output.fileno(), 1),
+            (os.POSIX_SPAWN_DUP2, sweep_output.fileno(), 2),
+        ]
+
+        start = monotonic()
+        sweep_pid = os.posix_spawn(sys.executable, sweep_args, os.environ, file_actions=file_actions)
+
+        while True:
+            done_pid, wait_status = os.waitpid(sweep_pid, os.WNOHANG)
+            if done_pid:
+                break
+            sleep(_sweep_poll_interval_seconds)
+
+        elapsed = monotonic() - start
+
+        _ = sweep_output.seek(0)
+        assert os.waitstatus_to_exitcode(wait_status) == 0, sweep_output.read()
 
     # .. the sweep is over, so the traffic may now wind down ..
     stop['is_set'] = True
