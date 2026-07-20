@@ -18,7 +18,7 @@ import os
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import stranydict, strstrdict
+    from zato.common.typing_ import any_, stranydict, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -173,7 +173,7 @@ def persist_env_variables(env_path:'str', env_variables:'stranydict') -> 'None':
     if 'env' not in env_config:
         env_config['env'] = {}
 
-    env_section = env_config['env']
+    env_section:'any_' = env_config['env']
 
     # .. mirror the in-process application - set what is given, drop what is empty ..
     for env_name, value in env_variables.items():

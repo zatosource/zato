@@ -94,7 +94,8 @@ def _apply_sql_env_variables(env_variables:'any_') -> 'None':
     # so it is read from the settings module directly.
     from zato.admin import settings as admin_settings
 
-    repo_location = os.path.join(admin_settings.config_dir, 'config', 'repo')
+    config_dir:'any_' = admin_settings.config_dir
+    repo_location = os.path.join(config_dir, 'config', 'repo')
     env_path = get_default_env_file_path(repo_location)
 
     try:

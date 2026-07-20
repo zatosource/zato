@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from logging import getLogger
 
 # SQLAlchemy
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, literal_column, select
 
 # Zato
 from zato.common.api import PubSub
@@ -229,8 +229,11 @@ class SQLAdminAPI(SQLBrowseAPI):
             lowered_names.append(topic_name.lower())
 
         # .. bucket by minute in the database - the modulo operator is portable
-        # .. across all the supported engines ..
-        bucket = message_table.c.pub_time_ms - message_table.c.pub_time_ms % _milliseconds_per_minute
+        # .. across all the supported engines. The bucket width is inlined as a literal
+        # .. instead of a bind parameter so the SELECT and GROUP BY expressions render
+        # .. identically, which PostgreSQL requires to match them up ..
+        bucket_width = literal_column(str(_milliseconds_per_minute))
+        bucket = message_table.c.pub_time_ms - message_table.c.pub_time_ms % bucket_width
         bucket = bucket.label('bucket')
 
         query = select(bucket, func.count().label('count'))

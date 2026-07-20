@@ -26,6 +26,7 @@ from zato.common.odb.model import Cluster, HTTPSOAP, PubSubSubscription, PubSubS
 from zato.common.odb.query import pubsub_subscription_list
 from zato.common.pubsub.util import evaluate_pattern_match, get_security_definition, set_time_since
 from zato.common.util.api import as_bool, new_sub_key, utcnow
+from zato.common.typing_ import cast_
 from zato.common.util.sql import elems_with_opaque
 from zato.server.service import AsIs, Int, PubSubMessage, Service
 from zato.server.service.internal import AdminService
@@ -33,7 +34,7 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _build_topic_objects_list(topic_data_list=None, topics=None, topic_data_by_name=None):
+def _build_topic_objects_list(topic_data_list:'any_'=None, topics:'any_'=None, topic_data_by_name:'any_'=None) -> 'anylist':
     """ Build topic objects with flags for frontend response.
     """
     topic_objects_list = []
@@ -85,7 +86,7 @@ def _build_topic_objects_list(topic_data_list=None, topics=None, topic_data_by_n
 
 if 0:
     from zato.common.ext.bunch import Bunch
-    from zato.common.typing_ import anylist, strdict, strlist
+    from zato.common.typing_ import any_, anydict, anylist, strdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -124,7 +125,7 @@ class GetList(AdminService):
         'sec_name', 'security', 'username', 'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name', \
         '-rest_push_endpoint_name', AsIs('-topic_name_list'), '-password', Int('-pending_depth')
 
-    def get_data(self, session):
+    def get_data(self, session:'any_') -> 'anylist':
 
         # Check if password should be included in the response
         needs_password = self.request.input.needs_password
@@ -134,8 +135,8 @@ class GetList(AdminService):
         result = self._search(pubsub_subscription_list, session, cluster_id, None, False)
 
         # Group by subscription ID
-        subscriptions_by_id = {}
-        topics_by_id = {}
+        subscriptions_by_id:'anydict' = {}
+        topics_by_id:'anydict' = {}
 
         for item in result:
             sub_id = item.id
@@ -196,7 +197,7 @@ class GetList(AdminService):
         for sub_id, sub_dict in subscriptions_by_id.items():
 
             # Sort topics by name ..
-            sorted_topics = sorted(topics_by_id[sub_id], key=lambda topic: topic['topic_name'])
+            sorted_topics = sorted(topics_by_id[sub_id], key=itemgetter('topic_name'))
 
             # .. create topic links from sorted topics ..
             topic_link_list:'anylist' = []
@@ -359,7 +360,7 @@ class Create(AdminService):
                             topic.name
                         )
 
-                    sub_topic.pattern_matched = pattern_matched
+                    sub_topic.pattern_matched = cast_('any_', pattern_matched)
 
                     session.add(sub_topic)
 
@@ -528,7 +529,7 @@ class Edit(AdminService):
                                     input.cluster_id,
                                     topic.name
                                 )
-                            sub_topic.pattern_matched = pattern_matched
+                            sub_topic.pattern_matched = cast_('any_', pattern_matched)
 
                             session.add(sub_topic)
 
@@ -662,12 +663,12 @@ class _BaseModifyTopicList(AdminService):
 
 # ################################################################################################################################
 
-    def _modify_topic_list(self, existing_topic_names:'strlist', new_topic_names:'strlist') -> 'strlist':
+    def _modify_topic_list(self, existing_topic_names:'anylist', new_topic_names:'anylist') -> 'anylist':
         raise NotImplementedError('Subclasses must implement _modify_topic_list')
 
 # ################################################################################################################################
 
-    def _get_subscriptions_by_sec(self, cluster_id, sec_base_id):
+    def _get_subscriptions_by_sec(self, cluster_id:'int', sec_base_id:'int') -> 'any_':
         """ Get subscriptions for a security definition.
         """
         get_list_request = {
@@ -750,7 +751,7 @@ class _BaseModifyTopicList(AdminService):
                 current_sub = None
 
                 for item in subscriptions:
-                    item = bunchify(item)
+                    item = cast_('any_', bunchify(item))
                     if item.sec_base_id == sec_base_id:
                         current_sub = item
                         break
@@ -827,7 +828,7 @@ class Subscribe(_BaseModifyTopicList):
     """
     action = ModuleCtx.Action_Subsctibe
 
-    def _modify_topic_list(self, existing_topic_names:'strlist', new_topic_names:'strlist') -> 'strlist':
+    def _modify_topic_list(self, existing_topic_names:'anylist', new_topic_names:'anylist') -> 'anylist':
 
         # Start with existing topics
         all_topic_names = existing_topic_names[:]
@@ -859,7 +860,7 @@ class Unsubscribe(_BaseModifyTopicList):
     """
     action = ModuleCtx.Action_Unsubsctibe
 
-    def _modify_topic_list(self, existing_topic_names:'strlist', new_topic_names:'strlist') -> 'strlist':
+    def _modify_topic_list(self, existing_topic_names:'anylist', new_topic_names:'anylist') -> 'anylist':
 
         # Extract topic names to remove (may be Bunch, dict, or string)
         names_to_remove = set()

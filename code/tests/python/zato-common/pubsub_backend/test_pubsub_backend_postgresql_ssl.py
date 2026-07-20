@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import pytest
 
 # SQLAlchemy
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import DBAPIError
 
 # Zato
 from cleanup import run_cleanup_scenario
@@ -56,7 +56,9 @@ def test_pubsub_backend_postgresql_ssl_is_required(postgresql_ssl_server:'Databa
     details['ssl'] = 'off'
 
     with pubsub_backend_env(details):
-        with pytest.raises(OperationalError):
+        # DBAPIError is the common base - pg8000 reports the rejected plain-text
+        # connection as an InterfaceError, not an OperationalError.
+        with pytest.raises(DBAPIError):
             # The engine is resolved per access, not in __init__, so the connection
             # attempt - and the failure - happens on the property read.
             _ = SQLPubSubBackend().engine

@@ -31,7 +31,6 @@ from zato.common.defaults import default_cluster_id
 # ################################################################################################################################
 
 if 0:
-    from django.http import HttpRequest
     from zato.common.typing_ import any_, anydict
     any_ = any_
     anydict = anydict
@@ -75,7 +74,7 @@ def _parse_response_data(response:'any_') -> 'anydict':
 # ################################################################################################################################
 
 @method_allowed('GET')
-def index(request:'HttpRequest') -> 'TemplateResponse':
+def index(request:'any_') -> 'TemplateResponse':
     """ Displays a read-only message browser for a subscription queue.
     """
 
@@ -132,7 +131,7 @@ def index(request:'HttpRequest') -> 'TemplateResponse':
 # ################################################################################################################################
 
 @method_allowed('POST')
-def clear_queue(request:'HttpRequest') -> 'HttpResponse':
+def clear_queue(request:'any_') -> 'HttpResponse':
     """ Clears all pending messages from a subscription queue.
     """
 
@@ -148,7 +147,7 @@ def clear_queue(request:'HttpRequest') -> 'HttpResponse':
             response_data = _parse_response_data(response)
             response_json = json.dumps(response_data)
 
-            out = HttpResponse(response_json, content_type='application/json')
+            out = HttpResponse(response_json.encode('utf-8'), content_type='application/json')
 
         # .. the service returned an error ..
         else:
@@ -158,7 +157,7 @@ def clear_queue(request:'HttpRequest') -> 'HttpResponse':
 
             error_json = json.dumps({'error': error_message})
 
-            out = HttpResponse(error_json, content_type='application/json', status=HTTPStatus.INTERNAL_SERVER_ERROR)
+            out = HttpResponse(error_json.encode('utf-8'), content_type='application/json', status=HTTPStatus.INTERNAL_SERVER_ERROR)
 
     # .. handle any unexpected transport or connection errors.
     except Exception: # noqa: BLE001
@@ -166,7 +165,7 @@ def clear_queue(request:'HttpRequest') -> 'HttpResponse':
 
         error_json = json.dumps({'error': _default_error_message})
 
-        out = HttpResponse(error_json, content_type='application/json', status=HTTPStatus.INTERNAL_SERVER_ERROR)
+        out = HttpResponse(error_json.encode('utf-8'), content_type='application/json', status=HTTPStatus.INTERNAL_SERVER_ERROR)
 
     return out
 
@@ -174,7 +173,7 @@ def clear_queue(request:'HttpRequest') -> 'HttpResponse':
 # ################################################################################################################################
 
 @method_allowed('GET')
-def message_detail(request:'HttpRequest') -> 'TemplateResponse':
+def message_detail(request:'any_') -> 'TemplateResponse':
     """ Displays the detail/edit form for a single message.
     """
 
@@ -247,7 +246,7 @@ def message_detail(request:'HttpRequest') -> 'TemplateResponse':
 # ################################################################################################################################
 
 @method_allowed('POST')
-def message_payload(request:'HttpRequest') -> 'HttpResponse':
+def message_payload(request:'any_') -> 'HttpResponse':
     """ Returns the message payload read from the pub/sub database.
     """
 
@@ -277,14 +276,14 @@ def message_payload(request:'HttpRequest') -> 'HttpResponse':
     # .. and return the payload as JSON.
     response_json = json.dumps(response_data)
 
-    out = HttpResponse(response_json, content_type='application/json')
+    out = HttpResponse(response_json.encode('utf-8'), content_type='application/json')
     return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
-def delete_message(request:'HttpRequest') -> 'HttpResponse':
+def delete_message(request:'any_') -> 'HttpResponse':
     """ Deletes a single message from a subscription queue.
     """
 
@@ -305,7 +304,7 @@ def delete_message(request:'HttpRequest') -> 'HttpResponse':
             response_data = _parse_response_data(response)
             response_json = json.dumps(response_data)
 
-            out = HttpResponse(response_json, content_type='application/json')
+            out = HttpResponse(response_json.encode('utf-8'), content_type='application/json')
 
         # .. the service returned an error ..
         else:
@@ -315,7 +314,7 @@ def delete_message(request:'HttpRequest') -> 'HttpResponse':
 
             error_json = json.dumps({'error': error_message})
 
-            out = HttpResponse(error_json, content_type='application/json', status=HTTPStatus.INTERNAL_SERVER_ERROR)
+            out = HttpResponse(error_json.encode('utf-8'), content_type='application/json', status=HTTPStatus.INTERNAL_SERVER_ERROR)
 
     # .. handle any unexpected transport or connection errors.
     except Exception: # noqa: BLE001
@@ -323,7 +322,7 @@ def delete_message(request:'HttpRequest') -> 'HttpResponse':
 
         error_json = json.dumps({'error': _default_error_message})
 
-        out = HttpResponse(error_json, content_type='application/json', status=HTTPStatus.INTERNAL_SERVER_ERROR)
+        out = HttpResponse(error_json.encode('utf-8'), content_type='application/json', status=HTTPStatus.INTERNAL_SERVER_ERROR)
 
     return out
 

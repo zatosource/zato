@@ -6,6 +6,12 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# gevent - the sockets of the database drivers must be cooperative or concurrent
+# greenlets serialize on them, so the patching runs before anything else is imported,
+# exactly like in the servers whose runtime pattern this suite exercises
+from gevent import monkey
+_ = monkey.patch_all()
+
 # stdlib
 import os
 import sys

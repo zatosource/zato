@@ -1120,13 +1120,13 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             while True:
                 try:
-                    result = fire_redis.xreadgroup(
+                    result = cast_('anylist', fire_redis.xreadgroup(
                         groupname=group_name,
                         consumername=consumer_name,
                         streams={fire_stream: '>', timeout_stream: '>'},
                         count=10,
                         block=1000,
-                    )
+                    ))
 
                     # We are able to read from the streams again, so the error condition, if any, has cleared.
                     if error_since:
@@ -1139,7 +1139,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                     len_result = len(result)
                     logger.info('Fire event: got %d %s in batch', len_result, 'stream' if len_result == 1 else 'streams')
 
-                    for stream_name, messages in result:  # type: ignore[union-attr]
+                    for stream_name, messages in result:
 
                         len_messages = len(messages)
                         logger.info('Fire event: stream=%r %d %s stream_type=%s',
@@ -1192,13 +1192,13 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             while True:
                 try:
-                    result = req_redis.xreadgroup(
+                    result = cast_('anylist', req_redis.xreadgroup(
                         groupname=group_name,
                         consumername=consumer_name,
                         streams={request_stream: '>'},
                         count=10,
                         block=5000,
-                    )
+                    ))
 
                     # We are able to read from the stream again, so the error condition, if any, has cleared.
                     if error_since:
@@ -1208,7 +1208,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                     if not result:
                         continue
 
-                    for stream_name, messages in result:  # type: ignore[union-attr]
+                    for stream_name, messages in result:
                         for msg_id, fields in messages:
                             command = fields['command']
                             if command == 'request_jobs':
@@ -1445,7 +1445,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                     items = connection_list(session, self.cluster_id, type_, False)
                     for item in items:
                         conn = GenericConnection.from_model(item)
-                        config = conn.to_dict()
+                        config = cast_('anydict', conn.to_dict())
                         self._enrich_queue_bridge_config(config)
                         logger.info('Queue bridge loading %s', type_)
 
@@ -1487,7 +1487,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                 items = connection_list(session, self.cluster_id, type_, False)
                 for item in items:
                     conn = GenericConnection.from_model(item)
-                    config = conn.to_dict()
+                    config = cast_('anydict', conn.to_dict())
                     self._enrich_queue_bridge_config(config)
                     if type_ in channel_types:
                         channels.append(config)
@@ -1582,13 +1582,13 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             while True:
                 try:
-                    result = request_redis.xreadgroup(
+                    result = cast_('anylist', request_redis.xreadgroup(
                         groupname=group_name,
                         consumername=consumer_name,
                         streams={request_stream: '>'},
                         count=10,
                         block=5000,
-                    )
+                    ))
 
                     # We are able to read from the stream again, so the error condition, if any, has cleared.
                     if error_since:
@@ -1636,13 +1636,13 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             while True:
                 try:
-                    result = recv_redis.xreadgroup(
+                    result = cast_('anylist', recv_redis.xreadgroup(
                         groupname=group_name,
                         consumername=consumer_name,
                         streams={recv_stream: '>'},
                         count=10,
                         block=1000,
-                    )
+                    ))
 
                     # We are able to read from the stream again, so the error condition, if any, has cleared.
                     if error_since:
@@ -1652,7 +1652,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                     if not result:
                         continue
 
-                    for stream_name, messages in result:  # type: ignore[union-attr]
+                    for stream_name, messages in result:
                         for msg_id, fields in messages:
                             service_name = fields['service']
                             payload_b64 = fields['payload']
@@ -2546,8 +2546,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # the same HTTP method and the same Accept header ..
         if attr_name == 'url_path' and entity_type in ('channel_rest', 'channel_soap'):
 
-            url_path_query = "SELECT method, opaque1 FROM http_soap WHERE url_path = :val " \
-                "AND connection = 'channel' AND soap_action = :soap_action"
+            url_path_query = "SELECT method, opaque1 FROM http_soap WHERE url_path = :val "
+            url_path_query += "AND connection = 'channel' AND soap_action = :soap_action"
             url_path_params = {'val': value, 'soap_action': soap_action}
 
             with closing(self.odb.session()) as session:
