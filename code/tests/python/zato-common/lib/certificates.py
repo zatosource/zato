@@ -30,7 +30,7 @@ _validity_days = 7
 # The key size for all the throwaway test keys
 _key_size = 2048
 
-# The certificates are mounted into database containers whose users need to read them
+# The certificates are read by servers running under other users, e.g. in containers
 _file_mode = 0o644
 
 # ################################################################################################################################
@@ -79,7 +79,7 @@ def _build_name(common_name:'str') -> 'x509.Name':
     """ Builds an X.509 subject out of a common name.
     """
     out = x509.Name([
-        x509.NameAttribute(NameOID.ORGANIZATION_NAME, 'Zato Live SQL Tests'),
+        x509.NameAttribute(NameOID.ORGANIZATION_NAME, 'Zato Live Tests'),
         x509.NameAttribute(NameOID.COMMON_NAME, common_name),
     ])
 
@@ -88,7 +88,7 @@ def _build_name(common_name:'str') -> 'x509.Name':
 # ################################################################################################################################
 
 def generate_certificates(directory:'str') -> 'CertificatePaths':
-    """ Generates a throwaway CA along with server and client certificates for database TLS tests.
+    """ Generates a throwaway CA along with server and client certificates for TLS tests.
     The server certificate covers localhost and 127.0.0.1 so hostname verification passes.
     """
     now = utcnow()
@@ -96,7 +96,7 @@ def generate_certificates(directory:'str') -> 'CertificatePaths':
 
     # The CA that both the server and the client certificates chain up to ..
     ca_key = rsa.generate_private_key(public_exponent=65537, key_size=_key_size)
-    ca_name = _build_name('Zato Live SQL Test CA')
+    ca_name = _build_name('Zato Live Test CA')
 
     ca_cert = x509.CertificateBuilder(). \
         subject_name(ca_name). \
@@ -130,7 +130,7 @@ def generate_certificates(directory:'str') -> 'CertificatePaths':
     client_key = rsa.generate_private_key(public_exponent=65537, key_size=_key_size)
 
     client_cert = x509.CertificateBuilder(). \
-        subject_name(_build_name('zato-live-sql-test-client')). \
+        subject_name(_build_name('zato-live-test-client')). \
         issuer_name(ca_name). \
         public_key(client_key.public_key()). \
         serial_number(x509.random_serial_number()). \

@@ -25,7 +25,7 @@ from zato.common.crypto.api import CryptoManager
 
 if 0:
     from es_server import ESServer
-    from live_sql.certificates import CertificatePaths
+    from certificates import CertificatePaths
     from zato.common.typing_ import stranydict
 
     CertificatePaths = CertificatePaths

@@ -13,7 +13,8 @@ from time import monotonic
 from humanize import intcomma
 
 # Zato
-from common import measure_median_seconds, set_progress_context, Max_Operation_Seconds
+from common import set_progress_context
+from perf import measure_median_seconds, Max_Operation_Seconds
 from seeding import count_rows, seed_backlog
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 

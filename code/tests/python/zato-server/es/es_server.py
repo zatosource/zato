@@ -23,7 +23,7 @@ from elasticsearch import Elasticsearch
 
 if 0:
     from subprocess import Popen
-    from live_sql.certificates import CertificatePaths
+    from certificates import CertificatePaths
     from zato.common.typing_ import optional, stranydict
 
     CertificatePaths = CertificatePaths

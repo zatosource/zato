@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 import pytest
 
 # Zato
-from live_sql.certificates import generate_certificates
+from certificates import generate_certificates
 from containers import start_mongodb, stop_container
 
 # ################################################################################################################################
@@ -27,7 +27,7 @@ from containers import start_mongodb, stop_container
 
 if 0:
     from collections.abc import Iterator
-    from live_sql.certificates import CertificatePaths
+    from certificates import CertificatePaths
     from containers import MongoDBServer
 
     certificatesgen = Iterator[CertificatePaths]

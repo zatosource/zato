@@ -24,7 +24,7 @@ from zato.common.crypto.api import CryptoManager
 
 if 0:
     from containers import MongoDBServer
-    from live_sql.certificates import CertificatePaths
+    from certificates import CertificatePaths
     from zato.common.typing_ import stranydict
 
     CertificatePaths = CertificatePaths

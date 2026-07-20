@@ -27,7 +27,7 @@ from zato.common.util.proc import start_process
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, strstrdict
+    from zato.common.typing_ import any_, anylist, anynone, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -65,10 +65,14 @@ _drain_timeout = 5.0
 
 class RabbitMQProcess:
     """ A private RabbitMQ node for tests - non-root, random ports, tmp directories,
-    removed on teardown. Assumes rabbitmq-server is on PATH.
+    removed on teardown. Assumes rabbitmq-server is on PATH. With needs_ssl the node
+    accepts TLS connections only, using the given server certificates.
     """
 
-    def __init__(self) -> 'None':
+    def __init__(self, needs_ssl:'bool'=False, certificates:'anynone'=None) -> 'None':
+
+        self.needs_ssl = needs_ssl
+        self.certificates = certificates
 
         # Everything the node needs lives under this directory
         self.base_directory = tempfile.mkdtemp(prefix='zato_test_rabbitmq_')
@@ -82,8 +86,13 @@ class RabbitMQProcess:
         cid = new_cid()
         self.nodename = f'zato-test-{cid}'
 
-        # The URL AMQP clients connect with
-        self.amqp_url = f'amqp://{_default_username}:{_default_password}@127.0.0.1:{self.amqp_port}//'
+        # The URL AMQP clients connect with - a TLS-only node accepts amqps connections only.
+        if self.needs_ssl:
+            scheme = 'amqps'
+        else:
+            scheme = 'amqp'
+
+        self.amqp_url = f'{scheme}://{_default_username}:{_default_password}@127.0.0.1:{self.amqp_port}//'
 
         # Where the node writes its pid, used as the last-resort kill switch
         self.pid_file = os.path.join(self.base_directory, 'rabbitmq.pid')
@@ -94,6 +103,12 @@ class RabbitMQProcess:
         with open(self.enabled_plugins_file, 'w') as plugins_file:
             _ = plugins_file.write(_no_plugins)
 
+        # A TLS-only node reads its listener and certificate configuration from this file.
+        self.config_file = os.path.join(self.base_directory, 'rabbitmq.conf')
+
+        if self.needs_ssl:
+            self._write_ssl_config()
+
         self.is_running = False
 
         # Make sure everything is stopped and removed even if the caller forgets
@@ -101,14 +116,32 @@ class RabbitMQProcess:
 
 # ################################################################################################################################
 
+    def _write_ssl_config(self) -> 'None':
+        """ Writes the configuration file that turns off the plain TCP listener
+        and makes the node accept TLS connections only.
+        """
+        certificates:'any_' = self.certificates
+
+        config = 'listeners.tcp = none\n'
+        config += f'listeners.ssl.default = {self.amqp_port}\n'
+        config += f'ssl_options.cacertfile = {certificates.ca_cert}\n'
+        config += f'ssl_options.certfile = {certificates.server_cert}\n'
+        config += f'ssl_options.keyfile = {certificates.server_key}\n'
+        config += 'ssl_options.verify = verify_none\n'
+        config += 'ssl_options.fail_if_no_peer_cert = false\n'
+
+        with open(self.config_file, 'w') as config_source:
+            _ = config_source.write(config)
+
+# ################################################################################################################################
+
     def get_environment(self) -> 'strstrdict':
         """ Returns the environment variables the node and rabbitmqctl need.
         HOME points at the base directory so the Erlang cookie lands there.
         """
-        return {
+        out = {
             'RABBITMQ_NODENAME': self.nodename,
             'RABBITMQ_NODE_IP_ADDRESS': '127.0.0.1',
-            'RABBITMQ_NODE_PORT': str(self.amqp_port),
             'RABBITMQ_DIST_PORT': str(self.dist_port),
             'RABBITMQ_MNESIA_BASE': os.path.join(self.base_directory, 'mnesia'),
             'RABBITMQ_LOG_BASE': os.path.join(self.base_directory, 'logs'),
@@ -116,6 +149,15 @@ class RabbitMQProcess:
             'RABBITMQ_ENABLED_PLUGINS_FILE': self.enabled_plugins_file,
             'HOME': self.base_directory,
         }
+
+        # A TLS-only node gets its listeners from the configuration file,
+        # a plain one from the environment.
+        if self.needs_ssl:
+            out['RABBITMQ_CONFIG_FILE'] = self.config_file
+        else:
+            out['RABBITMQ_NODE_PORT'] = str(self.amqp_port)
+
+        return out
 
 # ################################################################################################################################
 
@@ -235,14 +277,14 @@ def declare_and_bind(amqp_url:'str', exchange:'str', queue:'str', routing_key:'s
     from kombu import Exchange, Queue
 
     with Connection(amqp_url) as connection:
-        channel = connection.channel()
+        channel:'any_' = connection.channel()
 
         exchange_declaration = Exchange(exchange, type='direct', durable=True)
         queue_declaration = Queue(queue, exchange=exchange_declaration, routing_key=routing_key, durable=True)
 
         # Binding the queue declares the exchange, the queue and the binding itself
         bound_queue = queue_declaration(channel)
-        bound_queue.declare()
+        _ = bound_queue.declare()
 
 # ################################################################################################################################
 
@@ -251,7 +293,19 @@ def publish_to_exchange(amqp_url:'str', exchange:'str', routing_key:'str', body:
     """
     with Connection(amqp_url) as connection:
         producer = connection.Producer()
-        producer.publish(body, exchange=exchange, routing_key=routing_key)
+        _ = producer.publish(body, exchange=exchange, routing_key=routing_key)
+
+# ################################################################################################################################
+
+def publish_many_to_exchange(amqp_url:'str', exchange:'str', routing_key:'str', bodies:'anylist') -> 'None':
+    """ Publishes a batch of messages over one connection and one channel,
+    without per-message confirmations - how backlogs are seeded quickly.
+    """
+    with Connection(amqp_url) as connection:
+        producer = connection.Producer()
+
+        for body in bodies:
+            _ = producer.publish(body, exchange=exchange, routing_key=routing_key)
 
 # ################################################################################################################################
 
