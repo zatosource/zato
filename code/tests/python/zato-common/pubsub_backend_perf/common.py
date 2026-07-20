@@ -17,7 +17,7 @@ from tempfile import gettempdir
 from time import monotonic
 
 # gevent
-from gevent import getcurrent, kill, signal_handler, sleep
+from gevent import sleep
 
 # humanize
 from humanize import intcomma
@@ -27,6 +27,9 @@ from sqlalchemy import func, select
 
 # Zato
 from live_sql.env import database_env
+from perf import silence_logging_teardown, Max_Operation_Seconds, Min_Delivery_Rate_Per_Second, \
+    Min_Delivery_Rate_Per_Second_SSL, Min_Publish_Rate_Per_Second, Min_Publish_Rate_Per_Second_SSL, \
+    Progress_Interval_Seconds
 from zato.common.pubsub.sql.config import get_pubsub_engine
 from zato.common.pubsub.sql.schema import topic_sub_table
 from zato.common.util.api import as_bool
@@ -36,27 +39,15 @@ from zato.common.util.api import as_bool
 
 if 0:
     from collections.abc import Iterator
-    from zato.common.typing_ import callable_, stranydict
+    from zato.common.typing_ import stranydict
 
     envgen = Iterator[None]
-    floatlist = list[float]
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 # The prefix all the pub/sub database environment variables share.
 _env_prefix = 'Zato_PubSub_DB_'
-
-# Every user-visible operation must complete within this many seconds.
-Max_Operation_Seconds = 0.050
-
-# The performance floor the whole backend must sustain.
-Min_Publish_Rate_Per_Second  = 100
-Min_Delivery_Rate_Per_Second = 500
-
-# The floors of runs whose database connection uses SSL.
-Min_Publish_Rate_Per_Second_SSL  = 90
-Min_Delivery_Rate_Per_Second_SSL = 450
 
 # How many rows per second the cleanup process must at least remove.
 Min_Cleanup_Rate_Per_Second = 5_000
@@ -91,9 +82,6 @@ Operations_Delivery_Floor_Mass = 100
 # Where the backend's per-operation log records go.
 Log_File_Path = os.path.join(gettempdir(), 'zato-pubsub-backend-perf.log')
 
-# How often the console progress line is printed, in seconds.
-Progress_Interval_Seconds = 60
-
 # The run stops if the temporary directory has less free space than this.
 Min_Free_Disk_GB = 20
 
@@ -114,30 +102,6 @@ progress_context = {
 }
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def install_interrupt_handler() -> 'None':
-    """ Makes Ctrl-C work - under gevent the default handling raises KeyboardInterrupt
-    in the greenlet that is currently running, which kills only that greenlet while
-    the run continues. This handler directs the interrupt to the main greenlet instead,
-    whose unwinding runs the finally blocks that remove the databases.
-    A second Ctrl-C terminates the process immediately.
-    """
-    main_greenlet = getcurrent()
-    state = {'count': 0}
-
-    def _on_interrupt() -> 'None':
-        state['count'] += 1
-
-        # The second interrupt means the first one could not unwind - terminate immediately.
-        if state['count'] > 1:
-            os._exit(1)
-
-        print('Interrupt received - stopping the run', flush=True)
-        kill(main_greenlet, KeyboardInterrupt)
-
-    _ = signal_handler(SIGINT, _on_interrupt)
-
 # ################################################################################################################################
 
 def is_ssl_enabled() -> 'bool':
@@ -217,18 +181,6 @@ class ProgressCounters(logging.Handler):
 
 # ################################################################################################################################
 
-def _silence_logging_teardown() -> 'None':
-    """ Runs at exit, before the interpreter's final garbage collection. That collection
-    destroys the log handlers, whose weakref cleanup callback takes the logging module
-    lock - and under gevent that lock needs the hub, which is already gone by then,
-    so every run ends with a spurious 'greenlet is being finalized' traceback.
-    Flushing the handlers now and removing the lock makes the late cleanup a no-op.
-    """
-    logging.shutdown()
-    logging._lock = None # type: ignore[assignment]
-
-# ################################################################################################################################
-
 def setup_perf_logging() -> 'ProgressCounters':
     """ Routes every log record to the log file and returns the counting handler
     the progress reporting reads - the console stays free for the periodic
@@ -245,7 +197,7 @@ def setup_perf_logging() -> 'ProgressCounters':
     root.handlers[:] = [file_handler, counters]
     root.setLevel(logging.INFO)
 
-    atexit.register(_silence_logging_teardown)
+    _ = atexit.register(silence_logging_teardown)
 
     return counters
 
@@ -340,27 +292,6 @@ def cleanup_sqlite_db(db_path:'str') -> 'None':
 
         if os.path.exists(path):
             os.remove(path)
-
-# ################################################################################################################################
-
-def measure_median_seconds(operation:'callable_', iterations:'int') -> 'float':
-    """ Runs an operation repeatedly and returns its median duration in seconds -
-    the median keeps one-off cache misses and scheduler blips out of the verdict.
-    """
-    timings:'floatlist' = []
-
-    for _ in range(iterations):
-        start = monotonic()
-        _ = operation()
-        elapsed = monotonic() - start
-        timings.append(elapsed)
-
-    timings.sort()
-
-    middle_index = len(timings) // 2
-    out = timings[middle_index]
-
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

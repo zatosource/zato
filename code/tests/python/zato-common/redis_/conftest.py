@@ -25,14 +25,14 @@ from redis import Redis
 from redis.exceptions import RedisError
 
 # Zato
-from live_sql.certificates import generate_certificates
+from certificates import generate_certificates
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from collections.abc import Iterator
-    from live_sql.certificates import CertificatePaths
+    from certificates import CertificatePaths
     from zato.common.typing_ import stranydict
 
     certificatesgen = Iterator[CertificatePaths]

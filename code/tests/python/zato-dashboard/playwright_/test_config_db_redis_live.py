@@ -40,7 +40,7 @@ _zato_common_lib_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '
 if _zato_common_lib_dir not in sys.path:
     sys.path.insert(0, _zato_common_lib_dir)
 
-from live_sql.certificates import generate_certificates
+from certificates import generate_certificates
 
 # ################################################################################################################################
 # ################################################################################################################################

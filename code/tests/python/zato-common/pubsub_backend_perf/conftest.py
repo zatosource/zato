@@ -27,16 +27,17 @@ from gevent import spawn
 import pytest
 
 # Zato
-from common import install_interrupt_handler, report_progress_forever, setup_perf_logging, Log_File_Path
-from live_sql.certificates import generate_certificates
+from certificates import generate_certificates
+from common import report_progress_forever, setup_perf_logging, Log_File_Path
 from live_sql.containers import start_mysql, start_postgresql, stop_container
+from perf import install_interrupt_handler
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from collections.abc import Iterator
-    from live_sql.certificates import CertificatePaths
+    from certificates import CertificatePaths
     from live_sql.containers import DatabaseServer
 
     certificatesgen = Iterator[CertificatePaths]

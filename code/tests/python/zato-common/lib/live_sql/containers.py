@@ -24,7 +24,7 @@ from zato.common.typing_ import cast_
 # ################################################################################################################################
 
 if 0:
-    from live_sql.certificates import CertificatePaths
+    from certificates import CertificatePaths
     from zato.common.typing_ import optional, stranydict, strlist
 
     CertificatePaths = CertificatePaths

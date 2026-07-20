@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 
 # Zato
 from conftest import ModuleCtx as ConftestCtx
-from live_sql.certificates import generate_certificates
+from certificates import generate_certificates
 from live_sql.containers import start_mysql, start_postgresql, stop_container
 from live_sql.env import build_env
 

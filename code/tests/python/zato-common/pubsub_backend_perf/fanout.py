@@ -16,8 +16,9 @@ from gevent import joinall, spawn
 from humanize import intcomma
 
 # Zato
-from common import is_ssl_enabled, set_progress_context
+from common import get_min_publish_rate, is_ssl_enabled, set_progress_context
 from load import consume_until_done
+from perf import Min_Fanout_Delivery_Rate_Per_Second, Min_Fanout_Delivery_Rate_Per_Second_SSL
 from seeding import delete_all_rows
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 
@@ -47,15 +48,6 @@ _publisher_greenlet_count = 20
 
 # The payloads are small request envelopes.
 _payload = 'fanout-' + 'x' * 500
-
-# The rates the run must sustain - the publish floor is the standard one,
-# the delivery floor is above it because fan-out multiplies every publish tenfold.
-_min_publish_rate = 100
-_min_delivery_rate = 700
-
-# The floors of runs whose database connection uses SSL.
-_min_publish_rate_ssl = 90
-_min_delivery_rate_ssl = 630
 
 # How long one blocking fetch waits inside a consumer greenlet, in milliseconds.
 _consumer_block_ms = 2000
@@ -145,12 +137,12 @@ def run_fanout_scenario() -> 'None':
     publish_rate = _message_count / publish_elapsed
     delivery_rate = delivered / elapsed
 
+    min_publish_rate = get_min_publish_rate()
+
     if is_ssl_enabled():
-        min_publish_rate = _min_publish_rate_ssl
-        min_delivery_rate = _min_delivery_rate_ssl
+        min_delivery_rate = Min_Fanout_Delivery_Rate_Per_Second_SSL
     else:
-        min_publish_rate = _min_publish_rate
-        min_delivery_rate = _min_delivery_rate
+        min_delivery_rate = Min_Fanout_Delivery_Rate_Per_Second
 
     assert publish_rate >= min_publish_rate, f'Fan-out publish rate too low: {intcomma(int(publish_rate))}/s'
     assert delivery_rate >= min_delivery_rate, f'Fan-out delivery rate too low: {intcomma(int(delivery_rate))}/s'
