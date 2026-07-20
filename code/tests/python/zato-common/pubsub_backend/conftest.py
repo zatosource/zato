@@ -12,6 +12,7 @@ from gevent import monkey
 _ = monkey.patch_all()
 
 # stdlib
+import atexit
 import os
 import sys
 from shutil import rmtree
@@ -26,6 +27,10 @@ import pytest
 # Zato
 from certificates import generate_certificates
 from live_sql.containers import start_mysql, start_postgresql, stop_container
+from perf import silence_logging_teardown
+
+# The late log-handler cleanup would otherwise fail under gevent once the hub is gone.
+_ = atexit.register(silence_logging_teardown)
 
 # ################################################################################################################################
 # ################################################################################################################################
