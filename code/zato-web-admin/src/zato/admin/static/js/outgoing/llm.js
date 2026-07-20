@@ -14,7 +14,8 @@ $.fn.zato.data_table.LLM = new Class({
 
 $.fn.zato.outgoing.llm.config = {
     'custom_label': 'Custom',
-    'custom_value': 'zato-custom-model'
+    'custom_value': 'zato-custom-model',
+    'connection_type': 'outconn-llm'
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -27,12 +28,19 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name', 'address', 'model', 'pool_size', 'timeout', 'max_tokens',
         'max_history_turns', 'chat_expiry']);
+    // Generic connection names are unique per connection type, so the check
+    // must be scoped to LLM connections - otherwise any other generic
+    // connection of the same name would report the name as taken.
+    var unique_filter = {
+        filter_name: 'type_',
+        filter_value: $.fn.zato.outgoing.llm.config.connection_type
+    };
     var unique_constraints = [
         {field: 'name', entity_type: 'generic_connection', attr_name: 'name'}
     ];
     $.each(unique_constraints, function(i, c) {
-        $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
-        $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name);
+        $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name, unique_filter);
+        $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name, unique_filter);
     });
 
     // Maps each catalog model's wire id to its provider, for address auto-fill
