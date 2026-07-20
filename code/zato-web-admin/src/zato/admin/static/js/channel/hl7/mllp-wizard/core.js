@@ -213,6 +213,40 @@ $.fn.zato.channel.hl7.mllp.wizard.init = function(options) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// The badge and the inline-edit form take turns owning the badge's tippy
+// slot - the form destroys whatever tooltip it finds there when it opens.
+// This puts a fresh verdict tooltip back in the slot, unless the form is
+// on screen right now, in which case the slot is its.
+$.fn.zato.channel.hl7.mllp.wizard._ensureNameBadgeTippy = function() {
+
+    var badge = document.getElementById('mllp-wizard-name-badge');
+
+    if(badge._tippy) {
+        if(badge._tippy.isNameVerdict) {
+            return badge._tippy;
+        }
+        if(badge._tippy.state.isVisible) {
+            return null;
+        }
+        badge._tippy.destroy();
+    }
+
+    var instance = tippy(badge, {
+        content: '',
+        allowHTML: true,
+        theme: 'dark',
+        arrow: true,
+        placement: 'bottom'
+    });
+
+    instance.isNameVerdict = true;
+
+    var out = instance;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 // The name badge in the header - it mirrors the name field on every step,
 // turns red when the uniqueness check finds the name taken and opens
 // the shared inline-edit form when clicked.
@@ -221,10 +255,17 @@ $.fn.zato.channel.hl7.mllp.wizard.updateNameBadge = function() {
     var wizard = $.fn.zato.channel.hl7.mllp.wizard;
     var badge = $('#mllp-wizard-name-badge');
     var name = wizard.field('name').val().trim();
+    var isTaken = wizard.state.isNameTaken;
 
     badge.prop('hidden', !name);
-    badge.text(name);
-    badge.toggleClass('mllp-wizard-badge-alert', wizard.state.isNameTaken);
+    badge.text(isTaken ? 'Already taken: ' + name : name);
+    badge.toggleClass('mllp-wizard-badge-alert', isTaken);
+
+    // The hover tooltip follows the check's verdict
+    var verdictTippy = wizard._ensureNameBadgeTippy();
+    if(verdictTippy) {
+        verdictTippy.setContent(isTaken ? 'This name is already taken' : 'Name is available');
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -275,6 +316,18 @@ $.fn.zato.channel.hl7.mllp.wizard.initNameBadge = function() {
                 }
             }
         });
+
+        // The edit form just took over the badge's tippy slot - once it is
+        // fully gone, however it was dismissed, the verdict tooltip is due
+        // back in, which updateNameBadge takes care of.
+        var formInstance = badge._tippy;
+        if(formInstance && !formInstance.isNameVerdict) {
+            formInstance.setProps({
+                onHidden: function() {
+                    wizard.updateNameBadge();
+                }
+            });
+        }
     });
 
     wizard.updateNameBadge();

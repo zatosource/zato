@@ -42,12 +42,14 @@
 
     /* Every checkbox on this page - the card, the step bodies and all
        the popover micro-forms - renders as the smaller slider, in the
-       wizard accent, through the site-wide checkbox slider tokens */
-    --toggle-width: 34px;
-    --toggle-height: 19px;
-    --toggle-knob-size: 15px;
-    --toggle-knob-offset: 2px;
-    --toggle-travel: 15px;
+       wizard accent, through the site-wide checkbox slider tokens.
+       Only the REST security on/off slider is smaller still - it sets
+       its own tokens on the element itself. */
+    --toggle-width: 27.2px;
+    --toggle-height: 15.2px;
+    --toggle-knob-size: 12px;
+    --toggle-knob-offset: 1.6px;
+    --toggle-travel: 12px;
     --toggle-off-background: var(--wizard-border-strong);
     --toggle-on-background: var(--wizard-accent);
 }
@@ -164,6 +166,7 @@
     display: flex;
     align-items: center;
     gap: 20px;
+    padding: 0;
     margin-bottom: 13px;
     max-width: 560px;
 }
@@ -185,10 +188,12 @@
     color: var(--wizard-text);
 }
 
+/* No vertical padding on purpose - the 24px box centers the text and
+   the caret on its own, any one-sided padding would push them off */
 .mllp-wizard-name-field input {
     box-sizing: border-box;
-    height: 32px;
-    padding: 6px 10px;
+    height: 24px;
+    padding: 0 10px;
     border: 1px solid var(--wizard-border-strong);
     border-radius: 3px;
     font-size: 13px;

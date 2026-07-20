@@ -3608,7 +3608,7 @@ $.fn.zato.build_unique_check_data = function(entity_type, attr_name, value, filt
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Renders the taken/available indicator next to a field, positioned right after its current text.
-$.fn.zato.render_unique_indicator = function(field, value, exists) {
+$.fn.zato.render_unique_indicator = function(field, value, exists, attr_name) {
 
     field.siblings('.zato-unique-indicator').remove();
 
@@ -3628,6 +3628,24 @@ $.fn.zato.render_unique_indicator = function(field, value, exists) {
     field.after(html);
 
     var indicator = field.next('.zato-unique-indicator');
+
+    // The indicator explains itself on hover
+    if(window.tippy) {
+        var word = (attr_name || 'value').replace(/_/g, ' ');
+        var verdict;
+        if(exists) {
+            verdict = 'This ' + word + ' is already taken';
+        }
+        else {
+            verdict = word.charAt(0).toUpperCase() + word.slice(1) + ' is available';
+        }
+        tippy(indicator[0], {
+            content: verdict,
+            theme: 'dark',
+            arrow: true,
+            placement: 'top'
+        });
+    }
     var measure_span = $('<span>').css({
         'font': field.css('font'),
         'font-size': field.css('font-size'),
@@ -3714,7 +3732,7 @@ $.fn.zato.validate_unique = function(field_id, entity_type, attr_name, filter, o
                     if(current !== value) {
                         return;
                     }
-                    $.fn.zato.render_unique_indicator(field, value, data.exists);
+                    $.fn.zato.render_unique_indicator(field, value, data.exists, attr_name);
                     if(on_result) {
                         on_result(data.exists);
                     }
@@ -3770,7 +3788,7 @@ $.fn.zato.validate_unique_on_submit = function(form) {
         });
 
         if(exists) {
-            $.fn.zato.render_unique_indicator(field, value, true);
+            $.fn.zato.render_unique_indicator(field, value, true, check.attr_name);
             $.fn.zato.blink_elem(field);
             $.fn.zato.add_css_attention(field);
             if(!first_taken) {
