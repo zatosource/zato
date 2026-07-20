@@ -29,9 +29,10 @@ $.fn.zato.channel.hl7.mllp.wizard.config = {
     finishLabel: 'Finish',
     nextLabel: 'Next',
 
-    // The rows the "How does it work?" badge walks through - anything
-    // on a step body holding a labeled field
-    helpRowSelector: '.mllp-wizard-name-row, .mllp-wizard-toggle-row, .mllp-wizard-section-title, .mllp-wizard-respond-from-row, .mllp-wizard-tolerance-grid',
+    // The rows the "How does it work?" badge walks through - the card
+    // header with the wizard-wide overview, then anything on a step
+    // body holding a labeled field
+    helpRowSelector: '.dashboard-card-header, .mllp-wizard-name-row, .mllp-wizard-toggle-row, .mllp-wizard-section-title, .mllp-wizard-respond-from-row, .mllp-wizard-tolerance-grid',
 
     // Fields that must not be empty on submit - the same list the editor uses
     requiredFields: [
@@ -96,6 +97,9 @@ $.fn.zato.channel.hl7.mllp.wizard.helpDescriptions = function() {
             out['mllp-wizard-tippy-' + key.substring(3)] = shared[key];
         }
     }
+
+    // The page title carries the wizard-wide overview
+    out['mllp-wizard-title'] = $.fn.zato.channel.hl7.mllp.wizard.titleHelp();
 
     // The security rows of the REST popover allow more than one pick
     out['mllp-wizard-tippy-rest_security_id'] = 'Security definitions used to authenticate<br>incoming REST requests.<br>More than one can be assigned.<br>When the slider is off, with security disabled,<br>the channel will accept requests from anyone<br>who knows its address.';
@@ -276,6 +280,51 @@ $.fn.zato.channel.hl7.mllp.wizard.onNameCheckResult = function(exists) {
     var wizard = $.fn.zato.channel.hl7.mllp.wizard;
     wizard.state.isNameTaken = exists;
     wizard.updateNameBadge();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The wizard-wide overview shown when the page title is clicked - one of
+// the regular "How does it work?" stops. Everyone gets the short pitch,
+// and the MLLP primer waits folded inside for those who want the
+// background - the help tooltips are interactive, so the fold can be
+// clicked open in place.
+$.fn.zato.channel.hl7.mllp.wizard.titleHelp = function() {
+
+    var out =
+        '<div class="mllp-wizard-title-help">' +
+
+        '<p>This wizard creates a channel - the entry point through which ' +
+        'HL7 v2 messages reach the platform.</p>' +
+
+        '<p><span class="mllp-wizard-title-help-step">01</span> decides how messages arrive - ' +
+        'MLLP over TCP, REST, or both - and which ones will be accepted. ' +
+        '<span class="mllp-wizard-title-help-step">02</span> picks the service that handles ' +
+        'each message and where results go next. ' +
+        '<span class="mllp-wizard-title-help-step">03</span> is a review before the channel is created.</p>' +
+
+        '<details class="mllp-wizard-title-help-details">' +
+        '<summary>New to MLLP? A 30-second primer</summary>' +
+        '<div class="mllp-wizard-title-help-primer">' +
+
+        '<p>HL7 v2 is the format clinical systems use to tell each other ' +
+        'what just happened - an admission, a lab result, an order.</p>' +
+
+        '<p>MLLP, the Minimal Lower Layer Protocol, is the envelope those ' +
+        'messages travel in over a TCP connection - one control byte marks where ' +
+        'a message begins and two more where it ends, so both sides always ' +
+        'agree on message boundaries.</p>' +
+
+        '<p>A channel is a listener for such connections - it unwraps each ' +
+        'message, hands it to a service and replies with an acknowledgment ' +
+        'on its own. If in doubt, name the channel, pick a service on step 02 ' +
+        'and keep the defaults.</p>' +
+
+        '</div>' +
+        '</details>' +
+        '</div>';
+
+    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////

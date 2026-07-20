@@ -53,8 +53,7 @@
                     save_action: 'update-message',
                     hidden_fields: {
                         msg_id: messageData.msg_id,
-                        topic_name: messageData.topic_name,
-                        redis_stream_id: messageData.redis_stream_id
+                        topic_name: messageData.topic_name
                     }
                 })
             ]

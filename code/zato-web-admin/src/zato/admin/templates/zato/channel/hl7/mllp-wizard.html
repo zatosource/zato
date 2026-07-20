@@ -55,7 +55,9 @@ $(document).ready(function() {
         <div class="dashboard-card mllp-wizard-card" id="mllp-wizard">
 
             <div class="dashboard-card-header">
-                <h3>New HL7 MLLP channel</h3>
+                <!-- The label makes the title a regular "How does it work?"
+                     stop - clicking it shows the wizard-wide overview -->
+                <h3 id="mllp-wizard-title"><label for="mllp-wizard-title">New HL7 MLLP channel</label></h3>
                 <span class="mllp-wizard-badge mllp-wizard-name-badge" id="mllp-wizard-name-badge" hidden></span>
             </div>
 
@@ -87,11 +89,11 @@ $(document).ready(function() {
                             <label for="id_name">Name</label>
                             {{ form.name }}
                         </div>
-                        <label class="mllp-wizard-active-field" for="id_is_active">
+                        <label class="mllp-wizard-active-field" for="id_is_active" data-help-placement="top">
                             Active
                             {{ form.is_active }}
                         </label>
-                        <label class="mllp-wizard-active-field" for="id_is_default">
+                        <label class="mllp-wizard-active-field" for="id_is_default" data-help-placement="top">
                             Default
                             {{ form.is_default }}
                         </label>

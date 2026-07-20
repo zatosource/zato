@@ -102,7 +102,7 @@ $(document).ready(function() {
     config.tourSteps[0] = {};
     config.tourSteps[0].popover = {};
     config.tourSteps[0].popover.title = 'Config DB - SQL';
-    config.tourSteps[0].popover.description = 'Configure the SQL databases behind the audit log and analytics screens. ' +
+    config.tourSteps[0].popover.description = 'Configure the SQL databases behind the audit log, analytics and pub/sub screens. ' +
         'The settings are stored as environment variables in the server process.';
 
     config.tourSteps[1] = {};
