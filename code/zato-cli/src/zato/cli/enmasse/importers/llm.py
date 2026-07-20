@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.api import GENERIC, LLM
+from zato.common.llm_models import model_list
 from zato.cli.enmasse.importers.generic import GenericConnectionImporter
 
 # ################################################################################################################################
@@ -35,10 +36,10 @@ class LLMImporter(GenericConnectionImporter):
         'pool_size': LLM.DEFAULT.POOL_SIZE,
     }
 
-    # Note that timeout is not here because it is a column on the ODB model
+    # Note that timeout is not here because it is a column on the ODB model,
+    # and the default model is the first entry of the generated catalog.
     connection_extra_field_defaults = {
-        'provider': LLM.PROVIDER.OPENAI.id,
-        'model': LLM.DEFAULT.Model,
+        'model': model_list[0]['id'],
         'max_tokens': LLM.DEFAULT.MAX_TOKENS,
         'max_history_turns': LLM.DEFAULT.MAX_HISTORY_TURNS,
         'chat_expiry': LLM.DEFAULT.CHAT_EXPIRY,

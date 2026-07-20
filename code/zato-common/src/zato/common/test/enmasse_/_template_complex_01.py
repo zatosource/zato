@@ -431,9 +431,8 @@ ldap:
 llm:
 
   - name: enmasse.llm.1
-    provider: openai
-    address: https://api.openai.com/v1
     model: gpt-4o-mini
+    address: https://api.openai.com/v1
     secret: Zato_Enmasse_Env.Enmasse_LLM_API_Key
     timeout: 30
     max_tokens: 2048
@@ -441,9 +440,8 @@ llm:
     chat_expiry: 3600
 
   - name: enmasse.llm.2
-    provider: claude
+    model: Sonnet 5
     address: https://api.anthropic.com
-    model: claude-sonnet-4-5
 
 odata:
 

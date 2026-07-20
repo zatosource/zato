@@ -30,13 +30,17 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/llm.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.outgoing.llm.models = {{ llm_models_json|safe }};
+    $.fn.zato.outgoing.llm.addresses = {{ llm_addresses_json|safe }};
+    </script>
+
+    <script nonce="{{ CSP_NONCE }}">
     $.fn.zato.data_table.get_columns = function() {
         return [
             '_numbering',
             '_selection',
             'name',
             '_is_active',
-            '_provider',
             'model',
             'address',
             '_change_password',
@@ -45,7 +49,6 @@
             '_ping',
             'id',
             'is_active',
-            'provider',
             'pool_size',
             'timeout',
             'max_tokens',
@@ -81,14 +84,12 @@
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
-                        <th><a href="#">Provider</a></th>
                         <th><a href="#">Model</a></th>
                         <th><a href="#">Address</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -106,7 +107,6 @@
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                        <td>{{ item.provider_display }}</td>
                         <td>{{ item.model }}</td>
                         <td>{{ item.address }}</td>
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change API key</a></td>
@@ -115,7 +115,6 @@
                         <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)">Ping</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
-                        <td class='ignore'>{{ item.provider }}</td>
                         <td class='ignore'>{{ item.pool_size }}</td>
                         <td class='ignore'>{{ item.timeout }}</td>
                         <td class='ignore'>{{ item.max_tokens }}</td>
@@ -125,7 +124,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='19'>No results</td>
+                        <td colspan='17'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -146,16 +145,15 @@
 
                         <tr>
                             <td style="vertical-align:middle"><label for="{{ create_form.is_active.id_for_label }}">Active</label></td>
-                            <td colspan="3">{{ create_form.is_active }}
-                            |
-                            Pool size
-                            {{ create_form.pool_size }}
-                            </td>
+                            <td colspan="3">{{ create_form.is_active }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle"><label for="{{ create_form.provider.id_for_label }}">Provider</label></td>
-                            <td colspan="3">{{ create_form.provider }}</td>
+                            <td style="vertical-align:middle"><label for="{{ create_form.model.id_for_label }}">Model</label></td>
+                            <td colspan="3">
+                                <select id="llm-model-select-create"></select>
+                                {{ create_form.model }}
+                            </td>
                         </tr>
 
                         <tr>
@@ -164,22 +162,36 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle"><label for="{{ create_form.model.id_for_label }}">Model</label></td>
-                            <td colspan="3">{{ create_form.model }}
+                            <td style="vertical-align:middle"><label for="{{ create_form.secret.id_for_label }}">API key</label></td>
+                            <td colspan="3">{{ create_form.secret }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                            More options
+                            </td>
+                            <td colspan="3">
+                            <a href="javascript:$.fn.zato.toggle_visibility('.llm-more-options-create')">Toggle options</a>
+                            </td>
+                        </tr>
+
+                        <tr class="llm-more-options-create hidden">
+                            <td style="vertical-align:middle"><label for="{{ create_form.pool_size.id_for_label }}">Pool size</label></td>
+                            <td colspan="3">{{ create_form.pool_size }}
                             |
-                            Timeout
+                            <label for="{{ create_form.timeout.id_for_label }}">Timeout</label>
                             {{ create_form.timeout }}
                             </td>
                         </tr>
 
-                        <tr>
+                        <tr class="llm-more-options-create hidden">
                             <td style="vertical-align:middle"><label for="{{ create_form.max_tokens.id_for_label }}">Max tokens</label></td>
                             <td colspan="3">{{ create_form.max_tokens }}
                             |
-                            History turns
+                            <label for="{{ create_form.max_history_turns.id_for_label }}">History turns</label>
                             {{ create_form.max_history_turns }}
                             |
-                            Chat expiry
+                            <label for="{{ create_form.chat_expiry.id_for_label }}">Chat expiry</label>
                             {{ create_form.chat_expiry }}
                             </td>
                         </tr>
@@ -210,16 +222,15 @@
 
                         <tr>
                             <td style="vertical-align:middle"><label for="{{ edit_form.is_active.id_for_label }}">Active</label></td>
-                            <td colspan="3">{{ edit_form.is_active }}
-                            |
-                            Pool size
-                            {{ edit_form.pool_size }}
-                            </td>
+                            <td colspan="3">{{ edit_form.is_active }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle"><label for="{{ edit_form.provider.id_for_label }}">Provider</label></td>
-                            <td colspan="3">{{ edit_form.provider }}</td>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.model.id_for_label }}">Model</label></td>
+                            <td colspan="3">
+                                <select id="llm-model-select-edit"></select>
+                                {{ edit_form.model }}
+                            </td>
                         </tr>
 
                         <tr>
@@ -228,22 +239,31 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle"><label for="{{ edit_form.model.id_for_label }}">Model</label></td>
-                            <td colspan="3">{{ edit_form.model }}
+                            <td style="vertical-align:middle">
+                            More options
+                            </td>
+                            <td colspan="3">
+                            <a href="javascript:$.fn.zato.toggle_visibility('.llm-more-options-edit')">Toggle options</a>
+                            </td>
+                        </tr>
+
+                        <tr class="llm-more-options-edit hidden">
+                            <td style="vertical-align:middle"><label for="{{ edit_form.pool_size.id_for_label }}">Pool size</label></td>
+                            <td colspan="3">{{ edit_form.pool_size }}
                             |
-                            Timeout
+                            <label for="{{ edit_form.timeout.id_for_label }}">Timeout</label>
                             {{ edit_form.timeout }}
                             </td>
                         </tr>
 
-                        <tr>
+                        <tr class="llm-more-options-edit hidden">
                             <td style="vertical-align:middle"><label for="{{ edit_form.max_tokens.id_for_label }}">Max tokens</label></td>
                             <td colspan="3">{{ edit_form.max_tokens }}
                             |
-                            History turns
+                            <label for="{{ edit_form.max_history_turns.id_for_label }}">History turns</label>
                             {{ edit_form.max_history_turns }}
                             |
-                            Chat expiry
+                            <label for="{{ edit_form.chat_expiry.id_for_label }}">Chat expiry</label>
                             {{ edit_form.chat_expiry }}
                             </td>
                         </tr>

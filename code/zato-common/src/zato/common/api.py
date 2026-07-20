@@ -1257,13 +1257,17 @@ class LDAP:
 class LLM:
 
     class DEFAULT:
-        POOL_SIZE = 10
+        POOL_SIZE = 50
         TIMEOUT = 60
         MAX_TOKENS = 1024
         MAX_HISTORY_TURNS = 20
         CHAT_EXPIRY = 86400
-        Address = 'https://api.openai.com/v1'
-        Model = 'gpt-4o-mini'
+
+    # The base API URL of each provider's protocol
+    class ADDRESS:
+        CLAUDE = 'https://api.anthropic.com'
+        OPENAI = 'https://api.openai.com/v1'
+        GEMINI = 'https://generativelanguage.googleapis.com/v1beta'
 
     class PROVIDER:
         OPENAI = NameId('OpenAI', 'openai')
