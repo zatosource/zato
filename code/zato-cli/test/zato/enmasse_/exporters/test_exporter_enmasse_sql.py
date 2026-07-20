@@ -104,7 +104,10 @@ class TestEnmasseSQLExporter(TestCase):
 
             # Compare fields that are expected to be exported by SQLExporter
             # Note: password is not exported for security reasons
-            for field in ['name', 'is_active', 'type', 'host', 'port', 'db_name', 'username']:
+            for field in [
+                'name', 'is_active', 'type', 'host', 'port', 'db_name', 'username',
+                'ssl', 'ssl_ca_file', 'ssl_cert_file', 'ssl_key_file', 'ssl_verify',
+            ]:
                 if field in yaml_def:
                     self.assertEqual(exported_def.get(field), yaml_def.get(field),
                                      f'Mismatch for "{field}" in SQL connection "{name}"')

@@ -48,6 +48,13 @@ _default_interval_seconds = 60
 # short slices let a stop request take effect without waiting out the whole interval.
 _sleep_slice_seconds = 1
 
+# How long the pause between deletion batches is, in seconds. Each batch is its own
+# transaction and the pause between them is when the concurrently running servers
+# get to write - without it, a deep sweep on SQLite would reacquire the file's
+# write lock the moment it released it, starving the live traffic for the sweep's
+# whole duration.
+_batch_pause_seconds = 0.025
+
 # How many milliseconds one second and one day have - timestamp columns hold epoch milliseconds.
 _ms_per_second = 1000
 _ms_per_day = 24 * 60 * 60 * _ms_per_second
@@ -138,6 +145,9 @@ class PubSubCleanup:
 
                 out += len(message_ids)
 
+            # The pause between the batches is when the live traffic gets to write.
+            time.sleep(_batch_pause_seconds)
+
         if out:
             logger.info('Expiry sweep -> deleted:%d', out)
 
@@ -183,6 +193,9 @@ class PubSubCleanup:
                 self._delete_message_batch(connection, message_ids)
 
                 out += len(message_ids)
+
+            # The pause between the batches is when the live traffic gets to write.
+            time.sleep(_batch_pause_seconds)
 
         if out:
             logger.info('Aged-trace sweep -> deleted:%d, max_days:%d', out, max_days)
@@ -271,6 +284,9 @@ class PubSubCleanup:
                     self._delete_message_batch(connection, message_ids)
 
                     out += len(message_ids)
+
+                # The pause between the batches is when the live traffic gets to write.
+                time.sleep(_batch_pause_seconds)
 
         if out:
             logger.info('Over-cap-trace sweep -> deleted:%d, max_messages:%d', out, max_messages)

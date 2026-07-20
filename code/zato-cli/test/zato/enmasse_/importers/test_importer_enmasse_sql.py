@@ -20,6 +20,7 @@ from zato.common.odb.model import SQLConnectionPool
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
 from zato.common.defaults import default_server_base_dir
+from zato.common.util.sql import parse_instance_opaque_attr
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -92,6 +93,14 @@ class TestEnmasseSQLFromYAML(TestCase):
         self.assertEqual(sql.db_name, 'MYDB_01')
         self.assertEqual(sql.engine, 'mysql+pymysql')
         self.assertTrue(hasattr(sql, 'password'))
+
+        # Verify the SSL/TLS configuration was stored in the opaque attributes
+        opaque = parse_instance_opaque_attr(sql)
+        self.assertTrue(opaque['ssl'])
+        self.assertEqual(opaque['ssl_ca_file'], '/path/to/enmasse-sql-ca.crt')
+        self.assertEqual(opaque['ssl_cert_file'], '/path/to/enmasse-sql-client.crt')
+        self.assertEqual(opaque['ssl_key_file'], '/path/to/enmasse-sql-client.key')
+        self.assertTrue(opaque['ssl_verify'])
 
     def test_sql_update(self):
         """ Test updating existing SQL connection pool definitions.

@@ -39,6 +39,7 @@ ZATO_PASSWORD = os.environ.get('Zato_Django_Password') or os.environ.get('Zato_P
 
 # Zato
 from zato.common.api import TRACE1
+from zato.common.odb.ssl_config import get_psycopg2_ssl_connect_args, get_ssl_connect_args
 from zato.common.settings_db import SettingsDB
 from zato.common.util.api import get_engine_url
 # Star import is how these settings are pulled into Django's settings module
@@ -209,6 +210,25 @@ if 'DATABASES' in globals():
 
     db_data['db_type'] = db_type
 
+    # SSL/TLS configuration of the database connection - configurations
+    # written by older releases may not carry these keys at all.
+    ssl_config = {
+        'ssl':           db_data.get('SSL', ''),
+        'ssl_ca_file':   db_data.get('SSL_CA_FILE', ''),
+        'ssl_cert_file': db_data.get('SSL_CERT_FILE', ''),
+        'ssl_key_file':  db_data.get('SSL_KEY_FILE', ''),
+        'ssl_verify':    db_data.get('SSL_VERIFY', ''),
+    }
+
+    # MySQL connects through PyMySQL, which accepts an SSL context,
+    # while PostgreSQL connects through psycopg2, which accepts libpq arguments.
+    if db_type == 'mysql':
+        ssl_connect_args = get_ssl_connect_args(ssl_config, db_type)
+    elif db_type == 'postgresql':
+        ssl_connect_args = get_psycopg2_ssl_connect_args(ssl_config)
+    else:
+        ssl_connect_args = {}
+
     # SQLAlchemy setup for web admin's database
     SASession = scoped_session(sessionmaker())
 
@@ -216,6 +236,12 @@ if 'DATABASES' in globals():
 
     if db_data['db_type'] == 'mysql':
         kwargs['pool_recycle'] = 600
+
+    if ssl_connect_args:
+        kwargs['connect_args'] = ssl_connect_args
+
+        # Django's own connection to the same database receives the same arguments through its OPTIONS.
+        db_data['OPTIONS'] = ssl_connect_args
 
     engine = create_engine(get_engine_url(db_data), **kwargs)
     SASession.configure(bind=engine)

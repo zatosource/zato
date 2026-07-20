@@ -325,6 +325,9 @@ class SQLAdminAPI(SQLBrowseAPI):
 
                 cleared_count += len(rows)
 
+            # Let the other greenlets run between the batches.
+            self._yield_after_write()
+
         logger.info('clear_queue -> sub_key:%s, cleared_count:%d', sub_key, cleared_count)
 
         out:'anydict' = {
@@ -460,6 +463,9 @@ class SQLAdminAPI(SQLBrowseAPI):
 
                 _ = connection.execute(update_statement)
 
+            # Let the other greenlets run between the batches.
+            self._yield_after_write()
+
 # ################################################################################################################################
 
     def rename_topic(self, old_topic_name:'str', new_topic_name:'str') -> 'None':
@@ -514,6 +520,9 @@ class SQLAdminAPI(SQLBrowseAPI):
                 delete_statement = delete_statement.where(table.c.id.in_(row_ids))
 
                 _ = connection.execute(delete_statement)
+
+            # Let the other greenlets run between the batches.
+            self._yield_after_write()
 
 # ################################################################################################################################
 

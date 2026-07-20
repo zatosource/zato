@@ -1208,7 +1208,21 @@ def get_http_json_channel(name, service, cluster, security):
 # ################################################################################################################################
 
 def get_engine(args):
-    return sa.create_engine(get_engine_url(args))
+
+    # Imported here to avoid circular imports
+    from zato.common.odb.ssl_config import get_ssl_connect_args
+
+    # SSL/TLS configuration built out of the odb_ssl_* attributes, if any were given on input
+    ssl_config = {
+        'ssl':           getattr(args, 'odb_ssl', ''),
+        'ssl_ca_file':   getattr(args, 'odb_ssl_ca_file', ''),
+        'ssl_cert_file': getattr(args, 'odb_ssl_cert_file', ''),
+        'ssl_key_file':  getattr(args, 'odb_ssl_key_file', ''),
+        'ssl_verify':    getattr(args, 'odb_ssl_verify', ''),
+    }
+    connect_args = get_ssl_connect_args(ssl_config, getattr(args, 'odb_type', ''))
+
+    return sa.create_engine(get_engine_url(args), connect_args=connect_args)
 
 # ################################################################################################################################
 
@@ -1238,6 +1252,13 @@ def get_odb_session_from_server_config(config, cm, odb_password_encrypted):
     engine_args.odb_host = config.odb.host
     engine_args.odb_port = config.odb.port
     engine_args.odb_db_name = config.odb.db_name
+
+    # SSL/TLS configuration - configurations written by older releases may not carry these keys at all.
+    engine_args.odb_ssl           = config.odb.get('ssl', '')
+    engine_args.odb_ssl_ca_file   = config.odb.get('ssl_ca_file', '')
+    engine_args.odb_ssl_cert_file = config.odb.get('ssl_cert_file', '')
+    engine_args.odb_ssl_key_file  = config.odb.get('ssl_key_file', '')
+    engine_args.odb_ssl_verify    = config.odb.get('ssl_verify', '')
 
     if odb_password_encrypted:
         engine_args.odb_password = cm.decrypt(config.odb.password) if config.odb.password else ''
