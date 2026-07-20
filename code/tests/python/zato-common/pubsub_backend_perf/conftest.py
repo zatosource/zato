@@ -15,10 +15,14 @@ from tempfile import mkdtemp
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'lib')))
 
+# gevent
+from gevent import spawn
+
 # pytest
 import pytest
 
 # Zato
+from common import install_interrupt_handler, report_progress_forever, setup_perf_logging, Log_File_Path
 from live_sql.certificates import generate_certificates
 from live_sql.containers import start_mysql, start_postgresql, stop_container
 
@@ -31,6 +35,7 @@ if 0:
     from live_sql.containers import DatabaseServer
 
     certificatesgen = Iterator[CertificatePaths]
+    progressgen = Iterator[None]
     servergen = Iterator[DatabaseServer]
 
 # ################################################################################################################################
@@ -62,6 +67,22 @@ class ModuleCtx:
 _certificate_dir_mode = 0o755
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(scope='session', autouse=True)
+def progress_reporting() -> 'progressgen':
+    """ Sends the backend's per-operation logs to the log file for the whole session
+    and prints a console progress line once per interval, with the disk-space stop.
+    """
+    counters = setup_perf_logging()
+    install_interrupt_handler()
+    reporter = spawn(report_progress_forever, counters)
+
+    print(f'Backend logs go to {Log_File_Path}', flush=True)
+    yield
+
+    reporter.kill()
+
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')

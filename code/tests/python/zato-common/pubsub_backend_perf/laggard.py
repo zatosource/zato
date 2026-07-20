@@ -13,7 +13,7 @@ from time import monotonic
 from gevent import joinall, spawn
 
 # Zato
-from common import Min_Delivery_Rate_Per_Second, Min_Publish_Rate_Per_Second
+from common import set_progress_context, Min_Delivery_Rate_Per_Second, Min_Publish_Rate_Per_Second
 from load import consume_until_done
 from seeding import count_payloads, seed_aged_queue
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
@@ -157,6 +157,8 @@ def run_laggard_scenario() -> 'None':
     and when it finally comes back, the whole queue must drain at the delivery floor
     with every payload dropped afterwards.
     """
+    set_progress_context('laggard live phase', _publisher_greenlet_count, _subscriber_count - 1)
+
     backend = SQLPubSubBackend()
 
     laggard_sub_key = 'zpsk.perf.laggard.0000'
@@ -189,6 +191,7 @@ def run_laggard_scenario() -> 'None':
     assert depths[laggard_sub_key] == _aged_message_count + _fresh_message_count
 
     # .. the laggard comes back and works everything off ..
+    set_progress_context('laggard drain phase', 0, 1)
     _run_drain_phase(backend, laggard_sub_key)
 
     # .. and with the last subscriber done, every single payload is dropped.

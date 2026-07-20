@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from time import monotonic
 
 # Zato
-from common import measure_median_seconds, Max_Operation_Seconds
+from common import measure_median_seconds, set_progress_context, Max_Operation_Seconds
 from seeding import count_rows, seed_backlog
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 
@@ -166,6 +166,8 @@ def run_backlog_scenario() -> 'None':
     fetch latency stays flat between a 10k and a 1M backlog (the index regression detector)
     and clearing a 100,000-message queue completes within its batch bounds.
     """
+    set_progress_context('backlog', 0, 0)
+
     backend = SQLPubSubBackend()
 
     # First the small backlog - the baseline of the flatness comparison ..

@@ -13,7 +13,7 @@ from time import monotonic
 from gevent import joinall, spawn
 
 # Zato
-from common import Min_Delivery_Rate_Per_Second
+from common import set_progress_context, Min_Delivery_Rate_Per_Second
 from load import consume_until_done
 from seeding import count_rows, seed_backlog
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
@@ -74,6 +74,8 @@ def run_mass_drain_scenario(*, backlog_per_subscriber:'int', deadline_seconds:'i
     The whole population must hold the delivery floor together, the publishers
     must hold the publish floor beside them, and every queue must reach zero.
     """
+    set_progress_context('mass drain', _publisher_greenlet_count, _topic_count)
+
     backend = SQLPubSubBackend()
 
     # Every subscriber's backlog, seeded natively in one go ..
@@ -102,7 +104,7 @@ def run_mass_drain_scenario(*, backlog_per_subscriber:'int', deadline_seconds:'i
 
     start = monotonic()
 
-    # .. everyone comes back at the same moment ..
+    # .. every subscriber comes back at the same moment ..
     consumer_greenlets:'anylist' = []
 
     for sub_key in sub_keys:

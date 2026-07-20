@@ -13,6 +13,7 @@ from time import monotonic
 from gevent import joinall, sleep, spawn
 
 # Zato
+from common import set_progress_context
 from load import consume_until_stopped
 from seeding import count_rows, seed_backlog
 from zato.common.api import PubSub
@@ -63,8 +64,8 @@ _operator_delay_seconds = 1
 _depth_poll_seconds = 1
 
 # How long the consumers keep consuming after the clears when the run does not
-# drain to zero, in seconds - long enough to show the system stays live
-# with the operators done, short enough not to dominate the runtime
+# drain to zero, in seconds - long enough to verify the system keeps delivering
+# after the clears, short enough not to dominate the runtime
 _post_clear_window_seconds = 60
 
 # A message fetched right before its rows were cleared is still acknowledged
@@ -165,11 +166,13 @@ def run_operations_scenario(
 
     With drain_to_zero the consumers finish every remaining message and the
     delivery floor covers the whole run. Without it - the mode the millions-deep
-    scale runs in, where the remainder would be a handful of consumers grinding
-    for hours - the consumers get a fixed post-clear window to hold the delivery
-    floor, and then the operators clear every remaining queue, the way a stuck
-    environment is recovered, with the accounting covering both paths.
+    scale runs in, where the remainder would take a few consumers many hours -
+    the consumers get a fixed post-clear window to hold the delivery floor,
+    and then the operators clear every remaining queue, the same action that
+    recovers a congested environment, with the accounting covering both paths.
     """
+    set_progress_context('operations', _publisher_greenlet_count, topic_count)
+
     backend = SQLPubSubBackend()
 
     # Every subscriber's backlog, seeded natively in one go ..
@@ -262,9 +265,9 @@ def run_operations_scenario(
     stop['is_set'] = True
     _ = joinall(consumer_greenlets, timeout=deadline_seconds)
 
-    # .. whatever the window left behind, the operators now clear - each sweep
+    # .. the operators now clear everything the window left behind - each sweep
     # .. is the same clear-millions-in-one-action operation and gets the same budget.
-    # .. The consumers are gone, so the sweep counts are exact ..
+    # .. The consumers are stopped, so the sweep counts are exact ..
     swept_counts:'anydict' = {}
 
     if not drain_to_zero:
@@ -329,7 +332,7 @@ def run_operations_scenario(
     # .. nothing is in flight anywhere anymore ..
     assert count_rows('pubsub_delivery') == 0
 
-    # .. and the population held the delivery floor with the operators at work -
+    # .. and the population held the delivery floor while the operator actions ran -
     # .. over the whole run when it drains to zero, over the post-clear window otherwise.
     delivery_rate = total_delivered / elapsed
 
