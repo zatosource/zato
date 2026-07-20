@@ -272,6 +272,14 @@ class PubSubAMQPHarness:
         if drain_events_timeout:
             config.consumer_drain_events_timeout = drain_events_timeout
 
+        # A topic already registered against this channel points the consumers
+        # at the pub/sub delivery service from the very first message - the same
+        # override the registry sync applies on a real server at startup.
+        for backend_config in self._topic_backends.values():
+            if backend_config['amqp_channel_name'] == name:
+                backend_config['original_service_name'] = service_name
+                config.service_name = _pubsub_amqp_bridge_service
+
         self.amqp_api.create(name, config, self.on_message_callback, needs_start=True)
         self.amqp_api.create_channel(name, config)
 

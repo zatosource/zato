@@ -407,6 +407,7 @@ test-pubsub: ## All pub/sub tests.
 
 _test-pubsub:
 	$(MAKE) test-pubsub-backend 2>&1 | $(TS)
+	$(MAKE) test-pubsub-backend-amqp 2>&1 | $(TS)
 	ruff check \
 		$(CURDIR)/code/tests/python/zato-common/pubsub/ \
 		$(CURDIR)/code/tests/python/zato-common/rabbitmq_/ \
@@ -535,6 +536,33 @@ test-pubsub-backend-perf: ## Pub/sub SQL backend performance tests, no server ne
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend_perf \
 		-o log_cli=false \
 		--basetemp="$$basetemp" \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
+test-pubsub-backend-amqp: ## Pub/sub AMQP backend contract tests against a local RabbitMQ, plain and TLS, no server needed.
+	$(CURDIR)/code/bin/ruff check \
+		$(CURDIR)/code/zato-common/src/zato/common/test/rabbitmq_.py \
+		$(CURDIR)/code/tests/python/zato-common/lib/live_amqp/ \
+		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_amqp/
+	pyright \
+		$(CURDIR)/code/zato-common/src/zato/common/test/rabbitmq_.py \
+		$(CURDIR)/code/tests/python/zato-common/lib/live_amqp/ \
+		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_amqp/
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_amqp/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend_amqp \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
+test-pubsub-backend-amqp-perf: ## Pub/sub AMQP backend performance tests against a local RabbitMQ, plain and TLS - publish and delivery throughput, fan-out and drain under load.
+	$(CURDIR)/code/bin/ruff check \
+		$(CURDIR)/code/tests/python/zato-common/lib/live_amqp/ \
+		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_amqp_perf/
+	pyright \
+		$(CURDIR)/code/tests/python/zato-common/lib/live_amqp/ \
+		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_amqp_perf/
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_amqp_perf/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend_amqp_perf \
+		-o log_cli=false \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-pubsub-backend-perf-mass: ## Pub/sub SQL backend mass-recovery test at full scale - ten million enqueued messages, standalone because of its runtime.

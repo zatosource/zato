@@ -271,15 +271,15 @@ class RabbitMQProcess:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def declare_and_bind(amqp_url:'str', exchange:'str', queue:'str', routing_key:'str') -> 'None':
-    """ Declares a direct exchange, a queue and a binding between them.
+def declare_and_bind(amqp_url:'str', exchange:'str', queue:'str', routing_key:'str', exchange_type:'str'='direct') -> 'None':
+    """ Declares an exchange, a queue and a binding between them.
     """
     from kombu import Exchange, Queue
 
     with Connection(amqp_url) as connection:
         channel:'any_' = connection.channel()
 
-        exchange_declaration = Exchange(exchange, type='direct', durable=True)
+        exchange_declaration = Exchange(exchange, type=exchange_type, durable=True)
         queue_declaration = Queue(queue, exchange=exchange_declaration, routing_key=routing_key, durable=True)
 
         # Binding the queue declares the exchange, the queue and the binding itself
