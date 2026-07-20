@@ -12,6 +12,9 @@ from time import monotonic
 # gevent
 from gevent import joinall, spawn
 
+# humanize
+from humanize import intcomma
+
 # Zato
 from common import set_progress_context, Min_Delivery_Rate_Per_Second, Min_Publish_Rate_Per_Second
 from load import consume_until_done
@@ -91,7 +94,7 @@ def run_drain_scenario() -> 'None':
         message_count=_backlog_message_count,
         aged_days=_outage_days,
     )
-    print(f'Seeded {_backlog_message_count} backlog messages in {seed_seconds:.2f}s')
+    print(f'Seeded {intcomma(_backlog_message_count)} backlog messages in {seed_seconds:.2f}s')
 
     # .. the drainer owes everything - the backlog plus the fresh traffic ..
     drainer_counters:'anydict' = {
@@ -124,7 +127,7 @@ def run_drain_scenario() -> 'None':
     publish_elapsed = monotonic() - start
     publish_rate = _fresh_message_count / publish_elapsed
 
-    assert publish_rate >= Min_Publish_Rate_Per_Second, f'Publish rate too low during drain: {publish_rate:.0f}/s'
+    assert publish_rate >= Min_Publish_Rate_Per_Second, f'Publish rate too low during drain: {intcomma(int(publish_rate))}/s'
 
     # .. and everything must eventually go through.
     _ = joinall(consumer_greenlets, timeout=_deadline_seconds)
@@ -133,14 +136,14 @@ def run_drain_scenario() -> 'None':
 
     drained = drainer_counters['delivered']
     expected = drainer_counters['expected']
-    assert drained == expected, f'Expected to drain {expected} messages, got {drained}'
+    assert drained == expected, f'Expected to drain {intcomma(expected)} messages, got {intcomma(drained)}'
 
     peer_delivered = peer_counters['delivered']
-    assert peer_delivered == _fresh_message_count, f'Expected {_fresh_message_count} peer deliveries, got {peer_delivered}'
+    assert peer_delivered == _fresh_message_count, f'Expected {intcomma(_fresh_message_count)} peer deliveries, got {intcomma(peer_delivered)}'
 
     drain_rate = drained / elapsed
 
-    assert drain_rate >= Min_Delivery_Rate_Per_Second, f'Drain rate too low under load: {drain_rate:.0f}/s'
+    assert drain_rate >= Min_Delivery_Rate_Per_Second, f'Drain rate too low under load: {intcomma(int(drain_rate))}/s'
 
     # With both subscribers done, no payload has a reason to stay and the queue is empty.
     assert count_payloads(_topic_name) == 0
@@ -149,7 +152,7 @@ def run_drain_scenario() -> 'None':
     assert depths[_drainer_sub_key] == 0
     assert depths[_peer_sub_key] == 0
 
-    print(f'Drained {drained} messages at {drain_rate:.0f}/s with {publish_rate:.0f} publishes/s concurrently')
+    print(f'Drained {intcomma(drained)} messages at {intcomma(int(drain_rate))}/s with {intcomma(int(publish_rate))} publishes/s concurrently')
 
 # ################################################################################################################################
 # ################################################################################################################################

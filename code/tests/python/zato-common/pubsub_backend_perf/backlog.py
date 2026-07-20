@@ -9,6 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from time import monotonic
 
+# humanize
+from humanize import intcomma
+
 # Zato
 from common import measure_median_seconds, set_progress_context, Max_Operation_Seconds
 from seeding import count_rows, seed_backlog
@@ -172,7 +175,7 @@ def run_backlog_scenario() -> 'None':
 
     # First the small backlog - the baseline of the flatness comparison ..
     seed_seconds = seed_backlog(topic_count=_small_topic_count, messages_per_topic=_small_messages_per_topic)
-    print(f'Seeded {_small_topic_count * _small_messages_per_topic} messages in {seed_seconds:.2f}s')
+    print(f'Seeded {intcomma(_small_topic_count * _small_messages_per_topic)} messages in {seed_seconds:.2f}s')
 
     small_fetch_median = _measure_fetch_median(backend, _small_topic_count)
 
@@ -183,7 +186,7 @@ def run_backlog_scenario() -> 'None':
         deep_sub_key=_deep_sub_key,
         deep_topic_count=_deep_topic_count,
     )
-    print(f'Seeded {_full_topic_count * _full_messages_per_topic} messages in {seed_seconds:.2f}s')
+    print(f'Seeded {intcomma(_full_topic_count * _full_messages_per_topic)} messages in {seed_seconds:.2f}s')
 
     assert count_rows('pubsub_message') == _full_topic_count * _full_messages_per_topic
 
@@ -210,12 +213,13 @@ def run_backlog_scenario() -> 'None':
 
     expected_deep_count = _deep_topic_count * _full_messages_per_topic
 
-    assert result['cleared_count'] == expected_deep_count, \
-        f'Expected {expected_deep_count} cleared, got {result["cleared_count"]}'
+    cleared_count = result['cleared_count']
+    assert cleared_count == expected_deep_count, \
+        f'Expected {intcomma(expected_deep_count)} cleared, got {intcomma(cleared_count)}'
 
     assert elapsed <= _deep_clear_max_seconds, f'Deep clear-queue too slow: {elapsed:.1f}s'
 
-    print(f'Cleared {expected_deep_count} deliveries in {elapsed:.2f}s')
+    print(f'Cleared {intcomma(expected_deep_count)} deliveries in {elapsed:.2f}s')
 
 # ################################################################################################################################
 # ################################################################################################################################

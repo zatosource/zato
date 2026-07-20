@@ -12,6 +12,9 @@ from time import monotonic
 # gevent
 from gevent import joinall, spawn
 
+# humanize
+from humanize import intcomma
+
 # Zato
 from common import set_progress_context, Min_Delivery_Rate_Per_Second, Min_Publish_Rate_Per_Second
 from load import consume_until_done
@@ -98,15 +101,15 @@ def _run_live_phase(backend:'SQLPubSubBackend', fast_sub_keys:'strlist') -> 'Non
     elapsed = monotonic() - start
 
     delivered = counters['delivered']
-    assert delivered == expected_deliveries, f'Expected {expected_deliveries} deliveries, got {delivered}'
+    assert delivered == expected_deliveries, f'Expected {intcomma(expected_deliveries)} deliveries, got {intcomma(delivered)}'
 
     publish_rate = _fresh_message_count / elapsed
     delivery_rate = delivered / elapsed
 
-    assert publish_rate >= Min_Publish_Rate_Per_Second, f'Laggard-phase publish rate too low: {publish_rate:.0f}/s'
-    assert delivery_rate >= Min_Delivery_Rate_Per_Second, f'Laggard-phase delivery rate too low: {delivery_rate:.0f}/s'
+    assert publish_rate >= Min_Publish_Rate_Per_Second, f'Laggard-phase publish rate too low: {intcomma(int(publish_rate))}/s'
+    assert delivery_rate >= Min_Delivery_Rate_Per_Second, f'Laggard-phase delivery rate too low: {intcomma(int(delivery_rate))}/s'
 
-    print(f'Laggard live phase: {publish_rate:.0f} publishes/s, {delivery_rate:.0f} deliveries/s')
+    print(f'Laggard live phase: {intcomma(int(publish_rate))} publishes/s, {intcomma(int(delivery_rate))} deliveries/s')
 
 # ################################################################################################################################
 
@@ -139,14 +142,14 @@ def _run_drain_phase(backend:'SQLPubSubBackend', laggard_sub_key:'str') -> 'None
     elapsed = monotonic() - start
 
     # .. everything the laggard ever held must have gone through ..
-    assert drained == expected, f'Expected to drain {expected} messages, got {drained}'
+    assert drained == expected, f'Expected to drain {intcomma(expected)} messages, got {intcomma(drained)}'
 
     # .. at no less than the delivery floor even on a months-old queue.
     drain_rate = drained / elapsed
 
-    assert drain_rate >= Min_Delivery_Rate_Per_Second, f'Drain rate too low: {drain_rate:.0f}/s'
+    assert drain_rate >= Min_Delivery_Rate_Per_Second, f'Drain rate too low: {intcomma(int(drain_rate))}/s'
 
-    print(f'Laggard drained {drained} messages at {drain_rate:.0f}/s')
+    print(f'Laggard drained {intcomma(drained)} messages at {intcomma(int(drain_rate))}/s')
 
 # ################################################################################################################################
 
@@ -178,7 +181,7 @@ def run_laggard_scenario() -> 'None':
         message_count=_aged_message_count,
         aged_days=_aged_days,
     )
-    print(f'Seeded {_aged_message_count} aged messages in {seed_seconds:.2f}s')
+    print(f'Seeded {intcomma(_aged_message_count)} aged messages in {seed_seconds:.2f}s')
 
     # .. every aged payload is retained because the laggard still needs it ..
     assert count_payloads(_topic_name) == _aged_message_count

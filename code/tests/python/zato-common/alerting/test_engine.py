@@ -106,6 +106,38 @@ class TestActions:
 
 # ################################################################################################################################
 
+    def test_an_email_rule_without_addresses_uses_the_default_address(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        recorder = _TransportRecorder()
+
+        rule = new_rule('silent-feeds-default', FindingKind.Feed_Silent, action=AlertAction.Email_Digest)
+
+        result = process_findings([rule], [_new_finding()], recorder.make(), audit_log, 'cid-email-default', utcnow(),
+            default_email=_addresses)
+
+        assert result.dispatched == [('silent-feeds-default', AlertAction.Email_Digest)]
+
+        addresses, subject, _ = recorder.emails[0]
+
+        assert addresses == _addresses
+        assert 'silent for 400s' in subject
+
+# ################################################################################################################################
+
+    def test_an_email_rule_without_any_addresses_sends_nothing(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        recorder = _TransportRecorder()
+
+        rule = new_rule('silent-feeds-nowhere', FindingKind.Feed_Silent, action=AlertAction.Email_Digest)
+
+        result = process_findings([rule], [_new_finding()], recorder.make(), audit_log, 'cid-email-nowhere', utcnow())
+
+        # The alert itself is still raised, only the email delivery is skipped
+        assert result.raised_count == 1
+        assert recorder.emails == []
+
+# ################################################################################################################################
+
     def test_the_invoke_service_action_carries_the_structured_payload(self) -> 'None':
         audit_log = AuditLog(_server_name)
         recorder = _TransportRecorder()

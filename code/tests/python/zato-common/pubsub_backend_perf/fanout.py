@@ -12,6 +12,9 @@ from time import monotonic
 # gevent
 from gevent import joinall, spawn
 
+# humanize
+from humanize import intcomma
+
 # Zato
 from common import set_progress_context
 from load import consume_until_done
@@ -122,15 +125,15 @@ def run_fanout_scenario() -> 'None':
     elapsed = monotonic() - start
 
     delivered = counters['delivered']
-    assert delivered == expected_deliveries, f'Expected {expected_deliveries} deliveries, got {delivered}'
+    assert delivered == expected_deliveries, f'Expected {intcomma(expected_deliveries)} deliveries, got {intcomma(delivered)}'
 
     publish_rate = _message_count / elapsed
     delivery_rate = delivered / elapsed
 
-    assert publish_rate >= _min_publish_rate, f'Fan-out publish rate too low: {publish_rate:.0f}/s'
-    assert delivery_rate >= _min_delivery_rate, f'Fan-out delivery rate too low: {delivery_rate:.0f}/s'
+    assert publish_rate >= _min_publish_rate, f'Fan-out publish rate too low: {intcomma(int(publish_rate))}/s'
+    assert delivery_rate >= _min_delivery_rate, f'Fan-out delivery rate too low: {intcomma(int(delivery_rate))}/s'
 
-    print(f'Fan-out: {publish_rate:.0f} publishes/s, {delivery_rate:.0f} deliveries/s')
+    print(f'Fan-out: {intcomma(int(publish_rate))} publishes/s, {intcomma(int(delivery_rate))} deliveries/s')
 
 # ################################################################################################################################
 # ################################################################################################################################

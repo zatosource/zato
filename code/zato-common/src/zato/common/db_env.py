@@ -128,13 +128,21 @@ class EnvDBConfig:
 # ################################################################################################################################
 # ################################################################################################################################
 
+# How long an SQLite write waits for another writer to finish before giving up,
+# in milliseconds - without this, two processes sharing one file, e.g. a server
+# and the cron-driven cleanup process, fail immediately with a locked-database
+# error instead of taking turns. Writes are bounded batches, so the wait is short.
+_sqlite_busy_timeout_ms = 5000
+
 def _set_sqlite_pragmas(dbapi_connection:'any_', connection_record:'any_') -> 'None':
-    """ WAL mode lets multiple processes share the file safely, and synchronous=NORMAL
-    keeps each insert fast while remaining durable enough for aggregate and audit data.
+    """ WAL mode lets multiple processes share the file safely, synchronous=NORMAL
+    keeps each insert fast while remaining durable enough for aggregate and audit data,
+    and the busy timeout makes concurrent writers from separate processes take turns.
     """
     cursor = dbapi_connection.cursor()
     _ = cursor.execute('pragma journal_mode=wal')
     _ = cursor.execute('pragma synchronous=normal')
+    _ = cursor.execute(f'pragma busy_timeout={_sqlite_busy_timeout_ms}')
     cursor.close()
 
 # ################################################################################################################################
