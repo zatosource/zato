@@ -1472,13 +1472,16 @@ class HandleDispatchErrorTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
-    @patch('zato.server.connection.http_soap.channel.pretty_format_exception', return_value='formatted')
-    def test_generic_exception_admin_channel_sets_x_zato_message(self, _mock:'MagicMock') -> 'None':
+    def test_generic_exception_admin_channel_sets_x_zato_message(self) -> 'None':
         channel_item = _make_channel_item({'name': MISC.DefaultAdminInvokeChannel})
-        result, env = self._call(RuntimeError('Boom'), channel_item=channel_item)
+        result, env = self._call(RuntimeError('Test error message'), channel_item=channel_item)
 
         self.assertIn('X-Zato-Message', env['zato.http.response.headers'])
         self.assertIn('500', env['zato.http.response.status'])
+
+        # The response carries the actual message alone - the traceback goes to the server log only.
+        self.assertIn('Test error message', result)
+        self.assertNotIn('Traceback', result)
 
 # ################################################################################################################################
 

@@ -132,6 +132,10 @@ skip_simple_type = {
     # Connection names must stay strings even when they look numeric, e.g. a channel named 123.
     'name',
 
+    # Secrets and API keys must stay strings too - an all-digit key would otherwise
+    # arrive as an integer and encryption works only with text.
+    'secret',
+
     # AS2 fields that must stay strings even when their values look numeric -
     # the version travels as the AS2-Version HTTP header and the identifiers
     # and EDI addressing fields are frequently all-digit strings.
@@ -747,10 +751,17 @@ class Ping(_BaseService):
 
             try:
                 _ = ping_func(self.request.input.id)
-            except Exception:
-                exc = format_exc()
-                self.logger.warning(exc)
-                self.response.payload.info = exc
+            except Exception as e:
+
+                # The full traceback goes to the server log ..
+                self.logger.warning(format_exc())
+
+                # .. while the caller gets the actual error message alone.
+                error_message = str(e)
+                if not error_message:
+                    error_message = e.__class__.__name__
+
+                self.response.payload.info = error_message
                 self.response.payload.is_success = False
             else:
                 response_time = utcnow() - start_time

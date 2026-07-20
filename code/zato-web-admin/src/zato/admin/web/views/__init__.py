@@ -633,9 +633,9 @@ class CreateEdit(BaseView):
 
                 return HttpResponse(dumps(return_data), content_type='application/javascript')
             else:
-                msg = 'response:`{}`, details.response.details:`{}`'.format(response, response.details)
-                logger.error('CreateEdit step 7-ERR: %s', msg)
-                raise ZatoException(msg=msg)
+                # The log keeps the full context while the popup shows the server's message alone.
+                logger.error('CreateEdit step 7-ERR: response:`%s`, details:`%s`', response, response.details)
+                raise ZatoException(msg=response.details)
 
         except Exception as e:
             logger.error('CreateEdit EXCEPTION: type=%s, e=%s, traceback=%s', type(e).__name__, e, format_exc())

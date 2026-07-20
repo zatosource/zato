@@ -41,7 +41,7 @@ logger = getLogger(__name__)
 
 # Default values applied when a configuration key is missing or None -
 # the default model is the first entry of the generated catalog.
-llm_config_defaults:'dict[str, object]' = {
+llm_config_defaults:'stranydict' = {
     'model': model_list[0]['id'],
     'timeout': LLM.DEFAULT.TIMEOUT,
     'max_tokens': LLM.DEFAULT.MAX_TOKENS,
@@ -61,7 +61,7 @@ _provider_client_map = {
 
 # Maps human-friendly catalog names to the provider and the id sent on the wire,
 # built from the generated catalog in zato.common.llm_models.
-_catalog_by_name:'dict[str, dict[str, str]]' = {}
+_catalog_by_name:'stranydict' = {}
 
 for _model in model_list:
     _catalog_by_name[_model['name']] = {'provider': _model['provider'], 'id': _model['id']}

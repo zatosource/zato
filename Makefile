@@ -6,7 +6,7 @@
 	ruff pyright qa-reqs-install unify \
 	analytics update cron-update stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console \
-	help install-deps llm-models \
+	help install-deps \
 	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-pubsub-backend test-pubsub-backend-perf test-pubsub-backend-perf-mass test-enmasse \
 	test-cli test-mcp _test-mcp test-bearer _test-bearer test-graphql test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-llm test-hl7 test-hl7-volume test-ui test-ui-pubsub test-ui-openapi _test-ui test-common test-distlock test-truncate test-message-filters test-safeguards \
 	test-audit-log test-audit-log-ui test-alerting test-analytics test-analytics-ui test-demo-seed test-logging test-ibm-mq test-mongodb test-es \
@@ -690,9 +690,6 @@ test-soap: ## SOAP messaging tests - fully offline, no external services needed.
 		$(CURDIR)/code/tests/python/zato-common/soap/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_soap -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
-
-llm-models: ## Refresh the LLM model catalog in zato.common.llm_models from models.dev.
-	$(ZATO_PY) $(CURDIR)/code/util/update_llm_models.py
 
 test-llm: ## LLM connection tests against a local provider simulator and a test-managed Redis - fully offline.
 	$(ZATO_PY) -m pytest \
