@@ -27,37 +27,35 @@ if 0:
 # ################################################################################################################################
 
 # The full backlog - 1,000 queues with 1,000 pending messages each,
-# one million enqueued messages in total
+# one million enqueued messages in total.
 _full_topic_count = 1000
 _full_messages_per_topic = 1000
 
-# The small backlog the flatness comparison starts from
+# The small backlog the flatness comparison starts from.
 _small_topic_count = 10
 _small_messages_per_topic = 1000
 
 # The deep queue for clear-queue timing - one subscriber with a pending copy
-# of the first that many topics, i.e. 100,000 deliveries
+# of the first that many topics, i.e. 100,000 deliveries.
 _deep_sub_key = 'zpsk.perf.deep'
 _deep_topic_count = 100
 
-# How many times each measured operation runs for its median
+# How many times each measured operation runs for its median.
 _iterations = 10
 
-# The fetch median at the full backlog may be at most this many times the small-backlog one -
-# generous enough for measurement noise, far below the hundredfold jump of a lost index
+# The fetch median at the full backlog may be at most this many times the small-backlog one.
 _flatness_factor = 10
 
-# Measurement noise floor - medians below this are treated as this value in the flatness
-# ratio so microsecond-level jitter cannot fail the comparison
+# Measurement noise floor for the flatness ratio.
 _flatness_floor_seconds = 0.002
 
-# How long the deep clear-queue may take in total - 20 bounded batches of 5,000
+# How long the deep clear-queue may take in total - 20 bounded batches of 5,000.
 _deep_clear_max_seconds = 30
 
-# How many (sub_key, topic) pairs one dashboard page asks depths for
+# How many (sub_key, topic) pairs one dashboard page asks depths for.
 _depth_pair_count = 50
 
-# How many topics the timeline and publisher-count calls cover
+# How many topics the timeline and publisher-count calls cover.
 _stats_topic_count = 10
 
 # ################################################################################################################################
@@ -190,8 +188,7 @@ def run_backlog_scenario() -> 'None':
 
     assert count_rows('pubsub_message') == _full_topic_count * _full_messages_per_topic
 
-    # .. fetch latency must not grow with the backlog - a lost index shows up
-    # .. as a hundredfold jump, far beyond this bound ..
+    # .. fetch latency must not grow with the backlog ..
     full_fetch_median = _measure_fetch_median(backend, _full_topic_count)
 
     if small_fetch_median < _flatness_floor_seconds:

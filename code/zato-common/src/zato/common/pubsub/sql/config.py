@@ -29,7 +29,7 @@ if 0:
 
 class ModuleCtx:
 
-    # Environment variables selecting and configuring the pub/sub database
+    # Environment variables selecting and configuring the pub/sub database.
     Env_Type     = 'Zato_PubSub_DB_Type'
     Env_Host     = 'Zato_PubSub_DB_Host'
     Env_Port     = 'Zato_PubSub_DB_Port'
@@ -37,55 +37,51 @@ class ModuleCtx:
     Env_Password = 'Zato_PubSub_DB_Password'
     Env_Name     = 'Zato_PubSub_DB_Name'
 
-    # Environment variables configuring SSL/TLS for the pub/sub database
+    # Environment variables configuring SSL/TLS for the pub/sub database.
     Env_SSL           = 'Zato_PubSub_DB_SSL'
     Env_SSL_CA_File   = 'Zato_PubSub_DB_SSL_CA_File'
     Env_SSL_Cert_File = 'Zato_PubSub_DB_SSL_Cert_File'
     Env_SSL_Key_File  = 'Zato_PubSub_DB_SSL_Key_File'
     Env_SSL_Verify    = 'Zato_PubSub_DB_SSL_Verify'
 
-    # The environment variables overriding how long fully delivered messages are kept
+    # The environment variables overriding how long fully delivered messages are kept.
     Env_Delivered_Max_Messages = 'Zato_PubSub_Delivered_Max_Messages'
     Env_Delivered_Max_Days     = 'Zato_PubSub_Delivered_Max_Days'
 
-    # The environment variable overriding how many rows one bulk statement may touch
+    # The environment variable overriding how many rows one bulk statement may touch.
     Env_Batch_Size = 'Zato_PubSub_DB_Batch_Size'
 
-    # Recognized database types
+    # Recognized database types.
     Type_SQLite     = Type_SQLite
     Type_MySQL      = Type_MySQL
     Type_PostgreSQL = Type_PostgreSQL
     Type_Oracle     = Type_Oracle
 
-    # What is used when Zato_PubSub_DB_Type is not set
+    # What is used when Zato_PubSub_DB_Type is not set.
     Default_Type = Default_Type
 
-    # SSL is off unless requested explicitly
+    # SSL is off unless requested explicitly.
     Default_SSL = Default_SSL
 
-    # When SSL is on, the server certificate is verified unless turned off explicitly
+    # When SSL is on, the server certificate is verified unless turned off explicitly.
     Default_SSL_Verify = Default_SSL_Verify
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How many fully delivered messages one topic may retain for browsing and statistics
+# How many fully delivered messages one topic may retain for browsing and statistics.
 _default_delivered_max_messages = 1_000_000
 
-# How many days a fully delivered message is retained for browsing and statistics
+# How many days a fully delivered message is retained for browsing and statistics.
 _default_delivered_max_days = 7
 
-# How many rows one bulk delete or update statement may touch - bulk operations run
-# in bounded batches so a single statement never stalls the process for long,
-# which matters most under SQLite whose queries do not yield to other greenlets
+# How many rows one bulk delete or update statement may touch.
 _default_batch_size = 5_000
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How the pub/sub database is selected and configured through the environment -
-# the pool matters because pub/sub runs many small transactions and an unpooled
-# SQLite connection pays a WAL checkpoint on every single close
+# How the pub/sub database is selected and configured through the environment.
 _env_config = EnvDBConfig(
     env_prefix='Zato_PubSub_DB_',
     sqlite_file_name=pubsub_db_file_name,

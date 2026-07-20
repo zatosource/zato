@@ -14,7 +14,7 @@ from gevent import sleep
 
 if 0:
     from zato.common.pubsub.sql.backend import SQLPubSubBackend
-    from zato.common.typing_ import anydict, strlist
+    from zato.common.typing_ import anydict, intlist, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -32,18 +32,18 @@ def consume_until_done(backend:'SQLPubSubBackend', sub_key:'str', counters:'anyd
             continue
 
         msg_ids:'strlist' = []
+        sequence_ids:'intlist' = []
 
         for message in messages:
             msg_ids.append(message['msg_id'])
+            sequence_ids.append(message['sequence_id'])
 
-        _ = backend.ack_messages(sub_key, msg_ids)
+        _ = backend.ack_messages(sub_key, msg_ids, sequence_ids)
 
         counters['delivered'] += len(messages)
 
-        # Yield after each batch the way the real delivery loop yields on the network
-        # I/O of invoking its target - fetch and ack are synchronous C calls that never
-        # switch greenlets on their own, and without this a deep drain would starve
-        # every publisher on the shared loop, which the real pattern does not do.
+        # Yield after each batch the way the real delivery loop yields on its network
+        # I/O - without this a deep drain would starve every publisher on the shared loop.
         sleep(0)
 
 # ################################################################################################################################
@@ -67,11 +67,13 @@ def consume_until_stopped(
             continue
 
         msg_ids:'strlist' = []
+        sequence_ids:'intlist' = []
 
         for message in messages:
             msg_ids.append(message['msg_id'])
+            sequence_ids.append(message['sequence_id'])
 
-        _ = backend.ack_messages(sub_key, msg_ids)
+        _ = backend.ack_messages(sub_key, msg_ids, sequence_ids)
 
         per_sub_delivered[sub_key] += len(messages)
 

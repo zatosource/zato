@@ -17,7 +17,7 @@ from zato.common.pubsub.sql.config import ModuleCtx as PubSubDBCtx
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The topics and subscribers all the queue-management assertions share
+# The topics and subscribers all the queue-management assertions share.
 _topic_1 = 'pubsub.backend.test.queues.1'
 _topic_2 = 'pubsub.backend.test.queues.2'
 _sub_key_1 = 'zpsk.test.queues.1'

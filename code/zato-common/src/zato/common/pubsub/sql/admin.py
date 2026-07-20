@@ -32,13 +32,13 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The publish timeline is bucketed by minute
+# The publish timeline is bucketed by minute.
 _milliseconds_per_minute = 60 * 1000
 
-# How long the stored preview of each payload is
+# How long the stored preview of each payload is.
 _data_preview_len = PubSub.Message.Data_Preview_Len
 
-# How many minutes of history the statistics cover unless told otherwise
+# How many minutes of history the statistics cover unless told otherwise.
 _default_since_minutes = 60
 
 # ################################################################################################################################
@@ -47,9 +47,7 @@ _default_since_minutes = 60
 class SQLAdminAPI(SQLBrowseAPI):
     """ Queue administration and statistics - subscriber listings, depth counts,
     the publish timeline, queue clearing and whole-topic operations.
-    All bulk work runs in bounded batches so a single statement never stalls
-    the process, which matters most under SQLite whose queries do not yield
-    to other greenlets.
+    All bulk work runs in bounded batches.
     """
 
     def get_subscribed_topics(self, sub_key:'str') -> 'strlist':
@@ -228,10 +226,8 @@ class SQLAdminAPI(SQLBrowseAPI):
         for topic_name in topic_names:
             lowered_names.append(topic_name.lower())
 
-        # .. bucket by minute in the database - the modulo operator is portable
-        # .. across all the supported engines. The bucket width is inlined as a literal
-        # .. instead of a bind parameter so the SELECT and GROUP BY expressions render
-        # .. identically, which PostgreSQL requires to match them up ..
+        # .. bucket by minute - the width is a literal, not a bind parameter, so the SELECT
+        # .. and GROUP BY expressions render identically, which PostgreSQL requires ..
         bucket_width = literal_column(str(_milliseconds_per_minute))
         bucket = message_table.c.pub_time_ms - message_table.c.pub_time_ms % bucket_width
         bucket = bucket.label('bucket')
@@ -297,7 +293,7 @@ class SQLAdminAPI(SQLBrowseAPI):
         batch_size = get_batch_size()
         cleared_count = 0
 
-        # Work in bounded batches so no single transaction grows too large ..
+        # Work in bounded batches ..
         while True:
 
             with self.engine.begin() as connection:
@@ -526,7 +522,7 @@ class SQLAdminAPI(SQLBrowseAPI):
         """
         topic_name = topic_name.lower()
 
-        # Deliveries go first so no fetch can see a delivery row of a vanished message ..
+        # Deliveries go first ..
         self._delete_topic_rows_in_batches(delivery_table, topic_name)
 
         # .. then the messages themselves ..

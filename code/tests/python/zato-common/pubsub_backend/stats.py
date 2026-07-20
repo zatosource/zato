@@ -13,13 +13,13 @@ from zato.common.pubsub.sql.backend import SQLPubSubBackend
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The topics and subscribers all the statistics assertions share
+# The topics and subscribers all the statistics assertions share.
 _topic_1 = 'pubsub.backend.test.stats.1'
 _topic_2 = 'pubsub.backend.test.stats.2'
 _sub_key_1 = 'zpsk.test.stats.1'
 _sub_key_2 = 'zpsk.test.stats.2'
 
-# The publish timeline is bucketed by minute
+# The publish timeline is bucketed by minute.
 _milliseconds_per_minute = 60 * 1000
 
 # ################################################################################################################################
@@ -90,7 +90,7 @@ def _run_timeline_and_publishers_flow(backend:'SQLPubSubBackend') -> 'None':
     _ = backend.publish(_topic_2, 'bob-message-1', publisher='bob')
     _ = backend.publish(_topic_2, 'bob-message-2', publisher='bob')
 
-    # One message has no publisher and must not affect the distinct count
+    # One message has no publisher and must not affect the distinct count.
     _ = backend.publish(_topic_2, 'anonymous-message')
 
     # The timeline covers all the requested topics ..

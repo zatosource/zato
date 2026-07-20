@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import atexit
 import logging
 import os
 from contextlib import contextmanager
@@ -28,6 +29,7 @@ from sqlalchemy import func, select
 from live_sql.env import database_env
 from zato.common.pubsub.sql.config import get_pubsub_engine
 from zato.common.pubsub.sql.schema import topic_sub_table
+from zato.common.util.api import as_bool
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -42,43 +44,38 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The prefix all the pub/sub database environment variables share
+# The prefix all the pub/sub database environment variables share.
 _env_prefix = 'Zato_PubSub_DB_'
 
-# Every user-visible operation must complete within this many seconds
+# Every user-visible operation must complete within this many seconds.
 Max_Operation_Seconds = 0.050
 
-# The performance floor the whole backend must sustain
+# The performance floor the whole backend must sustain.
 Min_Publish_Rate_Per_Second  = 100
 Min_Delivery_Rate_Per_Second = 500
 
-# How many rows per second the cleanup process must at least remove -
-# a deliberately conservative floor since cleanup runs in the background
-# and correctness matters more than speed there.
+# The floors of runs whose database connection uses SSL.
+Min_Publish_Rate_Per_Second_SSL  = 90
+Min_Delivery_Rate_Per_Second_SSL = 450
+
+# How many rows per second the cleanup process must at least remove.
 Min_Cleanup_Rate_Per_Second = 5_000
 
 # The two scales the mass-drain scenario runs at - the main perf target uses
-# the smaller one and the dedicated mass target the bigger one. With 100
-# subscribers that is a total backlog of one million and ten million messages.
+# the smaller one and the dedicated mass target the bigger one.
 Mass_Drain_Backlog_Main = 10000
 Mass_Drain_Backlog_Mass = 100000
 
-# How long each scale may take before it is declared hung, in seconds
+# How long each scale may take before it is declared hung, in seconds.
 Mass_Drain_Deadline_Main = 600
 Mass_Drain_Deadline_Mass = 3600
 
-# The concurrent-publish floors of the two scales. The main scale holds the standard
-# floor. At the mass scale publishes contend with a hundred continuously draining
-# consumers for one serialized database - there the binding guarantee is the
-# per-operation time bound, and the floor is what that bound implies
-# for strictly serialized publishing.
+# The concurrent-publish floors of the two scales.
 Mass_Drain_Publish_Floor_Main = Min_Publish_Rate_Per_Second
 Mass_Drain_Publish_Floor_Mass = int(1 / Max_Operation_Seconds)
 
-# The two scales of the operations scenario. The main one is many mid-size queues.
-# The mass one is few queues of millions of messages each, of which two are cleared
-# whole - an operator removing a couple of million messages from individual queues
-# in one action, under full load.
+# The two scales of the operations scenario - many mid-size queues, or few queues
+# of millions of messages each, of which two are cleared whole under full load.
 Operations_Topics_Main = 100
 Operations_Cleared_Main = 20
 Operations_Clear_Budget_Main = 120
@@ -88,32 +85,28 @@ Operations_Backlog_Mass = 2500000
 Operations_Cleared_Mass = 2
 Operations_Clear_Budget_Mass = 1800
 
-# The delivery floor of the mass operations scale, measured over the post-clear
-# consume window. After the clears only two consumers remain, each against
-# a millions-deep queue on one serialized database - a scale where the standard
-# floor assumes a full population of consumers, not two.
+# The delivery floor of the mass operations scale, measured over the post-clear consume window.
 Operations_Delivery_Floor_Mass = 100
 
-# Where the backend's per-operation log records go - the console shows periodic
-# progress lines and scenario summaries only, yet the full detail must survive
-# an interrupted run for diagnosis, so it lives outside pytest's own directories.
+# Where the backend's per-operation log records go.
 Log_File_Path = os.path.join(gettempdir(), 'zato-pubsub-backend-perf.log')
 
-# How often the console progress line is printed, in seconds
+# How often the console progress line is printed, in seconds.
 Progress_Interval_Seconds = 60
 
-# The run stops if the temporary directory has less free space than this
+# The run stops if the temporary directory has less free space than this.
 Min_Free_Disk_GB = 20
 
-# How many bytes one gigabyte has
+# How many bytes one gigabyte has.
 _bytes_per_gb = 1024 ** 3
 
-# The environment variable that says which database the run uses -
-# when it is absent, no database is configured, e.g. between tests
+# The environment variable that says which database the run uses.
 _env_type_key = _env_prefix + 'Type'
 
-# What the currently running scenario looks like - each scenario registers
-# its shape here so the progress line can name it and report its greenlet counts
+# The environment variable that says whether the database connection uses SSL.
+_env_ssl_key = _env_prefix + 'SSL'
+
+# What the currently running scenario looks like.
 progress_context = {
     'scenario': 'starting',
     'publishers': 0,
@@ -136,7 +129,7 @@ def install_interrupt_handler() -> 'None':
     def _on_interrupt() -> 'None':
         state['count'] += 1
 
-        # The second interrupt means the first one could not unwind - terminate immediately
+        # The second interrupt means the first one could not unwind - terminate immediately.
         if state['count'] > 1:
             os._exit(1)
 
@@ -144,6 +137,42 @@ def install_interrupt_handler() -> 'None':
         kill(main_greenlet, KeyboardInterrupt)
 
     _ = signal_handler(SIGINT, _on_interrupt)
+
+# ################################################################################################################################
+
+def is_ssl_enabled() -> 'bool':
+    """ Tells whether the currently configured database connection uses SSL.
+    """
+    if value := os.environ.get(_env_ssl_key, ''):
+        out = as_bool(value)
+    else:
+        out = False
+
+    return out
+
+# ################################################################################################################################
+
+def get_min_publish_rate() -> 'int':
+    """ The publish floor of the current run.
+    """
+    if is_ssl_enabled():
+        out = Min_Publish_Rate_Per_Second_SSL
+    else:
+        out = Min_Publish_Rate_Per_Second
+
+    return out
+
+# ################################################################################################################################
+
+def get_min_delivery_rate() -> 'int':
+    """ The delivery floor of the current run.
+    """
+    if is_ssl_enabled():
+        out = Min_Delivery_Rate_Per_Second_SSL
+    else:
+        out = Min_Delivery_Rate_Per_Second
+
+    return out
 
 # ################################################################################################################################
 
@@ -180,11 +209,23 @@ class ProgressCounters(logging.Handler):
         if record.msg.startswith('Published message'):
             self.published += 1
 
-        elif record.msg.startswith('ack_messages'):
+        elif record.msg.startswith('ack_messages ->'):
             self.acked += args[1] # type: ignore[operator]
 
         elif record.msg.startswith('clear_queue'):
             self.cleared += args[1] # type: ignore[operator]
+
+# ################################################################################################################################
+
+def _silence_logging_teardown() -> 'None':
+    """ Runs at exit, before the interpreter's final garbage collection. That collection
+    destroys the log handlers, whose weakref cleanup callback takes the logging module
+    lock - and under gevent that lock needs the hub, which is already gone by then,
+    so every run ends with a spurious 'greenlet is being finalized' traceback.
+    Flushing the handlers now and removing the lock makes the late cleanup a no-op.
+    """
+    logging.shutdown()
+    logging._lock = None # type: ignore[assignment]
 
 # ################################################################################################################################
 
@@ -203,6 +244,8 @@ def setup_perf_logging() -> 'ProgressCounters':
     root = logging.getLogger()
     root.handlers[:] = [file_handler, counters]
     root.setLevel(logging.INFO)
+
+    atexit.register(_silence_logging_teardown)
 
     return counters
 
@@ -242,8 +285,7 @@ def report_progress_forever(counters:'ProgressCounters') -> 'None':
         elapsed = monotonic() - start
         free_gb = disk_usage(gettempdir()).free // _bytes_per_gb
 
-        # The rates cover the last interval only, so a busy scenario
-        # does not inflate the numbers of a quiet one that follows it.
+        # The rates cover the last interval only.
         publish_rate = (counters.published - previous_published) // Progress_Interval_Seconds
         ack_rate = (counters.acked - previous_acked) // Progress_Interval_Seconds
         clear_rate = (counters.cleared - previous_cleared) // Progress_Interval_Seconds
@@ -265,8 +307,7 @@ def report_progress_forever(counters:'ProgressCounters') -> 'None':
         message += f' free_disk={free_gb} GB'
         print(message, flush=True)
 
-        # The interrupt unwinds the main greenlet through its finally blocks,
-        # which is what removes the databases that consumed the disk.
+        # The interrupt unwinds the main greenlet through its finally blocks.
         if free_gb < Min_Free_Disk_GB:
             print(f'Free disk below {Min_Free_Disk_GB} GB - stopping the run', flush=True)
             os.kill(os.getpid(), SIGINT)

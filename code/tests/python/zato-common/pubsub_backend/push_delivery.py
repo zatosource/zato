@@ -27,27 +27,27 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The topic, subscribers and target service all the push delivery assertions share
+# The topic, subscribers and target service all the push delivery assertions share.
 _topic = 'pubsub.backend.test.push'
 _sub_key = 'zpsk.test.push.1'
 _sub_key_pull = 'zpsk.test.push.2'
 _service_name = 'test.push.target'
 
 # How long one wait for an expected delivery outcome may take at most, in seconds -
-# generous because a retry sleeps for seconds before its next attempt
+# generous because a retry sleeps for seconds before its next attempt.
 _wait_timeout_seconds = 30
 
-# How long one polling sleep is, in seconds
+# How long one polling sleep is, in seconds.
 _poll_interval_seconds = 0.05
 
-# How many messages the startup drain and the live phase each cover
+# How many messages the startup drain and the live phase each cover.
 _drain_message_count = 5
 _live_message_count = 3
 
-# A failure count high enough that delivery cannot succeed before the message expires
+# A failure count high enough that delivery cannot succeed before the message expires.
 _fail_until_expired = 1_000_000
 
-# How quickly the expiring message expires, in seconds
+# How quickly the expiring message expires, in seconds.
 _short_expiration_seconds = 1
 
 # ################################################################################################################################
@@ -108,7 +108,7 @@ def run_push_delivery_scenario() -> 'None':
     server = _StubServer()
     delivery = PushDelivery(server, backend) # type: ignore[arg-type]
 
-    # The push subscription and its runtime queue state
+    # The push subscription and its runtime queue state.
     sub_config = {
         'topic_name': _topic,
         'push_type': PubSub.Push_Type.Service,

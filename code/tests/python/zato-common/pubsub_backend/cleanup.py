@@ -26,7 +26,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The topics and subscribers all the cleanup assertions share
+# The topics and subscribers all the cleanup assertions share.
 _topic_expiry = 'pubsub.backend.test.cleanup.expiry'
 _topic_traces = 'pubsub.backend.test.cleanup.traces'
 
@@ -34,11 +34,11 @@ _sub_key_1 = 'zpsk.test.cleanup.1'
 _sub_key_2 = 'zpsk.test.cleanup.2'
 _sub_key_3 = 'zpsk.test.cleanup.3'
 
-# How many milliseconds one second and one day have
+# How many milliseconds one second and one day have.
 _ms_per_second = 1000
 _ms_per_day = 24 * 60 * 60 * _ms_per_second
 
-# How far in the past an aged trace is placed - well past the default retention of days
+# How far in the past an aged trace is placed - well past the default retention of days.
 _aged_days = 30
 
 # ################################################################################################################################
@@ -122,7 +122,7 @@ def run_cleanup_scenario() -> 'None':
     backend = SQLPubSubBackend()
     cleanup = PubSubCleanup()
 
-    # Two subscribers so expiry can be checked against multi-subscriber deliveries
+    # Two subscribers so expiry can be checked against multi-subscriber deliveries.
     backend.subscribe(_sub_key_1, _topic_expiry)
     backend.subscribe(_sub_key_2, _topic_expiry)
 

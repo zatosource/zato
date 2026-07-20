@@ -178,11 +178,13 @@ def start_mysql(
         '-p', f'{port}:3306',
     ]
 
-    # The TLS-required variant mounts the certificates and refuses unencrypted TCP connections
+    # The TLS-required variant mounts the certificates and refuses unencrypted TCP connections.
+    # Both variants allow LOAD DATA LOCAL INFILE - the bulk-seeding path of the perf tests.
     if needs_ssl:
         command.extend(['-v', f'{ssl_certificates.directory}:/certs-in:ro'])
         command.append(ModuleCtx.MySQL_Image)
         command.extend([
+            '--local-infile=1',
             '--ssl-ca=/certs-in/ca.crt',
             '--ssl-cert=/certs-in/server.crt',
             '--ssl-key=/certs-in/server.key',
@@ -190,6 +192,7 @@ def start_mysql(
         ])
     else:
         command.append(ModuleCtx.MySQL_Image)
+        command.append('--local-infile=1')
 
     _ = subprocess.run(command, check=True, capture_output=True)
 

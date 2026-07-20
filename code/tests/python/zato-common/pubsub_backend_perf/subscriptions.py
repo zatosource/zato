@@ -16,7 +16,7 @@ from gevent import joinall, spawn
 from humanize import intcomma
 
 # Zato
-from common import set_progress_context, Min_Delivery_Rate_Per_Second, Min_Publish_Rate_Per_Second
+from common import get_min_delivery_rate, get_min_publish_rate, set_progress_context
 from load import consume_until_done
 from seeding import delete_all_rows
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
@@ -35,14 +35,14 @@ if 0:
 # replacing polling. Two hundred concurrent subscribers spread over fifty types.
 _topic_count = 50
 
-# How many subscriber applications every record type has
+# How many subscriber applications every record type has.
 _subscribers_per_topic = 4
 
-# How many messages are published in the measured run
+# How many messages are published in the measured run.
 _message_count = 1000
 
-# How many publisher greenlets pump concurrently with the consumers
-_publisher_greenlet_count = 4
+# How many publisher greenlets pump concurrently with the consumers.
+_publisher_greenlet_count = 30
 
 # The three payload tiers real subscription traffic comes in -
 # most notifications carry one record ..
@@ -56,10 +56,10 @@ _batch_every = 5
 _bundle_payload = 'bundle-' + 'x' * 2300000
 _bundle_every = 50
 
-# How long one blocking fetch waits inside a consumer greenlet, in milliseconds
+# How long one blocking fetch waits inside a consumer greenlet, in milliseconds.
 _consumer_block_ms = 2000
 
-# How long the whole run may take at most before it is declared hung, in seconds
+# How long the whole run may take at most before it is declared hung, in seconds.
 _deadline_seconds = 120
 
 # ################################################################################################################################
@@ -70,7 +70,12 @@ def _publish_share(backend:'SQLPubSubBackend', topic_names:'strlist', publisher_
     round-robin over all the record types, with the three payload tiers
     interleaved the way real subscription traffic is.
     """
-    share = _message_count // _publisher_greenlet_count
+    share, remainder = divmod(_message_count, _publisher_greenlet_count)
+
+    # The remainder of the division goes to the first publishers, one message each,
+    # so all the shares add up to the total.
+    if publisher_index < remainder:
+        share += 1
 
     for message_index in range(share):
         sequence = publisher_index * share + message_index
@@ -125,28 +130,36 @@ def run_subscriptions_scenario() -> 'None':
     start = monotonic()
 
     # .. consumers first, so they are already waiting when the first publish lands ..
-    greenlets:'anylist' = []
+    consumer_greenlets:'anylist' = []
 
     for sub_key in sub_keys:
-        greenlets.append(spawn(consume_until_done, backend, sub_key, counters, _consumer_block_ms))
+        consumer_greenlets.append(spawn(consume_until_done, backend, sub_key, counters, _consumer_block_ms))
 
     # .. now the publishers pump concurrently with the consumers ..
-    for publisher_index in range(_publisher_greenlet_count):
-        greenlets.append(spawn(_publish_share, backend, topic_names, publisher_index))
+    publisher_greenlets:'anylist' = []
 
-    # .. wait until every notification has been fetched and acknowledged everywhere.
-    _ = joinall(greenlets, timeout=_deadline_seconds)
+    for publisher_index in range(_publisher_greenlet_count):
+        publisher_greenlets.append(spawn(_publish_share, backend, topic_names, publisher_index))
+
+    # .. the publish floor is measured over the publish phase - it must hold
+    # .. with the consumers running concurrently ..
+    _ = joinall(publisher_greenlets, timeout=_deadline_seconds)
+
+    publish_elapsed = monotonic() - start
+
+    # .. and wait until every notification has been fetched and acknowledged everywhere.
+    _ = joinall(consumer_greenlets, timeout=_deadline_seconds)
 
     elapsed = monotonic() - start
 
     delivered = counters['delivered']
     assert delivered == expected_deliveries, f'Expected {intcomma(expected_deliveries)} deliveries, got {intcomma(delivered)}'
 
-    publish_rate = _message_count / elapsed
+    publish_rate = _message_count / publish_elapsed
     delivery_rate = delivered / elapsed
 
-    assert publish_rate >= Min_Publish_Rate_Per_Second, f'Subscriptions publish rate too low: {intcomma(int(publish_rate))}/s'
-    assert delivery_rate >= Min_Delivery_Rate_Per_Second, f'Subscriptions delivery rate too low: {intcomma(int(delivery_rate))}/s'
+    assert publish_rate >= get_min_publish_rate(), f'Subscriptions publish rate too low: {intcomma(int(publish_rate))}/s'
+    assert delivery_rate >= get_min_delivery_rate(), f'Subscriptions delivery rate too low: {intcomma(int(delivery_rate))}/s'
 
     print(f'Subscriptions: {intcomma(int(publish_rate))} publishes/s, {intcomma(int(delivery_rate))} deliveries/s')
 
