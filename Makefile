@@ -519,9 +519,10 @@ test-pubsub-backend: ## Pub/sub SQL backend contract tests, no server needed.
 	pyright \
 		$(CURDIR)/code/zato-common/src/zato/common/pubsub/sql/ \
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_pubsub_backend_sqlite.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend \
+		-W "ignore:This process:DeprecationWarning" \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-pubsub-backend-perf: ## Pub/sub SQL backend performance tests, no server needed - throughput, traffic shapes, the million-message backlog and deep clear-queue.
@@ -531,10 +532,11 @@ test-pubsub-backend-perf: ## Pub/sub SQL backend performance tests, no server ne
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_perf/
 	basetemp="$${TMPDIR:-/tmp}/zato-pubsub-backend-perf-$$USER"; \
 	trap 'rm -rf "$$basetemp"' EXIT INT TERM; \
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_perf/test_pubsub_backend_perf_sqlite.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend_perf \
 		-o log_cli=false \
+		-W "ignore:This process:DeprecationWarning" \
 		--basetemp="$$basetemp" \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
@@ -547,7 +549,7 @@ test-pubsub-backend-amqp: ## Pub/sub AMQP backend contract tests against a local
 		$(CURDIR)/code/zato-common/src/zato/common/test/rabbitmq_.py \
 		$(CURDIR)/code/tests/python/zato-common/lib/live_amqp/ \
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_amqp/
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_amqp/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend_amqp \
 		$(FAIL_FAST) $(PYTEST_ARGS)
@@ -559,7 +561,7 @@ test-pubsub-backend-amqp-perf: ## Pub/sub AMQP backend performance tests against
 	pyright \
 		$(CURDIR)/code/tests/python/zato-common/lib/live_amqp/ \
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_amqp_perf/
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_amqp_perf/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend_amqp_perf \
 		-o log_cli=false \
@@ -572,10 +574,11 @@ test-pubsub-backend-perf-mass: ## Pub/sub SQL backend mass-recovery test at full
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_perf/
 	basetemp="$${TMPDIR:-/tmp}/zato-pubsub-backend-perf-$$USER"; \
 	trap 'rm -rf "$$basetemp"' EXIT INT TERM; \
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_perf/test_pubsub_backend_perf_mass_sqlite.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend_perf \
 		-o log_cli=false \
+		-W "ignore:This process:DeprecationWarning" \
 		--basetemp="$$basetemp" \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
