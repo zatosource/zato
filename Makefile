@@ -528,10 +528,13 @@ test-pubsub-backend-perf: ## Pub/sub SQL backend performance tests, no server ne
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_perf/
 	pyright \
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_perf/
+	basetemp="$${TMPDIR:-/tmp}/zato-pubsub-backend-perf-$$USER"; \
+	trap 'rm -rf "$$basetemp"' EXIT INT TERM; \
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_perf/test_pubsub_backend_perf_sqlite.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend_perf \
 		-o log_cli=false \
+		--basetemp="$$basetemp" \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-pubsub-backend-perf-mass: ## Pub/sub SQL backend mass-recovery test at full scale - ten million enqueued messages, standalone because of its runtime.
@@ -539,10 +542,13 @@ test-pubsub-backend-perf-mass: ## Pub/sub SQL backend mass-recovery test at full
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_perf/
 	pyright \
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_perf/
+	basetemp="$${TMPDIR:-/tmp}/zato-pubsub-backend-perf-$$USER"; \
+	trap 'rm -rf "$$basetemp"' EXIT INT TERM; \
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_perf/test_pubsub_backend_perf_mass_sqlite.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend_perf \
 		-o log_cli=false \
+		--basetemp="$$basetemp" \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-enmasse: ## Enmasse round-trip tests.

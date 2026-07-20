@@ -27,6 +27,7 @@ from zato.common.audit_log.common import audit_db_file_name, metadata as audit_m
 from zato.common.config_db import apply_env_variables, build_env_variables, get_default_env_file_path, \
     persist_env_variables, sql_env_prefix_by_database, sql_field_suffixes
 from zato.common.db_env import build_connect_args_from_values, build_engine_url_from_values, get_env_values, EnvDBConfig
+from zato.common.pubsub.sql.schema import metadata as pubsub_metadata, pubsub_db_file_name
 from zato.common.redis_env import get_redis_conn_from_values, get_redis_values_from_section
 from zato.common.util.config import get_config_object, update_config_file
 from zato.server.service.internal import AdminService
@@ -62,6 +63,11 @@ _sql_databases = {
         env_prefix=sql_env_prefix_by_database['analytics'],
         sqlite_file_name=analytics_db_file_name,
         metadata=analytics_metadata,
+    ),
+    'pubsub': EnvDBConfig(
+        env_prefix=sql_env_prefix_by_database['pubsub'],
+        sqlite_file_name=pubsub_db_file_name,
+        metadata=pubsub_metadata,
     ),
 }
 

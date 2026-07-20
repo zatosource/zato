@@ -244,13 +244,12 @@ class Get(_PubSubCommand):
     """ Gets a single message with full payload and metadata.
 
 Examples:
-  zato pubsub get /path/to/server --msg-id zpsm1234 --topic-name /my/topic --redis-stream-id 1716000000000-0
+  zato pubsub get /path/to/server --msg-id zpsm1234 --topic-name /my/topic
     """
 
     opts = [
         {'name':'--msg-id', 'help':'Message ID'},
         {'name':'--topic-name', 'help':'Topic name the message belongs to'},
-        {'name':'--redis-stream-id', 'help':'Redis stream entry ID'},
     ]
 
     def execute(self, args:'any_') -> 'None':
@@ -263,7 +262,6 @@ Examples:
         payload = {
             'msg_id': args.msg_id,
             'topic_name': args.topic_name,
-            'redis_stream_id': args.redis_stream_id,
         }
 
         response = client.invoke('zato.pubsub.subscription.get-message-detail', payload)
@@ -350,14 +348,13 @@ class Delete(_PubSubCommand):
     """ Deletes a single message from a subscription queue.
 
 Examples:
-  zato pubsub delete /path/to/server --msg-id zpsm1234 --topic-name /my/topic --sub-key zato.sub.abc123 --redis-stream-id 1716000000000-0
+  zato pubsub delete /path/to/server --msg-id zpsm1234 --topic-name /my/topic --sub-key zato.sub.abc123
     """
 
     opts = [
         {'name':'--msg-id', 'help':'Message ID'},
         {'name':'--topic-name', 'help':'Topic name the message belongs to'},
         {'name':'--sub-key', 'help':'Subscription key'},
-        {'name':'--redis-stream-id', 'help':'Redis stream entry ID'},
     ]
 
     def execute(self, args:'any_') -> 'None':
@@ -371,7 +368,6 @@ Examples:
             'msg_id': args.msg_id,
             'topic_name': args.topic_name,
             'sub_key': args.sub_key,
-            'redis_stream_id': args.redis_stream_id,
         }
 
         response = client.invoke('zato.pubsub.subscription.delete-message', payload)

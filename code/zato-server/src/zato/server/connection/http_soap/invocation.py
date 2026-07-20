@@ -296,7 +296,7 @@ def deliver_to_callback(
 
         # .. or a pub/sub topic the data is published to ..
         elif callback_type == _callback_type.Topic:
-            _ = server.pubsub_redis.publish(callback_name, data, cid=cid, correl_id=cid)
+            _ = server.pubsub_backend.publish(callback_name, data, cid=cid, correl_id=cid)
 
         # .. or another outgoing REST connection - its own declarative profile,
         # .. including its own potential callback, applies to this delivery too.

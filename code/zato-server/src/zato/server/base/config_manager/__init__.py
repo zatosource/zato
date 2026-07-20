@@ -40,7 +40,7 @@ from zato.common.facade import _service_name_to_topic, _service_sub_key_prefix
 from zato.common.json_internal import loads
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.typing_ import cast_
-from zato.common.pubsub.redis_backend import PublishResult
+from zato.common.pubsub.sql.backend import PublishResult
 from zato.common.util.api import asbool, fs_safe_name, import_module_from_path, new_cid_server, new_msg_id, parse_datetime, \
     update_apikey_username_to_channel, utcnow, visit_py_source, wait_for_dict_key, wait_for_dict_key_by_get_func
 from zato.common.util.retry import get_remaining_time, get_sleep_time
@@ -1271,7 +1271,7 @@ class ConfigManager(_ConfigManagerBase):
             for row in rows:
                 topic_name = row.name
                 sub_key = row.sub_key
-                self.server.pubsub_redis.subscribe(sub_key, topic_name)
+                self.server.pubsub_backend.subscribe(sub_key, topic_name)
                 synced += 1
 
                 if row.delivery_type == _push:
@@ -1326,7 +1326,7 @@ class ConfigManager(_ConfigManagerBase):
 
                 # A topic whose audit log was turned off explicitly writes no audit events
                 if opaque.get('is_audit_log_active') is False:
-                    self.server.pubsub_redis.set_topic_audit_flag(row.name, False)
+                    self.server.pubsub_backend.set_topic_audit_flag(row.name, False)
 
                 # Topics without opaque attributes predate backend types and are built-in,
                 # and built-in topics never have registry entries.
@@ -1440,7 +1440,7 @@ class ConfigManager(_ConfigManagerBase):
         )
 
         # Record the publish in the audit log.
-        self.server.pubsub_redis.audit_log.insert(AuditSource.PubSub, AuditEvent.Published, topic_name,
+        self.server.pubsub_backend.audit_log.insert(AuditSource.PubSub, AuditEvent.Published, topic_name,
             cid=cid,
             msg_id=result.msg_id,
             endpoint=endpoint,
@@ -1475,7 +1475,7 @@ class ConfigManager(_ConfigManagerBase):
         _push_type_service = PubSub.Push_Type.Service
         _push_type_rest = PubSub.Push_Type.REST
 
-        audit_log = self.server.pubsub_redis.audit_log
+        audit_log = self.server.pubsub_backend.audit_log
 
         # The audit log stores payloads as text so free-text search covers them.
         if isinstance(body, str):
@@ -2502,7 +2502,7 @@ class ConfigManager(_ConfigManagerBase):
 
             # .. set up the Redis consumer group so the subscriber can immediately
             # .. receive messages published after this point.
-            self.server.pubsub_redis.subscribe(sub_key, topic_name)
+            self.server.pubsub_backend.subscribe(sub_key, topic_name)
 
         # .. and if this is a push subscription, its delivery greenlet needs to run
         # .. from the moment the subscription exists, without waiting for an edit or a restart.
@@ -2524,7 +2524,7 @@ class ConfigManager(_ConfigManagerBase):
 
         # .. unsubscribe from old topics in Redis (GAP 12) ..
         for topic_name in old_topic_names:
-            self.server.pubsub_redis.unsubscribe(sub_key, topic_name)
+            self.server.pubsub_backend.unsubscribe(sub_key, topic_name)
 
         # .. remove old in-memory configs ..
         self._remove_pubsub_sub_configs_by_sub_key(sub_key)
@@ -2533,7 +2533,7 @@ class ConfigManager(_ConfigManagerBase):
         for topic_item in msg.topic_name_list:
             topic_name = topic_item['topic_name'] if isinstance(topic_item, dict) else topic_item.topic_name
             self._add_pubsub_sub_config(sub_key, topic_name, delivery_type, msg)
-            self.server.pubsub_redis.subscribe(sub_key, topic_name)
+            self.server.pubsub_backend.subscribe(sub_key, topic_name)
 
         # .. stop the old delivery greenlet (GAP 15) ..
         self.server.pubsub_push_delivery.stop_sub_key(sub_key)
@@ -2596,7 +2596,7 @@ class ConfigManager(_ConfigManagerBase):
 
         # .. clean up Redis state for each topic ..
         for topic_name in topic_names:
-            self.server.pubsub_redis.unsubscribe(sub_key, topic_name)
+            self.server.pubsub_backend.unsubscribe(sub_key, topic_name)
 
         # .. remove in-memory subscription configs ..
         self._remove_pubsub_sub_configs_by_sub_key(sub_key)
@@ -2660,7 +2660,7 @@ class ConfigManager(_ConfigManagerBase):
     def on_config_event_PUBSUB_TOPIC_CREATE(self, msg:'bunch_') -> 'None':
 
         # Every new topic announces its audit log state ..
-        self.server.pubsub_redis.set_topic_audit_flag(msg.topic_name, msg.is_audit_log_active)
+        self.server.pubsub_backend.set_topic_audit_flag(msg.topic_name, msg.is_audit_log_active)
 
         # .. and AMQP-backed topics additionally get a registry entry
         # .. along with the channel override if one is needed.
@@ -2689,8 +2689,8 @@ class ConfigManager(_ConfigManagerBase):
 
         # Re-register the audit log state under the topic's current name,
         # which also covers renames since the old name is forgotten first.
-        self.server.pubsub_redis.delete_topic_audit_flag(old_name)
-        self.server.pubsub_redis.set_topic_audit_flag(new_name, msg.is_audit_log_active)
+        self.server.pubsub_backend.delete_topic_audit_flag(old_name)
+        self.server.pubsub_backend.set_topic_audit_flag(new_name, msg.is_audit_log_active)
 
         # Handle name change ..
         if old_name != new_name:
@@ -2701,7 +2701,7 @@ class ConfigManager(_ConfigManagerBase):
                 matcher.rename_topic(client_id, old_name, new_name)
 
             # .. rename Redis keys and subscriber sets ..
-            self.server.pubsub_redis.rename_topic(old_name, new_name)
+            self.server.pubsub_backend.rename_topic(old_name, new_name)
 
             # .. re-key pubsub_subs from old topic name to new topic name ..
             sub_configs = self.config_store.pubsub_subs.pop(old_name, None)
@@ -2817,7 +2817,7 @@ class ConfigManager(_ConfigManagerBase):
         topic_name = msg.topic_name
 
         # .. forget about the topic's audit log state ..
-        self.server.pubsub_redis.delete_topic_audit_flag(topic_name)
+        self.server.pubsub_backend.delete_topic_audit_flag(topic_name)
 
         # .. update in-memory pattern matcher ..
         matcher = self.server.pubsub_pattern_matcher
@@ -2825,7 +2825,7 @@ class ConfigManager(_ConfigManagerBase):
             matcher.delete_topic(client_id, topic_name)
 
         # .. delete Redis keys, subscriber sets, and disk files ..
-        self.server.pubsub_redis.delete_topic(topic_name)
+        self.server.pubsub_backend.delete_topic(topic_name)
 
         # .. remove in-memory subscription and push delivery configs for this topic ..
         self._remove_topic_sub_configs(topic_name)
@@ -2928,7 +2928,7 @@ class ConfigManager(_ConfigManagerBase):
             topic_name = _service_name_to_topic(service_name)
 
             # .. remove the Redis consumer group and subscription sets ..
-            server.pubsub_redis.unsubscribe(sub_key, topic_name)
+            server.pubsub_backend.unsubscribe(sub_key, topic_name)
 
             # .. remove push delivery config ..
             _ = self._push_subs.pop(sub_key, None)

@@ -13,6 +13,7 @@ from logging import getLogger
 from sqlalchemy import and_, func, select
 
 # Zato
+from zato.common.api import PubSub
 from zato.common.pubsub.sql.browse import SQLBrowseAPI
 from zato.common.pubsub.sql.config import get_batch_size
 from zato.common.pubsub.sql.schema import delivery_table, message_table, topic_sub_table
@@ -33,6 +34,9 @@ logger = getLogger(__name__)
 
 # The publish timeline is bucketed by minute
 _milliseconds_per_minute = 60 * 1000
+
+# How long the stored preview of each payload is
+_data_preview_len = PubSub.Message.Data_Preview_Len
 
 # How many minutes of history the statistics cover unless told otherwise
 _default_since_minutes = 60
@@ -380,6 +384,49 @@ class SQLAdminAPI(SQLBrowseAPI):
         logger.info('delete_message -> sub_key:%s, topic_name:%s, msg_id:%s', sub_key, topic_name, msg_id)
 
         return True
+
+# ################################################################################################################################
+
+    def update_message(self, topic_name:'str', msg_id:'str', data:'str') -> 'bool':
+        """ Replaces one message's payload - what the dashboard's message edit form saves.
+        The size and preview follow the new payload, and encryption at rest is honored.
+        Returns True if the message existed and was updated.
+        """
+        topic_name = topic_name.lower()
+
+        data_size = len(data)
+        data_preview = data[:_data_preview_len]
+
+        # Encrypt the new payload at rest when configured to ..
+        if self.encrypt_at_rest:
+            payload = self._encrypt_payload(data)
+            payload_encrypted = True
+        else:
+            payload = data
+            payload_encrypted = False
+
+        # .. and replace the payload with everything derived from it.
+        update_statement = message_table.update()
+        update_statement = update_statement.where(and_(
+            message_table.c.msg_id == msg_id,
+            message_table.c.topic_name == topic_name,
+        ))
+        update_statement = update_statement.values(
+            payload=payload,
+            payload_encrypted=payload_encrypted,
+            data_size=data_size,
+            data_preview=data_preview if data_preview else None,
+        )
+
+        with self.engine.begin() as connection:
+            result = connection.execute(update_statement)
+
+        out = result.rowcount > 0
+
+        logger.info('update_message -> topic_name:%s, msg_id:%s, data_size:%d, updated:%s',
+            topic_name, msg_id, data_size, out)
+
+        return out
 
 # ################################################################################################################################
 

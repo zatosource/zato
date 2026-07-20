@@ -94,7 +94,7 @@ if 0:
     from zato.common.rules.api import RulesManager
     from zato.common.typing_ import any_, anydict, anydictnone, boolnone, callable_, callnone, dictnone, intnone, \
         listnone, modelnone, strdict, strdictnone, strstrdict, strnone, strlist
-    from zato.common.pubsub.redis_backend import PublishResult
+    from zato.common.pubsub.sql.backend import PublishResult
     from zato.common.util.time_ import TimeUtil
     from zato.distlock import Lock
     from zato.server.connection.ftp import FTPStore

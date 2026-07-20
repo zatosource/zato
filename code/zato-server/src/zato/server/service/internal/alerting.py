@@ -90,7 +90,7 @@ class AlertingRun(AdminService):
             _ = self.server.invoke(service_name, payload)
 
         def publish(topic_name:'str', payload:'stranydict') -> 'None':
-            _ = self.server.pubsub_redis.publish(topic_name, payload, cid=self.cid, correl_id=self.cid)
+            _ = self.server.pubsub_backend.publish(topic_name, payload, cid=self.cid, correl_id=self.cid)
 
         def http_post(url:'str', payload:'stranydict') -> 'None':
             response = requests.post(url, json=payload, timeout=_webhook_timeout)

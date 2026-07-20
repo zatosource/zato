@@ -85,7 +85,7 @@ def _build_topic_objects_list(topic_data_list=None, topics=None, topic_data_by_n
 
 if 0:
     from zato.common.ext.bunch import Bunch
-    from zato.common.typing_ import anydict, anylist, strdict, strlist
+    from zato.common.typing_ import anylist, strdict, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -187,8 +187,8 @@ class GetList(AdminService):
                 topic_name = topic_dict['topic_name']
                 sub_topic_pairs.append((sub_key, topic_name))
 
-        # .. get pending depths from Redis in a single Lua call ..
-        pending_depths = self.server.pubsub_redis.get_pending_depths(sub_topic_pairs)
+        # .. get pending depths from the pub/sub backend in one query ..
+        pending_depths = self.server.pubsub_backend.get_pending_depths(sub_topic_pairs)
 
         # .. and process data for each subscription.
         data:'anylist' = []
@@ -1033,14 +1033,12 @@ _browse_default_page_number = 1
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _since_timestamp_to_cursor(stream_id:'str') -> 'str':
-    """ Increments the sequence part of a Redis stream ID by 1
+def _since_timestamp_to_cursor(sequence_id:'str') -> 'str':
+    """ Increments the last-seen publication sequence number by 1
     so that the cursor excludes the last-seen entry.
     """
-    parts = stream_id.split('-')
-    timestamp_part = parts[0]
-    next_sequence = int(parts[1]) + 1
-    out = f'{timestamp_part}-{next_sequence}'
+    next_sequence = int(sequence_id) + 1
+    out = str(next_sequence)
     return out
 
 # ################################################################################################################################
@@ -1049,7 +1047,7 @@ def _since_timestamp_to_cursor(stream_id:'str') -> 'str':
 class BrowseQueue(AdminService):
     """ Browses messages in a subscription's queue filtered by delivery state.
     Compatible with the dashboard kit pagination contract (accepts page/page_size, returns rows/total/page).
-    Uses Redis-side pagination - only the requested page is fetched from Redis.
+    Uses database-side pagination - only the requested page is fetched.
     """
 
     name  = 'zato.pubsub.subscription.browse-queue'
@@ -1073,12 +1071,12 @@ class BrowseQueue(AdminService):
             sub_key, state, page_number, page_size, since_timestamp, cursor)
 
         # .. get all topics this subscriber is subscribed to ..
-        topic_names = self.server.pubsub_redis.get_subscribed_topics(sub_key)
+        topic_names = self.server.pubsub_backend.get_subscribed_topics(sub_key)
 
         # .. get the real total from O(1) Redis commands ..
         total = 0
         for topic_name in topic_names:
-            count = self.server.pubsub_redis.get_total_count(sub_key, topic_name, state)
+            count = self.server.pubsub_backend.get_total_count(sub_key, topic_name, state)
             logger.info('BrowseQueue total_count -> topic:%s, state:%s, count:%s', topic_name, state, count)
             total += count
 
@@ -1088,7 +1086,7 @@ class BrowseQueue(AdminService):
             new_rows:'anylist' = []
 
             for topic_name in topic_names:
-                messages, next_cursor = self.server.pubsub_redis.browse_messages(
+                messages, next_cursor = self.server.pubsub_backend.browse_messages(
                     topic_name, sub_key=sub_key, state=state,
                     cursor=cursor, page_size=page_size, needs_data=False)
                 logger.info('BrowseQueue since_timestamp browse -> topic:%s, cursor:%s, got:%d, next_cursor:%s',
@@ -1099,7 +1097,7 @@ class BrowseQueue(AdminService):
 
             if new_rows:
                 logger.info('BrowseQueue since_timestamp result -> rows:%d, first_id:%s, last_id:%s',
-                    len(new_rows), new_rows[0]['redis_stream_id'], new_rows[-1]['redis_stream_id'])
+                    len(new_rows), new_rows[0]['sequence_id'], new_rows[-1]['sequence_id'])
 
             out = {
                 'rows': new_rows,
@@ -1114,7 +1112,7 @@ class BrowseQueue(AdminService):
             page_rows:'anylist' = []
 
             for topic_name in topic_names:
-                messages, next_cursor = self.server.pubsub_redis.browse_messages(
+                messages, next_cursor = self.server.pubsub_backend.browse_messages(
                     topic_name, sub_key=sub_key, state=state,
                     cursor=cursor, page_size=page_size, needs_data=False,
                     reverse=True)
@@ -1122,8 +1120,8 @@ class BrowseQueue(AdminService):
                     topic_name, cursor, len(messages), next_cursor)
                 if messages:
                     logger.info('BrowseQueue reverse browse first/last -> first_id:%s, first_pub:%s, last_id:%s, last_pub:%s',
-                        messages[0]['redis_stream_id'], messages[0]['pub_time_iso'],
-                        messages[-1]['redis_stream_id'], messages[-1]['pub_time_iso'])
+                        messages[0]['sequence_id'], messages[0]['pub_time_iso'],
+                        messages[-1]['sequence_id'], messages[-1]['pub_time_iso'])
                 page_rows.extend(messages)
 
             page_rows.sort(key=itemgetter('pub_time_iso'), reverse=True)
@@ -1147,149 +1145,66 @@ class BrowseQueue(AdminService):
 # ################################################################################################################################
 
 class GetMessageDetail(AdminService):
-    """ Returns the full detail of a single message for the edit form.
+    """ Returns the full detail of a single message for the edit form, payload included.
     """
 
     name  = 'zato.pubsub.subscription.get-message-detail'
-    input = 'msg_id', 'topic_name', 'redis_stream_id'
+    input = 'msg_id', 'topic_name'
 
     def handle(self) -> 'None':
 
-        # Our response to produce
-        out:'anydict' = {}
-
         # Extract request parameters ..
-        msg_id          = self.request.input.msg_id
-        topic_name      = self.request.input.topic_name
-        redis_stream_id = self.request.input.redis_stream_id
+        msg_id     = self.request.input.msg_id
+        topic_name = self.request.input.topic_name
 
-        # .. check if the full payload still exists on disk ..
-        data_reference = self.server.pubsub_redis.disk_store.make_ref(msg_id, topic_name)
-        has_data = self.server.pubsub_redis.disk_store.exists(data_reference)
+        # .. read the message straight from the pub/sub backend ..
+        details = self.server.pubsub_backend.get_message_details(topic_name, msg_id)
 
-        if has_data:
-            load_result = self.server.pubsub_redis.disk_store.load(data_reference)
-        else:
-            logger.warning('GetMessageDetail -> payload not on disk, msg_id:%s, topic:%s, ref:%s, path:%s',
-                msg_id, topic_name, data_reference, self.server.pubsub_redis.disk_store._ref_to_path(data_reference))
-
-        # .. fetch the stream entry metadata ..
-        stream_key = self.server.pubsub_redis.get_stream_key(topic_name)
-        raw_entries = self.server.pubsub_redis.redis.xrange(stream_key, min=redis_stream_id, max=redis_stream_id)
-
-        if not raw_entries:
-            out = {'error': f'Stream entry not found: {redis_stream_id}'}
-
-            self.response.payload = out
+        if details is None:
+            self.response.payload = {'error': f'Message not found: {msg_id}'}
             return
 
-        # .. build the response with metadata from the stream entry ..
-        first_entry = raw_entries[0]
-        entry_data = first_entry[1]
-
-        out = {
-            'msg_id': msg_id,
-            'topic_name': topic_name,
-            'redis_stream_id': redis_stream_id,
-            'has_data': has_data,
-            'data': load_result.data if has_data else '',
-            'data_class': load_result.data_class if has_data else '',
-            'priority': int(entry_data['priority']),
-            'expiration': int(entry_data['expiration']),
-            'pub_time_iso': entry_data['pub_time_iso'],
-            'recv_time_iso': entry_data['recv_time_iso'],
-            'expiration_time_iso': entry_data['expiration_time_iso'],
-            'data_size': int(entry_data['data_size']),
-        }
-
-        # .. include optional metadata fields ..
-        if correl_id := entry_data.get('correl_id'):
-            out['correl_id'] = correl_id
-
-        if in_reply_to := entry_data.get('in_reply_to'):
-            out['in_reply_to'] = in_reply_to
-
-        if ext_client_id := entry_data.get('ext_client_id'):
-            out['ext_client_id'] = ext_client_id
-
-        if publisher := entry_data.get('publisher'):
-            out['publisher'] = publisher
+        # .. a NULL payload means the message was fully delivered and only its trace remains ..
+        details['has_data'] = bool(details['data'])
 
         # .. and return the response.
-        self.response.payload = out
+        self.response.payload = details
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class GetMessageMetadata(AdminService):
-    """ Returns only the Redis stream metadata for a single message (no disk read).
+    """ Returns only a message's metadata, without its payload.
     """
 
     name  = 'zato.pubsub.subscription.get-message-metadata'
-    input = 'msg_id', 'topic_name', 'redis_stream_id'
+    input = 'msg_id', 'topic_name'
 
     def handle(self) -> 'None':
 
-        # Our response to produce
-        out:'anydict' = {}
-
         # Extract request parameters ..
-        msg_id          = self.request.input.msg_id
-        topic_name      = self.request.input.topic_name
-        redis_stream_id = self.request.input.redis_stream_id
+        msg_id     = self.request.input.msg_id
+        topic_name = self.request.input.topic_name
 
-        # .. fetch the stream entry metadata ..
-        stream_key = self.server.pubsub_redis.get_stream_key(topic_name)
-        raw_entries = self.server.pubsub_redis.redis.xrange(stream_key, min=redis_stream_id, max=redis_stream_id)
+        # .. read the message straight from the pub/sub backend ..
+        details = self.server.pubsub_backend.get_message_details(topic_name, msg_id)
 
-        if not raw_entries:
-            out = {'error': f'Stream entry not found: {redis_stream_id}'}
-
-            self.response.payload = out
+        if details is None:
+            self.response.payload = {'error': f'Message not found: {msg_id}'}
             return
 
-        # .. build the response with metadata from the stream entry ..
-        first_entry = raw_entries[0]
-        entry_data = first_entry[1]
-
-        out = {
-            'msg_id': msg_id,
-            'topic_name': topic_name,
-            'redis_stream_id': redis_stream_id,
-            'priority': int(entry_data['priority']),
-            'expiration': int(entry_data['expiration']),
-            'pub_time_iso': entry_data['pub_time_iso'],
-            'recv_time_iso': entry_data['recv_time_iso'],
-            'expiration_time_iso': entry_data['expiration_time_iso'],
-            'data_size': int(entry_data['data_size']),
-        }
-
-        # .. include optional metadata fields ..
-        if correl_id := entry_data.get('correl_id'):
-            out['correl_id'] = correl_id
-
-        if in_reply_to := entry_data.get('in_reply_to'):
-            out['in_reply_to'] = in_reply_to
-
-        if ext_client_id := entry_data.get('ext_client_id'):
-            out['ext_client_id'] = ext_client_id
-
-        if publisher := entry_data.get('publisher'):
-            out['publisher'] = publisher
+        # .. drop the payload since only the metadata was asked for ..
+        del details['data']
+        del details['data_class']
 
         # .. and return the response.
-        self.response.payload = out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-_default_data_class = ''
+        self.response.payload = details
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class UpdateMessage(AdminService):
-    """ Updates a message's payload on disk.
+    """ Updates a message's payload in the pub/sub database.
     """
 
     name  = 'zato.pubsub.subscription.update-message'
@@ -1302,8 +1217,12 @@ class UpdateMessage(AdminService):
         topic_name = self.request.input.topic_name
         data       = self.request.input.data
 
-        # .. overwrite the payload file on disk ..
-        _ = self.server.pubsub_redis.disk_store.store(msg_id, topic_name, data, _default_data_class)
+        # .. replace the payload in the pub/sub database ..
+        was_updated = self.server.pubsub_backend.update_message(topic_name, msg_id, data)
+
+        if not was_updated:
+            self.response.payload = {'error': f'Message not found: {msg_id}'}
+            return
 
         # .. and return success.
         out = {
@@ -1328,8 +1247,8 @@ class ClearQueue(AdminService):
         # Extract the sub_key ..
         sub_key = self.request.input.sub_key
 
-        # .. delegate to the Redis backend ..
-        result = self.server.pubsub_redis.clear_queue(sub_key)
+        # .. delegate to the pub/sub backend ..
+        result = self.server.pubsub_backend.clear_queue(sub_key)
 
         # .. and return the result.
         self.response.payload = result
@@ -1342,38 +1261,18 @@ class DeleteMessage(AdminService):
     """
 
     name  = 'zato.pubsub.subscription.delete-message'
-    input = 'msg_id', 'topic_name', 'sub_key', 'redis_stream_id'
+    input = 'msg_id', 'topic_name', 'sub_key'
 
     def handle(self) -> 'None':
 
         # Extract request parameters ..
-        msg_id          = self.request.input.msg_id
-        topic_name      = self.request.input.topic_name
-        sub_key         = self.request.input.sub_key
-        redis_stream_id = self.request.input.redis_stream_id
+        msg_id     = self.request.input.msg_id
+        topic_name = self.request.input.topic_name
+        sub_key    = self.request.input.sub_key
 
-        # .. resolve stream key and fetch the entry to get data_ref ..
-        stream_key = self.server.pubsub_redis.get_stream_key(topic_name)
-        raw_entries = self.server.pubsub_redis.redis.xrange(stream_key, min=redis_stream_id, max=redis_stream_id)
-
-        if not raw_entries:
-            self.response.payload = {'error': f'Message not found: {redis_stream_id}'}
-            return
-
-        # .. extract data_ref from the entry ..
-        entry_data = raw_entries[0][1]
-        data_ref = entry_data['data_ref']
-
-        # .. ack the message (cleans up pending sets and disk if last subscriber) ..
-        self.server.pubsub_redis.ack_message(stream_key, sub_key, redis_stream_id, data_ref)
-
-        # .. check if no other subscriber needs this entry ..
-        pending_key = self.server.pubsub_redis._get_pending_key(data_ref)
-        remaining = self.server.pubsub_redis.redis.scard(pending_key)
-
-        # .. if no one else needs it, remove the entry from the queue entirely ..
-        if remaining == 0:
-            _ = self.server.pubsub_redis.redis.xdel(stream_key, redis_stream_id)
+        # .. remove the message from this subscriber's queue - the backend removes
+        # .. the row entirely when no other subscriber needs it anymore ..
+        _ = self.server.pubsub_backend.delete_message(sub_key, topic_name, msg_id)
 
         # .. and return success.
         self.response.payload = {'msg_id': msg_id, 'status': 'ok'}

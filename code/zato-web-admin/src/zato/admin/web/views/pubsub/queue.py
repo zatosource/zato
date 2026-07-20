@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import logging
-import os
 from http import HTTPStatus
 from traceback import format_exc
 from urllib.parse import quote
@@ -26,8 +25,7 @@ from pygments.formatters import HtmlFormatter
 from zato.admin.web.views import method_allowed
 from zato.admin.web.views.highlight import get_pygments_lexer, highlight_data_previews
 from zato.common.content_type import format_content, get_content_type
-from zato.common.defaults import default_cluster_id, default_server_base_dir
-from zato.common.pubsub.disk_store import DiskMessageStore
+from zato.common.defaults import default_cluster_id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -46,22 +44,10 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-_disk_store_base_dir = os.path.join(default_server_base_dir, 'work', 'pubsub-messages')
-_disk_store = DiskMessageStore(_disk_store_base_dir)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 _default_error_message = 'Error'
 _default_active_tab    = 'data'
 _default_page          = 1
 _default_page_size     = 50
-_default_priority      = 5
-_default_expiration    = 0
-_default_data          = ''
-_default_data_class    = ''
-_default_data_size     = 0
-_default_time_iso      = ''
 
 _poll_url    = '/zato/dashboard/detail-poll/'
 _payload_url = '/zato/pubsub/subscription/queue/message/payload/'
@@ -193,53 +179,36 @@ def message_detail(request:'HttpRequest') -> 'TemplateResponse':
     """
 
     # Extract parameters from the request ..
-    sub_key         = request.GET['sub_key']
-    msg_id          = request.GET['msg_id']
-    topic_name      = request.GET['topic_name']
-    redis_stream_id = request.GET['redis_stream_id']
+    sub_key    = request.GET['sub_key']
+    msg_id     = request.GET['msg_id']
+    topic_name = request.GET['topic_name']
 
-    # .. read the payload directly from disk ..
-    data_reference = _disk_store.make_ref(msg_id, topic_name)
-    load_result = _disk_store.load(data_reference)
-
-    # .. invoke the metadata-only service for Redis stream data ..
+    # .. invoke the detail service - it returns the metadata and the payload in one call ..
     invoke_payload = {
         'msg_id': msg_id,
         'topic_name': topic_name,
-        'redis_stream_id': redis_stream_id,
     }
 
-    response = request.zato.client.invoke('zato.pubsub.subscription.get-message-metadata', invoke_payload)
+    response = request.zato.client.invoke('zato.pubsub.subscription.get-message-detail', invoke_payload)
 
-    if response.ok:
-        message_data = _parse_response_data(response)
-    else:
-        message_data = {
-            'msg_id':              msg_id,
-            'topic_name':          topic_name,
-            'redis_stream_id':     redis_stream_id,
-            'priority':            _default_priority,
-            'expiration':          _default_expiration,
-            'pub_time_iso':        _default_time_iso,
-            'recv_time_iso':       _default_time_iso,
-            'expiration_time_iso': _default_time_iso,
-            'data_size':           _default_data_size,
-        }
+    if not response.ok:
+        raise Exception(response.details)
+
+    message_data = _parse_response_data(response)
 
     # .. detect content type and pretty-print ..
-    data = load_result.data
-    content_type = get_content_type(data)
-    data = format_content(data, content_type)
+    raw_data = message_data['data']
+    content_type = get_content_type(raw_data)
+    data = format_content(raw_data, content_type)
 
-    # .. attach the payload to the response ..
+    # .. attach the formatted payload to the response ..
     message_data['data'] = data
-    message_data['data_class'] = load_result.data_class
     message_data['content_type'] = content_type
 
     # .. pre-render syntax-highlighted HTML so the page loads without a highlight delay ..
     lexer = get_pygments_lexer(content_type)
     formatter = HtmlFormatter(nowrap=True)
-    message_data['data_highlighted'] = pygments_highlight(load_result.data, lexer, formatter)
+    message_data['data_highlighted'] = pygments_highlight(raw_data, lexer, formatter)
 
     # .. resolve the active tab from the URL ..
     if active_tab := request.GET.get('tab'):
@@ -279,7 +248,7 @@ def message_detail(request:'HttpRequest') -> 'TemplateResponse':
 
 @method_allowed('POST')
 def message_payload(request:'HttpRequest') -> 'HttpResponse':
-    """ Returns the message payload read directly from disk (no server round-trip).
+    """ Returns the message payload read from the pub/sub database.
     """
 
     # Parse the request body ..
@@ -287,20 +256,23 @@ def message_payload(request:'HttpRequest') -> 'HttpResponse':
     msg_id     = body['msg_id']
     topic_name = body['topic_name']
 
-    # .. read directly from disk ..
-    data_reference = _disk_store.make_ref(msg_id, topic_name)
+    # .. invoke the detail service for the payload ..
+    invoke_payload = {
+        'msg_id': msg_id,
+        'topic_name': topic_name,
+    }
 
-    if _disk_store.exists(data_reference):
-        load_result = _disk_store.load(data_reference)
-        response_data = {
-            'data': load_result.data,
-            'data_class': load_result.data_class,
-        }
-    else:
-        response_data = {
-            'data': '',
-            'data_class': '',
-        }
+    response = request.zato.client.invoke('zato.pubsub.subscription.get-message-detail', invoke_payload)
+
+    if not response.ok:
+        raise Exception(response.details)
+
+    message_data = _parse_response_data(response)
+
+    response_data = {
+        'data': message_data['data'],
+        'data_class': message_data['data_class'],
+    }
 
     # .. and return the payload as JSON.
     response_json = json.dumps(response_data)
@@ -318,17 +290,15 @@ def delete_message(request:'HttpRequest') -> 'HttpResponse':
 
     # Parse the request body ..
     body = json.loads(request.body)
-    msg_id          = body['msg_id']
-    topic_name      = body['topic_name']
-    sub_key         = body['sub_key']
-    redis_stream_id = body['redis_stream_id']
+    msg_id     = body['msg_id']
+    topic_name = body['topic_name']
+    sub_key    = body['sub_key']
 
     try:
         response = request.zato.client.invoke('zato.pubsub.subscription.delete-message', {
             'msg_id': msg_id,
             'topic_name': topic_name,
             'sub_key': sub_key,
-            'redis_stream_id': redis_stream_id,
         })
 
         if response.ok:

@@ -122,9 +122,11 @@ class SQLBrowseAPI(SQLBackendCore):
         """ Builds one browse entry dict out of a message row.
         """
 
-        # The always-present fields come first ..
+        # The always-present fields come first - the sequence number doubles
+        # as the browse cursor and as the dashboard's incremental-poll watermark ..
         out:'anydict' = {
             'msg_id': row.msg_id,
+            'sequence_id': row.id,
             'topic_name': row.topic_name,
             'priority': row.priority,
             'expiration': row.expiration,

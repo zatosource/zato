@@ -380,9 +380,9 @@ Subcommands:
 Examples:
   zato pubsub publish /path/to/server --topic /my/topic --data '{"key": "value"}'
   zato pubsub browse /path/to/server --sub-key zato.sub.abc123 --state pending
-  zato pubsub get /path/to/server --msg-id zpsm1234 --topic-name /my/topic --redis-stream-id 1716000000000-0
+  zato pubsub get /path/to/server --msg-id zpsm1234 --topic-name /my/topic
   zato pubsub update /path/to/server --msg-id zpsm1234 --topic-name /my/topic --data '{"updated": true}'
-  zato pubsub delete /path/to/server --msg-id zpsm1234 --topic-name /my/topic --sub-key zato.sub.abc123 --redis-stream-id 1716000000000-0
+  zato pubsub delete /path/to/server --msg-id zpsm1234 --topic-name /my/topic --sub-key zato.sub.abc123
   zato pubsub clear /path/to/server --sub-key zato.sub.abc123
 """
 

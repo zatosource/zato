@@ -126,7 +126,7 @@ class ReprocessAS2Message(AdminService):
             _ = self.server.invoke(service_name, message)
 
         def publish(topic_name:'str', message:'stranydict') -> 'None':
-            _ = self.server.pubsub_redis.publish(topic_name, message, cid=self.cid, correl_id=self.cid)
+            _ = self.server.pubsub_backend.publish(topic_name, message, cid=self.cid, correl_id=self.cid)
 
         try:
             event = load_event(event_id)
