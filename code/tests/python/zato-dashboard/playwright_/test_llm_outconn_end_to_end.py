@@ -101,7 +101,6 @@ class TestLLMOutconnEndToEnd:
 
         # Create the connection in the browser and give it a known API key ..
         outconn_id = create_llm_outconn(page, base_url, name, llm_test_server.url('/v1'), {
-            'provider': 'openai',
             'model': 'gpt-4o-mini',
         })
         change_llm_api_key(page, outconn_id, api_key)
@@ -147,7 +146,6 @@ class TestLLMOutconnEndToEnd:
 
         # Create the connection with the initial model and prove it works ..
         outconn_id = create_llm_outconn(page, base_url, name, llm_test_server.url('/v1'), {
-            'provider': 'openai',
             'model': 'gpt-4o-mini',
         })
 
@@ -198,7 +196,6 @@ class TestLLMOutconnEndToEnd:
         llm_test_server.clear_requests()
 
         outconn_id = create_llm_outconn(page, base_url, name, llm_test_server.url('/v1'), {
-            'provider': 'openai',
             'model': 'gpt-4o-mini',
         })
 

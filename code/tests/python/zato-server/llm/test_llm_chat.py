@@ -68,7 +68,6 @@ def _get_wrapper(
     config.queue_build_cap = 30
     config.address = llm_test_server.url('/v1')
     config.secret = 'test-key'
-    config.provider = 'openai'
     config.model = 'gpt-4o-mini'
     config.timeout = 10
     config.max_tokens = 256

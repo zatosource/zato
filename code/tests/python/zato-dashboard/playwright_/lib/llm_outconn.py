@@ -14,8 +14,7 @@ from http.client import OK
 from urllib.parse import urlparse
 
 # Zato
-from zato.common.test.playwright_pubsub import navigate_to_page, open_create_dialog, set_select_value, \
-    submit_create_form, submit_edit_form
+from zato.common.test.playwright_pubsub import navigate_to_page, open_create_dialog, submit_create_form, submit_edit_form
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,8 +39,8 @@ _Service_Poll_Interval = 1.0
 # Plain text fields in the create and edit forms, keyed by option name
 _Text_Fields = ('name', 'address', 'model', 'pool_size', 'timeout', 'max_tokens', 'max_history_turns', 'chat_expiry')
 
-# Select fields set by raw value via JS since Chosen.js hides the underlying elements
-_Select_Fields = ('provider',)
+# Fields that live inside the collapsed "More options" block and need it expanded first
+_More_Options_Fields = ('pool_size', 'timeout', 'max_tokens', 'max_history_turns', 'chat_expiry')
 
 # Checkbox fields toggled by boolean options
 _Checkbox_Fields = ('is_active',)
@@ -112,15 +111,22 @@ def fill_llm_outconn_form(page:'Page', options:'anydict', prefix:'str'='') -> 'N
     in options are touched.
     """
 
+    # The dialogs always open with the More options block collapsed,
+    # so it needs expanding before any of its fields can be filled.
+    needs_more_options = False
+    for field_name in _More_Options_Fields:
+        if field_name in options:
+            needs_more_options = True
+            break
+
+    if needs_more_options:
+        form_type = 'edit' if prefix else 'create'
+        page.evaluate(f'$.fn.zato.toggle_visibility(".llm-more-options-{form_type}")')
+
     # Plain text inputs ..
     for field_name in _Text_Fields:
         if field_name in options:
             page.fill(f'#id_{prefix}{field_name}', options[field_name])
-
-    # .. selects set by raw value ..
-    for field_name in _Select_Fields:
-        if field_name in options:
-            set_select_value(page, f'#id_{prefix}{field_name}', options[field_name])
 
     # .. and checkboxes, checked via JS so the state is set directly regardless of the styling.
     for field_name in _Checkbox_Fields:

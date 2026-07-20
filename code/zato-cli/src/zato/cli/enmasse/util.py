@@ -545,7 +545,7 @@ def get_object_order(object_type:'str') -> 'strlist':
         'tls_verify') + Invocation_Order_Fields_REST
     order['scheduler'] = 'name', 'is_active', 'service', 'job_type', 'start_date', 'seconds', 'minutes', 'hours', 'days', 'extra:list',
     order['ldap'] = 'name', 'is_active', 'username', 'auth_type', 'server_list:list',
-    order['llm'] = 'name', 'is_active', 'provider', 'address', 'model', 'pool_size', 'timeout', 'max_tokens', \
+    order['llm'] = 'name', 'is_active', 'model', 'address', 'pool_size', 'timeout', 'max_tokens', \
         'max_history_turns', 'chat_expiry',
     order['odata'] = 'name', 'is_active', 'address', 'odata_version', 'auth_type', 'username', 'token_url', 'tenant_id', \
         'client_id', 'scopes', 'needs_csrf_token', 'page_size', 'timeout', 'pool_size',

@@ -295,6 +295,7 @@
                                 <a class="menu-link"  style="padding-left: 0.3rem" href="#">AI &darr;</a>
                                 <ul>
                                     <li class="child"><a class="menu-link" href="{% url "gateway-mcp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=gateway-mcp">MCP gateways</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "out-llm" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-llm">LLM connections</a></li>
                                 </ul>
                             </li>
                             {% if 0 %}
@@ -367,7 +368,6 @@
                                             </li>
                                             <li class="child"><a class="menu-link" href="{% url "out-graphql" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-graphql">GraphQL</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-ldap" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-ldap">LDAP</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "out-llm" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-llm">LLM</a></li>
                                             {% if 0%}
                                             <li class="child"><a class="menu-link" href="{% url "out-mongodb" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-mongodb">MongoDB</a></li>
                                             {% endif %}

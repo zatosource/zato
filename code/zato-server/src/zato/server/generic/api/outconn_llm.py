@@ -12,6 +12,7 @@ from traceback import format_exc
 
 # Zato
 from zato.common.api import LLM
+from zato.common.llm_models import model_list
 from zato.common.typing_ import cast_
 from zato.server.connection.llm.claude import ClaudeClient
 from zato.server.connection.llm.common import Role_Assistant, Role_User
@@ -38,10 +39,10 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Default values applied when a configuration key is missing or None
+# Default values applied when a configuration key is missing or None -
+# the default model is the first entry of the generated catalog.
 llm_config_defaults:'dict[str, object]' = {
-    'provider': LLM.PROVIDER.OPENAI.id,
-    'model': LLM.DEFAULT.Model,
+    'model': model_list[0]['id'],
     'timeout': LLM.DEFAULT.TIMEOUT,
     'max_tokens': LLM.DEFAULT.MAX_TOKENS,
     'max_history_turns': LLM.DEFAULT.MAX_HISTORY_TURNS,
@@ -51,12 +52,24 @@ llm_config_defaults:'dict[str, object]' = {
 # Config keys that must be integers but may arrive as strings from opaque storage
 llm_int_config_keys = ('timeout', 'max_tokens', 'max_history_turns', 'chat_expiry')
 
-# Maps the provider config field to the client class built in add_client
+# Maps each derived provider to the client class built in add_client
 _provider_client_map = {
     LLM.PROVIDER.OPENAI.id: OpenAIClient,
     LLM.PROVIDER.CLAUDE.id: ClaudeClient,
     LLM.PROVIDER.GEMINI.id: GeminiClient,
 }
+
+# Maps human-friendly catalog names to the provider and the id sent on the wire,
+# built from the generated catalog in zato.common.llm_models.
+_catalog_by_name:'dict[str, dict[str, str]]' = {}
+
+for _model in model_list:
+    _catalog_by_name[_model['name']] = {'provider': _model['provider'], 'id': _model['id']}
+
+# Hand-typed model names select their protocol by these prefixes,
+# with OpenAI the protocol of everything else, self-hosted or proxied included.
+_claude_model_prefix = 'claude-'
+_gemini_model_prefix = 'gemini-'
 
 # A turn is one user message plus the assistant's reply
 _messages_per_turn = 2
@@ -81,8 +94,25 @@ class OutconnLLMWrapper(Wrapper):
 
     def add_client(self) -> 'None':
 
-        # The provider config field decides which client class to build
-        provider = self.config['provider']
+        # The model name alone decides which protocol the connection speaks ..
+        model = self.config['model']
+
+        # .. catalog names like "Fable 5" resolve to their provider
+        # .. and to the id the provider's API expects ..
+        if model in _catalog_by_name:
+            entry = _catalog_by_name[model]
+            provider = entry['provider']
+            self.config['model'] = entry['id']
+
+        # .. while hand-typed names select the protocol by prefix and go out unchanged,
+        # .. with OpenAI covering everything self-hosted or proxied.
+        elif model.startswith(_claude_model_prefix):
+            provider = LLM.PROVIDER.CLAUDE.id
+        elif model.startswith(_gemini_model_prefix):
+            provider = LLM.PROVIDER.GEMINI.id
+        else:
+            provider = LLM.PROVIDER.OPENAI.id
+
         client_class = _provider_client_map[provider]
 
         try:

@@ -88,7 +88,6 @@ class TestEnmasseLLMFromYAML(TestCase):
 
         # .. while the remaining fields from YAML land in the opaque configuration.
         opaque = parse_instance_opaque_attr(conn)
-        self.assertEqual(opaque['provider'], 'openai')
         self.assertEqual(opaque['model'], 'gpt-4o-mini')
         self.assertEqual(opaque['max_tokens'], 2048)
         self.assertEqual(opaque['max_history_turns'], 10)
@@ -103,8 +102,7 @@ class TestEnmasseLLMFromYAML(TestCase):
         self.assertEqual(conn2.timeout, LLM.DEFAULT.TIMEOUT)
 
         opaque2 = parse_instance_opaque_attr(conn2)
-        self.assertEqual(opaque2['provider'], 'claude')
-        self.assertEqual(opaque2['model'], 'claude-sonnet-4-5')
+        self.assertEqual(opaque2['model'], 'Sonnet 5')
         self.assertEqual(opaque2['max_tokens'], LLM.DEFAULT.MAX_TOKENS)
         self.assertEqual(opaque2['max_history_turns'], LLM.DEFAULT.MAX_HISTORY_TURNS)
         self.assertEqual(opaque2['chat_expiry'], LLM.DEFAULT.CHAT_EXPIRY)

@@ -81,9 +81,6 @@ class LLMExporter:
                 'name': row['name'],
             }
 
-            if provider := row.get('provider'):
-                item['provider'] = provider
-
             if address := row.get('address'):
                 item['address'] = address
 

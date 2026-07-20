@@ -97,7 +97,6 @@ class TestEnmasseLLMExport(TestCase):
             self.assertIn(name, exported_by_name)
             exported_def = exported_by_name[name]
             self.assertEqual(exported_def['name'], yaml_def['name'])
-            self.assertEqual(exported_def['provider'], yaml_def['provider'])
             self.assertEqual(exported_def['address'], yaml_def['address'])
             self.assertEqual(exported_def['model'], yaml_def['model'])
 
