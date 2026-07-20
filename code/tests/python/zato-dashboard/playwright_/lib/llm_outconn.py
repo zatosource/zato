@@ -65,6 +65,18 @@ def open_llm_outconn_page(page:'Page', base_url:'str', query:'str'='') -> 'None'
 
 # ################################################################################################################################
 
+def ensure_on_llm_outconn_page(page:'Page') -> 'None':
+    """ Navigates back to the outgoing LLM connections page if the browser is somewhere else,
+    e.g. in the IDE after an invocation - row clicks and the page's JS functions
+    are only available on the connections page itself.
+    """
+
+    if '/zato/outgoing/llm/' not in page.url:
+        parsed_url = urlparse(page.url)
+        open_llm_outconn_page(page, f'{parsed_url.scheme}://{parsed_url.netloc}')
+
+# ################################################################################################################################
+
 def find_llm_outconn_row(page:'Page', name:'str') -> 'any_':
     """ Returns the table row of an outgoing LLM connection of the given name or None if there is no such row.
     """
@@ -185,7 +197,10 @@ def open_edit_dialog(page:'Page', outconn_id:'str') -> 'None':
     """ Opens the edit dialog for an outgoing LLM connection of the given ID.
     """
 
-    # Call the page's JS edit function ..
+    # The edit function only exists on the connections page ..
+    ensure_on_llm_outconn_page(page)
+
+    # .. call the page's JS edit function ..
     page.evaluate(f'$.fn.zato.outgoing.llm.edit("{outconn_id}")')
 
     # .. and wait for the dialog to appear.
@@ -214,9 +229,7 @@ def delete_llm_outconn(page:'Page', outconn_id:'str') -> 'None':
 
     # The page may be somewhere else, e.g. in the IDE after an invocation,
     # so go back to the connections page first.
-    if '/zato/outgoing/llm/' not in page.url:
-        parsed_url = urlparse(page.url)
-        open_llm_outconn_page(page, f'{parsed_url.scheme}://{parsed_url.netloc}')
+    ensure_on_llm_outconn_page(page)
 
     # Trigger the delete confirmation ..
     page.evaluate(f'$.fn.zato.outgoing.llm.delete_("{outconn_id}")')
@@ -268,6 +281,9 @@ def change_llm_api_key(page:'Page', outconn_id:'str', api_key:'str') -> 'None':
 def ping_llm_outconn(page:'Page', name:'str') -> 'any_':
     """ Clicks the Ping link of an outgoing LLM connection's row and returns the response.
     """
+
+    # The row is only there on the connections page
+    ensure_on_llm_outconn_page(page)
 
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
 
