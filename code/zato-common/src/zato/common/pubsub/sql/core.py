@@ -16,7 +16,7 @@ from gevent import sleep
 from gevent.event import Event
 
 # SQLAlchemy
-from sqlalchemy import and_, exists, select
+from sqlalchemy import and_, bindparam, exists, select
 from sqlalchemy.exc import DBAPIError
 
 # Zato
@@ -59,6 +59,36 @@ _deadlock_retry_sleep = 0.05
 # How long back-to-back SQLite calls may hold the event loop before the backend
 # yields it, in seconds - see _yield_after_write.
 _yield_interval_seconds = 0.005
+
+# The statements below run on every publish or delivery, so they are built once here,
+# not per call - the bind parameters take their values at execution time.
+_subscriber_keys_query = select(topic_sub_table.c.sub_key)
+_subscriber_keys_query = _subscriber_keys_query.where(topic_sub_table.c.topic_name == bindparam('pub_topic_name'))
+
+_message_id_query = select(message_table.c.id)
+_message_id_query = _message_id_query.where(message_table.c.msg_id.in_(bindparam('lookup_msg_ids', expanding=True)))
+
+_ack_delete_statement = delivery_table.delete()
+_ack_delete_statement = _ack_delete_statement.where(and_(
+    delivery_table.c.sub_key == bindparam('ack_sub_key'),
+    delivery_table.c.message_id.in_(bindparam('ack_message_ids', expanding=True)),
+))
+
+# A message is still in flight while any delivery row references it -
+# the update drops the payloads of the given messages that have none left.
+_still_needed = exists()
+_still_needed = _still_needed.where(delivery_table.c.message_id == message_table.c.id)
+
+_drop_payloads_statement = message_table.update()
+_drop_payloads_statement = _drop_payloads_statement.where(and_(
+    message_table.c.id.in_(bindparam('drop_message_ids', expanding=True)),
+    message_table.c.payload.isnot(None),
+    ~_still_needed,
+))
+_drop_payloads_statement = _drop_payloads_statement.values(payload=None, payload_encrypted=False)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 def _is_deadlock_error(error:'DBAPIError') -> 'bool':
     """ Tells whether the database rolled our transaction back as a deadlock victim -
@@ -274,12 +304,9 @@ class SQLBackendCore:
     def _get_subscriber_keys(self, connection:'Connection', topic_name:'str') -> 'strlist':
         """ Returns all the subscriber keys of one topic, read within the caller's transaction.
         """
-        query = select(topic_sub_table.c.sub_key)
-        query = query.where(topic_sub_table.c.topic_name == topic_name)
-
         out:'strlist' = []
 
-        for row in connection.execute(query):
+        for row in connection.execute(_subscriber_keys_query, {'pub_topic_name': topic_name}):
             out.append(row.sub_key)
 
         return out
@@ -289,12 +316,9 @@ class SQLBackendCore:
     def _get_message_ids(self, connection:'Connection', msg_ids:'strlist') -> 'intlist':
         """ Maps public message identifiers to their primary keys, read within the caller's transaction.
         """
-        query = select(message_table.c.id)
-        query = query.where(message_table.c.msg_id.in_(msg_ids))
-
         out:'intlist' = []
 
-        for row in connection.execute(query):
+        for row in connection.execute(_message_id_query, {'lookup_msg_ids': msg_ids}):
             out.append(row.id)
 
         return out
@@ -305,20 +329,7 @@ class SQLBackendCore:
         """ Sets the payload to NULL for each of the given messages that no subscriber needs anymore.
         Returns how many payloads were dropped.
         """
-        # A message is still in flight while any delivery row references it ..
-        still_needed = exists()
-        still_needed = still_needed.where(delivery_table.c.message_id == message_table.c.id)
-
-        # .. so drop the payloads of the given messages that have none left.
-        update_statement = message_table.update()
-        update_statement = update_statement.where(and_(
-            message_table.c.id.in_(message_ids),
-            message_table.c.payload.isnot(None),
-            ~still_needed,
-        ))
-        update_statement = update_statement.values(payload=None, payload_encrypted=False)
-
-        result = connection.execute(update_statement)
+        result = connection.execute(_drop_payloads_statement, {'drop_message_ids': message_ids})
 
         out = result.rowcount
         return out
@@ -375,12 +386,11 @@ class SQLBackendCore:
                 return 0
 
             # .. remove this subscriber's delivery rows ..
-            delete_statement = delivery_table.delete()
-            delete_statement = delete_statement.where(and_(
-                delivery_table.c.sub_key == sub_key,
-                delivery_table.c.message_id.in_(message_ids),
-            ))
-            _ = connection.execute(delete_statement)
+            parameters = {
+                'ack_sub_key': sub_key,
+                'ack_message_ids': message_ids,
+            }
+            _ = connection.execute(_ack_delete_statement, parameters)
 
             # .. and drop the payloads of messages that no subscriber needs anymore.
             out = self._drop_fully_delivered_payloads(connection, message_ids)

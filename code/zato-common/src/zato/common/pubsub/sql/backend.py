@@ -406,12 +406,15 @@ class SQLPubSubBackend(SQLAdminAPI):
         # .. read whatever is deliverable right now ..
         rows = self._fetch_rows(sub_key, max_messages)
 
-        # .. nothing yet - optionally wait for a publish to wake us up and look again ..
+        # .. nothing yet - optionally wait for a publish to wake us up and look again.
+        # .. A wait that times out without a wakeup means nothing was published,
+        # .. so there is nothing to read and no query is issued - with thousands
+        # .. of mostly idle subscribers this is what keeps the idle cost at zero ..
         if not rows:
             if block_ms:
                 wait_seconds = block_ms / _milliseconds_per_second
-                _ = event.wait(wait_seconds)
-                rows = self._fetch_rows(sub_key, max_messages)
+                if event.wait(wait_seconds):
+                    rows = self._fetch_rows(sub_key, max_messages)
 
         # .. convert the rows into message dicts, keeping within the total size budget.
         out:'anylist' = []
