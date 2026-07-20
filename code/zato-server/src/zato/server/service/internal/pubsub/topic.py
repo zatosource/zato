@@ -395,24 +395,10 @@ class GetMatches(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Stream_Prefix = 'zato:pubsub:stream:'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _get_all_topic_names_from_redis(server:'any_') -> 'list':
-    """ Collect all topic names by scanning Redis stream keys.
+def _get_all_topic_names(server:'any_') -> 'list':
+    """ Collect the names of all the topics that currently hold any messages.
     """
-    all_keys = server.pubsub_redis.redis.keys(f'{_Stream_Prefix}*')
-
-    prefix_len = len(_Stream_Prefix)
-
-    out = []
-
-    for key in all_keys:
-        topic_name = key[prefix_len:]
-        out.append(topic_name)
-
+    out = server.pubsub_backend.get_topics_with_messages()
     return out
 
 # ################################################################################################################################
@@ -429,11 +415,11 @@ class GetPublishTimeline(AdminService):
         # Get the time window from the request ..
         since_minutes = self.request.raw_request['since_minutes']
 
-        # .. collect all topic names from Redis ..
-        topic_names = _get_all_topic_names_from_redis(self.server)
+        # .. collect the names of all the topics that hold messages ..
+        topic_names = _get_all_topic_names(self.server)
 
         # .. and query the backend for the timeline.
-        self.response.payload = self.server.pubsub_redis.get_publish_timeline(topic_names, since_minutes)
+        self.response.payload = self.server.pubsub_backend.get_publish_timeline(topic_names, since_minutes)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -449,11 +435,11 @@ class GetPublisherCount(AdminService):
         # Get the time window from the request ..
         since_minutes = self.request.raw_request['since_minutes']
 
-        # .. collect all topic names from Redis ..
-        topic_names = _get_all_topic_names_from_redis(self.server)
+        # .. collect the names of all the topics that hold messages ..
+        topic_names = _get_all_topic_names(self.server)
 
         # .. count distinct publishers ..
-        publisher_count = self.server.pubsub_redis.count_distinct_publishers(topic_names, since_minutes)
+        publisher_count = self.server.pubsub_backend.count_distinct_publishers(topic_names, since_minutes)
 
         # .. and return the count.
         self.response.payload = {'publisher_count': publisher_count}

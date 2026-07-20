@@ -99,7 +99,7 @@ class Pull(Service):
             if service_name:
                 _ = self.invoke(service_name, message)
             else:
-                _ = self.server.pubsub_redis.publish(topic_name, message, cid=self.cid, correl_id=self.cid)
+                _ = self.server.pubsub_backend.publish(topic_name, message, cid=self.cid, correl_id=self.cid)
 
         payload_count = len(result.payloads)
         suffix = 'payload' if payload_count == 1 else 'payloads'

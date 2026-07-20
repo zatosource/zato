@@ -33,6 +33,7 @@ Env_File_Name = 'env.ini'
 sql_env_prefix_by_database = {
     'audit-log': 'Zato_Audit_Log_DB_',
     'analytics': 'Zato_Analytics_DB_',
+    'pubsub':    'Zato_PubSub_DB_',
 }
 
 # Maps the SQL form fields to the suffixes of the corresponding environment variables

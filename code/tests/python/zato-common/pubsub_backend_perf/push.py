@@ -20,7 +20,7 @@ from common import set_progress_context, Min_Delivery_Rate_Per_Second, Min_Publi
 from seeding import count_rows, delete_all_rows
 from zato.common.api import PubSub
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
-from zato.server.base.parallel.delivery import SQLPushDelivery
+from zato.server.base.parallel.delivery import PushDelivery
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -101,7 +101,7 @@ def run_push_delivery_scenario() -> 'None':
 
     backend = SQLPubSubBackend()
     server = _StubServer()
-    delivery = SQLPushDelivery(server, backend) # type: ignore[arg-type]
+    delivery = PushDelivery(server, backend) # type: ignore[arg-type]
 
     # Every topic has its own push subscriber ..
     topic_names:'strlist' = []

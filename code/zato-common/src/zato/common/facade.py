@@ -16,7 +16,7 @@ from zato.common.api import PubSub
 # ################################################################################################################################
 
 if 0:
-    from zato.common.pubsub.redis_backend import PublishResult
+    from zato.common.pubsub.sql.backend import PublishResult
     from zato.common.typing_ import any_, anydict, anydictnone, anylist
     from zato.server.base.parallel import ParallelServer
 
@@ -117,7 +117,7 @@ class PubSubFacade:
         kwargs['publisher'] = self.service_name
 
         # .. now, publish the message to the topic.
-        out = self.server.pubsub_redis.publish(topic_name, data, **kwargs)
+        out = self.server.pubsub_backend.publish(topic_name, data, **kwargs)
 
         return out
 
@@ -138,7 +138,7 @@ class PubSubFacade:
                 sub_key = _service_sub_key_prefix + service_name
 
                 # .. create the topic stream and consumer group in Redis ..
-                self.server.pubsub_redis.subscribe(sub_key, computed_topic)
+                self.server.pubsub_backend.subscribe(sub_key, computed_topic)
 
                 # .. register push config so the delivery greenlet picks it up ..
                 sub_config = {
@@ -174,18 +174,18 @@ class PubSubFacade:
         max_len:'int'=_default_max_len,
     ) -> 'anylist':
 
-        out = self.server.pubsub_redis.fetch_messages(sub_key, max_messages=max_messages, max_len=max_len)
+        out = self.server.pubsub_backend.fetch_messages(sub_key, max_messages=max_messages, max_len=max_len)
         return out
 
 # ################################################################################################################################
 
     def subscribe(self, topic_name:'str', sub_key:'str') -> 'None':
-        self.server.pubsub_redis.subscribe(sub_key, topic_name)
+        self.server.pubsub_backend.subscribe(sub_key, topic_name)
 
 # ################################################################################################################################
 
     def unsubscribe(self, topic_name:'str', sub_key:'str') -> 'None':
-        self.server.pubsub_redis.unsubscribe(sub_key, topic_name)
+        self.server.pubsub_backend.unsubscribe(sub_key, topic_name)
 
 # ################################################################################################################################
 # ################################################################################################################################

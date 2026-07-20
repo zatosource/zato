@@ -39,7 +39,7 @@ from zato.common.marshal_.api import MarshalAPI
 from zato.common.odb.api import PoolStore
 from zato.common.odb.post_process import ODBPostProcess
 from zato.common.pubsub.matcher import PatternMatcher
-from zato.common.pubsub.redis_backend import RedisPubSubBackend
+from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.pubsub.subscriptions_store import SubscriptionsStore
 from zato.common.rate_limiting.common import client_address_headers
 from zato.common.rate_limiting.manager import RateLimitingManager
@@ -83,7 +83,7 @@ if 0:
     from zato.common.odb.model import Cluster as ClusterModel
     from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, intset, strdict, strbytes, \
         strlist, strorlistnone, strnone, strorlist, strset, strtuple
-    from zato.server.base.parallel.delivery import RedisPushDelivery
+    from zato.server.base.parallel.delivery import PushDelivery
     from zato.server.service.store import ServiceStore
     from zato.input_output import IOProcessor  # type: ignore[attr-defined]
     from zato.server.startup_callable import StartupCallableTool
@@ -151,8 +151,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     rate_limiting_manager: 'RateLimitingManager'
     quota_tiers_manager: 'QuotaTiersManager'
 
-    pubsub_redis: 'RedisPubSubBackend'
-    pubsub_push_delivery: 'RedisPushDelivery'
+    pubsub_backend: 'SQLPubSubBackend'
+    pubsub_push_delivery: 'PushDelivery'
     pubsub_pattern_matcher: 'PatternMatcher'
     pubsub_subscriptions: 'SubscriptionsStore'
 
@@ -994,7 +994,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             self.handle_enmasse_auto_from()
 
         # Start the Redis pub/sub backend
-        self._start_pubsub_redis()
+        self._start_pubsub_backend()
 
         # Start the Rust scheduler thread (in-process)
         self._start_scheduler()
@@ -1709,30 +1709,28 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
-    def _start_pubsub_redis(self):
+    def _start_pubsub_backend(self):
 
-        from zato.common.pubsub.disk_store import DiskMessageStore
-        from zato.common.redis_env import build_redis_connect_args, get_redis_conn_from_values, get_redis_values_from_section
-        from zato.server.base.parallel.delivery import RedisPushDelivery
+        from zato.common.audit_log.api import AuditLog
+        from zato.server.base.parallel.delivery import PushDelivery
 
-        # The [redis] section of server.conf describes the connection, SSL included
-        redis_values = get_redis_values_from_section(self.fs_server_config.redis)
+        # Messages, queues and delivery state live in the pub/sub database,
+        # selected through the Zato_PubSub_DB_* environment variables
+        # and defaulting to an SQLite file next to the audit log's one.
+        audit_log = AuditLog(self.name)
 
-        # .. set up the disk store for message payloads ..
-        work_dir = self.work_dir
-        disk_store_base_dir = os.path.join(work_dir, 'pubsub-messages')
-        disk_store = DiskMessageStore(disk_store_base_dir, crypto_manager=self.crypto_manager)
-
-        redis_conn = get_redis_conn_from_values(redis_values, decode_responses=True)
-        self.pubsub_redis = RedisPubSubBackend(redis_conn, disk_store, server=self)
+        self.pubsub_backend = SQLPubSubBackend(
+            audit_log=audit_log,
+            crypto_manager=self.crypto_manager,
+            encrypt_at_rest=self.encrypt_at_rest,
+        )
 
         self.config_manager._sync_pubsub_subscriptions()
         self.config_manager._sync_pubsub_topics()
 
-        # .. pass connection params so each delivery greenlet creates its own connection ..
-        redis_conn_params = build_redis_connect_args(redis_values, decode_responses=True)
-
-        self.pubsub_push_delivery = RedisPushDelivery(self, redis_conn_params)
+        # All delivery greenlets share the backend - its per-subscriber events
+        # wake their blocking fetches up, so no dedicated connections are needed.
+        self.pubsub_push_delivery = PushDelivery(self, self.pubsub_backend)
 
         # The built-in subscriber that delivers messages published to the outbound AS4 topic -
         # it has to exist before any user service publishes its first AS4 message.
@@ -1741,7 +1739,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         for sub_key in self.config_manager._push_subs:
             self.pubsub_push_delivery.start_sub_key(sub_key)
 
-        logger.info('PubSub Redis backend started')
+        logger.info('PubSub SQL backend started')
 
 # ################################################################################################################################
 
@@ -1754,8 +1752,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         sub_key = _service_sub_key_prefix + AS4.Delivery_Service
 
-        # Create the topic stream and the consumer group in Redis ..
-        self.pubsub_redis.subscribe(sub_key, AS4.Default.Outbound_Topic)
+        # Record the subscription in the pub/sub database ..
+        self.pubsub_backend.subscribe(sub_key, AS4.Default.Outbound_Topic)
 
         # .. and register the push config so a delivery greenlet picks it up.
         self.config_manager._push_subs[sub_key] = [{
@@ -2439,9 +2437,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             else:
                 self._is_process_closing = True
 
-            # .. stop the Redis pub/sub backend ..
+            # .. stop the pub/sub backend ..
             self.pubsub_push_delivery.stop()
-            self.pubsub_redis.redis.close()
+            self.pubsub_backend.close()
 
             # Close SQL pools
             self.sql_pool_store.cleanup_on_stop()

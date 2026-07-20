@@ -214,7 +214,7 @@ class Publish(PubSubRESTService):
         if backend_config:
             result = self.server.config_manager.pubsub_publish_to_amqp(backend_config, data, topic_name, cid)
         else:
-            result = self.server.pubsub_redis.publish(
+            result = self.server.pubsub_backend.publish(
                 topic_name,
                 data,
                 priority=priority,
@@ -276,14 +276,14 @@ class GetMessages(PubSubRESTService):
         max_len = min(input.max_len if input.max_len else _max_len_default, _max_len_limit)
 
         # Fetch messages from Redis
-        raw_messages = self.server.pubsub_redis.fetch_messages(
+        raw_messages = self.server.pubsub_backend.fetch_messages(
             sub_key,
             max_messages=max_messages,
             max_len=max_len
         )
 
         # .. format and acknowledge each message for the REST pull path ..
-        messages = self.server.pubsub_redis.format_messages_for_rest(raw_messages, sub_key)
+        messages = self.server.pubsub_backend.format_messages_for_rest(raw_messages, sub_key)
 
         # Build response
         self.response.payload.is_ok = True
@@ -356,7 +356,7 @@ class Subscribe(PubSubRESTService):
         sub_key = self.server.pubsub_subscriptions.get_or_create_sub_key(username)
 
         # Subscribe in Redis
-        self.server.pubsub_redis.subscribe(sub_key, topic_name)
+        self.server.pubsub_backend.subscribe(sub_key, topic_name)
 
         # Persist subscription in ODB
         self._persist_subscription(username, topic_name, sub_key)
@@ -442,10 +442,10 @@ class Unsubscribe(PubSubRESTService):
             return
 
         # Unsubscribe in Redis
-        self.server.pubsub_redis.unsubscribe(sub_key, topic_name)
+        self.server.pubsub_backend.unsubscribe(sub_key, topic_name)
 
         # Only clear sub_key if no remaining subscriptions
-        remaining_topics = self.server.pubsub_redis.get_subscribed_topics(sub_key)
+        remaining_topics = self.server.pubsub_backend.get_subscribed_topics(sub_key)
         if not remaining_topics:
             self.server.pubsub_subscriptions.clear_sub_key(username)
 

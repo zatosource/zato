@@ -185,7 +185,7 @@ class AS2ChannelRuntime:
 
             # .. or the partner's own topic ..
             elif partnership.inbound_topic:
-                _ = self.server.pubsub_redis.publish(partnership.inbound_topic, message, cid=cid, correl_id=cid)
+                _ = self.server.pubsub_backend.publish(partnership.inbound_topic, message, cid=cid, correl_id=cid)
 
             # .. or the channel's service ..
             elif self.service_name:
@@ -194,7 +194,7 @@ class AS2ChannelRuntime:
             # .. and by default, the channel's topic, which is where reliability lives -
             # redelivery and retries are pub/sub's built-in behavior.
             else:
-                _ = self.server.pubsub_redis.publish(self.inbound_topic, message, cid=cid, correl_id=cid)
+                _ = self.server.pubsub_backend.publish(self.inbound_topic, message, cid=cid, correl_id=cid)
 
 # ################################################################################################################################
 

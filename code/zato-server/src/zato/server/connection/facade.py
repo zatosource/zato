@@ -43,7 +43,7 @@ if 0:
     from requests import Response
     from zato.common.as2.outbound import SendResult as AS2SendResult
     from zato.common.as4.outbound import PullResult, SendResult
-    from zato.common.pubsub.redis_backend import PublishResult
+    from zato.common.pubsub.sql.backend import PublishResult
     from zato.common.typing_ import any_, anydict, callnone, strbytes, strnone
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.config_manager import ConfigManager
@@ -509,7 +509,7 @@ class AS4Invoker:
         }
 
         server = self.conn.server
-        out = server.pubsub_redis.publish(AS4.Default.Outbound_Topic, message, cid=self.cid, correl_id=self.cid)
+        out = server.pubsub_backend.publish(AS4.Default.Outbound_Topic, message, cid=self.cid, correl_id=self.cid)
 
         return out
 

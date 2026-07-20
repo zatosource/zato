@@ -16,7 +16,7 @@ from gevent import sleep
 from common import delete_all_rows, get_delivery_rows, get_message_rows
 from zato.common.api import PubSub
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
-from zato.server.base.parallel.delivery import SQLPushDelivery
+from zato.server.base.parallel.delivery import PushDelivery
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -106,7 +106,7 @@ def run_push_delivery_scenario() -> 'None':
 
     backend = SQLPubSubBackend()
     server = _StubServer()
-    delivery = SQLPushDelivery(server, backend) # type: ignore[arg-type]
+    delivery = PushDelivery(server, backend) # type: ignore[arg-type]
 
     # The push subscription and its runtime queue state
     sub_config = {
