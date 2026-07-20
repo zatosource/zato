@@ -1900,5 +1900,9 @@ class PubSubMessage:
     sub_key: 'str'
     topic_name: 'str'
 
+    # How much time passed since the message was published and received, set at delivery time
+    time_since_pub: 'str' = ''
+    time_since_recv: 'str' = ''
+
 # ################################################################################################################################
 # ################################################################################################################################

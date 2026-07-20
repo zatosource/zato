@@ -411,6 +411,13 @@ def get_env_engine(config:'EnvDBConfig') -> 'Engine':
         engine_kwargs['poolclass'] = QueuePool
         connect_args['check_same_thread'] = False
 
+    # .. all network databases run read committed so every backend behaves the same -
+    # .. it is already the default of PostgreSQL and Oracle DB, and it matters on MySQL,
+    # .. whose repeatable-read default takes gap locks that deadlock concurrent
+    # .. transactions deleting interleaved key ranges, e.g. pub/sub acknowledgements ..
+    if db_type != Type_SQLite:
+        engine_kwargs['isolation_level'] = 'READ COMMITTED'
+
     out = create_engine(engine_url, connect_args=connect_args, **engine_kwargs)
 
     # .. SQLite needs its pragmas applied to every new connection in the pool ..

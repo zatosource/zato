@@ -14,6 +14,7 @@ from zato.common.broker_message import PUBSUB
 from zato.common.odb.model import PubSubPermission, SecurityBase
 from zato.common.odb.query import pubsub_permission_list, pubsub_subscriptions_by_sec_base, pubsub_subscription_topic_names
 from zato.common.pubsub.util import get_permissions_for_sec_base
+from zato.common.typing_ import cast_
 from zato.common.util.sql import set_instance_opaque_attrs
 from zato.server.service.internal import AdminService
 
@@ -21,7 +22,7 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anylist
+    from zato.common.typing_ import any_, anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -32,7 +33,7 @@ class GetList(AdminService):
     input = 'cluster_id', '-cur_page', '-paginate', '-query'
     output = 'id', 'name', 'pattern', 'access_type', 'sec_base_id', 'subscription_count'
 
-    def get_data(self, session):
+    def get_data(self, session:'any_') -> 'anylist':
 
         query_config = {}
 
@@ -211,7 +212,7 @@ def _topic_is_covered(topic_name:'str', permissions:'anylist') -> 'bool':
 
 def _delete_subs_without_permission(
     service:'AdminService',
-    session:'object',
+    session:'any_',
     sec_base_id:'int',
     cluster_id:'int',
 ) -> 'None':
@@ -229,7 +230,7 @@ def _delete_subs_without_permission(
     for sub in subscriptions:
 
         # .. get the topic names for this subscription ..
-        topic_names = pubsub_subscription_topic_names(session, sub.id)
+        topic_names = pubsub_subscription_topic_names(session, cast_('int', sub.id))
 
         # .. split topics into those that still match a permission ..
         topics_to_keep:'list[str]' = []
