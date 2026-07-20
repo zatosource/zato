@@ -167,7 +167,8 @@
     align-items: center;
     gap: 20px;
     padding: 0;
-    margin-bottom: 13px;
+    margin-top: 10px;
+    margin-bottom: 4px;
     max-width: 560px;
 }
 
@@ -438,4 +439,3 @@ a.mllp-wizard-toggle-edit {
 .mllp-wizard-status-error {
     color: var(--wizard-error);
 }
-

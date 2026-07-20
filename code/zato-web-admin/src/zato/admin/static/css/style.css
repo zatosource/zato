@@ -1077,7 +1077,7 @@ div.action-panel span.previous-next {
     top: 50%;
     transform: translateY(-50%);
     white-space: nowrap;
-    pointer-events: none;
+    cursor: default;
     animation: zatoFadeIn 0.25s ease-in;
     transition: opacity 0.2s ease-out;
 
@@ -1107,8 +1107,8 @@ div.action-panel span.previous-next {
     background-color: rgba(220, 53, 69, 0.15);
     color: #b71c1c;
     border: 1px solid rgba(220, 53, 69, 0.25);
-    padding: 0.02rem 0.4rem;
-    border-radius: 10px
+    padding: 0.14rem 0.4rem;
+    border-radius: 3px
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
