@@ -18,8 +18,7 @@ from gevent.subprocess import run as subprocess_run
 from humanize import intcomma
 
 # Zato
-from common import set_progress_context, Min_Cleanup_Rate_Per_Second, Min_Delivery_Rate_Per_Second, \
-    Min_Publish_Rate_Per_Second
+from common import get_min_delivery_rate, get_min_publish_rate, set_progress_context, Min_Cleanup_Rate_Per_Second
 from load import consume_until_stopped
 from seeding import connect_native, seed_backlog
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
@@ -34,36 +33,32 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How many topics the seeded backlog spreads over, each with its own subscriber
+# How many topics the seeded backlog spreads over, each with its own subscriber.
 _topic_count = 100
 
-# How many messages each topic holds
+# How many messages each topic holds.
 _messages_per_topic = 10_000
 
 # The seeded topics split into three bands - expired pending messages the expiry
 # sweep must remove, delivered traces aged past retention the age sweep must remove,
-# and live pending messages the sweep must never touch. The live band is not idle -
-# its subscribers drain it and publishers pump fresh traffic into it while the sweep
-# runs, because that is how the real system works: the cleanup process is a separate
-# cron-driven process sweeping the same database the server is using.
+# and live pending messages the sweep must never touch, with live traffic
+# running against the live band throughout.
 _expired_topic_count = 40
 _aged_topic_count = 40
 
-# How many publisher greenlets pump into the live band while the sweep runs
-_publisher_greenlet_count = 2
+# How many publisher greenlets pump concurrently into the live band while the sweep runs.
+_publisher_greenlet_count = 20
 
-# How many messages one publisher greenlet publishes between yields - a busy server
-# works through the REST publishes that queued up while its other greenlets ran,
-# it does not hand the loop over after every single one
+# How many messages one publisher greenlet publishes between yields.
 _publish_burst_size = 100
 
-# How long one blocking fetch waits inside a consumer greenlet, in milliseconds
+# How long one blocking fetch waits inside a consumer greenlet, in milliseconds.
 _consumer_block_ms = 500
 
-# How far in the past the aged traces are placed - well past the default retention of days
+# How far in the past the aged traces are placed - well past the default retention of days.
 _aged_days = 30
 
-# How many milliseconds one second and one day have
+# How many milliseconds one second and one day have.
 _ms_per_second = 1000
 _ms_per_day = 24 * 60 * 60 * _ms_per_second
 
@@ -83,7 +78,7 @@ def _prepare_bands() -> 'None':
     expired_ms = now_ms - _ms_per_second
     aged_ms = now_ms - _aged_days * _ms_per_day
 
-    # The seeded topic names sort by their zero-padded index, so band edges are name comparisons
+    # The seeded topic names sort by their zero-padded index, so band edges are name comparisons.
     expired_cutoff = f'perf.topic.{_expired_topic_count - 1:04d}'
     aged_cutoff = f'perf.topic.{_expired_topic_count + _aged_topic_count - 1:04d}'
 
@@ -157,9 +152,7 @@ def _publish_traffic(backend:'SQLPubSubBackend', topic_names:'strlist', stop:'an
             counts['published'] += 1
             message_index += 1
 
-        # Yield after each burst so the consumers and the wind-down check get
-        # their turns - without this an open-ended publish loop would keep
-        # the shared loop to itself and the run could never end.
+        # Yield after each burst so the consumers and the wind-down check get their turns.
         sleep(0)
 
 # ################################################################################################################################
@@ -185,12 +178,12 @@ def run_retention_scenario() -> 'None':
     aged_message_count = _aged_topic_count * _messages_per_topic
     live_message_count = live_topic_count * _messages_per_topic
 
-    # The band edges, as in _prepare_bands
+    # The band edges, as in _prepare_bands.
     expired_cutoff = f'perf.topic.{_expired_topic_count - 1:04d}'
     aged_cutoff = f'perf.topic.{_expired_topic_count + _aged_topic_count - 1:04d}'
     live_high_cutoff = f'perf.topic.{_topic_count - 1:04d}'
 
-    # The live band's topics and subscribers, as seed_backlog names them
+    # The live band's topics and subscribers, as seed_backlog names them.
     live_topic_names:'strlist' = []
     live_sub_keys:'strlist' = []
 
@@ -214,8 +207,7 @@ def run_retention_scenario() -> 'None':
     for _publisher_index in range(_publisher_greenlet_count):
         greenlets.append(spawn(_publish_traffic, backend, live_topic_names, stop, publish_counts))
 
-    # .. the sweep runs as its own process, the way cron runs it in production,
-    # .. against the very database the traffic above is hitting ..
+    # .. the sweep runs as its own process against the very database the traffic above is hitting ..
     sweep_args = [sys.executable, '-m', 'zato.common.pubsub.sql.cleanup', '--once']
 
     start = monotonic()
@@ -241,9 +233,7 @@ def run_retention_scenario() -> 'None':
     remaining_aged = _count_band_messages(expired_cutoff, aged_cutoff)
     assert remaining_aged == 0, f'Expected no aged-band rows, got {intcomma(remaining_aged)}'
 
-    # .. the live band's accounting stays exact under the concurrent sweep - every
-    # .. message row is still there, acknowledged ones as traces, and its delivery
-    # .. rows are exactly the seeded backlog plus the fresh traffic minus the drained ..
+    # .. the live band's accounting stays exact under the concurrent sweep ..
     live_messages = _count_band_messages(aged_cutoff, live_high_cutoff)
     expected_live_messages = live_message_count + published
 
@@ -256,8 +246,7 @@ def run_retention_scenario() -> 'None':
     assert live_deliveries == expected_live_deliveries, \
         f'Expected {intcomma(expected_live_deliveries)} live-band deliveries, got {intcomma(live_deliveries)}'
 
-    # .. the sweep rate must clear the floor - the expired band cost a message
-    # .. row and a delivery row each, the aged band a message row each ..
+    # .. the sweep rate must clear the floor ..
     deleted_rows = expired_message_count * 2 + aged_message_count
     sweep_rate = deleted_rows / elapsed
 
@@ -273,10 +262,10 @@ def run_retention_scenario() -> 'None':
     assert sweep_rate >= Min_Cleanup_Rate_Per_Second, \
         f'Cleanup rate too low: {intcomma(int(sweep_rate))}/s over {intcomma(deleted_rows)} rows'
 
-    assert publish_rate >= Min_Publish_Rate_Per_Second, \
+    assert publish_rate >= get_min_publish_rate(), \
         f'Publish rate too low during the sweep: {intcomma(int(publish_rate))}/s'
 
-    assert delivery_rate >= Min_Delivery_Rate_Per_Second, \
+    assert delivery_rate >= get_min_delivery_rate(), \
         f'Delivery rate too low during the sweep: {intcomma(int(delivery_rate))}/s'
 
 # ################################################################################################################################

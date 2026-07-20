@@ -11,10 +11,12 @@ from datetime import datetime, timedelta, timezone
 from logging import getLogger
 
 # gevent
+from gevent import sleep
 from gevent.event import Event
 
 # SQLAlchemy
 from sqlalchemy import and_, exists, select
+from sqlalchemy.exc import DBAPIError
 
 # Zato
 from zato.common.pubsub.sql.config import get_pubsub_engine
@@ -29,7 +31,7 @@ if 0:
     from sqlalchemy.engine import Connection, Engine
     from zato.common.audit_log.api import AuditLog
     from zato.common.crypto.api import CryptoManager
-    from zato.common.typing_ import any_, anydict, intlist, optional, strlist, strset
+    from zato.common.typing_ import any_, anydict, intlist, intlistnone, optional, strlist, strset
 
     auditlognone       = optional[AuditLog]
     cryptomanagernone  = optional[CryptoManager]
@@ -48,6 +50,23 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+# How many times a transaction rolled back as a deadlock victim is attempted in total,
+# and how long the pause between the attempts is, in seconds.
+_deadlock_attempt_count = 5
+_deadlock_retry_sleep = 0.05
+
+def _is_deadlock_error(error:'DBAPIError') -> 'bool':
+    """ Tells whether the database rolled our transaction back as a deadlock victim -
+    MySQL says 'Deadlock found', PostgreSQL says 'deadlock detected'.
+    """
+    error_text = str(error.orig).lower()
+    out = 'deadlock' in error_text
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class SQLBackendCore:
     """ The shared state and low-level operations of the SQL pub/sub backend -
     engine access, per-subscriber wake-up events, payload encryption at rest,
@@ -62,10 +81,10 @@ class SQLBackendCore:
         encrypt_at_rest:'bool' = False,
         ) -> 'None':
 
-        # The audit log is injected by the server and is None in backend-only tests
+        # The audit log is injected by the server and is None in backend-only tests.
         self.audit_log = audit_log
 
-        # Payloads are encrypted before insert and decrypted after select when configured
+        # Payloads are encrypted before insert and decrypted after select when configured.
         self.crypto_manager = crypto_manager
         self.encrypt_at_rest = encrypt_at_rest
 
@@ -73,17 +92,14 @@ class SQLBackendCore:
         # receptions and deliveries involving these topics write no audit events.
         self.audit_disabled_topics:'strset' = set()
 
-        # One wake-up event per subscriber - publish sets them and blocking fetches wait on them,
-        # which works because exactly one server process ever uses one pub/sub database.
+        # One wake-up event per subscriber - publish sets them and blocking fetches wait on them.
         self._sub_events:'sub_event_dict' = {}
 
 # ################################################################################################################################
 
     @property
     def engine(self) -> 'Engine':
-        """ The engine behind the current Zato_PubSub_DB_* configuration - resolved on each
-        access, with the per-configuration cache in db_env making the lookup cheap, so changing
-        the variables at runtime redirects all new operations to the new database.
+        """ The engine behind the current Zato_PubSub_DB_* configuration, resolved on each access.
         """
         out = get_pubsub_engine()
         return out
@@ -159,8 +175,7 @@ class SQLBackendCore:
 
     def _load_payload_from_row(self, row:'any_') -> 'str':
         """ Returns the payload of one message row, decrypted if it was encrypted at rest.
-        The payload column is NULL once the message is fully delivered - and Oracle DB
-        additionally stores empty strings as NULLs - so a missing payload reads as ''.
+        A missing payload reads as ''.
         """
         payload = row.payload
 
@@ -183,6 +198,7 @@ class SQLBackendCore:
         # The always-present fields come first ..
         out:'anydict' = {
             'msg_id': row.msg_id,
+            'sequence_id': row.id,
             'topic_name': row.topic_name,
             'data': data,
             'data_class': row.data_class if row.data_class else '',
@@ -247,8 +263,7 @@ class SQLBackendCore:
 
     def _drop_fully_delivered_payloads(self, connection:'Connection', message_ids:'intlist') -> 'int':
         """ Sets the payload to NULL for each of the given messages that no subscriber needs anymore.
-        The row itself stays behind as the delivered-message trace for counts, the publish timeline
-        and delivered-message browsing. Returns how many payloads were dropped.
+        Returns how many payloads were dropped.
         """
         # A message is still in flight while any delivery row references it ..
         still_needed = exists()
@@ -270,17 +285,48 @@ class SQLBackendCore:
 
 # ################################################################################################################################
 
-    def ack_messages(self, sub_key:'str', msg_ids:'strlist') -> 'int':
+    def ack_messages(self, sub_key:'str', msg_ids:'strlist', sequence_ids:'intlistnone'=None) -> 'int':
         """ Acknowledges many messages for one subscriber in a single transaction.
-        Returns how many of them became fully delivered, i.e. no subscriber needs them anymore.
+        Callers that only hold public identifiers pass msg_ids alone.
+        Returns how many of them became fully delivered.
         """
         if not msg_ids:
             return 0
 
+        # The database may roll the transaction back as a deadlock victim -
+        # it is idempotent and is simply run again.
+        for attempt in range(_deadlock_attempt_count):
+            try:
+                out = self._ack_messages_once(sub_key, msg_ids, sequence_ids)
+                break
+            except DBAPIError as e:
+                # Anything other than a deadlock rollback is a real error.
+                if not _is_deadlock_error(e):
+                    raise
+
+                logger.info('ack_messages deadlock victim, attempt %d -> sub_key:%s', attempt + 1, sub_key)
+                sleep(_deadlock_retry_sleep)
+        else:
+            raise Exception(f'ack_messages still a deadlock victim after {_deadlock_attempt_count} attempts -> sub_key:{sub_key}')
+
+        logger.info('ack_messages -> sub_key:%s, acked:%d, fully_delivered:%d', sub_key, len(msg_ids), out)
+
+        return out
+
+# ################################################################################################################################
+
+    def _ack_messages_once(self, sub_key:'str', msg_ids:'strlist', sequence_ids:'intlistnone') -> 'int':
+        """ One acknowledgement transaction - what ack_messages runs and,
+        if the database picks it as a deadlock victim, runs again.
+        """
         with self.engine.begin() as connection:
 
-            # Map the public identifiers to primary keys ..
-            message_ids = self._get_message_ids(connection, msg_ids)
+            # Map public identifiers to primary keys first - as a separate read,
+            # not a subquery in the delete, whose shared InnoDB locks deadlock ..
+            if sequence_ids is None:
+                message_ids = self._get_message_ids(connection, msg_ids)
+            else:
+                message_ids = sequence_ids
 
             if not message_ids:
                 return 0
@@ -295,8 +341,6 @@ class SQLBackendCore:
 
             # .. and drop the payloads of messages that no subscriber needs anymore.
             out = self._drop_fully_delivered_payloads(connection, message_ids)
-
-        logger.info('ack_messages -> sub_key:%s, acked:%d, fully_delivered:%d', sub_key, len(msg_ids), out)
 
         return out
 

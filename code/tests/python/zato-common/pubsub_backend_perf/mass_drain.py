@@ -16,7 +16,7 @@ from gevent import joinall, spawn
 from humanize import intcomma
 
 # Zato
-from common import set_progress_context, Min_Delivery_Rate_Per_Second
+from common import get_min_delivery_rate, set_progress_context
 from load import consume_until_done
 from seeding import count_rows, seed_backlog
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
@@ -30,29 +30,27 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The mass-recovery pattern - a shared outage, e.g. the whole downstream side
-# or the network was gone, ends and every subscriber comes back at once,
-# each with its own deep backlog, all draining simultaneously while
+# The mass-recovery pattern - a shared outage ends and every subscriber comes back
+# at once, each with its own deep backlog, all draining simultaneously while
 # publishers keep pumping fresh traffic into all the topics.
-# How deep each backlog is comes in as a parameter - the main perf target
-# runs the smaller scale and the dedicated mass target the bigger one.
+# How deep each backlog is comes in as a parameter.
 _topic_count = 100
 
-# The naming the seeded backlog uses
+# The naming the seeded backlog uses.
 _topic_prefix = 'perf.massdrain'
 _sub_key_prefix = 'zpsk.perf.massdrain'
 
 # How many fresh messages are published concurrently with the mass drain,
-# round-robin over all the topics
+# round-robin over all the topics.
 _fresh_message_count = 2000
 
-# How many publisher greenlets pump concurrently
-_publisher_greenlet_count = 2
+# How many publisher greenlets pump concurrently.
+_publisher_greenlet_count = 20
 
-# The payload every fresh message carries
+# The payload every fresh message carries.
 _fresh_payload = 'massdrain-fresh-' + 'x' * 500
 
-# How long one blocking fetch waits inside a consumer greenlet, in milliseconds
+# How long one blocking fetch waits inside a consumer greenlet, in milliseconds.
 _consumer_block_ms = 2000
 
 # ################################################################################################################################
@@ -62,7 +60,12 @@ def _publish_share(backend:'SQLPubSubBackend', topic_names:'strlist', publisher_
     """ What one publisher greenlet runs - its share of the fresh messages,
     round-robin over all the topics.
     """
-    share = _fresh_message_count // _publisher_greenlet_count
+    share, remainder = divmod(_fresh_message_count, _publisher_greenlet_count)
+
+    # The remainder of the division goes to the first publishers, one message each,
+    # so all the shares add up to the total.
+    if publisher_index < remainder:
+        share += 1
 
     for message_index in range(share):
         topic_name = topic_names[(publisher_index * share + message_index) % _topic_count]
@@ -138,7 +141,7 @@ def run_mass_drain_scenario(*, backlog_per_subscriber:'int', deadline_seconds:'i
 
     drain_rate = delivered / elapsed
 
-    assert drain_rate >= Min_Delivery_Rate_Per_Second, f'Mass drain rate too low: {intcomma(int(drain_rate))}/s'
+    assert drain_rate >= get_min_delivery_rate(), f'Mass drain rate too low: {intcomma(int(drain_rate))}/s'
 
     # With every subscriber done there is nothing left in flight anywhere.
     assert count_rows('pubsub_delivery') == 0

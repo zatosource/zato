@@ -16,7 +16,7 @@ from gevent import joinall, spawn
 from humanize import intcomma
 
 # Zato
-from common import set_progress_context, Min_Delivery_Rate_Per_Second, Min_Publish_Rate_Per_Second
+from common import get_min_delivery_rate, get_min_publish_rate, set_progress_context
 from load import consume_until_done
 from seeding import count_payloads, seed_aged_queue
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
@@ -35,28 +35,28 @@ if 0:
 # may delete must not degrade anyone else.
 _topic_name = 'perf.laggard.topic'
 
-# How many subscribers the topic broadcasts to - one of them is the laggard
+# How many subscribers the topic broadcasts to - one of them is the laggard.
 _subscriber_count = 10
 
-# How many unacknowledged messages the laggard has accumulated
+# How many unacknowledged messages the laggard has accumulated.
 _aged_message_count = 100000
 
-# How many months' worth of age the accumulated messages carry, in days
+# How many months' worth of age the accumulated messages carry, in days.
 _aged_days = 90
 
-# How many fresh messages are published while the laggard is still down
+# How many fresh messages are published while the laggard is still down.
 _fresh_message_count = 1000
 
-# How many publisher greenlets pump concurrently with the fast consumers
-_publisher_greenlet_count = 2
+# How many publisher greenlets pump concurrently with the fast consumers.
+_publisher_greenlet_count = 20
 
-# The payload every fresh message carries
+# The payload every fresh message carries.
 _fresh_payload = 'laggard-fresh-' + 'x' * 500
 
-# How long one blocking fetch waits inside a consumer greenlet, in milliseconds
+# How long one blocking fetch waits inside a consumer greenlet, in milliseconds.
 _consumer_block_ms = 2000
 
-# How long the live phase may take at most before it is declared hung, in seconds
+# How long the live phase may take at most before it is declared hung, in seconds.
 _deadline_seconds = 60
 
 # ################################################################################################################################
@@ -65,7 +65,12 @@ _deadline_seconds = 60
 def _publish_share(backend:'SQLPubSubBackend', publisher_index:'int') -> 'None':
     """ What one publisher greenlet runs - its share of the fresh messages.
     """
-    share = _fresh_message_count // _publisher_greenlet_count
+    share, remainder = divmod(_fresh_message_count, _publisher_greenlet_count)
+
+    # The remainder of the division goes to the first publishers, one message each,
+    # so all the shares add up to the total.
+    if publisher_index < remainder:
+        share += 1
 
     for _ in range(share):
         _ = backend.publish(_topic_name, _fresh_payload)
@@ -86,28 +91,35 @@ def _run_live_phase(backend:'SQLPubSubBackend', fast_sub_keys:'strlist') -> 'Non
     start = monotonic()
 
     # The fast consumers first, so they are already waiting when the first publish lands ..
-    greenlets:'anylist' = []
+    consumer_greenlets:'anylist' = []
 
     for sub_key in fast_sub_keys:
-        greenlets.append(spawn(consume_until_done, backend, sub_key, counters, _consumer_block_ms))
+        consumer_greenlets.append(spawn(consume_until_done, backend, sub_key, counters, _consumer_block_ms))
 
     # .. now the publishers pump concurrently with them ..
+    publisher_greenlets:'anylist' = []
+
     for publisher_index in range(_publisher_greenlet_count):
-        greenlets.append(spawn(_publish_share, backend, publisher_index))
+        publisher_greenlets.append(spawn(_publish_share, backend, publisher_index))
+
+    # .. the publish rate is measured over the publishers' own window ..
+    _ = joinall(publisher_greenlets, timeout=_deadline_seconds)
+
+    publish_elapsed = monotonic() - start
 
     # .. and everything fresh must be fetched and acknowledged by every fast peer.
-    _ = joinall(greenlets, timeout=_deadline_seconds)
+    _ = joinall(consumer_greenlets, timeout=_deadline_seconds)
 
     elapsed = monotonic() - start
 
     delivered = counters['delivered']
     assert delivered == expected_deliveries, f'Expected {intcomma(expected_deliveries)} deliveries, got {intcomma(delivered)}'
 
-    publish_rate = _fresh_message_count / elapsed
+    publish_rate = _fresh_message_count / publish_elapsed
     delivery_rate = delivered / elapsed
 
-    assert publish_rate >= Min_Publish_Rate_Per_Second, f'Laggard-phase publish rate too low: {intcomma(int(publish_rate))}/s'
-    assert delivery_rate >= Min_Delivery_Rate_Per_Second, f'Laggard-phase delivery rate too low: {intcomma(int(delivery_rate))}/s'
+    assert publish_rate >= get_min_publish_rate(), f'Laggard-phase publish rate too low: {intcomma(int(publish_rate))}/s'
+    assert delivery_rate >= get_min_delivery_rate(), f'Laggard-phase delivery rate too low: {intcomma(int(delivery_rate))}/s'
 
     print(f'Laggard live phase: {intcomma(int(publish_rate))} publishes/s, {intcomma(int(delivery_rate))} deliveries/s')
 
@@ -147,7 +159,7 @@ def _run_drain_phase(backend:'SQLPubSubBackend', laggard_sub_key:'str') -> 'None
     # .. at no less than the delivery floor even on a months-old queue.
     drain_rate = drained / elapsed
 
-    assert drain_rate >= Min_Delivery_Rate_Per_Second, f'Drain rate too low: {intcomma(int(drain_rate))}/s'
+    assert drain_rate >= get_min_delivery_rate(), f'Drain rate too low: {intcomma(int(drain_rate))}/s'
 
     print(f'Laggard drained {intcomma(drained)} messages at {intcomma(int(drain_rate))}/s')
 

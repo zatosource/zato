@@ -19,18 +19,18 @@ from zato.common.pubsub.sql.backend import SQLPubSubBackend
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The topic and subscriber all the wake-up assertions share
+# The topic and subscriber all the wake-up assertions share.
 _topic = 'pubsub.backend.test.wakeup'
 _sub_key = 'zpsk.test.wakeup.1'
 
-# How long an empty blocking fetch waits in the timeout assertion, in milliseconds
+# How long an empty blocking fetch waits in the timeout assertion, in milliseconds.
 _short_block_ms = 300
 
 # How long the woken-up fetches are allowed to wait at most, in milliseconds -
-# far below their block time, proving they were woken up rather than timing out
+# far below their block time, proving they were woken up rather than timing out.
 _long_block_ms = 5000
 
-# How long the publisher greenlet sleeps before publishing, in seconds
+# How long the publisher greenlet sleeps before publishing, in seconds.
 _publish_delay_seconds = 0.3
 
 # ################################################################################################################################

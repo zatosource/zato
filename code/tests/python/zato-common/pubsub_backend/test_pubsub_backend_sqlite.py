@@ -42,7 +42,7 @@ def test_pubsub_backend_sqlite(tmp_path:'os.PathLike') -> 'None':
         run_cleanup_scenario()
         run_push_delivery_scenario()
 
-    # The database file was created under the path the environment pointed at
+    # The database file was created under the path the environment pointed at.
     assert os.path.exists(db_path)
 
 # ################################################################################################################################

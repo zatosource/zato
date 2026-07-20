@@ -39,42 +39,49 @@ if 0:
 # one is and how many get cleared all come in as parameters - the same scenario
 # runs both as many mid-size queues and as few queues of millions of messages each.
 
-# The naming the seeded backlog uses
+# The naming the seeded backlog uses.
 _topic_prefix = 'perf.operations'
 _sub_key_prefix = 'zpsk.perf.operations'
 
-# How many operator greenlets issue the clears concurrently
+# How many operator greenlets issue the clears concurrently.
 _operator_greenlet_count = 2
 
 # How many fresh messages are published concurrently with the drain,
 # round-robin over all the topics - the count divides evenly by the
-# topic count so every queue's arithmetic is exact
+# topic count so every queue's arithmetic is exact.
 _fresh_message_count = 2000
 
-# How many publisher greenlets pump concurrently
-_publisher_greenlet_count = 2
+# How many publisher greenlets pump concurrently - enough that the durable
+# publish commits, each a shared log flush away, sustain the publish floor,
+# the way production traffic arrives from many clients at once.
+_publisher_greenlet_count = 20
 
-# The payload every fresh message carries
+# The payload every fresh message carries.
 _fresh_payload = 'operations-fresh-' + 'x' * 500
 
-# How long one blocking fetch waits inside a consumer greenlet, in milliseconds
+# How long one blocking fetch waits inside a consumer greenlet, in milliseconds.
 _consumer_block_ms = 2000
 
-# How long the drain gets before the operators step in, in seconds
+# How long the drain gets before the operators step in, in seconds.
 _operator_delay_seconds = 1
 
-# How often the end-of-run check reads the queue depths, in seconds
+# How often the end-of-run check reads the queue depths, in seconds.
 _depth_poll_seconds = 1
 
 # How long the consumers keep consuming after the clears when the run does not
 # drain to zero, in seconds - long enough to verify the system keeps delivering
-# after the clears, short enough not to dominate the runtime
+# after the clears, short enough not to dominate the runtime.
 _post_clear_window_seconds = 60
 
 # A message fetched right before its rows were cleared is still acknowledged
 # afterwards and counted by both sides - at-least-once semantics. Each such
 # overlap is at most one in-flight fetch batch per clear pass over the queue.
 _fetch_batch_size = PubSub.Message.Default_Max_Messages
+
+# Fresh messages arriving while the clear runs, and rows the consumer acknowledges
+# from under it, give the clear loop extra passes beyond what the backlog's own
+# arithmetic says - each of them another commit an in-flight fetch can straddle.
+_extra_clear_pass_count = 4
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -84,7 +91,12 @@ def _publish_share(backend:'SQLPubSubBackend', topic_names:'strlist', publisher_
     round-robin over all the topics, cleared ones included, because the system
     keeps accepting requests to a queue no matter what operators do to it.
     """
-    share = _fresh_message_count // _publisher_greenlet_count
+    share, remainder = divmod(_fresh_message_count, _publisher_greenlet_count)
+
+    # The remainder of the division goes to the first publishers, one message each,
+    # so all the shares add up to the total.
+    if publisher_index < remainder:
+        share += 1
     topic_count = len(topic_names)
 
     for message_index in range(share):
@@ -268,9 +280,8 @@ def run_operations_scenario(
     stop['is_set'] = True
     _ = joinall(consumer_greenlets, timeout=deadline_seconds)
 
-    # .. the operators now clear everything the window left behind - each sweep
-    # .. is the same clear-millions-in-one-action operation and gets the same budget.
-    # .. The consumers are stopped, so the sweep counts are exact ..
+    # .. the operators now clear everything the window left behind -
+    # .. the consumers are stopped, so the sweep counts are exact ..
     swept_counts:'anydict' = {}
 
     if not drain_to_zero:
@@ -292,7 +303,8 @@ def run_operations_scenario(
     # .. a cleared queue's messages were either consumed or cleared - none lost,
     # .. and the overlap stays within what at-least-once delivery allows ..
     clear_batch_size = get_batch_size()
-    max_overlap_per_queue = _fetch_batch_size * (backlog_per_subscriber // clear_batch_size + 1)
+    clear_pass_count = (backlog_per_subscriber + fresh_per_topic) // clear_batch_size + 1 + _extra_clear_pass_count
+    max_overlap_per_queue = _fetch_batch_size * clear_pass_count
 
     total_delivered = 0
     total_cleared = 0
@@ -335,8 +347,7 @@ def run_operations_scenario(
     # .. nothing is in flight anywhere anymore ..
     assert count_rows('pubsub_delivery') == 0
 
-    # .. and the population held the delivery floor while the operator actions ran -
-    # .. over the whole run when it drains to zero, over the post-clear window otherwise.
+    # .. and the population held the delivery floor while the operator actions ran.
     delivery_rate = total_delivered / elapsed
 
     if drain_to_zero:

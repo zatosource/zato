@@ -41,14 +41,14 @@ logger = logging.getLogger('zato.pubsub.cleanup')
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How long the cleanup process sleeps between sweeps
+# How long the cleanup process sleeps between sweeps.
 _default_interval_seconds = 60
 
 # How long each slice of the between-sweeps sleep is, in seconds -
-# short slices let a stop request take effect without waiting out the whole interval
+# short slices let a stop request take effect without waiting out the whole interval.
 _sleep_slice_seconds = 1
 
-# How many milliseconds one second and one day have - timestamp columns hold epoch milliseconds
+# How many milliseconds one second and one day have - timestamp columns hold epoch milliseconds.
 _ms_per_second = 1000
 _ms_per_day = 24 * 60 * 60 * _ms_per_second
 
@@ -59,8 +59,7 @@ class PubSubCleanup:
     """ Removes what the pub/sub database does not need anymore - expired messages
     together with their delivery rows, and fully delivered message traces that are
     past their retention age or above their per-topic cap. Every delete runs
-    in bounded batches, each its own transaction, so no single statement
-    stalls the database and other work interleaves between the batches.
+    in bounded batches, each its own transaction.
     """
 
     def __init__(self, interval_seconds:'int'=_default_interval_seconds) -> 'None':
@@ -105,8 +104,7 @@ class PubSubCleanup:
 
     def _sweep_expired(self) -> 'int':
         """ Deletes messages whose expiration time has passed, together with their delivery rows.
-        Fully delivered traces are exempt - their payload is NULL and only retention governs them.
-        Returns how many messages were deleted.
+        Fully delivered traces are exempt. Returns how many messages were deleted.
         """
         batch_size = get_batch_size()
         now_ms = self._utc_now_ms()
@@ -115,11 +113,10 @@ class PubSubCleanup:
 
         while True:
 
-            # Each batch is its own transaction so other work interleaves between the batches
+            # Each batch is its own transaction so other work interleaves between the batches.
             with self.engine.begin() as connection:
 
-                # A retained payload means the message is still awaiting at least
-                # one subscriber, which is exactly what can expire ..
+                # Only messages with a retained payload can expire ..
                 query = select(message_table.c.id)
                 query = query.where(and_(
                     message_table.c.expiration_ms < now_ms,
@@ -155,14 +152,14 @@ class PubSubCleanup:
         batch_size = get_batch_size()
         max_days = get_delivered_max_days()
 
-        # Everything published before this moment is past its retention age
+        # Everything published before this moment is past its retention age.
         cutoff_ms = self._utc_now_ms() - max_days * _ms_per_day
 
         out = 0
 
         while True:
 
-            # Each batch is its own transaction so other work interleaves between the batches
+            # Each batch is its own transaction so other work interleaves between the batches.
             with self.engine.begin() as connection:
 
                 # A NULL payload is what makes a row a delivered-message trace ..
@@ -182,8 +179,7 @@ class PubSubCleanup:
                 if not message_ids:
                     break
 
-                # .. traces have no delivery rows left yet the shared delete
-                # .. stays correct if any concurrent operation added one.
+                # .. remove the batch.
                 self._delete_message_batch(connection, message_ids)
 
                 out += len(message_ids)
@@ -215,8 +211,8 @@ class PubSubCleanup:
         """ Returns the highest trace row id of one topic that is above the retention cap,
         or None when the topic is within its cap. Everything at or below the returned id must go.
         """
-        # Traces are ordered newest first so the row max_messages positions
-        # into the ordering is the newest one that no longer fits the cap
+        # The row max_messages positions into the newest-first ordering
+        # is the newest one that no longer fits the cap.
         query = select(message_table.c.id)
         query = query.where(and_(
             message_table.c.topic_name == topic_name,
@@ -244,8 +240,7 @@ class PubSubCleanup:
 
         for topic_name in self._get_trace_topics():
 
-            # The newest max_messages traces of this topic survive - everything
-            # at or below the cutoff id is above the cap and must go ..
+            # Everything at or below the cutoff id is above the cap and must go ..
             cutoff_id = self._get_topic_cap_cutoff(topic_name, max_messages)
 
             # .. this topic is within its cap ..
@@ -313,7 +308,7 @@ class PubSubCleanup:
             logger.info('Sweep completed -> expired:%d, aged:%d, over_cap:%d',
                 counts['expired'], counts['aged'], counts['over_cap'])
 
-            # Sleep in short slices so a stop request does not wait out the whole interval
+            # Sleep in short slices so a stop request does not wait out the whole interval.
             slept_seconds = 0
 
             while slept_seconds < self.interval_seconds and not self._should_stop:

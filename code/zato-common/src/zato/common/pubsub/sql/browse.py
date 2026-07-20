@@ -35,8 +35,43 @@ logger = getLogger(__name__)
 
 _default_page_size = PubSub.Message.Default_Max_Messages
 
-# The cursor value meaning "start from the beginning" - or from the end when browsing in reverse
+# The cursor value meaning "start from the beginning" - or from the end when browsing in reverse.
 _cursor_start = '-'
+
+# The message columns every browse entry consumes.
+_browse_columns = [
+    message_table.c.id,
+    message_table.c.msg_id,
+    message_table.c.topic_name,
+    message_table.c.priority,
+    message_table.c.expiration,
+    message_table.c.pub_time_iso,
+    message_table.c.recv_time_iso,
+    message_table.c.expiration_time_iso,
+    message_table.c.data_size,
+    message_table.c.data_preview,
+    message_table.c.correl_id,
+    message_table.c.in_reply_to,
+    message_table.c.ext_client_id,
+    message_table.c.publisher,
+]
+
+# The additional columns read only when the entry carries the full payload.
+_browse_payload_columns = [
+    message_table.c.payload,
+    message_table.c.payload_encrypted,
+    message_table.c.data_class,
+]
+
+def _get_browse_columns(needs_data:'bool') -> 'anylist':
+    """ Returns the message columns a browse query selects.
+    """
+    if needs_data:
+        out = _browse_columns + _browse_payload_columns
+    else:
+        out = list(_browse_columns)
+
+    return out
 
 _browse_state_handlers = {
     'pending':   '_browse_pending',
@@ -122,8 +157,7 @@ class SQLBrowseAPI(SQLBackendCore):
         """ Builds one browse entry dict out of a message row.
         """
 
-        # The always-present fields come first - the sequence number doubles
-        # as the browse cursor and as the dashboard's incremental-poll watermark ..
+        # The always-present fields come first ..
         out:'anydict' = {
             'msg_id': row.msg_id,
             'sequence_id': row.id,
@@ -202,7 +236,7 @@ class SQLBrowseAPI(SQLBackendCore):
         # .. pending messages are exactly the ones with a delivery row for this subscriber ..
         joined = delivery_table.join(message_table, message_table.c.id == delivery_table.c.message_id)
 
-        query = select(message_table)
+        query = select(*_get_browse_columns(needs_data))
         query = query.select_from(joined)
         query = query.where(and_(
             delivery_table.c.sub_key == sub_key,
@@ -244,7 +278,7 @@ class SQLBrowseAPI(SQLBackendCore):
 
         delivery_row_id = delivery_table.c.id.label('delivery_row_id')
 
-        query = select(message_table, delivery_row_id)
+        query = select(*_get_browse_columns(needs_data), delivery_row_id)
         query = query.select_from(joined)
         query = query.where(message_table.c.topic_name == topic_name)
         query = self._apply_cursor_and_order(query, message_table.c.id, cursor, reverse)
@@ -290,7 +324,7 @@ class SQLBrowseAPI(SQLBackendCore):
             delivery_table.c.sub_key == sub_key,
         ))
 
-        query = select(message_table)
+        query = select(*_get_browse_columns(needs_data))
         query = query.where(and_(
             message_table.c.topic_name == topic_name,
             ~still_pending,
@@ -314,7 +348,7 @@ class SQLBrowseAPI(SQLBackendCore):
         topic_name = topic_name.lower()
 
         # .. read the message row by its public identifier ..
-        query = select(message_table)
+        query = select(*_get_browse_columns(needs_data=True))
         query = query.where(and_(
             message_table.c.msg_id == msg_id,
             message_table.c.topic_name == topic_name,

@@ -16,7 +16,7 @@ from zato.common.pubsub.sql.backend import SQLPubSubBackend
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The topic and subscribers all the lifecycle assertions share
+# The topic and subscribers all the lifecycle assertions share.
 _topic = 'pubsub.backend.test.lifecycle'
 _sub_key_1 = 'zpsk.test.lifecycle.1'
 _sub_key_2 = 'zpsk.test.lifecycle.2'

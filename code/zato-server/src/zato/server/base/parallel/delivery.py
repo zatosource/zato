@@ -30,7 +30,7 @@ from zato.common.util.api import utcnow
 if 0:
     from gevent import Greenlet
     from zato.common.pubsub.sql.backend import SQLPubSubBackend
-    from zato.common.typing_ import anydict, strlist
+    from zato.common.typing_ import anydict, intlist, strlist
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -104,9 +104,7 @@ class PushDelivery:
         """
         logger.info('PubSub delivery greenlet started for sub_key `%s`', sub_key)
 
-        # On startup, drain everything still unacknowledged for this subscriber -
-        # what a previous process fetched but never acknowledged is still in the
-        # delivery table, which also covers an active-standby takeover ..
+        # On startup, drain everything still unacknowledged for this subscriber ..
         while not self._stop_event.is_set():
             if sub_key not in self.server.config_manager._push_subs:
                 break
@@ -144,16 +142,18 @@ class PushDelivery:
             config_by_topic[config['topic_name']] = config
 
         msg_ids:'strlist' = []
+        sequence_ids:'intlist' = []
 
         for message in messages:
             topic_name = message['topic_name']
             sub_config = config_by_topic[topic_name]
             self._deliver_with_retry(message, sub_config, sub_key)
             msg_ids.append(message['msg_id'])
+            sequence_ids.append(message['sequence_id'])
 
         # Delivered, expired and given-up messages all leave the queue - retrying
         # ran its course above, so nothing here is awaiting another attempt.
-        _ = self.backend.ack_messages(sub_key, msg_ids)
+        _ = self.backend.ack_messages(sub_key, msg_ids, sequence_ids)
 
 # ################################################################################################################################
 
@@ -183,8 +183,7 @@ class PushDelivery:
 
         while monotonic() < deadline:
 
-            # .. check if the message has expired - if so, drop it without delivery
-            # .. because there is no point pushing stale data to the endpoint ..
+            # .. drop expired messages without delivery ..
             now = utcnow()
             if now > expiration_time:
                 msg = f'PubSub message expired before delivery for sub_key `{sub_key}`'
@@ -217,8 +216,7 @@ class PushDelivery:
                 msg += f', msg_id `{msg_id}` after {attempt} attempts'
                 logger.error(msg)
 
-        # .. record the delivery outcome in the audit log, using the CID stored
-        # .. at publish time so all deliveries cross-reference their publish.
+            # .. record the delivery outcome in the audit log.
         self._insert_audit_event(message, sub_config, sub_key, delivered, expired)
 
 # ################################################################################################################################

@@ -6,9 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# gevent - the sockets of the database drivers must be cooperative or concurrent
-# greenlets serialize on them, so the patching runs before anything else is imported,
-# exactly like in the servers whose runtime pattern this suite exercises
+# gevent - the database drivers' sockets must be cooperative,
+# so the patching runs before anything else is imported.
 from gevent import monkey
 _ = monkey.patch_all()
 
@@ -44,19 +43,19 @@ if 0:
 
 class ModuleCtx:
 
-    # Host ports the containers listen on
+    # Host ports the containers listen on.
     MySQL_Port          = 23326
     MySQL_SSL_Port      = 23327
     PostgreSQL_Port     = 25452
     PostgreSQL_SSL_Port = 25453
 
-    # Names of the containers so stale ones can be removed
+    # Names of the containers so stale ones can be removed.
     MySQL_Container          = 'zato-pubsub-backend-test-mysql'
     MySQL_SSL_Container      = 'zato-pubsub-backend-test-mysql-ssl'
     PostgreSQL_Container     = 'zato-pubsub-backend-test-postgresql'
     PostgreSQL_SSL_Container = 'zato-pubsub-backend-test-postgresql-ssl'
 
-    # Database credentials shared by all the containers
+    # Database credentials shared by all the containers.
     Username = 'zato_pubsub'
     Password = 'test-pubsub-password'
     DB_Name  = 'zato_pubsub'
@@ -64,7 +63,7 @@ class ModuleCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The database users inside the containers must be able to traverse into the certificate directory
+# The database users inside the containers must be able to traverse into the certificate directory.
 _certificate_dir_mode = 0o755
 
 # ################################################################################################################################

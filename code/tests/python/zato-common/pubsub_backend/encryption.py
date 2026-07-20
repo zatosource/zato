@@ -14,11 +14,11 @@ from zato.common.pubsub.sql.backend import SQLPubSubBackend
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The topic and subscriber all the encryption assertions share
+# The topic and subscriber all the encryption assertions share.
 _topic = 'pubsub.backend.test.encryption'
 _sub_key = 'zpsk.test.encryption.1'
 
-# The payload whose plaintext must never appear in the database
+# The payload whose plaintext must never appear in the database.
 _plaintext = 'this-payload-must-be-encrypted-at-rest'
 
 # ################################################################################################################################
@@ -30,7 +30,7 @@ def run_encryption_scenario() -> 'None':
     """
     delete_all_rows()
 
-    # A throwaway key is all the backend needs
+    # A throwaway key is all the backend needs.
     secret_key = CryptoManager.generate_key()
     crypto_manager = CryptoManager(secret_key=secret_key)
 

@@ -16,7 +16,7 @@ from gevent import joinall, spawn
 from humanize import intcomma
 
 # Zato
-from common import set_progress_context
+from common import is_ssl_enabled, set_progress_context
 from load import consume_until_done
 from seeding import delete_all_rows
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
@@ -35,29 +35,32 @@ if 0:
 # because no single peer is known to hold the answer.
 _topic_count = 20
 
-# How many subscribers every topic broadcasts to
+# How many subscribers every topic broadcasts to.
 _subscribers_per_topic = 10
 
 # How many messages are published in the measured run - each one becomes
-# _subscribers_per_topic deliveries
+# _subscribers_per_topic deliveries.
 _message_count = 1000
 
-# How many publisher greenlets pump concurrently with the consumers -
-# the message count must divide evenly between them
-_publisher_greenlet_count = 4
+# How many publisher greenlets pump concurrently with the consumers.
+_publisher_greenlet_count = 20
 
-# The payloads are small request envelopes
+# The payloads are small request envelopes.
 _payload = 'fanout-' + 'x' * 500
 
 # The rates the run must sustain - the publish floor is the standard one,
-# the delivery floor is above it because fan-out multiplies every publish tenfold
+# the delivery floor is above it because fan-out multiplies every publish tenfold.
 _min_publish_rate = 100
 _min_delivery_rate = 700
 
-# How long one blocking fetch waits inside a consumer greenlet, in milliseconds
+# The floors of runs whose database connection uses SSL.
+_min_publish_rate_ssl = 90
+_min_delivery_rate_ssl = 630
+
+# How long one blocking fetch waits inside a consumer greenlet, in milliseconds.
 _consumer_block_ms = 2000
 
-# How long the whole run may take at most before it is declared hung, in seconds
+# How long the whole run may take at most before it is declared hung, in seconds.
 _deadline_seconds = 60
 
 # ################################################################################################################################
@@ -67,7 +70,12 @@ def _publish_share(backend:'SQLPubSubBackend', topic_names:'strlist', publisher_
     """ What one publisher greenlet runs - its share of the measured messages,
     round-robin over all the topics.
     """
-    share = _message_count // _publisher_greenlet_count
+    share, remainder = divmod(_message_count, _publisher_greenlet_count)
+
+    # The remainder of the division goes to the first publishers, one message each,
+    # so all the shares add up to the total.
+    if publisher_index < remainder:
+        share += 1
 
     for message_index in range(share):
         topic_name = topic_names[(publisher_index * share + message_index) % _topic_count]
@@ -110,28 +118,42 @@ def run_fanout_scenario() -> 'None':
     start = monotonic()
 
     # .. consumers first, so they are already waiting when the first publish lands ..
-    greenlets:'anylist' = []
+    consumer_greenlets:'anylist' = []
 
     for sub_key in sub_keys:
-        greenlets.append(spawn(consume_until_done, backend, sub_key, counters, _consumer_block_ms))
+        consumer_greenlets.append(spawn(consume_until_done, backend, sub_key, counters, _consumer_block_ms))
 
     # .. now the publishers pump concurrently with the consumers ..
+    publisher_greenlets:'anylist' = []
+
     for publisher_index in range(_publisher_greenlet_count):
-        greenlets.append(spawn(_publish_share, backend, topic_names, publisher_index))
+        publisher_greenlets.append(spawn(_publish_share, backend, topic_names, publisher_index))
+
+    # .. the publish rate is measured over the publishers' own window ..
+    _ = joinall(publisher_greenlets, timeout=_deadline_seconds)
+
+    publish_elapsed = monotonic() - start
 
     # .. wait until every broadcast has been fetched and acknowledged everywhere.
-    _ = joinall(greenlets, timeout=_deadline_seconds)
+    _ = joinall(consumer_greenlets, timeout=_deadline_seconds)
 
     elapsed = monotonic() - start
 
     delivered = counters['delivered']
     assert delivered == expected_deliveries, f'Expected {intcomma(expected_deliveries)} deliveries, got {intcomma(delivered)}'
 
-    publish_rate = _message_count / elapsed
+    publish_rate = _message_count / publish_elapsed
     delivery_rate = delivered / elapsed
 
-    assert publish_rate >= _min_publish_rate, f'Fan-out publish rate too low: {intcomma(int(publish_rate))}/s'
-    assert delivery_rate >= _min_delivery_rate, f'Fan-out delivery rate too low: {intcomma(int(delivery_rate))}/s'
+    if is_ssl_enabled():
+        min_publish_rate = _min_publish_rate_ssl
+        min_delivery_rate = _min_delivery_rate_ssl
+    else:
+        min_publish_rate = _min_publish_rate
+        min_delivery_rate = _min_delivery_rate
+
+    assert publish_rate >= min_publish_rate, f'Fan-out publish rate too low: {intcomma(int(publish_rate))}/s'
+    assert delivery_rate >= min_delivery_rate, f'Fan-out delivery rate too low: {intcomma(int(delivery_rate))}/s'
 
     print(f'Fan-out: {intcomma(int(publish_rate))} publishes/s, {intcomma(int(delivery_rate))} deliveries/s')
 

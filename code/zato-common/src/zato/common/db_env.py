@@ -134,6 +134,15 @@ class EnvDBConfig:
 # error instead of taking turns. Writes are bounded batches, so the wait is short.
 _sqlite_busy_timeout_ms = 5000
 
+# Pool sizing for network databases of stores that asked for a pool - every durable
+# commit waits for the database's log flush and the flush is shared across all commits
+# in flight, so throughput scales with how many connections may commit at once
+# and SQLAlchemy's default cap of 5+10 is too low for stores like pub/sub.
+# The total of 80 stays below the default connection limits of both MySQL (151)
+# and PostgreSQL (100), leaving room for other clients of the same database.
+_network_pool_size = 30
+_network_max_overflow = 50
+
 def _set_sqlite_pragmas(dbapi_connection:'any_', connection_record:'any_') -> 'None':
     """ WAL mode lets multiple processes share the file safely, synchronous=NORMAL
     keeps each insert fast while remaining durable enough for aggregate and audit data,
@@ -417,6 +426,12 @@ def get_env_engine(config:'EnvDBConfig') -> 'Engine':
     # .. transactions deleting interleaved key ranges, e.g. pub/sub acknowledgements ..
     if db_type != Type_SQLite:
         engine_kwargs['isolation_level'] = 'READ COMMITTED'
+
+        # .. stores with many concurrent small transactions also need enough
+        # .. connections for the database to group their commits into shared flushes ..
+        if config.needs_pool:
+            engine_kwargs['pool_size'] = _network_pool_size
+            engine_kwargs['max_overflow'] = _network_max_overflow
 
     out = create_engine(engine_url, connect_args=connect_args, **engine_kwargs)
 
