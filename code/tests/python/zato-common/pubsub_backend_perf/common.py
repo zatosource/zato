@@ -56,6 +56,19 @@ Mass_Drain_Deadline_Mass = 3600
 Mass_Drain_Publish_Floor_Main = Min_Publish_Rate_Per_Second
 Mass_Drain_Publish_Floor_Mass = int(1 / Max_Operation_Seconds)
 
+# The two scales of the operations scenario. The main one is many mid-size queues.
+# The mass one is few queues of millions of messages each, of which two are cleared
+# whole - an operator removing a couple of million messages from individual queues
+# in one action, under full load.
+Operations_Topics_Main = 100
+Operations_Cleared_Main = 20
+Operations_Clear_Budget_Main = 120
+
+Operations_Topics_Mass = 4
+Operations_Backlog_Mass = 2500000
+Operations_Cleared_Mass = 2
+Operations_Clear_Budget_Mass = 1800
+
 # ################################################################################################################################
 # ################################################################################################################################
 

@@ -32,15 +32,13 @@ if 0:
 # The operations pattern - the whole population is draining deep backlogs with
 # fresh traffic still arriving into the same queues, and in the middle of it
 # operators clear the deepest queues, each while its consumer keeps consuming
-# and its publishers keep publishing.
-_topic_count = 100
+# and its publishers keep publishing. How many queues there are, how deep each
+# one is and how many get cleared all come in as parameters - the same scenario
+# runs both as many mid-size queues and as few queues of millions of messages each.
 
 # The naming the seeded backlog uses
 _topic_prefix = 'perf.operations'
 _sub_key_prefix = 'zpsk.perf.operations'
-
-# How many of the deepest queues the operators clear mid-drain
-_cleared_queue_count = 20
 
 # How many operator greenlets issue the clears concurrently
 _operator_greenlet_count = 2
@@ -62,9 +60,6 @@ _consumer_block_ms = 2000
 # How long the drain gets before the operators step in, in seconds
 _operator_delay_seconds = 1
 
-# How long one clear of one deep queue may take under full load, in seconds
-_clear_budget_seconds = 120
-
 # How often the end-of-run check reads the queue depths, in seconds
 _depth_poll_seconds = 1
 
@@ -82,9 +77,10 @@ def _publish_share(backend:'SQLPubSubBackend', topic_names:'strlist', publisher_
     keeps accepting requests to a queue no matter what operators do to it.
     """
     share = _fresh_message_count // _publisher_greenlet_count
+    topic_count = len(topic_names)
 
     for message_index in range(share):
-        topic_name = topic_names[(publisher_index * share + message_index) % _topic_count]
+        topic_name = topic_names[(publisher_index * share + message_index) % topic_count]
         _ = backend.publish(topic_name, _fresh_payload)
 
 # ################################################################################################################################
@@ -107,7 +103,12 @@ def _clear_share(backend:'SQLPubSubBackend', sub_keys:'strlist', results:'anydic
 
 # ################################################################################################################################
 
-def _pick_deepest_queues(backend:'SQLPubSubBackend', sub_keys:'strlist', topic_names:'strlist') -> 'strlist':
+def _pick_deepest_queues(
+    backend:'SQLPubSubBackend',
+    sub_keys:'strlist',
+    topic_names:'strlist',
+    cleared_queue_count:'int',
+    ) -> 'strlist':
     """ Returns the subscribers with the deepest pending queues - the ones
     operators actually want to clear.
     """
@@ -115,7 +116,7 @@ def _pick_deepest_queues(backend:'SQLPubSubBackend', sub_keys:'strlist', topic_n
 
     by_depth = sorted(sub_keys, key=depths.__getitem__, reverse=True)
 
-    out = by_depth[:_cleared_queue_count]
+    out = by_depth[:cleared_queue_count]
     return out
 
 # ################################################################################################################################
@@ -139,22 +140,30 @@ def _wait_until_empty(backend:'SQLPubSubBackend', sub_keys:'strlist', topic_name
 
 # ################################################################################################################################
 
-def run_operations_scenario(*, backlog_per_subscriber:'int', deadline_seconds:'int', min_publish_rate:'int') -> 'None':
-    """ Live operations on a draining system - one hundred consumers work off deep
-    backlogs with fresh traffic still arriving into every queue, and mid-drain the
-    operators clear the twenty deepest queues, each while its consumer keeps
-    consuming. Publishing must hold its floor throughout, every clear must finish
-    within its budget, and at the end every message must be accounted for exactly -
-    consumed or cleared, none lost, with the double-counting window no bigger than
-    at-least-once delivery inherently allows.
+def run_operations_scenario(
+    *,
+    topic_count:'int',
+    backlog_per_subscriber:'int',
+    cleared_queue_count:'int',
+    clear_budget_seconds:'int',
+    deadline_seconds:'int',
+    min_publish_rate:'int',
+    ) -> 'None':
+    """ Live operations on a draining system - every consumer works off a deep
+    backlog with fresh traffic still arriving into every queue, and mid-drain the
+    operators clear the deepest queues, each while its consumer keeps consuming.
+    Publishing must hold its floor throughout, every clear must finish within
+    its budget, and at the end every message must be accounted for exactly -
+    consumed or cleared, none lost, with the double-counting window no bigger
+    than at-least-once delivery inherently allows.
     """
     backend = SQLPubSubBackend()
 
     # Every subscriber's backlog, seeded natively in one go ..
-    total_backlog = _topic_count * backlog_per_subscriber
+    total_backlog = topic_count * backlog_per_subscriber
 
     seed_seconds = seed_backlog(
-        topic_count=_topic_count,
+        topic_count=topic_count,
         messages_per_topic=backlog_per_subscriber,
         topic_prefix=_topic_prefix,
         sub_key_prefix=_sub_key_prefix,
@@ -164,7 +173,7 @@ def run_operations_scenario(*, backlog_per_subscriber:'int', deadline_seconds:'i
     topic_names:'strlist' = []
     sub_keys:'strlist' = []
 
-    for topic_index in range(_topic_count):
+    for topic_index in range(topic_count):
         topic_names.append(f'{_topic_prefix}.{topic_index:04d}')
         sub_keys.append(f'{_sub_key_prefix}.{topic_index:04d}')
 
@@ -194,11 +203,11 @@ def run_operations_scenario(*, backlog_per_subscriber:'int', deadline_seconds:'i
     # .. the drain gets going, then the operators pick the deepest queues and clear them ..
     sleep(_operator_delay_seconds)
 
-    cleared_sub_keys = _pick_deepest_queues(backend, sub_keys, topic_names)
+    cleared_sub_keys = _pick_deepest_queues(backend, sub_keys, topic_names, cleared_queue_count)
     clear_results:'anydict' = {}
 
     operator_greenlets:'anylist' = []
-    operator_share = _cleared_queue_count // _operator_greenlet_count
+    operator_share = cleared_queue_count // _operator_greenlet_count
 
     for operator_index in range(_operator_greenlet_count):
         share_start = operator_index * operator_share
@@ -216,11 +225,11 @@ def run_operations_scenario(*, backlog_per_subscriber:'int', deadline_seconds:'i
     # .. every clear must finish within its budget ..
     _ = joinall(operator_greenlets, timeout=deadline_seconds)
 
-    assert len(clear_results) == _cleared_queue_count
+    assert len(clear_results) == cleared_queue_count
 
     for sub_key, clear_result in clear_results.items():
         clear_elapsed = clear_result['elapsed']
-        assert clear_elapsed <= _clear_budget_seconds, f'Clear of {sub_key} too slow: {clear_elapsed:.1f}s'
+        assert clear_elapsed <= clear_budget_seconds, f'Clear of {sub_key} too slow: {clear_elapsed:.1f}s'
 
     # .. the consumers finish everything that was not cleared ..
     _wait_until_empty(backend, sub_keys, topic_names, deadline_seconds)
@@ -232,7 +241,7 @@ def run_operations_scenario(*, backlog_per_subscriber:'int', deadline_seconds:'i
 
     # .. every message must now be accounted for exactly. Every queue was owed
     # .. its backlog plus its share of the fresh traffic ..
-    fresh_per_topic = _fresh_message_count // _topic_count
+    fresh_per_topic = _fresh_message_count // topic_count
     expected_per_queue = backlog_per_subscriber + fresh_per_topic
 
     # .. a cleared queue's messages were either consumed or cleared - none lost,
@@ -276,7 +285,7 @@ def run_operations_scenario(*, backlog_per_subscriber:'int', deadline_seconds:'i
     assert delivery_rate >= Min_Delivery_Rate_Per_Second, f'Delivery rate too low during operations: {delivery_rate:.0f}/s'
 
     message = f'Operations: {total_delivered} delivered at {delivery_rate:.0f}/s, {total_cleared} cleared'
-    message += f' across {_cleared_queue_count} deep queues, overlap {total_overlap},'
+    message += f' across {cleared_queue_count} queues of {backlog_per_subscriber} each, overlap {total_overlap},'
     message += f' {publish_rate:.0f} publishes/s concurrently'
     print(message)
 
