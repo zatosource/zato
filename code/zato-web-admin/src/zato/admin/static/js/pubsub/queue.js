@@ -34,8 +34,7 @@
             '&sub_key=' + encodeURIComponent(subKey) +
             '&queue_name=' + encodeURIComponent(queue._queueName) +
             '&msg_id=' + encodeURIComponent(message.msg_id) +
-            '&topic_name=' + encodeURIComponent(topicName) +
-            '&redis_stream_id=' + encodeURIComponent(message.redis_stream_id);
+            '&topic_name=' + encodeURIComponent(topicName);
 
         var topicLink = '/zato/pubsub/topic/?cluster=1&query=' + encodeURIComponent(topicName);
 
@@ -54,7 +53,6 @@
         row += '<td class="data-preview"><a href="#" class="queue-preview-link"' +
             ' data-msg-id="' + message.msg_id + '"' +
             ' data-topic-name="' + topicName + '"' +
-            ' data-redis-stream-id="' + message.redis_stream_id + '"' +
             ' data-is-delivered="' + (message.is_delivered ? '1' : '0') + '"' +
             '><span class="syntax-light">' + message.data_preview_highlighted + '</span></a></td>';
         row += '<td>' + message.data_size + ' B</td>';
@@ -66,7 +64,6 @@
             row += '<td><a href="#" class="queue-delete-link"' +
                 ' data-msg-id="' + message.msg_id + '"' +
                 ' data-topic-name="' + topicName + '"' +
-                ' data-redis-stream-id="' + message.redis_stream_id + '"' +
                 '>Delete</a></td>';
         }
 
@@ -223,7 +220,7 @@
             object_id: subKey,
             page_size: 50,
             filters: {sub_key: subKey, state: config.state},
-            ts_field: 'redis_stream_id',
+            ts_field: 'sequence_id',
             table_body: '#messages-body',
             container_top: '#queue-pagination-top',
             container_bottom: '#queue-pagination-bottom',
@@ -286,7 +283,6 @@
             var $link = $(this);
             var msgId = $link.data('msg-id');
             var topicName = $link.data('topic-name');
-            var streamId = $link.data('redis-stream-id');
 
             var previewText = $link.text();
 
@@ -296,8 +292,7 @@
                 data: JSON.stringify({
                     action: 'get-message-detail',
                     msg_id: msgId,
-                    topic_name: topicName,
-                    redis_stream_id: streamId
+                    topic_name: topicName
                 }),
                 contentType: 'application/json',
                 headers: {'X-CSRFToken': $.cookie('csrftoken')},
@@ -315,8 +310,7 @@
                                     save_action: 'update-message',
                                     hidden_fields: {
                                         msg_id: msgId,
-                                        topic_name: topicName,
-                                        redis_stream_id: streamId
+                                        topic_name: topicName
                                     }
                                 })
                             ]
@@ -385,7 +379,7 @@
             });
         }
 
-        function _open_delete_overlay(msgId, data, $row, topicName, streamId) {
+        function _open_delete_overlay(msgId, data, $row, topicName) {
             if (!$deleteOverlay) {
                 _build_delete_overlay();
             }
@@ -393,7 +387,6 @@
             _deleteContext = {
                 msgId: msgId,
                 topicName: topicName,
-                streamId: streamId,
                 $row: $row
             };
 
@@ -418,8 +411,7 @@
                 data: JSON.stringify({
                     msg_id: ctx.msgId,
                     topic_name: ctx.topicName,
-                    sub_key: subKey,
-                    redis_stream_id: ctx.streamId
+                    sub_key: subKey
                 }),
                 contentType: 'application/json',
                 headers: {'X-CSRFToken': $.cookie('csrftoken')},
@@ -453,7 +445,6 @@
             var $row = $link.closest('tr');
             var msgId = $link.data('msg-id');
             var topicName = $link.data('topic-name');
-            var streamId = $link.data('redis-stream-id');
             var previewText = $row.find('.data-preview').text();
 
             $.ajax({
@@ -468,10 +459,10 @@
                 dataType: 'json',
                 success: function(response) {
                     var data = response.data ? response.data : previewText;
-                    _open_delete_overlay(msgId, data, $row, topicName, streamId);
+                    _open_delete_overlay(msgId, data, $row, topicName);
                 },
                 error: function() {
-                    _open_delete_overlay(msgId, previewText, $row, topicName, streamId);
+                    _open_delete_overlay(msgId, previewText, $row, topicName);
                 }
             });
         });
