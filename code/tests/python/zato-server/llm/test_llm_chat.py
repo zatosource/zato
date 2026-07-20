@@ -26,6 +26,12 @@ from zato.server.generic.api.outconn_llm import OutconnLLMWrapper
 if 0:
     from zato.common.typing_ import any_, anydict
 
+# A wrapper paired with the cache API its chat history store uses
+wrapper_and_cache = tuple[OutconnLLMWrapper, CacheAPI]
+
+# The chat expiry the tests use unless they exercise expiry itself, in seconds
+_Default_Chat_Expiry = 86400
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -54,8 +60,8 @@ def _get_wrapper(
     redis_server:'anydict',
     conn_name:'str',
     max_history_turns:'int'=20,
-    chat_expiry:'int'=86400,
-) -> 'tuple[OutconnLLMWrapper, CacheAPI]':
+    chat_expiry:'int'=_Default_Chat_Expiry,
+) -> 'wrapper_and_cache':
     """ Builds a wrapper over the provider simulator with one client ready in its queue,
     backed by the test-managed Redis.
     """
@@ -101,7 +107,7 @@ class TestLLMChat:
         assert response['text'] == 'One-shot reply'
 
         # Nothing was written to the history store
-        store = ChatHistoryStore(cache_api, 'chat.oneshot.invoke', 86400)
+        store = ChatHistoryStore(cache_api, 'chat.oneshot.invoke', _Default_Chat_Expiry)
         assert store.load('any-chat-id') == []
 
 # ################################################################################################################################
@@ -116,7 +122,7 @@ class TestLLMChat:
         request = llm_test_server.last_request
         assert request['body']['messages'] == [{'role': 'user', 'content': 'Hello'}]
 
-        store = ChatHistoryStore(cache_api, 'chat.oneshot.chat', 86400)
+        store = ChatHistoryStore(cache_api, 'chat.oneshot.chat', _Default_Chat_Expiry)
         assert store.load('any-chat-id') == []
 
 # ################################################################################################################################
@@ -143,7 +149,7 @@ class TestLLMChat:
         ]
 
         # The stored history holds both full turns
-        store = ChatHistoryStore(cache_api, 'chat.history', 86400)
+        store = ChatHistoryStore(cache_api, 'chat.history', _Default_Chat_Expiry)
         history = store.load('chat-123')
         assert history == [
             {'role': 'user', 'content': 'First question'},
@@ -155,7 +161,7 @@ class TestLLMChat:
         # The key carries the configured expiry
         redis_key = 'zato:cache:' + store.get_key('chat-123')
         ttl = cache_api.redis.ttl(redis_key)
-        assert 0 < ttl <= 86400
+        assert 0 < ttl <= _Default_Chat_Expiry
 
 # ################################################################################################################################
 
@@ -178,7 +184,7 @@ class TestLLMChat:
         ]
 
         # The store still holds all four turns
-        store = ChatHistoryStore(cache_api, 'chat.trim', 86400)
+        store = ChatHistoryStore(cache_api, 'chat.trim', _Default_Chat_Expiry)
         history = store.load('chat-trim')
         history_length = len(history)
         assert history_length == 8
