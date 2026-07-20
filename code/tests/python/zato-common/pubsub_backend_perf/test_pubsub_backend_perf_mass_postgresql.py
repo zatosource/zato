@@ -7,7 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from common import pubsub_backend_env, Mass_Drain_Backlog_Mass, Mass_Drain_Deadline_Mass, Mass_Drain_Publish_Floor_Mass
+from common import pubsub_backend_env, Mass_Drain_Backlog_Mass, Mass_Drain_Deadline_Mass, Mass_Drain_Publish_Floor_Mass, \
+    Operations_Backlog_Mass, Operations_Clear_Budget_Mass, Operations_Cleared_Mass, Operations_Topics_Mass
 from mass_drain import run_mass_drain_scenario
 from operations import run_operations_scenario
 
@@ -31,7 +32,10 @@ def test_pubsub_backend_perf_mass_postgresql(postgresql_server:'DatabaseServer')
             min_publish_rate=Mass_Drain_Publish_Floor_Mass,
         )
         run_operations_scenario(
-            backlog_per_subscriber=Mass_Drain_Backlog_Mass,
+            topic_count=Operations_Topics_Mass,
+            backlog_per_subscriber=Operations_Backlog_Mass,
+            cleared_queue_count=Operations_Cleared_Mass,
+            clear_budget_seconds=Operations_Clear_Budget_Mass,
             deadline_seconds=Mass_Drain_Deadline_Mass,
             min_publish_rate=Mass_Drain_Publish_Floor_Mass,
         )

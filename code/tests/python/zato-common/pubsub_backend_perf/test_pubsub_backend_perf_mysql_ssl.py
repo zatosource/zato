@@ -9,7 +9,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from backbone import run_backbone_scenario
 from backlog import run_backlog_scenario
-from common import pubsub_backend_env, Mass_Drain_Backlog_Main, Mass_Drain_Deadline_Main, Mass_Drain_Publish_Floor_Main
+from common import pubsub_backend_env, Mass_Drain_Backlog_Main, Mass_Drain_Deadline_Main, Mass_Drain_Publish_Floor_Main, \
+    Operations_Clear_Budget_Main, Operations_Cleared_Main, Operations_Topics_Main
 from drain import run_drain_scenario
 from fanout import run_fanout_scenario
 from laggard import run_laggard_scenario
@@ -45,7 +46,10 @@ def test_pubsub_backend_perf_mysql_ssl(mysql_ssl_server:'DatabaseServer') -> 'No
             min_publish_rate=Mass_Drain_Publish_Floor_Main,
         )
         run_operations_scenario(
+            topic_count=Operations_Topics_Main,
             backlog_per_subscriber=Mass_Drain_Backlog_Main,
+            cleared_queue_count=Operations_Cleared_Main,
+            clear_budget_seconds=Operations_Clear_Budget_Main,
             deadline_seconds=Mass_Drain_Deadline_Main,
             min_publish_rate=Mass_Drain_Publish_Floor_Main,
         )
