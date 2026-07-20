@@ -13,7 +13,6 @@ from time import monotonic
 from gevent import joinall, sleep, spawn
 
 # Zato
-from common import Min_Delivery_Rate_Per_Second
 from load import consume_until_stopped
 from seeding import count_rows, seed_backlog
 from zato.common.api import PubSub
@@ -62,6 +61,11 @@ _operator_delay_seconds = 1
 
 # How often the end-of-run check reads the queue depths, in seconds
 _depth_poll_seconds = 1
+
+# How long the consumers keep consuming after the clears when the run does not
+# drain to zero, in seconds - long enough to show the system stays live
+# with the operators done, short enough not to dominate the runtime
+_post_clear_window_seconds = 60
 
 # A message fetched right before its rows were cleared is still acknowledged
 # afterwards and counted by both sides - at-least-once semantics. Each such
@@ -148,6 +152,8 @@ def run_operations_scenario(
     clear_budget_seconds:'int',
     deadline_seconds:'int',
     min_publish_rate:'int',
+    min_delivery_rate:'int',
+    drain_to_zero:'bool',
     ) -> 'None':
     """ Live operations on a draining system - every consumer works off a deep
     backlog with fresh traffic still arriving into every queue, and mid-drain the
@@ -156,6 +162,13 @@ def run_operations_scenario(
     its budget, and at the end every message must be accounted for exactly -
     consumed or cleared, none lost, with the double-counting window no bigger
     than at-least-once delivery inherently allows.
+
+    With drain_to_zero the consumers finish every remaining message and the
+    delivery floor covers the whole run. Without it - the mode the millions-deep
+    scale runs in, where the remainder would be a handful of consumers grinding
+    for hours - the consumers get a fixed post-clear window to hold the delivery
+    floor, and then the operators clear every remaining queue, the way a stuck
+    environment is recovered, with the accounting covering both paths.
     """
     backend = SQLPubSubBackend()
 
@@ -231,13 +244,39 @@ def run_operations_scenario(
         clear_elapsed = clear_result['elapsed']
         assert clear_elapsed <= clear_budget_seconds, f'Clear of {sub_key} too slow: {clear_elapsed:.1f}s'
 
-    # .. the consumers finish everything that was not cleared ..
-    _wait_until_empty(backend, sub_keys, topic_names, deadline_seconds)
+    # .. with drain_to_zero the consumers finish everything that was not cleared ..
+    window_delivered = 0
+
+    if drain_to_zero:
+        _wait_until_empty(backend, sub_keys, topic_names, deadline_seconds)
+
+    # .. otherwise they get a fixed window to show delivery holds its floor
+    # .. with the operators done ..
+    else:
+        window_before = sum(per_sub_delivered.values())
+        sleep(_post_clear_window_seconds)
+        window_delivered = sum(per_sub_delivered.values()) - window_before
 
     elapsed = monotonic() - start
 
     stop['is_set'] = True
     _ = joinall(consumer_greenlets, timeout=deadline_seconds)
+
+    # .. whatever the window left behind, the operators now clear - each sweep
+    # .. is the same clear-millions-in-one-action operation and gets the same budget.
+    # .. The consumers are gone, so the sweep counts are exact ..
+    swept_counts:'anydict' = {}
+
+    if not drain_to_zero:
+        for sub_key in sub_keys:
+
+            sweep_start = monotonic()
+            result = backend.clear_queue(sub_key)
+            sweep_elapsed = monotonic() - sweep_start
+
+            assert sweep_elapsed <= clear_budget_seconds, f'Sweep of {sub_key} too slow: {sweep_elapsed:.1f}s'
+
+            swept_counts[sub_key] = result['cleared_count']
 
     # .. every message must now be accounted for exactly. Every queue was owed
     # .. its backlog plus its share of the fresh traffic ..
@@ -258,11 +297,21 @@ def run_operations_scenario(
         delivered = per_sub_delivered[sub_key]
         total_delivered += delivered
 
+        accounted = delivered
+
         if sub_key in clear_results:
             cleared = clear_results[sub_key]['cleared_count']
             total_cleared += cleared
+            accounted += cleared
 
-            accounted = delivered + cleared
+        if not drain_to_zero:
+            swept = swept_counts[sub_key]
+            total_cleared += swept
+            accounted += swept
+
+        # .. a mid-run cleared queue was raced by its consumer, so its overlap
+        # .. stays within what at-least-once delivery allows ..
+        if sub_key in clear_results:
             assert accounted >= expected_per_queue, \
                 f'Messages lost on {sub_key}: {accounted} accounted for, {expected_per_queue} expected'
 
@@ -271,18 +320,24 @@ def run_operations_scenario(
 
             total_overlap += overlap
 
-        # .. an uncleared queue delivered everything it was owed, exactly.
+        # .. every other queue balances exactly - what it delivered, plus what
+        # .. the final sweep found, is precisely what it was owed.
         else:
-            assert delivered == expected_per_queue, \
-                f'Expected {expected_per_queue} deliveries on {sub_key}, got {delivered}'
+            assert accounted == expected_per_queue, \
+                f'Expected {expected_per_queue} accounted for on {sub_key}, got {accounted}'
 
     # .. nothing is in flight anywhere anymore ..
     assert count_rows('pubsub_delivery') == 0
 
-    # .. and the population held the delivery floor with the operators at work.
+    # .. and the population held the delivery floor with the operators at work -
+    # .. over the whole run when it drains to zero, over the post-clear window otherwise.
     delivery_rate = total_delivered / elapsed
 
-    assert delivery_rate >= Min_Delivery_Rate_Per_Second, f'Delivery rate too low during operations: {delivery_rate:.0f}/s'
+    if drain_to_zero:
+        assert delivery_rate >= min_delivery_rate, f'Delivery rate too low during operations: {delivery_rate:.0f}/s'
+    else:
+        window_rate = window_delivered / _post_clear_window_seconds
+        assert window_rate >= min_delivery_rate, f'Post-clear delivery rate too low: {window_rate:.0f}/s'
 
     message = f'Operations: {total_delivered} delivered at {delivery_rate:.0f}/s, {total_cleared} cleared'
     message += f' across {cleared_queue_count} queues of {backlog_per_subscriber} each, overlap {total_overlap},'

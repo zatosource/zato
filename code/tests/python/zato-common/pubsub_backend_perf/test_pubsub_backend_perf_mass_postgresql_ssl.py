@@ -8,7 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from common import pubsub_backend_env, Mass_Drain_Backlog_Mass, Mass_Drain_Deadline_Mass, Mass_Drain_Publish_Floor_Mass, \
-    Operations_Backlog_Mass, Operations_Clear_Budget_Mass, Operations_Cleared_Mass, Operations_Topics_Mass
+    Operations_Backlog_Mass, Operations_Clear_Budget_Mass, Operations_Cleared_Mass, Operations_Delivery_Floor_Mass, \
+    Operations_Topics_Mass
 from mass_drain import run_mass_drain_scenario
 from operations import run_operations_scenario
 
@@ -38,6 +39,8 @@ def test_pubsub_backend_perf_mass_postgresql_ssl(postgresql_ssl_server:'Database
             clear_budget_seconds=Operations_Clear_Budget_Mass,
             deadline_seconds=Mass_Drain_Deadline_Mass,
             min_publish_rate=Mass_Drain_Publish_Floor_Mass,
+            min_delivery_rate=Operations_Delivery_Floor_Mass,
+            drain_to_zero=False,
         )
 
 # ################################################################################################################################

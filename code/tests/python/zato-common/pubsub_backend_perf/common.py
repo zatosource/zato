@@ -69,6 +69,12 @@ Operations_Backlog_Mass = 2500000
 Operations_Cleared_Mass = 2
 Operations_Clear_Budget_Mass = 1800
 
+# The delivery floor of the mass operations scale, measured over the post-clear
+# consume window. After the clears only two consumers remain, each against
+# a millions-deep queue on one serialized database - a scale where the standard
+# floor assumes a full population of consumers, not two.
+Operations_Delivery_Floor_Mass = 100
+
 # ################################################################################################################################
 # ################################################################################################################################
 
