@@ -13,7 +13,7 @@ from time import monotonic
 from gevent import joinall, sleep, spawn
 
 # Zato
-from common import Min_Delivery_Rate_Per_Second, Min_Publish_Rate_Per_Second
+from common import set_progress_context, Min_Delivery_Rate_Per_Second, Min_Publish_Rate_Per_Second
 from load import consume_until_done
 from seeding import delete_all_rows
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
@@ -89,6 +89,8 @@ def run_backbone_scenario() -> 'None':
     carrying an embedded document. The shared rate floors must hold across
     the whole population.
     """
+    set_progress_context('backbone', _publisher_greenlet_count, _topic_count * _subscribers_per_topic)
+
     delete_all_rows()
 
     backend = SQLPubSubBackend()

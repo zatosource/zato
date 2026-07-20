@@ -13,7 +13,7 @@ from time import monotonic
 from gevent import joinall, spawn
 
 # Zato
-from common import Min_Delivery_Rate_Per_Second, Min_Publish_Rate_Per_Second
+from common import set_progress_context, Min_Delivery_Rate_Per_Second, Min_Publish_Rate_Per_Second
 from load import consume_until_done
 from seeding import count_payloads, seed_aged_queue
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
@@ -79,6 +79,8 @@ def run_drain_scenario() -> 'None':
     must hold the delivery floor with the publishers running concurrently,
     nothing may be lost and the queue must reach zero.
     """
+    set_progress_context('drain', _publisher_greenlet_count, 2)
+
     backend = SQLPubSubBackend()
 
     # The backlog the outage left behind, pending only for the drainer ..

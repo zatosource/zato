@@ -13,7 +13,7 @@ from time import monotonic
 from gevent import joinall, spawn
 
 # Zato
-from common import Min_Delivery_Rate_Per_Second, Min_Publish_Rate_Per_Second
+from common import set_progress_context, Min_Delivery_Rate_Per_Second, Min_Publish_Rate_Per_Second
 from load import consume_until_done
 from seeding import delete_all_rows
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
@@ -92,6 +92,8 @@ def run_subscriptions_scenario() -> 'None':
     of real subscription traffic - single records, batches and multi-megabyte bundles -
     all flowing through the same delivery path. The shared rate floors must hold.
     """
+    set_progress_context('subscriptions', _publisher_greenlet_count, _topic_count * _subscribers_per_topic)
+
     delete_all_rows()
 
     backend = SQLPubSubBackend()
