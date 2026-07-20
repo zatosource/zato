@@ -76,6 +76,7 @@ from zato.server.generic.api.outconn_hl7_mllp import OutconnHL7MLLPWrapper
 from zato.server.generic.api.outconn_ibm_mq import OutconnIBMMQWrapper
 from zato.server.generic.api.outconn_kafka import OutconnKafkaWrapper
 from zato.server.generic.api.outconn_ldap import OutconnLDAPWrapper
+from zato.server.generic.api.outconn_llm import OutconnLLMWrapper
 from zato.server.generic.api.outconn_mongodb import OutconnMongoDBWrapper
 from zato.server.generic.api.outconn_odata import OutconnODataWrapper
 from zato.server.generic.api.outconn_sftp import OutconnSFTPWrapper
@@ -243,6 +244,9 @@ class ConfigManager(_ConfigManagerBase):
         # Generic connections - LDAP outconns
         self.outconn_ldap = {}
 
+        # Generic connections - LLM outconns
+        self.outconn_llm = {}
+
         # Generic connections - MongoDB outconns
         self.outconn_mongodb = {}
 
@@ -313,6 +317,7 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA: self.channel_kafka,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA: self.outconn_kafka,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: self.outconn_ldap,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LLM: self.outconn_llm,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: self.outconn_mongodb,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ODATA: self.outconn_odata,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SAP: self.outconn_sap,
@@ -341,6 +346,7 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA: ChannelKafkaWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA: OutconnKafkaWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: OutconnLDAPWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LLM: OutconnLLMWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: OutconnMongoDBWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ODATA: OutconnODataWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SAP: OutconnODataWrapper,
@@ -954,6 +960,7 @@ class ConfigManager(_ConfigManagerBase):
         outconn_ibm_mq_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IBM_MQ, {})
         outconn_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_KAFKA, {})
         outconn_ldap_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP, {})
+        outconn_llm_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LLM, {})
         outconn_mongodb_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB, {})
         outconn_odata_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ODATA, {})
         outconn_sap_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SAP, {})
@@ -982,6 +989,7 @@ class ConfigManager(_ConfigManagerBase):
             outconn_ibm_mq_map,
             outconn_kafka_map,
             outconn_ldap_map,
+            outconn_llm_map,
             outconn_mongodb_map,
             outconn_odata_map,
             outconn_sap_map,
@@ -998,6 +1006,7 @@ class ConfigManager(_ConfigManagerBase):
             outconn_ibm_mq_map,
             outconn_kafka_map,
             outconn_ldap_map,
+            outconn_llm_map,
             outconn_mongodb_map,
             outconn_odata_map,
             outconn_sap_map,

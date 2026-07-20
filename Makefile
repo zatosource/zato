@@ -8,7 +8,7 @@
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console \
 	help install-deps \
 	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-pubsub-backend test-pubsub-backend-perf test-pubsub-backend-perf-mass test-enmasse \
-	test-cli test-mcp _test-mcp test-bearer _test-bearer test-graphql test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-hl7 test-hl7-volume test-ui test-ui-pubsub test-ui-openapi _test-ui test-common test-distlock test-truncate test-message-filters test-safeguards \
+	test-cli test-mcp _test-mcp test-bearer _test-bearer test-graphql test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-llm test-hl7 test-hl7-volume test-ui test-ui-pubsub test-ui-openapi _test-ui test-common test-distlock test-truncate test-message-filters test-safeguards \
 	test-audit-log test-audit-log-ui test-alerting test-analytics test-analytics-ui test-demo-seed test-logging test-ibm-mq test-mongodb test-es \
 	test-all test \
 	health-ruff health-clippy \
@@ -691,6 +691,12 @@ test-soap: ## SOAP messaging tests - fully offline, no external services needed.
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_soap -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
+test-llm: ## LLM connection tests against a local provider simulator and a test-managed Redis - fully offline.
+	$(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/llm/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_llm -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
 test-sql-cloud: ## Snowflake and Redshift SQL tests against local protocol simulators - fully offline.
 	$(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/sql_cloud/ \
@@ -921,7 +927,7 @@ test-safeguards: ## Response safeguard tests with 100% branch coverage.
 	$(ZATO_PY) -m coverage report --data-file=$(CURDIR)/code/tests/.coverage_safeguards --show-missing --fail-under=100
 
 test-all: test-server test-rest test-scheduler test-rate-limiting test-pubsub test-enmasse \
-	test-cli test-mcp test-bearer test-graphql test-as2 test-as4 test-edifact test-x12 test-hl7 test-ui test-audit-log test-audit-log-ui test-alerting test-analytics test-demo-seed test-logging test-common test-distlock test-truncate test-message-filters test-safeguards ## Everything.
+	test-cli test-mcp test-bearer test-graphql test-as2 test-as4 test-edifact test-x12 test-llm test-hl7 test-ui test-audit-log test-audit-log-ui test-alerting test-analytics test-demo-seed test-logging test-common test-distlock test-truncate test-message-filters test-safeguards ## Everything.
 
 test: test-all ## Alias for test-all.
 

@@ -27,6 +27,7 @@ from zato.cli.enmasse.exporters.channel_soap import ChannelSOAPExporter
 from zato.cli.enmasse.exporters.channel_openapi import ChannelOpenAPIExporter
 from zato.cli.enmasse.exporters.jira import JiraExporter
 from zato.cli.enmasse.exporters.ldap import LDAPExporter
+from zato.cli.enmasse.exporters.llm import LLMExporter
 from zato.cli.enmasse.exporters.microsoft_cloud import MicrosoftCloudExporter
 from zato.cli.enmasse.exporters.microsoft_fabric import MicrosoftFabricExporter
 from zato.cli.enmasse.exporters.microsoft_power_automate import MicrosoftPowerAutomateExporter
@@ -105,6 +106,7 @@ class EnmasseYAMLExporter:
         self.outgoing_kafka_exporter = OutgoingKafkaExporter(self)
         self.jira_exporter = JiraExporter(self)
         self.ldap_exporter = LDAPExporter(self)
+        self.llm_exporter = LLMExporter(self)
         self.mongodb_exporter = MongoDBExporter(self)
         self.odata_exporter = ODataExporter(self, 'odata')
         self.sap_exporter = ODataExporter(self, 'sap')
@@ -424,6 +426,15 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
+    def export_llm(self, session:'SASession') -> 'list':
+        """ Exports LLM connection definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded
+        llm_list = self.llm_exporter.export(session, self.cluster_id)
+        return llm_list
+
+# ################################################################################################################################
+
     def export_odata(self, session:'SASession') -> 'list':
         """ Exports OData connection definitions.
         """
@@ -717,6 +728,11 @@ class EnmasseYAMLExporter:
         ldap_defs = self.export_ldap(session)
         if ldap_defs:
             output_dict['ldap'] = ldap_defs
+
+        # Export LLM connection definitions
+        llm_defs = self.export_llm(session)
+        if llm_defs:
+            output_dict['llm'] = llm_defs
 
         # Export OData connection definitions
         odata_defs = self.export_odata(session)

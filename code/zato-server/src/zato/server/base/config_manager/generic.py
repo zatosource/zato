@@ -25,6 +25,7 @@ from zato.server.generic.api.outconn_es import outconn_es_bool_config_keys, outc
     outconn_es_int_config_keys
 from zato.server.generic.api.outconn_hl7_fhir import outconn_fhir_config_defaults, outconn_fhir_int_config_keys
 from zato.server.generic.api.outconn_hl7_mllp import outconn_config_defaults, outconn_int_config_keys
+from zato.server.generic.api.outconn_llm import llm_config_defaults, llm_int_config_keys
 from zato.server.generic.api.outconn_odata import outconn_odata_bool_config_keys, outconn_odata_config_defaults, \
     outconn_odata_int_config_keys, outconn_sap_config_defaults
 from zato.server.generic.api.outconn_sftp import outconn_sftp_bool_config_keys, outconn_sftp_config_defaults, \
@@ -432,6 +433,28 @@ class Generic(ConfigManagerImpl):
             value = config[key]
             if isinstance(value, str):
                 config[key] = int(value)
+
+# ################################################################################################################################
+
+    def _generic_normalize_config_outconn_llm(self, config:'stranydict') -> 'None':
+        """ Fills in defaults for fields that the create path did not supply and coerces
+        numeric fields that may arrive as strings from opaque storage.
+        """
+
+        # Apply a default for every field that is missing or None ..
+        for key, default in llm_config_defaults.items():
+            if config.get(key) is None:
+                config[key] = default
+
+        # .. and make sure numeric fields are integers - an empty string means
+        # .. the create path had no value for the field, so its default applies.
+        for key in llm_int_config_keys:
+            value = config[key]
+            if isinstance(value, str):
+                if value:
+                    config[key] = int(value)
+                else:
+                    config[key] = llm_config_defaults[key]
 
 # ################################################################################################################################
 

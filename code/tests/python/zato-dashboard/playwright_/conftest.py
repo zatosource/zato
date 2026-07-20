@@ -30,6 +30,11 @@ _soap_lib_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 if _soap_lib_dir not in sys.path:
     sys.path.insert(0, _soap_lib_dir)
 
+# The live LLM provider simulator lives in the zato-server LLM suite so both suites share one implementation.
+_llm_lib_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'zato-server', 'llm', 'lib'))
+if _llm_lib_dir not in sys.path:
+    sys.path.insert(0, _llm_lib_dir)
+
 # pytest
 import pytest
 from playwright.sync_api import sync_playwright
@@ -634,6 +639,22 @@ def soap_test_server_mtls() -> 'any_':
     from soap_test_server import SOAPTestServer
 
     server = SOAPTestServer(tls=True, require_client_cert=True)
+    server.start()
+
+    yield server
+
+    server.stop()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def llm_test_server() -> 'any_':
+    """ A session-scoped live LLM provider simulator over plain HTTP.
+    """
+    from llm_test_server import LLMTestServer
+
+    server = LLMTestServer()
     server.start()
 
     yield server

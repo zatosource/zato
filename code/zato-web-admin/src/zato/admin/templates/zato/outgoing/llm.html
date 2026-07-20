@@ -1,0 +1,298 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}LLM outconns{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    {% comment %} Tippy {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
+
+    {% comment %} Common JS {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
+
+    {% comment %} LLM {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/llm.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+            'name',
+            '_is_active',
+            '_provider',
+            'model',
+            'address',
+            '_change_password',
+            '_edit',
+            '_delete',
+            '_ping',
+            'id',
+            'is_active',
+            'provider',
+            'pool_size',
+            'timeout',
+            'max_tokens',
+            'max_history_turns',
+            'chat_expiry'
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+    {% if cluster_id %}
+        <div id="markup">
+            <h2 class="zato">Outgoing LLM connections</h2>
+
+{% include "zato/search-form.html" with page_prompt="Show connections"%}
+
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.outgoing.llm.create()">Create a new outgoing LLM connection</a>
+        </div>
+
+            <table class="zato-table" id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Active</a></th>
+                        <th><a href="#">Provider</a></th>
+                        <th><a href="#">Model</a></th>
+                        <th><a href="#">Address</a></th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.provider_display }}</td>
+                        <td>{{ item.model }}</td>
+                        <td>{{ item.address }}</td>
+                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change API key</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.llm.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.llm.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)">Ping</a></td>
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.provider }}</td>
+                        <td class='ignore'>{{ item.pool_size }}</td>
+                        <td class='ignore'>{{ item.timeout }}</td>
+                        <td class='ignore'>{{ item.max_tokens }}</td>
+                        <td class='ignore'>{{ item.max_history_turns }}</td>
+                        <td class='ignore'>{{ item.chat_expiry }}</td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='19'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+
+{% include "zato/paginate/action-panel.html" %}
+        </div>
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "out-llm-create" %}" method="post" id="create-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle;width:14%"><label for="{{ create_form.name.id_for_label }}">Name</label></td>
+                            <td colspan="3">{{ create_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"><label for="{{ create_form.is_active.id_for_label }}">Active</label></td>
+                            <td colspan="3">{{ create_form.is_active }}
+                            |
+                            Pool size
+                            {{ create_form.pool_size }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"><label for="{{ create_form.provider.id_for_label }}">Provider</label></td>
+                            <td colspan="3">{{ create_form.provider }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"><label for="{{ create_form.address.id_for_label }}">Address</label></td>
+                            <td colspan="3">{{ create_form.address }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"><label for="{{ create_form.model.id_for_label }}">Model</label></td>
+                            <td colspan="3">{{ create_form.model }}
+                            |
+                            Timeout
+                            {{ create_form.timeout }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"><label for="{{ create_form.max_tokens.id_for_label }}">Max tokens</label></td>
+                            <td colspan="3">{{ create_form.max_tokens }}
+                            |
+                            History turns
+                            {{ create_form.max_history_turns }}
+                            |
+                            Chat expiry
+                            {{ create_form.chat_expiry }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
+                            </td>
+                            <td colspan="3" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "out-llm-edit" %}" method="post" id="edit-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle;width:14%"><label for="{{ edit_form.name.id_for_label }}">Name</label></td>
+                            <td colspan="3">{{ edit_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.is_active.id_for_label }}">Active</label></td>
+                            <td colspan="3">{{ edit_form.is_active }}
+                            |
+                            Pool size
+                            {{ edit_form.pool_size }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.provider.id_for_label }}">Provider</label></td>
+                            <td colspan="3">{{ edit_form.provider }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.address.id_for_label }}">Address</label></td>
+                            <td colspan="3">{{ edit_form.address }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.model.id_for_label }}">Model</label></td>
+                            <td colspan="3">{{ edit_form.model }}
+                            |
+                            Timeout
+                            {{ edit_form.timeout }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.max_tokens.id_for_label }}">Max tokens</label></td>
+                            <td colspan="3">{{ edit_form.max_tokens }}
+                            |
+                            History turns
+                            {{ edit_form.max_history_turns }}
+                            |
+                            Chat expiry
+                            {{ edit_form.chat_expiry }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
+                            </td>
+                            <td colspan="3" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+
+        <div id="change_password-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "out-llm-change-password" %}" method="post" id="change_password-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle; width:25%">Name</td>
+                            <td id="change-password-name"></td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle"><label for="{{ change_password_form.password.id_for_label }}">API key</label></td>
+                            <td>{{ change_password_form.password }}
+                                <input type="hidden" id="id_change_password-id" name="id" />
+                                <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+        </div>
+
+    {% endif %}
+
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}
