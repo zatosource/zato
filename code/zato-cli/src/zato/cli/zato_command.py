@@ -669,13 +669,18 @@ def main() -> 'any_':
     # .. otherwise, try to run the command now ..
     else:
 
-        # Populate ODB args from Zato_Database_* env vars if not provided via CLI
+        # Populate ODB args from environment variables if not provided via CLI
         _odb_env_map = {
             'odb_host': 'Zato_Database_Host',
             'odb_port': 'Zato_Database_Port',
             'odb_user': 'Zato_Database_Username',
             'odb_db_name': 'Zato_Database_Name',
             'odb_password': 'Zato_Database_Password',
+            'odb_ssl': 'Zato_ODB_SSL',
+            'odb_ssl_ca_file': 'Zato_ODB_SSL_CA_File',
+            'odb_ssl_cert_file': 'Zato_ODB_SSL_Cert_File',
+            'odb_ssl_key_file': 'Zato_ODB_SSL_Key_File',
+            'odb_ssl_verify': 'Zato_ODB_SSL_Verify',
         }
         for _attr, _env in _odb_env_map.items():
             if not getattr(args, _attr, None):

@@ -476,6 +476,11 @@ sql:
     db_name: MYDB_01
     username: enmasse.1
     password: Zato_Enmasse_Env.SQL_Password_1
+    ssl: true
+    ssl_ca_file: /path/to/enmasse-sql-ca.crt
+    ssl_cert_file: /path/to/enmasse-sql-client.crt
+    ssl_key_file: /path/to/enmasse-sql-client.key
+    ssl_verify: true
 
   - name: enmasse.sql.2
     type: oracle

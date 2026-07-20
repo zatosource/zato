@@ -38,6 +38,7 @@ from zato.common.odb import query
 from zato.common.odb.ping import get_ping_query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
      NTLM, OAuth, SecurityBase, Server, Service, WSSecurity
+from zato.common.odb.ssl_config import get_ssl_connect_args
 from zato.common.odb.testing import UnittestEngine
 from zato.common.odb.query import generic as query_generic
 from zato.common.util.api import current_host, get_component_name, get_engine_url, new_cid, parse_extra_into_dict, spawn_greenlet
@@ -329,6 +330,11 @@ class SQLConnectionPool:
         # Any other engine passes its extra options to create_engine as they are.
         else:
             _extra.update(extra_parsed)
+
+        # Connections configured for SSL/TLS receive their SSL context through driver-level connect arguments.
+        if ssl_connect_args := get_ssl_connect_args(self.config, self.engine_name):
+            connect_args = _extra.setdefault('connect_args', {})
+            connect_args.update(ssl_connect_args) # type: ignore
 
         # SQLite has no pools
         if self.engine_name != 'sqlite':

@@ -12,7 +12,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 def ping_database(params, ping_query):
 
+    # Zato
+    from zato.common.odb.ssl_config import get_ssl_connect_args
+
     connection = None
+
+    # Driver-level SSL arguments, empty if SSL is not enabled
+    ssl_connect_args = get_ssl_connect_args(params, params['engine'])
 
     try:
         #
@@ -21,13 +27,16 @@ def ping_database(params, ping_query):
         if params['engine'].startswith('mysql'):
             import pymysql
 
-            connection = pymysql.connect(
-                host     = params['host'],
-                port     = int(params['port']),
-                user     = params['username'],
-                password = params['password'],
-                db       = params['db_name'],
-            )
+            connect_args = {
+                'host':     params['host'],
+                'port':     int(params['port']),
+                'user':     params['username'],
+                'password': params['password'],
+                'db':       params['db_name'],
+            }
+            connect_args.update(ssl_connect_args)
+
+            connection = pymysql.connect(**connect_args)
 
         #
         # PostgreSQL
@@ -35,13 +44,16 @@ def ping_database(params, ping_query):
         elif params['engine'].startswith('postgres'):
             import pg8000
 
-            connection = pg8000.connect(
-                host     = params['host'],
-                port     = int(params['port']),
-                user     = params['username'],
-                password = params['password'],
-                database = params['db_name'],
-            )
+            connect_args = {
+                'host':     params['host'],
+                'port':     int(params['port']),
+                'user':     params['username'],
+                'password': params['password'],
+                'database': params['db_name'],
+            }
+            connect_args.update(ssl_connect_args)
+
+            connection = pg8000.connect(**connect_args)
 
         #
         # SQLite

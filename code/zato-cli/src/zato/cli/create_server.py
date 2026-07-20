@@ -78,6 +78,11 @@ host={{odb_host}}
 port={{odb_port}}
 password=zato+secret://zato.server_conf.odb.password
 pool_size={{odb_pool_size}}
+ssl={{odb_ssl}}
+ssl_ca_file={{odb_ssl_ca_file}}
+ssl_cert_file={{odb_ssl_cert_file}}
+ssl_key_file={{odb_ssl_key_file}}
+ssl_verify={{odb_ssl_verify}}
 username={{odb_user}}
 use_async_driver=True
 
@@ -589,6 +594,11 @@ class Create(ZatoCommand):
                     odb_host=args.odb_host or '',
                     odb_port=args.odb_port or '',
                     odb_pool_size=default_odb_pool_size,
+                    odb_ssl=args.odb_ssl or False,
+                    odb_ssl_ca_file=args.odb_ssl_ca_file or '',
+                    odb_ssl_cert_file=args.odb_ssl_cert_file or '',
+                    odb_ssl_key_file=args.odb_ssl_key_file or '',
+                    odb_ssl_verify=args.odb_ssl_verify or True,
                     odb_user=args.odb_user or '',
                     redis_host=self.get_arg('redis_host'),
                     redis_port=self.get_arg('redis_port'),

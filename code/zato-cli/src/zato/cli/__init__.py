@@ -39,6 +39,11 @@ _opts_odb_port = 'Operational database port'
 _opts_odb_user = 'Operational database user'
 _opts_odb_schema = 'Operational database schema'
 _opts_odb_db_name = 'Operational database name'
+_opts_odb_ssl = 'Whether to use SSL/TLS for connections to the operational database'
+_opts_odb_ssl_ca_file = 'Path to the CA certificate to verify the operational database server certificate against'
+_opts_odb_ssl_cert_file = 'Path to the client certificate for mutual TLS with the operational database'
+_opts_odb_ssl_key_file = 'Path to the private key of the client certificate'
+_opts_odb_ssl_verify = 'Whether to verify the operational database server certificate'
 
 # ################################################################################################################################
 
@@ -66,6 +71,11 @@ common_odb_opts = [
     {'name':'--odb-db-name', 'help':_opts_odb_db_name},
     {'name':'--postgresql-schema', 'help':_opts_odb_schema + ' (PostgreSQL only)'},
     {'name':'--odb-password', 'help':'ODB database password', 'default':''},
+    {'name':'--odb-ssl', 'help':_opts_odb_ssl},
+    {'name':'--odb-ssl-ca-file', 'help':_opts_odb_ssl_ca_file},
+    {'name':'--odb-ssl-cert-file', 'help':_opts_odb_ssl_cert_file},
+    {'name':'--odb-ssl-key-file', 'help':_opts_odb_ssl_key_file},
+    {'name':'--odb-ssl-verify', 'help':_opts_odb_ssl_verify},
 ]
 
 common_ca_create_opts = [
@@ -544,6 +554,7 @@ class ZatoCommand:
         import sqlalchemy
 
         # Zato
+        from zato.common.odb.ssl_config import get_ssl_connect_args
         from zato.common.util import api as util_api
         from zato.common.util.api import get_engine_url
 
@@ -551,6 +562,17 @@ class ZatoCommand:
             connect_args = {}
         else:
             connect_args = {'application_name':util_api.get_component_name('enmasse')}
+
+        # SSL/TLS configuration built out of the --odb-ssl-* options
+        ssl_config = {
+            'ssl':           getattr(args, 'odb_ssl', ''),
+            'ssl_ca_file':   getattr(args, 'odb_ssl_ca_file', ''),
+            'ssl_cert_file': getattr(args, 'odb_ssl_cert_file', ''),
+            'ssl_key_file':  getattr(args, 'odb_ssl_key_file', ''),
+            'ssl_verify':    getattr(args, 'odb_ssl_verify', ''),
+        }
+        ssl_connect_args = get_ssl_connect_args(ssl_config, args.odb_type)
+        connect_args.update(ssl_connect_args)
 
         return sqlalchemy.create_engine(get_engine_url(args), connect_args=connect_args)
 

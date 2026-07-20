@@ -12,6 +12,7 @@ import logging
 from zato.cli.enmasse.util import get_type_from_engine
 from zato.common.odb.model import to_json
 from zato.common.odb.query import out_sql_list
+from zato.common.util.sql import parse_instance_opaque_attr
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -76,6 +77,16 @@ class SQLExporter:
 
             if timeout := row.get('timeout'):
                 item['timeout'] = timeout
+
+            # The SSL/TLS configuration is kept in the opaque attributes
+            opaque = parse_instance_opaque_attr(row)
+
+            if opaque.get('ssl'):
+                item['ssl'] = opaque['ssl']
+
+                for ssl_key in ('ssl_ca_file', 'ssl_cert_file', 'ssl_key_file', 'ssl_verify'):
+                    if ssl_key in opaque:
+                        item[ssl_key] = opaque[ssl_key]
 
             exported_sql_connections.append(item)
 

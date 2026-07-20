@@ -231,6 +231,9 @@ class SQLPubSubBackend(SQLAdminAPI):
         if subscriber_keys:
             self.notify_sub_keys(subscriber_keys)
 
+        # .. give the subscribers just woken up a chance to run ..
+        self._yield_after_write()
+
         subscriber_count = len(subscriber_keys)
 
         logger.info('Published message -> msg_id:%s, topic_name:%s, subscriber_count:%d',
@@ -354,6 +357,9 @@ class SQLPubSubBackend(SQLAdminAPI):
                 _ = self._drop_fully_delivered_payloads(connection, message_ids)
 
                 cleaned_up_count += len(rows)
+
+            # Let the other greenlets run between the batches.
+            self._yield_after_write()
 
         logger.info('Unsubscribed -> sub_key:%s, topic_name:%s, cleaned_up_count:%d',
             sub_key, topic_name, cleaned_up_count)

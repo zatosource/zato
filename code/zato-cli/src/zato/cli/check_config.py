@@ -95,6 +95,17 @@ class CheckConfig(ManageCommand):
         engine_params = {'extra':{}, 'pool_size':1}
         for sqlalch_name, django_name in pairs:
             engine_params[sqlalch_name] = conf[django_name]
+
+        # SSL/TLS configuration - configurations written by older releases may not carry these keys at all.
+        ssl_pairs = (
+            ('ssl', 'DATABASE_SSL'),
+            ('ssl_ca_file', 'DATABASE_SSL_CA_FILE'),
+            ('ssl_cert_file', 'DATABASE_SSL_CERT_FILE'),
+            ('ssl_key_file', 'DATABASE_SSL_KEY_FILE'),
+            ('ssl_verify', 'DATABASE_SSL_VERIFY'),
+        )
+        for sqlalch_name, django_name in ssl_pairs:
+            engine_params[sqlalch_name] = conf.get(django_name, '')
         password = engine_params['password']
         if password:
             engine_params['password'] = cm.decrypt(password)

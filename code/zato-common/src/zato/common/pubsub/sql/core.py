@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from datetime import datetime, timedelta, timezone
 from logging import getLogger
+from time import monotonic
 
 # gevent
 from gevent import sleep
@@ -19,6 +20,7 @@ from sqlalchemy import and_, exists, select
 from sqlalchemy.exc import DBAPIError
 
 # Zato
+from zato.common.db_env import Type_SQLite
 from zato.common.pubsub.sql.config import get_pubsub_engine
 from zato.common.pubsub.sql.schema import delivery_table, message_table, topic_sub_table
 from zato.common.typing_ import cast_
@@ -31,13 +33,12 @@ if 0:
     from sqlalchemy.engine import Connection, Engine
     from zato.common.audit_log.api import AuditLog
     from zato.common.crypto.api import CryptoManager
-    from zato.common.typing_ import any_, anydict, intlist, intlistnone, optional, strlist, strset
-
-    auditlognone       = optional[AuditLog]
-    cryptomanagernone  = optional[CryptoManager]
+    from zato.common.typing_ import any_, anydict, intlist, intlistnone, strlist, strset
 
     # Dummy assignments to satisfy type checkers
+    AuditLog = AuditLog
     Connection = Connection
+    CryptoManager = CryptoManager
     Engine = Engine
 
 sub_event_dict = dict[str, Event]
@@ -54,6 +55,10 @@ logger = getLogger(__name__)
 # and how long the pause between the attempts is, in seconds.
 _deadlock_attempt_count = 5
 _deadlock_retry_sleep = 0.05
+
+# How long back-to-back SQLite calls may hold the event loop before the backend
+# yields it, in seconds - see _yield_after_write.
+_yield_interval_seconds = 0.005
 
 def _is_deadlock_error(error:'DBAPIError') -> 'bool':
     """ Tells whether the database rolled our transaction back as a deadlock victim -
@@ -76,8 +81,8 @@ class SQLBackendCore:
     def __init__(
         self,
         *,
-        audit_log:'auditlognone' = None,
-        crypto_manager:'cryptomanagernone' = None,
+        audit_log:'AuditLog | None' = None,
+        crypto_manager:'CryptoManager | None' = None,
         encrypt_at_rest:'bool' = False,
         ) -> 'None':
 
@@ -94,6 +99,14 @@ class SQLBackendCore:
 
         # One wake-up event per subscriber - publish sets them and blocking fetches wait on them.
         self._sub_events:'sub_event_dict' = {}
+
+        # When _yield_after_write last let the event loop run.
+        self._last_yield = monotonic()
+
+        # Which engine _needs_write_yield was computed for and what it said -
+        # the engine only changes when the environment repoints the backend.
+        self._yield_engine:'Engine | None' = None
+        self._needs_write_yield = False
 
 # ################################################################################################################################
 
@@ -150,6 +163,33 @@ class SQLBackendCore:
         for sub_key in sub_keys:
             event = self.get_sub_event(sub_key)
             event.set()
+
+# ################################################################################################################################
+
+    def _yield_after_write(self) -> 'None':
+        """ Lets other greenlets run after a write transaction. Network databases
+        yield to the event loop through their socket I/O with every statement,
+        but SQLite runs its calls as blocking ones in the calling thread, so without
+        an explicit yield a greenlet writing in a tight loop would starve every
+        other greenlet in the process. The yield is time-based - one per interval,
+        not one per call - so the loop can never be held longer than the interval
+        while callers writing in bursts keep their throughput.
+        """
+        engine = self.engine
+
+        # Only SQLite needs the yield - recheck only when the engine changed.
+        if engine is not self._yield_engine:
+            self._yield_engine = engine
+            self._needs_write_yield = engine.dialect.name == Type_SQLite
+
+        if not self._needs_write_yield:
+            return
+
+        now = monotonic()
+
+        if now - self._last_yield >= _yield_interval_seconds:
+            self._last_yield = now
+            sleep(0)
 
 # ################################################################################################################################
 
@@ -308,6 +348,9 @@ class SQLBackendCore:
                 sleep(_deadlock_retry_sleep)
         else:
             raise Exception(f'ack_messages still a deadlock victim after {_deadlock_attempt_count} attempts -> sub_key:{sub_key}')
+
+        # Let the other greenlets run now that the transaction is committed.
+        self._yield_after_write()
 
         logger.info('ack_messages -> sub_key:%s, acked:%d, fully_delivered:%d', sub_key, len(msg_ids), out)
 

@@ -342,6 +342,13 @@ class ConfigLoader:
             odb_data.pool_size = parallel_server.odb_data['pool_size']
             odb_data.username = parallel_server.odb_data['username']
 
+            # SSL/TLS configuration - configurations written by older releases may not carry these keys at all.
+            odb_data.ssl           = parallel_server.odb_data.get('ssl', '')
+            odb_data.ssl_ca_file   = parallel_server.odb_data.get('ssl_ca_file', '')
+            odb_data.ssl_cert_file = parallel_server.odb_data.get('ssl_cert_file', '')
+            odb_data.ssl_key_file  = parallel_server.odb_data.get('ssl_key_file', '')
+            odb_data.ssl_verify    = parallel_server.odb_data.get('ssl_verify', '')
+
         # Note that we don't read is_active off of anywhere - ODB always must
         # be active and it's not a regular connection pool anyway.
         odb_data.is_active = True

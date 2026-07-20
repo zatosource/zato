@@ -335,6 +335,11 @@ class Create(ZatoCommand):
         out.sqlite_path = getattr(args, 'sqlite_path', None)
         out.postgresql_schema = getattr(args, 'postgresql_schema', None)
         out.odb_password = args.odb_password
+        out.odb_ssl = getattr(args, 'odb_ssl', '')
+        out.odb_ssl_ca_file = getattr(args, 'odb_ssl_ca_file', '')
+        out.odb_ssl_cert_file = getattr(args, 'odb_ssl_cert_file', '')
+        out.odb_ssl_key_file = getattr(args, 'odb_ssl_key_file', '')
+        out.odb_ssl_verify = getattr(args, 'odb_ssl_verify', '')
         out.redis_password = self.get_arg('redis_password')
         out.cluster_name = cluster_name
         out.scheduler_name = 'scheduler1'

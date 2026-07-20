@@ -22,6 +22,7 @@ from urllib.parse import urlencode
 # Zato
 from zato.common.api import MS_SQL, NotGiven, SECRET_SHADOW, UNITTEST
 from zato.common.exception import Inactive
+from zato.common.odb.ssl_config import get_ssl_connect_args
 from zato.common.util.api import get_component_name, get_engine_url, new_cid, parse_extra_into_dict, spawn_greenlet
 
 # ################################################################################################################################
@@ -363,6 +364,11 @@ class SQLConnectionPool:
         # Any other engine passes its extra options to create_engine as they are.
         else:
             _extra.update(extra_parsed)
+
+        # Connections configured for SSL/TLS receive their SSL context through driver-level connect arguments.
+        if ssl_connect_args := get_ssl_connect_args(self.config, self.engine_name):
+            connect_args = _extra.setdefault('connect_args', {})
+            connect_args.update(ssl_connect_args) # type: ignore
 
         if self.engine_name != 'sqlite':
             _extra['pool_size'] = int(self.config.get('pool_size', 1)) # type: ignore
