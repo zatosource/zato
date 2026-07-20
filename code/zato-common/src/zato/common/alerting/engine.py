@@ -164,14 +164,26 @@ def dispatch_action(
     alert_id:'int',
     count:'int',
     transports:'AlertTransports',
+    default_email:'strlist | None' = None,
     ) -> 'None':
     """ Runs one rule's action for one alert - the rendered message goes out
-    through whichever transport the rule chose.
+    through whichever transport the rule chose. An email rule without its own
+    address list sends to the sweep's default address.
     """
     message = render_alert_message(count, finding.message)
 
     if rule.action == AlertAction.Email_Digest:
-        addresses = rule.action_config['addresses']
+
+        # A rule without its own address list sends to the sweep's default address
+        if not (addresses := rule.action_config.get('addresses')):
+            addresses = default_email
+
+        # With no addresses configured anywhere there is nowhere to send the email
+        if not addresses:
+            logger.warning('Alert rule `%s` has no addresses and no default email is configured - ' \
+                'skipping an email about `%s`', rule.name, finding.object_name)
+            return
+
         transports.send_email(addresses, message, f'{message}\n{finding.link}')
 
     elif rule.action == AlertAction.Invoke_Service:
@@ -287,7 +299,7 @@ def process_findings(
             # A repetition within the window is not dispatched again - unless
             # the finding is critical, which is never suppressed
             if raise_result.is_new or finding.severity == AlertSeverity.Critical:
-                dispatch_action(rule, finding, raise_result.alert_id, raise_result.count, transports)
+                dispatch_action(rule, finding, raise_result.alert_id, raise_result.count, transports, default_email)
                 out.dispatched.append((rule.name, rule.action))
 
     # The default sink emails its catch-all digest when an address is configured

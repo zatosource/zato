@@ -12,6 +12,9 @@ from time import monotonic
 # gevent
 from gevent import joinall, spawn
 
+# humanize
+from humanize import intcomma
+
 # Zato
 from common import set_progress_context, Min_Delivery_Rate_Per_Second
 from load import consume_until_done
@@ -87,7 +90,7 @@ def run_mass_drain_scenario(*, backlog_per_subscriber:'int', deadline_seconds:'i
         topic_prefix=_topic_prefix,
         sub_key_prefix=_sub_key_prefix,
     )
-    print(f'Seeded {total_backlog} backlog messages in {seed_seconds:.2f}s')
+    print(f'Seeded {intcomma(total_backlog)} backlog messages in {seed_seconds:.2f}s')
 
     topic_names:'strlist' = []
     sub_keys:'strlist' = []
@@ -122,7 +125,7 @@ def run_mass_drain_scenario(*, backlog_per_subscriber:'int', deadline_seconds:'i
     publish_elapsed = monotonic() - start
     publish_rate = _fresh_message_count / publish_elapsed
 
-    assert publish_rate >= min_publish_rate, f'Publish rate too low during mass drain: {publish_rate:.0f}/s'
+    assert publish_rate >= min_publish_rate, f'Publish rate too low during mass drain: {intcomma(int(publish_rate))}/s'
 
     # .. and everything must eventually go through.
     _ = joinall(consumer_greenlets, timeout=deadline_seconds)
@@ -131,11 +134,11 @@ def run_mass_drain_scenario(*, backlog_per_subscriber:'int', deadline_seconds:'i
 
     delivered = counters['delivered']
     expected = counters['expected']
-    assert delivered == expected, f'Expected to drain {expected} messages, got {delivered}'
+    assert delivered == expected, f'Expected to drain {intcomma(expected)} messages, got {intcomma(delivered)}'
 
     drain_rate = delivered / elapsed
 
-    assert drain_rate >= Min_Delivery_Rate_Per_Second, f'Mass drain rate too low: {drain_rate:.0f}/s'
+    assert drain_rate >= Min_Delivery_Rate_Per_Second, f'Mass drain rate too low: {intcomma(int(drain_rate))}/s'
 
     # With every subscriber done there is nothing left in flight anywhere.
     assert count_rows('pubsub_delivery') == 0
@@ -145,8 +148,8 @@ def run_mass_drain_scenario(*, backlog_per_subscriber:'int', deadline_seconds:'i
     for sub_key in sub_keys:
         assert depths[sub_key] == 0, f'Expected an empty queue for {sub_key}, got {depths[sub_key]}'
 
-    message = f'Mass drain: {_topic_count} subscribers drained {delivered} messages at {drain_rate:.0f}/s'
-    message += f' with {publish_rate:.0f} publishes/s concurrently'
+    message = f'Mass drain: {_topic_count} subscribers drained {intcomma(delivered)} messages at {intcomma(int(drain_rate))}/s'
+    message += f' with {intcomma(int(publish_rate))} publishes/s concurrently'
     print(message)
 
 # ################################################################################################################################

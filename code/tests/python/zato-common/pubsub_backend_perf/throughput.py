@@ -12,6 +12,9 @@ from time import monotonic
 # gevent
 from gevent import joinall, spawn
 
+# humanize
+from humanize import intcomma
+
 # Zato
 from common import set_progress_context, Min_Delivery_Rate_Per_Second, Min_Publish_Rate_Per_Second
 from load import consume_until_done
@@ -82,7 +85,7 @@ def run_publish_throughput_scenario() -> 'None':
     # .. and the rate must clear the floor.
     rate = _publish_message_count / elapsed
 
-    assert rate >= Min_Publish_Rate_Per_Second, f'Publish rate too low: {rate:.0f}/s over {_publish_message_count} messages'
+    assert rate >= Min_Publish_Rate_Per_Second, f'Publish rate too low: {intcomma(int(rate))}/s over {intcomma(_publish_message_count)} messages'
 
 # ################################################################################################################################
 
@@ -147,11 +150,11 @@ def run_delivery_throughput_scenario() -> 'None':
     elapsed = monotonic() - start
 
     delivered = counters['delivered']
-    assert delivered == _delivery_message_count, f'Expected {_delivery_message_count} deliveries, got {delivered}'
+    assert delivered == _delivery_message_count, f'Expected {intcomma(_delivery_message_count)} deliveries, got {intcomma(delivered)}'
 
     rate = delivered / elapsed
 
-    assert rate >= Min_Delivery_Rate_Per_Second, f'Delivery rate too low: {rate:.0f}/s over {delivered} messages'
+    assert rate >= Min_Delivery_Rate_Per_Second, f'Delivery rate too low: {intcomma(int(rate))}/s over {intcomma(delivered)} messages'
 
 # ################################################################################################################################
 # ################################################################################################################################

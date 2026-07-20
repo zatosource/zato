@@ -19,6 +19,8 @@ from fanout import run_fanout_scenario
 from laggard import run_laggard_scenario
 from mass_drain import run_mass_drain_scenario
 from operations import run_operations_scenario
+from push import run_push_delivery_scenario
+from retention import run_retention_scenario
 from subscriptions import run_subscriptions_scenario
 from throughput import run_delivery_throughput_scenario, run_publish_throughput_scenario
 from zato.common.pubsub.sql.config import ModuleCtx as PubSubDBCtx
@@ -40,6 +42,7 @@ def test_pubsub_backend_perf_sqlite(tmp_path:'os.PathLike') -> 'None':
         with pubsub_backend_env(details):
             run_publish_throughput_scenario()
             run_delivery_throughput_scenario()
+            run_push_delivery_scenario()
             run_fanout_scenario()
             run_backbone_scenario()
             run_subscriptions_scenario()
@@ -60,6 +63,7 @@ def test_pubsub_backend_perf_sqlite(tmp_path:'os.PathLike') -> 'None':
                 min_delivery_rate=Min_Delivery_Rate_Per_Second,
                 drain_to_zero=True,
             )
+            run_retention_scenario()
             run_backlog_scenario()
     finally:
         with pubsub_backend_env(details):

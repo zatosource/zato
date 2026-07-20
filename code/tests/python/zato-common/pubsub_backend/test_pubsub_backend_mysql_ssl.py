@@ -13,9 +13,11 @@ import pytest
 from sqlalchemy.exc import OperationalError
 
 # Zato
+from cleanup import run_cleanup_scenario
 from common import assert_mysql_connection_encrypted, pubsub_backend_env
 from encryption import run_encryption_scenario
 from lifecycle import run_lifecycle_scenario
+from push_delivery import run_push_delivery_scenario
 from queues import run_queues_scenario
 from stats import run_stats_scenario
 from wakeup import run_wakeup_scenario
@@ -41,6 +43,8 @@ def test_pubsub_backend_mysql_ssl(mysql_ssl_server:'DatabaseServer') -> 'None':
         run_stats_scenario()
         run_wakeup_scenario()
         run_encryption_scenario()
+        run_cleanup_scenario()
+        run_push_delivery_scenario()
         assert_mysql_connection_encrypted()
 
 # ################################################################################################################################

@@ -52,6 +52,11 @@ Max_Operation_Seconds = 0.050
 Min_Publish_Rate_Per_Second  = 100
 Min_Delivery_Rate_Per_Second = 500
 
+# How many rows per second the cleanup process must at least remove -
+# a deliberately conservative floor since cleanup runs in the background
+# and correctness matters more than speed there.
+Min_Cleanup_Rate_Per_Second = 5_000
+
 # The two scales the mass-drain scenario runs at - the main perf target uses
 # the smaller one and the dedicated mass target the bigger one. With 100
 # subscribers that is a total backlog of one million and ten million messages.

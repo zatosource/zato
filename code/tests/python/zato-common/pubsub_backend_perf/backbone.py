@@ -12,6 +12,9 @@ from time import monotonic
 # gevent
 from gevent import joinall, sleep, spawn
 
+# humanize
+from humanize import intcomma
+
 # Zato
 from common import set_progress_context, Min_Delivery_Rate_Per_Second, Min_Publish_Rate_Per_Second
 from load import consume_until_done
@@ -137,15 +140,15 @@ def run_backbone_scenario() -> 'None':
     elapsed = monotonic() - start
 
     delivered = counters['delivered']
-    assert delivered == expected_deliveries, f'Expected {expected_deliveries} deliveries, got {delivered}'
+    assert delivered == expected_deliveries, f'Expected {intcomma(expected_deliveries)} deliveries, got {intcomma(delivered)}'
 
     publish_rate = _message_count / elapsed
     delivery_rate = delivered / elapsed
 
-    assert publish_rate >= Min_Publish_Rate_Per_Second, f'Backbone publish rate too low: {publish_rate:.0f}/s'
-    assert delivery_rate >= Min_Delivery_Rate_Per_Second, f'Backbone delivery rate too low: {delivery_rate:.0f}/s'
+    assert publish_rate >= Min_Publish_Rate_Per_Second, f'Backbone publish rate too low: {intcomma(int(publish_rate))}/s'
+    assert delivery_rate >= Min_Delivery_Rate_Per_Second, f'Backbone delivery rate too low: {intcomma(int(delivery_rate))}/s'
 
-    print(f'Backbone: {publish_rate:.0f} publishes/s, {delivery_rate:.0f} deliveries/s')
+    print(f'Backbone: {intcomma(int(publish_rate))} publishes/s, {intcomma(int(delivery_rate))} deliveries/s')
 
 # ################################################################################################################################
 # ################################################################################################################################

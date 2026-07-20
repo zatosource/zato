@@ -12,6 +12,9 @@ from time import monotonic
 # gevent
 from gevent import joinall, sleep, spawn
 
+# humanize
+from humanize import intcomma
+
 # Zato
 from common import set_progress_context
 from load import consume_until_stopped
@@ -184,7 +187,7 @@ def run_operations_scenario(
         topic_prefix=_topic_prefix,
         sub_key_prefix=_sub_key_prefix,
     )
-    print(f'Seeded {total_backlog} backlog messages in {seed_seconds:.2f}s')
+    print(f'Seeded {intcomma(total_backlog)} backlog messages in {seed_seconds:.2f}s')
 
     topic_names:'strlist' = []
     sub_keys:'strlist' = []
@@ -236,7 +239,7 @@ def run_operations_scenario(
     publish_elapsed = monotonic() - start
     publish_rate = _fresh_message_count / publish_elapsed
 
-    assert publish_rate >= min_publish_rate, f'Publish rate too low during operations: {publish_rate:.0f}/s'
+    assert publish_rate >= min_publish_rate, f'Publish rate too low during operations: {intcomma(int(publish_rate))}/s'
 
     # .. every clear must finish within its budget ..
     _ = joinall(operator_greenlets, timeout=deadline_seconds)
@@ -316,10 +319,10 @@ def run_operations_scenario(
         # .. stays within what at-least-once delivery allows ..
         if sub_key in clear_results:
             assert accounted >= expected_per_queue, \
-                f'Messages lost on {sub_key}: {accounted} accounted for, {expected_per_queue} expected'
+                f'Messages lost on {sub_key}: {intcomma(accounted)} accounted for, {intcomma(expected_per_queue)} expected'
 
             overlap = accounted - expected_per_queue
-            assert overlap <= max_overlap_per_queue, f'Overlap too big on {sub_key}: {overlap}'
+            assert overlap <= max_overlap_per_queue, f'Overlap too big on {sub_key}: {intcomma(overlap)}'
 
             total_overlap += overlap
 
@@ -327,7 +330,7 @@ def run_operations_scenario(
         # .. the final sweep found, is precisely what it was owed.
         else:
             assert accounted == expected_per_queue, \
-                f'Expected {expected_per_queue} accounted for on {sub_key}, got {accounted}'
+                f'Expected {intcomma(expected_per_queue)} accounted for on {sub_key}, got {intcomma(accounted)}'
 
     # .. nothing is in flight anywhere anymore ..
     assert count_rows('pubsub_delivery') == 0
@@ -337,14 +340,14 @@ def run_operations_scenario(
     delivery_rate = total_delivered / elapsed
 
     if drain_to_zero:
-        assert delivery_rate >= min_delivery_rate, f'Delivery rate too low during operations: {delivery_rate:.0f}/s'
+        assert delivery_rate >= min_delivery_rate, f'Delivery rate too low during operations: {intcomma(int(delivery_rate))}/s'
     else:
         window_rate = window_delivered / _post_clear_window_seconds
-        assert window_rate >= min_delivery_rate, f'Post-clear delivery rate too low: {window_rate:.0f}/s'
+        assert window_rate >= min_delivery_rate, f'Post-clear delivery rate too low: {intcomma(int(window_rate))}/s'
 
-    message = f'Operations: {total_delivered} delivered at {delivery_rate:.0f}/s, {total_cleared} cleared'
-    message += f' across {cleared_queue_count} queues of {backlog_per_subscriber} each, overlap {total_overlap},'
-    message += f' {publish_rate:.0f} publishes/s concurrently'
+    message = f'Operations: {intcomma(total_delivered)} delivered at {intcomma(int(delivery_rate))}/s, {intcomma(total_cleared)} cleared'
+    message += f' across {cleared_queue_count} queues of {intcomma(backlog_per_subscriber)} each, overlap {intcomma(total_overlap)},'
+    message += f' {intcomma(int(publish_rate))} publishes/s concurrently'
     print(message)
 
 # ################################################################################################################################
