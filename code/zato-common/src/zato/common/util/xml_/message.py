@@ -37,6 +37,7 @@ from decimal import Decimal
 from lxml import etree
 
 # Zato
+from zato.common.util.message import Message
 from zato.common.util.xml_.constants import NS
 from zato.common.util.xml_.core import XMLException
 from zato.common.util.xml_.mime_ import new_content_id, Part
@@ -144,25 +145,20 @@ def to_lexical(value:'any_') -> 'str':
 # ################################################################################################################################
 # ################################################################################################################################
 
-class XMLMessage:
+class XMLMessage(Message):
     """ A dynamic, dot-accessed XML message - the only data structure users ever touch.
 
-    Its whole contract:
+    On top of the base Message tree it adds:
 
-    1. Dot access creates and reads child elements, auto-vivifying: message.foo.bar.baz = value
-    2. Assignment order is wire order
-    3. Brackets set and read XML attributes: slot['name'] = 'creationTime' - with `namespace` reserved
+    1. Assignment order is wire order
+    2. Brackets set and read XML attributes: slot['name'] = 'creationTime' - with `namespace` reserved
        for a per-node namespace override and `text` reserved for the text of a node that also has attributes
-    4. Assigning a list means repeated elements, for scalars and message nodes alike
-    5. The Python type of a value dictates its XML lexical form
-    6. Reading gives the same shape back, with repeated elements as lists and xsi:nil as None
-
-    Subclasses vivify children of their own type, so a tree built through a subclass
-    consists of that subclass throughout.
+    3. The Python type of a value dictates its XML lexical form
+    4. Reading gives the same shape back, with repeated elements as lists and xsi:nil as None
     """
 
     def __init__(self) -> 'None':
-        object.__setattr__(self, '_children', {})
+        super().__init__()
         object.__setattr__(self, '_attributes', {})
         object.__setattr__(self, '_namespace', None)
         object.__setattr__(self, '_text', None)
@@ -176,32 +172,20 @@ class XMLMessage:
             object.__setattr__(self, '_namespace', value)
             return
 
-        # Everything else is a child element - a dict preserves the order of first assignment,
-        # which is what makes assignment order the wire order.
-        self._children[name] = value
+        # Everything else is a child element, handled by the base tree.
+        super().__setattr__(name, value)
 
 # ################################################################################################################################
 
     def __getattr__(self, name:'str') -> 'any_':
 
-        # This method only runs when normal lookup failed, so internal fields are never seen here -
-        # underscore names are protocol probes (deepcopy, pickle, pytest) and must fail normally.
-        if name.startswith('_'):
-            raise AttributeError(name)
-
         if name == _reserved_namespace_key:
             out = self._namespace
             return out
 
-        # Auto-vivify - reading a child that does not exist yet creates an empty node
-        # of our own type, which is what lets message.foo.bar.baz = value build the whole
-        # path in one go. Nodes that never receive any content are pruned at serialization time.
-        if name in self._children:
-            out = self._children[name]
-        else:
-            out = type(self)()
-            self._children[name] = out
-
+        # Everything else is a child element - the base tree handles the underscore
+        # guard and the auto-vivification of missing children.
+        out = super().__getattr__(name)
         return out
 
 # ################################################################################################################################
@@ -244,6 +228,20 @@ class XMLMessage:
 
     def __bool__(self) -> 'bool':
         out = has_content(self)
+        return out
+
+# ################################################################################################################################
+
+    def __len__(self) -> 'int':
+
+        # Only children that actually carry content count - the check is the XML-aware one,
+        # so children that hold only text or attributes count as well.
+        out = 0
+
+        for value in self._children.values():
+            if _value_has_content(value):
+                out += 1
+
         return out
 
 # ################################################################################################################################

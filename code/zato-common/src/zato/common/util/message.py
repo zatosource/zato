@@ -24,8 +24,9 @@ consists of that subclass throughout.
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anydict
     any_ = any_
+    anydict = anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -93,6 +94,32 @@ class Message:
         return out
 
 # ################################################################################################################################
+
+    def to_dict(self) -> 'anydict':
+        """ Returns the tree as a plain dict, in assignment order - nodes that were
+        vivified by reads alone carry no content and are pruned.
+        """
+        out = {}
+
+        for name, value in self._children.items():
+
+            # A node that never received any content is as good as absent.
+            if not _value_has_content(value):
+                continue
+
+            out[name] = _value_to_dict(value)
+
+        return out
+
+# ################################################################################################################################
+
+    def getvalue(self) -> 'anydict':
+        """ Returns the same dict as to_dict - this is the name the response serializers probe for.
+        """
+        out = self.to_dict()
+        return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def has_content(message:'Message') -> 'bool':
@@ -121,6 +148,25 @@ def _value_has_content(value:'any_') -> 'bool':
                 break
     else:
         out = True
+
+    return out
+
+# ################################################################################################################################
+
+def _value_to_dict(value:'any_') -> 'any_':
+    """ Returns the dict form of a child value - nodes recurse, lists keep their order
+    with contentless items pruned, scalars pass through as they are.
+    """
+    if isinstance(value, Message):
+        out = value.to_dict()
+    elif isinstance(value, list):
+        out = []
+        for item in value:
+            if _value_has_content(item):
+                item_value = _value_to_dict(item)
+                out.append(item_value)
+    else:
+        out = value
 
     return out
 
