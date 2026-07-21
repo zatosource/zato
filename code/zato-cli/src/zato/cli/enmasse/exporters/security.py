@@ -12,7 +12,7 @@ import logging
 from zato.common.api import Quota_Tiers
 from zato.common.json_internal import loads
 from zato.common.odb.model import to_json
-from zato.common.odb.query import basic_auth_list, apikey_security_list, ntlm_list, oauth_list, wss_list
+from zato.common.odb.query import basic_auth_list, apikey_security_list, mtls_list, ntlm_list, oauth_list, wss_list
 from zato.common.odb.query.generic import GenericObjectWrapper
 
 # ################################################################################################################################
@@ -91,8 +91,8 @@ class SecurityExporter:
                 'type': sec_type
             }
 
-            # Add username only if not apikey type
-            if sec_type != 'apikey':
+            # Add username only for the types that carry one
+            if sec_type not in ('apikey', 'mtls'):
                 security_entry['username'] = item['username']
 
             # Add is_active if present
@@ -209,6 +209,7 @@ class SecurityExporter:
         # Get all security definitions from the database
         basic_auth_defs = basic_auth_list(session, cluster_id)
         apikey_defs = apikey_security_list(session, cluster_id)
+        mtls_defs = mtls_list(session, cluster_id)
         ntlm_defs = ntlm_list(session, cluster_id)
         oauth_defs = oauth_list(session, cluster_id)
         wss_defs = wss_list(session, cluster_id)
@@ -230,6 +231,15 @@ class SecurityExporter:
             # Process and get API key items
             apikey_security = self._process_standard_security(apikey_items, 'apikey', excluded_names, excluded_prefixes)
             exported_security.extend(apikey_security)
+
+        # Process mTLS definitions
+        if mtls_defs:
+            mtls_items = to_json(mtls_defs, return_as_dict=True)
+            logger.info('Processing %d mTLS definitions', len(mtls_items))
+
+            # Process and get mTLS items
+            mtls_security = self._process_standard_security(mtls_items, 'mtls', excluded_names, excluded_prefixes)
+            exported_security.extend(mtls_security)
 
         # Process NTLM definitions
         if ntlm_defs:

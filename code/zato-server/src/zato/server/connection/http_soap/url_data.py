@@ -44,19 +44,32 @@ logger = logging.getLogger(__name__)
 # Fields that inbound bearer token verification reads from a definition's opaque attributes
 _oauth_inbound_keys = ('is_static_token', 'static_token', 'issuer', 'jwks_url', 'audience', 'claims')
 
+# Fields that inbound mTLS verification reads from a definition's opaque attributes
+_mtls_inbound_keys = ('client_cert_fingerprint', 'client_cert_subject_dn')
+
+# Headers injected by the TLS-terminating proxy once it has verified the client certificate -
+# they arrive in their WSGI form, i.e. upper-cased, with dashes turned into underscores.
+_mtls_header_verify      = 'HTTP_X_ZATO_SSL_CLIENT_VERIFY'
+_mtls_header_fingerprint = 'HTTP_X_ZATO_SSL_CLIENT_SHA256'
+_mtls_header_subject_dn  = 'HTTP_X_ZATO_SSL_CLIENT_SUBJECT_DN'
+
+# The value the TLS-terminating proxy reports for a successfully verified client certificate.
+_mtls_verify_success = 'SUCCESS'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 class URLData(PyURLData):
     """ Performs URL matching and security checks.
     """
-    def __init__(self, config_manager, channel_data=None, url_sec=None, basic_auth_config=None, ntlm_config=None, \
-                 oauth_config=None, apikey_config=None, wss_config=None, config_dispatcher=None, odb=None):
+    def __init__(self, config_manager, channel_data=None, url_sec=None, basic_auth_config=None, mtls_config=None, \
+                 ntlm_config=None, oauth_config=None, apikey_config=None, wss_config=None, config_dispatcher=None, odb=None):
         super(URLData, self).__init__(channel_data)
 
         self.config_manager = config_manager
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
+        self.mtls_config = mtls_config
         self.ntlm_config = ntlm_config
         self.oauth_config = oauth_config
         self.apikey_config = apikey_config
@@ -82,10 +95,12 @@ class URLData(PyURLData):
 
 # ################################################################################################################################
 
-    def set_security_objects(self, *, url_sec, basic_auth_config, ntlm_config, oauth_config, apikey_config, wss_config):
+    def set_security_objects(self, *, url_sec, basic_auth_config, mtls_config, ntlm_config, oauth_config, apikey_config,
+        wss_config):
 
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
+        self.mtls_config = mtls_config
         self.ntlm_config = ntlm_config
         self.oauth_config = oauth_config
         self.apikey_config = apikey_config
@@ -144,6 +159,62 @@ class URLData(PyURLData):
                 msg_exc = 'Unauthorized; cid={}'.format(cid)
                 logger.error(msg_log)
                 raise Unauthorized(cid, msg_exc, 'Basic realm="{}"'.format(sec_def.realm))
+            else:
+                return False
+
+        return True
+
+# ################################################################################################################################
+
+    def _handle_security_mtls(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None, enforce_auth=True):
+        """ Performs the authentication against the client certificate details that the TLS-terminating proxy
+        reports in its injected headers after it has verified the certificate against the client CA.
+        """
+        # Local aliases
+        verify_result = wsgi_environ.get(_mtls_header_verify)
+
+        # Assume the request will not be let through until proven otherwise.
+        is_valid = False
+        reason = 'No client certificate'
+
+        # The proxy must have seen and verified a client certificate at all ..
+        if verify_result == _mtls_verify_success:
+
+            expected_fingerprint = sec_def.get('client_cert_fingerprint')
+            expected_subject_dn = sec_def.get('client_cert_subject_dn')
+
+            # .. a configured fingerprint must match what the proxy reports - fingerprints are hex strings
+            # .. that may arrive with colon separators and in either case, so both sides are normalized first ..
+            if expected_fingerprint:
+                given_fingerprint = wsgi_environ.get(_mtls_header_fingerprint) or ''
+                expected_fingerprint = expected_fingerprint.replace(':', '').lower()
+                given_fingerprint = given_fingerprint.replace(':', '').lower()
+
+                if is_string_equal(expected_fingerprint, given_fingerprint):
+                    is_valid = True
+                else:
+                    reason = 'Fingerprint mismatch'
+
+            # .. otherwise, a configured subject DN must match the one from the certificate ..
+            elif expected_subject_dn:
+                given_subject_dn = wsgi_environ.get(_mtls_header_subject_dn) or ''
+
+                if is_string_equal(expected_subject_dn, given_subject_dn):
+                    is_valid = True
+                else:
+                    reason = 'Subject DN mismatch'
+
+            # .. with no match criteria configured, a certificate verified by the proxy is enough.
+            else:
+                is_valid = True
+
+        # If we are here with a negative result, the request is rejected.
+        if not is_valid:
+            if enforce_auth:
+                msg = '401 Unauthorized path_info:`{}`, cid:`{}`'.format(path_info, cid)
+                error_msg = '401 Unauthorized'
+                logger.error(msg + ' ({})'.format(reason))
+                raise Unauthorized(cid, error_msg, None)
             else:
                 return False
 
@@ -257,6 +328,12 @@ class URLData(PyURLData):
                             # definition did not carry before, e.g. an audience added later on.
                             elif sec_def_type == SEC_DEF_TYPE.OAUTH:
                                 if key in _oauth_inbound_keys:
+                                    sec_def[key] = msg[key]
+
+                            # The same applies to mTLS definitions, whose match criteria
+                            # are opaque attributes too.
+                            elif sec_def_type == SEC_DEF_TYPE.MTLS:
+                                if key in _mtls_inbound_keys:
                                     sec_def[key] = msg[key]
 
 # ################################################################################################################################
@@ -388,6 +465,47 @@ class URLData(PyURLData):
         with self.url_sec_lock:
             self.basic_auth_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, SEC_DEF_TYPE.BASIC_AUTH)
+
+# ################################################################################################################################
+
+    def _update_mtls(self, name, config):
+        self.mtls_config[name] = Bunch()
+        self.mtls_config[name].config = config
+
+    def mtls_get(self, name):
+        """ Returns the configuration of the mTLS security definition of the given name.
+        """
+        wait_for_dict_key(self.mtls_config, name)
+        with self.url_sec_lock:
+            return self.mtls_config.get(name)
+
+    def mtls_get_by_id(self, def_id):
+        """ Same as mtls_get but returns information by definition ID.
+        """
+        with self.url_sec_lock:
+            return self._get_sec_def_by_id(self.mtls_config, def_id)
+
+    def on_config_event_SECURITY_MTLS_CREATE(self, msg, *args):
+        """ Creates a new mTLS security definition.
+        """
+        with self.url_sec_lock:
+            self._update_mtls(msg.name, msg)
+
+    def on_config_event_SECURITY_MTLS_EDIT(self, msg, *args):
+        """ Updates an existing mTLS security definition.
+        """
+        with self.url_sec_lock:
+            del self.mtls_config[msg.old_name]
+            self._update_mtls(msg.name, msg)
+            self._update_url_sec(msg, SEC_DEF_TYPE.MTLS)
+
+    def on_config_event_SECURITY_MTLS_DELETE(self, msg, *args):
+        """ Deletes an mTLS security definition.
+        """
+        with self.url_sec_lock:
+            self._delete_channel_data('mtls', msg.name)
+            del self.mtls_config[msg.name]
+            self._update_url_sec(msg, SEC_DEF_TYPE.MTLS, True)
 
 # ################################################################################################################################
 

@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
+import shutil
 import ssl
 import tempfile
 import threading
@@ -332,20 +333,29 @@ def _build_self_signed_certificate(host:'str') -> 'tuple':
 
 class HTTPSTestServer(HTTPTestServer):
     """ The HTTPS variant of the recording test server, using a self-signed certificate
-    generated at start, for validate_tls tests.
+    generated at start, for validate_tls tests. With require_client_cert it turns into
+    a mutual-TLS server backed by a full CA, for mTLS security definition tests.
     """
 
-    def __init__(self) -> 'None':
+    def __init__(self, require_client_cert:'bool'=False) -> 'None':
         super().__init__()
 
         self.scheme = 'https'
+        self.require_client_cert = require_client_cert
+
+        # Set only in the mutual-TLS mode - the CA plus the server and client material.
+        self.tls_material:'any_' = None
+
+        # Set only in the plain HTTPS mode - the self-signed certificate and its key.
         self._certificate_path = ''
         self._key_path = ''
 
 # ################################################################################################################################
 
     def start(self) -> 'None':
-        """ Starts the plain server first, then wraps its socket in TLS with a fresh self-signed certificate.
+        """ Starts the plain server first, then wraps its socket in TLS - with a fresh self-signed
+        certificate by default or with CA-signed material and a mandatory client certificate
+        in the mutual-TLS mode.
         """
 
         # Bind to an ephemeral port ..
@@ -355,19 +365,36 @@ class HTTPSTestServer(HTTPTestServer):
         address = self._httpd.server_address
         self.port = address[1]
 
-        # .. generate the self-signed certificate ..
-        self._certificate_path, self._key_path = _build_self_signed_certificate(self.host)
+        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+
+        if self.require_client_cert:
+
+            # Imported here because the module lives in the shared SOAP test library,
+            # which the suite's conftest puts on sys.path before any test runs.
+            from certs import build_tls_material
+
+            # Mutual TLS needs a full CA so the client certificate can chain up to it ..
+            self.tls_material = build_tls_material(self.host)
+            ssl_context.load_cert_chain(self.tls_material.server_certificate_path, self.tls_material.server_key_path)
+
+            # .. and the client certificate is mandatory and pinned to that CA.
+            ssl_context.verify_mode = ssl.CERT_REQUIRED
+            ssl_context.load_verify_locations(self.tls_material.ca_path)
+
+        else:
+            # Plain HTTPS only needs the self-signed certificate.
+            self._certificate_path, self._key_path = _build_self_signed_certificate(self.host)
+            ssl_context.load_cert_chain(self._certificate_path, self._key_path)
 
         # .. wrap the listening socket in TLS ..
-        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        ssl_context.load_cert_chain(self._certificate_path, self._key_path)
         self._httpd.socket = ssl_context.wrap_socket(self._httpd.socket, server_side=True)
 
         # .. and serve in the background.
         self._thread = threading.Thread(target=self._httpd.serve_forever, daemon=True)
         self._thread.start()
 
-        logger.info('[HTTPSTestServer] started on %s://%s:%d', self.scheme, self.host, self.port)
+        logger.info('[HTTPSTestServer] started on %s://%s:%d require_client_cert=%s',
+            self.scheme, self.host, self.port, self.require_client_cert)
 
 # ################################################################################################################################
 
@@ -376,8 +403,11 @@ class HTTPSTestServer(HTTPTestServer):
         """
         super().stop()
 
-        os.remove(self._certificate_path)
-        os.remove(self._key_path)
+        if self.tls_material:
+            shutil.rmtree(self.tls_material.directory, ignore_errors=True)
+        else:
+            os.remove(self._certificate_path)
+            os.remove(self._key_path)
 
 # ################################################################################################################################
 # ################################################################################################################################

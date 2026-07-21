@@ -346,6 +346,7 @@ class ES:
 class SEC_DEF_TYPE:
     APIKEY = 'apikey'
     BASIC_AUTH = 'basic_auth'
+    MTLS = 'mtls'
     NTLM = 'ntlm'
     OAUTH = 'oauth'
     WSS = 'wss'
@@ -358,6 +359,7 @@ Sec_Def_Type = SEC_DEF_TYPE
 SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.APIKEY: 'API key',
     SEC_DEF_TYPE.BASIC_AUTH: 'Basic Auth',
+    SEC_DEF_TYPE.MTLS: 'mTLS',
     SEC_DEF_TYPE.NTLM: 'NTLM',
     SEC_DEF_TYPE.OAUTH: 'Bearer token',
     SEC_DEF_TYPE.WSS: 'WS-Security',

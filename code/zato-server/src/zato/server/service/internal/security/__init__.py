@@ -62,6 +62,7 @@ class GetList(AdminService):
             pairs:'any_' = (
                 (SEC_DEF_TYPE.APIKEY, query.apikey_security_list),
                 (SEC_DEF_TYPE.BASIC_AUTH, query.basic_auth_list),
+                (SEC_DEF_TYPE.MTLS, query.mtls_list),
                 (SEC_DEF_TYPE.NTLM, query.ntlm_list),
                 (SEC_DEF_TYPE.OAUTH, query.oauth_list),
                 (SEC_DEF_TYPE.WSS, query.wss_list),

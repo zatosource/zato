@@ -150,6 +150,52 @@ class TestEnmasseSecurity(TestCase):
 
 # ################################################################################################################################
 
+    def test_mtls_creation(self):
+        """ Test the creation of mTLS security definitions.
+        """
+        self._setup_test_environment()
+
+        # Filter only mTLS security definitions
+        mtls_defs = []
+
+        for item in self.yaml_config['security']:
+            if item['type'] == 'mtls':
+                mtls_defs.append(item)
+
+        self.assertTrue(len(mtls_defs) > 0, 'No mTLS definitions found in YAML')
+
+        # Process security definitions
+        sec_created, _ = self.security_importer.sync_security_definitions(mtls_defs, self.session)
+
+        # Assert the correct number of items were created
+        self.assertEqual(len(sec_created), len(mtls_defs), 'Not all mTLS definitions were created')
+
+        # Index the created instances by name for the per-definition checks below ..
+        created_by_name = {}
+
+        for instance in sec_created:
+            self.assertIn(instance.name, self.importer.sec_defs)
+            created_by_name[instance.name] = instance
+
+        # .. an outgoing-oriented definition keeps its certificate material paths in opaque attributes ..
+        outgoing = created_by_name['enmasse.mtls.1']
+        self.assertTrue(outgoing.is_active)
+
+        opaque = json.loads(outgoing.opaque1)
+        self.assertEqual(opaque['cert_path'], '/opt/hot-deploy/ssl/enmasse-client-cert.pem')
+        self.assertEqual(opaque['key_path'], '/opt/hot-deploy/ssl/enmasse-client-key.pem')
+        self.assertEqual(opaque['ca_certs_path'], '/opt/hot-deploy/ssl/enmasse-remote-ca.pem')
+
+        # .. and a channel-oriented definition keeps its match criteria in opaque attributes.
+        channel = created_by_name['enmasse.mtls.2']
+        self.assertTrue(channel.is_active)
+
+        opaque = json.loads(channel.opaque1)
+        self.assertEqual(opaque['client_cert_fingerprint'], '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')
+        self.assertEqual(opaque['client_cert_subject_dn'], 'CN=enmasse.client,O=Enmasse,C=US')
+
+# ################################################################################################################################
+
     def _get_wss_defs_from_yaml(self) -> 'anylist':
         """ Returns all the WS-Security definitions the YAML template holds.
         """
@@ -328,6 +374,7 @@ class TestEnmasseSecurity(TestCase):
         security_types = [def_info['type'] for def_info in self.importer.sec_defs.values()]
         self.assertIn('basic_auth', security_types)
         self.assertIn('bearer_token', security_types)
+        self.assertIn('mtls', security_types)
         self.assertIn('ntlm', security_types)
         self.assertIn('apikey', security_types)
         self.assertIn('wss', security_types)

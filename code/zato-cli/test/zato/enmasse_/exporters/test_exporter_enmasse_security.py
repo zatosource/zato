@@ -143,6 +143,25 @@ class TestEnmasseSecurityExporter(TestCase):
                 # Passwords are never exported
                 self.assertNotIn('password', exported_def, f'Password must not be exported for "{name}"')
 
+            # Check mTLS fields - the certificate material paths and channel match criteria
+            # must round-trip through opaque storage
+            if yaml_def.get('type') == 'mtls':
+                mtls_fields = [
+                    'is_active', 'cert_path', 'key_path', 'ca_certs_path', 'client_cert_fingerprint',
+                    'client_cert_subject_dn',
+                ]
+
+                for field in mtls_fields:
+                    if field in yaml_def:
+                        self.assertIn(field, exported_def, f'Field {field} missing from export of "{name}"')
+                        self.assertEqual(exported_def[field], yaml_def[field], f'Field {field} mismatch for security definition "{name}"')
+
+                # Passwords are never exported
+                self.assertNotIn('password', exported_def, f'Password must not be exported for "{name}"')
+
+                # An mTLS definition carries no username either
+                self.assertNotIn('username', exported_def, f'Username must not be exported for "{name}"')
+
             # Check rate_limiting if present in the YAML definition
             if rate_limiting := yaml_def.get('rate_limiting'):
                 self.assertIn('rate_limiting', exported_def, f'rate_limiting missing from export of "{name}"')

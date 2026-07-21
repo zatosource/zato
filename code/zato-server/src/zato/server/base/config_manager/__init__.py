@@ -379,6 +379,7 @@ class ConfigManager(_ConfigManagerBase):
             self.config_store.http_soap,
             self._get_channel_url_sec(),
             self.config_store.basic_auth,
+            self.config_store.mtls,
             self.config_store.ntlm,
             self.config_store.oauth,
             self.config_store.apikey,
@@ -630,6 +631,14 @@ class ConfigManager(_ConfigManagerBase):
         if sec_config['sec_type'] == SEC_DEF_TYPE.WSS and _sec_config:
             wrapper_config['security'] = dict(_sec_config)
 
+        # An mTLS definition carries paths to the client certificate material - the wrapper
+        # maps them to its TLS fields itself when it sets up its authentication.
+        if sec_config['sec_type'] == SEC_DEF_TYPE.MTLS and security_name:
+            mtls_config = self.request_dispatcher.url_data.mtls_get(security_name).config
+            wrapper_config['cert_path'] = mtls_config.get('cert_path')
+            wrapper_config['key_path'] = mtls_config.get('key_path')
+            wrapper_config['ca_certs_path'] = mtls_config.get('ca_certs_path')
+
         return HTTPSOAPWrapper(self.server, wrapper_config)
 
 # ################################################################################################################################
@@ -814,6 +823,7 @@ class ConfigManager(_ConfigManagerBase):
         self.request_dispatcher.url_data.set_security_objects(
             url_sec=url_sec,
             basic_auth_config=self.config_store.basic_auth,
+            mtls_config=self.config_store.mtls,
             ntlm_config=self.config_store.ntlm,
             oauth_config=self.config_store.oauth,
             apikey_config=self.config_store.apikey,
@@ -1803,6 +1813,39 @@ class ConfigManager(_ConfigManagerBase):
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.NTLM,
                 self._visit_wrapper_change_password)
+
+# ################################################################################################################################
+
+    def wait_for_mtls(self, name:'str', timeout:'int'=999999) -> 'bool':
+        return wait_for_dict_key_by_get_func(self.mtls_get, name, timeout, interval=0.5)
+
+    def mtls_get(self, name:'str') -> 'bunch_':
+        """ Returns the configuration of the mTLS security definition
+        of the given name.
+        """
+        return self.request_dispatcher.url_data.mtls_get(name)
+
+    def mtls_get_by_id(self, def_id:'int') -> 'bunch_':
+        """ Same as mtls_get but by definition ID.
+        """
+        return self.request_dispatcher.url_data.mtls_get_by_id(def_id)
+
+    def on_config_event_SECURITY_MTLS_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
+        """ Creates a new mTLS security definition.
+        """
+        dispatcher.notify(broker_message.SECURITY.MTLS_CREATE.value, msg)
+
+    def on_config_event_SECURITY_MTLS_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
+        """ Updates an existing mTLS security definition.
+        """
+        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.MTLS,
+                self._visit_wrapper_edit, keys=('name', 'cert_path', 'key_path', 'ca_certs_path'))
+
+    def on_config_event_SECURITY_MTLS_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
+        """ Deletes an mTLS security definition.
+        """
+        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.MTLS,
+                self._visit_wrapper_delete)
 
 # ################################################################################################################################
 

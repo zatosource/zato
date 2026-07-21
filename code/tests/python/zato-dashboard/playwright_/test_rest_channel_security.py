@@ -28,8 +28,8 @@ if 0:
 # ################################################################################################################################
 
 from rest_channel import create_apikey_definition, create_bearer_token_definition, create_channel, \
-    create_ntlm_definition, edit_channel, find_channel_row, get_row_cell_texts, invoke_channel, invoke_until_status, \
-    open_channel_page, open_edit_dialog
+    create_mtls_definition, create_ntlm_definition, edit_channel, find_channel_row, get_row_cell_texts, invoke_channel, \
+    invoke_until_status, open_channel_page, open_edit_dialog
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -47,6 +47,11 @@ _Cell_Security = 6
 
 # Log patterns produced by the server when credentials are rejected
 _Auth_Log_Patterns = ('401 Unauthorized path_info', 'Unauthorized; path_info')
+
+# Headers a TLS-terminating proxy injects after verifying the client certificate
+_MTLS_Header_Verify      = 'X-Zato-SSL-Client-Verify'
+_MTLS_Header_Fingerprint = 'X-Zato-SSL-Client-SHA256'
+_MTLS_Header_Subject_DN  = 'X-Zato-SSL-Client-Subject-DN'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -292,6 +297,116 @@ class TestRESTChannelSecurity:
         selected_label = _get_selected_security_label(page)
         expected_label = f'NTLM/{definition["name"]}'
         assert selected_label == expected_label, f'Expected "{expected_label}" selected, got: "{selected_label}"'
+
+# ################################################################################################################################
+
+    @pytest.mark.expect_log_errors(*_Auth_Log_Patterns)
+    def test_mtls_fingerprint(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates an mTLS definition with a fingerprint and a channel using it, then verifies
+        that requests carrying the matching proxy-injected headers pass while requests with
+        a wrong fingerprint, an unverified certificate or no headers at all get 401.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+
+        channel_name = _Test_Name_Prefix + 'mtls'
+        url_path = '/test/rest/sec-mtls/' + rand_string()
+        fingerprint = rand_string() + rand_string()
+
+        # Create the security definition ..
+        definition = create_mtls_definition(page, base_url, _Test_Name_Prefix + 'mtls-def', {
+            'client_cert_fingerprint': fingerprint,
+        })
+
+        # .. create the channel with that definition assigned ..
+        _ = create_channel(page, base_url, channel_name, _Echo_Service, url_path, {
+            'security': f'mTLS/{definition["name"]}',
+        })
+
+        # .. a server-rendered row shows the definition, so reload the page first ..
+        open_channel_page(page, base_url)
+        row = find_channel_row(page, channel_name)
+        cells = get_row_cell_texts(row)
+        assert definition['name'] in cells[_Cell_Security], \
+            f'Expected "{definition["name"]}" in the security cell, got: "{cells[_Cell_Security]}"'
+
+        # .. a verified certificate with the matching fingerprint passes ..
+        headers = {
+            _MTLS_Header_Verify: 'SUCCESS',
+            _MTLS_Header_Fingerprint: fingerprint,
+        }
+        response = invoke_until_status(server_port, url_path, OK, data='{"cert": "valid"}', headers=headers)
+        assert response.status_code == OK, \
+            f'Expected OK with a matching fingerprint, got {response.status_code}: {response.text}'
+
+        # .. a verified certificate with a different fingerprint is rejected ..
+        wrong_headers = {
+            _MTLS_Header_Verify: 'SUCCESS',
+            _MTLS_Header_Fingerprint: 'wrong.' + rand_string(),
+        }
+        response = invoke_channel(server_port, url_path, data='{"cert": "wrong"}', headers=wrong_headers)
+        assert response.status_code == UNAUTHORIZED, \
+            f'Expected UNAUTHORIZED with a wrong fingerprint, got {response.status_code}'
+
+        # .. an unverified certificate is rejected even with the right fingerprint ..
+        unverified_headers = {
+            _MTLS_Header_Verify: 'FAILED',
+            _MTLS_Header_Fingerprint: fingerprint,
+        }
+        response = invoke_channel(server_port, url_path, data='{"cert": "unverified"}', headers=unverified_headers)
+        assert response.status_code == UNAUTHORIZED, \
+            f'Expected UNAUTHORIZED with an unverified certificate, got {response.status_code}'
+
+        # .. and a request without any of the headers is rejected too.
+        response = invoke_channel(server_port, url_path, data='{"cert": "missing"}')
+        assert response.status_code == UNAUTHORIZED, \
+            f'Expected UNAUTHORIZED with no client certificate headers, got {response.status_code}'
+
+# ################################################################################################################################
+
+    @pytest.mark.expect_log_errors(*_Auth_Log_Patterns)
+    def test_mtls_subject_dn(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates an mTLS definition with a subject DN and a channel using it, then verifies
+        that requests with the matching subject DN pass while a different one gets 401.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+        server_port = zato_dashboard['server_port']
+
+        channel_name = _Test_Name_Prefix + 'mtls-dn'
+        url_path = '/test/rest/sec-mtls-dn/' + rand_string()
+        subject_dn = f'CN=client.{rand_string()},O=Test,C=US'
+
+        # Create the security definition ..
+        definition = create_mtls_definition(page, base_url, _Test_Name_Prefix + 'mtls-dn-def', {
+            'client_cert_subject_dn': subject_dn,
+        })
+
+        # .. create the channel with that definition assigned ..
+        _ = create_channel(page, base_url, channel_name, _Echo_Service, url_path, {
+            'security': f'mTLS/{definition["name"]}',
+        })
+
+        # .. a verified certificate with the matching subject DN passes ..
+        headers = {
+            _MTLS_Header_Verify: 'SUCCESS',
+            _MTLS_Header_Subject_DN: subject_dn,
+        }
+        response = invoke_until_status(server_port, url_path, OK, data='{"subject": "valid"}', headers=headers)
+        assert response.status_code == OK, \
+            f'Expected OK with a matching subject DN, got {response.status_code}: {response.text}'
+
+        # .. and a verified certificate with a different subject DN is rejected.
+        wrong_headers = {
+            _MTLS_Header_Verify: 'SUCCESS',
+            _MTLS_Header_Subject_DN: 'CN=intruder,O=Elsewhere,C=US',
+        }
+        response = invoke_channel(server_port, url_path, data='{"subject": "wrong"}', headers=wrong_headers)
+        assert response.status_code == UNAUTHORIZED, \
+            f'Expected UNAUTHORIZED with a wrong subject DN, got {response.status_code}'
 
 # ################################################################################################################################
 

@@ -166,6 +166,8 @@ $.namespace('zato.security');
 $.namespace('zato.security.apikey');
 $.namespace('zato.security.basic_auth');
 $.namespace('zato.security.jwt');
+$.namespace('zato.security.mtls');
+$.namespace('zato.security.mtls.data_table');
 $.namespace('zato.security.ntlm');
 $.namespace('zato.security.oauth');
 $.namespace('zato.security.posture');

@@ -63,6 +63,10 @@ class ConfigLoader:
         query = self.odb.get_basic_auth_list(cluster_id, None, True)
         self.config.basic_auth = ConfigDict.from_query('basic_auth', query, decrypt_func=self.decrypt)
 
+        # mTLS
+        query = self.odb.get_mtls_list(cluster_id, True)
+        self.config.mtls = ConfigDict.from_query('mtls', query, decrypt_func=self.decrypt)
+
         # NTLM
         query = self.odb.get_ntlm_list(cluster_id, True)
         self.config.ntlm = ConfigDict.from_query('ntlm', query, decrypt_func=self.decrypt)
