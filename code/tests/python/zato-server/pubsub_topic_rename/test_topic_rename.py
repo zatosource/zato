@@ -93,7 +93,7 @@ def _get_subscriptions(admin:'any_', sec_name:'str') -> 'anylist':
 
 class TestTopicRename:
     """ Verifies that topic rename and deactivation propagate correctly
-    through all in-memory structures and Redis.
+    through all in-memory structures and the pub/sub database.
     """
 
 # ################################################################################################################################
@@ -163,7 +163,7 @@ class TestTopicRename:
 
     def test_04_publish_and_pull_after_rename(self, zato_server:'any_') -> 'None':
         """ Publish to the renamed topic and pull messages.
-        This proves pubsub_subs was re-keyed (GAP 6) and Redis streams were renamed.
+        This proves pubsub_subs was re-keyed (GAP 6) and the queue rows were renamed.
         """
         publisher = _get_publisher()
         puller = _get_puller()

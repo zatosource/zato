@@ -119,7 +119,7 @@ class TestPublishToService(unittest.TestCase):
 # ################################################################################################################################
 
     def test_implicit_topic_created(self) -> 'None':
-        """ After publishing to a service, the implicit zato.s.to.{name} topic exists in Redis.
+        """ After publishing to a service, the implicit zato.s.to.{name} topic exists in the pub/sub database.
         """
 
         _ = self.client.invoke('test.pubsub.publish-to-service', {
@@ -127,10 +127,10 @@ class TestPublishToService(unittest.TestCase):
             'data': 'topic creation test',
         })
 
-        # .. give Redis a moment to process ..
+        # .. give the delivery a moment to complete ..
         time.sleep(0.3)
 
-        raw = self.client.invoke('test.pubsub.check-redis-topics')
+        raw = self.client.invoke('test.pubsub.check-topics')
         result = json.loads(raw) if isinstance(raw, str) else raw
         topics = result['topics']
 

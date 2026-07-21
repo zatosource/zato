@@ -41,6 +41,7 @@ from zato.server.connection.as2 import AS2ChannelRuntime
 from zato.server.connection.as4 import AS4ChannelRuntime
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, NotFound, Unauthorized
 from zato.server.connection.http_soap import response_cache
+from zato.server.connection.http_soap.cors import add_cors_response_headers, handle_preflight_request, is_allowed_origin
 from zato.server.connection.http_soap.channel_soap import build_soap_fault_response, build_soap_response, \
     parse_soap_request, resolve_soap_payload
 from zato.server.groups.ctx import SecurityGroupsCtx
@@ -102,6 +103,7 @@ _data_format_hl7_v2 = HL7.Const.Version.v2.id
 _default_soap_version = SOAPVersion.V11
 _bad_request_types = (BadRequest, ModelValidationError, BackendInvocationError)
 _default_admin_channel = MISC.DefaultAdminInvokeChannel
+_http_options = 'OPTIONS'
 
 # ################################################################################################################################
 
@@ -906,6 +908,21 @@ class RequestDispatcher:
 
         # Extract core request metadata from the WSGI environment
         meta = self._extract_request_meta(wsgi_environ)
+
+        # Cross-origin browser requests carry the Origin header - anything else, e.g. curl or server-to-server calls,
+        # skips this block at the cost of a single dictionary lookup ..
+        if origin := wsgi_environ.get('HTTP_ORIGIN'):
+            if is_allowed_origin(origin):
+
+                # .. a preflight request is answered right away, before authentication,
+                # because preflights never carry credentials ..
+                if meta.http_method == _http_options:
+                    out = handle_preflight_request(origin, wsgi_environ)
+                    return out
+
+                # .. and an actual request gets the header that lets the browser expose our response to the page.
+                else:
+                    add_cors_response_headers(origin, wsgi_environ)
 
         # Immediately reject the request if it is not a support HTTP method, no matter what channel
         # it would have otherwise matched.

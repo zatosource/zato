@@ -208,7 +208,7 @@ class Publish(PubSubRESTService):
         if expiration < 1:
             expiration = 1
 
-        # .. publish either to the AMQP broker or to Redis, depending on the topic's backend ..
+        # .. publish either to the AMQP broker or to the pub/sub database, depending on the topic's backend ..
         backend_config = self.server.config_manager.get_pubsub_topic_backend(topic_name)
 
         if backend_config:
@@ -275,7 +275,7 @@ class GetMessages(PubSubRESTService):
         max_messages = min(input.max_messages if input.max_messages else _max_messages_default, _max_messages_limit)
         max_len = min(input.max_len if input.max_len else _max_len_default, _max_len_limit)
 
-        # Fetch messages from Redis
+        # Fetch messages from the pub/sub database
         raw_messages = self.server.pubsub_backend.fetch_messages(
             sub_key,
             max_messages=max_messages,
@@ -355,7 +355,7 @@ class Subscribe(PubSubRESTService):
         # Get or create sub_key for this user
         sub_key = self.server.pubsub_subscriptions.get_or_create_sub_key(username)
 
-        # Subscribe in Redis
+        # Record the subscription in the pub/sub database
         self.server.pubsub_backend.subscribe(sub_key, topic_name)
 
         # Persist subscription in ODB
@@ -441,7 +441,7 @@ class Unsubscribe(PubSubRESTService):
             self.response.payload.status = _status_ok
             return
 
-        # Unsubscribe in Redis
+        # Remove the subscription from the pub/sub database
         self.server.pubsub_backend.unsubscribe(sub_key, topic_name)
 
         # Only clear sub_key if no remaining subscriptions

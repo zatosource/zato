@@ -8,8 +8,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-import os
 import time
+
+# Zato
+from zato.common.test import pubsub_db
 
 if 0:
     from zato.common.typing_ import any_, anylist, strlist
@@ -57,21 +59,6 @@ def _publish_messages(publish_client:'any_', topic_name:'str', count:'int') -> '
         msg_ids.append(msg_id)
 
     return msg_ids
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _count_msg_files(directory:'str') -> 'int':
-    """ Counts .msg files recursively in a directory.
-    """
-    count = 0
-    if not os.path.isdir(directory):
-        return 0
-    for _, _dirs, files in os.walk(directory):
-        for fname in files:
-            if fname.endswith('.msg'):
-                count += 1
-    return count
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -151,7 +138,8 @@ class TestCombinedClearPushLeavePull:
 # ################################################################################################################################
 
 class TestCombinedClearBothEmpty:
-    """ Clearing both subscribers should result in state=all returning 0.
+    """ Clearing both subscribers should leave nothing pending anywhere
+    and drop every stored payload.
     """
 
     def test_clear_both_empty(self, zato_server:'any_') -> 'None':
@@ -170,34 +158,38 @@ class TestCombinedClearBothEmpty:
         _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key_push})
 
         # .. publish 3, wait ..
-        _ = _publish_messages(publisher, _topic_1, 3)
+        msg_ids = _publish_messages(publisher, _topic_1, 3)
         time.sleep(_settle_time)
 
         # .. clear pull first, then push ..
         _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key_pull})
         _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key_push})
 
-        # .. state=all should be empty for both ..
+        # .. nothing is pending for either subscriber ..
         browse_pull = admin.invoke('zato.pubsub.subscription.browse-queue', {
             'sub_key': sub_key_pull,
-            'state': 'all',
+            'state': 'pending',
         })
         assert browse_pull['total'] == 0
 
         browse_push = admin.invoke('zato.pubsub.subscription.browse-queue', {
             'sub_key': sub_key_push,
-            'state': 'all',
+            'state': 'pending',
         })
         assert browse_push['total'] == 0
 
+        # .. and every payload was dropped, only traces remain.
+        assert pubsub_db.count_messages_with_payload(msg_ids) == 0
+        assert pubsub_db.count_message_rows(msg_ids) == 3
+
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestCombinedClearBothDiskFiles:
-    """ After clearing both subscribers, .msg files should be gone.
+class TestCombinedClearBothPayloads:
+    """ After clearing both subscribers, no stored payload remains.
     """
 
-    def test_clear_both_disk_files(self, zato_server:'any_') -> 'None':
+    def test_clear_both_payloads(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient
         from zato.common.test.config_pubsub_clear_queue_combined import TestConfig
@@ -213,18 +205,15 @@ class TestCombinedClearBothDiskFiles:
         _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key_push})
 
         # .. publish 3, wait ..
-        _ = _publish_messages(publisher, _topic_1, 3)
+        msg_ids = _publish_messages(publisher, _topic_1, 3)
         time.sleep(_settle_time)
 
         # .. clear both ..
         _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key_pull})
         _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key_push})
 
-        # .. .msg files should be gone ..
-        pubsub_messages_dir = os.path.join(TestConfig.server_directory, 'work', 'pubsub-messages')
-        topic_dir = os.path.join(pubsub_messages_dir, _topic_1)
-
-        assert _count_msg_files(topic_dir) == 0
+        # .. every payload should be gone.
+        assert pubsub_db.count_messages_with_payload(msg_ids) == 0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -249,25 +238,28 @@ class TestCombinedClearOrderIndependent:
         _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key_push})
 
         # .. publish 3, wait ..
-        _ = _publish_messages(publisher, _topic_1, 3)
+        msg_ids = _publish_messages(publisher, _topic_1, 3)
         time.sleep(_settle_time)
 
         # .. clear push first, then pull ..
         _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key_push})
         _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key_pull})
 
-        # .. state=all should be empty for both ..
+        # .. nothing is pending for either subscriber ..
         browse_pull = admin.invoke('zato.pubsub.subscription.browse-queue', {
             'sub_key': sub_key_pull,
-            'state': 'all',
+            'state': 'pending',
         })
         assert browse_pull['total'] == 0
 
         browse_push = admin.invoke('zato.pubsub.subscription.browse-queue', {
             'sub_key': sub_key_push,
-            'state': 'all',
+            'state': 'pending',
         })
         assert browse_push['total'] == 0
+
+        # .. and the payloads are gone regardless of the clearing order.
+        assert pubsub_db.count_messages_with_payload(msg_ids) == 0
 
 # ################################################################################################################################
 # ################################################################################################################################

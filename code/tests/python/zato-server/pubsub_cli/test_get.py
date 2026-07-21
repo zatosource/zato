@@ -73,7 +73,7 @@ class TestGet:
         msg_id = publish_result['msg_id']
         time.sleep(_settle_time)
 
-        # .. browse to get the redis_stream_id ..
+        # .. confirm the message is in the queue ..
         browse_result = admin.invoke('zato.pubsub.subscription.browse-queue', {
             'sub_key': sub_key,
             'state': 'pending',
@@ -90,7 +90,6 @@ class TestGet:
                 break
 
         assert target_row is not None
-        redis_stream_id = target_row['redis_stream_id']
 
         # .. get via CLI ..
         result = _run_cli(
@@ -98,7 +97,6 @@ class TestGet:
             'get',
             '--msg-id', msg_id,
             '--topic-name', _topic,
-            '--redis-stream-id', redis_stream_id,
         )
 
         assert result.returncode == 0, f'CLI failed: {result.stdout}\n{result.stderr}'

@@ -1074,7 +1074,7 @@ class BrowseQueue(AdminService):
         # .. get all topics this subscriber is subscribed to ..
         topic_names = self.server.pubsub_backend.get_subscribed_topics(sub_key)
 
-        # .. get the real total from O(1) Redis commands ..
+        # .. get the real total straight from the backend ..
         total = 0
         for topic_name in topic_names:
             count = self.server.pubsub_backend.get_total_count(sub_key, topic_name, state)

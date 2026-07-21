@@ -8,14 +8,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-import os
 import time
+
+# Zato
+from zato.common.test import pubsub_db
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist
+    from zato.common.typing_ import any_, anylist, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -46,7 +48,7 @@ def _get_sub_key(admin_client:'any_', username:'str') -> 'str':
         if sec_name == username:
             return item['sub_key']
 
-    raise RuntimeError(f'No subscription found for username: {username}')
+    raise Exception(f'No subscription found for username: {username}')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -67,45 +69,22 @@ def _get_sub_id(admin_client:'any_', username:'str') -> 'int':
         if sec_name == username:
             return item['id']
 
-    raise RuntimeError(f'No subscription found for username: {username}')
+    raise Exception(f'No subscription found for username: {username}')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _publish_messages(publish_client:'any_', topic_name:'str', count:'int') -> 'None':
-    """ Publishes `count` messages to the given topic.
+def _publish_messages(publish_client:'any_', topic_name:'str', count:'int') -> 'strlist':
+    """ Publishes `count` messages to the given topic and returns their msg_ids.
     """
+    msg_ids:'strlist' = []
+
     for idx in range(count):
-        _ = publish_client.publish(topic_name, f'ack-atomicity-payload-{idx}')
+        result = publish_client.publish(topic_name, f'ack-atomicity-payload-{idx}')
+        msg_id = result['msg_id']
+        msg_ids.append(msg_id)
 
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _count_msg_files(directory:'str') -> 'int':
-    """ Counts .msg files recursively under the given directory.
-    """
-    count = 0
-
-    if not os.path.isdir(directory):
-        return 0
-
-    for _, _dirs, files in os.walk(directory):
-        for fname in files:
-            if fname.endswith('.msg'):
-                count += 1
-
-    return count
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _get_topic_dir(server_directory:'str', topic_name:'str') -> 'str':
-    """ Returns the on-disk directory for a topic's message files.
-    """
-    pubsub_messages_dir = os.path.join(server_directory, 'work', 'pubsub-messages')
-
-    out = os.path.join(pubsub_messages_dir, topic_name)
-    return out
+    return msg_ids
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -126,10 +105,10 @@ def _clear_all_queues(admin:'any_') -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 #
-# Gap: SREM+SCARD non-atomic - concurrent acks for same message by different subscribers
+# Gap: concurrent acks for the same message by different subscribers
 #
 # Publish 1 message to a topic with 2 subscribers. Both pull (which acks).
-# Verify: pending key gone, expiry entry gone, disk file deleted, no errors.
+# Verify: nothing pending, the payload dropped, no errors.
 #
 # ################################################################################################################################
 # ################################################################################################################################
@@ -153,7 +132,7 @@ class TestConcurrentAckTwoSubscribers:
         sub_key_b = _get_sub_key(admin, TestConfig.puller_b_username)
 
         # .. publish 1 message to the shared topic ..
-        _publish_messages(publisher, _topic_shared, 1)
+        msg_ids = _publish_messages(publisher, _topic_shared, 1)
         time.sleep(_settle_time)
 
         # .. both subscribers pull (and ack) ..
@@ -164,13 +143,11 @@ class TestConcurrentAckTwoSubscribers:
         assert result_a['message_count'] >= 1
         assert result_b['message_count'] == 1
 
-        # .. let disk deletion complete ..
+        # .. let the payload cleanup complete ..
         time.sleep(_settle_time)
 
-        # .. verify the disk file is gone ..
-        topic_dir = _get_topic_dir(TestConfig.server_directory, _topic_shared)
-        file_count = _count_msg_files(topic_dir)
-        assert file_count == 0
+        # .. verify the payload was dropped once both subscribers acked ..
+        assert pubsub_db.count_messages_with_payload(msg_ids) == 0
 
         # .. verify both queues report empty.
         browse_a = admin.invoke('zato.pubsub.subscription.browse-queue', {
@@ -189,10 +166,10 @@ class TestConcurrentAckTwoSubscribers:
 # ################################################################################################################################
 # ################################################################################################################################
 #
-# Gap: Double ack for same (data_ref, sub_key) - ack + expired-ack path
+# Gap: Double ack for the same (message, sub_key) pair
 #
 # Publish 1 message, pull it, then pull again (second pull sees empty).
-# Verify: no error, pending set cleaned, disk file gone.
+# Verify: no error, nothing pending, payload gone.
 #
 # ################################################################################################################################
 # ################################################################################################################################
@@ -214,24 +191,22 @@ class TestDoublePullSameSubscriber:
         sub_key_a = _get_sub_key(admin, TestConfig.puller_a_username)
 
         # .. publish 1 message to the sole topic ..
-        _publish_messages(publisher, _topic_sole, 1)
+        msg_ids = _publish_messages(publisher, _topic_sole, 1)
         time.sleep(_settle_time)
 
         # .. first pull delivers and acks ..
         result_first = puller_a.pull(max_messages=50)
         assert result_first['message_count'] == 1
 
-        # .. let disk deletion complete ..
+        # .. let the payload cleanup complete ..
         time.sleep(_settle_time)
 
         # .. second pull should see nothing, no error ..
         result_second = puller_a.pull(max_messages=50)
         assert result_second['message_count'] == 0
 
-        # .. verify the disk file is gone ..
-        topic_dir = _get_topic_dir(TestConfig.server_directory, _topic_sole)
-        file_count = _count_msg_files(topic_dir)
-        assert file_count == 0
+        # .. verify the payload is gone ..
+        assert pubsub_db.count_messages_with_payload(msg_ids) == 0
 
         # .. verify pending is empty.
         browse_result = admin.invoke('zato.pubsub.subscription.browse-queue', {
@@ -247,7 +222,7 @@ class TestDoublePullSameSubscriber:
 # Gap: ack interleaves with clear_queue
 #
 # Publish 5 messages to a topic with 1 subscriber. Pull 2 (acks them).
-# Immediately clear_queue. Verify: queue empty, browse pending=0, all disk files gone.
+# Immediately clear_queue. Verify: queue empty, browse pending=0, all payloads gone.
 #
 # ################################################################################################################################
 # ################################################################################################################################
@@ -269,7 +244,7 @@ class TestAckDuringClearQueue:
         sub_key_a = _get_sub_key(admin, TestConfig.puller_a_username)
 
         # .. publish 5 messages to the sole topic ..
-        _publish_messages(publisher, _topic_sole, 5)
+        msg_ids = _publish_messages(publisher, _topic_sole, 5)
         time.sleep(_settle_time)
 
         # .. pull 2 (acks them) ..
@@ -279,7 +254,7 @@ class TestAckDuringClearQueue:
         clear_result = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key_a})
         logger.info('Clear result: %s', clear_result)
 
-        # .. let disk deletion complete ..
+        # .. let the payload cleanup complete ..
         time.sleep(_settle_time)
 
         # .. verify pending is empty ..
@@ -290,10 +265,9 @@ class TestAckDuringClearQueue:
 
         assert browse_result['total'] == 0
 
-        # .. verify disk files are gone.
-        topic_dir = _get_topic_dir(TestConfig.server_directory, _topic_sole)
-        file_count = _count_msg_files(topic_dir)
-        assert file_count == 0
+        # .. verify all the payloads are gone.
+        with_payload = pubsub_db.count_messages_with_payload(msg_ids)
+        assert with_payload == 0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -301,7 +275,7 @@ class TestAckDuringClearQueue:
 # Gap: Cleanup correctness after atomic ack with multiple subscribers
 #
 # Publish 3 messages to shared topic. Sub A pulls all 3 (acks).
-# Verify: sub B still has 3 pending, disk files still exist, B can pull them.
+# Verify: sub B still has 3 pending, the payloads still exist, B can pull them.
 #
 # ################################################################################################################################
 # ################################################################################################################################
@@ -324,7 +298,7 @@ class TestMultiSubAckPreservesOther:
         sub_key_b = _get_sub_key(admin, TestConfig.puller_b_username)
 
         # .. publish 3 messages to the shared topic ..
-        _publish_messages(publisher, _topic_shared, 3)
+        msg_ids = _publish_messages(publisher, _topic_shared, 3)
         time.sleep(_settle_time)
 
         # .. sub A pulls all (acks them) - may also get messages from sole topic ..
@@ -339,10 +313,9 @@ class TestMultiSubAckPreservesOther:
 
         assert browse_b['total'] == 3
 
-        # .. disk files should still exist ..
-        topic_dir = _get_topic_dir(TestConfig.server_directory, _topic_shared)
-        file_count = _count_msg_files(topic_dir)
-        assert file_count >= 3
+        # .. the payloads must still exist because B has not acked ..
+        with_payload = pubsub_db.count_messages_with_payload(msg_ids)
+        assert with_payload == 3
 
         # .. B can pull them all.
         result_b = puller_b.pull(max_messages=50)
@@ -351,17 +324,17 @@ class TestMultiSubAckPreservesOther:
 # ################################################################################################################################
 # ################################################################################################################################
 #
-# Gap: Disk file survives until last subscriber acks
+# Gap: the payload survives until the last subscriber acks
 #
 # Publish 1 message to shared topic (2 subs). Sub A pulls (acks).
-# Verify disk file still exists. Sub B pulls (acks). Verify disk file is gone.
+# Verify the payload still exists. Sub B pulls (acks). Verify the payload is gone.
 #
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestDiskFileLifetime:
+class TestPayloadLifetime:
 
-    def test_disk_file_lifetime(self, zato_server:'any_') -> 'None':
+    def test_payload_lifetime(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient, PullClient
         from zato.common.test.config_pubsub_ack_atomicity import TestConfig
@@ -375,28 +348,27 @@ class TestDiskFileLifetime:
         _clear_all_queues(admin)
 
         # .. publish 1 message to the shared topic ..
-        _publish_messages(publisher, _topic_shared, 1)
+        msg_ids = _publish_messages(publisher, _topic_shared, 1)
         time.sleep(_settle_time)
 
         # .. sub A pulls (acks) - may also get messages from sole topic ..
         result_a = puller_a.pull(max_messages=50)
         assert result_a['message_count'] >= 1
 
-        # .. disk file should still exist because B has not acked ..
-        topic_dir = _get_topic_dir(TestConfig.server_directory, _topic_shared)
-        file_count_after_a = _count_msg_files(topic_dir)
-        assert file_count_after_a >= 1
+        # .. the payload must still exist because B has not acked ..
+        with_payload_after_a = pubsub_db.count_messages_with_payload(msg_ids)
+        assert with_payload_after_a == 1
 
         # .. sub B pulls (acks the last subscriber) ..
         result_b = puller_b.pull(max_messages=50)
         assert result_b['message_count'] == 1
 
-        # .. let disk deletion complete ..
+        # .. let the payload cleanup complete ..
         time.sleep(_settle_time)
 
-        # .. now the disk file should be gone.
-        file_count_after_b = _count_msg_files(topic_dir)
-        assert file_count_after_b == 0
+        # .. now the payload must be gone.
+        with_payload_after_b = pubsub_db.count_messages_with_payload(msg_ids)
+        assert with_payload_after_b == 0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -404,7 +376,7 @@ class TestDiskFileLifetime:
 # Gap: ack interleaves with unsubscribe
 #
 # Publish 3 messages, pull 1 (ack it), then unsubscribe.
-# Verify: no pending keys remain, disk files for sole-subscriber messages are deleted.
+# Verify: nothing stays pending, the sole-subscriber payloads are dropped.
 # This test must run last because it deletes and re-creates puller_a's subscription.
 #
 # ################################################################################################################################
@@ -425,7 +397,7 @@ class TestZZ_AckDuringUnsubscribe:
         _clear_all_queues(admin)
 
         # .. publish 3 messages to the sole topic ..
-        _publish_messages(publisher, _topic_sole, 3)
+        msg_ids = _publish_messages(publisher, _topic_sole, 3)
         time.sleep(_settle_time)
 
         # .. pull 1 (acks it) ..
@@ -441,10 +413,9 @@ class TestZZ_AckDuringUnsubscribe:
             # .. let cleanup complete ..
             time.sleep(_settle_time)
 
-            # .. verify disk files for the sole topic are gone ..
-            topic_dir = _get_topic_dir(TestConfig.server_directory, _topic_sole)
-            file_count = _count_msg_files(topic_dir)
-            assert file_count == 0
+            # .. verify the sole topic's payloads are gone ..
+            with_payload = pubsub_db.count_messages_with_payload(msg_ids)
+            assert with_payload == 0
 
         finally:
             # .. re-create the subscription so the environment stays consistent.

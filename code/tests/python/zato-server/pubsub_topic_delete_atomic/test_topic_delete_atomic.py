@@ -8,22 +8,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-import os
 import threading
 import time
 
-# redis
-from redis import Redis
-
 # Zato
-from zato.common.api import PubSub
-from zato.common.typing_ import cast_
+from zato.common.test import pubsub_db
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, strset
+    from zato.common.typing_ import any_, anylist, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,17 +29,6 @@ _settle_time = 0.5
 
 _topic_target = 'tda.topic.a'
 _topic_survivor = 'tda.topic.b'
-
-_test_redis_host = 'localhost'
-_test_redis_port = 6379
-_test_redis_db   = PubSub.Test_Redis_DB
-
-_Stream_Prefix      = 'zato:pubsub:stream:'
-_Topic_Subs_Prefix  = 'zato:pubsub:topic_subs:'
-_Subs_Prefix        = 'zato:pubsub:subs:'
-_Pending_Prefix     = 'zato:pubsub:pending:'
-_Sub_Pending_Prefix = 'zato:pubsub:sub_pending:'
-_Pending_Expiry_Key = 'zato:pubsub:pending_expiry'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -67,12 +51,6 @@ def _get_publisher() -> 'any_':
 
 # ################################################################################################################################
 
-def _get_redis() -> 'Redis':
-    redis = Redis(host=_test_redis_host, port=_test_redis_port, db=_test_redis_db, decode_responses=True)
-    return redis
-
-# ################################################################################################################################
-
 def _get_topic_id(admin:'any_', topic_name:'str') -> 'int':
     topic_list = admin.invoke('zato.pubsub.topic.get-list', {'cluster_id': 1})
 
@@ -85,7 +63,7 @@ def _get_topic_id(admin:'any_', topic_name:'str') -> 'int':
         if item['name'] == topic_name:
             return item['id']
 
-    raise RuntimeError(f'Topic not found: {topic_name}')
+    raise Exception(f'Topic not found: {topic_name}')
 
 # ################################################################################################################################
 
@@ -106,36 +84,20 @@ def _get_sub_key(admin:'any_', topic_name:'str') -> 'str':
                 if topic_entry['topic_name'] == topic_name:
                     return item['sub_key']
 
-    raise RuntimeError(f'No subscription found for topic: {topic_name}')
+    raise Exception(f'No subscription found for topic: {topic_name}')
 
 # ################################################################################################################################
 
-def _get_data_refs_from_stream(redis:'Redis', topic_name:'str') -> 'anylist':
-    stream_key = f'{_Stream_Prefix}{topic_name}'
-    entries:'anylist' = cast_('anylist', redis.xrange(stream_key))
+def _publish_messages(publisher:'any_', topic_name:'str', count:'int', payload:'str') -> 'strlist':
+    """ Publishes messages and returns their public identifiers.
+    """
+    out:'strlist' = []
 
-    data_refs:'anylist' = []
+    for _ in range(count):
+        result = publisher.publish(topic_name, payload)
+        out.append(result['msg_id'])
 
-    for _, fields in entries:
-        data_ref = fields['data_ref']
-        data_refs.append(data_ref)
-
-    return data_refs
-
-# ################################################################################################################################
-
-def _count_msg_files(directory:'str') -> 'int':
-    count = 0
-
-    if not os.path.isdir(directory):
-        return 0
-
-    for _, _dirs, files in os.walk(directory):
-        for file_name in files:
-            if file_name.endswith('.msg'):
-                count += 1
-
-    return count
+    return out
 
 # ################################################################################################################################
 
@@ -161,29 +123,22 @@ def _recreate_topic_and_subscribe(admin:'any_', topic_name:'str') -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestNoDiskFilesRemainAfterConcurrentPublishAndDelete:
-    """ Gap A: concurrent publish during delete must not leave disk files
-    with no stream entry pointing to them.
+class TestNoRowsRemainAfterConcurrentPublishAndDelete:
+    """ Gap A: concurrent publish during delete must not leave message rows
+    behind with no topic to belong to.
     """
 
-    def test_01_no_disk_files_remain_after_concurrent_publish_and_delete(self, zato_server:'any_') -> 'None':
-
-        from zato.common.test.config_pubsub_topic_delete_atomic import TestConfig
+    def test_01_no_rows_remain_after_concurrent_publish_and_delete(self, zato_server:'any_') -> 'None':
 
         admin = _get_admin()
         publisher = _get_publisher()
-        redis = _get_redis()
 
-        # .. publish 5 messages so there are disk files ..
-        for _ in range(5):
-            _ = publisher.publish(_topic_target, 'pre-delete-payload')
+        # .. publish 5 messages so there are message rows ..
+        msg_ids_before = _publish_messages(publisher, _topic_target, 5, 'pre-delete-payload')
 
         time.sleep(_settle_time)
 
         topic_id = _get_topic_id(admin, _topic_target)
-
-        # .. collect data_refs that are currently in the stream ..
-        data_refs_before = _get_data_refs_from_stream(redis, _topic_target)
 
         # .. publish more from a background thread while deleting ..
         def _publish_loop() -> 'None':
@@ -202,27 +157,21 @@ class TestNoDiskFilesRemainAfterConcurrentPublishAndDelete:
         publish_thread.join()
         time.sleep(_settle_time)
 
-        # .. verify: no stream key ..
-        stream_key = f'{_Stream_Prefix}{_topic_target}'
-        stream_exists = redis.exists(stream_key)
-        assert stream_exists == 0, f'Stream key still exists: {stream_key}'
+        # .. verify: no message rows for the topic ..
+        message_count = pubsub_db.count_topic_messages(_topic_target)
+        assert message_count == 0, f'Message rows still exist for {_topic_target}: {message_count}'
 
-        # .. verify: no topic_subs key ..
-        topic_subs_key = f'{_Topic_Subs_Prefix}{_topic_target}'
-        topic_subs_exists = redis.exists(topic_subs_key)
-        assert topic_subs_exists == 0, f'topic_subs key still exists: {topic_subs_key}'
+        # .. verify: no subscription state for the topic ..
+        subscribers = pubsub_db.get_topic_subscribers(_topic_target)
+        assert subscribers == [], f'Subscription state still exists: {subscribers}'
 
-        # .. verify: no disk files remain ..
-        pubsub_messages_dir = os.path.join(TestConfig.server_directory, 'work', 'pubsub-messages')
-        topic_dir = os.path.join(pubsub_messages_dir, _topic_target)
-        file_count = _count_msg_files(topic_dir)
-        assert file_count == 0, f'Expected 0 .msg files after delete, found {file_count}'
+        # .. verify: no delivery rows for the topic ..
+        delivery_count = pubsub_db.count_topic_deliveries(_topic_target)
+        assert delivery_count == 0, f'Delivery rows still exist: {delivery_count}'
 
-        # .. verify: no stale pending entries for data_refs that were in the stream ..
-        for data_ref in data_refs_before:
-            pending_key = f'{_Pending_Prefix}{data_ref}'
-            exists = redis.exists(pending_key)
-            assert exists == 0, f'Stale pending key: {pending_key}'
+        # .. verify: the rows of the messages published before the delete are gone ..
+        remaining = pubsub_db.count_message_rows(msg_ids_before)
+        assert remaining == 0, f'Stale message rows: {remaining}'
 
         # .. restore for subsequent tests.
         _recreate_topic_and_subscribe(admin, _topic_target)
@@ -232,7 +181,7 @@ class TestNoDiskFilesRemainAfterConcurrentPublishAndDelete:
 
 class TestNoDanglingSubReferenceAfterConcurrentSubscribeAndDelete:
     """ Gap B: concurrent subscribe during delete must not leave dangling references
-    where a subscriber's subs set still contains the deleted topic name.
+    where a subscriber still holds a subscription row for the deleted topic.
     """
 
     def test_02_no_dangling_sub_reference_after_concurrent_subscribe_and_delete(self, zato_server:'any_') -> 'None':
@@ -240,7 +189,6 @@ class TestNoDanglingSubReferenceAfterConcurrentSubscribeAndDelete:
         from zato.common.test.config_pubsub_topic_delete_atomic import TestConfig
 
         admin = _get_admin()
-        redis = _get_redis()
 
         topic_id = _get_topic_id(admin, _topic_target)
 
@@ -268,25 +216,10 @@ class TestNoDanglingSubReferenceAfterConcurrentSubscribeAndDelete:
         subscribe_thread.join()
         time.sleep(_settle_time)
 
-        # .. verify: no topic_subs key ..
-        topic_subs_key = f'{_Topic_Subs_Prefix}{_topic_target}'
-        topic_subs_exists = redis.exists(topic_subs_key)
-        assert topic_subs_exists == 0, f'topic_subs key still exists: {topic_subs_key}'
-
-        # .. verify: no subs:<sub_key> set contains the deleted topic ..
-        cursor = 0
-        while True:
-            scan_result = cast_('tuple', redis.scan(cursor, match=f'{_Subs_Prefix}*', count=100))
-            cursor = scan_result[0]
-            keys = scan_result[1]
-
-            for key in keys:
-                members:'strset' = cast_('strset', redis.smembers(key))
-                assert _topic_target not in members, \
-                    f'Dangling reference to {_topic_target} in {key}'
-
-            if cursor == 0:
-                break
+        # .. verify: no subscription rows remain for the deleted topic - the same table
+        # .. holds both directions, so an empty subscriber list means no dangling references ..
+        subscribers = pubsub_db.get_topic_subscribers(_topic_target)
+        assert subscribers == [], f'Dangling references to {_topic_target}: {subscribers}'
 
         # .. restore for subsequent tests.
         _recreate_topic_and_subscribe(admin, _topic_target)
@@ -295,7 +228,7 @@ class TestNoDanglingSubReferenceAfterConcurrentSubscribeAndDelete:
 # ################################################################################################################################
 
 class TestNoPartialSubscriptionAfterConcurrentSubscribeAndDelete:
-    """ Gap C: concurrent subscribe tries XGROUP_CREATE on deleted stream.
+    """ Gap C: a concurrent subscribe must not leave a partially created queue behind.
     Re-creating the topic and subscribing fresh must work without errors.
     """
 
@@ -305,7 +238,6 @@ class TestNoPartialSubscriptionAfterConcurrentSubscribeAndDelete:
 
         admin = _get_admin()
         publisher = _get_publisher()
-        redis = _get_redis()
 
         topic_id = _get_topic_id(admin, _topic_target)
 
@@ -332,10 +264,9 @@ class TestNoPartialSubscriptionAfterConcurrentSubscribeAndDelete:
         subscribe_thread.join()
         time.sleep(_settle_time)
 
-        # .. verify: no consumer groups on the (now-deleted) stream ..
-        stream_key = f'{_Stream_Prefix}{_topic_target}'
-        stream_exists = redis.exists(stream_key)
-        assert stream_exists == 0, f'Stream still exists: {stream_key}'
+        # .. verify: no message rows remain for the deleted topic ..
+        message_count = pubsub_db.count_topic_messages(_topic_target)
+        assert message_count == 0, f'Message rows still exist: {message_count}'
 
         # .. re-create topic and subscribe fresh - must succeed without errors ..
         _recreate_topic_and_subscribe(admin, _topic_target)
@@ -354,18 +285,15 @@ class TestNoPartialSubscriptionAfterConcurrentSubscribeAndDelete:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestBurstPublishDuringDeleteLeaveNoFiles:
+class TestBurstPublishDuringDeleteLeavesNoRows:
     """ Gap A high-volume variant: 10 rapid publishes concurrent with delete
-    must not leave disk files or stale pending entries.
+    must not leave message or delivery rows behind.
     """
 
-    def test_04_burst_publish_during_delete_leaves_no_files(self, zato_server:'any_') -> 'None':
-
-        from zato.common.test.config_pubsub_topic_delete_atomic import TestConfig
+    def test_04_burst_publish_during_delete_leaves_no_rows(self, zato_server:'any_') -> 'None':
 
         admin = _get_admin()
         publisher = _get_publisher()
-        redis = _get_redis()
 
         topic_id = _get_topic_id(admin, _topic_target)
 
@@ -386,32 +314,15 @@ class TestBurstPublishDuringDeleteLeaveNoFiles:
         publish_thread.join()
         time.sleep(_settle_time)
 
-        # .. verify: no stream, no topic_subs, no disk files ..
-        stream_key = f'{_Stream_Prefix}{_topic_target}'
-        assert redis.exists(stream_key) == 0
+        # .. verify: no message rows, no subscription state, no delivery rows ..
+        message_count = pubsub_db.count_topic_messages(_topic_target)
+        assert message_count == 0, f'Expected 0 message rows after burst delete, found {message_count}'
 
-        topic_subs_key = f'{_Topic_Subs_Prefix}{_topic_target}'
-        assert redis.exists(topic_subs_key) == 0
+        subscribers = pubsub_db.get_topic_subscribers(_topic_target)
+        assert subscribers == [], f'Subscription state still exists: {subscribers}'
 
-        pubsub_messages_dir = os.path.join(TestConfig.server_directory, 'work', 'pubsub-messages')
-        topic_dir = os.path.join(pubsub_messages_dir, _topic_target)
-        file_count = _count_msg_files(topic_dir)
-        assert file_count == 0, f'Expected 0 .msg files after burst delete, found {file_count}'
-
-        # .. verify: no stale pending entries referencing the deleted topic ..
-        cursor = 0
-        while True:
-            scan_result = cast_('tuple', redis.scan(cursor, match=f'{_Pending_Prefix}*', count=100))
-            cursor = scan_result[0]
-            keys = scan_result[1]
-
-            for key in keys:
-                data_ref = key.replace(_Pending_Prefix, '')
-                if f'{_topic_target}/' in data_ref:
-                    assert False, f'Stale pending key for deleted topic: {key}'
-
-            if cursor == 0:
-                break
+        delivery_count = pubsub_db.count_topic_deliveries(_topic_target)
+        assert delivery_count == 0, f'Stale delivery rows for deleted topic: {delivery_count}'
 
         # .. restore.
         _recreate_topic_and_subscribe(admin, _topic_target)
@@ -420,59 +331,37 @@ class TestBurstPublishDuringDeleteLeaveNoFiles:
 # ################################################################################################################################
 
 class TestNoStalePendingEntriesAfterDelete:
-    """ Pending and expiry sets must be fully cleaned for the deleted topic's data_refs.
+    """ Delivery rows and message rows must be fully cleaned for the deleted topic.
     """
 
     def test_05_no_stale_pending_entries_after_delete(self, zato_server:'any_') -> 'None':
 
         admin = _get_admin()
         publisher = _get_publisher()
-        redis = _get_redis()
 
-        # .. record stream length before publishing ..
-        stream_key_before = f'{_Stream_Prefix}{_topic_target}'
-        stream_len_before = cast_('int', redis.xlen(stream_key_before))
-
-        # .. publish 5 messages (pending sets will be populated for the subscriber) ..
-        for _ in range(5):
-            _ = publisher.publish(_topic_target, 'pending-test-payload')
+        # .. publish 5 messages (delivery rows will be created for the subscriber) ..
+        msg_ids = _publish_messages(publisher, _topic_target, 5, 'pending-test-payload')
 
         time.sleep(_settle_time)
 
-        # .. collect data_refs - only the ones we just published ..
-        all_data_refs = _get_data_refs_from_stream(redis, _topic_target)
-        data_refs = all_data_refs[stream_len_before:]
-        assert len(data_refs) == 5
-
         sub_key = _get_sub_key(admin, _topic_target)
-        sub_pending_key = f'{_Sub_Pending_Prefix}{sub_key}'
 
         # .. verify pending state exists before delete ..
-        for data_ref in data_refs:
-            pending_key = f'{_Pending_Prefix}{data_ref}'
-            assert redis.exists(pending_key) == 1, f'Expected pending key to exist before delete: {pending_key}'
+        pending_count = pubsub_db.count_pending(sub_key, _topic_target)
+        assert pending_count >= 5, f'Expected pending deliveries before delete, got {pending_count}'
 
         # .. delete the topic ..
         topic_id = _get_topic_id(admin, _topic_target)
         _ = admin.invoke('zato.pubsub.topic.delete', {'id': topic_id})
         time.sleep(_settle_time)
 
-        # .. verify: all pending:<data_ref> keys gone ..
-        for data_ref in data_refs:
-            pending_key = f'{_Pending_Prefix}{data_ref}'
-            exists = redis.exists(pending_key)
-            assert exists == 0, f'Stale pending key after delete: {pending_key}'
+        # .. verify: all delivery rows gone ..
+        delivery_count = pubsub_db.count_topic_deliveries(_topic_target)
+        assert delivery_count == 0, f'Stale delivery rows after delete: {delivery_count}'
 
-        # .. verify: data_refs removed from sub_pending ..
-        sub_pending_members:'strset' = cast_('strset', redis.smembers(sub_pending_key))
-        for data_ref in data_refs:
-            assert data_ref not in sub_pending_members, \
-                f'Stale data_ref in sub_pending after delete: {data_ref}'
-
-        # .. verify: pending_expiry sorted set has no entries for these data_refs ..
-        for data_ref in data_refs:
-            score = redis.zscore(_Pending_Expiry_Key, data_ref)
-            assert score is None, f'Stale expiry entry after delete: {data_ref}'
+        # .. verify: the message rows are gone too ..
+        remaining = pubsub_db.count_message_rows(msg_ids)
+        assert remaining == 0, f'Stale message rows after delete: {remaining}'
 
         # .. restore.
         _recreate_topic_and_subscribe(admin, _topic_target)
@@ -482,87 +371,52 @@ class TestNoStalePendingEntriesAfterDelete:
 
 class TestMultiTopicSubscriberSurvivorTopicIntact:
     """ Subscriber on two topics (each with its own sub_key). Delete one topic.
-    The other topic's sub_key, sub_pending, pending sets, and stream must remain intact.
+    The other topic's subscription state, delivery rows and payloads must remain intact.
     """
 
     def test_06_multi_topic_subscriber_survivor_topic_intact(self, zato_server:'any_') -> 'None':
 
         admin = _get_admin()
         publisher = _get_publisher()
-        redis = _get_redis()
-
-        # .. record stream lengths before publishing ..
-        stream_len_target_before = cast_('int', redis.xlen(f'{_Stream_Prefix}{_topic_target}'))
-        stream_len_survivor_before = cast_('int', redis.xlen(f'{_Stream_Prefix}{_topic_survivor}'))
 
         # .. publish 3 messages to each topic ..
-        for _ in range(3):
-            _ = publisher.publish(_topic_target, 'target-topic-payload')
-
-        for _ in range(3):
-            _ = publisher.publish(_topic_survivor, 'survivor-topic-payload')
+        msg_ids_target = _publish_messages(publisher, _topic_target, 3, 'target-topic-payload')
+        msg_ids_survivor = _publish_messages(publisher, _topic_survivor, 3, 'survivor-topic-payload')
 
         time.sleep(_settle_time)
 
-        # .. collect only the data_refs we just published ..
-        all_data_refs_target = _get_data_refs_from_stream(redis, _topic_target)
-        all_data_refs_survivor = _get_data_refs_from_stream(redis, _topic_survivor)
-
-        data_refs_target = all_data_refs_target[stream_len_target_before:]
-        data_refs_survivor = all_data_refs_survivor[stream_len_survivor_before:]
-
-        assert len(data_refs_target) == 3
-        assert len(data_refs_survivor) == 3
-
-        # .. get sub_key for the survivor topic ..
+        # .. get the sub_key for the survivor topic ..
         sub_key_survivor = _get_sub_key(admin, _topic_survivor)
-        sub_pending_key_survivor = f'{_Sub_Pending_Prefix}{sub_key_survivor}'
 
-        # .. verify survivor sub_pending contains its data_refs before delete ..
-        sub_pending_survivor_before:'strset' = cast_('strset', redis.smembers(sub_pending_key_survivor))
-
-        for data_ref in data_refs_survivor:
-            assert data_ref in sub_pending_survivor_before, \
-                f'Expected {data_ref} in survivor sub_pending before delete'
+        # .. verify the survivor has its messages pending before delete ..
+        pending_survivor_before = pubsub_db.count_pending(sub_key_survivor, _topic_survivor)
+        assert pending_survivor_before >= 3, \
+            f'Expected survivor pending deliveries before delete, got {pending_survivor_before}'
 
         # .. delete the target topic ..
         topic_id = _get_topic_id(admin, _topic_target)
         _ = admin.invoke('zato.pubsub.topic.delete', {'id': topic_id})
         time.sleep(_settle_time)
 
-        # .. verify: target topic's pending sets are gone ..
-        for data_ref in data_refs_target:
-            pending_key = f'{_Pending_Prefix}{data_ref}'
-            exists = redis.exists(pending_key)
-            assert exists == 0, f'Target pending key still exists: {pending_key}'
+        # .. verify: the target topic's rows are gone ..
+        assert pubsub_db.count_message_rows(msg_ids_target) == 0, \
+            'Target message rows still exist after delete'
+        assert pubsub_db.count_topic_deliveries(_topic_target) == 0, \
+            'Target delivery rows still exist after delete'
 
-        # .. verify: target topic's stream is gone ..
-        stream_key_target = f'{_Stream_Prefix}{_topic_target}'
-        assert redis.exists(stream_key_target) == 0, 'Target stream still exists'
+        # .. verify: the survivor topic's pending deliveries are intact ..
+        pending_survivor_after = pubsub_db.count_pending(sub_key_survivor, _topic_survivor)
+        assert pending_survivor_after >= 3, \
+            f'Survivor pending deliveries lost after deleting target topic: {pending_survivor_after}'
 
-        # .. verify: survivor topic's sub_pending is intact ..
-        sub_pending_survivor_after:'strset' = cast_('strset', redis.smembers(sub_pending_key_survivor))
+        # .. verify: the survivor topic's messages still hold their payloads ..
+        with_payload = pubsub_db.count_messages_with_payload(msg_ids_survivor)
+        assert with_payload == 3, \
+            f'Survivor payloads lost after deleting target topic: {with_payload}'
 
-        for data_ref in data_refs_survivor:
-            assert data_ref in sub_pending_survivor_after, \
-                f'Survivor data_ref lost from sub_pending after deleting target topic: {data_ref}'
-
-        # .. verify: survivor topic's pending sets still contain the survivor sub_key ..
-        for data_ref in data_refs_survivor:
-            pending_key = f'{_Pending_Prefix}{data_ref}'
-            members:'strset' = cast_('strset', redis.smembers(pending_key))
-            assert sub_key_survivor in members, \
-                f'Survivor sub_key lost from pending set: {pending_key}'
-
-        # .. verify: survivor topic stream is intact ..
-        stream_key_survivor = f'{_Stream_Prefix}{_topic_survivor}'
-        stream_len = cast_('int', redis.xlen(stream_key_survivor))
-        assert stream_len >= 3, f'Survivor topic stream should have at least 3 entries, got {stream_len}'
-
-        # .. verify: survivor topic_subs key is intact ..
-        topic_subs_key_survivor = f'{_Topic_Subs_Prefix}{_topic_survivor}'
-        topic_subs_exists = redis.exists(topic_subs_key_survivor)
-        assert topic_subs_exists == 1, f'Survivor topic_subs key is gone: {topic_subs_key_survivor}'
+        # .. verify: the survivor topic's subscription state is intact ..
+        assert sub_key_survivor in pubsub_db.get_topic_subscribers(_topic_survivor), \
+            'Survivor subscription state is gone'
 
         # .. restore the target topic.
         _recreate_topic_and_subscribe(admin, _topic_target)
@@ -580,8 +434,7 @@ class TestDoubleDeleteIdempotent:
         publisher = _get_publisher()
 
         # .. publish some messages ..
-        for _ in range(3):
-            _ = publisher.publish(_topic_target, 'double-delete-payload')
+        _ = _publish_messages(publisher, _topic_target, 3, 'double-delete-payload')
 
         time.sleep(_settle_time)
 
@@ -605,14 +458,13 @@ class TestDoubleDeleteIdempotent:
 # ################################################################################################################################
 
 class TestDeleteTopicWithNoSubscribers:
-    """ Empty topic_subs path: just stream and key cleanup, no pending work.
+    """ Empty subscriber path: just message row cleanup, no pending work.
     """
 
     def test_08_delete_topic_with_no_subscribers(self, zato_server:'any_') -> 'None':
 
         admin = _get_admin()
         publisher = _get_publisher()
-        redis = _get_redis()
 
         # .. create a fresh topic with no subscribers ..
         _ = admin.invoke('zato.pubsub.topic.create', {
@@ -622,7 +474,8 @@ class TestDeleteTopicWithNoSubscribers:
 
         time.sleep(_settle_time)
 
-        # .. publish to it (publish Lua sees 0 subscribers, self-cleans disk files) ..
+        # .. publish to it - with 0 subscribers the message row stays behind
+        # .. as an already delivered trace with no payload ..
         _ = publisher.publish('tda.topic.nosub', 'no-subscriber-payload')
         time.sleep(_settle_time)
 
@@ -631,12 +484,12 @@ class TestDeleteTopicWithNoSubscribers:
         _ = admin.invoke('zato.pubsub.topic.delete', {'id': topic_id})
         time.sleep(_settle_time)
 
-        # .. verify: stream gone, topic_subs gone ..
-        stream_key = f'{_Stream_Prefix}tda.topic.nosub'
-        assert redis.exists(stream_key) == 0, f'Stream still exists: {stream_key}'
+        # .. verify: no message rows, no subscription state ..
+        message_count = pubsub_db.count_topic_messages('tda.topic.nosub')
+        assert message_count == 0, f'Message rows still exist: {message_count}'
 
-        topic_subs_key = f'{_Topic_Subs_Prefix}tda.topic.nosub'
-        assert redis.exists(topic_subs_key) == 0, f'topic_subs still exists: {topic_subs_key}'
+        subscribers = pubsub_db.get_topic_subscribers('tda.topic.nosub')
+        assert subscribers == [], f'Subscription state still exists: {subscribers}'
 
 # ################################################################################################################################
 # ################################################################################################################################

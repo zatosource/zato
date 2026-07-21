@@ -86,25 +86,9 @@ class TestUpdate:
         assert 'Message updated' in result.stdout
 
         # .. verify the payload was updated by getting the message detail ..
-        browse_result = admin.invoke('zato.pubsub.subscription.browse-queue', {
-            'sub_key': sub_key,
-            'state': 'pending',
-        })
-
-        rows = browse_result['rows']
-        target_row = None
-        for row in rows:
-            if row['msg_id'] == msg_id:
-                target_row = row
-                break
-
-        assert target_row is not None
-        redis_stream_id = target_row['redis_stream_id']
-
         detail = admin.invoke('zato.pubsub.subscription.get-message-detail', {
             'msg_id': msg_id,
             'topic_name': _topic,
-            'redis_stream_id': redis_stream_id,
         })
 
         assert '{"updated": true}' in detail['data']

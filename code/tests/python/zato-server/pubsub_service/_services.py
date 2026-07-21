@@ -122,28 +122,24 @@ class PubSubTestPublishToService(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class PubSubTestCheckRedisTopics(Service):
-    """ Returns a list of Redis stream keys matching the service topic prefix.
+class PubSubTestCheckTopics(Service):
+    """ Returns the names of the service topics that hold any rows in the pub/sub database.
     Used by tests to verify implicit topic creation.
     """
 
-    name = 'test.pubsub.check-redis-topics'
+    name = 'test.pubsub.check-topics'
 
     def handle(self) -> 'None':
         from json import dumps
 
-        redis = self.server.pubsub_redis.redis
-
-        prefix = 'zato:pubsub:stream:zato.s.to.'
-        keys = redis.keys(prefix + '*')
+        prefix = 'zato.s.to.'
+        all_topics = self.server.pubsub_backend.get_topics_with_messages()
 
         topic_names = []
 
-        for key in keys:
-            if isinstance(key, bytes):
-                key = key.decode('utf-8')
-            topic_name = key.replace('zato:pubsub:stream:', '')
-            topic_names.append(topic_name)
+        for topic_name in all_topics:
+            if topic_name.startswith(prefix):
+                topic_names.append(topic_name)
 
         self.response.payload = dumps({'topics': topic_names})
 
@@ -531,28 +527,37 @@ class PubSubTestClearServiceReceived(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class PubSubTestResetServiceStreams(Service):
-    """ Deletes all service-related Redis streams and consumer groups, and removes
+class PubSubTestResetServiceTopics(Service):
+    """ Deletes all service-related topics from the pub/sub database and removes
     their entries from the server's push subscription and topic caches,
     so the next publish recreates everything from scratch.
     """
 
-    name = 'test.pubsub.reset-service-streams'
+    name = 'test.pubsub.reset-service-topics'
 
     def handle(self) -> 'None':
         from json import dumps
 
-        redis = self.server.pubsub_redis.redis
-        prefix = 'zato:pubsub:stream:zato.s.to.test.pubsub.service-'
-        keys = redis.keys(prefix + '*')
+        backend = self.server.pubsub_backend
+        prefix = 'zato.s.to.test.pubsub.service-'
 
-        deleted_count = 0
+        # Collect the service topics that hold any message rows ..
+        topic_names = set()
 
-        for key in keys:
-            if isinstance(key, bytes):
-                key = key.decode('utf-8')
-            _ = redis.delete(key)
-            deleted_count += 1
+        for topic_name in backend.get_topics_with_messages():
+            if topic_name.startswith(prefix):
+                topic_names.add(topic_name)
+
+        # .. and the ones the service subscribers are still subscribed to ..
+        for short_name in _service_routing:
+            sub_key = 'zato.service.test.pubsub.' + short_name
+
+            for topic_name in backend.get_subscribed_topics(sub_key):
+                topic_names.add(topic_name)
+
+        # .. remove each of them together with its messages, deliveries and subscriptions ..
+        for topic_name in topic_names:
+            backend.delete_topic(topic_name)
 
         # .. also clean up the server's in-memory caches ..
         for short_name in _service_routing:
@@ -572,7 +577,9 @@ class PubSubTestResetServiceStreams(Service):
         for received_list in _service_received.values():
             received_list.clear()
 
-        self.response.payload = dumps({'deleted_streams': deleted_count})
+        deleted_count = len(topic_names)
+
+        self.response.payload = dumps({'deleted_topics': deleted_count})
 
 # ################################################################################################################################
 # ################################################################################################################################

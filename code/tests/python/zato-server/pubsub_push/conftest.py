@@ -156,22 +156,14 @@ zato_server = create_zato_server_fixture(
 
 @pytest.fixture(autouse=True)
 def clear_all_outputs() -> 'any_':
-    """ Trims Redis pub/sub streams and clears all delivered message files before each test.
+    """ Clears the pub/sub database and all delivered message files before each test.
     """
-    # redis
-    from redis import Redis
-
     # Zato
-    from zato.common.api import PubSub
+    from zato.common.test import pubsub_db
     from zato.common.test.config_pubsub_push import TestConfig
 
-    # .. trim all pub/sub streams to 0 so no in-flight deliveries leak across tests ..
-    redis_client = Redis(host='localhost', port=6379, db=PubSub.Test_Redis_DB, decode_responses=True)
-
-    for key in redis_client.scan_iter('zato:pubsub:stream:*'):
-        _ = redis_client.xtrim(key, maxlen=0)
-
-    redis_client.close()
+    # .. remove all message and delivery rows so no in-flight deliveries leak across tests ..
+    pubsub_db.delete_all_messages()
 
     # .. then clear receiver output directories ..
     for endpoint_config in TestConfig.endpoints.values():

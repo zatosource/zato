@@ -403,6 +403,13 @@ def create_zato_server_fixture(
             quickstart_prefix=quickstart_prefix,
         )
 
+        # .. point the pub/sub database at this environment's own file so the server,
+        # .. any subprocesses and the test process itself all share one database
+        # .. that starts empty and disappears together with the quickstart directory ..
+        pubsub_db_path = os.path.join(server_directory, 'pubsub.db')
+        os.environ['Zato_PubSub_DB_Name'] = pubsub_db_path
+        logger.info('Pub/sub database: %s', pubsub_db_path)
+
         # .. copy services into the pickup directory if needed ..
         hot_deploy_sources = setup_result.get('hot_deploy_sources', []) # type: ignore[union-attr]
 

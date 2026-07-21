@@ -8,16 +8,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-import os
 import threading
 import time
 
-# redis
-from redis import Redis
-
 # Zato
-from zato.common.api import PubSub
-from zato.common.typing_ import cast_
+from zato.common.test import pubsub_db
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,13 +29,6 @@ _settle_time = 0.5
 
 _topic_concurrent = 'unsub.atomic.concurrent'
 _topic_burst      = 'unsub.atomic.burst'
-
-_test_redis_host = 'localhost'
-_test_redis_port = 6379
-_test_redis_db   = PubSub.Test_Redis_DB
-
-_Pending_Prefix     = 'zato:pubsub:pending:'
-_Sub_Pending_Prefix = 'zato:pubsub:sub_pending:'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,12 +48,6 @@ def _get_publisher() -> 'any_':
 
     publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
     return publisher
-
-# ################################################################################################################################
-
-def _get_redis() -> 'Redis':
-    redis = Redis(host=_test_redis_host, port=_test_redis_port, db=_test_redis_db, decode_responses=True)
-    return redis
 
 # ################################################################################################################################
 
@@ -105,7 +87,7 @@ def _get_sub_key(admin:'any_', topic_name:'str') -> 'str':
                 out = subscription['sub_key']
                 return out
 
-    raise RuntimeError(f'No subscription found for topic: {topic_name}')
+    raise Exception(f'No subscription found for topic: {topic_name}')
 
 # ################################################################################################################################
 
@@ -125,7 +107,7 @@ def _get_sub_id(admin:'any_', topic_name:'str') -> 'int':
                 out = subscription['id']
                 return out
 
-    raise RuntimeError(f'No subscription found for topic: {topic_name}')
+    raise Exception(f'No subscription found for topic: {topic_name}')
 
 # ################################################################################################################################
 
@@ -142,44 +124,22 @@ def _recreate_subscription(admin:'any_', topic_name:'str') -> 'None':
     })
 
 # ################################################################################################################################
-
-def _scan_pending_keys_for_sub(redis:'Redis', sub_key:'str') -> 'anylist':
-    """ Scans all pending:<data_ref> keys and returns those that still contain sub_key.
-    """
-    out:'anylist' = []
-    cursor = 0
-
-    while True:
-        scan_result = cast_('tuple', redis.scan(cursor, match=f'{_Pending_Prefix}*', count=100))
-        cursor = scan_result[0]
-        keys = scan_result[1]
-
-        for key in keys:
-            if redis.sismember(key, sub_key):
-                out.append(key)
-
-        if cursor == 0:
-            break
-
-    return out
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 class TestNoStalePendingAfterConcurrentPublishAndUnsub:
     """ Proves the primary race is closed: concurrent publish + unsubscribe
-    cannot leave stale entries in pending sets.
+    cannot leave stale delivery rows behind.
 
-    Gap: between SREM topic_subs and Lua pending cleanup, a publish Lua could
-    read SMEMBERS before the SREM and add the sub_key to a pending set that
-    the cleanup Lua then misses. After fix, both operations are atomic.
+    Gap: between removing the subscription row and cleaning up the pending
+    deliveries, a publish could read the subscriber list before the removal
+    and add a delivery row the cleanup then misses. After fix, unsubscribe
+    removes the subscription row first, then sweeps the delivery rows.
     """
 
     def test_01_no_stale_pending_after_concurrent_publish_and_unsub(self, zato_server:'any_') -> 'None':
 
         admin = _get_admin()
         publisher = _get_publisher()
-        redis = _get_redis()
 
         sub_key = _get_sub_key(admin, _topic_concurrent)
         sub_id = _get_sub_id(admin, _topic_concurrent)
@@ -206,18 +166,15 @@ class TestNoStalePendingAfterConcurrentPublishAndUnsub:
         publish_thread.join()
         time.sleep(_settle_time)
 
-        # .. after unsubscribe, no pending:<data_ref> set should contain sub_key ..
-        stale_keys = _scan_pending_keys_for_sub(redis, sub_key)
+        # .. after unsubscribe, no delivery rows may remain for the sub_key ..
+        pending_count = pubsub_db.count_pending(sub_key)
 
-        assert stale_keys == [], \
-            f'Stale pending entries found containing sub_key after unsub: {stale_keys}'
+        assert pending_count == 0, \
+            f'Stale delivery rows found for sub_key after unsub: {pending_count}'
 
-        # .. sub_pending:<sub_key> must not exist ..
-        sub_pending_key = f'{_Sub_Pending_Prefix}{sub_key}'
-        sub_pending_exists = redis.exists(sub_pending_key)
-
-        assert sub_pending_exists == 0, \
-            f'sub_pending key still exists after unsub: {sub_pending_key}'
+        # .. and the subscription state must be gone too ..
+        assert pubsub_db.get_subscribed_topics(sub_key) == [], \
+            f'Subscription state still exists after unsub: {sub_key}'
 
         # .. re-create the subscription for test isolation.
         _recreate_subscription(admin, _topic_concurrent)
@@ -228,7 +185,7 @@ class TestNoStalePendingAfterConcurrentPublishAndUnsub:
 
 class TestUnsubDuringBurstPublish:
     """ Burst variant: 10 rapid publishes concurrent with unsub.
-    After unsub completes, no pending set contains the sub_key.
+    After unsub completes, no delivery rows remain for the sub_key.
 
     Gap: same as test_01 but with higher message volume to increase
     the probability of interleaving under the old non-atomic code.
@@ -238,7 +195,6 @@ class TestUnsubDuringBurstPublish:
 
         admin = _get_admin()
         publisher = _get_publisher()
-        redis = _get_redis()
 
         sub_key = _get_sub_key(admin, _topic_burst)
         sub_id = _get_sub_id(admin, _topic_burst)
@@ -265,18 +221,15 @@ class TestUnsubDuringBurstPublish:
         publish_thread.join()
         time.sleep(_settle_time)
 
-        # .. no pending set should contain sub_key ..
-        stale_keys = _scan_pending_keys_for_sub(redis, sub_key)
+        # .. no delivery rows may remain for the sub_key ..
+        pending_count = pubsub_db.count_pending(sub_key)
 
-        assert stale_keys == [], \
-            f'Stale pending entries found after burst unsub: {stale_keys}'
+        assert pending_count == 0, \
+            f'Stale delivery rows found after burst unsub: {pending_count}'
 
-        # .. sub_pending:<sub_key> must not exist ..
-        sub_pending_key = f'{_Sub_Pending_Prefix}{sub_key}'
-        sub_pending_exists = redis.exists(sub_pending_key)
-
-        assert sub_pending_exists == 0, \
-            f'sub_pending key still exists after burst unsub: {sub_pending_key}'
+        # .. and the subscription state must be gone too ..
+        assert pubsub_db.get_subscribed_topics(sub_key) == [], \
+            f'Subscription state still exists after burst unsub: {sub_key}'
 
         # .. re-create the subscription for test isolation.
         _recreate_subscription(admin, _topic_burst)
@@ -285,46 +238,36 @@ class TestUnsubDuringBurstPublish:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestDiskFilesCleanedAfterUnsub:
+class TestPayloadsDroppedAfterUnsub:
     """ Functional consequence: publish a message to a 1-subscriber topic,
-    unsubscribe immediately, verify disk file is deleted.
+    unsubscribe immediately, verify the payload is dropped from the message row.
 
-    Gap: if a stale pending entry were left behind, the disk file would never
-    be cleaned because the pending count would never reach zero. This test
-    proves that after the atomic fix, disk cleanup proceeds correctly.
+    Gap: if a stale delivery row were left behind, the payload would never
+    be dropped because the pending count would never reach zero. This test
+    proves that after the atomic fix, payload cleanup proceeds correctly.
     """
 
-    def test_03_disk_files_cleaned_after_unsub(self, zato_server:'any_') -> 'None':
-
-        from zato.common.test.config_pubsub_unsub_atomic import TestConfig
+    def test_03_payloads_dropped_after_unsub(self, zato_server:'any_') -> 'None':
 
         admin = _get_admin()
         publisher = _get_publisher()
 
         sub_id = _get_sub_id(admin, _topic_concurrent)
 
-        # .. publish 1 message so it ends up on disk ..
-        _ = publisher.publish(_topic_concurrent, 'disk-cleanup-race-payload')
+        # .. publish 1 message so its payload is retained for the subscriber ..
+        result = publisher.publish(_topic_concurrent, 'payload-cleanup-race-payload')
+        msg_id = result['msg_id']
         time.sleep(_settle_time)
 
-        # .. delete the subscription (triggers unsubscribe + disk cleanup) ..
+        # .. delete the subscription (triggers unsubscribe + payload cleanup) ..
         _ = admin.invoke('zato.pubsub.subscription.delete', {'id': sub_id})
         time.sleep(_settle_time)
 
-        # .. verify no .msg files remain for this topic ..
-        pubsub_messages_dir = os.path.join(TestConfig.server_directory, 'work', 'pubsub-messages')
-        topic_dir = os.path.join(pubsub_messages_dir, _topic_concurrent)
+        # .. verify the payload was dropped from the message row ..
+        with_payload = pubsub_db.count_messages_with_payload([msg_id])
 
-        file_count = 0
-
-        if os.path.isdir(topic_dir):
-            for _, _dirs, files in os.walk(topic_dir):
-                for file_name in files:
-                    if file_name.endswith('.msg'):
-                        file_count += 1
-
-        assert file_count == 0, \
-            f'Expected 0 .msg files after unsub, found {file_count} in {topic_dir}'
+        assert with_payload == 0, \
+            f'Expected the payload of {msg_id} to be dropped after unsub'
 
         # .. re-create the subscription for test isolation.
         _recreate_subscription(admin, _topic_concurrent)
