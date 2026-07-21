@@ -11,13 +11,14 @@ from datetime import timedelta
 from logging import getLogger
 
 # SQLAlchemy
-from sqlalchemy import and_, Column, Integer, LargeBinary, MetaData, select, String, Table, Text, UniqueConstraint
+from sqlalchemy import and_, BigInteger, Column, Integer, LargeBinary, MetaData, select, String, Table, Text, UniqueConstraint
 from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.common.api import AS2
 from zato.common.as2.inbound import StoredMDN
 from zato.common.audit_log.api import get_audit_engine
+from zato.common.db_env import ensure_column_types
 from zato.common.json_internal import dumps, loads
 from zato.common.util.api import utcnow
 
@@ -53,8 +54,12 @@ _retention_check_interval = 1000
 # constraint on the identity triple, so detection stays atomic when more than one server handles traffic.
 metadata = MetaData()
 
+# Row identifiers are 64-bit, except under SQLite where the autoincrement
+# primary key must be a plain INTEGER to become an alias of the built-in rowid.
+_id_column_type = BigInteger().with_variant(Integer(), 'sqlite')
+
 duplicate_table = Table('as2_duplicate', metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('id', _id_column_type, primary_key=True, autoincrement=True),
     Column('as2_from', String(_short_column_len)),
     Column('as2_to', String(_short_column_len)),
     Column('message_id', String(_short_column_len)),
@@ -85,8 +90,10 @@ class DuplicateStore:
 
         self.engine:'Engine' = engine
 
-        # The schema creation is idempotent, the same way the audit log's is.
+        # The schema creation is idempotent, the same way the audit log's is,
+        # and databases created by older releases may still hold the id as 32-bit.
         metadata.create_all(self.engine)
+        ensure_column_types(self.engine, duplicate_table)
 
         # Counts stores so retention can run periodically instead of on every write.
         self._store_count = 0

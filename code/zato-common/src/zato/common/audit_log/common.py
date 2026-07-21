@@ -12,7 +12,7 @@ from http.client import BAD_GATEWAY, BAD_REQUEST, FORBIDDEN, GATEWAY_TIMEOUT, NO
     SERVICE_UNAVAILABLE, TOO_MANY_REQUESTS, UNAUTHORIZED, UNPROCESSABLE_ENTITY
 
 # SQLAlchemy
-from sqlalchemy import Column, Index, Integer, MetaData, Numeric, String, Table, Text
+from sqlalchemy import BigInteger, Column, Index, Integer, MetaData, Numeric, String, Table, Text
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -143,8 +143,12 @@ class AuditLink:
 # Short columns are VARCHAR because MySQL cannot index TEXT columns without a prefix length.
 metadata = MetaData()
 
+# Event identifiers are 64-bit, except under SQLite where the autoincrement
+# primary key must be a plain INTEGER to become an alias of the built-in rowid.
+_id_column_type = BigInteger().with_variant(Integer(), 'sqlite')
+
 event_table = Table('event', metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('id', _id_column_type, primary_key=True, autoincrement=True),
     Column('cid', String(_short_column_len)),
     Column('cid_sequence', Integer),
     Column('source', String(_short_column_len)),
@@ -177,8 +181,8 @@ event_table = Table('event', metadata,
 # Values are stored as capped text, and numbers additionally go to a numeric column
 # so aggregation queries can sum and group without casting.
 event_attr_table = Table('event_attr', metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('event_id', Integer),
+    Column('id', _id_column_type, primary_key=True, autoincrement=True),
+    Column('event_id', BigInteger),
     Column('name', String(_short_column_len)),
     Column('value', String(_short_column_len)),
     Column('value_number', Numeric(20, 6, asdecimal=False)),
@@ -193,8 +197,8 @@ event_attr_table = Table('event_attr', metadata,
 # and pruning content is a bulk delete here rather than column surgery on the event table.
 # The event time is denormalized so pruning never needs a join.
 event_body_table = Table('event_body', metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('event_id', Integer),
+    Column('id', _id_column_type, primary_key=True, autoincrement=True),
+    Column('event_id', BigInteger),
     Column('kind', String(_short_column_len)),
     Column('event_time_iso', String(_short_column_len)),
     Column('data', Text),
@@ -207,9 +211,9 @@ event_body_table = Table('event_body', metadata,
 # Lineage between events - resubmissions, batch membership and aggregation.
 # A link table because one event may have many parents.
 event_link_table = Table('event_link', metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('child_event_id', Integer),
-    Column('parent_event_id', Integer),
+    Column('id', _id_column_type, primary_key=True, autoincrement=True),
+    Column('child_event_id', BigInteger),
+    Column('parent_event_id', BigInteger),
     Column('link_type', String(_short_column_len)),
     Index('idx_event_link_child', 'child_event_id'),
     Index('idx_event_link_parent', 'parent_event_id'),
@@ -221,7 +225,7 @@ event_link_table = Table('event_link', metadata,
 # so a double-click or two overlapping bulk operations cannot double-apply one message.
 # A row acquired but never completed marks an interrupted resubmit, detectable as in-doubt.
 event_dedup_table = Table('event_dedup', metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('id', _id_column_type, primary_key=True, autoincrement=True),
     Column('dedup_key', String(_short_column_len)),
     Column('cid', String(_short_column_len)),
     Column('action', String(_short_column_len)),
@@ -238,7 +242,7 @@ event_dedup_table = Table('event_dedup', metadata,
 # the dedup window, repeated findings increment the count instead of adding rows,
 # and acknowledgment is recorded in place, so an alert never exists twice half-resolved.
 alert_table = Table('alert', metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('id', _id_column_type, primary_key=True, autoincrement=True),
     Column('rule_name', String(_short_column_len)),
     Column('source', String(_short_column_len)),
     Column('object_name', String(_short_column_len)),
