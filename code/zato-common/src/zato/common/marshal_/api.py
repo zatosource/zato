@@ -113,6 +113,50 @@ class Model(BaseModel):
     __name__: 'str'
     after_created = None
 
+    def __getattr__(self, name:'str') -> 'any_':
+
+        # Underscore names never vivify - pickling, copying and dataclass internals probe them.
+        if name.startswith('_'):
+            raise AttributeError(name)
+
+        # Not a dataclass yet (the decorator is missing) - nothing to reason about.
+        fields = getattr(type(self), _FIELDS, None)
+        if fields is None:
+            raise AttributeError(name)
+
+        # A name outside the declared fields is a typo - report what the fields are.
+        if name not in fields:
+            raise AttributeError('No such field `{}` in `{}` among `{}`'.format(
+                name, type(self).__name__, sorted(fields)))
+
+        # An optional field resolves to its underlying type first.
+        field_type = fields[name].type
+        if is_union(field_type):
+            _, field_type, _ = extract_from_union(field_type)
+
+        # A nested model field vivifies an instance of its class and registers it,
+        # so repeated reads return the same object and assignments below it stick.
+        if isclass(field_type) and issubclass(field_type, Model):
+            instance = field_type.__new__(field_type)
+            setattr(self, name, instance)
+            return instance
+
+        # A scalar field that was never set cannot vivify - only nested models can.
+        raise AttributeError('Field `{}` of `{}` is `{}`, not a nested model'.format(
+            name, type(self).__name__, field_type))
+
+    def __setattr__(self, name:'str', value:'any_') -> 'None':
+
+        fields = getattr(type(self), _FIELDS, None)
+
+        # Underscore names are internal helpers and a class that is not a dataclass yet accepts anything -
+        # otherwise, only declared fields may be assigned so typos fail at the assignment line.
+        if fields is None or name.startswith('_') or name in fields:
+            object.__setattr__(self, name, value)
+        else:
+            raise AttributeError('No such field `{}` in `{}` among `{}`'.format(
+                name, type(self).__name__, sorted(fields)))
+
     def __getitem__(self, name, default=None):
         if not isinstance(name, str):
             name = str(name)

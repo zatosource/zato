@@ -148,7 +148,7 @@ class IsDeployed(Service):
 class _Get(AdminService):
 
     input = 'cluster_id',
-    output = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted')
+    output = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Integer('slow_threshold'), Boolean('may_be_deleted')
 
     def get_data(self, session): # type: ignore
         query = session.query(ODBService.id, ODBService.name, ODBService.is_active,
@@ -484,7 +484,7 @@ class ServiceInvoker(Service):
 # ################################################################################################################################
 
     def _extract_payload_from_request(self):
-        payload = self.request.raw_request
+        payload = self.request.raw
         payload = loads(payload) if payload else None
         return payload
 
@@ -625,7 +625,7 @@ class RPCServiceInvoker(Service):
     """ An invoker making use of the API that Redis-based communication used to use.
     """
     def handle(self):
-        self.server.on_broker_msg(self.request.raw_request)
+        self.server.on_broker_msg(self.request.raw)
 
 # ################################################################################################################################
 # ################################################################################################################################

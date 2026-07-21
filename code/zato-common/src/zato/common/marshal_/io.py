@@ -59,6 +59,23 @@ class DataClassIO:
         self.server = server
         self.user_declaration = user_declaration
 
+# ################################################################################################################################
+
+    @property
+    def output_model_class(self) -> 'any_':
+        """ The model class declared as output, if any - the declaration is genuinely optional
+        because input-only services are commonplace.
+        """
+        return getattr(self.user_declaration, 'output', None)
+
+# ################################################################################################################################
+
+    @property
+    def has_output_declared(self) -> 'bool':
+        return self.output_model_class is not None
+
+# ################################################################################################################################
+
     @staticmethod
     def attach_io(server, class_):
         """ Given a service class, the method extracts its user-defined I/O definition

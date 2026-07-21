@@ -413,7 +413,7 @@ class GetPublishTimeline(AdminService):
     def handle(self) -> 'None':
 
         # Get the time window from the request ..
-        since_minutes = self.request.raw_request['since_minutes']
+        since_minutes = self.request.raw['since_minutes']
 
         # .. collect the names of all the topics that hold messages ..
         topic_names = _get_all_topic_names(self.server)
@@ -433,7 +433,7 @@ class GetPublisherCount(AdminService):
     def handle(self) -> 'None':
 
         # Get the time window from the request ..
-        since_minutes = self.request.raw_request['since_minutes']
+        since_minutes = self.request.raw['since_minutes']
 
         # .. collect the names of all the topics that hold messages ..
         topic_names = _get_all_topic_names(self.server)
@@ -460,7 +460,7 @@ class OnAMQPMessage(Service):
         channel_name = self.channel.name
 
         # .. the body is delivered as-is, without any envelope ..
-        body = self.request.raw_request
+        body = self.request.raw
 
         config_manager = self.server.config_manager
 
@@ -485,8 +485,8 @@ class Publish(AdminService):
     def handle(self) -> 'None':
 
         # Get the topic name and message data from the request ..
-        topic_name = self.request.raw_request['topic_name']
-        data = self.request.raw_request['data']
+        topic_name = self.request.raw['topic_name']
+        data = self.request.raw['data']
 
         # .. publish the message ..
         result = self.publish(topic_name, data)

@@ -978,7 +978,7 @@ class HandleDelivery(Service):
     def handle(self):
 
         # Local aliases
-        input:'strdict' = self.request.raw_request
+        input:'strdict' = self.request.raw
 
         # Extract the metadata - and delete it from input because we don't want to deliver it
         meta = input.pop('_zato_meta')

@@ -70,7 +70,7 @@ class ImportObjects(Service):
     def handle(self):
 
         # data = test_data
-        data = self.request.raw_request
+        data = self.request.raw
 
         # Data that we received on input
         input:'ObjectContainer' = ObjectContainer.from_dict(data)

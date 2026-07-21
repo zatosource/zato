@@ -1433,6 +1433,13 @@ class RequestHandler:
         This includes converting dictionaries into JSON or adding Zato metadata.
         """
 
+        # A model that was vivified by a read but never given any field is the same
+        # as no response at all - it must not leak a half-built instance to the wire.
+        # The payload has to be read first because it is that read that vivifies the model.
+        payload = response.payload
+        if response._payload_vivified and isinstance(payload, Model) and not payload.__dict__:
+            response.payload = ''
+
         # A message assigned by a service behind a SOAP channel is wrapped in an envelope
         # matching the request - strings and bytes keep passing through as they are.
         if transport == _transport_soap:
