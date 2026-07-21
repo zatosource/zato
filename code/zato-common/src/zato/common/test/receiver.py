@@ -191,8 +191,15 @@ class _RequestHandler(BaseHTTPRequestHandler):
             file_name = f'{hex_string}.json'
             file_path = os.path.join(output_directory, file_name)
 
-            with open(file_path, 'wb') as output_file:
+            # Write to a temporary name first and rename atomically - readers polling
+            # the directory must never see a half-written .json file, otherwise they
+            # count a delivery whose content they then skip as incomplete.
+            temporary_path = file_path + '.tmp'
+
+            with open(temporary_path, 'wb') as output_file:
                 _ = output_file.write(body)
+
+            os.rename(temporary_path, file_path)
 
             logger.info('Persisted payload to %s', file_path)
 
@@ -324,9 +331,12 @@ class WebhookReceiver:
         deadline = time.monotonic() + timeout
 
         while time.monotonic() < deadline:
-            count = self.delivered_count()
-            if count >= expected_count:
-                out = self.get_delivered_messages()
+
+            # Count the parsed messages, not the files - the two must never diverge,
+            # otherwise a file observed mid-write satisfies the count while the parsed
+            # list comes back one message short.
+            out = self.get_delivered_messages()
+            if len(out) >= expected_count:
                 return out
 
             # .. wait for the next delivery signal, then recheck ..
