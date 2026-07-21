@@ -64,6 +64,9 @@
 }
 
 .zato-table tbody tr:last-child td {
-    padding-bottom: 14px;
+    /* One variable drives both paddings so the content always stays vertically centered */
+    --last-row-padding: 9px;
+    padding-top: var(--last-row-padding);
+    padding-bottom: var(--last-row-padding);
     border-bottom: none;
 }
