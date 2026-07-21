@@ -45,8 +45,8 @@ Cell_Claims   = 24
 # Text fields the create and edit dialogs share, in both the dynamic and the inbound sections
 _Text_Fields = ('name', 'auth_server_url', 'username', 'secret', 'issuer', 'jwks_url', 'audience', 'claims')
 
-# Text fields specific to the static tokens tab
-_Static_Fields = ('static_header', 'static_prefix', 'static_token')
+# Text fields specific to the static tokens tab - the token itself appears only in the create form
+_Static_Fields = ('static_header', 'static_prefix')
 
 # ################################################################################################################################
 # ################################################################################################################################

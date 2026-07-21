@@ -100,6 +100,23 @@ def _submit_edit_form(page:'Page') -> 'None':
 
 # ################################################################################################################################
 
+def _change_secret(page:'Page', item_id:'str', client_secret:'str') -> 'None':
+    """ Sets the client secret of a connection via the change-secret dialog.
+    """
+
+    # Open the dialog ..
+    page.evaluate(f'$.fn.zato.data_table.change_password("{item_id}", "Change secret")')
+    _ = page.wait_for_selector('#change_password-div', state='visible', timeout=5000)
+
+    # .. fill in the new secret ..
+    page.fill('#change_password-div #id_password', client_secret)
+
+    # .. and submit, waiting for the dialog to close.
+    page.click('#change_password-div input[type="submit"]')
+    _ = page.wait_for_selector('#change_password-div', state='hidden', timeout=10000)
+
+# ################################################################################################################################
+
 def _delete_connection(page:'Page', item_id:'str') -> 'None':
     page.evaluate(f'$.fn.zato.cloud.microsoft_fabric.delete_("{item_id}")')
     page.wait_for_selector('#popup_container', state='visible', timeout=5000)
@@ -132,9 +149,11 @@ def _do_full_crud(page:'Page', base_url:'str', suffix:'str') -> 'None':
     page.fill('#id_edit-name', edited_name)
     page.fill('#id_edit-tenant_id', 'tenant-id-edited')
     page.fill('#id_edit-client_id', 'client-id-edited')
-    page.fill('#id_edit-client_secret', client_secret)
 
     _submit_edit_form(page)
+
+    # .. change the secret through its own dialog ..
+    _change_secret(page, item_id, client_secret + '-changed')
 
     # .. delete.
     _delete_connection(page, item_id)
@@ -239,9 +258,11 @@ class TestCloudMicrosoftFabricLifecycle:
         page.fill('#id_edit-name', edited_name)
         page.fill('#id_edit-tenant_id', 'tenant-id-edited')
         page.fill('#id_edit-client_id', 'client-id-edited')
-        page.fill('#id_edit-client_secret', client_secret)
 
         _submit_edit_form(page)
+
+        # .. change the secret through its own dialog ..
+        _change_secret(page, item_id, client_secret + '-changed')
 
         # .. verify old name gone, new name present ..
         old_row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{name}"))')
@@ -288,7 +309,6 @@ class TestCloudMicrosoftFabricLifecycle:
         _open_edit_dialog(page, item_id)
 
         page.fill('#id_edit-tenant_id', 'tenant-id-unicode-edited')
-        page.fill('#id_edit-client_secret', client_secret)
 
         _submit_edit_form(page)
 

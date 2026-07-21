@@ -16,6 +16,7 @@ import requests
 
 # Zato
 from zato.common.api import MicrosoftPowerAutomate
+from zato.common.const import SECRETS
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -58,8 +59,14 @@ class MicrosoftPowerAutomateClient:
         self.name = config['name']
         self.tenant_id = config['tenant_id']
         self.client_id = config['client_id']
-        self.client_secret = config['client_secret']
         self.environment_id = config['environment_id']
+
+        # The secret lives in the secret column, except for connections created
+        # before it moved there, which keep it in the opaque attributes.
+        client_secret = config.get('secret')
+        if (not client_secret) or client_secret.startswith(SECRETS.Auto_Generated_Prefix):
+            client_secret = config['client_secret']
+        self.client_secret = client_secret
 
         # The base address of the Power Automate API - fall back to the public cloud if none was given on input.
         if address := config.get('address'):

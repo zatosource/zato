@@ -185,10 +185,11 @@ class EnmasseBearerInboundTestCase(TestCase):
             for item in exported['security']:
                 security_by_name[item['name']] = item
 
-            # .. the static definition keeps its token ..
+            # .. the static definition is exported as static but its token, which is import-only, is not ..
             static_def = security_by_name[static_name]
             self.assertEqual(static_def['type'], 'bearer_token')
-            self.assertEqual(static_def['static_token'], f'enmasse-static-token-{test_suffix}')
+            self.assertTrue(static_def['is_static_token'])
+            self.assertNotIn('static_token', static_def)
 
             # .. the JWT definition keeps all its inbound fields ..
             jwt_def = security_by_name[jwt_name]

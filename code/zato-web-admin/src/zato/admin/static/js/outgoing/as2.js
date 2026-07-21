@@ -108,10 +108,10 @@ $.fn.zato.outgoing.as2.field_descriptions = {
     'id_as2_trust_anchors': 'CA certificates in PEM that partner<br>certificates must chain up to.<br>An alternative to pinning one certificate.',
 
     // Keys tab
-    'id_as2_signing_key': 'Your private key in PEM, pasted as text.<br>It signs every outgoing message and is<br>stored encrypted, never in plain text.',
+    'id_as2_signing_key': 'Your private key in PEM, pasted as text.<br>It signs every outgoing message and is<br>stored encrypted, never in plain text.<br>Leave empty to keep the stored key.',
     'id_as2_signing_cert_chain': 'The certificate chain matching the signing key,<br>in PEM - your certificate first,<br>then any intermediates.',
-    'id_as2_decryption_key': 'The private key that decrypts messages<br>encrypted to you. Often the same<br>as the signing key. Stored encrypted.',
-    'id_as2_next_decryption_key': 'Your next private key, staged ahead<br>of your own rotation. Messages encrypted<br>to either key decrypt during the overlap.',
+    'id_as2_decryption_key': 'The private key that decrypts messages<br>encrypted to you. Often the same<br>as the signing key. Stored encrypted.<br>Leave empty to keep the stored key.',
+    'id_as2_next_decryption_key': 'Your next private key, staged ahead<br>of your own rotation. Messages encrypted<br>to either key decrypt during the overlap.<br>Leave empty to keep the stored key.',
     'id_as2_next_decryption_cert': 'The certificate of the next decryption key,<br>in PEM - it matches incoming messages<br>to the right key.',
 
     // Delivery tab
@@ -213,10 +213,12 @@ $.fn.zato.outgoing.as2.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.as2_partner_cert ? item.as2_partner_cert : '');
     row += String.format("<td class='ignore'>{0}</td>", item.as2_partner_next_cert ? item.as2_partner_next_cert : '');
     row += String.format("<td class='ignore'>{0}</td>", item.as2_partner_next_cert_from ? item.as2_partner_next_cert_from : '');
-    row += String.format("<td class='ignore'>{0}</td>", item.as2_signing_key ? item.as2_signing_key : '');
+    // Private keys never appear in the page - the backend keeps the stored ones
+    // when their edit form fields are left empty.
+    row += "<td class='ignore'></td>";
     row += String.format("<td class='ignore'>{0}</td>", item.as2_signing_cert_chain ? item.as2_signing_cert_chain : '');
-    row += String.format("<td class='ignore'>{0}</td>", item.as2_decryption_key ? item.as2_decryption_key : '');
-    row += String.format("<td class='ignore'>{0}</td>", item.as2_next_decryption_key ? item.as2_next_decryption_key : '');
+    row += "<td class='ignore'></td>";
+    row += "<td class='ignore'></td>";
     row += String.format("<td class='ignore'>{0}</td>", item.as2_next_decryption_cert ? item.as2_next_decryption_cert : '');
     row += String.format("<td class='ignore'>{0}</td>", item.as2_peer_signing_cert ? item.as2_peer_signing_cert : '');
     row += String.format("<td class='ignore'>{0}</td>", item.as2_peer_encryption_cert ? item.as2_peer_encryption_cert : '');

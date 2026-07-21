@@ -14,7 +14,7 @@ from unittest.mock import MagicMock
 # Zato
 from zato.common.api import PubSub
 from zato.common.facade import PubSubFacade, _service_topic_prefix
-from zato.common.pubsub.redis_backend import PublishResult
+from zato.common.pubsub.sql.backend import PublishResult
 from zato.server.base.config_manager import ConfigManager
 
 # ################################################################################################################################
@@ -36,7 +36,7 @@ class _ConfigManagerStub:
         self._push_subs = {}
         self.amqp_invoke = MagicMock()
 
-        # The AMQP publish path writes audit events through server.pubsub_redis.audit_log
+        # The AMQP publish path writes audit events through server.pubsub_backend.audit_log
         self.server = MagicMock()
 
 # ################################################################################################################################
@@ -65,10 +65,10 @@ class TestPubSubFacadeAMQPRouting(unittest.TestCase):
         }
         self.config_manager._topic_backends['topic.amqp'] = self.backend_config
 
-        # .. the built-in Redis backend returns its own result ..
-        redis_result = PublishResult()
-        redis_result.msg_id = 'redis-msg-001'
-        self.server.pubsub_redis.publish.return_value = redis_result
+        # .. the built-in backend returns its own result ..
+        backend_result = PublishResult()
+        backend_result.msg_id = 'backend-msg-001'
+        self.server.pubsub_backend.publish.return_value = backend_result
 
         self.facade = PubSubFacade(self.server, 'test.service')
 
@@ -88,7 +88,7 @@ class TestPubSubFacadeAMQPRouting(unittest.TestCase):
         )
 
         # The built-in backend is not involved at all
-        self.server.pubsub_redis.publish.assert_not_called()
+        self.server.pubsub_backend.publish.assert_not_called()
 
 # ################################################################################################################################
 
@@ -103,13 +103,13 @@ class TestPubSubFacadeAMQPRouting(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_builtin_topic_goes_to_redis(self) -> 'None':
-        """ A topic absent from the registry goes to pubsub_redis.publish
+    def test_builtin_topic_goes_to_backend(self) -> 'None':
+        """ A topic absent from the registry goes to pubsub_backend.publish
         with unchanged arguments, amqp_invoke is not called.
         """
         out = self.facade.publish('topic.builtin', 'builtin data', priority=7)
 
-        call_args = self.server.pubsub_redis.publish.call_args
+        call_args = self.server.pubsub_backend.publish.call_args
 
         self.assertEqual(call_args[0][0], 'topic.builtin')
         self.assertEqual(call_args[0][1], 'builtin data')
@@ -118,7 +118,7 @@ class TestPubSubFacadeAMQPRouting(unittest.TestCase):
 
         self.config_manager.amqp_invoke.assert_not_called()
 
-        self.assertEqual(out.msg_id, 'redis-msg-001')
+        self.assertEqual(out.msg_id, 'backend-msg-001')
 
 # ################################################################################################################################
 
@@ -133,7 +133,7 @@ class TestPubSubFacadeAMQPRouting(unittest.TestCase):
 
         self.config_manager.amqp_invoke.assert_not_called()
 
-        call_args = self.server.pubsub_redis.publish.call_args
+        call_args = self.server.pubsub_backend.publish.call_args
         self.assertEqual(call_args[0][0], service_topic)
 
 # ################################################################################################################################

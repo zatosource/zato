@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.const import SECRETS
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.playwright_pubsub import close_dialog_via_jquery
 from as4_outconn import create_as4_outconn, delete_as4_outconn, edit_as4_outconn, find_as4_outconn_row, \
@@ -102,10 +101,10 @@ class TestAS4OutconnLifecycle:
         assert page.input_value('#id_edit-timeout') == '20'
         assert page.input_value('#id_edit-validate_tls') == 'False'
 
-        # The private keys are stored encrypted, so the dialog shows the encrypted
-        # form rather than the pasted plain text ..
-        assert page.input_value('#id_edit-as4_signing_key').startswith(SECRETS.PREFIX)
-        assert page.input_value('#id_edit-as4_decryption_key').startswith(SECRETS.PREFIX)
+        # The private keys never come back to the page, so the dialog shows them empty -
+        # leaving them empty on an edit keeps the stored keys ..
+        assert page.input_value('#id_edit-as4_signing_key') == ''
+        assert page.input_value('#id_edit-as4_decryption_key') == ''
 
         # .. while the public certificates round-trip verbatim.
         assert page.input_value('#id_edit-as4_signing_cert_chain').strip() == sender.certificate.strip()
@@ -146,8 +145,9 @@ class TestAS4OutconnLifecycle:
         assert page.input_value('#id_edit-as4_mpc') == 'urn:test:mpc'
         assert page.input_value('#id_edit-as4_signing_cert_chain').strip() == sender.certificate.strip()
 
-        # .. and the encrypted keys survived the edit unchanged in kind.
-        assert page.input_value('#id_edit-as4_signing_key').startswith(SECRETS.PREFIX)
+        # .. and the private keys are still never shown, while the edit
+        # with the key fields left empty kept the stored ones.
+        assert page.input_value('#id_edit-as4_signing_key') == ''
 
         # .. close the dialog ..
         close_dialog_via_jquery(page, 'edit-div')

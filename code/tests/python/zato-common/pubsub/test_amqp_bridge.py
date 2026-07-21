@@ -166,7 +166,7 @@ class TestBridgeService(unittest.TestCase):
         service = MagicMock()
         service.channel.name = 'channel.1'
         service.cid = 'test-cid-001'
-        service.request.raw_request = 'inbound body'
+        service.request.raw = 'inbound body'
         service.server.config_manager.get_pubsub_topic_by_amqp_channel.return_value = 'topic.amqp'
 
         OnAMQPMessage.handle(service)

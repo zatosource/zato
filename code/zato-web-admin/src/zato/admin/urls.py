@@ -1195,8 +1195,8 @@ urlpatterns += [
         login_required(cloud_microsoft_365.Delete()), name=cloud_microsoft_365.Delete.url_name),
     url(r'^zato/cloud/microsoft-365/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(cloud_microsoft_365.ping), name='cloud-microsoft-365-ping'),
-    url(r'^zato/cloud/jira/reset-oauth2-scopes/$',
-        login_required(cloud_microsoft_365.reset_oauth2_scopes), name='cloud-microsoft-365-reset-oauth2-scopes'),
+    url(r'^zato/cloud/microsoft-365/change-password/$',
+        login_required(cloud_microsoft_365.change_password), name='cloud-microsoft-365-change-password'),
     ]
 
 urlpatterns += [
@@ -1213,6 +1213,8 @@ urlpatterns += [
         login_required(cloud_microsoft_fabric.Delete()), name=cloud_microsoft_fabric.Delete.url_name),
     url(r'^zato/cloud/microsoft-fabric/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(cloud_microsoft_fabric.ping), name='cloud-microsoft-fabric-ping'),
+    url(r'^zato/cloud/microsoft-fabric/change-password/$',
+        login_required(cloud_microsoft_fabric.change_password), name='cloud-microsoft-fabric-change-password'),
     ]
 
 urlpatterns += [
@@ -1229,6 +1231,8 @@ urlpatterns += [
         login_required(cloud_microsoft_power_automate.Delete()), name=cloud_microsoft_power_automate.Delete.url_name),
     url(r'^zato/cloud/microsoft-power-automate/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(cloud_microsoft_power_automate.ping), name='cloud-microsoft-power-automate-ping'),
+    url(r'^zato/cloud/microsoft-power-automate/change-password/$',
+        login_required(cloud_microsoft_power_automate.change_password), name='cloud-microsoft-power-automate-change-password'),
     ]
 
 urlpatterns += [

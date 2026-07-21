@@ -33,5 +33,8 @@ class SECRETS:
     # Zato secret (configuration)
     URL_PREFIX = 'zato+secret://'
 
+    # Secrets auto-generated for connections created without one
+    Auto_Generated_Prefix = 'auto.generated.'
+
 # ################################################################################################################################
 # ################################################################################################################################

@@ -6,9 +6,15 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from http import HTTPStatus
+from json import loads
+
 # Zato
+from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.cloud.microsoft_fabric import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, ping_connection
+from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
+    method_allowed, ping_connection
 from zato.common.api import GENERIC, generic_attrs
 from zato.common.model.microsoft_fabric import MicrosoftFabricConfigObject
 
@@ -24,7 +30,7 @@ class Index(_Index):
     paginate = True
 
     input_required = 'cluster_id', 'type_'
-    output_required = 'id', 'name', 'is_active', 'address', 'tenant_id', 'client_id', 'client_secret'
+    output_required = 'id', 'name', 'is_active', 'address', 'tenant_id', 'client_id'
     output_optional = generic_attrs
     output_repeated = True
 
@@ -35,6 +41,7 @@ class Index(_Index):
             'show_search_form': True,
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
+            'change_password_form': ChangePasswordForm(),
         }
 
 # ################################################################################################################################
@@ -43,7 +50,7 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    input_required = 'name', 'is_active', 'address', 'tenant_id', 'client_id', 'client_secret'
+    input_required = 'name', 'is_active', 'address', 'tenant_id', 'client_id'
     output_required = 'id', 'name'
 
 # ################################################################################################################################
@@ -69,6 +76,24 @@ class Create(_CreateEdit):
     url_name = 'cloud-microsoft-fabric-create'
     service_name = 'zato.generic.connection.create'
 
+    def __call__(self, req, *args, **kwargs):
+
+        # The secret from the create form is stored in a follow-up call.
+        response = super().__call__(req, *args, **kwargs)
+
+        if response.status_code == HTTPStatus.OK:
+            data = loads(response.content)
+            secret = req.POST.get('client_secret', '')
+
+            if secret:
+                _ = req.zato.client.invoke('zato.generic.connection.change-password', {
+                    'id': data['id'],
+                    'password': secret,
+                    'type_': GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_FABRIC,
+                })
+
+        return response
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -86,6 +111,12 @@ class Delete(_Delete):
     service_name = 'zato.generic.connection.delete'
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def change_password(req):
+    return _change_password(req, 'zato.generic.connection.change-password', success_msg='Secret updated')
+
 # ################################################################################################################################
 
 @method_allowed('POST')

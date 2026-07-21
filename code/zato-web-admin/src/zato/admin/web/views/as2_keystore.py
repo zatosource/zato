@@ -86,7 +86,8 @@ def get_expiry_info(cert_chain:'str') -> 'anydict':
 @method_allowed('GET')
 def index(req:'any_') -> 'TemplateResponse':
     """ Our own AS2 keystore - the signing pair, the current decryption key
-    and the next decryption pair staged for rotation.
+    and the next decryption pair staged for rotation. The private keys never
+    reach the page - only flags saying whether one is stored.
     """
     response = req.zato.client.invoke(_service_get)
     data = response.data
@@ -98,11 +99,11 @@ def index(req:'any_') -> 'TemplateResponse':
 
     return_data = {
         'cluster_id': default_cluster_id,
-        'as2_signing_key': data['as2_signing_key'],
         'as2_signing_cert_chain': data['as2_signing_cert_chain'],
-        'as2_decryption_key': data['as2_decryption_key'],
-        'as2_next_decryption_key': data['as2_next_decryption_key'],
         'as2_next_decryption_cert': data['as2_next_decryption_cert'],
+        'has_as2_signing_key': data['has_as2_signing_key'],
+        'has_as2_decryption_key': data['has_as2_decryption_key'],
+        'has_as2_next_decryption_key': data['has_as2_next_decryption_key'],
         'signing_expiry': signing_expiry,
         'next_cert_expiry': next_cert_expiry,
         'zato_clusters': True,

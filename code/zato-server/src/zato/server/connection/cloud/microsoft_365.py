@@ -21,6 +21,7 @@ from O365.utils.token import MemoryTokenBackend
 
 # Zato
 from zato.common.api import Microsoft365
+from zato.common.const import SECRETS
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -89,10 +90,15 @@ class Microsoft365Client:
 
         tenant_id = config['tenant_id']
         client_id = config['client_id']
-        secret_value = config.get('secret_value') or config.get('secret') or config.get('password')
+
+        # The secret lives in the secret column, except for connections created
+        # before it moved there, which keep it in the opaque attributes.
+        secret_value = config.get('secret')
+        if (not secret_value) or secret_value.startswith(SECRETS.Auto_Generated_Prefix):
+            secret_value = config.get('secret_value') or config.get('password')
 
         if not secret_value:
-            raise Exception(f'Secret value not found in {dict(config)}')
+            raise Exception(f'Secret value not found for `{self.name}`')
 
         credentials = (client_id, secret_value)
 

@@ -13,7 +13,7 @@ from unittest.mock import MagicMock
 
 # Zato
 from zato.common.facade import PubSubFacade, _service_name_to_topic, _service_topic_prefix, _service_sub_key_prefix
-from zato.common.pubsub.redis_backend import PublishResult
+from zato.common.pubsub.sql.backend import PublishResult
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -56,10 +56,10 @@ class TestPubSubFacadePublish(unittest.TestCase):
             'my.api.order.create': 'my_api_order_create.MyApiOrderCreate',
         }
 
-        # .. set up the Redis mock to return a PublishResult ..
+        # .. set up the backend mock to return a PublishResult ..
         publish_result = PublishResult()
         publish_result.msg_id = 'test-message-id-001'
-        self.server.pubsub_redis.publish.return_value = publish_result
+        self.server.pubsub_backend.publish.return_value = publish_result
 
         self.facade = PubSubFacade(self.server, 'test.service')
 
@@ -73,7 +73,7 @@ class TestPubSubFacadePublish(unittest.TestCase):
         expected_topic = _service_topic_prefix + 'my.api.customer.new'
         expected_sub_key = _service_sub_key_prefix + 'my.api.customer.new'
 
-        self.server.pubsub_redis.subscribe.assert_called_once_with(expected_sub_key, expected_topic)
+        self.server.pubsub_backend.subscribe.assert_called_once_with(expected_sub_key, expected_topic)
 
 # ################################################################################################################################
 
@@ -83,7 +83,7 @@ class TestPubSubFacadePublish(unittest.TestCase):
         _ = self.facade.publish('my.api.customer.new', 'test data')
 
         expected_topic = _service_topic_prefix + 'my.api.customer.new'
-        call_args = self.server.pubsub_redis.publish.call_args
+        call_args = self.server.pubsub_backend.publish.call_args
 
         self.assertEqual(call_args[0][0], expected_topic)
         self.assertEqual(call_args[0][1], 'test data')
@@ -95,9 +95,9 @@ class TestPubSubFacadePublish(unittest.TestCase):
         """
         _ = self.facade.publish('customer.events.new', 'test data')
 
-        self.server.pubsub_redis.subscribe.assert_not_called()
+        self.server.pubsub_backend.subscribe.assert_not_called()
 
-        call_args = self.server.pubsub_redis.publish.call_args
+        call_args = self.server.pubsub_backend.publish.call_args
 
         self.assertEqual(call_args[0][0], 'customer.events.new')
 
@@ -109,9 +109,9 @@ class TestPubSubFacadePublish(unittest.TestCase):
         _ = self.facade.publish('my.api.customer.new', 'first message')
         _ = self.facade.publish('my.api.customer.new', 'second message')
 
-        self.server.pubsub_redis.subscribe.assert_called_once()
+        self.server.pubsub_backend.subscribe.assert_called_once()
 
-        publish_call_count = self.server.pubsub_redis.publish.call_count
+        publish_call_count = self.server.pubsub_backend.publish.call_count
         self.assertEqual(publish_call_count, 2)
 
 # ################################################################################################################################
@@ -155,7 +155,7 @@ class TestPubSubFacadePublish(unittest.TestCase):
         _ = self.facade.publish('my.api.customer.new', 'customer data')
         _ = self.facade.publish('my.api.order.create', 'order data')
 
-        subscribe_call_count = self.server.pubsub_redis.subscribe.call_count
+        subscribe_call_count = self.server.pubsub_backend.subscribe.call_count
         self.assertEqual(subscribe_call_count, 2)
 
         sub_key_customer = _service_sub_key_prefix + 'my.api.customer.new'
@@ -167,7 +167,7 @@ class TestPubSubFacadePublish(unittest.TestCase):
 # ################################################################################################################################
 
     def test_publish_returns_publish_result(self) -> 'None':
-        """ Publish returns the PublishResult from the Redis backend.
+        """ Publish returns the PublishResult from the pub/sub backend.
         """
         out = self.facade.publish('my.api.customer.new', 'test data')
 
@@ -177,7 +177,7 @@ class TestPubSubFacadePublish(unittest.TestCase):
 # ################################################################################################################################
 
     def test_publish_passes_all_keyword_arguments(self) -> 'None':
-        """ All optional keyword arguments are forwarded to the Redis backend.
+        """ All optional keyword arguments are forwarded to the pub/sub backend.
         """
         _ = self.facade.publish(
             'customer.events',
@@ -190,7 +190,7 @@ class TestPubSubFacadePublish(unittest.TestCase):
             pub_time='2026-05-13T12:00:00',
         )
 
-        call_kwargs = self.server.pubsub_redis.publish.call_args[1]
+        call_kwargs = self.server.pubsub_backend.publish.call_args[1]
 
         self.assertEqual(call_kwargs['priority'], 9)
         self.assertEqual(call_kwargs['expiration'], 7200)
@@ -222,14 +222,14 @@ class TestPubSubFacadePublishInputModel(unittest.TestCase):
 
         publish_result = PublishResult()
         publish_result.msg_id = 'test-typed-msg-001'
-        self.server.pubsub_redis.publish.return_value = publish_result
+        self.server.pubsub_backend.publish.return_value = publish_result
 
         self.facade = PubSubFacade(self.server, 'my.typed.service')
 
 # ################################################################################################################################
 
     def test_dict_data_passed_through_unchanged(self) -> 'None':
-        """ A dict payload is forwarded to Redis backend exactly as provided.
+        """ A dict payload is forwarded to the pub/sub backend exactly as provided.
         """
         input_data = {
             'customer_name': 'Test Corp',
@@ -239,7 +239,7 @@ class TestPubSubFacadePublishInputModel(unittest.TestCase):
 
         _ = self.facade.publish('my.typed.service', input_data)
 
-        call_args = self.server.pubsub_redis.publish.call_args
+        call_args = self.server.pubsub_backend.publish.call_args
 
         self.assertEqual(call_args[0][1], input_data)
 
@@ -250,7 +250,7 @@ class TestPubSubFacadePublishInputModel(unittest.TestCase):
         """
         _ = self.facade.publish('my.typed.service', 'plain text message')
 
-        call_args = self.server.pubsub_redis.publish.call_args
+        call_args = self.server.pubsub_backend.publish.call_args
 
         self.assertEqual(call_args[0][1], 'plain text message')
 

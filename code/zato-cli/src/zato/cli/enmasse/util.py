@@ -533,7 +533,7 @@ def get_object_order(object_type:'str') -> 'strlist':
         'issuer', 'subject', 'audience', 'jwks_url', 'claims:list', 'signing_key', 'signing_certificate_chain', \
         'decryption_key', 'peer_certificate', 'trust_anchors', 'auth_endpoint', 'client_id_field', \
         'client_secret_field', 'grant_type', 'data_format', 'extra_fields:list', \
-        'static_header', 'static_token', 'static_prefix', 'rate_limiting:list', 'quota_tier',
+        'static_header', 'is_static_token', 'static_token', 'static_prefix', 'rate_limiting:list', 'quota_tier',
 
     order['quota_tier'] = 'name', 'description', 'rules:list',
     order['groups'] = 'name', 'is_active', 'quota_tier', 'members:list',
