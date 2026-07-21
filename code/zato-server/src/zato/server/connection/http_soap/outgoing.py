@@ -53,7 +53,7 @@ from zato.server.metrics import get_error_source_from_status_class, get_status_c
 if 0:
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.bearer_token import BearerTokenInfoResult
-    from zato.common.typing_ import any_, callnone, dictnone, list_, stranydict, strdictnone, strstrdict, type_
+    from zato.common.typing_ import any_, callnone, dictnone, list_, stranydict, strdictnone, strnone, strstrdict, type_
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict
     callnone = callnone
@@ -81,6 +81,7 @@ _Basic_Auth = SEC_DEF_TYPE.BASIC_AUTH
 _MTLS = SEC_DEF_TYPE.MTLS
 _NTLM = SEC_DEF_TYPE.NTLM
 _OAuth = SEC_DEF_TYPE.OAUTH
+_SPNEGO = SEC_DEF_TYPE.SPNEGO
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -100,6 +101,55 @@ class HTTPSAdapter(HTTPAdapter):
     """
     def clear_pool(self):
         self.poolmanager.clear()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SPNEGOAuth:
+    """ A requests auth object that acquires Kerberos credentials from a keytab lazily,
+    on the first request, so that a connection can be created and edited before its keytab
+    is mounted into the container.
+    """
+    def __init__(self, principal:'str', keytab_path:'str', target_spn:'strnone', needs_delegation:'bool') -> 'None':
+        self.principal = principal
+        self.keytab_path = keytab_path
+        self.target_spn = target_spn
+        self.needs_delegation = needs_delegation
+        self._impl = None
+
+    def _build_impl(self) -> 'any_':
+
+        # Imported here because the underlying gssapi package needs system Kerberos
+        # libraries which may be absent from installations that never use SPNEGO.
+        import gssapi
+        from requests_gssapi import HTTPSPNEGOAuth
+
+        # Credentials are acquired explicitly from the keytab, so no external kinit
+        # or credential cache is needed - gssapi re-acquires tickets from the keytab
+        # on its own when they expire.
+        creds = gssapi.Credentials(
+            name=gssapi.Name(self.principal, gssapi.NameType.kerberos_principal),
+            store={'client_keytab': self.keytab_path},
+            usage='initiate',
+        )
+
+        # The remote service's SPN is optional - when it is not given,
+        # it is derived from the target host name.
+        if self.target_spn:
+            target_name = gssapi.Name(self.target_spn, gssapi.NameType.hostbased_service)
+        else:
+            target_name = None
+
+        return HTTPSPNEGOAuth(creds=creds, target_name=target_name, delegate=self.needs_delegation)
+
+    def __call__(self, request:'any_') -> 'any_':
+
+        # The underlying auth object is built on first use - the keytab has to exist
+        # only when the connection is actually invoked, not when it is configured.
+        if self._impl is None:
+            self._impl = self._build_impl()
+
+        return self._impl(request)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -306,6 +356,23 @@ class BaseHTTPSOAPWrapper:
             # the connection itself may have been configured with.
             self.config['tls_client_cert'] = self.config.get('cert_path')
             self.config['tls_client_key'] = self.config.get('key_path')
+
+        # #######################################
+        #
+        # Kerberos (SPNEGO)
+        #
+        # #######################################
+        elif self.sec_type == _SPNEGO:
+
+            principal = self.config['principal']
+            keytab_path = self.config['keytab_path']
+            target_spn = self.config.get('target_spn')
+            needs_delegation = self.config.get('needs_delegation')
+
+            # The auth object defers all gssapi work until the first request goes out.
+            _requests_auth = SPNEGOAuth(principal, keytab_path, target_spn, bool(needs_delegation))
+            self.requests_auth = _requests_auth
+            self.username = principal
 
 # ################################################################################################################################
 

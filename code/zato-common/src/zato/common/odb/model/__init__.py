@@ -391,6 +391,28 @@ class MTLSSecurity(SecurityBase):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class SPNEGOSecurity(SecurityBase):
+    """ A Kerberos (SPNEGO) definition - the client principal, the path to its keytab and optional
+    negotiation details are kept in opaque attributes.
+    """
+    __tablename__ = 'sec_spnego'
+    __mapper_args__ = {'polymorphic_identity': 'spnego'}
+
+    id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), primary_key=True)
+
+    def __init__(self, id=None, name=None, is_active=None, username=None, cluster=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.username = username
+        self.cluster = cluster
+
+    def to_json(self):
+        return to_json(self)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class APIKeySecurity(SecurityBase):
     """ Stores API keys.
     """

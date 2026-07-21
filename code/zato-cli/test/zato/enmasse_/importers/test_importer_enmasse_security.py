@@ -196,6 +196,39 @@ class TestEnmasseSecurity(TestCase):
 
 # ################################################################################################################################
 
+    def test_spnego_creation(self):
+        """ Test the creation of Kerberos (SPNEGO) security definitions.
+        """
+        self._setup_test_environment()
+
+        # Filter only SPNEGO security definitions
+        spnego_defs = []
+
+        for item in self.yaml_config['security']:
+            if item['type'] == 'spnego':
+                spnego_defs.append(item)
+
+        self.assertTrue(len(spnego_defs) > 0, 'No SPNEGO definitions found in YAML')
+
+        # Process security definitions
+        sec_created, _ = self.security_importer.sync_security_definitions(spnego_defs, self.session)
+
+        # Assert the correct number of items were created
+        self.assertEqual(len(sec_created), len(spnego_defs), 'Not all SPNEGO definitions were created')
+
+        # The definition keeps its principal and keytab details in opaque attributes
+        instance = sec_created[0]
+        self.assertIn(instance.name, self.importer.sec_defs)
+        self.assertEqual(instance.name, 'enmasse.spnego.1')
+        self.assertTrue(instance.is_active)
+
+        opaque = json.loads(instance.opaque1)
+        self.assertEqual(opaque['principal'], 'enmasse@EXAMPLE.COM')
+        self.assertEqual(opaque['keytab_path'], '/opt/hot-deploy/krb5/enmasse.keytab')
+        self.assertEqual(opaque['target_spn'], 'HTTP@api.example.com')
+
+# ################################################################################################################################
+
     def _get_wss_defs_from_yaml(self) -> 'anylist':
         """ Returns all the WS-Security definitions the YAML template holds.
         """
@@ -376,6 +409,7 @@ class TestEnmasseSecurity(TestCase):
         self.assertIn('bearer_token', security_types)
         self.assertIn('mtls', security_types)
         self.assertIn('ntlm', security_types)
+        self.assertIn('spnego', security_types)
         self.assertIn('apikey', security_types)
         self.assertIn('wss', security_types)
 

@@ -162,6 +162,24 @@ class TestEnmasseSecurityExporter(TestCase):
                 # An mTLS definition carries no username either
                 self.assertNotIn('username', exported_def, f'Username must not be exported for "{name}"')
 
+            # Check Kerberos (SPNEGO) fields - the principal and keytab details
+            # must round-trip through opaque storage
+            if yaml_def.get('type') == 'spnego':
+                spnego_fields = [
+                    'is_active', 'principal', 'keytab_path', 'target_spn', 'needs_delegation',
+                ]
+
+                for field in spnego_fields:
+                    if field in yaml_def:
+                        self.assertIn(field, exported_def, f'Field {field} missing from export of "{name}"')
+                        self.assertEqual(exported_def[field], yaml_def[field], f'Field {field} mismatch for security definition "{name}"')
+
+                # Passwords are never exported
+                self.assertNotIn('password', exported_def, f'Password must not be exported for "{name}"')
+
+                # An SPNEGO definition carries no username either
+                self.assertNotIn('username', exported_def, f'Username must not be exported for "{name}"')
+
             # Check rate_limiting if present in the YAML definition
             if rate_limiting := yaml_def.get('rate_limiting'):
                 self.assertIn('rate_limiting', exported_def, f'rate_limiting missing from export of "{name}"')

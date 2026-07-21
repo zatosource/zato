@@ -12,7 +12,8 @@ import logging
 from zato.common.api import Quota_Tiers
 from zato.common.json_internal import loads
 from zato.common.odb.model import to_json
-from zato.common.odb.query import basic_auth_list, apikey_security_list, mtls_list, ntlm_list, oauth_list, wss_list
+from zato.common.odb.query import basic_auth_list, apikey_security_list, mtls_list, ntlm_list, oauth_list, spnego_list, \
+    wss_list
 from zato.common.odb.query.generic import GenericObjectWrapper
 
 # ################################################################################################################################
@@ -92,7 +93,7 @@ class SecurityExporter:
             }
 
             # Add username only for the types that carry one
-            if sec_type not in ('apikey', 'mtls'):
+            if sec_type not in ('apikey', 'mtls', 'spnego'):
                 security_entry['username'] = item['username']
 
             # Add is_active if present
@@ -212,6 +213,7 @@ class SecurityExporter:
         mtls_defs = mtls_list(session, cluster_id)
         ntlm_defs = ntlm_list(session, cluster_id)
         oauth_defs = oauth_list(session, cluster_id)
+        spnego_defs = spnego_list(session, cluster_id)
         wss_defs = wss_list(session, cluster_id)
 
         # Process basic auth definitions
@@ -249,6 +251,15 @@ class SecurityExporter:
             # Process and get NTLM items
             ntlm_security = self._process_standard_security(ntlm_items, 'ntlm', excluded_names, excluded_prefixes)
             exported_security.extend(ntlm_security)
+
+        # Process Kerberos (SPNEGO) definitions
+        if spnego_defs:
+            spnego_items = to_json(spnego_defs, return_as_dict=True)
+            logger.info('Processing %d SPNEGO definitions', len(spnego_items))
+
+            # Process and get SPNEGO items
+            spnego_security = self._process_standard_security(spnego_items, 'spnego', excluded_names, excluded_prefixes)
+            exported_security.extend(spnego_security)
 
         # Process WS-Security definitions
         if wss_defs:

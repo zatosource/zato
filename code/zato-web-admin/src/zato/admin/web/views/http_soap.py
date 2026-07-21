@@ -67,6 +67,7 @@ _rest_security_type_supported = {
     SEC_DEF_TYPE.MTLS,
     SEC_DEF_TYPE.NTLM,
     SEC_DEF_TYPE.OAUTH,
+    SEC_DEF_TYPE.SPNEGO,
 }
 
 # Names of the fields that describe the declarative invocation profile of an outgoing REST connection

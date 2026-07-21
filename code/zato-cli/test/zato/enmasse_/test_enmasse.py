@@ -227,6 +227,14 @@ class EnmasseTestCase(BaseEnmasseTestCase):
                     mtls_2['client_cert_fingerprint'], '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')
                 self.assertEqual(mtls_2['client_cert_subject_dn'], 'CN=enmasse.client,O=Enmasse,C=US')
 
+                # The Kerberos (SPNEGO) definition must survive the round trip with its principal and keytab details
+                self.assertIn('enmasse.spnego.1', exported_security_by_name, 'enmasse.spnego.1 missing from export')
+                spnego_1 = exported_security_by_name['enmasse.spnego.1']
+                self.assertEqual(spnego_1['type'], 'spnego')
+                self.assertEqual(spnego_1['principal'], 'enmasse@EXAMPLE.COM')
+                self.assertEqual(spnego_1['keytab_path'], '/opt/hot-deploy/krb5/enmasse.keytab')
+                self.assertEqual(spnego_1['target_spn'], 'HTTP@api.example.com')
+
         except ErrorReturnCode as e:
             stdout = e.stdout.decode('utf8')
             stderr = e.stderr

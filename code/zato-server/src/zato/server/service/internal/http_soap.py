@@ -478,7 +478,7 @@ class _HTTPSOAPService:
 
                 if transport == URL_TYPE.PLAIN_HTTP and \
                    sec_def.sec_type not in (SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.APIKEY, SEC_DEF_TYPE.OAUTH, SEC_DEF_TYPE.NTLM,
-                       SEC_DEF_TYPE.MTLS):
+                       SEC_DEF_TYPE.MTLS, SEC_DEF_TYPE.SPNEGO):
                     raise Exception('Unsupported sec_type `{}`'.format(sec_def.sec_type))
 
             info['security_id'] = security_id

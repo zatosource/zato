@@ -320,6 +320,7 @@ class ConfigStore:
         self.mtls = None   # type: ConfigDict
         self.ntlm = None   # type: ConfigDict
         self.oauth = None   # type: ConfigDict
+        self.spnego = None   # type: ConfigDict
 
         # URL security
         self.url_sec = None # type: ConfigDict

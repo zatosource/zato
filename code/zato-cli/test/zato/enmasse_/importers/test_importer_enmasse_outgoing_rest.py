@@ -105,8 +105,8 @@ class TestEnmasseOutgoingRESTFromYAML(TestCase):
         # Process all outgoing REST definitions
         created, updated = self.outgoing_rest_importer.sync_outgoing_rest(outgoing_rest_defs, self.session)
 
-        # Should have created all 5 connections
-        self.assertEqual(len(created), 5)
+        # Should have created all 6 connections
+        self.assertEqual(len(created), 7)
         self.assertEqual(len(updated), 0)
 
         # Verify the first outgoing REST connection was created correctly

@@ -71,6 +71,10 @@ class ConfigLoader:
         query = self.odb.get_ntlm_list(cluster_id, True)
         self.config.ntlm = ConfigDict.from_query('ntlm', query, decrypt_func=self.decrypt)
 
+        # Kerberos (SPNEGO)
+        query = self.odb.get_spnego_list(cluster_id, True)
+        self.config.spnego = ConfigDict.from_query('spnego', query, decrypt_func=self.decrypt)
+
         # OAuth
         query = self.odb.get_oauth_list(cluster_id, True)
         self.config.oauth = ConfigDict.from_query('oauth', query, decrypt_func=self.decrypt)

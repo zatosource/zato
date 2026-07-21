@@ -24,7 +24,7 @@ from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import APIKeySecurity, ChannelAMQP, Cluster, \
     DeployedService, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, \
     MTLSSecurity, NTLM, OAuth, OutgoingOdoo, OutgoingAMQP, OutgoingFTP, PubSubPermission, PubSubSubscription, \
-    PubSubSubscriptionTopic, PubSubTopic, SecurityBase, Server, Service, SMTP, SQLConnectionPool, WSSecurity
+    PubSubSubscriptionTopic, PubSubTopic, SecurityBase, Server, Service, SMTP, SPNEGOSecurity, SQLConnectionPool, WSSecurity
 from zato.common.util.search import SearchResults as _SearchResults
 
 # ################################################################################################################################
@@ -333,6 +333,20 @@ def mtls_list(session, cluster_id, needs_columns=False):
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==MTLSSecurity.cluster_id).\
         filter(SecurityBase.id==MTLSSecurity.id).\
+        order_by(SecurityBase.name)
+
+@query_wrapper
+def spnego_list(session, cluster_id, needs_columns=False):
+    """ All the Kerberos (SPNEGO) definitions.
+    """
+    return session.query(
+        SPNEGOSecurity.id, SPNEGOSecurity.name,
+        SPNEGOSecurity.is_active,
+        SPNEGOSecurity.sec_type,
+        SPNEGOSecurity.opaque1).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==SPNEGOSecurity.cluster_id).\
+        filter(SecurityBase.id==SPNEGOSecurity.id).\
         order_by(SecurityBase.name)
 
 @query_wrapper
