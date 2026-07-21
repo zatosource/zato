@@ -63,7 +63,8 @@ class TestEnmasseChannelHL7MLLPLive(BaseEnmasseTestCase):
 
     def _cleanup(self, test_suffix:'str') -> 'None':
         from zato.cli.enmasse.client import cleanup_enmasse
-        cleanup_enmasse()
+        from zato.common.defaults import default_server_base_dir
+        cleanup_enmasse(default_server_base_dir)
 
 # ################################################################################################################################
 

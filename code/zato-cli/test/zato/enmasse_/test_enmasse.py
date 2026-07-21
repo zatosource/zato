@@ -8,15 +8,28 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import sys
 from logging import basicConfig, getLogger, WARN
 from tempfile import gettempdir
 from unittest import main
 
+# The directory with the throwaway test environment helpers
+_this_directory = os.path.dirname(__file__)
+sys.path.insert(0, _this_directory)
+
 # Zato
+from env_helper import create_environment, delete_environment
 from zato.common.test import rand_string, rand_unicode
 from zato.common.test.enmasse_.base import BaseEnmasseTestCase
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.util.open_ import open_w
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from env_helper import TestEnvironment
+    TestEnvironment = TestEnvironment
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -28,6 +41,23 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 class EnmasseTestCase(BaseEnmasseTestCase):
+    """ Runs against a throwaway quickstart environment with its own embedded ODB,
+    created in setUpClass and deleted in tearDownClass - no pre-existing environment is ever used.
+    """
+
+    environment: 'TestEnvironment'
+
+    @classmethod
+    def setUpClass(class_) -> 'None':
+        class_.environment = create_environment('zato-enmasse-cli-', needs_server=True)
+
+# ################################################################################################################################
+
+    @classmethod
+    def tearDownClass(class_) -> 'None':
+        delete_environment(class_.environment)
+
+# ################################################################################################################################
 
     def get_smtp_config(self) -> 'str':
         return ''
@@ -36,7 +66,7 @@ class EnmasseTestCase(BaseEnmasseTestCase):
 
         # Clean up test data
         from zato.cli.enmasse.client import cleanup_enmasse
-        cleanup_enmasse()
+        cleanup_enmasse(self.environment.server_dir)
 
 # ################################################################################################################################
 
@@ -64,10 +94,10 @@ class EnmasseTestCase(BaseEnmasseTestCase):
 
         try:
             # Invoke enmasse to create objects ..
-            _ = self.invoke_enmasse(config_path)
+            _ = self.invoke_enmasse(config_path, server_dir=self.environment.server_dir)
 
             # .. now invoke it again to edit them in place.
-            _ = self.invoke_enmasse(config_path)
+            _ = self.invoke_enmasse(config_path, server_dir=self.environment.server_dir)
 
         except ErrorReturnCode as e:
             stdout:'bytes' = e.stdout # type: bytes
@@ -119,11 +149,13 @@ class EnmasseTestCase(BaseEnmasseTestCase):
 
         try:
             # First import the data
-            _ = self.invoke_enmasse(import_path)
+            _ = self.invoke_enmasse(import_path, server_dir=self.environment.server_dir)
 
             # Now export the data
             include_types = 'channel_rest,security,elastic_search,channel_openapi,channel_hl7_mllp'
-            _ = self.invoke_enmasse(export_path, is_import=False, is_export=True, include_type=include_types)
+            _ = self.invoke_enmasse(
+                export_path, is_import=False, is_export=True, include_type=include_types,
+                server_dir=self.environment.server_dir)
 
             # Read back both files
             with open(import_path, 'r') as f:
@@ -238,8 +270,7 @@ EnmasseApiKey1 = api-key-value-1
             command = get_zato_sh_command()
 
             # Custom invocation to include env-file
-            from zato.common.test.config import TestConfig
-            out = command('enmasse', TestConfig.server_location,
+            out = command('enmasse', self.environment.server_dir,
                 '--import',
                 '--input', import_path,
                 '--verbose',

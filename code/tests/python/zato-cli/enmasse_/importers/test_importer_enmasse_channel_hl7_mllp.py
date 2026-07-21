@@ -60,7 +60,7 @@ class TestEnmasseChannelHL7MLLPImporter(TestCase):
         if self.session:
             self.session.close()
         os.unlink(self.temp_file.name)
-        cleanup_enmasse()
+        cleanup_enmasse(self.server_path)
 
 # ################################################################################################################################
 

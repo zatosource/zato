@@ -7,17 +7,23 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
+import sys
 import logging
 from json import loads
 from unittest import TestCase, main
 
+# The directory with the throwaway test environment helpers
+_enmasse_tests_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, _enmasse_tests_dir)
+
 # Zato
+from env_helper import get_shared_environment
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.outgoing_rest import OutgoingRESTImporter
 from zato.cli.enmasse.importers.outgoing_soap import OutgoingSOAPImporter
 from zato.common.api import HTTP_SOAP, SchedulerLink
-from zato.common.defaults import default_server_base_dir
 from zato.common.odb.model import Job
 from zato.common.typing_ import cast_
 
@@ -96,7 +102,8 @@ class TestEnmasseOutgoingDeclarativeImport(TestCase):
     """
 
     def setUp(self) -> 'None':
-        self.server_path = default_server_base_dir
+        environment = get_shared_environment()
+        self.server_path = environment.server_dir
 
         self.importer = EnmasseYAMLImporter()
         self.outgoing_rest_importer = OutgoingRESTImporter(self.importer)
@@ -109,7 +116,7 @@ class TestEnmasseOutgoingDeclarativeImport(TestCase):
     def tearDown(self) -> 'None':
         if self.session:
             _ = self.session.close()
-        cleanup_enmasse()
+        cleanup_enmasse(self.server_path)
 
 # ################################################################################################################################
 

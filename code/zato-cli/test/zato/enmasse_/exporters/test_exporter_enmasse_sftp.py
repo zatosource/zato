@@ -9,14 +9,19 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
+import sys
 from unittest import TestCase, main
 
+# The directory with the throwaway test environment helpers
+_enmasse_tests_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, _enmasse_tests_dir)
+
 # Zato
+from env_helper import get_shared_environment
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.exporter import EnmasseYAMLExporter
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.sftp import SFTPImporter
-from zato.common.defaults import default_server_base_dir
 from zato.common.test.sftp_ import SFTPTestServer
 from zato.common.typing_ import cast_
 
@@ -77,7 +82,8 @@ class TestEnmasseSFTPExporter(TestCase):
         if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
             self.skipTest('Env. key Zato_Test_SFTP is not set')
 
-        self.server_path = default_server_base_dir
+        environment = get_shared_environment()
+        self.server_path = environment.server_dir
 
         # Importer is needed to set up the database state for export tests
         self.importer = EnmasseYAMLImporter()
@@ -90,7 +96,7 @@ class TestEnmasseSFTPExporter(TestCase):
     def tearDown(self) -> 'None':
         if self.session:
             _ = self.session.close()
-        cleanup_enmasse()
+        cleanup_enmasse(self.server_path)
 
 # ################################################################################################################################
 

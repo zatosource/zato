@@ -9,10 +9,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
+import sys
 import tempfile
 from unittest import TestCase, main
 
+# The directory with the throwaway test environment helpers
+_enmasse_tests_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, _enmasse_tests_dir)
+
 # Zato
+from env_helper import get_shared_environment
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.exporter import EnmasseYAMLExporter
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
@@ -20,7 +26,6 @@ from zato.cli.enmasse.importers.security import SecurityImporter
 from zato.cli.enmasse.importers.group import GroupImporter
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
-from zato.common.defaults import default_server_base_dir
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,7 +42,8 @@ class TestEnmasseGroupExporter(TestCase):
     """
 
     def setUp(self) -> 'None':
-        self.server_path = default_server_base_dir
+        environment = get_shared_environment()
+        self.server_path = environment.server_dir
 
         self.temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.yaml')
         _ = self.temp_file.write(template_complex_01.encode('utf-8'))
@@ -125,7 +131,7 @@ class TestEnmasseGroupExporter(TestCase):
         if self.session:
             self.session.close()
         os.unlink(self.temp_file.name)
-        cleanup_enmasse()
+        cleanup_enmasse(self.server_path)
 
 # ################################################################################################################################
 # ################################################################################################################################
