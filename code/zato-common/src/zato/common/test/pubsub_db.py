@@ -97,6 +97,22 @@ def count_pending(sub_key:'str', topic_name:'str'='') -> 'int':
 
 # ################################################################################################################################
 
+def count_all_deliveries() -> 'int':
+    """ Counts every delivery row in the database - the total unacknowledged backlog
+    across all the topics and subscribers.
+    """
+    query = select(func.count())
+    query = query.select_from(delivery_table)
+
+    engine = get_pubsub_engine()
+
+    with engine.connect() as connection:
+        out = connection.execute(query).scalar()
+
+    return out
+
+# ################################################################################################################################
+
 def count_topic_deliveries(topic_name:'str') -> 'int':
     """ Counts all the delivery rows of one topic across every subscriber.
     """
