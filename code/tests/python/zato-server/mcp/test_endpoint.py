@@ -234,7 +234,7 @@ class _MockRequest:
     """
     def __init__(self) -> 'None':
         self.http = _MockHTTPRequest()
-        self.raw_request = ''
+        self.raw = ''
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -324,7 +324,7 @@ class MCPEndpointOriginValidation(TestCase):
 
         endpoint = _make_endpoint('origin-gateway', wrapper)
         endpoint.request.http.headers['mcp-session-id'] = session_id
-        endpoint.request.raw_request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
+        endpoint.request.raw = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
 
         endpoint.handle()
 
@@ -352,7 +352,7 @@ class MCPEndpointOriginValidation(TestCase):
         endpoint = _make_endpoint('origin-gateway', wrapper)
         endpoint.request.http.headers['mcp-session-id'] = session_id
         endpoint.request.http.headers['origin'] = 'https://evil.example.com'
-        endpoint.request.raw_request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
+        endpoint.request.raw = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
 
         endpoint.handle()
 
@@ -381,7 +381,7 @@ class MCPEndpointOriginValidation(TestCase):
         endpoint = _make_endpoint('origin-gateway', wrapper)
         endpoint.request.http.headers['mcp-session-id'] = session_id
         endpoint.request.http.headers['origin'] = 'https://app.example.com'
-        endpoint.request.raw_request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
+        endpoint.request.raw = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
 
         endpoint.handle()
 
@@ -416,7 +416,7 @@ class MCPEndpointNoHandler(TestCase):
 
         # .. a request arriving now must get a clean 404 ..
         endpoint = _make_endpoint('deleted-gateway', wrapper)
-        endpoint.request.raw_request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
+        endpoint.request.raw = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
 
         endpoint.handle()
 
@@ -464,7 +464,7 @@ class MCPEndpointNoHandler(TestCase):
 
         # .. a request arriving now must get a clean 404 ..
         endpoint = _make_endpoint('unbuilt-gateway', wrapper)
-        endpoint.request.raw_request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
+        endpoint.request.raw = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
 
         endpoint.handle()
 
@@ -492,7 +492,7 @@ class MCPEndpointNoHandler(TestCase):
 
         endpoint = _make_endpoint('live-gateway', wrapper)
         endpoint.request.http.headers['mcp-session-id'] = session_id
-        endpoint.request.raw_request = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
+        endpoint.request.raw = dumps({'jsonrpc': '2.0', 'method': 'ping', 'id': 1})
 
         endpoint.handle()
 

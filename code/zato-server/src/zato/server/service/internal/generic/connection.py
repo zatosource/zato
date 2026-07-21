@@ -29,6 +29,7 @@ from zato.common.odb.query.generic import connection_list
 from zato.common.typing_ import cast_
 from zato.common.util.api import parse_simple_type
 from zato.common.util.config import replace_query_string_items_in_dict
+from zato.common.util.sql import parse_instance_opaque_attr
 from zato.common.util.gateway import on_mcp_gateway_create_edit, on_mcp_gateway_delete
 from zato.common.util.time_ import utcnow
 from zato.server.config_audit import get_model_snapshot, record_service_config_change
@@ -117,6 +118,10 @@ extra_secret_keys = (
     'client_secret',
 
 )
+
+# Keys that hold secrets - they are never returned in listings, no matter whether their values
+# are stored in clear text or encrypted, because the browser must never receive them at all.
+never_returned_keys = ('secret', 'secret_value', 'password') + extra_secret_keys + AS2.Secret_Fields
 
 # Note that this is a set, unlike extra_secret_keys, because we do not make it part of I/O.
 extra_simple_type = {
@@ -338,6 +343,26 @@ class _CreateEdit(_BaseService):
                 # event compares it with the state the commit produces.
                 before_snapshot = get_model_snapshot(model)
 
+                # Private keys are never returned to the Dashboard, so an edit form cannot send them back.
+                if data.get('type_') == COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_AS2:
+                    model_opaque = parse_instance_opaque_attr(model)
+                    for name in AS2.Secret_Fields:
+
+                        # A key given on input is a new one and is stored as given ..
+                        if data.get(name):
+                            continue
+
+                        # .. the staged next decryption key is cleared along with
+                        # .. its certificate once a rotation completes ..
+                        if name == 'as2_next_decryption_key':
+                            if not data.get('as2_next_decryption_cert'):
+                                continue
+
+                        # .. and any other empty key on input means the stored one is kept.
+                        if stored_value := model_opaque.get(name):
+                            data[name] = stored_value
+                            conn.opaque[name] = stored_value
+
                 # Use the secret that was given on input because it may be a new one.
                 # Otherwise, if no secret is given on input, it means that we are not changing it
                 # so we can reuse the same secret that the model already uses.
@@ -366,7 +391,7 @@ class _CreateEdit(_BaseService):
                     secret = input_secret
                 else:
                     secret = self.crypto.generate_secret().decode('utf8')
-                    secret = self.server.encrypt('auto.generated.{}'.format(secret))
+                    secret = self.server.encrypt(SECRETS.Auto_Generated_Prefix + secret)
                     secret = cast_('str', secret)
                 conn.secret = secret
 
@@ -503,7 +528,11 @@ class GetList(AdminService):
         # New items that will be potentially added to conn_dict
         to_add = {}
 
-        # Mask out all the relevant attributes
+        # Secrets never leave the server in listings ..
+        for key in never_returned_keys:
+            _ = conn_dict.pop(key, None)
+
+        # .. mask out all the relevant attributes.
         replace_query_string_items_in_dict(self.server, conn_dict)
 
         # Process all the items found in the database.
@@ -612,6 +641,10 @@ class GetByID(AdminService):
         # .. everyone else knows objects from the external database under their offset ids ..
         conn_dict['id'] = input_id
 
+        # .. secrets never leave the server ..
+        for key in never_returned_keys:
+            _ = conn_dict.pop(key, None)
+
         # .. mask out all the relevant secret attributes ..
         replace_query_string_items_in_dict(self.server, conn_dict)
 
@@ -625,56 +658,6 @@ class ChangePassword(ChangePasswordBase):
     """ Changes the secret (password) of a generic connection.
     """
     password_required = False
-
-
-# ################################################################################################################################
-
-    def _run_pre_handle_tasks_CLOUD_MICROSOFT_365(self, session:'any_', instance:'any_') -> 'None':
-
-        # Disabled, no longer in use
-        return
-
-        # stdlib
-        from json import dumps, loads
-        from urllib.parse import parse_qs, urlsplit
-
-        # office-365
-        from O365 import Account
-
-        auth_url = self.request.input.password
-        auth_url = self.server.decrypt(auth_url)
-
-        query = urlsplit(auth_url).query
-        parsed = parse_qs(query)
-
-        state = parsed['state']
-        state = state[0]
-
-        opaque1 = instance.opaque1
-        opaque1 = loads(opaque1)
-
-        client_id = opaque1['client_id']
-        secret_value = opaque1.get('secret_value') or opaque1.get('secret') or opaque1['password']
-
-        credentials = (client_id, secret_value)
-
-        account = Account(credentials)
-        _ = account.con.request_token(authorization_url=auth_url, state=state)
-
-        opaque1['token'] = account.con.token_backend.token
-        opaque1 = dumps(opaque1)
-        instance.opaque1 = opaque1
-
-        session.add(instance)
-        session.commit()
-
-# ################################################################################################################################
-
-    def _run_pre_handle_tasks(self, session:'any_', instance:'any_') -> 'None':
-        conn_type = self.request.input.get('type_')
-
-        if conn_type == COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365:
-            self._run_pre_handle_tasks_CLOUD_MICROSOFT_365(session, instance)
 
 # ################################################################################################################################
 
@@ -705,13 +688,11 @@ class ChangePassword(ChangePasswordBase):
         else:
             local_id = instance_id
 
+        # To ensure that the input ID is correct
         with closing(self.server.get_config_session(object_id=instance_id)) as session:
             query = session.query(ModelGenericConn)
             query = query.filter(ModelGenericConn.id==local_id)
-            instance = query.one()
-
-            # This steps runs optional post-handle tasks that some types of connections may require.
-            self._run_pre_handle_tasks(session, instance)
+            _ = query.one()
 
         # This step updates the secret.
         self._handle(ModelGenericConn, _auth, GENERIC.CONNECTION_CHANGE_PASSWORD.value, instance_id=instance_id,

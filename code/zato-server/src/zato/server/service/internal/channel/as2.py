@@ -17,6 +17,7 @@ from zato.common.as2.reconcile import MDNReconciler, process_incoming_mdn
 from zato.common.ext_db.api import is_ext_db_configured, to_public_id
 from zato.common.odb.model import HTTPSOAP
 from zato.common.util.sql import parse_instance_opaque_attr
+from zato.server.service import Boolean
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -96,14 +97,14 @@ class _KeystoreService(AdminService):
 # ################################################################################################################################
 
 class GetKeystore(_KeystoreService):
-    """ Returns our own AS2 keystore - the signing pair, the current decryption key
-    and the next decryption pair staged for rotation. Private keys come back
-    the way they are stored, which is encrypted.
+    """ Returns our own AS2 keystore - the certificates as stored and, for each private key,
+    only a flag telling whether one is stored. The keys themselves never leave the server.
     """
 
     name = 'zato.channel.as2.keystore.get'
 
-    output = ('id', 'name') + AS2.Keystore_Fields
+    output = ('id', 'name', 'as2_signing_cert_chain', 'as2_next_decryption_cert') + \
+        tuple(Boolean('has_' + name) for name in AS2.Secret_Fields)
 
     def handle(self) -> 'None':
 
@@ -116,21 +117,25 @@ class GetKeystore(_KeystoreService):
             self.response.payload.id = item.id
             self.response.payload.name = item.name
 
-            # A fresh channel has no keystore yet, in which case each field is an empty string.
-            for name in AS2.Keystore_Fields:
+            # A fresh channel has no keystore yet, in which case each certificate is an empty string ..
+            for name in ('as2_signing_cert_chain', 'as2_next_decryption_cert'):
                 value = opaque.get(name)
                 if value is None:
                     value = ''
                 setattr(self.response.payload, name, value)
 
+            # .. and the private keys are reported only as flags saying whether one is stored.
+            for name in AS2.Secret_Fields:
+                setattr(self.response.payload, 'has_' + name, bool(opaque.get(name)))
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 class EditKeystore(_KeystoreService):
-    """ Updates our own AS2 keystore on the inbound AS2 channel. The keystore fields
-    are taken from input as given - an empty string clears a field, which is how
-    the next decryption pair is removed once its rotation completes. All the other
-    AS2 fields are carried over from the channel so they survive the edit.
+    """ Updates our own AS2 keystore on the inbound AS2 channel. An empty private key
+    keeps the stored one, except that clearing the next decryption certificate clears
+    the staged key with it, which is how the pair is removed once its rotation completes.
+    All the other AS2 fields are carried over from the channel so they survive the edit.
     """
 
     name = 'zato.channel.as2.keystore.edit'

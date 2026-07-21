@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
+from json import dumps, loads
 from traceback import format_exc
 from uuid import uuid4
 
@@ -36,11 +37,18 @@ class GetList(AdminService):
     input = 'cluster_id', *query_parameters
     output = 'id', 'name', 'is_active', 'username', 'client_id_field', 'client_secret_field', 'grant_type', \
         '-auth_server_url', '-scopes', '-extra_fields', '-data_format', \
-        '-static_header', '-static_token', '-static_prefix', \
+        '-static_header', 'is_static_token', '-static_prefix', \
         '-issuer', '-jwks_url', '-audience', '-claims'
 
     def get_data(self, session:'any_') -> 'anylist':
-        return elems_with_opaque(self._search(oauth_list, session, self.request.input.cluster_id, False)) # type: ignore
+        data = elems_with_opaque(self._search(oauth_list, session, self.request.input.cluster_id, False)) # type: ignore
+
+        # The token itself is never returned - only a flag indicating whether the definition uses one.
+        for item in data:
+            is_static_token = bool(item.pop('static_token', None)) or bool(item.get('is_static_token'))
+            item['is_static_token'] = is_static_token
+
+        return data
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -55,13 +63,14 @@ class Create(AdminService):
     """
     input = 'cluster_id', 'name', 'is_active', '-username', '-client_id_field', \
         '-client_secret_field', '-grant_type', '-data_format', '-auth_server_url', '-scopes', '-extra_fields', \
-        '-static_header', '-static_token', '-static_prefix', \
+        '-static_header', '-is_static_token', '-static_prefix', \
         '-issuer', '-jwks_url', '-audience', '-claims'
     output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
         input.password = uuid4().hex
+        input.is_static_token = bool(input.is_static_token)
 
         with closing(self.odb.session()) as session:
             try:
@@ -116,12 +125,13 @@ class Edit(AdminService):
     """
     input = 'id', 'cluster_id', 'name', 'is_active', '-username', '-client_id_field', \
         '-client_secret_field', '-grant_type', '-data_format', '-auth_server_url', '-scopes', '-extra_fields', \
-        '-static_header', '-static_token', '-static_prefix', \
+        '-static_header', '-is_static_token', '-static_prefix', \
         '-issuer', '-jwks_url', '-audience', '-claims'
     output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
+        input.is_static_token = bool(input.is_static_token)
         with closing(self.odb.session()) as session:
             try:
                 existing_one = session.query(OAuth).\
@@ -171,6 +181,15 @@ class ChangePassword(ChangePasswordBase):
     def handle(self):
         def _auth(instance:'any_', password:'str'):
             instance.password = password
+
+            # Static tokens used to be kept in the opaque attributes - the password column
+            # is their only home now, so the old copy is removed here.
+            if instance.opaque1:
+                opaque = loads(instance.opaque1)
+                if 'static_token' in opaque:
+                    del opaque['static_token']
+                    opaque['is_static_token'] = True
+                    instance.opaque1 = dumps(opaque)
 
         return self._handle(OAuth, _auth, SECURITY.OAUTH_CHANGE_PASSWORD.value)
 

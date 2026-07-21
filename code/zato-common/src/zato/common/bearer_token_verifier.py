@@ -123,8 +123,12 @@ def build_verify_config(sec_def:'stranydict') -> 'BearerTokenVerifyConfig':
     out.security_id = sec_def['id']
     out.sec_def_name = sec_def['name']
 
-    # Static definitions carry the exact expected token ..
-    out.static_token = sec_def.get('static_token') or ''
+    # Static definitions carry the exact expected token - it lives in the password column,
+    # while definitions created before it moved there keep it in the opaque attributes.
+    static_token = sec_def.get('static_token') or ''
+    if (not static_token) and sec_def.get('is_static_token'):
+        static_token = sec_def['password']
+    out.static_token = static_token
 
     # .. the issuer defaults to the base of the token endpoint ..
     issuer = sec_def.get('issuer') or ''

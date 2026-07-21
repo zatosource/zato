@@ -385,8 +385,14 @@ class BaseHTTPSOAPWrapper:
                 # .. this is reusable ..
                 sec_def = self.server.security_facade.get_bearer_token_by_name(sec_def_name)
 
+                # .. static tokens live in the password column, while definitions created
+                # .. before the token moved there keep it in the opaque attributes ..
+                static_token = sec_def.get('static_token') or ''
+                if (not static_token) and sec_def.get('is_static_token'):
+                    static_token = sec_def['password']
+
                 # .. static tokens have their value defined directly in the definition ..
-                if static_token := sec_def.get('static_token'):
+                if static_token:
 
                     # .. build the header from the static definition fields ..
                     static_header = sec_def['static_header']

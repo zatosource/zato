@@ -87,9 +87,9 @@ $.fn.zato.outgoing.as4.field_descriptions = {
     'id_validate_tls': 'Whether the TLS certificate of the remote<br>server must be validated. Turn it off<br>only in test environments.',
 
     // Security tab
-    'id_as4_signing_key': 'Your private key in PEM, pasted as text.<br>It signs every outgoing message and is<br>stored encrypted, never in plain text.',
+    'id_as4_signing_key': 'Your private key in PEM, pasted as text.<br>It signs every outgoing message and is<br>stored encrypted, never in plain text.<br>Leave empty to keep the stored key.',
     'id_as4_signing_cert_chain': 'The certificate chain matching the signing key,<br>in PEM - your access point certificate first,<br>then any intermediates.',
-    'id_as4_decryption_key': 'The private key that decrypts messages<br>encrypted to you. Often the same<br>as the signing key. Stored encrypted.',
+    'id_as4_decryption_key': 'The private key that decrypts messages<br>encrypted to you. Often the same<br>as the signing key. Stored encrypted.<br>Leave empty to keep the stored key.',
     'id_as4_peer_signing_cert': 'The certificate the peer signs with, in PEM.<br>Used to verify receipts and incoming messages.<br>With discovery it comes from the SMP.',
     'id_as4_peer_encryption_cert': 'The certificate outgoing messages are<br>encrypted to, in PEM. With discovery<br>it comes from the SMP.',
     'id_as4_trust_anchors': 'CA certificates in PEM that peer certificates<br>must chain up to, e.g. the Peppol root CA.<br>An alternative to pinning one peer certificate.',
@@ -162,9 +162,11 @@ $.fn.zato.outgoing.as4.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.as4_final_recipient ? item.as4_final_recipient : '');
     row += String.format("<td class='ignore'>{0}</td>", item.as4_extra_pmodes ? item.as4_extra_pmodes : '');
 
-    row += String.format("<td class='ignore'>{0}</td>", item.as4_signing_key ? item.as4_signing_key : '');
+    // Private keys never appear in the page - the backend keeps the stored ones
+    // when their edit form fields are left empty.
+    row += "<td class='ignore'></td>";
     row += String.format("<td class='ignore'>{0}</td>", item.as4_signing_cert_chain ? item.as4_signing_cert_chain : '');
-    row += String.format("<td class='ignore'>{0}</td>", item.as4_decryption_key ? item.as4_decryption_key : '');
+    row += "<td class='ignore'></td>";
     row += String.format("<td class='ignore'>{0}</td>", item.as4_peer_signing_cert ? item.as4_peer_signing_cert : '');
     row += String.format("<td class='ignore'>{0}</td>", item.as4_peer_encryption_cert ? item.as4_peer_encryption_cert : '');
     row += String.format("<td class='ignore'>{0}</td>", item.as4_trust_anchors ? item.as4_trust_anchors : '');

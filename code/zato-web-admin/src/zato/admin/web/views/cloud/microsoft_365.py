@@ -6,7 +6,12 @@ Copyright (C) 2022, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from http import HTTPStatus
+from json import loads
+
 # Zato
+from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.cloud.microsoft_365 import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
     method_allowed, ping_connection
@@ -25,7 +30,7 @@ class Index(_Index):
     paginate = True
 
     input_required = 'cluster_id', 'type_'
-    output_required = 'id', 'name', 'is_active', 'client_id', 'secret_value', 'scopes', 'tenant_id'
+    output_required = 'id', 'name', 'is_active', 'client_id', 'scopes', 'tenant_id'
     output_optional = generic_attrs
     output_repeated = True
 
@@ -36,6 +41,7 @@ class Index(_Index):
             'show_search_form': True,
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
+            'change_password_form': ChangePasswordForm(),
         }
 
 # ################################################################################################################################
@@ -44,7 +50,7 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    input_required = 'name', 'is_active', 'client_id', 'secret_value', 'scopes', 'tenant_id'
+    input_required = 'name', 'is_active', 'client_id', 'scopes', 'tenant_id'
     output_required = 'id', 'name'
 
 # ################################################################################################################################
@@ -70,6 +76,24 @@ class Create(_CreateEdit):
     url_name = 'cloud-microsoft-365-create'
     service_name = 'zato.generic.connection.create'
 
+    def __call__(self, req, *args, **kwargs):
+
+        # The secret from the create form is stored in a follow-up call.
+        response = super().__call__(req, *args, **kwargs)
+
+        if response.status_code == HTTPStatus.OK:
+            data = loads(response.content)
+            secret = req.POST.get('secret_value', '')
+
+            if secret:
+                _ = req.zato.client.invoke('zato.generic.connection.change-password', {
+                    'id': data['id'],
+                    'password': secret,
+                    'type_': GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365,
+                })
+
+        return response
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -90,17 +114,8 @@ class Delete(_Delete):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def reset_oauth2_scopes(req):
-
-    reset_oauth2_scopes_url_step_2 = req.POST['reset_oauth2_scopes_url_step_2']
-
-    data = {
-        'id': req.POST['id'],
-        'password': reset_oauth2_scopes_url_step_2,
-        'type_': GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365,
-    }
-
-    return _change_password(req, 'zato.generic.connection.change-password', success_msg='OAuth2 scopes reset', data=data)
+def change_password(req):
+    return _change_password(req, 'zato.generic.connection.change-password', success_msg='Secret updated')
 
 # ################################################################################################################################
 

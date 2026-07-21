@@ -99,6 +99,10 @@ for _as2_field_name in AS2.Common_Fields + AS2.Channel_Fields:
 
 _as2_input = tuple(_as2_fields)
 
+# The private key fields of AS2 and AS4 objects - they are stored encrypted
+# and they are never returned to any caller.
+_pem_secret_fields = AS2.Secret_Fields + AS4.Secret_Fields
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -549,6 +553,10 @@ class Get(_BaseGet):
             item = http_soap(session, cluster_id, local_id, self.request.input.name)
             out = cast_('anydict', get_dict_with_opaque(item))
 
+        # Private keys never leave the server, not even encrypted.
+        for name in _pem_secret_fields:
+            _ = out.pop(name, None)
+
         # The object is known everywhere else under its offset id
         if is_ext:
             out['id'] = to_public_id(out['id'])
@@ -630,6 +638,10 @@ class GetList(_BaseGet):
             # .. ignore wrapper elements if told do ..
             if should_ignore_wrapper and item.get('is_wrapper'):
                 continue
+
+            # .. private keys never leave the server, not even encrypted ..
+            for name in _pem_secret_fields:
+                _ = item.pop(name, None)
 
             # .. if we are here, it means that this element is to be returned ..
             out.append(item)
@@ -1217,6 +1229,23 @@ class Edit(_CreateEdit):
                 # otherwise the config event broadcast below would erase it from the runtime channel data.
                 if response_cache := opaque.get('response_cache'):
                     input.response_cache = response_cache
+
+                # Private keys are never returned to the Dashboard, so an edit form cannot send them back.
+                for name in _pem_secret_fields:
+
+                    # A key given on input is a new one and is stored as given ..
+                    if input.get(name):
+                        continue
+
+                    # .. the staged next decryption key is cleared along with
+                    # .. its certificate once a rotation completes ..
+                    if name == 'as2_next_decryption_key':
+                        if not input.get('as2_next_decryption_cert'):
+                            continue
+
+                    # .. and any other empty key on input means the stored one is kept.
+                    if stored_value := opaque.get(name):
+                        input[name] = stored_value
 
                 old_name = item.name
                 old_url_path = item.url_path

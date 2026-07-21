@@ -117,7 +117,7 @@ class SecurityExporter:
         # Fields that might be in opaque data for dynamic tokens
         possible_fields = [
             'auth_endpoint', 'client_id_field', 'client_secret_field', 'grant_type', 'data_format', 'extra_fields',
-            'static_header', 'static_token', 'static_prefix',
+            'static_header', 'static_prefix',
         ]
 
         for item in items:
@@ -163,6 +163,9 @@ class SecurityExporter:
                 if field in item and item[field]:
                     opaque_data[field] = item[field]
 
+            # The token itself is import-only and is never exported
+            _ = opaque_data.pop('static_token', None)
+
             # Update OAuth definition with the collected opaque data
             if opaque_data:
                 # Rename auth_server_url back to auth_endpoint for export
@@ -171,13 +174,10 @@ class SecurityExporter:
                 oauth.update(opaque_data)
 
             # Warn about missing fields based on token type ..
-            is_static = 'static_token' in oauth
+            is_static = bool(oauth.get('is_static_token')) or 'static_header' in oauth
 
-            # .. static tokens need static_token, dynamic tokens need auth_endpoint.
-            if is_static:
-                if not oauth.get('static_token'):
-                    logger.warning('Static bearer token %s is missing static_token', name)
-            else:
+            # .. dynamic tokens need auth_endpoint.
+            if not is_static:
                 if 'auth_endpoint' not in oauth:
                     logger.warning('Dynamic bearer token %s is missing auth_endpoint', name)
 

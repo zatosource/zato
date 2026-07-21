@@ -20,7 +20,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(
         ['name', 'username', 'auth_server_url', 'client_id_field', 'client_secret_field', 'grant_type', 'data_format',
-         'static_header', 'static_token', 'static_prefix']
+         'static_header', 'static_prefix']
     );
     var unique_constraints = [
         {field: 'name', entity_type: 'security', attr_name: 'name'}
@@ -41,6 +41,7 @@ $.fn.zato.security.oauth._on_tab_change = function(div_id) {
         else {
             $link.hide();
         }
+        $(div_id).find('input[name$="is_static_token"]').val(tab === 'static' ? 'on' : '');
     };
 };
 
@@ -85,6 +86,7 @@ $.fn.zato.security.oauth.create = function() {
         independent_tabs: true,
         on_change: $.fn.zato.security.oauth._on_tab_change('#create-div')
     });
+    $.fn.zato.security.oauth._on_tab_change('#create-div')('dynamic');
     $.fn.zato.data_table._create_edit('create', 'Create a Bearer token definition', null);
     $.fn.zato.how_it_works.init({
         badgeId: 'create-how-it-works',
@@ -95,7 +97,7 @@ $.fn.zato.security.oauth.create = function() {
 
 $.fn.zato.security.oauth.edit = function(id) {
     var instance = $.fn.zato.data_table.data[id];
-    var is_static = instance.static_token ? true : false;
+    var is_static = $.fn.zato.to_bool(instance.is_static_token);
     var default_tab = is_static ? 'static' : 'dynamic';
 
     $.fn.zato.form_tabs.reset({
@@ -121,7 +123,6 @@ $.fn.zato.security.oauth.edit = function(id) {
     if (is_static) {
         $('#id_edit-static_header').val(instance.static_header);
         $('#id_edit-static_prefix').val(instance.static_prefix);
-        $('#id_edit-static_token').val(instance.static_token);
         $('#id_edit_static_name').val(instance.name);
     }
     else {
@@ -159,7 +160,7 @@ $.fn.zato.security.oauth.data_table.new_row = function(item, data, include_tr) {
 
     var is_active = item.is_active == true
 
-    var is_static = item.static_token ? true : false;
+    var is_static = $.fn.zato.to_bool(item.is_static_token);
     var token_type = is_static ? 'Static' : 'Dynamic';
     var hint = '<span class="form_hint">---</span>';
 
@@ -198,7 +199,7 @@ $.fn.zato.security.oauth.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.data_format);
 
     row += String.format("<td class='ignore'>{0}</td>", item.static_header);
-    row += String.format("<td class='ignore'>{0}</td>", item.static_token);
+    row += String.format("<td class='ignore'>{0}</td>", is_static);
     row += String.format("<td class='ignore'>{0}</td>", item.static_prefix);
 
     row += String.format("<td class='ignore'>{0}</td>", item.issuer);

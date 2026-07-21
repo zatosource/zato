@@ -175,9 +175,11 @@
                         <td class='ignore'>{{ item.as4_final_recipient|default:'' }}</td>
                         <td class='ignore'>{{ item.as4_extra_pmodes|default:'' }}</td>
 
-                        <td class='ignore'>{{ item.as4_signing_key|default:'' }}</td>
+                        {% comment %} Private keys never appear in the page - the backend keeps
+                        the stored ones when their edit form fields are left empty. {% endcomment %}
+                        <td class='ignore'></td>
                         <td class='ignore'>{{ item.as4_signing_cert_chain|default:'' }}</td>
-                        <td class='ignore'>{{ item.as4_decryption_key|default:'' }}</td>
+                        <td class='ignore'></td>
                         <td class='ignore'>{{ item.as4_peer_signing_cert|default:'' }}</td>
                         <td class='ignore'>{{ item.as4_peer_encryption_cert|default:'' }}</td>
                         <td class='ignore'>{{ item.as4_trust_anchors|default:'' }}</td>

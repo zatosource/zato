@@ -34,7 +34,7 @@ OPTIONAL_FIELDS = [
 
 # Fields to extract from opaque attributes
 OPAQUE_FIELDS = [
-    'tenant_id', 'client_id', 'scopes', 'secret_value'
+    'tenant_id', 'client_id', 'scopes'
 ]
 
 # ################################################################################################################################

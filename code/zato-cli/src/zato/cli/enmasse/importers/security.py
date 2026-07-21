@@ -134,9 +134,16 @@ class SecurityImporter:
             if sec_type == 'bearer_token':
 
                 # Detect static vs dynamic bearer tokens by the presence of static fields
-                is_static = 'static_header' in item or 'static_token' in item or 'static_prefix' in item
+                is_static = 'static_header' in item or 'static_token' in item or 'static_prefix' in item \
+                    or item.get('is_static_token')
 
                 if is_static:
+                    item['is_static_token'] = True
+
+                    # The token lives in the password column - it is import-only and never exported
+                    if static_token := item.pop('static_token', None):
+                        item['password'] = static_token
+
                     if 'static_header' not in item:
                         item['static_header'] = 'Authorization'
                     if 'static_prefix' not in item:

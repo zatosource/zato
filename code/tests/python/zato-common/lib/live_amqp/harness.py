@@ -116,8 +116,8 @@ class _ServiceChannel:
 class _ServiceRequest:
     """ What the inbound delivery service reads from self.request.
     """
-    def __init__(self, raw_request:'any_') -> 'None':
-        self.raw_request = raw_request
+    def __init__(self, raw:'any_') -> 'None':
+        self.raw = raw
 
 # ################################################################################################################################
 # ################################################################################################################################

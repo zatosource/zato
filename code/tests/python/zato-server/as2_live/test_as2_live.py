@@ -174,12 +174,16 @@ def original_keystore(api_client:'ZatoClient') -> 'any_':
 
     yield original
 
-    restore_request = {}
-
-    for name in AS2.Keystore_Fields:
-        restore_request[name] = original[name]
-
-    _ = api_client.invoke(_Keystore_Edit, restore_request)
+    # The keystore get service returns only the certificates - the private keys never
+    # leave the server, so the restore puts the certificates back while the empty
+    # key fields keep the stored keys in place.
+    _ = api_client.invoke(_Keystore_Edit, {
+        'as2_signing_key': '',
+        'as2_signing_cert_chain': original['as2_signing_cert_chain'],
+        'as2_decryption_key': '',
+        'as2_next_decryption_key': '',
+        'as2_next_decryption_cert': original['as2_next_decryption_cert'],
+    })
 
 # ################################################################################################################################
 # ################################################################################################################################

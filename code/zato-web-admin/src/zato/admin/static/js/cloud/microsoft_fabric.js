@@ -22,7 +22,6 @@ $(document).ready(function() {
         'address',
         'tenant_id',
         'client_id',
-        'client_secret',
     ]);
 
     var unique_constraints = [
@@ -88,13 +87,14 @@ $.fn.zato.cloud.microsoft_fabric.data_table.new_row = function(item, data, inclu
     row += String.format('<td>{0}</td>', item.client_id);
 
     // 2
+    row += String.format('<td>{0}</td>',
+        String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}', 'Change secret')\">Change secret</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.cloud.microsoft_fabric.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.cloud.microsoft_fabric.delete_('{0}');\">Delete</a>", item.id));
 
     // 3
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:void(0)\" onclick=\"$.fn.zato.data_table.ping('{0}', this)\">Ping</a>", item.id));
     row += String.format("<td class='ignore'>{0}</td>", item.address);
-    row += String.format("<td class='ignore'>{0}</td>", item.client_secret);
 
     // 4
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);

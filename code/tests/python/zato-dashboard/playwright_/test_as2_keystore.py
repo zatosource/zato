@@ -7,8 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.api import AS2
-from zato.common.const import SECRETS
 from as4_keys import new_party
 
 # ################################################################################################################################
@@ -73,85 +71,85 @@ class TestAS2Keystore:
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
 
-        # The keystore is a singleton on the AS2 channel, so what was there before
-        # the test is put back once the test is done.
-        original = api_client.invoke(_Service_Get)
-
         # A soon-to-expire signing certificate exercises the red expiry warning
         # while the next decryption pair uses a long-lived one.
         signing_party = new_party('as2-keystore-signing', _Short_Validity_Days)
         next_party = new_party('as2-keystore-next')
 
-        try:
+        # Fill in the whole form ..
+        _open_keystore_page(page, base_url)
 
-            # Fill in the whole form ..
-            _open_keystore_page(page, base_url)
+        page.fill('#id_as2_signing_key', signing_party.key)
+        page.fill('#id_as2_signing_cert_chain', signing_party.certificate)
+        page.fill('#id_as2_decryption_key', signing_party.key)
+        page.fill('#id_as2_next_decryption_key', next_party.key)
+        page.fill('#id_as2_next_decryption_cert', next_party.certificate)
 
-            page.fill('#id_as2_signing_key', signing_party.key)
-            page.fill('#id_as2_signing_cert_chain', signing_party.certificate)
-            page.fill('#id_as2_decryption_key', signing_party.key)
-            page.fill('#id_as2_next_decryption_key', next_party.key)
-            page.fill('#id_as2_next_decryption_cert', next_party.certificate)
+        # .. and save it.
+        _save_keystore_form(page)
 
-            # .. and save it.
-            _save_keystore_form(page)
+        # Reload so the page is rebuilt from what the server now has stored ..
+        _open_keystore_page(page, base_url)
 
-            # Reload so the page is rebuilt from what the server now has stored ..
-            _open_keystore_page(page, base_url)
+        # .. the private keys never come back to the page - the textareas are empty
+        # .. and the hints say a key is stored ..
+        assert page.input_value('#id_as2_signing_key') == ''
+        assert page.input_value('#id_as2_decryption_key') == ''
+        assert page.input_value('#id_as2_next_decryption_key') == ''
 
-            # .. the private keys are stored encrypted ..
-            assert page.input_value('#id_as2_signing_key').startswith(SECRETS.PREFIX)
-            assert page.input_value('#id_as2_decryption_key').startswith(SECRETS.PREFIX)
-            assert page.input_value('#id_as2_next_decryption_key').startswith(SECRETS.PREFIX)
+        assert 'A key is stored' in page.text_content('#signing-key-hint')
+        assert 'A key is stored' in page.text_content('#decryption-key-hint')
+        assert 'A key is stored' in page.text_content('#next-key-hint')
 
-            # .. the certificates are stored as pasted ..
-            assert page.input_value('#id_as2_signing_cert_chain').strip() == signing_party.certificate.strip()
-            assert page.input_value('#id_as2_next_decryption_cert').strip() == next_party.certificate.strip()
+        # .. the certificates are stored as pasted ..
+        assert page.input_value('#id_as2_signing_cert_chain').strip() == signing_party.certificate.strip()
+        assert page.input_value('#id_as2_next_decryption_cert').strip() == next_party.certificate.strip()
 
-            # .. the soon-to-expire signing certificate is shown with the red warning ..
-            signing_expiry_class = page.get_attribute('#signing-expiry', 'class')
-            assert 'cert-expiry-warning' in signing_expiry_class
+        # .. the soon-to-expire signing certificate is shown with the red warning ..
+        signing_expiry_class = page.get_attribute('#signing-expiry', 'class')
+        assert 'cert-expiry-warning' in signing_expiry_class
 
-            signing_expiry_text = page.text_content('#signing-expiry')
-            assert 'days left' in signing_expiry_text
+        signing_expiry_text = page.text_content('#signing-expiry')
+        assert 'days left' in signing_expiry_text
 
-            # .. while the long-lived next certificate is not.
-            next_expiry_class = page.get_attribute('#next-cert-expiry', 'class')
-            assert 'cert-expiry-warning' not in next_expiry_class
+        # .. while the long-lived next certificate is not.
+        next_expiry_class = page.get_attribute('#next-cert-expiry', 'class')
+        assert 'cert-expiry-warning' not in next_expiry_class
 
-            # The backend view of the keystore matches what the page shows -
-            # the browser submits textareas with CRLF line endings, so the stored
-            # certificate is compared with those normalized away.
-            stored = api_client.invoke(_Service_Get)
+        # The backend view of the keystore matches what the page shows - the keys are
+        # reported only as flags and the browser submits textareas with CRLF line endings,
+        # so the stored certificate is compared with those normalized away.
+        stored = api_client.invoke(_Service_Get)
 
-            stored_cert_chain = stored['as2_signing_cert_chain'].replace('\r\n', '\n')
+        stored_cert_chain = stored['as2_signing_cert_chain'].replace('\r\n', '\n')
 
-            assert stored['as2_signing_key'].startswith(SECRETS.PREFIX)
-            assert stored_cert_chain.strip() == signing_party.certificate.strip()
+        assert stored['has_as2_signing_key'] is True
+        assert stored['has_as2_decryption_key'] is True
+        assert stored['has_as2_next_decryption_key'] is True
+        assert stored_cert_chain.strip() == signing_party.certificate.strip()
 
-            # Clearing the next decryption pair is how a completed rotation is wrapped up ..
-            page.fill('#id_as2_next_decryption_key', '')
-            page.fill('#id_as2_next_decryption_cert', '')
+        # A save with the key fields left empty keeps the stored keys in place ..
+        page.fill('#id_as2_signing_cert_chain', signing_party.certificate)
+        _save_keystore_form(page)
 
-            _save_keystore_form(page)
+        stored = api_client.invoke(_Service_Get)
+        assert stored['has_as2_signing_key'] is True
+        assert stored['has_as2_decryption_key'] is True
 
-            # .. after which the page no longer shows an expiry for it.
-            _open_keystore_page(page, base_url)
+        # .. and clearing the next decryption certificate removes the staged key with it,
+        # which is how a completed rotation is wrapped up ..
+        _open_keystore_page(page, base_url)
+        page.fill('#id_as2_next_decryption_cert', '')
 
-            assert page.input_value('#id_as2_next_decryption_key') == ''
-            assert page.input_value('#id_as2_next_decryption_cert') == ''
-            assert page.text_content('#next-cert-expiry').strip() == '---'
+        _save_keystore_form(page)
 
-        finally:
+        # .. after which the page no longer shows the pair at all.
+        _open_keystore_page(page, base_url)
 
-            # Put back what was stored before the test - the original private keys
-            # are already encrypted, so the edit keeps them as they are.
-            restore_request = {}
-
-            for name in AS2.Keystore_Fields:
-                restore_request[name] = original[name]
-
-            _ = api_client.invoke(_Service_Edit, restore_request)
+        assert page.input_value('#id_as2_next_decryption_key') == ''
+        assert page.input_value('#id_as2_next_decryption_cert') == ''
+        assert 'No key is stored yet' in page.text_content('#next-key-hint')
+        assert page.text_content('#next-cert-expiry').strip() == '---'
 
 # ################################################################################################################################
 # ################################################################################################################################

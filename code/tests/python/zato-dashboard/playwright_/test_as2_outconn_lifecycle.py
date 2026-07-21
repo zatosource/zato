@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.const import SECRETS
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.playwright_pubsub import close_dialog_via_jquery
 from as2_outconn import create_as2_outconn, delete_as2_outconn, edit_as2_outconn, find_as2_outconn_row, \
@@ -134,11 +133,11 @@ class TestAS2OutconnLifecycle:
         assert page.is_checked('#id_edit-mdn_signed')
         assert page.input_value('#id_edit-async_mdn_url') == 'https://zato.example.com/zato/as2/mdn'
 
-        # The private keys are stored encrypted, so the dialog shows the encrypted
-        # form rather than the pasted plain text ..
-        assert page.input_value('#id_edit-as2_signing_key').startswith(SECRETS.PREFIX)
-        assert page.input_value('#id_edit-as2_decryption_key').startswith(SECRETS.PREFIX)
-        assert page.input_value('#id_edit-as2_next_decryption_key').startswith(SECRETS.PREFIX)
+        # The private keys never come back to the page, so the dialog shows them empty -
+        # leaving them empty on an edit keeps the stored keys ..
+        assert page.input_value('#id_edit-as2_signing_key') == ''
+        assert page.input_value('#id_edit-as2_decryption_key') == ''
+        assert page.input_value('#id_edit-as2_next_decryption_key') == ''
 
         # .. while the certificates round-trip verbatim.
         assert page.input_value('#id_edit-as2_partner_cert').strip() == receiver.certificate.strip()
@@ -202,8 +201,9 @@ class TestAS2OutconnLifecycle:
         assert page.input_value('#id_edit-username') == 'as2-basic-user'
         assert page.input_value('#id_edit-as2_partner_cert').strip() == receiver.certificate.strip()
 
-        # .. and the encrypted keys survived the edit unchanged in kind.
-        assert page.input_value('#id_edit-as2_signing_key').startswith(SECRETS.PREFIX)
+        # .. and the private keys are still never shown, while the edit
+        # with the key fields left empty kept the stored ones.
+        assert page.input_value('#id_edit-as2_signing_key') == ''
 
         # .. close the dialog ..
         close_dialog_via_jquery(page, 'edit-div')

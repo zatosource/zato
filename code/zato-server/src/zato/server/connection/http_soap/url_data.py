@@ -42,7 +42,7 @@ if 0:
 logger = logging.getLogger(__name__)
 
 # Fields that inbound bearer token verification reads from a definition's opaque attributes
-_oauth_inbound_keys = ('static_token', 'issuer', 'jwks_url', 'audience', 'claims')
+_oauth_inbound_keys = ('is_static_token', 'static_token', 'issuer', 'jwks_url', 'audience', 'claims')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -533,8 +533,22 @@ class URLData(PyURLData):
         """
         wait_for_dict_key(self.oauth_config, msg.name)
         with self.url_sec_lock:
-            self.oauth_config[msg.name]['config']['password'] = msg.password
+            config = self.oauth_config[msg.name]['config']
+            config['password'] = msg.password
+
+            # Static tokens used to be kept in the opaque attributes - the password column
+            # is their only home now, so the old copy is removed here.
+            if config.pop('static_token', None):
+                config['is_static_token'] = True
+
             self._update_url_sec(msg, SEC_DEF_TYPE.OAUTH)
+
+            # The same removal applies to security definitions attached to channels.
+            for url_info in self.url_sec.values():
+                sec_def = url_info.get('sec_def')
+                if sec_def and sec_def != ZATO_NONE and sec_def.sec_type == SEC_DEF_TYPE.OAUTH and sec_def.name == msg.name:
+                    if sec_def.pop('static_token', None):
+                        sec_def['is_static_token'] = True
 
 # ################################################################################################################################
 

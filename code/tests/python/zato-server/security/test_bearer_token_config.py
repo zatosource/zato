@@ -159,6 +159,20 @@ class BuildVerifyConfig(TestCase):
 
 # ################################################################################################################################
 
+    def test_static_definition_token_in_password(self) -> 'None':
+        """ The token of a static definition lives in the password column.
+        """
+        sec_def = self._make_sec_def()
+        sec_def['is_static_token'] = True
+        sec_def['password'] = 'test-static-token-from-password'
+
+        out = build_verify_config(sec_def)
+
+        self.assertEqual(out.static_token, 'test-static-token-from-password')
+        self.assertEqual(out.audience, '')
+
+# ################################################################################################################################
+
     def test_outgoing_only_definition(self) -> 'None':
         """ A definition with no inbound fields at all builds a config that never matches inbound traffic.
         """

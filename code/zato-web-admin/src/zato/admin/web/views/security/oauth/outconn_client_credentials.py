@@ -42,7 +42,7 @@ class Index(_Index):
     input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active', 'username', 'auth_server_url', 'scopes', \
         'client_id_field', 'client_secret_field', 'grant_type', 'extra_fields', 'data_format', \
-        'static_header', 'static_token', 'static_prefix', \
+        'static_header', 'is_static_token', 'static_prefix', \
         'issuer', 'jwks_url', 'audience', 'claims'
     output_repeated = True
 
@@ -63,7 +63,7 @@ class _CreateEdit(CreateEdit):
     input_required = 'name', 'is_active'
     input_optional = 'username', 'auth_server_url', 'scopes', \
         'client_id_field', 'client_secret_field', 'grant_type', 'extra_fields', 'data_format', \
-        'static_header', 'static_token', 'static_prefix', \
+        'static_header', 'is_static_token', 'static_prefix', \
         'issuer', 'jwks_url', 'audience', 'claims'
     output_required = 'id', 'name'
 
@@ -81,11 +81,12 @@ class Create(_CreateEdit):
 
         # The create service generates a random secret, so the one from the create form
         # is stored in a follow-up call, the same way API key definitions do it.
+        # Static tokens are stored through the same call - they live in the password column.
         response = super().__call__(req, *args, **kwargs)
 
         if response.status_code == HTTPStatus.OK:
             data = loads(response.content)
-            secret = req.POST.get('secret', '')
+            secret = req.POST.get('secret', '') or req.POST.get('static_token', '')
 
             if secret:
                 _ = req.zato.client.invoke('zato.security.oauth.change-password', {
