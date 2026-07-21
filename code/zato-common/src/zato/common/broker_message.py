@@ -82,6 +82,10 @@ class SECURITY(Constants):
     MTLS_EDIT = ValueConstant('')
     MTLS_DELETE = ValueConstant('')
 
+    SPNEGO_CREATE = ValueConstant('')
+    SPNEGO_EDIT = ValueConstant('')
+    SPNEGO_DELETE = ValueConstant('')
+
     APIKEY_CREATE = ValueConstant('')
     APIKEY_EDIT = ValueConstant('')
     APIKEY_DELETE = ValueConstant('')

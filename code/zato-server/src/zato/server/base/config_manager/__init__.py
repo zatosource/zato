@@ -382,6 +382,7 @@ class ConfigManager(_ConfigManagerBase):
             self.config_store.mtls,
             self.config_store.ntlm,
             self.config_store.oauth,
+            self.config_store.spnego,
             self.config_store.apikey,
             self.config_store.wss,
             self.config_dispatcher,
@@ -639,6 +640,15 @@ class ConfigManager(_ConfigManagerBase):
             wrapper_config['key_path'] = mtls_config.get('key_path')
             wrapper_config['ca_certs_path'] = mtls_config.get('ca_certs_path')
 
+        # A Kerberos (SPNEGO) definition carries the client principal and its keytab -
+        # the wrapper builds an HTTPSPNEGOAuth object out of them when it sets up its session.
+        if sec_config['sec_type'] == SEC_DEF_TYPE.SPNEGO and security_name:
+            spnego_config = self.request_dispatcher.url_data.spnego_get(security_name).config
+            wrapper_config['principal'] = spnego_config.get('principal')
+            wrapper_config['keytab_path'] = spnego_config.get('keytab_path')
+            wrapper_config['target_spn'] = spnego_config.get('target_spn')
+            wrapper_config['needs_delegation'] = spnego_config.get('needs_delegation')
+
         return HTTPSOAPWrapper(self.server, wrapper_config)
 
 # ################################################################################################################################
@@ -826,6 +836,7 @@ class ConfigManager(_ConfigManagerBase):
             mtls_config=self.config_store.mtls,
             ntlm_config=self.config_store.ntlm,
             oauth_config=self.config_store.oauth,
+            spnego_config=self.config_store.spnego,
             apikey_config=self.config_store.apikey,
             wss_config=self.config_store.wss,
         )
@@ -1845,6 +1856,39 @@ class ConfigManager(_ConfigManagerBase):
         """ Deletes an mTLS security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.MTLS,
+                self._visit_wrapper_delete)
+
+# ################################################################################################################################
+
+    def wait_for_spnego(self, name:'str', timeout:'int'=999999) -> 'bool':
+        return wait_for_dict_key_by_get_func(self.spnego_get, name, timeout, interval=0.5)
+
+    def spnego_get(self, name:'str') -> 'bunch_':
+        """ Returns the configuration of the Kerberos (SPNEGO) security definition
+        of the given name.
+        """
+        return self.request_dispatcher.url_data.spnego_get(name)
+
+    def spnego_get_by_id(self, def_id:'int') -> 'bunch_':
+        """ Same as spnego_get but by definition ID.
+        """
+        return self.request_dispatcher.url_data.spnego_get_by_id(def_id)
+
+    def on_config_event_SECURITY_SPNEGO_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
+        """ Creates a new Kerberos (SPNEGO) security definition.
+        """
+        dispatcher.notify(broker_message.SECURITY.SPNEGO_CREATE.value, msg)
+
+    def on_config_event_SECURITY_SPNEGO_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
+        """ Updates an existing Kerberos (SPNEGO) security definition.
+        """
+        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.SPNEGO,
+                self._visit_wrapper_edit, keys=('name', 'principal', 'keytab_path', 'target_spn', 'needs_delegation'))
+
+    def on_config_event_SECURITY_SPNEGO_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
+        """ Deletes a Kerberos (SPNEGO) security definition.
+        """
+        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.SPNEGO,
                 self._visit_wrapper_delete)
 
 # ################################################################################################################################

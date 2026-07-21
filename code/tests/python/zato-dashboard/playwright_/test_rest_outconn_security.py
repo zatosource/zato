@@ -30,7 +30,7 @@ if 0:
 
 from http_test_server import HTTPSTestServer, HTTPTestServer
 from rest_channel import create_apikey_definition, create_bearer_token_definition, create_mtls_definition, \
-    create_ntlm_definition
+    create_ntlm_definition, create_spnego_definition
 from rest_outconn import create_outconn, edit_outconn, find_outconn_row, get_row_cell_texts, invoke_outconn_via_overlay, \
     open_edit_dialog, open_outconn_page, ping_outconn_until_success
 
@@ -348,6 +348,43 @@ class TestRESTOutconnSecurity:
 
 # ################################################################################################################################
 
+    def test_spnego_assignment(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates a Kerberos (SPNEGO) definition, assigns it to a connection and verifies the assignment
+        persists across the row and the edit dialog. Live invocations against a KDC are covered
+        by the end-to-end suite.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        outconn_name = _Test_Name_Prefix + 'spnego'
+        url_path = '/test/outconn/sec-spnego/' + rand_string()
+
+        # Create the security definition ..
+        definition = create_spnego_definition(page, base_url, _Test_Name_Prefix + 'spnego-def')
+
+        # .. create the connection with that definition assigned ..
+        outconn_id = create_outconn(page, base_url, outconn_name, 'https://rest-sec.example.com:8443', {
+            'url_path': url_path,
+            'security': f'Kerberos (SPNEGO)/{definition["name"]}',
+        })
+
+        # .. a server-rendered row shows the definition, so reload the page first ..
+        open_outconn_page(page, base_url)
+        row = find_outconn_row(page, outconn_name)
+        cells = get_row_cell_texts(row)
+        assert definition['name'] in cells[_Cell_Security], \
+            f'Expected "{definition["name"]}" in the security cell, got: "{cells[_Cell_Security]}"'
+
+        # .. and the edit dialog has it selected.
+        open_edit_dialog(page, outconn_id)
+
+        selected_label = page.evaluate('$("#id_edit-security option:selected").text()')
+        expected_label = f'Kerberos (SPNEGO)/{definition["name"]}'
+        assert selected_label == expected_label, f'Expected "{expected_label}" selected, got: "{selected_label}"'
+
+# ################################################################################################################################
+
     def test_mtls_live_client_cert(
         self, logged_in_page:'Page', zato_dashboard:'anydict', https_mtls_test_server:'HTTPSTestServer') -> 'None':
         """ Creates an mTLS definition whose certificate material chains up to the test server's CA,
@@ -417,8 +454,17 @@ class TestRESTOutconnSecurity:
 
         logger.info('[test_mtls_live_no_client_cert] result=%s', result)
 
-        # .. the overlay reports a failure rather than an OK response ..
-        assert '200 OK' not in result['status'], f'Expected a failed invocation, got: {result}'
+        # .. the overlay itself returns OK because the invoking service responded, so the failed
+        # handshake shows up in the response text rather than in the status line ..
+        response_text = result['response']
+
+        has_tls_failure = False
+        for pattern in _MTLS_Failure_Log_Patterns:
+            if pattern in response_text:
+                has_tls_failure = True
+                break
+
+        assert has_tls_failure, f'Expected a TLS handshake failure in the response, got: {result}'
 
         # .. and no request made it through the handshake.
         recorded = https_mtls_test_server.recorded_requests

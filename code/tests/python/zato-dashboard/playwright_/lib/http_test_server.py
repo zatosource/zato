@@ -14,8 +14,9 @@ import ssl
 import tempfile
 import threading
 import time
+from base64 import b64decode
 from datetime import datetime, timedelta, timezone
-from http.client import OK
+from http.client import OK, UNAUTHORIZED
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qsl, urlsplit
 
@@ -93,6 +94,10 @@ class _RecordingHandler(BaseHTTPRequestHandler):
             'headers': dict(self.headers.items()),
             'body': body,
         }
+
+        # Subclasses may enrich the record, e.g. with the authenticated principal
+        record.update(self._get_extra_record_fields())
+
         server.recorded_requests.append(record)
 
         # .. use the per-path configuration if there is one, defaulting otherwise ..
@@ -127,6 +132,13 @@ class _RecordingHandler(BaseHTTPRequestHandler):
     do_DELETE  = _handle
     do_HEAD    = _handle
     do_OPTIONS = _handle
+
+# ################################################################################################################################
+
+    def _get_extra_record_fields(self) -> 'anydict':
+        """ Extra fields subclasses may add to a recorded request.
+        """
+        return {}
 
 # ################################################################################################################################
 
@@ -408,6 +420,137 @@ class HTTPSTestServer(HTTPTestServer):
         else:
             os.remove(self._certificate_path)
             os.remove(self._key_path)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _SPNEGOHandler(_RecordingHandler):
+    """ The accept side of the SPNEGO negotiation - a request without a Negotiate token
+    receives the 401 challenge, a request with one has its token verified with GSSAPI
+    against the server's service keytab.
+    """
+
+    # The authenticated client principal, set once the negotiation completes
+    _spnego_principal = ''
+
+    def _handle(self) -> 'None':
+
+        server:'any_' = self.server
+
+        # A client that has completed the negotiation carries its token in this header ..
+        auth_header = self.headers.get('Authorization')
+
+        if auth_header and auth_header.startswith('Negotiate '):
+
+            # Imported here because the module is loaded lazily, only by suites that use it
+            from gssapi.exceptions import GSSError
+
+            # .. verify the token with the service credentials - a token that cannot
+            # be verified, e.g. one minted against stale keys, counts as no token at all ..
+            in_token = b64decode(auth_header[len('Negotiate '):])
+
+            accept_context = server.build_accept_context()
+
+            try:
+                _ = accept_context.step(in_token)
+            except GSSError:
+                logger.info('[SPNEGOTestServer] token verification failed', exc_info=True)
+            else:
+                # .. a complete context means the client authenticated, so the request
+                # is recorded with the principal and served as usual ..
+                if accept_context.complete:
+                    self._spnego_principal = str(accept_context.initiator_name)
+                    super()._handle()
+                    return
+
+        # .. anything else receives the challenge that starts the negotiation.
+        self._respond_with_challenge()
+
+# ################################################################################################################################
+
+    # The base class binds its verb handlers to its own _handle function directly,
+    # which is why they are rebound here to the negotiating one.
+    do_GET     = _handle
+    do_POST    = _handle
+    do_PUT     = _handle
+    do_PATCH   = _handle
+    do_DELETE  = _handle
+    do_HEAD    = _handle
+    do_OPTIONS = _handle
+
+# ################################################################################################################################
+
+    def _respond_with_challenge(self) -> 'None':
+        """ Responds with the 401 challenge, draining the request body first so that
+        the keep-alive connection stays usable for the client's retry.
+        """
+        if 'Content-Length' in self.headers:
+            content_length = int(self.headers['Content-Length'])
+            _ = self.rfile.read(content_length)
+
+        self.send_response(UNAUTHORIZED)
+        self.send_header('WWW-Authenticate', 'Negotiate')
+        self.send_header('Content-Length', '0')
+        self.end_headers()
+
+# ################################################################################################################################
+
+    def _get_extra_record_fields(self) -> 'anydict':
+        out = {'spnego_principal': self._spnego_principal}
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SPNEGOTestServer(HTTPTestServer):
+    """ The SPNEGO-protected variant of the recording test server - it performs the accept
+    side of the negotiation with the given service principal and its keytab, so tests cover
+    the full 401-negotiate-retry dance that outgoing connections perform.
+    """
+
+    def __init__(self, service_principal:'str', keytab_path:'str') -> 'None':
+        super().__init__()
+
+        self.service_principal = service_principal
+        self.keytab_path = keytab_path
+
+# ################################################################################################################################
+
+    def start(self) -> 'None':
+        """ Binds the server to an ephemeral port and starts serving in a background thread,
+        with the SPNEGO handler in place of the plain recording one.
+        """
+
+        # Imported here because the underlying gssapi package needs system Kerberos
+        # libraries which may be absent from installations that never run these tests.
+        import gssapi
+
+        service_principal = self.service_principal
+        keytab_path = self.keytab_path
+
+        # Each negotiation needs its own context, so the server object exposes a builder
+        # instead of a single shared context.
+        def build_accept_context() -> 'any_':
+            name = gssapi.Name(service_principal, gssapi.NameType.hostbased_service)
+            creds = gssapi.Credentials(name=name, store={'keytab': keytab_path}, usage='accept')
+
+            out = gssapi.SecurityContext(creds=creds, usage='accept')
+            return out
+
+        # Bind to an ephemeral port ..
+        self._httpd = _RecordingServer((self.host, 0), _SPNEGOHandler)
+        self._httpd.build_accept_context = build_accept_context
+
+        # .. remember which port was assigned ..
+        address = self._httpd.server_address
+        self.port = address[1]
+
+        # .. and serve in the background.
+        self._thread = threading.Thread(target=self._httpd.serve_forever, daemon=True)
+        self._thread.start()
+
+        logger.info('[SPNEGOTestServer] started on %s://%s:%d principal=%s',
+            self.scheme, self.host, self.port, self.service_principal)
 
 # ################################################################################################################################
 # ################################################################################################################################

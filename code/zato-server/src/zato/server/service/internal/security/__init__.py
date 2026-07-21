@@ -65,6 +65,7 @@ class GetList(AdminService):
                 (SEC_DEF_TYPE.MTLS, query.mtls_list),
                 (SEC_DEF_TYPE.NTLM, query.ntlm_list),
                 (SEC_DEF_TYPE.OAUTH, query.oauth_list),
+                (SEC_DEF_TYPE.SPNEGO, query.spnego_list),
                 (SEC_DEF_TYPE.WSS, query.wss_list),
             )
 

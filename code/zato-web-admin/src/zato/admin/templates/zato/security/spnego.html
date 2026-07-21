@@ -1,0 +1,187 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Kerberos definitions{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/security/spnego.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+            'name',
+            'principal',
+            'keytab_path',
+            '_edit',
+            '_delete',
+            'id',
+            'target_spn',
+            'needs_delegation',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+    {% if cluster_id %}
+
+        <div id="markup">
+<h2 class="zato">Kerberos (SPNEGO)</h2>
+
+{% include "zato/search-form.html" with page_prompt="Search"%}
+
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.security.spnego.create()">Create a Kerberos definition</a>
+        </div>
+
+            <table class="zato-table" id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Principal</a></th>
+                        <th><a href="#">Keytab path</a></th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.principal|default:'' }}</td>
+                        <td>{{ item.keytab_path|default:'' }}</td>
+                        <td><a href="javascript:$.fn.zato.security.spnego.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.security.spnego.delete_('{{ item.id }}')">Delete</a></td>
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.target_spn|default:'' }}</td>
+                        <td class='ignore'>{{ item.needs_delegation|default:'False' }}</td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='10'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+
+{% include "zato/paginate/action-panel.html" %}
+
+        </div>
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "security-spnego-create" %}" method="post" id="create-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle; width:30%"><label for="{{ create_form.name.id_for_label }}">Name</label></td>
+                            <td>{{ create_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle"><label for="{{ create_form.principal.id_for_label }}">Principal</label></td>
+                            <td>{{ create_form.principal }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle"><label for="{{ create_form.keytab_path.id_for_label }}">Keytab path</label></td>
+                            <td>{{ create_form.keytab_path }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle"><label for="{{ create_form.target_spn.id_for_label }}">Target SPN</label></td>
+                            <td>{{ create_form.target_spn }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle"><label for="{{ create_form.needs_delegation.id_for_label }}">Delegate credentials</label></td>
+                            <td>{{ create_form.needs_delegation }}</td>
+                        </tr>
+                        <tr>
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "security-spnego-edit" %}" method="post" id="edit-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle; width:30%"><label for="{{ edit_form.name.id_for_label }}">Name</label></td>
+                            <td>{{ edit_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.principal.id_for_label }}">Principal</label></td>
+                            <td>{{ edit_form.principal }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.keytab_path.id_for_label }}">Keytab path</label></td>
+                            <td>{{ edit_form.keytab_path }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.target_spn.id_for_label }}">Target SPN</label></td>
+                            <td>{{ edit_form.target_spn }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.needs_delegation.id_for_label }}">Delegate credentials</label></td>
+                            <td>{{ edit_form.needs_delegation }}</td>
+                        </tr>
+                        <tr>
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+
+    {% endif %} {% comment %}cluster_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

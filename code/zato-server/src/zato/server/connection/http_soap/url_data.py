@@ -63,7 +63,8 @@ class URLData(PyURLData):
     """ Performs URL matching and security checks.
     """
     def __init__(self, config_manager, channel_data=None, url_sec=None, basic_auth_config=None, mtls_config=None, \
-                 ntlm_config=None, oauth_config=None, apikey_config=None, wss_config=None, config_dispatcher=None, odb=None):
+                 ntlm_config=None, oauth_config=None, spnego_config=None, apikey_config=None, wss_config=None, \
+                 config_dispatcher=None, odb=None):
         super(URLData, self).__init__(channel_data)
 
         self.config_manager = config_manager
@@ -72,6 +73,7 @@ class URLData(PyURLData):
         self.mtls_config = mtls_config
         self.ntlm_config = ntlm_config
         self.oauth_config = oauth_config
+        self.spnego_config = spnego_config
         self.apikey_config = apikey_config
         self.wss_config = wss_config
         self.config_dispatcher = config_dispatcher
@@ -95,14 +97,15 @@ class URLData(PyURLData):
 
 # ################################################################################################################################
 
-    def set_security_objects(self, *, url_sec, basic_auth_config, mtls_config, ntlm_config, oauth_config, apikey_config,
-        wss_config):
+    def set_security_objects(self, *, url_sec, basic_auth_config, mtls_config, ntlm_config, oauth_config, spnego_config,
+        apikey_config, wss_config):
 
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
         self.mtls_config = mtls_config
         self.ntlm_config = ntlm_config
         self.oauth_config = oauth_config
+        self.spnego_config = spnego_config
         self.apikey_config = apikey_config
         self.wss_config = wss_config
 
@@ -554,6 +557,47 @@ class URLData(PyURLData):
 
 # ################################################################################################################################
 
+    def _update_spnego(self, name, config):
+        self.spnego_config[name] = Bunch()
+        self.spnego_config[name].config = config
+
+    def spnego_get(self, name):
+        """ Returns the configuration of the Kerberos (SPNEGO) security definition of the given name.
+        """
+        wait_for_dict_key(self.spnego_config, name)
+        with self.url_sec_lock:
+            return self.spnego_config.get(name)
+
+    def spnego_get_by_id(self, def_id):
+        """ Same as spnego_get but returns information by definition ID.
+        """
+        with self.url_sec_lock:
+            return self._get_sec_def_by_id(self.spnego_config, def_id)
+
+    def on_config_event_SECURITY_SPNEGO_CREATE(self, msg, *args):
+        """ Creates a new Kerberos (SPNEGO) security definition.
+        """
+        with self.url_sec_lock:
+            self._update_spnego(msg.name, msg)
+
+    def on_config_event_SECURITY_SPNEGO_EDIT(self, msg, *args):
+        """ Updates an existing Kerberos (SPNEGO) security definition.
+        """
+        with self.url_sec_lock:
+            del self.spnego_config[msg.old_name]
+            self._update_spnego(msg.name, msg)
+            self._update_url_sec(msg, SEC_DEF_TYPE.SPNEGO)
+
+    def on_config_event_SECURITY_SPNEGO_DELETE(self, msg, *args):
+        """ Deletes a Kerberos (SPNEGO) security definition.
+        """
+        with self.url_sec_lock:
+            self._delete_channel_data('spnego', msg.name)
+            del self.spnego_config[msg.name]
+            self._update_url_sec(msg, SEC_DEF_TYPE.SPNEGO, True)
+
+# ################################################################################################################################
+
     def _update_wss(self, name, config):
         self.wss_config[name] = Bunch()
         self.wss_config[name].config = config
@@ -655,17 +699,20 @@ class URLData(PyURLData):
             config['password'] = msg.password
 
             # Static tokens used to be kept in the opaque attributes - the password column
-            # is their only home now, so the old copy is removed here.
-            if config.pop('static_token', None):
+            # is their only home now, so the old copy is blanked out here. The config object
+            # is a broker message without a pop method, which is why the key itself stays in place.
+            if config.get('static_token'):
+                config['static_token'] = ''
                 config['is_static_token'] = True
 
             self._update_url_sec(msg, SEC_DEF_TYPE.OAUTH)
 
-            # The same removal applies to security definitions attached to channels.
+            # The same blanking applies to security definitions attached to channels.
             for url_info in self.url_sec.values():
                 sec_def = url_info.get('sec_def')
                 if sec_def and sec_def != ZATO_NONE and sec_def.sec_type == SEC_DEF_TYPE.OAUTH and sec_def.name == msg.name:
-                    if sec_def.pop('static_token', None):
+                    if sec_def.get('static_token'):
+                        sec_def['static_token'] = ''
                         sec_def['is_static_token'] = True
 
 # ################################################################################################################################

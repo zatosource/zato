@@ -676,6 +676,28 @@ def create_mtls_definition(page:'Page', base_url:'str', name:'str', fields:'anyd
 
 # ################################################################################################################################
 
+def create_spnego_definition(page:'Page', base_url:'str', name:'str', fields:'anydict | None'=None) -> 'anydict':
+    """ Creates a Kerberos (SPNEGO) security definition via the UI and returns its details.
+    The principal and keytab path are required, the fields dictionary may add optional
+    details such as target_spn.
+    """
+
+    form_fields = {
+        'name': name,
+        'principal': f'{name}@EXAMPLE.COM',
+        'keytab_path': f'/opt/hot-deploy/krb5/{name}.keytab',
+    } # type: anydict
+
+    if fields:
+        form_fields.update(fields)
+
+    _create_definition_on_page(page, base_url, '/zato/security/spnego/?cluster=1', form_fields)
+
+    out = dict(form_fields)
+    return out
+
+# ################################################################################################################################
+
 def create_bearer_token_definition(page:'Page', base_url:'str', name:'str') -> 'anydict':
     """ Creates a Bearer token security definition via the UI and returns its details.
     """

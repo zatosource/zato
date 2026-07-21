@@ -55,7 +55,7 @@ from zato.admin.web.views.outgoing import smb as out_smb
 from zato.admin.web.views.outgoing import soap as out_soap
 from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.service import ide as service_ide
-from zato.admin.web.views.security import apikey, basic_auth, mtls, ntlm, wss
+from zato.admin.web.views.security import apikey, basic_auth, mtls, ntlm, spnego, wss
 from zato.admin.web.views.security import posture as security_posture
 from zato.admin.web.views.security import tier as security_tier
 from zato.admin.web.views.security.oauth import outconn_client_credentials as oauth_outconn_client_credentials
@@ -265,6 +265,22 @@ urlpatterns += [
         login_required(ntlm.change_password), name='security-ntlm-change-password'),
     url(r'^zato/security/ntlm/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(ntlm.Delete()), name=ntlm.Delete.url_name),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. Kerberos (SPNEGO)
+
+    url(r'^zato/security/spnego/$',
+        login_required(spnego.Index()), name=spnego.Index.url_name),
+    url(r'^zato/security/spnego/create/$',
+        login_required(spnego.Create()), name=spnego.Create.url_name),
+    url(r'^zato/security/spnego/edit/$',
+        login_required(spnego.Edit()), name=spnego.Edit.url_name),
+    url(r'^zato/security/spnego/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(spnego.Delete()), name=spnego.Delete.url_name),
     ]
 
 # ################################################################################################################################

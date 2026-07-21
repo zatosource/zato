@@ -35,6 +35,11 @@ _llm_lib_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..
 if _llm_lib_dir not in sys.path:
     sys.path.insert(0, _llm_lib_dir)
 
+# The live test container helpers, e.g. the Kerberos KDC, live in the shared zato-common library.
+_common_lib_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'zato-common', 'lib'))
+if _common_lib_dir not in sys.path:
+    sys.path.insert(0, _common_lib_dir)
+
 # pytest
 import pytest
 from playwright.sync_api import sync_playwright
@@ -54,6 +59,7 @@ if 0:
 
 from cleanup_refs import cleanup_refs as _cleanup_refs
 from client import ZatoClient
+from live_kerberos.containers import ModuleCtx as _KerberosCtx
 from login import login as login_to_dashboard
 
 # Zato
@@ -343,6 +349,10 @@ def zato_dashboard() -> 'any_':
     # SFTP tests copy a private key to this path after the server has already started
     sftp_key_path = os.path.join(temporary_dir, 'sftp-test-key')
     server_env[_SFTP_Key_Env_Name] = sftp_key_path
+
+    # Kerberos tests write this configuration file when their KDC starts - the path is fixed
+    # and exported here because the server reads its environment once, at start.
+    server_env['KRB5_CONFIG'] = _KerberosCtx.Krb5_Config_Path
 
     server_process = subprocess.Popen(
         [_Zato_Bin, 'start', server_dir, '--fg'],

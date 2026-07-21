@@ -97,6 +97,12 @@ security:
     client_cert_fingerprint: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
     client_cert_subject_dn: CN=enmasse.client,O=Enmasse,C=US
 
+  - name: enmasse.spnego.1
+    type: spnego
+    principal: enmasse@EXAMPLE.COM
+    keytab_path: /opt/hot-deploy/krb5/enmasse.keytab
+    target_spn: HTTP@api.example.com
+
   - name: enmasse.wss.1
     username: enmasse.1
     password: abcdef123456
@@ -316,10 +322,17 @@ outgoing_rest:
     url_path: /abc/3
     data_format: json # No default value
 
-  - name: enmasse.outgoing.rest.4
+  - name: enmasse.outgoing.rest.6
     host: https://mtls.example.com
-    url_path: /abc/4
+    url_path: /abc/6
     security: enmasse.mtls.1
+    data_format: json
+    timeout: 30
+
+  - name: enmasse.outgoing.rest.7
+    host: https://spnego.example.com
+    url_path: /abc/7
+    security: enmasse.spnego.1
     data_format: json
     timeout: 30
 

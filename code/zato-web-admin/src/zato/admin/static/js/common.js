@@ -171,6 +171,8 @@ $.namespace('zato.security.mtls.data_table');
 $.namespace('zato.security.ntlm');
 $.namespace('zato.security.oauth');
 $.namespace('zato.security.posture');
+$.namespace('zato.security.spnego');
+$.namespace('zato.security.spnego.data_table');
 $.namespace('zato.security.tier');
 $.namespace('zato.security.wss');
 $.namespace('zato.security.wss.data_table');

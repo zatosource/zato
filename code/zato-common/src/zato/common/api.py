@@ -349,6 +349,7 @@ class SEC_DEF_TYPE:
     MTLS = 'mtls'
     NTLM = 'ntlm'
     OAUTH = 'oauth'
+    SPNEGO = 'spnego'
     WSS = 'wss'
 
 Sec_Def_Type = SEC_DEF_TYPE
@@ -362,6 +363,7 @@ SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.MTLS: 'mTLS',
     SEC_DEF_TYPE.NTLM: 'NTLM',
     SEC_DEF_TYPE.OAUTH: 'Bearer token',
+    SEC_DEF_TYPE.SPNEGO: 'Kerberos (SPNEGO)',
     SEC_DEF_TYPE.WSS: 'WS-Security',
 }
 
