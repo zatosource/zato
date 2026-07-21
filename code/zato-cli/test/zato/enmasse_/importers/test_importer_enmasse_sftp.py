@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import sys
 import tempfile
 from unittest import TestCase, main
 
@@ -17,12 +18,16 @@ import yaml
 # Bunch
 from zato.common.ext.bunch import bunchify
 
+# The directory with the throwaway test environment helpers
+_enmasse_tests_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, _enmasse_tests_dir)
+
 # Zato
+from env_helper import get_shared_environment
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.sftp import SFTPImporter
 from zato.common.api import GENERIC
-from zato.common.defaults import default_server_base_dir
 from zato.common.odb.model import GenericConn
 from zato.common.test.sftp_ import SFTPTestServer
 from zato.common.typing_ import cast_
@@ -96,7 +101,8 @@ class TestEnmasseSFTPFromYAML(TestCase):
             self.skipTest('Env. key Zato_Test_SFTP is not set')
 
         # Server path for database connection
-        self.server_path = default_server_base_dir
+        environment = get_shared_environment()
+        self.server_path = environment.server_dir
 
         # The YAML configuration with two connections - one key-based and one password-based
         yaml_data = yaml.safe_dump(self.get_yaml_dict(), allow_unicode=True)
@@ -122,7 +128,7 @@ class TestEnmasseSFTPFromYAML(TestCase):
         if self.session:
             self.session.close()
         os.unlink(self.temp_file.name)
-        cleanup_enmasse()
+        cleanup_enmasse(self.server_path)
 
 # ################################################################################################################################
 

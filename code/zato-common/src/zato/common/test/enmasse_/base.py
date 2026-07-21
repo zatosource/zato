@@ -58,7 +58,8 @@ class BaseEnmasseTestCase(TestCase):
 # ################################################################################################################################
 
     def invoke_enmasse(self, config_path:'str', require_ok:'bool'=True, missing_wait_time:'int'=1,
-                    is_import:'bool'=True, is_export:'bool'=False, include_type:'str'=None) -> 'RunningCommand':
+                    is_import:'bool'=True, is_export:'bool'=False, include_type:'str'=None,
+                    server_dir:'str'='') -> 'RunningCommand':
 
         # Zato
         from zato.common.util.cli import get_zato_sh_command
@@ -66,8 +67,12 @@ class BaseEnmasseTestCase(TestCase):
         # A shortcut
         command = get_zato_sh_command()
 
+        # Use the default server location unless the caller points us to another environment
+        if not server_dir:
+            server_dir = TestConfig.server_location
+
         # Prepare arguments
-        args = ['enmasse', TestConfig.server_location, '--verbose', '--missing-wait-time', missing_wait_time]
+        args = ['enmasse', server_dir, '--verbose', '--missing-wait-time', missing_wait_time]
 
         # Handle import operation
         if is_import:

@@ -23,13 +23,17 @@ import yaml
 # Bunch
 from zato.common.ext.bunch import bunchify
 
+# The directory with the throwaway test environment helpers
+_enmasse_tests_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, _enmasse_tests_dir)
+
 # Zato
 from containers import start_mongodb, stop_container
+from env_helper import get_shared_environment
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.mongodb import MongoDBImporter
 from zato.common.api import GENERIC, MongoDB
-from zato.common.defaults import default_server_base_dir
 from zato.common.odb.model import GenericConn
 from zato.common.typing_ import cast_
 from zato.common.util.sql import parse_instance_opaque_attr
@@ -116,7 +120,8 @@ class TestEnmasseMongoDBFromYAML(TestCase):
             self.skipTest('Env. key Zato_Test_MongoDB is not set')
 
         # Server path for database connection
-        self.server_path = default_server_base_dir
+        environment = get_shared_environment()
+        self.server_path = environment.server_dir
 
         # The YAML configuration with two connections - one with an ASCII name and one with a Unicode one
         yaml_data = yaml.safe_dump(self.get_yaml_dict(), allow_unicode=True)
@@ -142,7 +147,7 @@ class TestEnmasseMongoDBFromYAML(TestCase):
         if self.session:
             self.session.close()
         os.unlink(self.temp_file.name)
-        cleanup_enmasse()
+        cleanup_enmasse(self.server_path)
 
 # ################################################################################################################################
 
