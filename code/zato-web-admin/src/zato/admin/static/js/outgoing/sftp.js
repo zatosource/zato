@@ -19,12 +19,15 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func = $.fn.zato.outgoing.sftp.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name', 'address', 'username']);
+    // Generic connection names are unique per connection type,
+    // so the check is scoped to this page's own type.
     var uniqueConstraints = [
-        {field: 'name', entity_type: 'generic_connection', attr_name: 'name'}
+        {field: 'name', entity_type: 'generic_connection', attr_name: 'name',
+            filter_name: 'type_', filter_value: 'outconn-sftp'}
     ];
-    $.each(uniqueConstraints, function(constraintIdx, constraint) {
-        $.fn.zato.validate_unique('#id_' + constraint.field, constraint.entity_type, constraint.attr_name);
-        $.fn.zato.validate_unique('#id_edit-' + constraint.field, constraint.entity_type, constraint.attr_name);
+    $.each(uniqueConstraints, function(constraintIndex, constraint) {
+        $.fn.zato.validate_unique('#id_' + constraint.field, constraint.entity_type, constraint.attr_name, constraint);
+        $.fn.zato.validate_unique('#id_edit-' + constraint.field, constraint.entity_type, constraint.attr_name, constraint);
     });
 })
 

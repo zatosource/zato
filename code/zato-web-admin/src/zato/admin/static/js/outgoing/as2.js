@@ -25,12 +25,15 @@ $(document).ready(function() {
         'as2_to',
     ]);
 
+    // Generic connection names are unique per connection type,
+    // so the check is scoped to this page's own type.
     var unique_constraints = [
-        {field: 'name', entity_type: 'generic_connection', attr_name: 'name'},
+        {field: 'name', entity_type: 'generic_connection', attr_name: 'name',
+            filter_name: 'type_', filter_value: 'outconn-as2'},
     ];
-    $.each(unique_constraints, function(i, c) {
-        $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
-        $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name);
+    $.each(unique_constraints, function(index, constraint) {
+        $.fn.zato.validate_unique('#id_' + constraint.field, constraint.entity_type, constraint.attr_name, constraint);
+        $.fn.zato.validate_unique('#id_edit-' + constraint.field, constraint.entity_type, constraint.attr_name, constraint);
     });
 })
 

@@ -117,7 +117,7 @@ class _FakeServer:
 
     def __init__(self) -> 'None':
         self.config_manager = _FakeConfigManager()
-        self.pubsub_redis = _FakePubSub()
+        self.pubsub_backend = _FakePubSub()
         self.invoked = []
 
 # ################################################################################################################################
@@ -244,7 +244,7 @@ class TestWrapperSend:
         assert result.receipt.ref_to_message_id == result.message_id
 
         # The channel routed the payload to its topic with the ebMS metadata.
-        published = channel.server.pubsub_redis.published
+        published = channel.server.pubsub_backend.published
         assert len(published) == 1
 
         topic_name, message, cid, _ = published[0]
@@ -266,7 +266,7 @@ class TestWrapperSend:
         assert result.is_ok
 
         # A configured service takes precedence over the topic.
-        assert channel.server.pubsub_redis.published == []
+        assert channel.server.pubsub_backend.published == []
         assert len(channel.server.invoked) == 1
 
         service_name, message = channel.server.invoked[0]
@@ -360,7 +360,7 @@ class TestSendTo:
 
         # The channel routed the payload with the SBDH metadata parsed out,
         # so subscribers route without re-parsing anything.
-        published = channel.server.pubsub_redis.published
+        published = channel.server.pubsub_backend.published
         assert len(published) == 1
 
         preset = get_document_type_preset(Document_Type_Name)
@@ -419,7 +419,7 @@ class TestNotServiced:
         assert Peppol_Not_Serviced in str(exception_info.value)
 
         # Nothing was routed anywhere.
-        assert channel.server.pubsub_redis.published == []
+        assert channel.server.pubsub_backend.published == []
         assert channel.server.invoked == []
 
 # ################################################################################################################################
@@ -432,7 +432,7 @@ class TestNotServiced:
         result = wrapper.send_to(Test_CID, Serviced_Participant, Document_Type_Name, Payload)
 
         assert result.is_ok
-        assert len(channel.server.pubsub_redis.published) == 1
+        assert len(channel.server.pubsub_backend.published) == 1
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -465,14 +465,14 @@ class TestDuplicateSuppression:
         first = channel.handle('cid-1', body, content_type)
         assert not first.is_duplicate
         assert first.payloads[0].data == Payload
-        assert len(channel.server.pubsub_redis.published) == 1
+        assert len(channel.server.pubsub_backend.published) == 1
 
         # The replay still gets a receipt but nothing is routed a second time.
         second = channel.handle('cid-2', body, content_type)
         assert second.is_duplicate
         assert second.payloads == []
         assert not second.is_error
-        assert len(channel.server.pubsub_redis.published) == 1
+        assert len(channel.server.pubsub_backend.published) == 1
 
         # The receipt for the replay references the original message.
         assert message_id.encode('utf8') in second.body
@@ -501,7 +501,7 @@ class TestDuplicateSuppression:
         _ = channel.handle('cid-1', body_first, content_type_first)
         _ = channel.handle('cid-2', body_second, content_type_second)
 
-        assert len(channel.server.pubsub_redis.published) == 2
+        assert len(channel.server.pubsub_backend.published) == 2
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -522,7 +522,7 @@ class TestRoutedMessageMetadata:
         body, content_type, _, _ = build_push_message(pmode, rsa_parties.sender, [new_part(Payload)])
         _ = channel.handle('cid-1', body, content_type)
 
-        _, message, _, _ = channel.server.pubsub_redis.published[0]
+        _, message, _, _ = channel.server.pubsub_backend.published[0]
 
         expected_keys = {
             'message_id', 'conversation_id', 'from_party', 'to_party', 'service', 'action',

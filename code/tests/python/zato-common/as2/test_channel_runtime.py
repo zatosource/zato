@@ -90,7 +90,7 @@ class _FakeServer:
     def __init__(self) -> 'None':
         self.invoked = []
         self.config_manager = _FakeConfigManager()
-        self.pubsub_redis = _FakePubSub()
+        self.pubsub_backend = _FakePubSub()
 
 # ################################################################################################################################
 
@@ -283,9 +283,9 @@ class TestRouting:
 
             # The one document went to the default AS2 topic ..
             assert server.invoked == []
-            assert len(server.pubsub_redis.published) == 1
+            assert len(server.pubsub_backend.published) == 1
 
-            topic, message = server.pubsub_redis.published[0]
+            topic, message = server.pubsub_backend.published[0]
             assert topic == AS2.Default.Inbound_Topic
 
             # .. carrying the AS2 identities and the payload ..
@@ -314,7 +314,7 @@ class TestRouting:
 
             assert not result.is_error
 
-            topic, _ = server.pubsub_redis.published[0]
+            topic, _ = server.pubsub_backend.published[0]
             assert topic == 'orders.custom'
 
         finally:
@@ -331,7 +331,7 @@ class TestRouting:
 
             assert not result.is_error
 
-            assert server.pubsub_redis.published == []
+            assert server.pubsub_backend.published == []
             assert len(server.invoked) == 1
 
             service_name, message = server.invoked[0]
@@ -356,7 +356,7 @@ class TestRouting:
             # The partner's own topic wins over the channel's service.
             assert server.invoked == []
 
-            topic, _ = server.pubsub_redis.published[0]
+            topic, _ = server.pubsub_backend.published[0]
             assert topic == 'orders.partner'
 
         finally:
@@ -377,7 +377,7 @@ class TestRouting:
 
             assert not result.is_error
 
-            assert server.pubsub_redis.published == []
+            assert server.pubsub_backend.published == []
 
             service_name, _ = server.invoked[0]
             assert service_name == 'orders.partner-service'
@@ -395,7 +395,7 @@ class TestRouting:
             result = runtime.handle('cid-1', body, headers)
 
             assert not result.is_error
-            topic, _ = server.pubsub_redis.published[0]
+            topic, _ = server.pubsub_backend.published[0]
             assert topic == AS2.Default.Inbound_Topic
 
             # An edit of the Dashboard-managed connection reroutes the very next message.
@@ -406,7 +406,7 @@ class TestRouting:
             result = runtime.handle('cid-2', body, headers)
 
             assert not result.is_error
-            topic, _ = server.pubsub_redis.published[1]
+            topic, _ = server.pubsub_backend.published[1]
             assert topic == 'orders.after-the-edit'
 
         finally:
@@ -436,7 +436,7 @@ class TestDuplicates:
             assert second.status_code == first.status_code
 
             # .. and the payload was routed only once.
-            assert len(server.pubsub_redis.published) == 1
+            assert len(server.pubsub_backend.published) == 1
 
         finally:
             _cleanup_env()
@@ -456,7 +456,7 @@ class TestDuplicates:
             assert not first.is_duplicate
             assert not second.is_duplicate
 
-            assert len(server.pubsub_redis.published) == 2
+            assert len(server.pubsub_backend.published) == 2
 
         finally:
             _cleanup_env()
@@ -493,7 +493,7 @@ class TestCertificateRotation:
 
             # The overlap window admits the new signer and the document was routed.
             assert not result.is_error
-            assert len(server.pubsub_redis.published) == 1
+            assert len(server.pubsub_backend.published) == 1
 
         finally:
             _cleanup_env()
@@ -528,7 +528,7 @@ class TestCertificateRotation:
             # The signer is not live yet, so the message was rejected and nothing was routed.
             assert result.is_error
             assert result.error_modifier == AS2Error.Authentication_Failed
-            assert server.pubsub_redis.published == []
+            assert server.pubsub_backend.published == []
 
         finally:
             _cleanup_env()
@@ -549,7 +549,7 @@ class TestRejections:
             assert result.error_modifier == AS2Error.Unknown_Trading_Relationship
 
             assert server.invoked == []
-            assert server.pubsub_redis.published == []
+            assert server.pubsub_backend.published == []
 
         finally:
             _cleanup_env()
@@ -574,7 +574,7 @@ class TestRejections:
 
             assert not second.is_duplicate
             assert not second.is_error
-            assert len(server.pubsub_redis.published) == 1
+            assert len(server.pubsub_backend.published) == 1
 
         finally:
             _cleanup_env()

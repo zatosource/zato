@@ -8,17 +8,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-import os
 import subprocess
 import sys
 import unittest
 
-# redis
-from redis import Redis
-
 # Zato
-from zato.common.api import PubSub
-from zato.common.typing_ import cast_
+from zato.common.test import pubsub_db
 
 # local
 from zato.common.test.client import PublishClient
@@ -28,94 +23,53 @@ from zato.common.test.config_pubsub_push import TestConfig
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anylist, strlist
+    from zato.common.typing_ import strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = logging.getLogger('zato.test.pubsub_push.base_cleanup_live')
 
-_test_redis_host = 'localhost'
-_test_redis_port = 6379
-_test_redis_db   = PubSub.Test_Redis_DB
-
 _python_bin = sys.executable
 
-_Pending_Prefix     = 'zato:pubsub:pending:'
-_Pending_Expiry_Key = 'zato:pubsub:pending_expiry'
-_Stream_Prefix      = 'zato:pubsub:stream:'
-
-_cleanup_module = 'zato.common.pubsub.cleanup'
+_cleanup_module = 'zato.common.pubsub.sql.cleanup'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class BaseCleanupLiveTestCase(unittest.TestCase):
     """ Shared setup and helpers for all live cleanup tests that publish via the REST API
-    and run the cleanup subprocess against the real server directory.
+    and run the cleanup subprocess against the same pub/sub database the server uses.
     """
 
     @classmethod
     def setUpClass(class_) -> 'None': # pyright: ignore[reportSelfClsParameterName]
         class_.publisher = PublishClient(
             TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
-        class_.redis = Redis(host=_test_redis_host, port=_test_redis_port, db=_test_redis_db, decode_responses=True)
 
 # ################################################################################################################################
 
-    def _get_disk_store_dir(self) -> 'str':
-        """ Returns the path to the server's pubsub-messages directory.
+    def publish_messages(self, topic_name:'str', count:'int', expiration:'int') -> 'strlist':
+        """ Publishes the requested number of messages and returns their msg_ids.
         """
-        out = os.path.join(TestConfig.server_directory, 'work', 'pubsub-messages')
+        out:'strlist' = []
+
+        for _ in range(count):
+            result = self.publisher.publish(topic_name, 'cleanup test payload', expiration=expiration)
+            msg_id = result['msg_id']
+            out.append(msg_id)
+
+        logger.info('publish_messages -> topic:%s, count:%d, msg_ids:%s', topic_name, len(out), out)
         return out
 
 # ################################################################################################################################
 
-    def _find_file_on_disk(self, data_ref:'str') -> 'bool':
-        """ Checks whether a file for the given data_ref exists on disk.
-        """
-        disk_store_dir = self._get_disk_store_dir()
-        full_path = os.path.join(disk_store_dir, data_ref)
-
-        if os.path.exists(full_path):
-            logger.info('_find_file_on_disk -> found %s', full_path)
-            return True
-
-        return False
-
-# ################################################################################################################################
-
-    def _get_published_data_refs(self, topic_name:'str', count:'int') -> 'strlist':
-        """ Reads the last N data_refs from the stream for the given topic.
-        """
-        stream_key = f'{_Stream_Prefix}{topic_name}'
-        entries:'anylist' = cast_('anylist', self.redis.xrevrange(stream_key, count=count))
-
-        data_refs:'strlist' = []
-
-        for entry in entries:
-            _, message_data = entry
-            data_ref = message_data['data_ref']
-            data_refs.append(data_ref)
-
-        logger.info('_get_published_data_refs -> topic:%s, count:%d, refs:%s', topic_name, len(data_refs), data_refs)
-        return data_refs
-
-# ################################################################################################################################
-
     def _run_cleanup_once(self) -> 'None':
-        """ Runs the cleanup subprocess in --once mode against the real server directory.
+        """ Runs the cleanup subprocess in --once mode against the shared pub/sub database.
+        The Zato_PubSub_DB_* variables are inherited from this test process's environment.
         """
-        server_directory = TestConfig.server_directory
-
         cleanup_command = [
             _python_bin, '-m', _cleanup_module,
-            server_directory,
-            '--interval', '1',
-            '--batch-size', '100',
-            '--redis-host', _test_redis_host,
-            '--redis-port', str(_test_redis_port),
-            '--redis-db', str(_test_redis_db),
             '--once',
         ]
 
@@ -126,64 +80,24 @@ class BaseCleanupLiveTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def assert_files_exist(self, data_refs:'strlist') -> 'None':
-        """ Asserts that all given data_refs have corresponding files on disk.
+    def assert_all_cleaned(self, msg_ids:'strlist') -> 'None':
+        """ Asserts that none of the given messages have any rows left in the database.
         """
-        for data_ref in data_refs:
-            found = self._find_file_on_disk(data_ref)
-            self.assertTrue(found, f'Expected file for {data_ref} to exist')
+        row_count = pubsub_db.count_message_rows(msg_ids)
+        self.assertEqual(row_count, 0, f'Expected no message rows for {msg_ids}, found {row_count}')
 
 # ################################################################################################################################
 
-    def assert_files_gone(self, data_refs:'strlist') -> 'None':
-        """ Asserts that none of the given data_refs have files on disk.
+    def assert_all_present(self, msg_ids:'strlist') -> 'None':
+        """ Asserts that all the given messages still have their rows and payloads.
         """
-        for data_ref in data_refs:
-            found = self._find_file_on_disk(data_ref)
-            self.assertFalse(found, f'Expected file for {data_ref} to be deleted')
+        expected_count = len(msg_ids)
 
-# ################################################################################################################################
+        row_count = pubsub_db.count_message_rows(msg_ids)
+        self.assertEqual(row_count, expected_count, f'Expected {expected_count} message rows, found {row_count}')
 
-    def assert_pending_gone(self, data_refs:'strlist') -> 'None':
-        """ Asserts that none of the given data_refs have pending sets in Redis.
-        """
-        for data_ref in data_refs:
-            pending_key = f'{_Pending_Prefix}{data_ref}'
-            exists = cast_('int', self.redis.exists(pending_key))
-            self.assertEqual(exists, 0)
-
-# ################################################################################################################################
-
-    def assert_expiry_gone(self, data_refs:'strlist') -> 'None':
-        """ Asserts that none of the given data_refs have expiry entries in Redis.
-        """
-        for data_ref in data_refs:
-            score = self.redis.zscore(_Pending_Expiry_Key, data_ref)
-            self.assertIsNone(score)
-
-# ################################################################################################################################
-
-    def assert_all_cleaned(self, data_refs:'strlist') -> 'None':
-        """ Asserts that files, pending sets, and expiry entries are all gone for the given data_refs.
-        """
-        self.assert_files_gone(data_refs)
-        self.assert_pending_gone(data_refs)
-        self.assert_expiry_gone(data_refs)
-
-# ################################################################################################################################
-
-    def assert_all_present(self, data_refs:'strlist') -> 'None':
-        """ Asserts that files, pending sets, and expiry entries all exist for the given data_refs.
-        """
-        self.assert_files_exist(data_refs)
-
-        for data_ref in data_refs:
-            pending_key = f'{_Pending_Prefix}{data_ref}'
-            exists = cast_('int', self.redis.exists(pending_key))
-            self.assertGreater(exists, 0)
-
-            score = self.redis.zscore(_Pending_Expiry_Key, data_ref)
-            self.assertIsNotNone(score)
+        payload_count = pubsub_db.count_messages_with_payload(msg_ids)
+        self.assertEqual(payload_count, expected_count, f'Expected {expected_count} payloads, found {payload_count}')
 
 # ################################################################################################################################
 # ################################################################################################################################

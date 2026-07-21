@@ -29,7 +29,8 @@
     {% comment %} OData - one implementation serves every subtype, the page config below says which one this is {% endcomment %}
     <script nonce="{{ CSP_NONCE }}">
     $.fn.zato.outgoing.odata.config = {
-        label: '{{ subtype.label }}'
+        label: '{{ subtype.label }}',
+        connection_type: '{{ subtype.type_ }}'
     };
     </script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/odata.js"></script>

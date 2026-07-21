@@ -3597,11 +3597,19 @@ $.fn.zato.build_unique_check_data = function(entity_type, attr_name, value, filt
         $.extend(data, filter());
     }
 
-    // .. and, when a scoping filter object is supplied, narrow the check down to that sub-group
-    // .. (e.g. a username is unique per sec_type rather than globally).
+    // .. when a scoping filter object is supplied, narrow the check down to that sub-group
+    // .. (e.g. a generic connection name is unique per type_ rather than globally) ..
     else if(filter) {
-        data['filter_name'] = filter.filter_name;
-        data['filter_value'] = filter.filter_value;
+        if(filter.filter_name) {
+            data['filter_name'] = filter.filter_name;
+            data['filter_value'] = filter.filter_value;
+        }
+
+        // .. and, when the backend stores the object under a prefixed name,
+        // .. the check runs against the name as stored.
+        if(filter.value_prefix) {
+            data['value'] = filter.value_prefix + value;
+        }
     }
 
     return data;

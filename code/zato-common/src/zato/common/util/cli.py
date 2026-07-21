@@ -46,12 +46,16 @@ def get_zato_sh_command(command_name:'str'=CommandName.Default) -> 'RunningComma
 
     try:
         command = getattr(sh, command_name) # type: ignore
+
+        # Under sh 2.x, commands return plain strings by default, whereas we need RunningCommand objects.
+        command = command.bake(_return_cmd=True)
         return command
     except CommandNotFound:
 
         # In case we were using the default name, let's try again with a fallback one ..
         if command_name == CommandName.Default:
             command = getattr(sh, CommandName.PackageFullPath)
+            command = command.bake(_return_cmd=True)
             return command
 
         # .. otherwise, re-raise the exception as we are not sure what to do otherwise.

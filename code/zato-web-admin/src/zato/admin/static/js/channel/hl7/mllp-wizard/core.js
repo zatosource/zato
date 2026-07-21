@@ -142,9 +142,11 @@ $.fn.zato.channel.hl7.mllp.wizard.init = function(options) {
     // .. the searchable select for services ..
     $.fn.zato.turn_selects_into_chosen('#mllp-wizard-service-row');
 
-    // .. live uniqueness indicators for the name and the REST URL path,
-    // with the name badge in the header following the checks ..
-    $.fn.zato.validate_unique('#id_name', 'generic_connection', 'name', null, wizard.onNameCheckResult);
+    // .. live uniqueness indicators for the name and the REST URL path, with the name badge
+    // in the header following the checks - the name check is scoped to MLLP channels
+    // because generic connection names are unique per connection type ..
+    $.fn.zato.validate_unique('#id_name', 'generic_connection', 'name',
+        {filter_name: 'type_', filter_value: 'channel-hl7-mllp'}, wizard.onNameCheckResult);
     $.fn.zato.validate_unique('#id_rest_url_path', 'channel_rest', 'url_path');
 
     // .. the header badge mirrors the name and edits it in place ..

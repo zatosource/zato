@@ -409,7 +409,7 @@ class _FakeChannelServer:
     def __init__(self) -> 'None':
         self.invoked = []
         self.config_manager = _FakeConfigManager()
-        self.pubsub_redis = _FakePubSub()
+        self.pubsub_backend = _FakePubSub()
 
 # ################################################################################################################################
 
