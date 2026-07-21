@@ -29,12 +29,17 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist
+    from zato.common.typing_ import any_, anydict, anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 _backend_fields = ('backend_type', 'amqp_outconn_name', 'amqp_exchange', 'amqp_routing_key', 'amqp_channel_name')
+
+_min_priority     = PubSub.Message.Priority_Min
+_max_priority     = PubSub.Message.Priority_Max
+_default_priority = PubSub.Message.Priority_Default
+_min_expiration   = 1
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -488,8 +493,39 @@ class Publish(AdminService):
         topic_name = self.request.raw['topic_name']
         data = self.request.raw['data']
 
+        # .. collect the optional metadata accompanying the message ..
+        publish_kwargs:'anydict' = {}
+
+        if priority := self.request.raw.get('priority'):
+            priority = int(priority)
+
+            # .. out-of-range priorities are replaced with the default one ..
+            is_priority_valid = _min_priority <= priority <= _max_priority
+            if not is_priority_valid:
+                priority = _default_priority
+
+            publish_kwargs['priority'] = priority
+
+        if expiration := self.request.raw.get('expiration'):
+            expiration = int(expiration)
+
+            # .. expiration is always at least one second ..
+            if expiration < _min_expiration:
+                expiration = _min_expiration
+
+            publish_kwargs['expiration'] = expiration
+
+        if correl_id := self.request.raw.get('correl_id'):
+            publish_kwargs['correl_id'] = correl_id
+
+        if in_reply_to := self.request.raw.get('in_reply_to'):
+            publish_kwargs['in_reply_to'] = in_reply_to
+
+        if ext_client_id := self.request.raw.get('ext_client_id'):
+            publish_kwargs['ext_client_id'] = ext_client_id
+
         # .. publish the message ..
-        result = self.publish(topic_name, data)
+        result = self.publish(topic_name, data, **publish_kwargs)
 
         # .. serialize the result ..
         response_body = dumps({'msg_id': result.msg_id})

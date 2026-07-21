@@ -64,6 +64,7 @@ Gateway_Trigger_Service = 'helpers.service-gateway'
 _rest_security_type_supported = {
     SEC_DEF_TYPE.APIKEY,
     SEC_DEF_TYPE.BASIC_AUTH,
+    SEC_DEF_TYPE.MTLS,
     SEC_DEF_TYPE.NTLM,
     SEC_DEF_TYPE.OAUTH,
 }

@@ -55,7 +55,7 @@ from zato.admin.web.views.outgoing import smb as out_smb
 from zato.admin.web.views.outgoing import soap as out_soap
 from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.service import ide as service_ide
-from zato.admin.web.views.security import apikey, basic_auth, ntlm, wss
+from zato.admin.web.views.security import apikey, basic_auth, mtls, ntlm, wss
 from zato.admin.web.views.security import posture as security_posture
 from zato.admin.web.views.security import tier as security_tier
 from zato.admin.web.views.security.oauth import outconn_client_credentials as oauth_outconn_client_credentials
@@ -229,6 +229,22 @@ urlpatterns += [
         login_required(security_tier.delete), name='security-tier-delete'),
     url(r'^zato/security/tier/(?P<id>.*)/$',
         login_required(security_tier.edit), name='security-tier-edit'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. mTLS
+
+    url(r'^zato/security/mtls/$',
+        login_required(mtls.Index()), name=mtls.Index.url_name),
+    url(r'^zato/security/mtls/create/$',
+        login_required(mtls.Create()), name=mtls.Create.url_name),
+    url(r'^zato/security/mtls/edit/$',
+        login_required(mtls.Edit()), name=mtls.Edit.url_name),
+    url(r'^zato/security/mtls/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(mtls.Delete()), name=mtls.Delete.url_name),
     ]
 
 # ################################################################################################################################

@@ -78,6 +78,10 @@ class SECURITY(Constants):
     NTLM_DELETE = ValueConstant('')
     NTLM_CHANGE_PASSWORD = ValueConstant('')
 
+    MTLS_CREATE = ValueConstant('')
+    MTLS_EDIT = ValueConstant('')
+    MTLS_DELETE = ValueConstant('')
+
     APIKEY_CREATE = ValueConstant('')
     APIKEY_EDIT = ValueConstant('')
     APIKEY_DELETE = ValueConstant('')

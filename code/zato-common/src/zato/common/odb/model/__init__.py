@@ -369,6 +369,28 @@ class NTLM(SecurityBase):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class MTLSSecurity(SecurityBase):
+    """ An mTLS definition - client certificate paths for outgoing connections and expected client certificate
+    details for channels are kept in opaque attributes.
+    """
+    __tablename__ = 'sec_mtls'
+    __mapper_args__ = {'polymorphic_identity': 'mtls'}
+
+    id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), primary_key=True)
+
+    def __init__(self, id=None, name=None, is_active=None, username=None, cluster=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.username = username
+        self.cluster = cluster
+
+    def to_json(self):
+        return to_json(self)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class APIKeySecurity(SecurityBase):
     """ Stores API keys.
     """

@@ -211,6 +211,22 @@ class EnmasseTestCase(BaseEnmasseTestCase):
                     self.assertIn('rate_limiting', basic_auth_1, f'rate_limiting missing from exported {basic_auth_1_name}')
                     self.assertEqual(len(basic_auth_1['rate_limiting']), 1)
 
+                # The outgoing-oriented mTLS definition must survive the round trip with its certificate material paths
+                self.assertIn('enmasse.mtls.1', exported_security_by_name, 'enmasse.mtls.1 missing from export')
+                mtls_1 = exported_security_by_name['enmasse.mtls.1']
+                self.assertEqual(mtls_1['type'], 'mtls')
+                self.assertEqual(mtls_1['cert_path'], '/opt/hot-deploy/ssl/enmasse-client-cert.pem')
+                self.assertEqual(mtls_1['key_path'], '/opt/hot-deploy/ssl/enmasse-client-key.pem')
+                self.assertEqual(mtls_1['ca_certs_path'], '/opt/hot-deploy/ssl/enmasse-remote-ca.pem')
+
+                # The channel-oriented mTLS definition must survive the round trip with its match criteria
+                self.assertIn('enmasse.mtls.2', exported_security_by_name, 'enmasse.mtls.2 missing from export')
+                mtls_2 = exported_security_by_name['enmasse.mtls.2']
+                self.assertEqual(mtls_2['type'], 'mtls')
+                self.assertEqual(
+                    mtls_2['client_cert_fingerprint'], '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')
+                self.assertEqual(mtls_2['client_cert_subject_dn'], 'CN=enmasse.client,O=Enmasse,C=US')
+
         except ErrorReturnCode as e:
             stdout = e.stdout.decode('utf8')
             stderr = e.stderr

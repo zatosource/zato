@@ -656,6 +656,26 @@ def create_ntlm_definition(page:'Page', base_url:'str', name:'str') -> 'anydict'
 
 # ################################################################################################################################
 
+def create_mtls_definition(page:'Page', base_url:'str', name:'str', fields:'anydict | None'=None) -> 'anydict':
+    """ Creates an mTLS security definition via the UI and returns its details.
+    All the definition's fields other than the name are optional and come from the fields dictionary,
+    e.g. cert_path and key_path for outgoing connections or client_cert_fingerprint for channels.
+    """
+
+    form_fields = {
+        'name': name,
+    } # type: anydict
+
+    if fields:
+        form_fields.update(fields)
+
+    _create_definition_on_page(page, base_url, '/zato/security/mtls/?cluster=1', form_fields)
+
+    out = dict(form_fields)
+    return out
+
+# ################################################################################################################################
+
 def create_bearer_token_definition(page:'Page', base_url:'str', name:'str') -> 'anydict':
     """ Creates a Bearer token security definition via the UI and returns its details.
     """

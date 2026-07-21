@@ -37,7 +37,7 @@ from zato.common.mssql_direct import MSSQLDirectAPI, SimpleSession
 from zato.common.odb import query
 from zato.common.odb.ping import get_ping_query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
-     NTLM, OAuth, SecurityBase, Server, Service, WSSecurity
+     MTLSSecurity, NTLM, OAuth, SecurityBase, Server, Service, WSSecurity
 from zato.common.odb.ssl_config import get_ssl_connect_args
 from zato.common.odb.testing import UnittestEngine
 from zato.common.odb.query import generic as query_generic
@@ -795,6 +795,7 @@ class ODBManager(SessionWrapper):
             sec_type_db_class = {
                 SEC_DEF_TYPE.APIKEY: APIKeySecurity,
                 SEC_DEF_TYPE.BASIC_AUTH: HTTPBasicAuth,
+                SEC_DEF_TYPE.MTLS: MTLSSecurity,
                 SEC_DEF_TYPE.NTLM: NTLM,
                 SEC_DEF_TYPE.OAUTH: OAuth,
                 SEC_DEF_TYPE.WSS: WSSecurity,
@@ -875,6 +876,14 @@ class ODBManager(SessionWrapper):
 
                         # WS-Security enforcement needs the definition's mode and its
                         # mode-specific details, all of which come from opaque attributes.
+                        for key, value in sec_def.items():
+                            if key not in result[target].sec_def:
+                                result[target].sec_def[key] = value
+
+                    elif item.sec_type == SEC_DEF_TYPE.MTLS:
+
+                        # mTLS enforcement needs the expected client certificate details,
+                        # all of which come from opaque attributes.
                         for key, value in sec_def.items():
                             if key not in result[target].sec_def:
                                 result[target].sec_def[key] = value
@@ -1094,6 +1103,14 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
             return elems_with_opaque(query.basic_auth_list(session, cluster_id, cluster_name, needs_columns))
+
+# ################################################################################################################################
+
+    def get_mtls_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of mTLS definitions existing on the given cluster.
+        """
+        with closing(self.session()) as session:
+            return query.mtls_list(session, cluster_id, needs_columns)
 
 # ################################################################################################################################
 

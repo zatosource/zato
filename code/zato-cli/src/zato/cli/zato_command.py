@@ -379,6 +379,7 @@ Subcommands:
 
 Examples:
   zato pubsub publish /path/to/server --topic /my/topic --data '{"key": "value"}'
+  zato pubsub publish /path/to/server --topic /my/topic --data 'Hello' --priority 7 --expiration 3600
   zato pubsub browse /path/to/server --sub-key zato.sub.abc123 --state pending
   zato pubsub get /path/to/server --msg-id zpsm1234 --topic-name /my/topic
   zato pubsub update /path/to/server --msg-id zpsm1234 --topic-name /my/topic --data '{"updated": true}'

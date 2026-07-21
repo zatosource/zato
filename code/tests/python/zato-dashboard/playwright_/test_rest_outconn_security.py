@@ -28,8 +28,9 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-from http_test_server import HTTPTestServer
-from rest_channel import create_apikey_definition, create_bearer_token_definition, create_ntlm_definition
+from http_test_server import HTTPSTestServer, HTTPTestServer
+from rest_channel import create_apikey_definition, create_bearer_token_definition, create_mtls_definition, \
+    create_ntlm_definition
 from rest_outconn import create_outconn, edit_outconn, find_outconn_row, get_row_cell_texts, invoke_outconn_via_overlay, \
     open_edit_dialog, open_outconn_page, ping_outconn_until_success
 
@@ -52,6 +53,10 @@ _Propagation_Timeout = 20
 # How long to sleep between the invocations above
 _Propagation_Poll_Interval = 0.5
 
+# Log patterns produced when a mutual-TLS handshake fails for the lack of a client certificate
+_MTLS_Failure_Log_Patterns = ('SSLError', 'Max retries exceeded', 'certificate required', 'handshake failure', \
+    'alert', 'EOF occurred')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -61,6 +66,21 @@ def http_test_server() -> 'any_':
     """
 
     server = HTTPTestServer()
+    server.start()
+
+    yield server
+
+    server.stop()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture()
+def https_mtls_test_server() -> 'any_':
+    """ A live recording HTTPS server that requires client certificates, for the duration of a single test.
+    """
+
+    server = HTTPSTestServer(require_client_cert=True)
     server.start()
 
     yield server
@@ -284,6 +304,125 @@ class TestRESTOutconnSecurity:
         selected_label = page.evaluate('$("#id_edit-security option:selected").text()')
         expected_label = f'Bearer token/{definition["name"]}'
         assert selected_label == expected_label, f'Expected "{expected_label}" selected, got: "{selected_label}"'
+
+# ################################################################################################################################
+
+    def test_mtls_assignment(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ Creates an mTLS definition, assigns it to a connection and verifies the assignment
+        persists across the row and the edit dialog. Live invocations with actual client
+        certificates are covered by the end-to-end suite.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        outconn_name = _Test_Name_Prefix + 'mtls'
+        url_path = '/test/outconn/sec-mtls/' + rand_string()
+
+        # Create the security definition ..
+        definition = create_mtls_definition(page, base_url, _Test_Name_Prefix + 'mtls-def', {
+            'cert_path': '/opt/zato/certs/client.cert.pem',
+            'key_path': '/opt/zato/certs/client.key.pem',
+            'ca_certs_path': '/opt/zato/certs/ca.cert.pem',
+        })
+
+        # .. create the connection with that definition assigned ..
+        outconn_id = create_outconn(page, base_url, outconn_name, 'https://rest-sec.example.com:8443', {
+            'url_path': url_path,
+            'security': f'mTLS/{definition["name"]}',
+        })
+
+        # .. a server-rendered row shows the definition, so reload the page first ..
+        open_outconn_page(page, base_url)
+        row = find_outconn_row(page, outconn_name)
+        cells = get_row_cell_texts(row)
+        assert definition['name'] in cells[_Cell_Security], \
+            f'Expected "{definition["name"]}" in the security cell, got: "{cells[_Cell_Security]}"'
+
+        # .. and the edit dialog has it selected.
+        open_edit_dialog(page, outconn_id)
+
+        selected_label = page.evaluate('$("#id_edit-security option:selected").text()')
+        expected_label = f'mTLS/{definition["name"]}'
+        assert selected_label == expected_label, f'Expected "{expected_label}" selected, got: "{selected_label}"'
+
+# ################################################################################################################################
+
+    def test_mtls_live_client_cert(
+        self, logged_in_page:'Page', zato_dashboard:'anydict', https_mtls_test_server:'HTTPSTestServer') -> 'None':
+        """ Creates an mTLS definition whose certificate material chains up to the test server's CA,
+        assigns it to a connection and verifies the connection reaches the endpoint that requires
+        client certificates.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        outconn_name = _Test_Name_Prefix + 'mtls-live'
+        url_path = '/test/outconn/sec-mtls-live/' + rand_string()
+
+        material = https_mtls_test_server.tls_material
+
+        # Create the security definition with the paths to the live material ..
+        definition = create_mtls_definition(page, base_url, _Test_Name_Prefix + 'mtls-live-def', {
+            'cert_path': material.client_certificate_path,
+            'key_path': material.client_key_path,
+            'ca_certs_path': material.ca_path,
+        })
+
+        # .. create the connection with that definition assigned ..
+        outconn_id = create_outconn(page, base_url, outconn_name, https_mtls_test_server.address, {
+            'url_path': url_path,
+            'security': f'mTLS/{definition["name"]}',
+        })
+
+        # .. the ping succeeds only once the client certificate is in place,
+        # which also covers the propagation delay of the new definition ..
+        ping_result = ping_outconn_until_success(page, outconn_name)
+        assert ping_result['is_success'], f'Expected a successful ping with a client certificate, got: {ping_result}'
+
+        # .. invoke it ..
+        request = _invoke_and_get_request(page, https_mtls_test_server, outconn_id)
+
+        logger.info('[test_mtls_live_client_cert] request=%s', request)
+
+        # .. and the request reached the endpoint over the mutually authenticated connection.
+        assert request['path'] == url_path, f'Expected path "{url_path}", got: {request}'
+
+# ################################################################################################################################
+
+    @pytest.mark.expect_log_errors(*_MTLS_Failure_Log_Patterns)
+    def test_mtls_live_no_client_cert(
+        self, logged_in_page:'Page', zato_dashboard:'anydict', https_mtls_test_server:'HTTPSTestServer') -> 'None':
+        """ A connection without an mTLS definition cannot reach the endpoint that requires
+        client certificates - the handshake fails and the server records no requests.
+        """
+
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        outconn_name = _Test_Name_Prefix + 'mtls-live-neg'
+        url_path = '/test/outconn/sec-mtls-neg/' + rand_string()
+
+        # Create the connection without any security definition, with TLS validation off
+        # so the only possible failure is the missing client certificate ..
+        outconn_id = create_outconn(page, base_url, outconn_name, https_mtls_test_server.address, {
+            'url_path': url_path,
+            'validate_tls': 'False',
+        })
+
+        # .. invoke it through the overlay ..
+        https_mtls_test_server.clear_requests()
+        result = invoke_outconn_via_overlay(page, outconn_id, request_body='{"check": "no-cert"}')
+
+        logger.info('[test_mtls_live_no_client_cert] result=%s', result)
+
+        # .. the overlay reports a failure rather than an OK response ..
+        assert '200 OK' not in result['status'], f'Expected a failed invocation, got: {result}'
+
+        # .. and no request made it through the handshake.
+        recorded = https_mtls_test_server.recorded_requests
+        assert not recorded, f'Expected no recorded requests, got: {recorded}'
 
 # ################################################################################################################################
 

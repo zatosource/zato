@@ -13,8 +13,8 @@ from uuid import uuid4
 # Zato
 from zato.cli.enmasse.util import preprocess_item
 from zato.common.json_internal import loads
-from zato.common.odb.model import HTTPBasicAuth, APIKeySecurity, NTLM, OAuth, to_json, WSSecurity
-from zato.common.odb.query import basic_auth_list, apikey_security_list, ntlm_list, oauth_list, wss_list
+from zato.common.odb.model import HTTPBasicAuth, APIKeySecurity, MTLSSecurity, NTLM, OAuth, to_json, WSSecurity
+from zato.common.odb.query import basic_auth_list, apikey_security_list, mtls_list, ntlm_list, oauth_list, wss_list
 from zato.common.util.sql import set_instance_opaque_attrs
 
 # ################################################################################################################################
@@ -72,6 +72,10 @@ class SecurityImporter:
         apikey = apikey_security_list(session, cluster_id)
         logger.info('Getting apikey definitions')
         self._process_security_defs(apikey, 'apikey', out)
+
+        mtls = mtls_list(session, cluster_id)
+        logger.info('Getting mtls definitions')
+        self._process_security_defs(mtls, 'mtls', out)
 
         ntlm = ntlm_list(session, cluster_id)
         logger.info('Getting ntlm definitions')
@@ -247,6 +251,20 @@ class SecurityImporter:
 
 # ################################################################################################################################
 
+    def _create_mtls(self, security_def:'anydict', cluster:'any_') -> 'any_':
+        auth = MTLSSecurity(
+            None,
+            security_def['name'],
+            security_def.get('is_active', True),
+            security_def['name'],
+            cluster
+        )
+
+        set_instance_opaque_attrs(auth, security_def)
+        return auth
+
+# ################################################################################################################################
+
     def _create_wss(self, security_def:'anydict', cluster:'any_') -> 'any_':
         auth = WSSecurity(
             None,
@@ -306,6 +324,8 @@ class SecurityImporter:
             auth = self._create_basic_auth(security_def, cluster)
         elif sec_type == 'apikey':
             auth = self._create_apikey(security_def, cluster)
+        elif sec_type == 'mtls':
+            auth = self._create_mtls(security_def, cluster)
         elif sec_type == 'ntlm':
             auth = self._create_ntlm(security_def, cluster)
         elif sec_type == 'wss':
@@ -344,6 +364,7 @@ class SecurityImporter:
         class_map = {
             'basic_auth': HTTPBasicAuth,
             'apikey': APIKeySecurity,
+            'mtls': MTLSSecurity,
             'ntlm': NTLM,
             'bearer_token': OAuth,
             'wss': WSSecurity
@@ -412,7 +433,7 @@ class SecurityImporter:
         noun = 'definition' if count == 1 else 'definitions'
         logger.info(f'Processing {count} security {noun} from YAML')
 
-        valid_types = {'basic_auth', 'ntlm', 'bearer_token', 'apikey', 'wss'}
+        valid_types = {'basic_auth', 'mtls', 'ntlm', 'bearer_token', 'apikey', 'wss'}
 
         for item in security_list:
             if item['type'] not in valid_types:

@@ -78,6 +78,7 @@ soapenv12_namespace = 'http://www.w3.org/2003/05/soap-envelope'
 
 _API_Key = SEC_DEF_TYPE.APIKEY
 _Basic_Auth = SEC_DEF_TYPE.BASIC_AUTH
+_MTLS = SEC_DEF_TYPE.MTLS
 _NTLM = SEC_DEF_TYPE.NTLM
 _OAuth = SEC_DEF_TYPE.OAUTH
 
@@ -294,6 +295,18 @@ class BaseHTTPSOAPWrapper:
             self.requests_auth = _requests_auth
             self.username = _username
 
+        # #######################################
+        #
+        # mTLS
+        #
+        # #######################################
+        elif self.sec_type == _MTLS:
+
+            # The definition's certificate material replaces whatever TLS details
+            # the connection itself may have been configured with.
+            self.config['tls_client_cert'] = self.config.get('cert_path')
+            self.config['tls_client_key'] = self.config.get('key_path')
+
 # ################################################################################################################################
 
     def _get_auth(self) -> 'any_':
@@ -352,6 +365,12 @@ class BaseHTTPSOAPWrapper:
             tls_verify = False
         else:
             tls_verify = self.config.get('validate_tls', True)
+
+        # An mTLS definition may pin the remote end's CA bundle - when it does, and verification
+        # is enabled, the pinned bundle replaces the system trust store.
+        if tls_verify:
+            if ca_certs_path := self.config.get('ca_certs_path'):
+                tls_verify = ca_certs_path
 
         # A mutual-TLS endpoint needs our client certificate, whose file is mounted into the
         # container - a single PEM holding both the certificate and its key, or a separate pair.

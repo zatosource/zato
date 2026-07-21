@@ -23,8 +23,8 @@ from zato.common.api import AMQP_Subtype_Plain, DEFAULT_HTTP_PING_METHOD, DEFAUL
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import APIKeySecurity, ChannelAMQP, Cluster, \
     DeployedService, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, \
-    NTLM, OAuth, OutgoingOdoo, OutgoingAMQP, OutgoingFTP, PubSubPermission, PubSubSubscription, PubSubSubscriptionTopic, \
-    PubSubTopic, SecurityBase, Server, Service, SMTP, SQLConnectionPool, WSSecurity
+    MTLSSecurity, NTLM, OAuth, OutgoingOdoo, OutgoingAMQP, OutgoingFTP, PubSubPermission, PubSubSubscription, \
+    PubSubSubscriptionTopic, PubSubTopic, SecurityBase, Server, Service, SMTP, SQLConnectionPool, WSSecurity
 from zato.common.util.search import SearchResults as _SearchResults
 
 # ################################################################################################################################
@@ -319,6 +319,20 @@ def ntlm_list(session, cluster_id, needs_columns=False):
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==NTLM.cluster_id).\
         filter(SecurityBase.id==NTLM.id).\
+        order_by(SecurityBase.name)
+
+@query_wrapper
+def mtls_list(session, cluster_id, needs_columns=False):
+    """ All the mTLS definitions.
+    """
+    return session.query(
+        MTLSSecurity.id, MTLSSecurity.name,
+        MTLSSecurity.is_active,
+        MTLSSecurity.sec_type,
+        MTLSSecurity.opaque1).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==MTLSSecurity.cluster_id).\
+        filter(SecurityBase.id==MTLSSecurity.id).\
         order_by(SecurityBase.name)
 
 @query_wrapper

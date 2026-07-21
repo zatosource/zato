@@ -83,14 +83,18 @@ class Publish(_PubSubCommand):
 
 Examples:
   zato pubsub publish /path/to/server --topic /my/topic --data '{"order_id": 123}'
-  zato pubsub publish /path/to/server --topic /events/user.created --data 'Hello' --priority 7 --expiration 3600000
+  zato pubsub publish /path/to/server --topic /events/user.created --data 'Hello' --priority 7 --expiration 3600
+  zato pubsub publish /path/to/server --topic /my/topic --data 'Hello' --correl-id abc123 --ext-client-id crm5
     """
 
     opts = [
         {'name':'--topic', 'help':'Topic name to publish to'},
         {'name':'--data', 'help':'Message payload'},
-        {'name':'--priority', 'help':'Message priority (1-9, default 5)'},
-        {'name':'--expiration', 'help':'Expiration in milliseconds'},
+        {'name':'--priority', 'help':'Message priority (0-9, default 5)'},
+        {'name':'--expiration', 'help':'Expiration in seconds (default one year)'},
+        {'name':'--correl-id', 'help':'Correlation ID to assign to the message'},
+        {'name':'--in-reply-to', 'help':'ID of the message this one replies to'},
+        {'name':'--ext-client-id', 'help':'External client ID to assign to the message'},
     ]
 
     def execute(self, args:'any_') -> 'None':
@@ -110,6 +114,15 @@ Examples:
 
         if args.expiration:
             payload['expiration'] = args.expiration
+
+        if args.correl_id:
+            payload['correl_id'] = args.correl_id
+
+        if args.in_reply_to:
+            payload['in_reply_to'] = args.in_reply_to
+
+        if args.ext_client_id:
+            payload['ext_client_id'] = args.ext_client_id
 
         response = client.invoke('zato.pubsub.topic.publish', payload)
 
