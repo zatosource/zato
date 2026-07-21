@@ -10,11 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import time
 
-# redis
-from redis import Redis
-
 # Zato
-from zato.common.api import PubSub
+from zato.common.test import pubsub_db
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -28,13 +25,6 @@ if 0:
 logger = logging.getLogger('zato.test.pubsub_sub_delete_mismatch')
 
 _settle_time = 0.5
-
-_test_redis_host = 'localhost'
-_test_redis_port = 6379
-_test_redis_db   = PubSub.Test_Redis_DB
-
-_Subs_Prefix       = 'zato:pubsub:subs:'
-_Topic_Subs_Prefix = 'zato:pubsub:topic_subs:'
 
 _security_name = 'test.mismatch.security.subscriber'
 
@@ -54,12 +44,6 @@ def _get_publisher() -> 'any_':
     from zato.common.test.config_pubsub_sub_delete_mismatch import TestConfig
     publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
     return publisher
-
-# ################################################################################################################################
-
-def _get_redis() -> 'Redis':
-    redis = Redis(host=_test_redis_host, port=_test_redis_port, db=_test_redis_db, decode_responses=True)
-    return redis
 
 # ################################################################################################################################
 
@@ -153,12 +137,11 @@ class TestSubscriptionDeleteMismatch:
 
 # ################################################################################################################################
 
-    def test_01_delete_cleans_redis(self, zato_server:'any_') -> 'None':
+    def test_01_delete_cleans_subscription_state(self, zato_server:'any_') -> 'None':
         """ Delete a subscription whose security definition has name != username,
-        verify that Redis sets are cleaned up correctly.
+        verify that the pub/sub database state is cleaned up correctly.
         """
         admin = _get_admin()
-        redis = _get_redis()
 
         topic_name = 'mismatch.topic.delete'
 
@@ -166,28 +149,25 @@ class TestSubscriptionDeleteMismatch:
         sub_key = _get_sub_key_for_topics(admin, [topic_name])
         sub = _find_subscription_by_topics(admin, [topic_name])
 
-        # .. verify Redis sets exist before delete ..
-        subs_key = f'{_Subs_Prefix}{sub_key}'
-        topic_subs_key = f'{_Topic_Subs_Prefix}{topic_name}'
-
-        assert redis.sismember(subs_key, topic_name) == 1, \
-            'Expected sub_key to be member of subs set before delete'
-        assert redis.sismember(topic_subs_key, sub_key) == 1, \
-            'Expected sub_key to be member of topic_subs set before delete'
+        # .. verify the subscription state exists before delete ..
+        assert topic_name in pubsub_db.get_subscribed_topics(sub_key), \
+            'Expected the topic among the sub_key subscriptions before delete'
+        assert sub_key in pubsub_db.get_topic_subscribers(topic_name), \
+            'Expected sub_key among the topic subscribers before delete'
 
         # .. delete the subscription ..
         _delete_subscription(admin, sub['id'])
         time.sleep(_settle_time)
 
-        # .. verify Redis sets are cleaned ..
-        assert redis.sismember(subs_key, topic_name) == 0, \
-            'Expected topic removed from subs set after delete'
-        assert redis.sismember(topic_subs_key, sub_key) == 0, \
-            'Expected sub_key removed from topic_subs set after delete'
+        # .. verify the subscription state is cleaned ..
+        assert topic_name not in pubsub_db.get_subscribed_topics(sub_key), \
+            'Expected the topic removed from the sub_key subscriptions after delete'
+        assert sub_key not in pubsub_db.get_topic_subscribers(topic_name), \
+            'Expected sub_key removed from the topic subscribers after delete'
 
-        # .. verify the subs key has no remaining members.
-        assert redis.scard(subs_key) == 0, \
-            'Expected subs set to be empty after subscription delete'
+        # .. verify the sub_key has no remaining subscriptions.
+        assert pubsub_db.get_subscribed_topics(sub_key) == [], \
+            'Expected no subscriptions left after subscription delete'
 
 # ################################################################################################################################
 

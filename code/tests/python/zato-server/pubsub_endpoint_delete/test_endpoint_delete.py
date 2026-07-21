@@ -10,11 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import time
 
-# redis
-from redis import Redis
-
 # Zato
-from zato.common.api import PubSub
+from zato.common.test import pubsub_db
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -28,15 +25,6 @@ if 0:
 logger = logging.getLogger('zato.test.pubsub_endpoint_delete')
 
 _settle_time = 0.5
-
-_test_redis_host = 'localhost'
-_test_redis_port = 6379
-_test_redis_db   = PubSub.Test_Redis_DB
-
-_Subs_Prefix        = 'zato:pubsub:subs:'
-_Topic_Subs_Prefix  = 'zato:pubsub:topic_subs:'
-_Stream_Prefix      = 'zato:pubsub:stream:'
-_Sub_Pending_Prefix = 'zato:pubsub:sub_pending:'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,13 +43,6 @@ def _get_publisher() -> 'any_':
     from zato.common.test.config_pubsub_endpoint_delete import TestConfig
 
     out = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
-    return out
-
-# ################################################################################################################################
-
-def _get_redis() -> 'Redis':
-
-    out = Redis(host=_test_redis_host, port=_test_redis_port, db=_test_redis_db, decode_responses=True)
     return out
 
 # ################################################################################################################################
@@ -153,47 +134,44 @@ def _get_sub_key_for_topics(admin:'any_', topic_names:'list[str]') -> 'str':
 
 class TestEndpointDelete:
     """ Verifies that deleting an HTTPSOAP outgoing connection used as a push endpoint
-    cleans up all pub/sub state (GAP 28): Redis sets, pending messages, consumer groups,
+    cleans up all pub/sub state (GAP 28): subscription rows, pending delivery rows,
     in-memory config, and delivery greenlets.
     """
 
 # ################################################################################################################################
 
-    def test_01_redis_sets_cleaned(self, zato_server:'any_') -> 'None':
-        """ After endpoint delete: SISMEMBER topic_subs:<topic> <sub_key> returns 0,
-        SCARD subs:<sub_key> returns 0.
-        Proves GAP 28 fix: Redis set memberships are removed when the REST endpoint is deleted.
+    def test_01_subscription_state_cleaned(self, zato_server:'any_') -> 'None':
+        """ After endpoint delete: the (sub_key, topic) subscription rows are gone
+        from the pub/sub database in both directions.
+        Proves GAP 28 fix: subscription state is removed when the REST endpoint is deleted.
         """
         admin = _get_admin()
-        redis = _get_redis()
 
         # .. find the pre-created push subscription ..
         sub_key = _get_sub_key_for_topics(admin, ['ed.topic.push'])
 
-        # .. verify Redis sets exist before delete ..
+        # .. verify the subscription state exists before delete ..
         topic_name = 'ed.topic.push'
-        subs_key = f'{_Subs_Prefix}{sub_key}'
-        topic_subs_key = f'{_Topic_Subs_Prefix}{topic_name}'
 
-        assert redis.sismember(subs_key, topic_name) == 1, \
-            'Expected sub_key to be member of subs set before delete'
-        assert redis.sismember(topic_subs_key, sub_key) == 1, \
-            'Expected sub_key to be member of topic_subs set before delete'
+        assert topic_name in pubsub_db.get_subscribed_topics(sub_key), \
+            'Expected the topic among the sub_key subscriptions before delete'
+        assert sub_key in pubsub_db.get_topic_subscribers(topic_name), \
+            'Expected sub_key among the topic subscribers before delete'
 
         # .. delete the outgoing REST endpoint ..
         endpoint_id = _get_outgoing_rest_id(admin, 'test.ed.out.webhook')
         _delete_outgoing_rest(admin, endpoint_id)
         time.sleep(_settle_time)
 
-        # .. verify Redis sets are cleaned ..
-        assert redis.sismember(subs_key, topic_name) == 0, \
-            'Expected topic removed from subs set after endpoint delete'
-        assert redis.sismember(topic_subs_key, sub_key) == 0, \
-            'Expected sub_key removed from topic_subs set after endpoint delete'
+        # .. verify the subscription state is cleaned ..
+        assert topic_name not in pubsub_db.get_subscribed_topics(sub_key), \
+            'Expected the topic removed from the sub_key subscriptions after endpoint delete'
+        assert sub_key not in pubsub_db.get_topic_subscribers(topic_name), \
+            'Expected sub_key removed from the topic subscribers after endpoint delete'
 
-        # .. verify the subs key has no remaining members ..
-        assert redis.scard(subs_key) == 0, \
-            'Expected subs set to be empty after endpoint delete'
+        # .. verify the sub_key has no remaining subscriptions ..
+        assert pubsub_db.get_subscribed_topics(sub_key) == [], \
+            'Expected no subscriptions left after endpoint delete'
 
 # ################################################################################################################################
 
@@ -239,14 +217,13 @@ class TestEndpointDelete:
 
     def test_04_pending_messages_cleaned(self, zato_server:'any_') -> 'None':
         """ Publish messages, create a new push subscription, delete the endpoint:
-        sub_pending:<sub_key> key is gone from Redis.
-        Proves GAP 28 fix: pending message references are removed on endpoint delete.
+        no delivery rows remain for the sub_key.
+        Proves GAP 28 fix: pending delivery rows are removed on endpoint delete.
         """
         from zato.common.test.config_pubsub_endpoint_delete import TestConfig
         from zato.common.test.conftest_base_pubsub import find_free_port
 
         admin = _get_admin()
-        redis = _get_redis()
         publisher = _get_publisher()
 
         topic_name = 'ed.topic.pending'
@@ -302,9 +279,8 @@ class TestEndpointDelete:
 
         time.sleep(_settle_time)
 
-        # .. verify there is pending state in Redis ..
-        sub_pending_key = f'{_Sub_Pending_Prefix}{sub_key}'
-        pending_count:'int' = redis.scard(sub_pending_key) # type: ignore[assignment]
+        # .. verify there is pending state in the database ..
+        pending_count = pubsub_db.count_pending(sub_key)
 
         assert pending_count > 0, \
             f'Expected pending messages before delete, got {pending_count}'
@@ -314,20 +290,19 @@ class TestEndpointDelete:
         time.sleep(_settle_time)
 
         # .. verify pending state is gone ..
-        assert redis.exists(sub_pending_key) == 0, \
-            'Expected sub_pending key to be deleted after endpoint delete'
+        assert pubsub_db.count_pending(sub_key) == 0, \
+            'Expected no delivery rows after endpoint delete'
 
 # ################################################################################################################################
 
-    def test_05_consumer_group_destroyed(self, zato_server:'any_') -> 'None':
-        """ Create a push subscription, delete the endpoint:
-        XINFO GROUPS does not list the sub_key consumer group.
-        Proves GAP 28 fix: consumer group is destroyed when the endpoint is deleted.
+    def test_05_queue_state_removed(self, zato_server:'any_') -> 'None':
+        """ Create a push subscription, delete the endpoint: the subscriber
+        disappears from the topic and holds no delivery rows.
+        Proves GAP 28 fix: the whole queue is removed when the endpoint is deleted.
         """
         from zato.common.test.config_pubsub_endpoint_delete import TestConfig
 
         admin = _get_admin()
-        redis = _get_redis()
 
         topic_name = 'ed.topic.push'
 
@@ -372,32 +347,19 @@ class TestEndpointDelete:
         # .. find the sub_key ..
         sub_key = _get_sub_key_for_topics(admin, [topic_name])
 
-        # .. verify the consumer group exists ..
-        stream_key = f'{_Stream_Prefix}{topic_name}'
-        groups:'list' = redis.xinfo_groups(stream_key) # type: ignore[assignment]
-
-        group_names:'list[str]' = []
-
-        for group in groups:
-            group_names.append(group['name'])
-
-        assert sub_key in group_names, \
-            f'Expected consumer group {sub_key} to exist before delete'
+        # .. verify the subscriber is registered with the topic ..
+        assert sub_key in pubsub_db.get_topic_subscribers(topic_name), \
+            f'Expected subscriber {sub_key} to exist before delete'
 
         # .. delete the outgoing REST endpoint ..
         _delete_outgoing_rest(admin, endpoint_id)
         time.sleep(_settle_time)
 
-        # .. verify the consumer group is destroyed ..
-        groups_after:'list' = redis.xinfo_groups(stream_key) # type: ignore[assignment]
-
-        group_names_after:'list[str]' = []
-
-        for group in groups_after:
-            group_names_after.append(group['name'])
-
-        assert sub_key not in group_names_after, \
-            f'Expected consumer group {sub_key} to be destroyed after endpoint delete'
+        # .. verify the whole queue is gone ..
+        assert sub_key not in pubsub_db.get_topic_subscribers(topic_name), \
+            f'Expected subscriber {sub_key} to be removed after endpoint delete'
+        assert pubsub_db.count_pending(sub_key) == 0, \
+            'Expected no delivery rows after endpoint delete'
 
 # ################################################################################################################################
 # ################################################################################################################################

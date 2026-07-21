@@ -8,8 +8,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-import os
 import time
+
+# Zato
+from zato.common.test import pubsub_db
 
 if 0:
     from zato.common.typing_ import any_, anylist, strlist
@@ -62,23 +64,8 @@ def _publish_messages(publish_client:'any_', topic_name:'str', count:'int') -> '
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _count_msg_files(directory:'str') -> 'int':
-    """ Counts .msg files recursively in a directory.
-    """
-    count = 0
-    if not os.path.isdir(directory):
-        return 0
-    for _, _dirs, files in os.walk(directory):
-        for fname in files:
-            if fname.endswith('.msg'):
-                count += 1
-    return count
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class TestPushClearBasic:
-    """ Publish to a push-only topic, wait for delivery, clear, verify state=all is empty.
+    """ Publish to a push-only topic, wait for delivery, clear, verify nothing is pending.
     """
 
     def test_push_clear_basic(self, zato_server:'any_') -> 'None':
@@ -95,21 +82,24 @@ class TestPushClearBasic:
         _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key})
 
         # .. publish 3 messages, wait for push delivery ..
-        _ = _publish_messages(publisher, _topic_1, 3)
+        msg_ids = _publish_messages(publisher, _topic_1, 3)
         time.sleep(_settle_time)
 
         # .. clear (push delivery may have already ack'd everything,
         # .. so cleared_count can be 0 or more) ..
         _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key})
 
-        # .. state=all should be empty.
+        # .. nothing is pending anymore ..
         browse_result = admin.invoke('zato.pubsub.subscription.browse-queue', {
             'sub_key': sub_key,
-            'state': 'all',
+            'state': 'pending',
         })
 
         assert browse_result['total'] == 0
         assert browse_result['rows'] == []
+
+        # .. and no payload remains in storage.
+        assert pubsub_db.count_messages_with_payload(msg_ids) == 0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -136,13 +126,13 @@ class TestPushClearEmpty:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestPushClearDiskFiles:
-    """ Verify that after clearing a push subscriber's queue, no .msg files remain.
-    Push delivery acks messages and deletes disk files on its own,
+class TestPushClearPayloads:
+    """ Verify that after clearing a push subscriber's queue, no payload remains stored.
+    Push delivery acks messages and drops payloads on its own,
     so this test verifies the combined effect.
     """
 
-    def test_push_disk_files_gone(self, zato_server:'any_') -> 'None':
+    def test_push_payloads_gone(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient
         from zato.common.test.config_pubsub_clear_queue_push import TestConfig
@@ -156,18 +146,15 @@ class TestPushClearDiskFiles:
         _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key})
 
         # .. publish 3, wait for push delivery ..
-        _ = _publish_messages(publisher, _topic_1, 3)
+        msg_ids = _publish_messages(publisher, _topic_1, 3)
         time.sleep(_settle_time)
 
-        # .. clear to remove any remaining stream/pending entries ..
+        # .. clear to remove any remaining pending entries ..
         _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key})
 
-        # .. verify .msg files are gone (push ack deletes them during delivery,
+        # .. verify the payloads are gone (push ack drops them during delivery,
         # .. clear_queue removes any that might remain).
-        pubsub_messages_dir = os.path.join(TestConfig.server_directory, 'work', 'pubsub-messages')
-        topic_dir = os.path.join(pubsub_messages_dir, _topic_1)
-
-        assert _count_msg_files(topic_dir) == 0
+        assert pubsub_db.count_messages_with_payload(msg_ids) == 0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -195,28 +182,30 @@ class TestPushClearThenPublishNew:
         _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key})
 
         # .. publish 3 more, wait ..
-        _ = _publish_messages(publisher, _topic_1, 3)
+        msg_ids = _publish_messages(publisher, _topic_1, 3)
         time.sleep(_settle_time)
 
         # .. clear again ..
         _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key})
 
-        # .. state=all should be empty.
+        # .. nothing is pending and the new batch's payloads are gone too.
         browse_result = admin.invoke('zato.pubsub.subscription.browse-queue', {
             'sub_key': sub_key,
-            'state': 'all',
+            'state': 'pending',
         })
 
         assert browse_result['total'] == 0
+        assert pubsub_db.count_messages_with_payload(msg_ids) == 0
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestPushClearStateAllEmpty:
-    """ After clearing a push subscriber, browse state=all returns zero entries.
+class TestPushClearStatePendingEmpty:
+    """ After clearing a push subscriber, browse state=pending returns zero entries
+    while the message rows remain as payload-less traces.
     """
 
-    def test_push_state_all_empty(self, zato_server:'any_') -> 'None':
+    def test_push_state_pending_empty(self, zato_server:'any_') -> 'None':
 
         from zato.common.test.client import AdminClient, PublishClient
         from zato.common.test.config_pubsub_clear_queue_push import TestConfig
@@ -230,20 +219,24 @@ class TestPushClearStateAllEmpty:
         _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key})
 
         # .. publish 3 to topic_2, wait ..
-        _ = _publish_messages(publisher, _topic_2, 3)
+        msg_ids = _publish_messages(publisher, _topic_2, 3)
         time.sleep(_settle_time)
 
         # .. clear ..
         _ = admin.invoke('zato.pubsub.subscription.clear-queue', {'sub_key': sub_key})
 
-        # .. browse state=all on topic_2 should be empty.
+        # .. browse state=pending on topic_2 should be empty ..
         browse_result = admin.invoke('zato.pubsub.subscription.browse-queue', {
             'sub_key': sub_key,
-            'state': 'all',
+            'state': 'pending',
         })
 
         assert browse_result['total'] == 0
         assert browse_result['rows'] == []
+
+        # .. while the traces are still there, only without payloads.
+        assert pubsub_db.count_message_rows(msg_ids) == 3
+        assert pubsub_db.count_messages_with_payload(msg_ids) == 0
 
 # ################################################################################################################################
 # ################################################################################################################################

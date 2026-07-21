@@ -8,20 +8,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-import os
 import time
 
-# redis
-from redis import Redis
-
 # Zato
-from zato.common.api import PubSub
+from zato.common.test import pubsub_db
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist
+    from zato.common.typing_ import any_, anydict, anylist, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,17 +25,6 @@ if 0:
 logger = logging.getLogger('zato.test.pubsub_sub_delete')
 
 _settle_time = 0.5
-
-_test_redis_host = 'localhost'
-_test_redis_port = 6379
-_test_redis_db   = PubSub.Test_Redis_DB
-
-_Subs_Prefix        = 'zato:pubsub:subs:'
-_Topic_Subs_Prefix  = 'zato:pubsub:topic_subs:'
-_Stream_Prefix      = 'zato:pubsub:stream:'
-_Sub_Pending_Prefix = 'zato:pubsub:sub_pending:'
-_Pending_Prefix     = 'zato:pubsub:pending:'
-_Pending_Expiry_Key = 'zato:pubsub:pending_expiry'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,12 +42,6 @@ def _get_publisher() -> 'any_':
     from zato.common.test.config_pubsub_sub_delete import TestConfig
     publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
     return publisher
-
-# ################################################################################################################################
-
-def _get_redis() -> 'Redis':
-    redis = Redis(host=_test_redis_host, port=_test_redis_port, db=_test_redis_db, decode_responses=True)
-    return redis
 
 # ################################################################################################################################
 
@@ -148,57 +127,52 @@ def _delete_subscription(admin:'any_', sub_id:'int') -> 'None':
 # ################################################################################################################################
 
 class TestSubscriptionDelete:
-    """ Verifies that subscription deletion cleans up all Redis state (GAP 9):
-    subscriber set membership, topic subscriber sets, pending messages,
-    disk payload files, and consumer groups.
+    """ Verifies that subscription deletion cleans up all pub/sub database state (GAP 9):
+    subscription rows both ways, pending delivery rows and retained payloads.
     """
 
 # ################################################################################################################################
 
-    def test_01_redis_sets_cleaned(self, zato_server:'any_') -> 'None':
-        """ After subscribe + delete: SISMEMBER zato:pubsub:topic_subs:<topic> <sub_key>
-        returns 0, SCARD zato:pubsub:subs:<sub_key> returns 0.
-        Proves GAP 9 fix: Redis set memberships are removed on subscription delete.
+    def test_01_subscription_state_cleaned(self, zato_server:'any_') -> 'None':
+        """ After subscribe + delete: the (sub_key, topic) subscription rows are gone
+        from the pub/sub database in both directions.
+        Proves GAP 9 fix: subscription state is removed on subscription delete.
         """
         admin = _get_admin()
-        redis = _get_redis()
 
         # .. find the pre-created single-topic subscription ..
         sub_key = _get_sub_key_for_topics(admin, ['sd.topic.single'])
         sub = _find_subscription_by_topics(admin, ['sd.topic.single'])
 
-        # .. verify Redis sets exist before delete ..
-        topic_name_lower = 'sd.topic.single'
-        subs_key = f'{_Subs_Prefix}{sub_key}'
-        topic_subs_key = f'{_Topic_Subs_Prefix}{topic_name_lower}'
+        # .. verify the subscription state exists before delete ..
+        topic_name = 'sd.topic.single'
 
-        assert redis.sismember(subs_key, topic_name_lower) == 1, \
-            'Expected sub_key to be member of subs set before delete'
-        assert redis.sismember(topic_subs_key, sub_key) == 1, \
-            'Expected sub_key to be member of topic_subs set before delete'
+        assert topic_name in pubsub_db.get_subscribed_topics(sub_key), \
+            'Expected the topic among the sub_key subscriptions before delete'
+        assert sub_key in pubsub_db.get_topic_subscribers(topic_name), \
+            'Expected sub_key among the topic subscribers before delete'
 
         # .. delete the subscription ..
         _delete_subscription(admin, sub['id'])
         time.sleep(_settle_time)
 
-        # .. verify Redis sets are cleaned ..
-        assert redis.sismember(subs_key, topic_name_lower) == 0, \
-            'Expected topic removed from subs set after delete'
-        assert redis.sismember(topic_subs_key, sub_key) == 0, \
-            'Expected sub_key removed from topic_subs set after delete'
+        # .. verify the subscription state is cleaned ..
+        assert topic_name not in pubsub_db.get_subscribed_topics(sub_key), \
+            'Expected the topic removed from the sub_key subscriptions after delete'
+        assert sub_key not in pubsub_db.get_topic_subscribers(topic_name), \
+            'Expected sub_key removed from the topic subscribers after delete'
 
-        # .. verify the subs key has no remaining members ..
-        assert redis.scard(subs_key) == 0, \
-            'Expected subs set to be empty after single-topic subscription delete'
+        # .. verify the sub_key has no remaining subscriptions ..
+        assert pubsub_db.get_subscribed_topics(sub_key) == [], \
+            'Expected no subscriptions left after single-topic subscription delete'
 
 # ################################################################################################################################
 
     def test_02_pending_messages_cleaned(self, zato_server:'any_') -> 'None':
         """ Publish messages, subscribe, delete sub: pending state is cleaned.
-        Proves GAP 9 fix: pending message references are removed on subscription delete.
+        Proves GAP 9 fix: pending delivery rows are removed on subscription delete.
         """
         admin = _get_admin()
-        redis = _get_redis()
         publisher = _get_publisher()
 
         topic_name = 'sd.topic.pending'
@@ -220,11 +194,9 @@ class TestSubscriptionDelete:
 
         time.sleep(_settle_time)
 
-        # .. verify there is pending state in Redis ..
-        sub_pending_key = f'{_Sub_Pending_Prefix}{sub_key}'
-        pending_count:'int' = redis.scard(sub_pending_key) # type: ignore[assignment]
+        # .. verify there is pending state in the database ..
+        pending_count = pubsub_db.count_pending(sub_key)
 
-        # .. the messages should be in the sub's pending set ..
         assert pending_count > 0, \
             f'Expected pending messages before delete, got {pending_count}'
 
@@ -234,22 +206,20 @@ class TestSubscriptionDelete:
         time.sleep(_settle_time)
 
         # .. verify pending state is gone ..
-        assert redis.exists(sub_pending_key) == 0, \
-            'Expected sub_pending key to be deleted after subscription delete'
+        assert pubsub_db.count_pending(sub_key) == 0, \
+            'Expected no delivery rows after subscription delete'
 
 # ################################################################################################################################
 
-    def test_03_disk_payloads_cleaned(self, zato_server:'any_') -> 'None':
-        """ Publish messages (trigger disk spill), delete sub: payload files are gone.
-        Proves GAP 9 fix: disk payload files are removed when no pending subscribers remain.
+    def test_03_payloads_dropped(self, zato_server:'any_') -> 'None':
+        """ Publish messages, delete sub: the payloads of messages no subscriber
+        needs anymore are dropped from the message rows.
+        Proves GAP 9 fix: retained payloads are removed when no pending subscribers remain.
         """
         admin = _get_admin()
-        redis = _get_redis()
         publisher = _get_publisher()
 
-        from zato.common.test.config_pubsub_sub_delete import TestConfig
-
-        topic_name = 'sd.topic.disk'
+        topic_name = 'sd.topic.payloads'
 
         # .. create a fresh topic ..
         _ = _create_topic(admin, topic_name)
@@ -259,54 +229,41 @@ class TestSubscriptionDelete:
         _ = _create_subscription(admin, [topic_name])
         time.sleep(_settle_time)
 
-        # .. find the sub_key ..
-        sub_key = _get_sub_key_for_topics(admin, [topic_name])
+        # .. publish messages and remember their identifiers ..
+        msg_ids:'strlist' = []
 
-        # .. publish messages (they will be stored on disk) ..
         for idx in range(3):
-            _ = publisher.publish(topic_name, f'disk-payload-{idx}-' + ('x' * 1024))
+            result = publisher.publish(topic_name, f'retained-payload-{idx}-' + ('x' * 1024))
+            msg_ids.append(result['msg_id'])
 
         time.sleep(_settle_time)
 
-        # .. collect data_refs from the sub_pending set ..
-        sub_pending_key = f'{_Sub_Pending_Prefix}{sub_key}'
-        data_refs:'set' = redis.smembers(sub_pending_key) # type: ignore[assignment]
+        # .. verify the payloads are retained while the messages are pending ..
+        with_payload = pubsub_db.count_messages_with_payload(msg_ids)
 
-        assert len(data_refs) > 0, \
-            'Expected data_refs in sub_pending before delete'
-
-        # .. verify disk files exist ..
-        pubsub_messages_dir = os.path.join(TestConfig.server_directory, 'work', 'pubsub-messages')
-        existing_files = []
-
-        for data_ref in data_refs:
-            file_path = os.path.join(pubsub_messages_dir, data_ref)
-            if os.path.exists(file_path):
-                existing_files.append(file_path)
-
-        assert len(existing_files) > 0, \
-            'Expected disk files to exist before subscription delete'
+        assert with_payload > 0, \
+            'Expected retained payloads before subscription delete'
 
         # .. delete the subscription ..
         sub = _find_subscription_by_topics(admin, [topic_name])
         _delete_subscription(admin, sub['id'])
         time.sleep(_settle_time)
 
-        # .. verify disk files are gone ..
-        for file_path in existing_files:
-            assert not os.path.exists(file_path), \
-                f'Expected disk file to be deleted: {file_path}'
+        # .. verify the payloads are dropped ..
+        assert pubsub_db.count_messages_with_payload(msg_ids) == 0, \
+            'Expected all payloads dropped after subscription delete'
 
 # ################################################################################################################################
 
-    def test_04_consumer_group_destroyed(self, zato_server:'any_') -> 'None':
-        """ After delete (with no remaining topics): XINFO GROUPS does not list the sub_key consumer group.
-        Proves GAP 9 fix: consumer group is destroyed when subscriber has no remaining subscriptions.
+    def test_04_queue_state_removed(self, zato_server:'any_') -> 'None':
+        """ After delete (with no remaining topics): neither subscription state
+        nor delivery rows remain anywhere for the sub_key.
+        Proves GAP 9 fix: the whole queue disappears when the subscriber has no subscriptions left.
         """
         admin = _get_admin()
-        redis = _get_redis()
+        publisher = _get_publisher()
 
-        topic_name = 'sd.topic.cgroup'
+        topic_name = 'sd.topic.queue'
 
         # .. create a fresh topic ..
         _ = _create_topic(admin, topic_name)
@@ -319,62 +276,60 @@ class TestSubscriptionDelete:
         # .. find the sub_key ..
         sub_key = _get_sub_key_for_topics(admin, [topic_name])
 
-        # .. verify the consumer group exists ..
-        stream_key = f'{_Stream_Prefix}{topic_name}'
-        groups:'list' = redis.xinfo_groups(stream_key) # type: ignore[assignment]
-        group_names = [group['name'] for group in groups]
+        # .. give the subscriber something pending ..
+        _ = publisher.publish(topic_name, 'queue-state-payload')
+        time.sleep(_settle_time)
 
-        assert sub_key in group_names, \
-            f'Expected consumer group {sub_key} to exist before delete'
+        # .. verify the queue exists ..
+        assert sub_key in pubsub_db.get_topic_subscribers(topic_name), \
+            f'Expected subscriber {sub_key} to exist before delete'
 
         # .. delete the subscription ..
         sub = _find_subscription_by_topics(admin, [topic_name])
         _delete_subscription(admin, sub['id'])
         time.sleep(_settle_time)
 
-        # .. verify the consumer group is destroyed ..
-        groups_after:'list' = redis.xinfo_groups(stream_key) # type: ignore[assignment]
-        group_names_after = [group['name'] for group in groups_after]
-
-        assert sub_key not in group_names_after, \
-            f'Expected consumer group {sub_key} to be destroyed after delete'
+        # .. verify the whole queue is gone ..
+        assert sub_key not in pubsub_db.get_topic_subscribers(topic_name), \
+            f'Expected subscriber {sub_key} to be removed after delete'
+        assert pubsub_db.count_pending(sub_key) == 0, \
+            'Expected no delivery rows after delete'
 
 # ################################################################################################################################
 
     def test_05_multi_topic_partial(self, zato_server:'any_') -> 'None':
-        """ Subscribe to 2 topics, delete sub: Redis cleaned for both topics.
+        """ Subscribe to 2 topics, delete sub: state cleaned for both topics.
         Proves GAP 9 fix: unsubscribe is called for every topic the sub_key belongs to.
         """
         admin = _get_admin()
-        redis = _get_redis()
 
         # .. find the pre-created multi-topic subscription (sd.topic.multi.first + sd.topic.multi.second) ..
         sub_key = _get_sub_key_for_topics(admin, ['sd.topic.multi.first', 'sd.topic.multi.second'])
         sub = _find_subscription_by_topics(admin, ['sd.topic.multi.first', 'sd.topic.multi.second'])
 
-        # .. verify Redis sets exist for both topics before delete ..
-        topic_first_subs_key  = f'{_Topic_Subs_Prefix}sd.topic.multi.first'
-        topic_second_subs_key = f'{_Topic_Subs_Prefix}sd.topic.multi.second'
-        subs_key = f'{_Subs_Prefix}{sub_key}'
+        # .. verify subscription state exists for both topics before delete ..
+        assert sub_key in pubsub_db.get_topic_subscribers('sd.topic.multi.first'), \
+            'Expected sub_key among subscribers of sd.topic.multi.first before delete'
+        assert sub_key in pubsub_db.get_topic_subscribers('sd.topic.multi.second'), \
+            'Expected sub_key among subscribers of sd.topic.multi.second before delete'
 
-        assert redis.sismember(topic_first_subs_key, sub_key) == 1, \
-            'Expected sub_key in topic_subs for sd.topic.multi.first before delete'
-        assert redis.sismember(topic_second_subs_key, sub_key) == 1, \
-            'Expected sub_key in topic_subs for sd.topic.multi.second before delete'
-        assert redis.scard(subs_key) == 2, \
-            'Expected 2 topics in subs set before delete'
+        subscribed_topics = pubsub_db.get_subscribed_topics(sub_key)
+        subscribed_count = len(subscribed_topics)
+
+        assert subscribed_count == 2, \
+            f'Expected 2 subscribed topics before delete, got {subscribed_count}'
 
         # .. delete the subscription ..
         _delete_subscription(admin, sub['id'])
         time.sleep(_settle_time)
 
-        # .. verify both topics are cleaned from Redis ..
-        assert redis.sismember(topic_first_subs_key, sub_key) == 0, \
-            'Expected sub_key removed from topic_subs for sd.topic.multi.first after delete'
-        assert redis.sismember(topic_second_subs_key, sub_key) == 0, \
-            'Expected sub_key removed from topic_subs for sd.topic.multi.second after delete'
-        assert redis.scard(subs_key) == 0, \
-            'Expected subs set to be empty after multi-topic subscription delete'
+        # .. verify both topics are cleaned ..
+        assert sub_key not in pubsub_db.get_topic_subscribers('sd.topic.multi.first'), \
+            'Expected sub_key removed from subscribers of sd.topic.multi.first after delete'
+        assert sub_key not in pubsub_db.get_topic_subscribers('sd.topic.multi.second'), \
+            'Expected sub_key removed from subscribers of sd.topic.multi.second after delete'
+        assert pubsub_db.get_subscribed_topics(sub_key) == [], \
+            'Expected no subscriptions left after multi-topic subscription delete'
 
 # ################################################################################################################################
 # ################################################################################################################################

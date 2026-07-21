@@ -41,7 +41,7 @@ class _ConfigManagerStub:
         self._push_subs = {}
         self._topic_backends = {}
 
-        # These touch Redis and push delivery so they are not under test here
+        # These touch the pub/sub backend and push delivery so they are not under test here
         self._remove_topic_sub_configs = MagicMock()
         self._resync_topic_subscriptions = MagicMock()
 

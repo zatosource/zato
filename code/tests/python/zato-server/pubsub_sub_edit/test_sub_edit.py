@@ -155,7 +155,7 @@ def _get_outgoing_rest_id(admin:'any_', connection_name:'str') -> 'int':
 
 class TestSubEdit:
     """ Verifies that subscription edit correctly propagates through
-    Redis, in-memory config, _push_subs, and delivery greenlets.
+    the pub/sub database, in-memory config, _push_subs, and delivery greenlets.
     """
 
 # ################################################################################################################################
@@ -211,7 +211,7 @@ class TestSubEdit:
 
     def test_03_removed_topic_no_longer_delivered(self, zato_server:'any_') -> 'None':
         """ GAP 12: publish to topic.two (removed), pull returns 0 new messages.
-        Proves Redis consumer group for topic.two was cleaned up.
+        Proves the queue state for topic.two was cleaned up.
         """
         publisher = _get_publisher()
         puller = _get_puller()
@@ -232,7 +232,7 @@ class TestSubEdit:
 
     def test_04_add_new_topic_receives_messages(self, zato_server:'any_') -> 'None':
         """ GAP 13: edit sub to add topic.three. Publish to topic.three, pull receives message.
-        Proves Redis subscribe was called for new topic.
+        Proves the backend subscribe was called for the new topic.
         """
         admin = _get_admin()
         publisher = _get_publisher()
@@ -299,7 +299,7 @@ class TestSubEdit:
 
 # ################################################################################################################################
 
-    def test_07_edit_does_not_leak_redis_state(self, zato_server:'any_') -> 'None':
+    def test_07_edit_does_not_leak_queue_state(self, zato_server:'any_') -> 'None':
         """ GAP 12: after removing topic.two earlier, re-add it.
         Publish and pull succeeds - proves old consumer group was cleaned and new one works.
         """

@@ -112,7 +112,7 @@ class TestServiceChains(unittest.TestCase):
 # ################################################################################################################################
 
     def test_z_chain_creates_two_implicit_topics(self) -> 'None':
-        """ After a two-hop chain, both implicit topics exist in Redis.
+        """ After a two-hop chain, both implicit topics exist in the pub/sub database.
         """
 
         # .. trigger the chain ..
@@ -124,10 +124,10 @@ class TestServiceChains(unittest.TestCase):
         # .. wait for delivery to complete ..
         _ = self._poll_chain_received('chain_count', 1)
 
-        # .. give Redis a moment ..
+        # .. give the database a moment ..
         time.sleep(0.3)
 
-        raw = self.client.invoke('test.pubsub.check-redis-topics')
+        raw = self.client.invoke('test.pubsub.check-topics')
         result = json.loads(raw) if isinstance(raw, str) else raw
         topics = result['topics']
 
@@ -149,10 +149,10 @@ class TestServiceChains(unittest.TestCase):
         # .. wait for delivery ..
         _ = self._poll_chain_received('fanout_1_count', 1)
 
-        # .. give Redis a moment ..
+        # .. give the database a moment ..
         time.sleep(0.3)
 
-        raw = self.client.invoke('test.pubsub.check-redis-topics')
+        raw = self.client.invoke('test.pubsub.check-topics')
         result = json.loads(raw) if isinstance(raw, str) else raw
         topics = result['topics']
 

@@ -122,7 +122,7 @@ def _get_dashboard_data(request:'HttpRequest') -> 'str':
         if queue_age > oldest_unacked_age_seconds:
             oldest_unacked_age_seconds = queue_age
 
-    # .. get the publish timeline from Redis streams ..
+    # .. get the publish timeline ..
     timeline_response = request.zato.client.invoke('zato.pubsub.topic.get-publish-timeline', {
         'since_minutes': 60,
     })

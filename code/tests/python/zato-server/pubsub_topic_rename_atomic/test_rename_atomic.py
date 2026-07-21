@@ -125,12 +125,12 @@ def _rename_topic(admin:'any_', old_name:'str', new_name:'str') -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 #
-# Gap 1: publish during rename cannot create a new stream under old key
+# Gap 1: publish during rename cannot split data between old and new names
 #
-# With atomic Lua, the stream RENAME and topic_subs_key RENAME happen in a single
-# Redis command. No publish Lua can interleave between those two steps, so XADD
-# cannot target a stale (pre-rename) stream key while the topic_subs_key still
-# points to the old subscriber set.
+# The rename updates the topic name across message, delivery and subscription
+# rows in a single database transaction. No publish can interleave between those
+# steps, so a message cannot land under the stale (pre-rename) topic name while
+# the subscription rows already point to the new one.
 #
 # ################################################################################################################################
 # ################################################################################################################################
@@ -169,11 +169,11 @@ class TestPublishDuringRenameNoDataSplit:
 # ################################################################################################################################
 # ################################################################################################################################
 #
-# Gap 2: SMEMBERS on topic_subs_key returns consistent state during rename
+# Gap 2: subscriber lookups return consistent state during rename
 #
 # After rename, publishing to the old name must fail because the topic no longer
-# exists. The topic_subs_key for the old name is gone (renamed atomically), so the
-# publish Lua's SMEMBERS returns empty or the REST layer rejects the request.
+# exists. The subscription rows for the old name are gone (renamed in the same
+# transaction), so the REST layer rejects the request.
 #
 # ################################################################################################################################
 # ################################################################################################################################
@@ -207,11 +207,11 @@ class TestPublishToOldNameFailsAfterRename:
 # ################################################################################################################################
 # ################################################################################################################################
 #
-# Gap 3: subscriber fetch after rename finds the stream under new key
+# Gap 3: subscriber fetch after rename finds the queue under the new name
 #
-# Redis RENAME preserves the stream and its consumer groups. After an atomic rename,
-# the subscriber's pull (which builds stream_key from topic_name) must find the
-# stream under the new name with all pre-rename messages intact.
+# The rename preserves message and delivery rows, only their topic name changes.
+# After an atomic rename, the subscriber's pull (which selects by topic name)
+# must find the queue under the new name with all pre-rename messages intact.
 #
 # ################################################################################################################################
 # ################################################################################################################################
@@ -241,10 +241,10 @@ class TestFetchAfterRenameNoNogroup:
 # ################################################################################################################################
 # ################################################################################################################################
 #
-# Gap 4: SREM+SADD per subscriber cannot leave a gap where topic is missing
+# Gap 4: per-subscriber updates cannot leave a gap where the topic is missing
 #
-# Because the Lua script loops over all subscribers and updates their topic sets
-# atomically, there is no window where a subscriber's subs_key is missing the topic.
+# Because the rename updates all subscription rows in one transaction, there is
+# no window where a subscriber's subscription is missing the topic.
 # This test verifies the subscription metadata shows the new name immediately.
 #
 # ################################################################################################################################

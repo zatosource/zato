@@ -37,13 +37,8 @@ def _build_config(
     invoke_password:'str',
 ) -> 'anydict':
 
-    from redis import Redis
-    from zato.common.api import PubSub
-
-    # .. flush the test Redis DB to remove stale data from previous runs ..
-    redis_connection = Redis(host='localhost', port=6379, db=PubSub.Test_Redis_DB, decode_responses=True)
-    _ = redis_connection.flushdb()
-    redis_connection.close()
+    # The pub/sub database lives inside the quickstart directory the shared fixture
+    # creates for this session, so it always starts empty - no reset is needed here.
 
     publisher_password  = 'test.pub.' + CryptoManager.generate_hex_string()
     subscriber_password = 'test.sub.' + CryptoManager.generate_hex_string()

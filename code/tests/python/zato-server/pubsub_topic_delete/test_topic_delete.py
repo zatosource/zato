@@ -365,7 +365,7 @@ class TestTopicDelete:
     def test_07_no_server_errors_after_topic_delete(self, zato_server:'any_') -> 'None':
         """ After all deletions, the server log must not contain ERROR or CRITICAL
         lines referencing deleted topics. This catches silent failures from stale
-        greenlets, config lookups, or stale Redis operations.
+        greenlets, config lookups, or stale database operations.
         """
         from zato.common.test.config_pubsub_topic_delete import TestConfig
 

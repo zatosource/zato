@@ -40,8 +40,8 @@ class TestServiceTopology(unittest.TestCase):
     def setUpClass(class_) -> 'None': # pyright: ignore[reportSelfClsParameterName]
         class_.client = ZatoClient(TestConfig.base_url, TestConfig.password)
 
-        # .. wipe all service Redis streams and server caches from any previous run ..
-        _ = class_.client.invoke('test.pubsub.reset-service-streams')
+        # .. wipe all service topics and server caches from any previous run ..
+        _ = class_.client.invoke('test.pubsub.reset-service-topics')
 
 # ################################################################################################################################
 
@@ -214,7 +214,7 @@ class TestServiceTopology(unittest.TestCase):
 # ################################################################################################################################
 
     def test_z_all_twenty_topics_created(self) -> 'None':
-        """ After running all topology tests, all 20 service topics exist in Redis.
+        """ After running all topology tests, all 20 service topics exist in the pub/sub database.
         """
 
         # .. trigger any remaining topologies that may not have been tested yet ..
@@ -258,13 +258,13 @@ class TestServiceTopology(unittest.TestCase):
 
         time.sleep(0.3)
 
-        raw = self.client.invoke('test.pubsub.check-redis-topics')
+        raw = self.client.invoke('test.pubsub.check-topics')
         result = json.loads(raw) if isinstance(raw, str) else raw
         topics = result['topics']
 
         for number in range(1, 21):
             topic_name = f'zato.s.to.test.pubsub.{_service_name(number)}'
-            self.assertIn(topic_name, topics, f'{topic_name} should exist in Redis')
+            self.assertIn(topic_name, topics, f'{topic_name} should exist in the pub/sub database')
 
 # ################################################################################################################################
 # ################################################################################################################################

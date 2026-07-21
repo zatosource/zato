@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import os
+import sqlite3
 import tempfile
 import time
 from urllib.request import Request, urlopen
@@ -97,28 +98,19 @@ def _create_amqp_topic_for_queue(
 
 # ################################################################################################################################
 
-def _read_redis_config(server_dir:'str') -> 'anydict':
-    """ Reads the [redis] section of server.conf so tests connect to the same Redis the server uses.
+def _count_topic_message_rows(pubsub_db_path:'str', topic_name:'str') -> 'int':
+    """ Counts one topic's message rows in the server's pub/sub database.
     """
-    config_path = os.path.join(server_dir, 'config', 'repo', 'server.conf')
+    connection = sqlite3.connect(pubsub_db_path)
 
-    with open(config_path, 'r') as config_file:
-        lines = config_file.read().splitlines()
+    try:
+        cursor = connection.execute(
+            'SELECT COUNT(*) FROM pubsub_message WHERE topic_name = ?', (topic_name.lower(),))
+        row = cursor.fetchone()
+    finally:
+        connection.close()
 
-    out = {} # type: anydict
-    in_redis_section = False
-
-    for line in lines:
-        stripped = line.strip()
-
-        if stripped.startswith('['):
-            in_redis_section = stripped == '[redis]'
-            continue
-
-        if in_redis_section and '=' in stripped:
-            key, _, value = stripped.partition('=')
-            out[key.strip()] = value.strip()
-
+    out = row[0]
     return out
 
 # ################################################################################################################################
@@ -438,56 +430,42 @@ class TestPubSubTopicAMQPPublish:
 
 # ################################################################################################################################
 
-    def test_no_redis_stream_keys_for_amqp_topic(
+    def test_no_database_rows_for_amqp_topic(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
         rabbitmq_broker:'anydict', # noqa: F811
         ) -> 'None':
-        """ Publishing to an AMQP-backed topic leaves no pub/sub stream keys in Redis.
+        """ Publishing to an AMQP-backed topic leaves no rows in the pub/sub database -
+        the broker owns the storage of such topics.
         """
-        # redis
-        from redis import Redis
-
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
 
         # Configure the outgoing connection and topic via forms ..
-        topic_info = _create_amqp_topic_for_queue(page, base_url, rabbitmq_broker, 'noredis')
+        topic_info = _create_amqp_topic_for_queue(page, base_url, rabbitmq_broker, 'nodatabase')
         topic_name = topic_info['topic_name']
 
         # .. publish through the overlay ..
         open_publish_overlay(page, topic_info['item_id'])
-        publish_via_overlay(page, 'redis-check-payload-' + new_cid())
+        publish_via_overlay(page, 'database-check-payload-' + new_cid())
 
-        # .. connect to the same Redis the server uses ..
-        redis_config = _read_redis_config(zato_dashboard['server_dir'])
-        redis_client = Redis(
-            host=redis_config['host'],
-            port=int(redis_config['port']),
-            db=int(redis_config['db']),
-            decode_responses=True,
-        )
-
-        # .. and no stream key exists for the AMQP topic.
-        stream_keys = list(redis_client.scan_iter('zato:pubsub:stream:*'))
-        redis_client.close()
-
-        matching = [key for key in stream_keys if topic_name in key]
-        assert not matching, f'Expected no stream keys for `{topic_name}`, got: {matching}'
+        # .. and the server's pub/sub database holds no rows for the AMQP topic.
+        row_count = _count_topic_message_rows(zato_dashboard['pubsub_db_path'], topic_name)
+        assert row_count == 0, f'Expected no message rows for `{topic_name}`, got: {row_count}'
 
         # .. leave the queue clean for the next test.
         _ = drain_queue(rabbitmq_broker['amqp_url'], rabbitmq_broker['queue'], timeout=1)
 
 # ################################################################################################################################
 
-    def test_builtin_topic_still_delivered_via_redis_push(
+    def test_builtin_topic_still_delivered_via_push(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
         ) -> 'None':
         """ A built-in topic with a REST push subscriber still delivers through
-        the normal Redis push path, both backends coexist in one server.
+        the normal push path, both backends coexist in one server.
         """
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
@@ -523,7 +501,7 @@ class TestPubSubTopicAMQPPublish:
             open_publish_overlay(page, item_id)
             publish_via_overlay(page, payload_marker)
 
-            # .. and the receiver got the message through the Redis push path.
+            # .. and the receiver got the message through the push path.
             messages = receiver.wait_for_delivery(1)
 
             assert len(messages) >= 1, f'Expected at least one delivery, got: {messages}'

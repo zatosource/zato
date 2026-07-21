@@ -11,14 +11,9 @@ import logging
 import time
 import unittest
 
-# local
+# Zato
+from zato.common.test import pubsub_db
 from zato.common.test.base_cleanup_live import BaseCleanupLiveTestCase
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if 0:
-    from zato.common.typing_ import strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,25 +32,21 @@ class TestCleanupExpiredViaAPI(BaseCleanupLiveTestCase):
         topic_name = 'iam.user.created'
         ttl_seconds = 1
 
-        # Publish 5 messages with short TTL ..
-        for _ in range(5):
-            _ = self.publisher.publish(topic_name, 'cleanup test payload', expiration=ttl_seconds)
+        # Publish 5 messages with short TTL - the topic's pull subscriber never pulls,
+        # so the messages keep their payloads and stay pending until they expire ..
+        msg_ids = self.publish_messages(topic_name, 5, ttl_seconds)
 
-        # .. collect data_refs from the stream ..
-        data_refs = self._get_published_data_refs(topic_name, 5)
-        self.assertEqual(len(data_refs), 5)
+        # .. verify the rows and payloads exist in the database ..
+        self.assert_all_present(msg_ids)
 
-        # .. verify files exist on disk ..
-        self.assert_files_exist(data_refs)
-
-        # .. wait for messages to expire ..
+        # .. wait for the messages to expire ..
         time.sleep(ttl_seconds + 1)
 
         # .. run the cleanup ..
         self._run_cleanup_once()
 
         # .. and verify everything is gone.
-        self.assert_all_cleaned(data_refs)
+        self.assert_all_cleaned(msg_ids)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -69,26 +60,13 @@ class TestCleanupMixedExpiry(BaseCleanupLiveTestCase):
 
         topic_name = 'iam.user.deleted'
         short_ttl = 1
+        long_ttl = 3600
 
         # Publish 5 messages with short TTL ..
-        for _ in range(5):
-            _ = self.publisher.publish(topic_name, 'short-lived payload', expiration=short_ttl)
-
-        expired_refs = self._get_published_data_refs(topic_name, 5)
-        self.assertEqual(len(expired_refs), 5)
+        expired_ids = self.publish_messages(topic_name, 5, short_ttl)
 
         # .. publish 5 messages with 1-hour TTL ..
-        for _ in range(5):
-            _ = self.publisher.publish(topic_name, 'long-lived payload', expiration=3600)
-
-        all_refs = self._get_published_data_refs(topic_name, 10)
-        live_refs:'strlist' = []
-
-        for data_ref in all_refs:
-            if data_ref not in expired_refs:
-                live_refs.append(data_ref)
-
-        self.assertEqual(len(live_refs), 5)
+        live_ids = self.publish_messages(topic_name, 5, long_ttl)
 
         # .. wait for the short-lived messages to expire ..
         time.sleep(short_ttl + 1)
@@ -97,17 +75,18 @@ class TestCleanupMixedExpiry(BaseCleanupLiveTestCase):
         self._run_cleanup_once()
 
         # .. verify expired messages are gone ..
-        self.assert_all_cleaned(expired_refs)
+        self.assert_all_cleaned(expired_ids)
 
         # .. and live messages are still present.
-        self.assert_all_present(live_refs)
+        self.assert_all_present(live_ids)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class TestCleanupAfterSubscriptionDeleted(BaseCleanupLiveTestCase):
-    """ Publish a message with short TTL, delete the subscription before delivery,
-    wait for expiry, run cleanup - file cleaned up by the expiry sweep.
+    """ Publish a message with short TTL, remove the topic's subscription rows behind
+    the server's back, wait for expiry, run cleanup - the expiry sweep removes the message
+    even though no subscriber is left to ever acknowledge it.
     """
 
     def test_cleanup_handles_deleted_subscription(self) -> 'None':
@@ -116,28 +95,23 @@ class TestCleanupAfterSubscriptionDeleted(BaseCleanupLiveTestCase):
         ttl_seconds = 1
 
         # Publish a message with short TTL ..
-        _ = self.publisher.publish(topic_name, 'will expire undelivered', expiration=ttl_seconds)
+        msg_ids = self.publish_messages(topic_name, 1, ttl_seconds)
 
-        # .. collect the data_ref ..
-        data_refs = self._get_published_data_refs(topic_name, 1)
-        self.assertEqual(len(data_refs), 1)
-
-        # .. verify the file exists ..
-        self.assert_files_exist(data_refs)
+        # .. verify the row and its payload exist ..
+        self.assert_all_present(msg_ids)
 
         # .. remove all subscribers from the topic so no delivery can happen ..
-        topic_subs_key = f'zato:pubsub:topic_subs:{topic_name}'
-        _ = self.redis.delete(topic_subs_key)
-        logger.info('Deleted topic_subs key -> %s', topic_subs_key)
+        pubsub_db.remove_topic_subscriptions(topic_name)
+        logger.info('Removed subscription rows -> %s', topic_name)
 
         # .. wait for expiry ..
         time.sleep(ttl_seconds + 1)
 
-        # .. run cleanup - the expiry sweep should remove the file.
+        # .. run cleanup - the expiry sweep should remove the message.
         self._run_cleanup_once()
 
         # .. and verify everything is gone.
-        self.assert_all_cleaned(data_refs)
+        self.assert_all_cleaned(msg_ids)
 
 # ################################################################################################################################
 # ################################################################################################################################

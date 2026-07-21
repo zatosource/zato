@@ -10,11 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import time
 
-# redis
-from redis import Redis
-
 # Zato
-from zato.common.api import PubSub
+from zato.common.test import pubsub_db
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -28,15 +25,6 @@ if 0:
 logger = logging.getLogger('zato.test.pubsub_sec_delete')
 
 _settle_time = 0.5
-
-_test_redis_host = 'localhost'
-_test_redis_port = 6379
-_test_redis_db   = PubSub.Test_Redis_DB
-
-_Subs_Prefix        = 'zato:pubsub:subs:'
-_Topic_Subs_Prefix  = 'zato:pubsub:topic_subs:'
-_Stream_Prefix      = 'zato:pubsub:stream:'
-_Sub_Pending_Prefix = 'zato:pubsub:sub_pending:'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,12 +42,6 @@ def _get_publisher() -> 'any_':
     from zato.common.test.config_pubsub_sec_delete import TestConfig
     publisher = PublishClient(TestConfig.base_url, TestConfig.publisher_username, TestConfig.publisher_password)
     return publisher
-
-# ################################################################################################################################
-
-def _get_redis() -> 'Redis':
-    redis = Redis(host=_test_redis_host, port=_test_redis_port, db=_test_redis_db, decode_responses=True)
-    return redis
 
 # ################################################################################################################################
 
@@ -149,28 +131,24 @@ class TestSecurityDeletePubSubCleanup:
 
 # ################################################################################################################################
 
-    def test_02_redis_sets_cleaned(self, zato_server:'any_') -> 'None':
-        """ GAP 19: Redis subscriber sets and topic subscriber sets are cleaned up
+    def test_02_subscription_state_cleaned(self, zato_server:'any_') -> 'None':
+        """ GAP 19: The pub/sub database subscription state is cleaned up
         for all subscriptions that belonged to the deleted security definition.
         """
-        redis = _get_redis()
-
         sub_keys:'list[str]' = self.__class__._sub_keys_before # type: ignore[attr-defined]
         topics:'list[str]' = self.__class__._topics_before # type: ignore[attr-defined]
 
-        # .. verify no sub_key has remaining subs set entries ..
+        # .. verify no sub_key has remaining subscription rows ..
         for sub_key in sub_keys:
-            subs_key = f'{_Subs_Prefix}{sub_key}'
-            card:'int' = redis.scard(subs_key) # type: ignore[assignment]
-            assert card == 0, f'Expected subs set to be empty for {sub_key}, got {card}'
+            subscribed = pubsub_db.get_subscribed_topics(sub_key)
+            assert subscribed == [], f'Expected no subscriptions left for {sub_key}, got {subscribed}'
 
-        # .. verify no topic_subs set contains any of the old sub_keys ..
+        # .. verify no topic lists any of the old sub_keys among its subscribers ..
         for topic_name in topics:
-            topic_subs_key = f'{_Topic_Subs_Prefix}{topic_name}'
+            subscribers = pubsub_db.get_topic_subscribers(topic_name)
             for sub_key in sub_keys:
-                is_member:'int' = redis.sismember(topic_subs_key, sub_key) # type: ignore[assignment]
-                assert is_member == 0, \
-                    f'Expected sub_key {sub_key} removed from topic_subs for {topic_name}'
+                assert sub_key not in subscribers, \
+                    f'Expected sub_key {sub_key} removed from the subscribers of {topic_name}'
 
 # ################################################################################################################################
 
@@ -236,29 +214,25 @@ class TestSecurityDeletePubSubCleanup:
         """ GAPs 22+23: Push delivery config (_push_subs) is removed and delivery greenlets
         are stopped. Verified by confirming no pending messages accumulate after security delete.
         """
-        redis = _get_redis()
-
         sub_keys:'list[str]' = self.__class__._sub_keys_before # type: ignore[attr-defined]
 
-        # .. verify no sub_pending keys remain for the old sub_keys ..
+        # .. verify no delivery rows remain for the old sub_keys ..
         for sub_key in sub_keys:
-            sub_pending_key = f'{_Sub_Pending_Prefix}{sub_key}'
-            exists:'int' = redis.exists(sub_pending_key) # type: ignore[assignment]
-            assert exists == 0, f'Expected sub_pending key gone for {sub_key}'
+            pending_count = pubsub_db.count_pending(sub_key)
+            assert pending_count == 0, f'Expected no delivery rows for {sub_key}, got {pending_count}'
 
         # .. publish messages to the topics - they must not accumulate for deleted subs ..
         publisher = _get_publisher()
 
         for topic_name in self.__class__._topics_before: # type: ignore[attr-defined]
-            _ = publisher.publish(topic_name, 'orphan-test-payload')
+            _ = publisher.publish(topic_name, 'no-subscriber-test-payload')
 
         time.sleep(_settle_time)
 
         # .. verify no new pending state appeared for the old sub_keys ..
         for sub_key in sub_keys:
-            sub_pending_key = f'{_Sub_Pending_Prefix}{sub_key}'
-            exists_after:'int' = redis.exists(sub_pending_key) # type: ignore[assignment]
-            assert exists_after == 0, \
+            pending_count_after = pubsub_db.count_pending(sub_key)
+            assert pending_count_after == 0, \
                 f'Expected no pending accumulation for deleted sub_key {sub_key}'
 
 # ################################################################################################################################
