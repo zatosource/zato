@@ -25,12 +25,15 @@ $(document).ready(function() {
         'validate_tls',
     ]);
 
+    // These connections are REST wrappers underneath, stored under a prefixed name,
+    // so the check runs against the outgoing REST table with the name as stored.
     var unique_constraints = [
-        {field: 'name', entity_type: 'generic_connection', attr_name: 'name'}
+        {field: 'name', entity_type: 'outgoing_rest', attr_name: 'name',
+            value_prefix: 'KeysightVision.'}
     ];
-    $.each(unique_constraints, function(i, c) {
-        $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
-        $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name);
+    $.each(unique_constraints, function(index, constraint) {
+        $.fn.zato.validate_unique('#id_' + constraint.field, constraint.entity_type, constraint.attr_name, constraint);
+        $.fn.zato.validate_unique('#id_edit-' + constraint.field, constraint.entity_type, constraint.attr_name, constraint);
     });
 })
 

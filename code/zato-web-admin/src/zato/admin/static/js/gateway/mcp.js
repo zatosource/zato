@@ -18,13 +18,16 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func = $.fn.zato.gateway.mcp.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name', 'url_path']);
+    // Generic connection names are unique per connection type,
+    // so the check is scoped to this page's own type.
     var unique_constraints = [
-        {field: 'name', entity_type: 'generic_connection', attr_name: 'name'},
+        {field: 'name', entity_type: 'generic_connection', attr_name: 'name',
+            filter_name: 'type_', filter_value: 'gateway-mcp'},
         {field: 'url_path', entity_type: 'http_soap', attr_name: 'url_path'}
     ];
-    $.each(unique_constraints, function(constraint_idx, constraint) {
-        $.fn.zato.validate_unique('#id_' + constraint.field, constraint.entity_type, constraint.attr_name);
-        $.fn.zato.validate_unique('#id_edit-' + constraint.field, constraint.entity_type, constraint.attr_name);
+    $.each(unique_constraints, function(index, constraint) {
+        $.fn.zato.validate_unique('#id_' + constraint.field, constraint.entity_type, constraint.attr_name, constraint);
+        $.fn.zato.validate_unique('#id_edit-' + constraint.field, constraint.entity_type, constraint.attr_name, constraint);
     });
 
     $.fn.zato.data_table.before_submit_hook = function(form) {

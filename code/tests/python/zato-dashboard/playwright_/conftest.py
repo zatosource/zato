@@ -335,6 +335,11 @@ def zato_dashboard() -> 'any_':
     server_env['Zato_Queue_Bridge_Redis_Port'] = str(queue_bridge_redis_port)
     server_env.pop('COVERAGE_PROCESS_START', None)
 
+    # The pub/sub database lives inside this test server's own directory,
+    # which is also where tests that read it directly find it.
+    pubsub_db_path = os.path.join(server_dir, 'pubsub.db')
+    server_env['Zato_PubSub_DB_Name'] = pubsub_db_path
+
     # SFTP tests copy a private key to this path after the server has already started
     sftp_key_path = os.path.join(temporary_dir, 'sftp-test-key')
     server_env[_SFTP_Key_Env_Name] = sftp_key_path
@@ -431,6 +436,7 @@ def zato_dashboard() -> 'any_':
         'dashboard_url': f'http://{host}:{dashboard_port}',
         'password': _Password,
         'server_dir': server_dir,
+        'pubsub_db_path': pubsub_db_path,
         'dashboard_dir': dashboard_dir,
         'temporary_dir': temporary_dir,
         'server_process': server_process,

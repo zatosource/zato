@@ -49,28 +49,28 @@ class GitRepoManager(_BaseRepoManager):
         import sh
 
         # Always work in the same directory as the repository is in
-        sh.cd(self.repo_location)
+        with sh.pushd(self.repo_location):
 
-        # (Re-)init the repository
-        sh.git.init(self.repo_location)
+            # (Re-)init the repository
+            sh.git.init(self.repo_location)
 
-        # Set user info
-        current_user = get_current_user()
-        sh.git.config('user.name', current_user)
-        sh.git.config('user.email', '{}@{}'.format(current_user, socket.getfqdn()))
+            # Set user info
+            current_user = get_current_user()
+            sh.git.config('user.name', current_user)
+            sh.git.config('user.email', '{}@{}'.format(current_user, socket.getfqdn()))
 
-        # Default branch is called 'main'
-        sh.git.checkout('-B', 'main')
+            # Default branch is called 'main'
+            sh.git.checkout('-B', 'main')
 
-        # Add all files
-        sh.git.add('-A', self.repo_location)
+            # Add all files
+            sh.git.add('-A', self.repo_location)
 
-        output = sh.git.status('--porcelain') # type: str
-        output = output.strip()
+            output = sh.git.status('--porcelain') # type: str
+            output = output.strip()
 
-        # And commit changes if there are any
-        if output:
-            sh.git.commit('-m', 'Committing latest changes')
+            # And commit changes if there are any
+            if output:
+                sh.git.commit('-m', 'Committing latest changes')
 
 # ################################################################################################################################
 # ################################################################################################################################

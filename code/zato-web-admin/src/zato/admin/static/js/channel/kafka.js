@@ -18,12 +18,15 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func = $.fn.zato.channel.kafka.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name', 'address', 'topic', 'group_id', 'service']);
+    // Generic connection names are unique per connection type,
+    // so the check is scoped to this page's own type.
     var unique_constraints = [
-        {field: 'name', entity_type: 'generic_connection', attr_name: 'name'}
+        {field: 'name', entity_type: 'generic_connection', attr_name: 'name',
+            filter_name: 'type_', filter_value: 'channel-kafka'}
     ];
-    $.each(unique_constraints, function(i, c) {
-        $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
-        $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name);
+    $.each(unique_constraints, function(index, constraint) {
+        $.fn.zato.validate_unique('#id_' + constraint.field, constraint.entity_type, constraint.attr_name, constraint);
+        $.fn.zato.validate_unique('#id_edit-' + constraint.field, constraint.entity_type, constraint.attr_name, constraint);
     });
 })
 

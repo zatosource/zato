@@ -18,8 +18,8 @@ from zato.common.util.safeguards.walk import walk_strings
 # ################################################################################################################################
 
 # Script and style elements are removed with everything inside them.
-Script_Elements = re_compile(r'<script\b.*?</script\s*>', DOTALL | IGNORECASE)
-Style_Elements  = re_compile(r'<style\b.*?</style\s*>', DOTALL | IGNORECASE)
+Script_Elements = re_compile(r'<script\b.*?</script\b[^>]*>', DOTALL | IGNORECASE)
+Style_Elements  = re_compile(r'<style\b.*?</style\b[^>]*>', DOTALL | IGNORECASE)
 
 # Event handler attributes - onclick, onerror, onload and the rest of the on* family.
 Event_Handlers = re_compile(r'\s+on\w+\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+)', IGNORECASE)

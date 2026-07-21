@@ -220,8 +220,10 @@ $.fn.zato.channel.hl7.mllp.editor.init = function(options) {
         descriptions: $.fn.zato.channel.hl7.mllp.field_descriptions
     });
 
-    // .. live uniqueness indicators ..
-    $.fn.zato.validate_unique('#' + prefix + 'name', 'generic_connection', 'name');
+    // .. live uniqueness indicators, with the name check scoped to MLLP channels
+    // because generic connection names are unique per connection type ..
+    $.fn.zato.validate_unique('#' + prefix + 'name', 'generic_connection', 'name',
+        {filter_name: 'type_', filter_value: 'channel-hl7-mllp'});
     $.fn.zato.validate_unique('#' + prefix + 'rest_url_path', 'channel_rest', 'url_path');
 
     // .. keep the service and security selects fresh while the page is open ..
