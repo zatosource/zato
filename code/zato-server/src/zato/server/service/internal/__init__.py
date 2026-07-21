@@ -84,7 +84,7 @@ class AdminService(Service):
             # in which case we want to access its opaque attributes
             # that are not available through self.request.input.
             try:
-                data = self.request.raw_request
+                data = self.request.raw
                 if not isinstance(data, dict):
                     data = loads(data)
             except Exception:
@@ -190,39 +190,39 @@ class ServerInvoker(AdminService):
     name = 'zato.server.invoker'
 
     def handle(self):
-        func_name = self.request.raw_request['func_name']
+        func_name = self.request.raw['func_name']
         func = getattr(self.server, func_name)
 
         if func_name == 'import_enmasse':
-            file_content = self.request.raw_request.get('file_content', '')
-            file_name = self.request.raw_request.get('file_name', 'enmasse.yaml')
+            file_content = self.request.raw.get('file_content', '')
+            file_name = self.request.raw.get('file_name', 'enmasse.yaml')
             response = func(file_content, file_name)
         elif func_name == 'check_attr_exists':
-            entity_type = self.request.raw_request['entity_type']
-            attr_name = self.request.raw_request['attr_name']
-            value = self.request.raw_request['value']
-            filter_name = self.request.raw_request.get('filter_name', '')
-            filter_value = self.request.raw_request.get('filter_value', '')
-            soap_action = self.request.raw_request.get('soap_action', '')
-            method = self.request.raw_request.get('method', '')
-            http_accept = self.request.raw_request.get('http_accept', '')
+            entity_type = self.request.raw['entity_type']
+            attr_name = self.request.raw['attr_name']
+            value = self.request.raw['value']
+            filter_name = self.request.raw.get('filter_name', '')
+            filter_value = self.request.raw.get('filter_value', '')
+            soap_action = self.request.raw.get('soap_action', '')
+            method = self.request.raw.get('method', '')
+            http_accept = self.request.raw.get('http_accept', '')
 
             response = func(entity_type, attr_name, value, filter_name, filter_value, soap_action, method, http_accept)
         elif func_name in ('test_logging', 'set_logging'):
-            text = self.request.raw_request['text']
+            text = self.request.raw['text']
             response = func(text)
         elif func_name == 'set_log_destination':
-            vendor = self.request.raw_request['vendor']
-            destination = self.request.raw_request['destination']
+            vendor = self.request.raw['vendor']
+            destination = self.request.raw['destination']
             response = func(vendor, destination)
         elif func_name in ('delete_log_destination', 'ping_log_destination'):
-            vendor = self.request.raw_request['vendor']
-            destination_id = self.request.raw_request['destination_id']
+            vendor = self.request.raw['vendor']
+            destination_id = self.request.raw['destination_id']
             response = func(vendor, destination_id)
         elif func_name == 'get_bearer_token':
             from json import loads as json_loads
-            security_id = self.request.raw_request.get('security_id', '')
-            raw_params_json = self.request.raw_request.get('raw_params_json', '')
+            security_id = self.request.raw.get('security_id', '')
+            raw_params_json = self.request.raw.get('raw_params_json', '')
             raw_params = json_loads(raw_params_json) if raw_params_json else None
             response = func(security_id, raw_params)
         else:

@@ -48,7 +48,7 @@ class _Logger(Service):
     pickup_data_type = None
 
     def handle(self) -> 'None':
-        self.logger.info('%s data received: `%s`', self.pickup_data_type, self.request.raw_request)
+        self.logger.info('%s data received: `%s`', self.pickup_data_type, self.request.raw)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,7 +73,7 @@ class LogCSV(Service):
     """ Picks up CSV files and logs their contents.
     """
     def handle(self) -> 'None':
-        raw_request = cast_('stranydict', self.request.raw_request)
+        raw_request = cast_('stranydict', self.request.raw)
         with open_r(raw_request['full_path']) as f:
             reader = csv.reader(f)
             for idx, line in enumerate(reader, 1):
@@ -86,7 +86,7 @@ class _Updater(Service):
     pickup_action: 'ValueConstant'
 
     def handle(self) -> 'None':
-        raw_request = cast_('stranydict', self.request.raw_request)
+        raw_request = cast_('stranydict', self.request.raw)
 
         self.config_dispatcher.publish({
             'action': self.pickup_action.value,
@@ -125,7 +125,7 @@ class UpdateEnmasse(Service):
     def handle(self) -> 'None':
 
         # Add type hints ..
-        raw_request = cast_('stranydict', self.request.raw_request)
+        raw_request = cast_('stranydict', self.request.raw)
 
         # .. extract the path to the enmasse file ..
         enmasse_file_path = raw_request['full_path']

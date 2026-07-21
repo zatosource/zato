@@ -25,7 +25,7 @@ class Deliver(Service):
 
         # The message is what the publishing facade built - it arrives as the JSON string
         # that the pub/sub backend stored at publication time.
-        msg = loads(self.request.raw_request)
+        msg = loads(self.request.raw)
 
         # Everything needed to replay the original call is inside the message.
         connection = self.out.as4[msg['connection']]
@@ -68,7 +68,7 @@ class Pull(Service):
     def handle(self) -> 'None':
 
         # The scheduler parses the job's extra data into a dictionary before invoking us.
-        msg = self.request.raw_request
+        msg = self.request.raw
 
         connection_name = msg['connection']
         mpc = msg.get('mpc')

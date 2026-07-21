@@ -51,8 +51,8 @@ class GetList(Service):
         service_name = 'zato.http-soap.get-list'
 
         # Filter by this wrapper type from input
-        if isinstance(self.request.raw_request, dict):
-            wrapper_type = self.request.raw_request.get('wrapper_type', '') # type: str
+        if isinstance(self.request.raw, dict):
+            wrapper_type = self.request.raw.get('wrapper_type', '') # type: str
 
         # This response has all the REST connections possible ..
         response = self.invoke(service_name, {
@@ -146,7 +146,7 @@ class _WrapperBase(Service):
 # ################################################################################################################################
 
     def handle(self):
-        self._handle(self.request.raw_request)
+        self._handle(self.request.raw)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -185,7 +185,7 @@ class ChangePassword(_WrapperBase):
     def handle(self) -> 'None':
 
         # Reusable
-        request = self.request.raw_request
+        request = self.request.raw
 
         # This must always exist
         id = request['id']

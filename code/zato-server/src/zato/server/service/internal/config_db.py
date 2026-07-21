@@ -97,7 +97,7 @@ class SQLGet(AdminService):
     def handle(self):
 
         # Which of the databases we are to read ..
-        database = self.request.raw_request['database']
+        database = self.request.raw['database']
         config = _sql_databases[database]
 
         # .. the connection values come out of the environment with defaults filled in ..
@@ -122,7 +122,7 @@ class SQLTest(AdminService):
 
     def handle(self):
 
-        values = self.request.raw_request['values']
+        values = self.request.raw['values']
         db_type = values['type']
 
         try:
@@ -167,8 +167,8 @@ class SQLSave(AdminService):
     def handle(self):
 
         # Which of the databases we are to configure ..
-        database = self.request.raw_request['database']
-        values = self.request.raw_request['values']
+        database = self.request.raw['database']
+        values = self.request.raw['values']
 
         env_prefix = sql_env_prefix_by_database[database]
 
@@ -235,7 +235,7 @@ class RedisTest(AdminService):
 
     def handle(self):
 
-        values = self.request.raw_request['values']
+        values = self.request.raw['values']
 
         # The port and the database number arrive as strings from the form
         values['port'] = int(values['port'])
@@ -278,7 +278,7 @@ class RedisSave(AdminService):
 
     def handle(self):
 
-        values = self.request.raw_request['values']
+        values = self.request.raw['values']
 
         # The port and the database number arrive as strings from the form
         values['port'] = int(values['port'])

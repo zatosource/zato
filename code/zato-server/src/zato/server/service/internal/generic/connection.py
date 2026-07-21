@@ -220,7 +220,7 @@ class _CreateEdit(_BaseService):
         self.logger.info('GenericConn _CreateEdit step 1b: type_=%s, name=%s',
             data.get('type_'), data.get('name'))
 
-        raw_request = self.request.raw_request
+        raw_request = self.request.raw
         if isinstance(raw_request, (str, bytes)):
             raw_request = loads(raw_request)
 

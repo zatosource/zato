@@ -157,9 +157,10 @@ class AMQPRequestData:
 class Request:
     """ Wraps a service request and adds some useful meta-data.
     """
-    text: 'any_'
+    payload: 'any_'
+    raw: 'any_'
 
-    __slots__ = ('service', 'logger', 'payload', 'text', 'input', 'cid', 'data_format', 'transport',
+    __slots__ = ('service', 'logger', 'payload', 'raw', 'input', 'cid', 'data_format', 'transport',
         'encrypt_func', 'encrypt_secrets', 'bytes_to_str_encoding', '_wsgi_environ', 'channel_params',
         'merge_channel_params', 'http', 'amqp', 'soap', 'enforce_string_encoding', 'headers')
 
@@ -172,7 +173,7 @@ class Request:
         self.service = service
         self.logger = cast_('Logger', None) # This is populated in a service's update_handle
         self.payload = ''
-        self.text = ''
+        self.raw = ''
         self.input = None # type: any_
         self.cid = cast_('str', None)
         self.data_format = cast_('str', data_format)
@@ -196,7 +197,7 @@ class Request:
         self,
         is_io,       # type: bool
         cid,          # type: str
-        io_processor,          # type: IOProcessor
+        io_processor,          # type: IOProcessor | None
         data_format,  # type: str
         transport,    # type: str
         wsgi_environ, # type: stranydict
@@ -220,36 +221,69 @@ class Request:
                     if param not in self.input:
                         self.input[param] = value
 
-        # We merge channel params in if requested even if it's not I/O
+        # There is no I/O declaration - the parsed payload itself becomes the input.
         else:
-            if self.merge_channel_params:
-                self.input.update(self.channel_params)
+
+            # A dict means parsed JSON - it is exposed through input directly ..
+            if isinstance(self.payload, dict):
+                self.input.update(self.payload)
+
+                # .. with channel params merged in without overriding the payload ..
+                if self.merge_channel_params:
+                    for param, value in self.channel_params.items():
+                        if param not in self.input:
+                            self.input[param] = value
+
+            # .. a list is parsed JSON as well and it becomes the input as it is ..
+            elif isinstance(self.payload, list):
+                self.input = self.payload
+
+            # .. raw text or bytes are the input exactly as received, e.g. EDIFACT or ER7 ..
+            elif isinstance(self.payload, (str, bytes)) and self.payload:
+                self.input = self.payload
+
+            # .. and with no payload at all, the input carries channel params only.
+            else:
+                if self.merge_channel_params:
+                    self.input.update(self.channel_params)
 
 # ################################################################################################################################
 
     @property
     def raw_request(self) -> 'any_':
-        return self.text
+        return self.raw
 
 # ################################################################################################################################
 
     @raw_request.setter
     def raw_request(self, value:'any_') -> 'any_':
-        self.text = value
+        self.raw = value
+
+# ################################################################################################################################
+
+    @property
+    def text(self) -> 'any_':
+        return self.raw
+
+# ################################################################################################################################
+
+    @text.setter
+    def text(self, value:'any_') -> 'any_':
+        self.raw = value
 
 # ################################################################################################################################
 
     def to_bunch(self):
-        """ Returns a bunchified (converted into bunch.Bunch) version of self.raw_request,
+        """ Returns a bunchified (converted into bunch.Bunch) version of self.raw,
         deep copied if it's a dict (or a subclass). Note that it makes sense to use this method
         only with dicts or JSON input.
         """
         # We have a dict
-        if isinstance(self.raw_request, dict):
-            return bunchify(deepcopy(self.raw_request))
+        if isinstance(self.raw, dict):
+            return bunchify(deepcopy(self.raw))
 
         # Must be a JSON input, raises exception when attempting to load it if it's not
-        return bunchify(loads(self.raw_request))
+        return bunchify(loads(self.raw))
 
     # Backward-compatibility
     bunchified = to_bunch

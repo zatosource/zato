@@ -51,7 +51,7 @@ class AS2MDNEndpoint(AdminService):
         """
 
         # The MDN parser works with the raw wire bytes.
-        body = self.request.raw_request
+        body = self.request.raw
 
         if isinstance(body, str):
             body = body.encode('utf8')

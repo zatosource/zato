@@ -40,6 +40,7 @@ from zato.common.typing_ import cast_, type_
 from zato.common.util.api import make_repr, new_cid, payload_from_request, service_name_from_impl, spawn_greenlet, uncamelify
 from zato.common.util.logging_ import current_cid as _current_cid, current_service_name as _current_service_name
 from zato.common.util.python_ import get_module_name_by_path
+from zato.common.util.message import Message
 from zato.common.util.time_ import utcnow
 from zato.common.util.xml_.message import XMLMessage
 from zato.server.commands import CommandsFacade
@@ -610,10 +611,21 @@ class Service:
         if may_have_wsgi_environ:
             self.request.http.init(self.wsgi_environ)
 
-        # self.has_io attribute is set by ServiceStore during deployment
-        if self.has_io:
-            self.request.init(True, self.cid, self._io, self.data_format, self.transport, self.wsgi_environ, self.server.encrypt)
-            self.response.init(self.cid, self._io, self.data_format)
+        # self.has_io attribute is set by ServiceStore during deployment. Without an I/O declaration
+        # there is no processor but the request and response objects are still initialized,
+        # which is what makes self.request.input and self.response.payload always available.
+        io_processor = self._io if self.has_io else None
+        self.request.init(
+            self.has_io, self.cid, io_processor, self.data_format, self.transport, self.wsgi_environ, self.server.encrypt)
+
+        # A dataclass-based I/O definition knows its output model class and the response
+        # uses it to vivify a model instance on the payload's first access.
+        if io_processor and io_processor.is_dataclass:
+            output_model_class = io_processor.output_model_class
+        else:
+            output_model_class = None
+
+        self.response.init(self.cid, io_processor, self.data_format, output_model_class)
 
         # Cache is always enabled
         self.cache = self._config_manager.cache_api
@@ -672,9 +684,25 @@ class Service:
     def set_response_data(self, service:'Service', **kwargs:'any_') -> 'any_':
         response = service.response.payload
 
+        # A model that was vivified by a read but never given any field is the same
+        # as no response at all - it must not leak a half-built instance to the caller.
+        if service.response._payload_vivified and isinstance(response, Model) and not response.__dict__:
+            service.response.payload = ''
+            return ''
+
         if not isinstance(response, _response_raw_types):
 
-            if hasattr(response, 'getvalue'):
+            # A free-form message that was never given any content is the same
+            # as no response at all - it must not leak an empty dict to the caller.
+            if isinstance(response, Message):
+                if response:
+                    response = response.getvalue()
+                    if kwargs.get('as_bunch'):
+                        response = bunchify(response)
+                else:
+                    response = ''
+
+            elif hasattr(response, 'getvalue'):
                 response = response.getvalue()
                 if kwargs.get('as_bunch'):
                     response = bunchify(response)
@@ -884,7 +912,7 @@ class Service:
                             func = parallel.on_call_finished
                             exc_data = exc_formatted
 
-                        if isinstance(service.response.payload, IOPayload):
+                        if isinstance(service.response.payload, (IOPayload, Message)):
                             payload = service.response.payload.getvalue()
                         else:
                             payload = service.response.payload
@@ -1301,7 +1329,7 @@ class Service:
         service.config_dispatcher = config_dispatcher
         service.cid = cid
         service.request.payload = payload
-        service.request.raw_request = raw_request
+        service.request.raw = raw_request
         service.transport = transport
         service.data_format = data_format
         service.wsgi_environ = wsgi_environ or {}
@@ -1368,7 +1396,7 @@ class Service:
             self.server.service_store.new_instance_by_name(service_name, *args, **kwargs)
 
         _ = service.update(service, CHANNEL.NEW_INSTANCE, self.server, config_dispatcher=self.config_dispatcher, _ignored=None,
-            cid=self.cid, payload=self.request.payload, raw_request=self.request.raw_request, wsgi_environ=self.wsgi_environ)
+            cid=self.cid, payload=self.request.payload, raw_request=self.request.raw, wsgi_environ=self.wsgi_environ)
 
         return service
 
@@ -1602,15 +1630,15 @@ class AdapterBase(Service):
         found = {}
 
         # We go here if we don't have any input at all
-        if not self.request.raw_request:
+        if not self.request.raw:
             missing = placeholders
         else:
 
             missing = []
 
             for item in placeholders:
-                if item in self.request.raw_request:
-                    value = self.request.raw_request[item]
+                if item in self.request.raw:
+                    value = self.request.raw[item]
                     value = str(value)
                     found[item] = value
                 else:

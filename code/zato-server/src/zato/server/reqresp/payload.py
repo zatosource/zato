@@ -7,7 +7,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
+from zato.common.util.message import has_content, Message
 from zato.input_output import IOProcessor
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
 
 # ################################################################################################################################
 
@@ -47,19 +55,32 @@ class IOPayload:
         else:
             setattr(self, key, value)
 
-    def __setattr__(self, key, value):
+    def __setattr__(self, key:'str', value:'any_') -> 'None':
 
         if key in IOPayload._internal_attrs:
             object.__setattr__(self, key, value)
         else:
-            self.user_attrs_dict[key] = value
+            # Only declared names may become part of the response - anything else
+            # is a typo or a name that is missing from the service's output declaration.
+            if key in self.all_output_elem_names:
+                self.user_attrs_dict[key] = value
+            else:
+                raise KeyError('{}; No such output element `{}` among `{}` ({})'.format(
+                    self.io.service_class, key, self.all_output_elem_names, hex(id(self))))
 
-    def __getattr__(self, key):
+    def __getattr__(self, key:'str') -> 'any_':
         try:
             return self.user_attrs_dict[key]
         except KeyError:
-            raise KeyError('{}; No such key `{}` among `{}` ({})'.format(
-                self.io.service_class, key, self.user_attrs_dict, hex(id(self))))
+            # A declared name that was not assigned yet vivifies a message subtree,
+            # which is what lets payload.abc.hello = 123 build the whole path in one go.
+            if key in self.all_output_elem_names:
+                out = Message()
+                self.user_attrs_dict[key] = out
+                return out
+            else:
+                raise KeyError('{}; No such output element `{}` among `{}` ({})'.format(
+                    self.io.service_class, key, self.all_output_elem_names, hex(id(self))))
 
     def __getitem__(self, key):
         return self.__getattr__(key)
@@ -159,11 +180,25 @@ class IOPayload:
 
 # ################################################################################################################################
 
-    def getvalue(self):
+    def getvalue(self) -> 'any_':
         """ Returns a service's payload as a raw Python dict or list.
         """
-        value = self.user_attrs_list if self.output_repeated else self.user_attrs_dict
-        return value
+        if self.output_repeated:
+            return self.user_attrs_list
+
+        out = {}
+
+        for key, value in self.user_attrs_dict.items():
+
+            # A message subtree turns into a plain dict - unless it was vivified
+            # by a read alone, in which case it carries no content and is pruned.
+            if isinstance(value, Message):
+                if has_content(value):
+                    out[key] = value.to_dict()
+            else:
+                out[key] = value
+
+        return out
 
     def append(self, value):
 

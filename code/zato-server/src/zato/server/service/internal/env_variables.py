@@ -45,8 +45,8 @@ class Test(AdminService):
     name = _service_name_prefix + 'test'
 
     def handle(self):
-        text = self.request.raw_request.get('variables', '')
-        allow_delete = self.request.raw_request.get('allow_delete', False)
+        text = self.request.raw.get('variables', '')
+        allow_delete = self.request.raw.get('allow_delete', False)
 
         if not text.strip():
             self.response.payload = {
@@ -122,8 +122,8 @@ class Save(AdminService):
     name = _service_name_prefix + 'save'
 
     def handle(self):
-        text = self.request.raw_request.get('variables', '')
-        allow_delete = self.request.raw_request.get('allow_delete', False)
+        text = self.request.raw.get('variables', '')
+        allow_delete = self.request.raw.get('allow_delete', False)
 
         if not text.strip():
             self.response.payload = {

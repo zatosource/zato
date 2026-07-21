@@ -186,7 +186,7 @@ class MCPEndpoint(AdminService):
             return
 
         # .. get the raw request body ..
-        raw_request = self.request.raw_request
+        raw_request = self.request.raw
 
         if isinstance(raw_request, str):
             raw_request = raw_request.encode('utf8')
