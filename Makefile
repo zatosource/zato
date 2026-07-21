@@ -7,7 +7,7 @@
 	analytics update cron-update stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console \
 	help install-deps \
-	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-pubsub-backend test-pubsub-backend-perf test-pubsub-backend-perf-mass test-enmasse \
+	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-pubsub-backend test-pubsub-backend-perf test-pubsub-backend-perf-mass test-pubsub-system-perf test-enmasse \
 	test-cli test-mcp _test-mcp test-bearer _test-bearer test-graphql test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-llm test-hl7 test-hl7-volume test-ui test-ui-pubsub test-ui-openapi _test-ui test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-audit-log-ui test-alerting test-analytics test-analytics-ui test-demo-seed test-logging test-ibm-mq test-mongodb test-es \
 	test-all test \
@@ -538,6 +538,17 @@ test-pubsub-backend-perf: ## Pub/sub SQL backend performance tests, no server ne
 		-o log_cli=false \
 		-W "ignore:This process:DeprecationWarning" \
 		--basetemp="$$basetemp" \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
+test-pubsub-system-perf: ## Pub/sub system-level performance test through a real server - 1,000 push queues into 500 counting services, REST and facade publishing, floors asserted end to end.
+	$(CURDIR)/code/bin/ruff check \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_system_perf/
+	pyright \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_system_perf/
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_system_perf/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_system_perf \
+		-W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-pubsub-backend-amqp: ## Pub/sub AMQP backend contract tests against a local RabbitMQ, plain and TLS, no server needed.

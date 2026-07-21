@@ -123,11 +123,15 @@ Retention_Days = get_retention_days()
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How the audit log database is selected and configured through the environment
+# How the audit log database is selected and configured through the environment.
+# The pool matters for SQLite too - without it every event opens and closes its own
+# connection, and closing the last WAL connection runs a checkpoint with an fsync,
+# which serializes high-volume producers like pub/sub behind disk flushes.
 _env_config = EnvDBConfig(
     env_prefix='Zato_Audit_Log_DB_',
     sqlite_file_name=audit_db_file_name,
     metadata=metadata,
+    needs_pool=True,
 )
 
 # ################################################################################################################################

@@ -39,7 +39,11 @@ if 0:
 
 _process_kill_timeout = 5
 _server_wait_timeout  = 120
-_quickstart_timeout   = 180
+
+# Large enough for the system perf suite, whose enmasse import creates over
+# two thousand objects - ordinary suites finish well within the old 180 seconds.
+_quickstart_timeout   = 600
+
 _ping_poll_interval   = 0.5
 
 # ################################################################################################################################
@@ -409,6 +413,12 @@ def create_zato_server_fixture(
         pubsub_db_path = os.path.join(server_directory, 'pubsub.db')
         os.environ['Zato_PubSub_DB_Name'] = pubsub_db_path
         logger.info('Pub/sub database: %s', pubsub_db_path)
+
+        # .. the audit log gets its own file too - otherwise the test server would
+        # .. write its audit events into the developer's own environment's database ..
+        audit_db_path = os.path.join(server_directory, 'audit.db')
+        os.environ['Zato_Audit_Log_DB_Name'] = audit_db_path
+        logger.info('Audit log database: %s', audit_db_path)
 
         # .. copy services into the pickup directory if needed ..
         hot_deploy_sources = setup_result.get('hot_deploy_sources', []) # type: ignore[union-attr]
