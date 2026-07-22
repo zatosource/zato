@@ -343,6 +343,24 @@ class ES:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class GRPC:
+
+    class Default:
+        Address = 'localhost:50051'
+
+        # How many seconds to wait for the channel to become ready when pinging.
+        Ping_Timeout = 10
+
+        # The biggest message that can be sent or received, in bytes (100 MB).
+        Max_Message_Size = 104_857_600
+
+    # The name of the subdirectory of the server's work directory
+    # where modules generated out of .proto files are kept.
+    Stub_Dir = 'grpc-stubs'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class SEC_DEF_TYPE:
     APIKEY = 'apikey'
     BASIC_AUTH = 'basic_auth'
@@ -1144,6 +1162,7 @@ class GENERIC:
             OUTCONN_HL7_FHIR = 'outconn-hl7-fhir'
             OUTCONN_HL7_MLLP = 'outconn-hl7-mllp'
             OUTCONN_GRAPHQL = 'outconn-graphql'
+            OUTCONN_GRPC = 'outconn-grpc'
             OUTCONN_IBM_MQ = 'outconn-ibm-mq'
             OUTCONN_KAFKA = 'outconn-kafka'
             OUTCONN_MONGODB = 'outconn-mongodb'

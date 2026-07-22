@@ -71,6 +71,7 @@ from zato.server.generic.api.channel_kafka import ChannelKafkaWrapper
 from zato.server.generic.api.outconn_as2 import OutconnAS2Wrapper
 from zato.server.generic.api.outconn_es import OutconnESWrapper
 from zato.server.generic.api.outconn_graphql import OutconnGraphQLWrapper
+from zato.server.generic.api.outconn_grpc import OutconnGRPCWrapper
 from zato.server.generic.api.outconn_hl7_fhir import OutconnHL7FHIRWrapper
 from zato.server.generic.api.outconn_hl7_mllp import OutconnHL7MLLPWrapper
 from zato.server.generic.api.outconn_ibm_mq import OutconnIBMMQWrapper
@@ -217,6 +218,9 @@ class ConfigManager(_ConfigManagerBase):
         # Generic connections - GraphQL outconns
         self.outconn_graphql = {}
 
+        # Generic connections - gRPC outconns
+        self.outconn_grpc = {}
+
         # Generic connections - HL7 MLLP channels
         self.channel_hl7_mllp = {}
 
@@ -310,6 +314,7 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_AS2: self.outconn_as2,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ES: self.outconn_es,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRAPHQL: self.outconn_graphql,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRPC: self.outconn_grpc,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: self.outconn_hl7_fhir,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: self.outconn_hl7_mllp,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_IBM_MQ: self.channel_ibm_mq,
@@ -339,6 +344,7 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_AS2: OutconnAS2Wrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ES: OutconnESWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRAPHQL: OutconnGraphQLWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRPC: OutconnGRPCWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: OutconnHL7FHIRWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: OutconnHL7MLLPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_IBM_MQ: ChannelIBMMQWrapper,
@@ -981,6 +987,7 @@ class ConfigManager(_ConfigManagerBase):
         outconn_as2_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_AS2, {})
         outconn_es_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ES, {})
         outconn_graphql_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRAPHQL, {})
+        outconn_grpc_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRPC, {})
         outconn_hl7_fhir_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR, {})
         outconn_hl7_mllp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP, {})
         outconn_ibm_mq_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IBM_MQ, {})
@@ -1010,6 +1017,7 @@ class ConfigManager(_ConfigManagerBase):
             outconn_as2_map,
             outconn_es_map,
             outconn_graphql_map,
+            outconn_grpc_map,
             outconn_hl7_fhir_map,
             outconn_hl7_mllp_map,
             outconn_ibm_mq_map,

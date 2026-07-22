@@ -264,7 +264,7 @@ def _load_rows(cutoff_period:'str', channel:'str'='', caller:'strnone'=None) -> 
 
     diag_done = perf_counter()
 
-    logger.warning('Analytics-Diag: _load_rows cutoff=%s channel=%r caller=%r -> rows=%d engine=%.1fms query=%.1fms',
+    logger.info('Analytics-Diag: _load_rows cutoff=%s channel=%r caller=%r -> rows=%d engine=%.1fms query=%.1fms',
         cutoff_period, channel, caller, len(out), (diag_engine - diag_start) * 1000, (diag_done - diag_engine) * 1000)
 
     return out
@@ -426,7 +426,7 @@ def _fold_rows(rows:'anylist', cutoff_period:'str', group_by_channel:'bool') -> 
 
         totals.related.add(related_name)
 
-    logger.warning('Analytics-Diag: _fold_rows rows=%d skipped_before_cutoff=%d entities=%d ' \
+    logger.info('Analytics-Diag: _fold_rows rows=%d skipped_before_cutoff=%d entities=%d ' \
         'json_loads_calls=%d json_loads=%.1fms total=%.1fms',
         len(rows), diag_skipped_count, len(entities), diag_loads_count, diag_loads_time * 1000,
         (perf_counter() - diag_start) * 1000)
@@ -564,7 +564,7 @@ def _get_screen_data(now:'datetime', time_range:'str', channel:'str', caller:'st
     entity_rows = _build_entity_rows(entities, window_periods, top_count)
     diag_entity_rows = perf_counter()
 
-    logger.warning(
+    logger.info(
         'Analytics-Diag: _get_screen_data range=%s channel=%r caller=%r group_by_channel=%s top_count=%d | ' \
         'rows=%d entities=%d timeline=%d window_periods=%d entity_rows=%d | ' \
         'load=%.1fms fold=%.1fms anomalies=%.1fms timeline=%.1fms entity_rows=%.1fms total=%.1fms',

@@ -1,0 +1,50 @@
+// Test proto with all four RPC shapes - unary, server-streaming,
+// client-streaming and bidirectional-streaming.
+
+syntax = "proto3";
+
+package billing;
+
+service BillingService {
+
+    // Unary in, unary out.
+    rpc GetInvoice (InvoiceRequest) returns (Invoice) {}
+
+    // Unary in, streaming out.
+    rpc ListInvoices (InvoiceListRequest) returns (stream Invoice) {}
+
+    // Streaming in, unary out.
+    rpc SubmitPayments (stream Payment) returns (PaymentSummary) {}
+
+    // Streaming in, streaming out.
+    rpc ReconcilePayments (stream Payment) returns (stream PaymentReceipt) {}
+}
+
+message InvoiceRequest {
+    string invoice_id = 1;
+}
+
+message InvoiceListRequest {
+    int32 max_items = 1;
+}
+
+message Invoice {
+    string invoice_id = 1;
+    string customer = 2;
+    int64 amount_cents = 3;
+}
+
+message Payment {
+    string invoice_id = 1;
+    int64 amount_cents = 2;
+}
+
+message PaymentSummary {
+    int32 payment_count = 1;
+    int64 total_cents = 2;
+}
+
+message PaymentReceipt {
+    string invoice_id = 1;
+    bool is_settled = 2;
+}

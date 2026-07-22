@@ -136,6 +136,8 @@ $.namespace('zato.outgoing.hl7.mllp.data_table');
 $.namespace('zato.outgoing.mongodb');
 $.namespace('zato.outgoing.graphql');
 $.namespace('zato.outgoing.graphql.data_table');
+$.namespace('zato.outgoing.grpc');
+$.namespace('zato.outgoing.grpc.data_table');
 $.namespace('zato.outgoing.ibm_mq');
 $.namespace('zato.outgoing.ibm_mq.data_table');
 $.namespace('zato.outgoing.kafka');

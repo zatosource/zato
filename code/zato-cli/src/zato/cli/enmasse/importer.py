@@ -37,6 +37,7 @@ from zato.cli.enmasse.importers.jira import JiraImporter
 from zato.cli.enmasse.importers.channel_hl7_mllp import ChannelHL7MLLPImporter
 from zato.cli.enmasse.importers.outgoing_hl7_mllp import OutgoingHL7MLLPImporter
 from zato.cli.enmasse.importers.graphql import OutgoingGraphQLImporter
+from zato.cli.enmasse.importers.grpc import OutgoingGRPCImporter
 from zato.cli.enmasse.importers.amqp import ChannelAMQPImporter, OutgoingAMQPImporter
 from zato.cli.enmasse.importers.ibm_mq import ChannelIBMMQImporter, OutgoingIBMMQImporter
 from zato.cli.enmasse.importers.kafka import ChannelKafkaImporter, OutgoingKafkaImporter
@@ -89,6 +90,7 @@ for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse
                         'zato.cli.enmasse.importers.channel_hl7_mllp',
                         'zato.cli.enmasse.importers.outgoing_hl7_mllp',
                         'zato.cli.enmasse.importers.graphql',
+                        'zato.cli.enmasse.importers.grpc',
                         'zato.cli.enmasse.importers.amqp',
                         'zato.cli.enmasse.importers.ibm_mq',
                         'zato.cli.enmasse.importers.kafka',
@@ -141,6 +143,7 @@ class EnmasseYAMLImporter:
         self.channel_kafka_defs = {}
         self.gateway_mcp_defs = {}
         self.outgoing_graphql_defs = {}
+        self.outgoing_grpc_defs = {}
         self.outgoing_ibm_mq_defs = {}
         self.outgoing_kafka_defs = {}
         self.ldap_defs = {}
@@ -196,6 +199,7 @@ class EnmasseYAMLImporter:
         self.channel_kafka_importer = ChannelKafkaImporter(self)
         self.gateway_mcp_importer = GatewayMCPImporter(self)
         self.outgoing_graphql_importer = OutgoingGraphQLImporter(self)
+        self.outgoing_grpc_importer = OutgoingGRPCImporter(self)
         self.outgoing_ibm_mq_importer = OutgoingIBMMQImporter(self)
         self.outgoing_kafka_importer = OutgoingKafkaImporter(self)
         self.ldap_importer = LDAPImporter(self)
@@ -1128,6 +1132,25 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
+    def sync_outgoing_grpc(self, outgoing_grpc_list:'list', session:'SASession') -> 'tuple':
+        if not outgoing_grpc_list:
+            return [], []
+
+        count = len(outgoing_grpc_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} gRPC outgoing {noun}')
+
+        for idx, item in enumerate(outgoing_grpc_list):
+            logger.info('gRPC outgoing item %d: %s', idx, item)
+
+        created, updated = self.outgoing_grpc_importer.sync_definitions(outgoing_grpc_list, session)
+        self.outgoing_grpc_defs = self.outgoing_grpc_importer.connection_defs
+        logger.info('Processed gRPC outgoing definitions: created=%d updated=%d', len(created), len(updated))
+
+        return created, updated
+
+# ################################################################################################################################
+
     def sync_microsoft_cloud(self, microsoft_cloud_list:'list', session:'SASession') -> 'tuple':
         """ Synchronizes Microsoft 365 connection definitions from a YAML configuration with the database.
         """
@@ -1631,6 +1654,14 @@ class EnmasseYAMLImporter:
             self.created_objects['outgoing_graphql'] = outgoing_graphql_created
         if outgoing_graphql_updated:
             self.updated_objects['outgoing_graphql'] = outgoing_graphql_updated
+
+        # Process gRPC outgoing definitions - the shorter 'grpc' key is accepted as an alias
+        outgoing_grpc_list = yaml_config.get('outgoing_grpc', []) + yaml_config.get('grpc', [])
+        outgoing_grpc_created, outgoing_grpc_updated = self.sync_outgoing_grpc(outgoing_grpc_list, session)
+        if outgoing_grpc_created:
+            self.created_objects['outgoing_grpc'] = outgoing_grpc_created
+        if outgoing_grpc_updated:
+            self.updated_objects['outgoing_grpc'] = outgoing_grpc_updated
 
         # Process HL7 MLLP channel definitions
         channel_hl7_mllp_list = yaml_config.get('channel_hl7_mllp', [])

@@ -52,7 +52,7 @@ def _diag_log_screen(screen:'str', name:'str', time_range:'str', data:'any_', di
     timeline_len = len(data.get('timeline') or [])
     rows_len = len(data.get('rows') or data.get('top_channels') or [])
 
-    logger.warning('Analytics-Diag: screen=%s name=%r range=%s query=%.1fms json_dumps=%.1fms ' \
+    logger.info('Analytics-Diag: screen=%s name=%r range=%s query=%.1fms json_dumps=%.1fms ' \
         'payload=%d bytes timeline=%d rows=%d',
         screen, name, time_range, (diag_query - diag_start) * 1000, (diag_dumps - diag_query) * 1000,
         len(payload), timeline_len, rows_len)

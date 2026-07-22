@@ -40,6 +40,7 @@ from zato.cli.enmasse.exporters.channel_hl7_mllp import ChannelHL7MLLPExporter
 from zato.cli.enmasse.exporters.outgoing_hl7_mllp import OutgoingHL7MLLPExporter
 from zato.cli.enmasse.exporters.es import ElasticSearchExporter
 from zato.cli.enmasse.exporters.graphql import OutgoingGraphQLExporter
+from zato.cli.enmasse.exporters.grpc import OutgoingGRPCExporter
 from zato.cli.enmasse.exporters.amqp import ChannelAMQPExporter, OutgoingAMQPExporter
 from zato.cli.enmasse.exporters.ibm_mq import ChannelIBMMQExporter, OutgoingIBMMQExporter
 from zato.cli.enmasse.exporters.kafka import ChannelKafkaExporter, OutgoingKafkaExporter
@@ -95,6 +96,7 @@ class EnmasseYAMLExporter:
         self.channel_hl7_mllp_exporter = ChannelHL7MLLPExporter(self)
         self.outgoing_hl7_mllp_exporter = OutgoingHL7MLLPExporter(self)
         self.outgoing_graphql_exporter = OutgoingGraphQLExporter(self)
+        self.outgoing_grpc_exporter = OutgoingGRPCExporter(self)
         self.channel_ibm_mq_exporter = ChannelIBMMQExporter(self)
         self.outgoing_ibm_mq_exporter = OutgoingIBMMQExporter(self)
         self.channel_amqp_exporter = ChannelAMQPExporter(self, 'amqp')
@@ -279,6 +281,15 @@ class EnmasseYAMLExporter:
         _ = self.get_cluster(session)
         outgoing_graphql_list = self.outgoing_graphql_exporter.export(session, self.cluster_id)
         return outgoing_graphql_list
+
+# ################################################################################################################################
+
+    def export_outgoing_grpc(self, session:'SASession') -> 'list':
+        """ Exports gRPC outgoing definitions.
+        """
+        _ = self.get_cluster(session)
+        outgoing_grpc_list = self.outgoing_grpc_exporter.export(session, self.cluster_id)
+        return outgoing_grpc_list
 
 # ################################################################################################################################
 
@@ -693,6 +704,11 @@ class EnmasseYAMLExporter:
         outgoing_graphql_defs = self.export_outgoing_graphql(session)
         if outgoing_graphql_defs:
             output_dict['outgoing_graphql'] = outgoing_graphql_defs
+
+        # Export gRPC outgoing definitions
+        outgoing_grpc_defs = self.export_outgoing_grpc(session)
+        if outgoing_grpc_defs:
+            output_dict['outgoing_grpc'] = outgoing_grpc_defs
 
         # Export Kafka outgoing definitions
         outgoing_kafka_defs = self.export_outgoing_kafka(session)

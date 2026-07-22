@@ -40,6 +40,7 @@ from zato.admin.web.views.channel import ibm_mq as channel_ibm_mq
 from zato.admin.web.views.channel import kafka as channel_kafka
 from zato.admin.web.views.gateway import mcp as gateway_mcp
 from zato.admin.web.views.outgoing import graphql as out_graphql
+from zato.admin.web.views.outgoing import grpc as out_grpc
 from zato.admin.web.views.outgoing import ibm_mq as out_ibm_mq
 from zato.admin.web.views.outgoing import kafka as out_kafka
 from zato.admin.web.views.outgoing import as2 as out_as2
@@ -739,6 +740,23 @@ urlpatterns += [
         login_required(out_graphql.ping), name='out-graphql-ping'),
     url(r'^zato/outgoing/graphql/invoke/(?P<id>.*)/$',
         login_required(out_graphql.invoke), name='out-graphql-invoke'),
+
+    # .. gRPC outgoing
+
+    url(r'^zato/outgoing/grpc/$',
+        login_required(out_grpc.Index()), name=out_grpc.Index.url_name),
+    url(r'^zato/outgoing/grpc/create/$',
+        login_required(out_grpc.Create()), name=out_grpc.Create.url_name),
+    url(r'^zato/outgoing/grpc/edit/$',
+        login_required(out_grpc.Edit()), name=out_grpc.Edit.url_name),
+    url(r'^zato/outgoing/grpc/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_grpc.Delete()), name=out_grpc.Delete.url_name),
+    url(r'^zato/outgoing/grpc/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_grpc.ping), name='out-grpc-ping'),
+    url(r'^zato/outgoing/grpc/invoke/(?P<id>.*)/$',
+        login_required(out_grpc.invoke), name='out-grpc-invoke'),
+    url(r'^zato/outgoing/grpc/download-stubs/(?P<id>.*)/$',
+        login_required(out_grpc.download_stubs), name='out-grpc-download-stubs'),
     ]
 
 # ################################################################################################################################

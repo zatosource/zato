@@ -50,6 +50,7 @@ class _object_type:
 
     Channel_AMQP = 'channel_amqp'                 #
     Outgoing_AMQP = 'outgoing_amqp'               #
+    Outgoing_GRPC = 'outgoing_grpc'               #
     Channel_Azure_Service_Bus = 'channel_azure_service_bus'   #
     Outgoing_Azure_Service_Bus = 'outgoing_azure_service_bus' #
 
@@ -71,6 +72,7 @@ _object_alias[_object_type.OData] = 'outgoing_odata'
 _object_alias[_object_type.SAP] = 'outgoing_sap'
 _object_alias[_object_type.Microsoft_Cloud] = ['zato_generic_connection:cloud-confluence', 'cloud-microsoft-365']
 _object_alias[_object_type.Odoo] = 'outconn_odoo'
+_object_alias[_object_type.Outgoing_GRPC] = 'grpc'
 _object_alias[_object_type.Outgoing_SOAP] = 'outconn_soap'
 _object_alias[_object_type.Search_ElasticSearch] = 'outgoing_elastic_search'
 _object_alias[_object_type.Security] = ['def_sec', 'security_name']

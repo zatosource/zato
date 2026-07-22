@@ -150,7 +150,7 @@ def get_anomaly_periods(series:'period_value_dict', periods_to_check:'strlist') 
 
     diag_done = perf_counter()
 
-    logger.warning('Analytics-Diag: get_anomaly_periods series=%d checked=%d groups=%d anomalies=%d ' \
+    logger.info('Analytics-Diag: get_anomaly_periods series=%d checked=%d groups=%d anomalies=%d ' \
         'group_build=%.1fms check=%.1fms total=%.1fms',
         len(series), len(periods_to_check), len(groups), len(out),
         (diag_grouped - diag_start) * 1000, (diag_done - diag_grouped) * 1000, (diag_done - diag_start) * 1000)
