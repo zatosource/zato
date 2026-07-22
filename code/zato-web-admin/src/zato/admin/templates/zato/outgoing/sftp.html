@@ -132,7 +132,7 @@
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.username|default:'<span class="form_hint">---</span>' }}</td>
                         <td><a href="{% url "out-sftp-command-shell" item.id cluster_id item.name|slugify %}?name={{ item.name|urlencode:"" }}">Command shell</a></td>
-                        <td><a href="{% url "out-sftp-schedules" item.id cluster_id item.name|slugify %}?name={{ item.name|urlencode:"" }}">Schedules</a></td>
+                        <td><a href="{% url "out-file-transfer-schedules" 'sftp' item.id cluster_id item.name|slugify %}?name={{ item.name|urlencode:"" }}">Schedules</a></td>
 
                         {% comment %} 3 {% endcomment %}
                         <td><a href="javascript:$.fn.zato.outgoing.sftp.edit('{{ item.id }}')">Edit</a></td>

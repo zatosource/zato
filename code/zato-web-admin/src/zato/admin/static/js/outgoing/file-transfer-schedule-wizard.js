@@ -45,7 +45,7 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         'name',
         'directory',
         'pattern',
-        'stability_check_gap',
+        'stability_delay',
         'marker_suffix',
         'scheduler_service',
         'move_directory',
@@ -58,16 +58,16 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
     onInit: function() {
 
         // The readiness cards write their pick into the hidden mode field ..
-        $.fn.zato.wizard_kit.choices.init({
+        var readyChoices = $.fn.zato.wizard_kit.choices.init({
             group: 'ready',
             onChange: function(choiceId) {
-                wizard.field('ready_mode').val(choiceId);
+                wizard.field('ready_how').val(choiceId);
                 wizard.review.refreshSummaries();
             }
         });
 
         // .. and so do the post-processing cards on step 2 ..
-        $.fn.zato.wizard_kit.choices.init({
+        var successChoices = $.fn.zato.wizard_kit.choices.init({
             group: 'success',
             onChange: function(choiceId) {
                 wizard.field('on_success').val(choiceId);
@@ -75,8 +75,13 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
             }
         });
 
+        // .. the cards follow the hidden fields, which matters when the wizard
+        // opens with an existing schedule whose picks differ from the defaults ..
+        readyChoices.set(wizard.field('ready_how').val());
+        successChoices.set(wizard.field('on_success').val());
+
         // .. the card summaries follow their inline fields as the user types ..
-        wizard.field('stability_check_gap').on('input', wizard.review.refreshSummaries);
+        wizard.field('stability_delay').on('input', wizard.review.refreshSummaries);
         wizard.field('marker_suffix').on('input', wizard.review.refreshSummaries);
         wizard.field('move_directory').on('input', wizard.review.refreshSummaries);
 
@@ -177,7 +182,7 @@ wizard.review.refreshSummaries = function() {
 
     var review = wizard.review;
 
-    var checkGap = wizard.field('stability_check_gap').val();
+    var checkGap = wizard.field('stability_delay').val();
     review.setSummary('file-transfer-wizard-summary-stability', 'checked twice, ' + checkGap + 's apart');
 
     var markerSuffix = wizard.field('marker_suffix').val();
@@ -209,11 +214,11 @@ wizard.review.render = function() {
     var labels = wizard.labels;
 
     // How the readiness pick reads on the review ..
-    var readyMode = wizard.field('ready_mode').val();
+    var readyMode = wizard.field('ready_how').val();
     var readyText;
 
     if(readyMode === 'stability') {
-        var checkGap = wizard.field('stability_check_gap').val();
+        var checkGap = wizard.field('stability_delay').val();
         readyText = 'When it stops changing - checked twice, ' + checkGap + ' seconds apart';
     }
     else {

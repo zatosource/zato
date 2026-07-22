@@ -13,9 +13,11 @@ from the wizard kit. The view provides:
 * name_slug      - its name slugified, for links back to the list
 * transfer_label - the connection type shown in the context badge, e.g. SFTP
 * form           - CreateForm, its fields carry all the defaults
+* is_edit        - whether the wizard edits an existing schedule
+* schedule_id    - the id of the schedule being edited, empty on create
 {% endcomment %}
 
-{% block html_title %}File transfer schedule - Create a new schedule{% endblock %}
+{% block html_title %}File transfer schedule - {% if is_edit %}Edit a schedule{% else %}Create a new schedule{% endif %}{% endblock %}
 
 {% block dashboard_extra_css %}
 <link rel="stylesheet" type="text/css" href="/static/css/settings.css">
@@ -39,7 +41,7 @@ from the wizard kit. The view provides:
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
     $.fn.zato.outgoing.file_transfer.wizard.init({
-        list_url: '{% url "out-sftp-schedules" conn_id cluster_id name_slug %}?name={{ conn_name|urlencode:"" }}'
+        list_url: '{% url "out-file-transfer-schedules" transfer_type conn_id cluster_id name_slug %}?name={{ conn_name|urlencode:"" }}'
     });
 });
 </script>
@@ -60,12 +62,12 @@ $(document).ready(function() {
             <div class="dashboard-card-header">
                 <!-- The label makes the title a regular "How does it work?"
                      stop - clicking it shows the wizard-wide overview -->
-                <h3 id="file-transfer-wizard-title"><label for="file-transfer-wizard-title">New file transfer schedule</label></h3>
+                <h3 id="file-transfer-wizard-title"><label for="file-transfer-wizard-title">{% if is_edit %}Edit file transfer schedule{% else %}New file transfer schedule{% endif %}</label></h3>
                 <span class="wizard-badge wizard-name-badge" id="file-transfer-wizard-name-badge" hidden></span>
                 <span class="wizard-badge wizard-badge-context" id="file-transfer-wizard-context-badge">{{ transfer_label }} &middot; {{ conn_name }}</span>
             </div>
 
-            <form novalidate action="{% url "out-sftp-schedule-create" %}" method="post" id="create-form">
+            <form novalidate action="{% if is_edit %}{% url "out-file-transfer-schedule-edit" %}{% else %}{% url "out-file-transfer-schedule-create" %}{% endif %}" method="post" id="create-form">
 
                 <!-- The step strip wears the shared dashboard tabs chrome - the tabs
                      show progress, the walking itself happens through Next and Back -->
@@ -127,8 +129,8 @@ $(document).ready(function() {
                             </div>
                             <div class="wizard-choice-body">
                                 <div class="wizard-field-row">
-                                    <label for="id_stability_check_gap">Check gap</label>
-                                    {{ form.stability_check_gap }}
+                                    <label for="id_stability_delay">Check gap</label>
+                                    {{ form.stability_delay }}
                                     <span class="wizard-field-hint">seconds between the two looks</span>
                                 </div>
                             </div>
@@ -253,12 +255,15 @@ $(document).ready(function() {
 
                 <!-- Fields written by the choice cards - never shown directly -->
                 <div class="wizard-hidden-fields" hidden>
-                    {{ form.ready_mode }}
+                    {{ form.ready_how }}
                     {{ form.on_success }}
                 </div>
 
                 <input type="hidden" id="id_cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 <input type="hidden" id="id_conn_id" name="conn_id" value="{{ conn_id }}" />
+                {% if is_edit %}
+                <input type="hidden" id="id_id" name="id" value="{{ schedule_id }}" />
+                {% endif %}
 
                 <!-- The date-time picker reads the user profile's formats from here -->
                 <input type="hidden" id="js_date_format" value="{{ js_date_format }}" />
