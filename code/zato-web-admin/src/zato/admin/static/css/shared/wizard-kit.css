@@ -1,0 +1,922 @@
+/*
+ * Wizard kit - the shared look of every multi-step wizard page.
+ *
+ * A wizard page is one dashboard card holding the step strip, the step
+ * bodies with their answer cards, the review and the footer, plus the
+ * popover micro-forms the cards open. This file carries everything the
+ * wizards share - an instance stylesheet adds only what is truly its own,
+ * e.g. the MLLP security rows or the tolerance grid.
+ *
+ * Parameterization runs through the --wizard-* tokens below. They sit on
+ * :root because the popover micro-forms are appended to document.body,
+ * outside any page container - an instance recolors itself by overriding
+ * the tokens in its own stylesheet, also on :root, since one page carries
+ * one wizard.
+ *
+ *    --wizard-accent           - the step strip, links and focus color
+ *    --wizard-done             - the green of summaries and success
+ *    --wizard-error            - the red of alerts and failures
+ *    --wizard-border           - hairlines inside the card
+ *    --wizard-border-strong    - input borders and off sliders
+ *    --wizard-text             - the main text color
+ *    --wizard-text-muted       - secondary text
+ *    --wizard-text-faint       - hints and placeholders
+ */
+
+/* ------------------------------------------------------------ */
+/* Wizard page - layout overrides                                */
+/* ------------------------------------------------------------ */
+
+/* A wizard page is a dashboard page with no hero and no chart -
+   only the grid with the one card remains */
+.dashboard-hero,
+.dashboard-chart-section {
+    display: none;
+}
+
+.dashboard-grid-section {
+    grid-template-columns: 1fr;
+    max-width: 54em;
+    margin-top: 20px;
+}
+
+.dashboard-grid-section .dashboard-card {
+    max-height: none;
+}
+
+/* ------------------------------------------------------------ */
+/* Wizard - card and shared tokens                               */
+/* ------------------------------------------------------------ */
+
+:root {
+    --wizard-accent: var(--zato-seablue-light2);
+    --wizard-done: #28a745;
+    --wizard-error: #dc3545;
+    --wizard-border: #d9dee3;
+    --wizard-border-strong: #b8c0c7;
+    --wizard-text: #1a1a2e;
+    --wizard-text-muted: #71717a;
+    --wizard-text-faint: #9ca3af;
+
+    /* Every checkbox on a wizard page - the card, the step bodies and all
+       the popover micro-forms - renders as the smaller slider, in the
+       wizard accent, through the site-wide checkbox slider tokens. */
+    --toggle-width: 27.2px;
+    --toggle-height: 15.2px;
+    --toggle-knob-size: 12px;
+    --toggle-knob-offset: 1.6px;
+    --toggle-travel: 12px;
+    --toggle-off-background: var(--wizard-border-strong);
+    --toggle-on-background: var(--wizard-accent);
+}
+
+.wizard-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.wizard-card form {
+    display: flex;
+    flex-direction: column;
+}
+
+/* The badge chrome shared across a wizard - the header name badge and
+   alert badges all wear it. Green by default, the alert variant turns it
+   red, the blink variant makes it pulse and the context variant wears the
+   accent to name what the wizard belongs to. */
+.wizard-badge {
+    padding: 2px 9px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #2e7d32;
+    background: rgba(46, 125, 50, 0.12);
+    border: 1px solid rgba(46, 125, 50, 0.3);
+    border-radius: 3px;
+}
+
+.wizard-badge-alert {
+    color: #b71c1c;
+    background: rgba(220, 53, 69, 0.15);
+    border-color: rgba(220, 53, 69, 0.35);
+}
+
+.wizard-badge-blink {
+    animation: wizard-badge-blink 1.1s ease-in-out infinite;
+}
+
+@keyframes wizard-badge-blink {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.35; }
+}
+
+/* The context badge - a "what this wizard belongs to" slot in the card
+   header, e.g. the connection a schedule is created for. It keeps to the
+   right edge of the header and wears the accent instead of the green. */
+.wizard-badge-context {
+    margin-left: auto;
+    color: var(--wizard-accent);
+    background: rgba(20, 87, 138, 0.08);
+    border-color: rgba(20, 87, 138, 0.25);
+}
+
+/* The name badge in the header - it mirrors the name field as the user
+   types, turns red when the name is already taken and opens the inline
+   edit form when clicked */
+.wizard-name-badge {
+    margin-left: 12px;
+    max-width: 24em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+/* A hidden badge still takes part in layout, only invisibly - the header
+   keeps one height whether or not a name has been typed in yet. The
+   zero-width space gives the empty badge a text line of full height,
+   without it the badge would be only as tall as its padding and border. */
+.wizard-name-badge[hidden] {
+    display: block;
+    visibility: hidden;
+}
+
+.wizard-name-badge[hidden]::before {
+    content: "\200b";
+}
+
+/* ------------------------------------------------------------ */
+/* Wizard - the wizard-wide overview behind the page title       */
+/* ------------------------------------------------------------ */
+
+.wizard-title-help {
+    font-size: 12px;
+    line-height: 1.55;
+    text-align: left;
+    padding: 2px 1px;
+}
+
+.wizard-title-help p {
+    margin: 0 0 8px 0;
+}
+
+.wizard-title-help p:last-child {
+    margin-bottom: 0;
+}
+
+/* The step numbers quoted in the overview - the same monospace look
+   the tab strip uses, so the text and the tabs read as one thing */
+.wizard-title-help-step {
+    font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 1px 5px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 3px;
+    white-space: nowrap;
+}
+
+/* The primer for newcomers stays folded until asked for - regulars
+   never have to scroll past it */
+.wizard-title-help-details {
+    margin-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    padding-top: 8px;
+}
+
+.wizard-title-help-details summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
+    list-style-position: inside;
+}
+
+.wizard-title-help-details summary:hover {
+    color: #fff;
+}
+
+.wizard-title-help-primer {
+    margin-top: 8px;
+}
+
+/* ------------------------------------------------------------ */
+/* Wizard - step strip                                           */
+/* ------------------------------------------------------------ */
+
+/* The chrome itself comes from the shared dashboard tabs the posture
+   page uses - here it is only recolored with the wizard accent */
+/* The bottom margin is the one gap between the step strip and whatever
+   a step body starts with, so every step opens at the same height and
+   no first row needs a margin of its own. Only the wizard's tabs -
+   the shared dashboard tabs elsewhere keep their own spacing. */
+.wizard-steps {
+    --tab-active-color: var(--wizard-accent);
+    --tab-active-border-color: var(--wizard-accent);
+    margin: 6px 0 29px;
+}
+
+/* The number sits inline before the label, hence the flex layout -
+   the tabs navigate, so they keep the shared pointer and hover looks */
+.wizard-steps > .dashboard-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* The step numbers are just part of the tab name, only in monospace */
+.wizard-step-num {
+    font-family: "Ubuntu Mono", "DejaVu Sans Mono", "Menlo", "Consolas", monospace;
+}
+
+/* ------------------------------------------------------------ */
+/* Wizard - step bodies and sections                             */
+/* ------------------------------------------------------------ */
+
+.wizard-section {
+    margin-bottom: 22px;
+}
+
+.wizard-section-title {
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--wizard-text);
+}
+
+/* A dimmed note right under a section title */
+.wizard-section-hint {
+    margin: -6px 0 10px;
+    font-size: 11.5px;
+    color: var(--wizard-text-faint);
+}
+
+/* ------------------------------------------------------------ */
+/* Wizard - name row                                             */
+/* ------------------------------------------------------------ */
+
+.wizard-name-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 0;
+    margin-bottom: 4px;
+    max-width: 560px;
+}
+
+/* The name reads like the toggle rows below it - the label sits in front
+   of the input, in the same column the toggle row labels use */
+.wizard-name-field {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+
+.wizard-name-field label {
+    flex: 0 0 auto;
+    width: 4em;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--wizard-text);
+}
+
+/* No vertical padding on purpose - the 24px box centers the text and
+   the caret on its own, any one-sided padding would push them off */
+.wizard-name-field input {
+    box-sizing: border-box;
+    height: 24px;
+    padding: 0 10px;
+    border: 1px solid var(--wizard-border-strong);
+    border-radius: 3px;
+    font-size: 13px;
+}
+
+.wizard-active-field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    font-size: 13px;
+    color: var(--wizard-text);
+    cursor: pointer;
+}
+
+/* formalize.css paints a grey glow on every focused control - kill it here */
+.wizard-card input:focus,
+.wizard-card select:focus,
+.wizard-card textarea:focus,
+.wizard-card button:focus,
+.wizard-card .chosen-container-active .chosen-single,
+.wizard-card .chosen-container-active .chosen-choices {
+    outline: none;
+    box-shadow: none;
+}
+
+.wizard-summary-fresh {
+    animation: wizard-summary-fade-in 450ms ease-out;
+}
+
+/* ------------------------------------------------------------ */
+/* Wizard - toggle rows                                          */
+/* ------------------------------------------------------------ */
+
+.wizard-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 560px;
+    padding: 7px 0;
+}
+
+/* Clicking the row's name flips its slider. All the row labels share
+   one width so the summary links line up in a column, and the line height
+   mirrors the slider height so the text centers against the slider. */
+.wizard-toggle-label {
+    flex: 0 0 auto;
+    width: 4em;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: var(--toggle-height);
+    color: var(--wizard-text);
+    cursor: pointer;
+
+    /* Geometrically the text is dead centered against the slider, but the
+       caps of the label sit optically low against the pill - a nudge up
+       makes them read as centered. The offset is static and nothing here
+       transitions, so toggling a slider cannot make the labels move. */
+    position: relative;
+    top: -1px;
+    transition: none;
+}
+
+/* One link is the way into a row's options popup - inside it the
+   summary wears the site-wide dashed-underline link face while the hint
+   stays a dimmed note, and everything in between is clickable too.
+   The font size sits on the link itself so its line box is built from
+   the 12px text rather than the page's 16px strut, which used to hang
+   the text a pixel or two below the slider midline. */
+a.wizard-toggle-edit {
+    background-image: none;
+    padding-bottom: 0;
+    font-size: 12px;
+    line-height: var(--toggle-height);
+
+    /* The union of the link's inline boxes runs past the slider height by
+       a fraction of a pixel, which used to make the link the tallest thing
+       in its row - the whole row then grew and shrank as a slider toggled
+       the link on and off, nudging everything below. The clamp keeps every
+       row the same height whether or not its link is on screen. */
+    height: var(--toggle-height);
+}
+
+.wizard-toggle-summary {
+    font-size: 12px;
+}
+
+/* The hint waits for a hover over the link - opacity keeps its space
+   reserved, so nothing around it moves when it fades in */
+.wizard-toggle-edit .zato-soft-hint {
+    opacity: 0;
+    transition: opacity 150ms ease;
+}
+
+.wizard-toggle-edit:hover .zato-soft-hint {
+    opacity: 1;
+}
+
+/* Nothing to edit while a row is off, so the whole link goes away */
+.wizard-toggle-edit:has(.wizard-toggle-summary:empty) {
+    display: none;
+}
+
+/* Barely there - the text softens for a moment while the new value
+   settles in, never enough to read as a flicker */
+@keyframes wizard-summary-fade-in {
+    from { opacity: 0.75; }
+    to   { opacity: 1; }
+}
+
+/* ------------------------------------------------------------ */
+/* Wizard - service select                                       */
+/* ------------------------------------------------------------ */
+
+.wizard-service-row {
+    max-width: 560px;
+    margin-bottom: 6px;
+}
+
+.wizard-service-row .chosen-container {
+    width: 100% !important;
+}
+
+/* ------------------------------------------------------------ */
+/* Wizard - connection rows                                      */
+/* ------------------------------------------------------------ */
+
+.wizard-conn-list {
+    max-width: 560px;
+}
+
+.wizard-conn-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 7px 10px;
+    margin-bottom: 4px;
+    border: 1px solid var(--wizard-border);
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 150ms ease;
+}
+
+.wizard-conn-row:hover {
+    border-color: var(--wizard-accent);
+}
+
+.wizard-conn-row-text {
+    flex: 1;
+    color: var(--wizard-done);
+    font-weight: 500;
+    animation: wizard-summary-fade-in 300ms ease-out;
+}
+
+.wizard-conn-row-inactive {
+    font-size: 11px;
+    color: var(--wizard-text-faint);
+    font-style: italic;
+}
+
+.wizard-conn-row-remove {
+    padding: 2px 5px;
+    color: var(--wizard-text-faint);
+    font-size: 11px;
+}
+
+.wizard-conn-row-remove:hover {
+    color: var(--wizard-error);
+}
+
+.wizard-conn-add {
+    display: inline-block;
+    margin-top: 2px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--wizard-accent);
+    cursor: pointer;
+}
+
+.wizard-conn-add:hover {
+    text-decoration: underline;
+}
+
+.wizard-respond-from-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    font-size: 12px;
+}
+
+.wizard-respond-from-row label {
+    font-weight: 600;
+    color: var(--wizard-text);
+}
+
+/* ------------------------------------------------------------ */
+/* Wizard - option cards                                         */
+/* ------------------------------------------------------------ */
+
+.wizard-option-card {
+    max-width: 560px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    border: 1px solid var(--wizard-border);
+    border-radius: 5px;
+    transition: border-color 150ms ease;
+}
+
+.wizard-option-card:hover {
+    border-color: var(--wizard-border-strong);
+}
+
+.wizard-option-card-clickable {
+    cursor: pointer;
+}
+
+.wizard-option-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.wizard-option-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--wizard-text);
+}
+
+.wizard-option-summary {
+    margin-left: auto;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--wizard-done);
+}
+
+.wizard-chevron {
+    flex-shrink: 0;
+    color: var(--wizard-text-muted);
+    transition: transform 150ms ease;
+}
+
+.wizard-chevron-open {
+    transform: rotate(90deg);
+}
+
+.wizard-option-body {
+    max-height: 0;
+    margin-top: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 200ms ease, opacity 150ms ease, margin 150ms ease;
+}
+
+.wizard-option-body-open {
+    max-height: 800px;
+    margin-top: 10px;
+    opacity: 1;
+}
+
+/* ------------------------------------------------------------ */
+/* Wizard - pick-one choice cards                                */
+/* ------------------------------------------------------------ */
+
+/* A choice group is a set of cards of which exactly one is selected -
+   a radio group wearing the option card look. The selected card unfolds
+   its body, where its own inline fields live. */
+.wizard-choice-card {
+    max-width: 560px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    border: 1px solid var(--wizard-border);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: border-color 150ms ease, background 150ms ease;
+}
+
+.wizard-choice-card:hover {
+    border-color: var(--wizard-border-strong);
+}
+
+.wizard-choice-card-selected {
+    border-color: var(--wizard-accent);
+    background: rgba(20, 87, 138, 0.035);
+}
+
+.wizard-choice-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* The radio dot is drawn by the stylesheet, so the cards need no
+   actual radio inputs of their own */
+.wizard-choice-radio {
+    width: 13px;
+    height: 13px;
+    border: 1.5px solid var(--wizard-border-strong);
+    border-radius: 50%;
+    flex: 0 0 auto;
+    position: relative;
+}
+
+.wizard-choice-card-selected .wizard-choice-radio {
+    border-color: var(--wizard-accent);
+}
+
+.wizard-choice-card-selected .wizard-choice-radio::before {
+    content: '';
+    position: absolute;
+    inset: 2.5px;
+    background: var(--wizard-accent);
+    border-radius: 50%;
+}
+
+.wizard-choice-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--wizard-text);
+}
+
+.wizard-choice-summary {
+    margin-left: auto;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--wizard-done);
+}
+
+.wizard-choice-desc {
+    margin: 4px 0 0 23px;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--wizard-text-muted);
+}
+
+/* Only the selected card shows its body with the inline fields */
+.wizard-choice-body {
+    display: none;
+    margin: 10px 0 2px 23px;
+}
+
+.wizard-choice-card-selected .wizard-choice-body {
+    display: block;
+}
+
+/* ------------------------------------------------------------ */
+/* Wizard - review step                                          */
+/* ------------------------------------------------------------ */
+
+.wizard-review-group {
+    max-width: 640px;
+    margin-bottom: 16px;
+}
+
+.wizard-review-group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 5px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--wizard-border);
+}
+
+.wizard-review-group-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--wizard-text-muted);
+}
+
+.wizard-review-edit {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--wizard-accent);
+    cursor: pointer;
+}
+
+.wizard-review-edit:hover {
+    text-decoration: underline;
+}
+
+.wizard-review-row {
+    display: flex;
+    padding: 4px 0;
+    font-size: 13px;
+}
+
+.wizard-review-key {
+    width: 220px;
+    flex-shrink: 0;
+    color: var(--wizard-text-muted);
+}
+
+.wizard-review-value {
+    color: var(--wizard-text);
+}
+
+/* ------------------------------------------------------------ */
+/* Wizard - footer                                               */
+/* ------------------------------------------------------------ */
+
+/* Three zones - the help badge on the left, Back and Next dead center,
+   the status and Cancel on the right. The side columns share one width,
+   which is what keeps the middle pair truly centered. */
+.wizard-footer {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    margin-top: 8px;
+    padding: 16px 0 4px;
+    border-top: 1px solid var(--wizard-border);
+}
+
+/* A touch larger than the shared badge - this one sits next to the
+   full-size footer buttons. The popover badges keep the shared size. */
+.wizard-footer .how-it-works-badge {
+    justify-self: start;
+    padding: 2px 9px;
+    font-size: 9.75px;
+}
+
+.wizard-footer-center {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.wizard-footer-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-self: end;
+}
+
+.wizard-footer .secondary-button {
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+.wizard-footer button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.wizard-status {
+    font-size: 12px;
+    color: var(--wizard-text-muted);
+    transition: opacity 300ms ease;
+}
+
+.wizard-status-saved {
+    color: var(--wizard-done);
+}
+
+.wizard-status-error {
+    color: var(--wizard-error);
+}
+
+/* ------------------------------------------------------------ */
+/* Wizard - popover micro-forms                                  */
+/* ------------------------------------------------------------ */
+
+/* The chrome - the surface, the dark draggable header and the drag
+   cursors - comes from the shared popup look in shared/popup.css,
+   the same one the IDE's right-click menus wear. The tippy box only
+   positions the popup, so it paints nothing of its own. */
+.tippy-box[data-theme~='wizard'] {
+    background-color: transparent;
+    color: var(--wizard-text);
+}
+
+/* Only the popover's own content box - the help tooltips nested inside
+   the popover bring tippy boxes of their own and keep their padding */
+.tippy-box[data-theme~='wizard'] > .tippy-content {
+    padding: 0;
+}
+
+.tippy-box[data-theme~='wizard'] input:focus,
+.tippy-box[data-theme~='wizard'] select:focus,
+.tippy-box[data-theme~='wizard'] textarea:focus,
+.tippy-box[data-theme~='wizard'] button:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+/* The per-field help tooltips live inside the popover they explain, so
+   clicking them does not close it - and in there the stock tippy 14px
+   towers over the popover's own 11-13px text, so they match it instead */
+.wizard-tippy-form .tippy-box {
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.wizard-tippy-form {
+    display: flex;
+    flex-direction: column;
+    min-width: 260px;
+    box-sizing: border-box;
+}
+
+/* The fields under the popup header, on the same sandy panel
+   the IDE's right-click menus use for their action lists */
+.wizard-tippy-body {
+    padding: 12px 14px 10px;
+    background: var(--zato-popup-sand);
+    border-radius: 0 0 5px 5px;
+}
+
+/* Several short fields share one row instead of stacking full-width */
+.wizard-tippy-row {
+    display: flex;
+    gap: 10px;
+}
+
+.wizard-tippy-row .wizard-tippy-field {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+/* A checkbox sharing a row with labeled inputs takes only the room it
+   needs and drops to their baseline, level with the inputs themselves */
+.wizard-tippy-row .wizard-tippy-field:has(.wizard-tippy-checkbox) {
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    padding-bottom: 5px;
+}
+
+.wizard-tippy-field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-bottom: 8px;
+}
+
+.wizard-tippy-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--wizard-text-muted);
+}
+
+/* One explicit height keeps rows mixing inputs and selects even */
+.wizard-tippy-field input[type="text"],
+.wizard-tippy-field select {
+    width: 100%;
+    box-sizing: border-box;
+    height: 24px;
+    padding: 5px 8px;
+    border: 1px solid var(--wizard-border-strong);
+    border-radius: 3px;
+    font-size: 13px;
+}
+
+/* The picked values read as data, not as headings - a notch smaller than
+   the free-text inputs next to them, in the same face the inputs wear.
+   The formalize height of 1.8em squeezed the select's line box out through
+   the bottom edge, sitting the text low - the explicit height above plus
+   paddings sized to the line box recenter it. */
+.wizard-tippy-field select {
+    font-size: 12px;
+    font-family: Arial, "Liberation Sans", FreeSans, sans-serif;
+    line-height: normal;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+.wizard-tippy-field input[type="text"]:focus,
+.wizard-tippy-field select:focus {
+    border-color: var(--wizard-accent);
+    outline: none;
+    box-shadow: none;
+}
+
+.wizard-tippy-input-row {
+    display: flex;
+    gap: 6px;
+}
+
+.wizard-tippy-input-row .wizard-tippy-unit {
+    width: auto;
+    flex-shrink: 0;
+}
+
+.wizard-tippy-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--wizard-text);
+    cursor: pointer;
+}
+
+/* The site-wide tippy link colors are meant for dark tooltips - this
+   popover is light, so its links wear the standard link face. The theme
+   attribute keeps the selector ahead of the .tippy-box .tippy-content
+   rule in style.css, which would otherwise paint the links light. */
+.tippy-box[data-theme~='wizard'] .tippy-content a:not(.menu-link) {
+    color: rgb(17, 17, 17);
+    --zato-link-dash: rgba(0, 0, 0, 0.35);
+}
+
+.tippy-box[data-theme~='wizard'] .tippy-content a:not(.menu-link):hover {
+    color: var(--zato-link-hover) !important;
+    --zato-link-dash: rgba(0, 0, 0, 0.35);
+}
+
+.wizard-tippy-hint {
+    font-size: 11px;
+    color: var(--wizard-text-faint);
+}
+
+/* The rule above the buttons mirrors the one the wizard footer draws */
+.wizard-tippy-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--wizard-border);
+}
+
+/* The help badge keeps to the left, away from the OK button */
+.wizard-tippy-buttons .how-it-works-badge {
+    margin-right: auto;
+}
+
+.wizard-tippy-buttons .secondary-button {
+    box-shadow: none !important;
+    text-shadow: none !important;
+}

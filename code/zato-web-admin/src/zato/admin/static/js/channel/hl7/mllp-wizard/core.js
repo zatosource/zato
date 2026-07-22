@@ -1,38 +1,49 @@
-// HL7 MLLP channel wizard - state, step navigation and submit.
+// HL7 MLLP channel wizard - the wizard kit instance.
 //
-// The page is rendered by zato/channel/hl7/mllp-wizard.html. The rendered
-// Django form is the single source of every field's value - its inputs carry
-// all the defaults and the popover micro-forms read from and write back into
-// them, so the payload posted on Finish is exactly what the full-page editor
-// would post. This file holds the wizard-wide config and state, the step
-// strip, the footer buttons and the actual save. The micro-forms live in
-// forms.js, the destination rows in destinations.js and the summaries plus
-// the review step in review.js.
+// The page is rendered by zato/channel/hl7/mllp-wizard.html. The generic
+// machinery - the step strip, the name badge, the footer and the save -
+// comes from the wizard kit, configured here. This file holds only what
+// is MLLP's own: the required fields, the help texts, the wizard-wide
+// overview and the multi-security REST bridge inputs. The micro-forms
+// live in forms.js, the destination rows in destinations.js and the
+// summaries plus the review step in review.js.
 
 (function($) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.hl7.mllp.wizard.config = {
+var wizard = $.fn.zato.channel.hl7.mllp.wizard;
 
-    // Messages shown next to the Finish button after a save attempt
-    savedMessage: 'OK, saved',
-    saveErrorMessage: 'Could not save',
+// The instance's own state - the kit adds its keys on top
+wizard.state = {
 
-    // How long the success message stays on screen before the redirect
-    redirectDelayMs: 750,
+    // Destination rows - {type, connection, isActive, options}
+    destinationList: [],
+
+    // The security definitions picked for the REST bridge, in row order -
+    // each entry is a sec_type/id value of the Django security select
+    securityKeyList: [],
+
+    // Whether the REST bridge requires callers to authenticate at all -
+    // with this off the picks above are kept but not applied
+    isSecurityEnabled: true
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.wizard_kit.core.setup(wizard, {
+
+    idPrefix: 'mllp-wizard',
+    formSelector: '#create-form',
 
     // How many steps the wizard has
     stepCount: 3,
 
-    // The footer button label on the last step
-    finishLabel: 'Finish',
-    nextLabel: 'Next',
-
     // The rows the "How does it work?" badge walks through - the card
     // header with the wizard-wide overview, then anything on a step
     // body holding a labeled field
-    helpRowSelector: '.dashboard-card-header, .mllp-wizard-name-row, .mllp-wizard-toggle-row, .mllp-wizard-section-title, .mllp-wizard-respond-from-row, .mllp-wizard-tolerance-grid',
+    helpRowSelector: '.dashboard-card-header, .wizard-name-row, .wizard-toggle-row, ' +
+        '.wizard-section-title, .wizard-respond-from-row, .mllp-wizard-tolerance-grid',
 
     // Fields that must not be empty on submit - the same list the editor uses
     requiredFields: [
@@ -45,48 +56,68 @@ $.fn.zato.channel.hl7.mllp.wizard.config = {
         'start_seq',
         'end_seq',
         'default_character_encoding'
-    ]
-};
+    ],
+
+    // The name check is scoped to MLLP channels because generic
+    // connection names are unique per connection type
+    nameUnique: {
+        source: 'generic_connection',
+        field: 'name',
+        filterName: 'type_',
+        filterValue: 'channel-hl7-mllp'
+    },
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Filled in by init() and updated as the user moves through the steps
-$.fn.zato.channel.hl7.mllp.wizard.state = {
+    onInit: function() {
 
-    // Which step is on screen
-    currentStep: 0,
+        // The transport, REST and routing cards on step 1 ..
+        wizard.forms.initCards();
 
-    // Where the channel list page is
-    listUrl: '',
+        // .. the destination rows and the option cards on step 2 ..
+        wizard.destinations.init();
+        wizard.review.initOptionCards();
 
-    // Destination rows - {type, connection, isActive, options}
-    destinationList: [],
+        // .. the searchable select for services ..
+        $.fn.zato.turn_selects_into_chosen('#mllp-wizard-service-row');
 
-    // The security definitions picked for the REST bridge, in row order -
-    // each entry is a sec_type/id value of the Django security select
-    securityKeyList: [],
+        // .. a live uniqueness indicator for the REST URL path - the name
+        // has its own check through the kit config above ..
+        $.fn.zato.validate_unique('#id_rest_url_path', 'channel_rest', 'url_path');
 
-    // Whether the REST bridge requires callers to authenticate at all -
-    // with this off the picks above are kept but not applied
-    isSecurityEnabled: true,
+        // .. keep the services and the security definitions fresh while
+        // the page is open - no reloading to pick up new ones ..
+        $.fn.zato.live_form_updates.register('create', [
+            {object_type: 'service', target_select: '#id_service'},
+            {object_type: 'security', target_select: '#id_rest_security_id'}
+        ]);
+        $.fn.zato.live_form_updates.start('create');
 
-    // Whether the last uniqueness check found the name already taken
-    isNameTaken: false
-};
+        // .. an open REST popover clones the security select into its rows,
+        // so a live update to the underlying form select re-clones them.
+        $('#id_rest_security_id').on('chosen:updated', function() {
+            wizard.forms.refreshSecuritySelect();
+        });
+    },
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.hl7.mllp.wizard.field = function(name) {
-    var out = $('#id_' + name);
-    return out;
-};
+    beforeSave: function(form) {
+
+        // The destination rows travel in hidden JSON fields the backend reads ..
+        wizard.destinations.serialize();
+
+        // .. so do the security definitions picked for the REST bridge.
+        wizard._writeSecurityIdInputs(form);
+    }
+});
 
 // ////////////////////////////////////////////////////////////////////////
 
 // The help texts behind every "How does it work?" badge on the page -
 // the map the full-page editor uses, re-keyed for the popover inputs,
 // plus entries for the controls only the wizard has.
-$.fn.zato.channel.hl7.mllp.wizard.helpDescriptions = function() {
+wizard.helpDescriptions = function() {
 
     var shared = $.fn.zato.channel.hl7.mllp.field_descriptions;
     var out = $.extend({}, shared);
@@ -99,7 +130,7 @@ $.fn.zato.channel.hl7.mllp.wizard.helpDescriptions = function() {
     }
 
     // The page title carries the wizard-wide overview
-    out['mllp-wizard-title'] = $.fn.zato.channel.hl7.mllp.wizard.titleHelp();
+    out['mllp-wizard-title'] = wizard.titleHelp();
 
     // The security rows of the REST popover allow more than one pick
     out['mllp-wizard-tippy-rest_security_id'] = 'Security definitions used to authenticate<br>incoming REST requests.<br>More than one can be assigned.<br>When the slider is off, with security disabled,<br>the channel will accept requests from anyone<br>who knows its address.';
@@ -120,194 +151,28 @@ $.fn.zato.channel.hl7.mllp.wizard.helpDescriptions = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.hl7.mllp.wizard.init = function(options) {
-
-    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
-    var config = wizard.config;
-
-    wizard.state.listUrl = options.list_url;
-
-    // Mark the fields that must not be empty ..
-    for(var fieldIdx = 0; fieldIdx < config.requiredFields.length; fieldIdx++) {
-        $.fn.zato.data_table.set_field_required('#id_' + config.requiredFields[fieldIdx]);
-    }
-
-    // .. the transport, REST and routing cards on step 1 ..
-    wizard.forms.initCards();
-
-    // .. the destination rows and the option cards on step 2 ..
-    wizard.destinations.init();
-    wizard.review.initOptionCards();
-
-    // .. the searchable select for services ..
-    $.fn.zato.turn_selects_into_chosen('#mllp-wizard-service-row');
-
-    // .. live uniqueness indicators for the name and the REST URL path, with the name badge
-    // in the header following the checks - the name check is scoped to MLLP channels
-    // because generic connection names are unique per connection type ..
-    $.fn.zato.validate_unique('#id_name', 'generic_connection', 'name',
-        {filter_name: 'type_', filter_value: 'channel-hl7-mllp'}, wizard.onNameCheckResult);
-    $.fn.zato.validate_unique('#id_rest_url_path', 'channel_rest', 'url_path');
-
-    // .. the header badge mirrors the name and edits it in place ..
-    wizard.initNameBadge();
-
-    // .. the per-field help badge in the footer - each popover micro-form
-    // additionally wires a badge of its own when it opens ..
-    $.fn.zato.how_it_works.init({
-        badgeId: 'mllp-wizard-how-it-works',
-        divId: '#mllp-wizard',
-        fieldSelector: config.helpRowSelector,
-
-        // The card has empty margin on its left, so the tooltips go there
-        // instead of covering the rows above the described field
-        placement: 'left',
-        descriptions: wizard.helpDescriptions()
-    });
-
-    // .. keep the services and the security definitions fresh while
-    // the page is open - no reloading to pick up new ones ..
-    $.fn.zato.live_form_updates.register('create', [
-        {object_type: 'service', target_select: '#id_service'},
-        {object_type: 'security', target_select: '#id_rest_security_id'}
-    ]);
-    $.fn.zato.live_form_updates.start('create');
-
-    // .. an open REST popover clones the security select into its rows,
-    // so a live update to the underlying form select re-clones them ..
-    $('#id_rest_security_id').on('chosen:updated', function() {
-        wizard.forms.refreshSecuritySelect();
-    });
-
-    // .. the tabs jump straight to their step ..
-    $('#mllp-wizard-steps .mllp-wizard-step').on('click', function() {
-        wizard.goToStep(parseInt($(this).attr('data-step')));
-    });
-
-    // .. the footer buttons ..
-    $('#mllp-wizard-back').on('click', function() {
-        wizard.goToStep(wizard.state.currentStep - 1);
-    });
-
-    $('#mllp-wizard-next').on('click', function() {
-        var isLastStep = wizard.state.currentStep === config.stepCount - 1;
-        if(isLastStep) {
-            wizard.save();
-        }
-        else {
-            wizard.goToStep(wizard.state.currentStep + 1);
-        }
-    });
-
-    $('#mllp-wizard-cancel').on('click', function() {
-        window.location.href = wizard.state.listUrl;
-    });
-
-    // .. the name badge follows the name as the user types ..
-    $('#id_name').on('input', function() {
-        wizard.state.isNameTaken = false;
-        wizard.updateNameBadge();
-    });
-
-    // .. show the first step ..
-    wizard.review.refreshSummaries();
-    wizard.goToStep(0);
-
-    // .. and fade the page in.
-    $.fn.zato.dashboard_kit.reveal();
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// The badge and the inline-edit form take turns owning the badge's tippy
-// slot - the form destroys whatever tooltip it finds there when it opens.
-// This puts a fresh verdict tooltip back in the slot, unless the form is
-// on screen right now, in which case the slot is its.
-$.fn.zato.channel.hl7.mllp.wizard._ensureNameBadgeTippy = function() {
-
-    var badge = document.getElementById('mllp-wizard-name-badge');
-
-    if(badge._tippy) {
-        if(badge._tippy.isNameVerdict) {
-            return badge._tippy;
-        }
-        if(badge._tippy.state.isVisible) {
-            return null;
-        }
-        badge._tippy.destroy();
-    }
-
-    var instance = tippy(badge, {
-        content: '',
-        allowHTML: true,
-        theme: 'dark',
-        arrow: true,
-        placement: 'bottom'
-    });
-
-    instance.isNameVerdict = true;
-
-    var out = instance;
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// The name badge in the header - it mirrors the name field on every step,
-// turns red when the uniqueness check finds the name taken and opens
-// the shared inline-edit form when clicked.
-$.fn.zato.channel.hl7.mllp.wizard.updateNameBadge = function() {
-
-    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
-    var badge = $('#mllp-wizard-name-badge');
-    var name = wizard.field('name').val().trim();
-    var isTaken = wizard.state.isNameTaken;
-
-    badge.prop('hidden', !name);
-    badge.text(isTaken ? 'Already taken: ' + name : name);
-    badge.toggleClass('mllp-wizard-badge-alert', isTaken);
-
-    // The hover tooltip follows the check's verdict
-    var verdictTippy = wizard._ensureNameBadgeTippy();
-    if(verdictTippy) {
-        verdictTippy.setContent(isTaken ? 'This name is already taken' : 'Name is available');
-    }
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// Invoked by the shared uniqueness validator each time a check completes.
-$.fn.zato.channel.hl7.mllp.wizard.onNameCheckResult = function(exists) {
-
-    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
-    wizard.state.isNameTaken = exists;
-    wizard.updateNameBadge();
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
 // The wizard-wide overview shown when the page title is clicked - one of
 // the regular "How does it work?" stops. Everyone gets the short pitch,
 // and the MLLP primer waits folded inside for those who want the
 // background - the help tooltips are interactive, so the fold can be
 // clicked open in place.
-$.fn.zato.channel.hl7.mllp.wizard.titleHelp = function() {
+wizard.titleHelp = function() {
 
     var out =
-        '<div class="mllp-wizard-title-help">' +
+        '<div class="wizard-title-help">' +
 
         '<p>This wizard creates a channel - the entry point through which ' +
         'HL7 v2 messages reach the platform.</p>' +
 
-        '<p><span class="mllp-wizard-title-help-step">01</span> decides how messages arrive - ' +
+        '<p><span class="wizard-title-help-step">01</span> decides how messages arrive - ' +
         'MLLP over TCP, REST, or both - and which ones will be accepted. ' +
-        '<span class="mllp-wizard-title-help-step">02</span> picks the service that handles ' +
+        '<span class="wizard-title-help-step">02</span> picks the service that handles ' +
         'each message and where results go next. ' +
-        '<span class="mllp-wizard-title-help-step">03</span> is a review before the channel is created.</p>' +
+        '<span class="wizard-title-help-step">03</span> is a review before the channel is created.</p>' +
 
-        '<details class="mllp-wizard-title-help-details">' +
+        '<details class="wizard-title-help-details">' +
         '<summary>New to MLLP? A 30-second primer</summary>' +
-        '<div class="mllp-wizard-title-help-primer">' +
+        '<div class="wizard-title-help-primer">' +
 
         '<p>HL7 v2 is the format clinical systems use to tell each other ' +
         'what just happened - an admission, a lab result, an order.</p>' +
@@ -331,122 +196,11 @@ $.fn.zato.channel.hl7.mllp.wizard.titleHelp = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.hl7.mllp.wizard.initNameBadge = function() {
-
-    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
-    var config = wizard.config;
-
-    $('#mllp-wizard-name-badge').on('click', function() {
-        var badge = this;
-
-        $.fn.zato.inline_edit.form_tippy({
-            link_elem: badge,
-            title: 'Name',
-            input_width: '18em',
-            rows: [
-                {name: 'name', label: 'Name', value: wizard.field('name').val()}
-            ],
-            validate: function(values) {
-                if(!values.name) {
-                    return 'This field is required: Name';
-                }
-                return '';
-            },
-            on_submit: function(values) {
-
-                // Writing through the field runs everything the field's own
-                // input event runs - the badge, the Next button and the
-                // debounced uniqueness check.
-                wizard.field('name').val(values.name);
-                wizard.field('name').trigger('input');
-
-                // The review step renders once, on entry - an edit made
-                // while it is on screen has to re-render it by hand.
-                if(wizard.state.currentStep === config.stepCount - 1) {
-                    wizard.review.render();
-                }
-            }
-        });
-
-        // The edit form just took over the badge's tippy slot - once it is
-        // fully gone, however it was dismissed, the verdict tooltip is due
-        // back in, which updateNameBadge takes care of.
-        var formInstance = badge._tippy;
-        if(formInstance && !formInstance.isNameVerdict) {
-            formInstance.setProps({
-                onHidden: function() {
-                    wizard.updateNameBadge();
-                }
-            });
-        }
-    });
-
-    wizard.updateNameBadge();
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.channel.hl7.mllp.wizard.goToStep = function(stepIndex) {
-
-    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
-    var config = wizard.config;
-
-    if(stepIndex < 0) {
-        return;
-    }
-    if(stepIndex >= config.stepCount) {
-        return;
-    }
-
-    // Any open micro-form belongs to the step being left behind ..
-    wizard.forms.close();
-
-    wizard.state.currentStep = stepIndex;
-
-    // .. show only the body of the current step ..
-    for(var bodyIdx = 0; bodyIdx < config.stepCount; bodyIdx++) {
-        var body = $('#mllp-wizard-step-body-' + bodyIdx);
-        body.prop('hidden', bodyIdx !== stepIndex);
-    }
-
-    // .. the step strip marks where the user is and what is already done ..
-    $('#mllp-wizard-steps .mllp-wizard-step').each(function() {
-        var step = $(this);
-        var stepNumber = parseInt(step.attr('data-step'));
-        var isCurrent = stepNumber === stepIndex;
-
-        step.removeClass('mllp-wizard-step-active mllp-wizard-step-done dashboard-tab-active');
-        step.attr('aria-selected', isCurrent ? 'true' : 'false');
-
-        if(isCurrent) {
-            step.addClass('mllp-wizard-step-active dashboard-tab-active');
-        }
-        else if(stepNumber < stepIndex) {
-            step.addClass('mllp-wizard-step-done');
-        }
-    });
-
-    // .. the review step renders itself from the form each time it opens ..
-    var isLastStep = stepIndex === config.stepCount - 1;
-    if(isLastStep) {
-        wizard.review.render();
-    }
-
-    // .. and the footer follows the position - there is nothing
-    // to go back to from the first step.
-    $('#mllp-wizard-back').prop('disabled', stepIndex === 0);
-    $('#mllp-wizard-next').text(isLastStep ? config.finishLabel : config.nextLabel);
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
 // With two or more security definitions picked, all of them travel as
 // repeated hidden inputs and the backend wraps them in a security group
 // it creates on its own. A single pick stays in the rest_security_id
 // select alone, exactly the way the full-page editor posts it.
-$.fn.zato.channel.hl7.mllp.wizard._writeSecurityIdInputs = function(form) {
-
-    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
+wizard._writeSecurityIdInputs = function(form) {
 
     form.find('.mllp-wizard-security-input').remove();
 
@@ -480,55 +234,6 @@ $.fn.zato.channel.hl7.mllp.wizard._writeSecurityIdInputs = function(form) {
         input.value = keyList[keyIdx];
         form.append(input);
     }
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.channel.hl7.mllp.wizard.save = function() {
-
-    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
-    var config = wizard.config;
-    var form = $('#create-form');
-
-    // The destination rows travel in hidden JSON fields the backend reads ..
-    wizard.destinations.serialize();
-
-    // .. so do the security definitions picked for the REST bridge ..
-    wizard._writeSecurityIdInputs(form);
-
-    // .. client-side validation first ..
-    if(!$.fn.zato.is_form_valid(form)) {
-        return;
-    }
-
-    // .. then the synchronous uniqueness checks ..
-    if(!$.fn.zato.validate_unique_on_submit(form)) {
-        return;
-    }
-
-    var statusElement = $('#mllp-wizard-status');
-    statusElement.text('').removeClass('mllp-wizard-status-saved mllp-wizard-status-error');
-
-    var callback = function(data, status) {
-
-        if(status === 'success') {
-            var response = JSON.parse(data.responseText);
-            statusElement.text(config.savedMessage).addClass('mllp-wizard-status-saved');
-            $('#user-message-div').hide();
-
-            // Back to the list page, with the new channel highlighted
-            setTimeout(function() {
-                window.location.href = wizard.state.listUrl + '&highlight=' + response.id;
-            }, config.redirectDelayMs);
-        }
-        else {
-            statusElement.text(config.saveErrorMessage).addClass('mllp-wizard-status-error');
-            $.fn.zato.user_message(false, data.responseText);
-        }
-    };
-
-    // .. and the actual POST to the create endpoint.
-    $.fn.zato.data_table._on_submit(form, callback);
 };
 
 // ////////////////////////////////////////////////////////////////////////

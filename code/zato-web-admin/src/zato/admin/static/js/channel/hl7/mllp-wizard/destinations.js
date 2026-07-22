@@ -4,13 +4,19 @@
 // micro-form for its details, the same interaction the step 1 cards use.
 // The rows serialize into the form's hidden "destinations" and
 // "respond_from" fields in the very shape the full-page editor produces,
-// reusing the type and option definitions of the shared destinations module.
+// reusing the type and option definitions of the shared destinations module
+// and the wizard kit's popover scaffolding.
 
 (function($) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.hl7.mllp.wizard.destinations.config = {
+var wizard = $.fn.zato.channel.hl7.mllp.wizard;
+var destinations = wizard.destinations;
+
+// ////////////////////////////////////////////////////////////////////////
+
+destinations.config = {
 
     // What the caller's response defaults to
     respondFromService: 'service',
@@ -24,14 +30,11 @@ $.fn.zato.channel.hl7.mllp.wizard.destinations.config = {
 };
 
 // Connections grouped by destination type, loaded once per page
-$.fn.zato.channel.hl7.mllp.wizard.destinations._connectionData = null;
+destinations._connectionData = null;
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.hl7.mllp.wizard.destinations.init = function() {
-
-    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
-    var destinations = wizard.destinations;
+destinations.init = function() {
 
     // Adding a row waits until the connection list has arrived ..
     $('#mllp-wizard-destination-add').on('click', function() {
@@ -54,9 +57,7 @@ $.fn.zato.channel.hl7.mllp.wizard.destinations.init = function() {
 
 // Runs the callback once the connection list is available,
 // loading it on the first call and caching it for the rest of the page.
-$.fn.zato.channel.hl7.mllp.wizard.destinations._withConnectionData = function(callback) {
-
-    var destinations = $.fn.zato.channel.hl7.mllp.wizard.destinations;
+destinations._withConnectionData = function(callback) {
 
     if(destinations._connectionData) {
         callback();
@@ -74,10 +75,7 @@ $.fn.zato.channel.hl7.mllp.wizard.destinations._withConnectionData = function(ca
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.hl7.mllp.wizard.destinations.add = function(anchorElement) {
-
-    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
-    var destinations = wizard.destinations;
+destinations.add = function(anchorElement) {
 
     var destination = {
         type: $.fn.zato.destinations.config.defaultType,
@@ -94,7 +92,7 @@ $.fn.zato.channel.hl7.mllp.wizard.destinations.add = function(anchorElement) {
 // ////////////////////////////////////////////////////////////////////////
 
 // The one-line label a destination row shows - type, connection and options.
-$.fn.zato.channel.hl7.mllp.wizard.destinations._rowLabel = function(destination) {
+destinations._rowLabel = function(destination) {
 
     var typeList = $.fn.zato.destinations.config.typeList;
 
@@ -117,10 +115,8 @@ $.fn.zato.channel.hl7.mllp.wizard.destinations._rowLabel = function(destination)
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.hl7.mllp.wizard.destinations.renderRows = function() {
+destinations.renderRows = function() {
 
-    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
-    var destinations = wizard.destinations;
     var config = destinations.config;
 
     var container = $('#mllp-wizard-destination-rows');
@@ -130,23 +126,23 @@ $.fn.zato.channel.hl7.mllp.wizard.destinations.renderRows = function() {
         var destination = wizard.state.destinationList[destinationIdx];
 
         var row = document.createElement('div');
-        row.className = 'mllp-wizard-conn-row';
+        row.className = 'wizard-conn-row';
         row.setAttribute('data-destination-index', destinationIdx);
 
         var text = document.createElement('span');
-        text.className = 'mllp-wizard-conn-row-text';
+        text.className = 'wizard-conn-row-text';
         text.textContent = destinations._rowLabel(destination);
         row.appendChild(text);
 
         if(!destination.isActive) {
             var inactive = document.createElement('span');
-            inactive.className = 'mllp-wizard-conn-row-inactive';
+            inactive.className = 'wizard-conn-row-inactive';
             inactive.textContent = config.inactiveLabel;
             row.appendChild(inactive);
         }
 
         var remove = document.createElement('span');
-        remove.className = 'mllp-wizard-conn-row-remove';
+        remove.className = 'wizard-conn-row-remove';
         remove.textContent = 'x';
         remove.title = 'Remove';
         row.appendChild(remove);
@@ -155,11 +151,11 @@ $.fn.zato.channel.hl7.mllp.wizard.destinations.renderRows = function() {
     }
 
     // Clicking a row edits it, the little x at its end removes it ..
-    container.find('.mllp-wizard-conn-row').on('click', function(event) {
+    container.find('.wizard-conn-row').on('click', function(event) {
         var row = this;
         var destinationIndex = parseInt(row.getAttribute('data-destination-index'));
 
-        if($(event.target).hasClass('mllp-wizard-conn-row-remove')) {
+        if($(event.target).hasClass('wizard-conn-row-remove')) {
             wizard.state.destinationList.splice(destinationIndex, 1);
             destinations.renderRows();
             destinations.refreshRespondFrom();
@@ -175,18 +171,16 @@ $.fn.zato.channel.hl7.mllp.wizard.destinations.renderRows = function() {
 // ////////////////////////////////////////////////////////////////////////
 
 // Builds the connection select and the per-type option inputs for one type.
-$.fn.zato.channel.hl7.mllp.wizard.destinations._renderTypeFields = function(container, destination) {
-
-    var destinations = $.fn.zato.channel.hl7.mllp.wizard.destinations;
+destinations._renderTypeFields = function(container, destination) {
 
     container.innerHTML = '';
 
     // The connections of this type ..
     var connectionRow = document.createElement('div');
-    connectionRow.className = 'mllp-wizard-tippy-field';
+    connectionRow.className = 'wizard-tippy-field';
 
     var connectionLabel = document.createElement('label');
-    connectionLabel.className = 'mllp-wizard-tippy-label';
+    connectionLabel.className = 'wizard-tippy-label';
     connectionLabel.setAttribute('for', 'mllp-wizard-destination-connection');
     connectionLabel.textContent = 'Connection';
     connectionRow.appendChild(connectionLabel);
@@ -217,10 +211,10 @@ $.fn.zato.channel.hl7.mllp.wizard.destinations._renderTypeFields = function(cont
         var optionDef = optionDefs[optionIdx];
 
         var optionRow = document.createElement('div');
-        optionRow.className = 'mllp-wizard-tippy-field';
+        optionRow.className = 'wizard-tippy-field';
 
         var optionLabel = document.createElement('label');
-        optionLabel.className = 'mllp-wizard-tippy-label';
+        optionLabel.className = 'wizard-tippy-label';
         optionLabel.textContent = optionDef.label;
         optionRow.appendChild(optionLabel);
 
@@ -256,29 +250,27 @@ $.fn.zato.channel.hl7.mllp.wizard.destinations._renderTypeFields = function(cont
 // ////////////////////////////////////////////////////////////////////////
 
 // Opens the micro-form for one destination row.
-$.fn.zato.channel.hl7.mllp.wizard.destinations.openEditor = function(destinationIndex, anchorElement) {
+destinations.openEditor = function(destinationIndex, anchorElement) {
 
-    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
-    var destinations = wizard.destinations;
     var destination = wizard.state.destinationList[destinationIndex];
 
     var container = document.createElement('div');
-    container.className = 'mllp-wizard-tippy-form zato-popup';
+    container.className = 'wizard-tippy-form zato-popup';
     container.id = wizard.forms.config.popupId;
 
     container.appendChild(wizard.forms.buildTitle('Destination'));
 
     // The fields live under the header, in the popup body
     var body = document.createElement('div');
-    body.className = 'mllp-wizard-tippy-body';
+    body.className = 'wizard-tippy-body';
     container.appendChild(body);
 
     // The type select drives what the rest of the form shows ..
     var typeRow = document.createElement('div');
-    typeRow.className = 'mllp-wizard-tippy-field';
+    typeRow.className = 'wizard-tippy-field';
 
     var typeLabel = document.createElement('label');
-    typeLabel.className = 'mllp-wizard-tippy-label';
+    typeLabel.className = 'wizard-tippy-label';
     typeLabel.setAttribute('for', 'mllp-wizard-destination-type');
     typeLabel.textContent = 'Type';
     typeRow.appendChild(typeLabel);
@@ -316,10 +308,10 @@ $.fn.zato.channel.hl7.mllp.wizard.destinations.openEditor = function(destination
 
     // .. whether the destination receives messages at all ..
     var activeRow = document.createElement('div');
-    activeRow.className = 'mllp-wizard-tippy-field';
+    activeRow.className = 'wizard-tippy-field';
 
     var activeLabel = document.createElement('label');
-    activeLabel.className = 'mllp-wizard-tippy-checkbox';
+    activeLabel.className = 'wizard-tippy-checkbox';
     activeLabel.setAttribute('for', 'mllp-wizard-destination-active');
 
     var activeCheckbox = document.createElement('input');
@@ -334,7 +326,7 @@ $.fn.zato.channel.hl7.mllp.wizard.destinations.openEditor = function(destination
 
     // .. and the confirm button, with the per-field help to its left.
     var buttons = document.createElement('div');
-    buttons.className = 'mllp-wizard-tippy-buttons';
+    buttons.className = 'wizard-tippy-buttons';
     buttons.appendChild(wizard.forms.buildHelpBadge());
 
     var doneButton = document.createElement('button');
@@ -382,10 +374,9 @@ $.fn.zato.channel.hl7.mllp.wizard.destinations.openEditor = function(destination
 // ////////////////////////////////////////////////////////////////////////
 
 // Rebuilds the "Respond from" select - the service plus one entry per row.
-$.fn.zato.channel.hl7.mllp.wizard.destinations.refreshRespondFrom = function() {
+destinations.refreshRespondFrom = function() {
 
-    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
-    var config = wizard.destinations.config;
+    var config = destinations.config;
 
     var select = $('#mllp-wizard-respond-from');
     var current = select.val();
@@ -430,9 +421,8 @@ $.fn.zato.channel.hl7.mllp.wizard.destinations.refreshRespondFrom = function() {
 // ////////////////////////////////////////////////////////////////////////
 
 // Writes the rows into the form's hidden JSON fields before submit.
-$.fn.zato.channel.hl7.mllp.wizard.destinations.serialize = function() {
+destinations.serialize = function() {
 
-    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
     var serialized = [];
 
     for(var destinationIdx = 0; destinationIdx < wizard.state.destinationList.length; destinationIdx++) {

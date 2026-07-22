@@ -1,148 +1,12 @@
 /*
- * HL7 MLLP channel wizard - destination rows, option cards and the
- * popover micro-forms, shared by all three steps of the wizard page.
+ * HL7 MLLP channel wizard - the controls only this wizard has: the
+ * tolerance grid and the security rows of the REST popover. The shared
+ * popover and card chrome lives in shared/wizard-kit.css.
  */
 
 /* ------------------------------------------------------------ */
-/* MLLP wizard - destination rows                                */
+/* MLLP wizard - tolerance grid                                  */
 /* ------------------------------------------------------------ */
-
-.mllp-wizard-conn-list {
-    max-width: 560px;
-}
-
-.mllp-wizard-conn-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 7px 10px;
-    margin-bottom: 4px;
-    border: 1px solid var(--wizard-border);
-    border-radius: 4px;
-    font-size: 12px;
-    cursor: pointer;
-    transition: border-color 150ms ease;
-}
-
-.mllp-wizard-conn-row:hover {
-    border-color: var(--wizard-accent);
-}
-
-.mllp-wizard-conn-row-text {
-    flex: 1;
-    color: var(--wizard-done);
-    font-weight: 500;
-    animation: mllp-wizard-summary-fade-in 300ms ease-out;
-}
-
-.mllp-wizard-conn-row-inactive {
-    font-size: 11px;
-    color: var(--wizard-text-faint);
-    font-style: italic;
-}
-
-.mllp-wizard-conn-row-remove {
-    padding: 2px 5px;
-    color: var(--wizard-text-faint);
-    font-size: 11px;
-}
-
-.mllp-wizard-conn-row-remove:hover {
-    color: var(--wizard-error);
-}
-
-.mllp-wizard-conn-add {
-    display: inline-block;
-    margin-top: 2px;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--wizard-accent);
-    cursor: pointer;
-}
-
-.mllp-wizard-conn-add:hover {
-    text-decoration: underline;
-}
-
-.mllp-wizard-respond-from-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 12px;
-    font-size: 12px;
-}
-
-.mllp-wizard-respond-from-row label {
-    font-weight: 600;
-    color: var(--wizard-text);
-}
-
-/* ------------------------------------------------------------ */
-/* MLLP wizard - option cards                                    */
-/* ------------------------------------------------------------ */
-
-.mllp-wizard-option-card {
-    max-width: 560px;
-    padding: 10px 14px;
-    margin-bottom: 8px;
-    border: 1px solid var(--wizard-border);
-    border-radius: 5px;
-    transition: border-color 150ms ease;
-}
-
-.mllp-wizard-option-card:hover {
-    border-color: var(--wizard-border-strong);
-}
-
-.mllp-wizard-option-card-clickable {
-    cursor: pointer;
-}
-
-.mllp-wizard-option-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    user-select: none;
-}
-
-.mllp-wizard-option-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--wizard-text);
-}
-
-.mllp-wizard-option-summary {
-    margin-left: auto;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--wizard-done);
-}
-
-.mllp-wizard-chevron {
-    flex-shrink: 0;
-    color: var(--wizard-text-muted);
-    transition: transform 150ms ease;
-}
-
-.mllp-wizard-chevron-open {
-    transform: rotate(90deg);
-}
-
-.mllp-wizard-option-body {
-    max-height: 0;
-    margin-top: 0;
-    overflow: hidden;
-    opacity: 0;
-    transition: max-height 200ms ease, opacity 150ms ease, margin 150ms ease;
-}
-
-.mllp-wizard-option-body-open {
-    max-height: 800px;
-    margin-top: 10px;
-    opacity: 1;
-}
 
 .mllp-wizard-tolerance-group-title {
     margin: 8px 0 6px;
@@ -169,156 +33,8 @@
 }
 
 /* ------------------------------------------------------------ */
-/* MLLP wizard - popover micro-forms                             */
+/* MLLP wizard - REST security rows                              */
 /* ------------------------------------------------------------ */
-
-/* The chrome - the surface, the dark draggable header and the drag
-   cursors - comes from the shared popup look in shared/popup.css,
-   the same one the IDE's right-click menus wear. The tippy box only
-   positions the popup, so it paints nothing of its own. */
-.tippy-box[data-theme~='mllp-wizard'] {
-    background-color: transparent;
-    color: var(--wizard-text);
-}
-
-/* Only the popover's own content box - the help tooltips nested inside
-   the popover bring tippy boxes of their own and keep their padding */
-.tippy-box[data-theme~='mllp-wizard'] > .tippy-content {
-    padding: 0;
-}
-
-.tippy-box[data-theme~='mllp-wizard'] input:focus,
-.tippy-box[data-theme~='mllp-wizard'] select:focus,
-.tippy-box[data-theme~='mllp-wizard'] textarea:focus,
-.tippy-box[data-theme~='mllp-wizard'] button:focus {
-    outline: none;
-    box-shadow: none;
-}
-
-/* The per-field help tooltips live inside the popover they explain, so
-   clicking them does not close it - and in there the stock tippy 14px
-   towers over the popover's own 11-13px text, so they match it instead */
-.mllp-wizard-tippy-form .tippy-box {
-    font-size: 12px;
-    line-height: 1.5;
-}
-
-.mllp-wizard-tippy-form {
-    display: flex;
-    flex-direction: column;
-    min-width: 260px;
-    box-sizing: border-box;
-}
-
-/* The fields under the popup header, on the same sandy panel
-   the IDE's right-click menus use for their action lists */
-.mllp-wizard-tippy-body {
-    padding: 12px 14px 10px;
-    background: var(--zato-popup-sand);
-    border-radius: 0 0 5px 5px;
-}
-
-/* Several short fields share one row instead of stacking full-width */
-.mllp-wizard-tippy-row {
-    display: flex;
-    gap: 10px;
-}
-
-.mllp-wizard-tippy-row .mllp-wizard-tippy-field {
-    flex: 1 1 0;
-    min-width: 0;
-}
-
-/* A checkbox sharing a row with labeled inputs takes only the room it
-   needs and drops to their baseline, level with the inputs themselves */
-.mllp-wizard-tippy-row .mllp-wizard-tippy-field:has(.mllp-wizard-tippy-checkbox) {
-    flex: 0 0 auto;
-    justify-content: flex-end;
-    padding-bottom: 5px;
-}
-
-.mllp-wizard-tippy-field {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    margin-bottom: 8px;
-}
-
-.mllp-wizard-tippy-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--wizard-text-muted);
-}
-
-/* One explicit height keeps rows mixing inputs and selects even */
-.mllp-wizard-tippy-field input[type="text"],
-.mllp-wizard-tippy-field select {
-    width: 100%;
-    box-sizing: border-box;
-    height: 24px;
-    padding: 5px 8px;
-    border: 1px solid var(--wizard-border-strong);
-    border-radius: 3px;
-    font-size: 13px;
-}
-
-/* The picked values read as data, not as headings - a notch smaller than
-   the free-text inputs next to them, in the same face the inputs wear.
-   The formalize height of 1.8em squeezed the select's line box out through
-   the bottom edge, sitting the text low - the explicit height above plus
-   paddings sized to the line box recenter it. */
-.mllp-wizard-tippy-field select {
-    font-size: 12px;
-    font-family: Arial, "Liberation Sans", FreeSans, sans-serif;
-    line-height: normal;
-    padding-top: 4px;
-    padding-bottom: 4px;
-}
-
-.mllp-wizard-tippy-field input[type="text"]:focus,
-.mllp-wizard-tippy-field select:focus {
-    border-color: var(--wizard-accent);
-    outline: none;
-    box-shadow: none;
-}
-
-.mllp-wizard-tippy-input-row {
-    display: flex;
-    gap: 6px;
-}
-
-.mllp-wizard-tippy-input-row .mllp-wizard-tippy-unit {
-    width: auto;
-    flex-shrink: 0;
-}
-
-.mllp-wizard-tippy-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    font-size: 12px;
-    color: var(--wizard-text);
-    cursor: pointer;
-}
-
-/* The site-wide tippy link colors are meant for dark tooltips - this
-   popover is light, so its links wear the standard link face. The theme
-   attribute keeps the selector ahead of the .tippy-box .tippy-content
-   rule in style.css, which would otherwise paint the links light. */
-.tippy-box[data-theme~='mllp-wizard'] .tippy-content a:not(.menu-link) {
-    color: rgb(17, 17, 17);
-    --zato-link-dash: rgba(0, 0, 0, 0.35);
-}
-
-.tippy-box[data-theme~='mllp-wizard'] .tippy-content a:not(.menu-link):hover {
-    color: var(--zato-link-hover) !important;
-    --zato-link-dash: rgba(0, 0, 0, 0.35);
-}
-
-.mllp-wizard-tippy-hint {
-    font-size: 11px;
-    color: var(--wizard-text-faint);
-}
 
 /* The head above the security rows - the label plus the on/off slider,
    which is tinier than even the small sliders the wizard uses */
@@ -338,7 +54,7 @@
 }
 
 /* The label caps sit optically low against the small pill */
-.mllp-wizard-security-head .mllp-wizard-tippy-label {
+.mllp-wizard-security-head .wizard-tippy-label {
     position: relative;
     top: -1.5px;
 }
@@ -374,11 +90,18 @@
     flex: 1;
 }
 
+/* The add link keeps to its own width under the rows */
+a.mllp-wizard-security-add {
+    align-self: flex-start;
+    margin-top: 7px;
+    font-size: 12px;
+}
+
 /* The delete icon is the shared close.svg drawn through a mask, so it
    renders the same everywhere instead of depending on how a font shapes
    the multiplication sign. The row centers its children, which keeps
    the icon in the middle of the select next to it. */
-.tippy-box[data-theme~='mllp-wizard'] .tippy-content a.mllp-wizard-security-delete {
+.tippy-box[data-theme~='wizard'] .tippy-content a.mllp-wizard-security-delete {
     background-image: none;
     display: flex;
     align-items: center;
@@ -406,31 +129,4 @@ a.mllp-wizard-security-delete::before {
 
 a.mllp-wizard-security-delete:hover::before {
     background-color: var(--wizard-error);
-}
-
-a.mllp-wizard-security-add {
-    align-self: flex-start;
-    margin-top: 7px;
-    font-size: 12px;
-}
-
-/* The rule above the buttons mirrors the one the wizard footer draws */
-.mllp-wizard-tippy-buttons {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 8px;
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid var(--wizard-border);
-}
-
-/* The help badge keeps to the left, away from the OK button */
-.mllp-wizard-tippy-buttons .how-it-works-badge {
-    margin-right: auto;
-}
-
-.mllp-wizard-tippy-buttons .secondary-button {
-    box-shadow: none !important;
-    text-shadow: none !important;
 }

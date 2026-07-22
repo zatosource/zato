@@ -3,7 +3,8 @@
 {% comment %}
 Multi-step wizard for creating a new HL7 MLLP channel - three steps with
 progressive disclosure. Basic answers live directly on the steps while
-everything advanced opens in small popover micro-forms. The view provides:
+everything advanced opens in small popover micro-forms. The generic
+machinery and look come from the wizard kit. The view provides:
 
 * cluster_id   - the current cluster
 * form         - CreateForm, its fields carry all the defaults
@@ -19,6 +20,7 @@ so the resulting channel is identical to one created through the editor.
 <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
 <link rel="stylesheet" type="text/css" href="/static/css/channel/hl7/mllp-wizard.css">
 <link rel="stylesheet" type="text/css" href="/static/css/channel/hl7/mllp-wizard-controls.css">
 {% endblock %}
@@ -27,6 +29,9 @@ so the resulting channel is identical to one created through the editor.
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/destinations.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/core.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/forms.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/review.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-descriptions.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-wizard/core.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-wizard/forms.js"></script>
@@ -52,13 +57,13 @@ $(document).ready(function() {
 
         <div id="user-message-div" style="display:none"><pre id="user-message" class="user-message"></pre></div>
 
-        <div class="dashboard-card mllp-wizard-card" id="mllp-wizard">
+        <div class="dashboard-card wizard-card" id="mllp-wizard">
 
             <div class="dashboard-card-header">
                 <!-- The label makes the title a regular "How does it work?"
                      stop - clicking it shows the wizard-wide overview -->
                 <h3 id="mllp-wizard-title"><label for="mllp-wizard-title">New HL7 MLLP channel</label></h3>
-                <span class="mllp-wizard-badge mllp-wizard-name-badge" id="mllp-wizard-name-badge" hidden></span>
+                <span class="wizard-badge wizard-name-badge" id="mllp-wizard-name-badge" hidden></span>
             </div>
 
             <form novalidate action="{% url "channel-hl7-mllp-create" %}" method="post" id="create-form">
@@ -66,90 +71,90 @@ $(document).ready(function() {
                 <!-- The step strip wears the shared dashboard tabs chrome, the same
                      the security posture page uses - the tabs show progress, the
                      walking itself happens through the Next and Back buttons -->
-                <div class="dashboard-tabs mllp-wizard-steps" id="mllp-wizard-steps" role="tablist" aria-label="Wizard steps">
-                    <button type="button" class="dashboard-tab mllp-wizard-step mllp-wizard-step-active dashboard-tab-active" data-step="0" role="tab" aria-selected="true">
-                        <span class="mllp-wizard-step-num">01</span>
+                <div class="dashboard-tabs wizard-steps" id="mllp-wizard-steps" role="tablist" aria-label="Wizard steps">
+                    <button type="button" class="dashboard-tab wizard-step wizard-step-active dashboard-tab-active" data-step="0" role="tab" aria-selected="true">
+                        <span class="wizard-step-num">01</span>
                         <span class="dashboard-tab-label">How do messages arrive?</span>
                     </button>
-                    <button type="button" class="dashboard-tab mllp-wizard-step" data-step="1" role="tab" aria-selected="false">
-                        <span class="mllp-wizard-step-num">02</span>
+                    <button type="button" class="dashboard-tab wizard-step" data-step="1" role="tab" aria-selected="false">
+                        <span class="wizard-step-num">02</span>
                         <span class="dashboard-tab-label">What happens next?</span>
                     </button>
-                    <button type="button" class="dashboard-tab mllp-wizard-step" data-step="2" role="tab" aria-selected="false">
-                        <span class="mllp-wizard-step-num">03</span>
+                    <button type="button" class="dashboard-tab wizard-step" data-step="2" role="tab" aria-selected="false">
+                        <span class="wizard-step-num">03</span>
                         <span class="dashboard-tab-label">Review and go</span>
                     </button>
                 </div>
 
                 <!-- Step 1 - name, transport and routing -->
-                <div class="mllp-wizard-step-body" id="mllp-wizard-step-body-0">
+                <div class="wizard-step-body" id="mllp-wizard-step-body-0">
 
-                    <div class="mllp-wizard-name-row">
-                        <div class="mllp-wizard-name-field">
+                    <div class="wizard-name-row">
+                        <div class="wizard-name-field">
                             <label for="id_name">Name</label>
                             {{ form.name }}
                         </div>
-                        <label class="mllp-wizard-active-field" for="id_is_active" data-help-placement="top">
+                        <label class="wizard-active-field" for="id_is_active" data-help-placement="top">
                             Active
                             {{ form.is_active }}
                         </label>
-                        <label class="mllp-wizard-active-field" for="id_is_default" data-help-placement="top">
+                        <label class="wizard-active-field" for="id_is_default" data-help-placement="top">
                             Default
                             {{ form.is_default }}
                         </label>
                     </div>
 
-                    <div class="mllp-wizard-section">
-                        <div class="mllp-wizard-toggle-row" id="mllp-wizard-row-transport">
-                            <label class="mllp-wizard-toggle-label" for="mllp-wizard-toggle-mllp">MLLP</label>
+                    <div class="wizard-section">
+                        <div class="wizard-toggle-row" id="mllp-wizard-row-transport">
+                            <label class="wizard-toggle-label" for="mllp-wizard-toggle-mllp">MLLP</label>
                             <input type="checkbox" id="mllp-wizard-toggle-mllp" checked>
-                            <a href="javascript:void(0)" class="mllp-wizard-toggle-edit" id="mllp-wizard-edit-transport"><span class="zato-link-face mllp-wizard-toggle-summary" id="mllp-wizard-summary-transport"></span><span class="zato-soft-hint">Click to edit</span></a>
+                            <a href="javascript:void(0)" class="wizard-toggle-edit" id="mllp-wizard-edit-transport"><span class="zato-link-face wizard-toggle-summary" id="mllp-wizard-summary-transport"></span><span class="zato-soft-hint">Click to edit</span></a>
                         </div>
 
-                        <div class="mllp-wizard-toggle-row" id="mllp-wizard-row-rest">
-                            <label class="mllp-wizard-toggle-label" for="mllp-wizard-toggle-rest">REST</label>
+                        <div class="wizard-toggle-row" id="mllp-wizard-row-rest">
+                            <label class="wizard-toggle-label" for="mllp-wizard-toggle-rest">REST</label>
                             <input type="checkbox" id="mllp-wizard-toggle-rest">
-                            <a href="javascript:void(0)" class="mllp-wizard-toggle-edit" id="mllp-wizard-edit-rest"><span class="zato-link-face mllp-wizard-toggle-summary" id="mllp-wizard-summary-rest"></span><span class="zato-soft-hint">Click to edit</span></a>
+                            <a href="javascript:void(0)" class="wizard-toggle-edit" id="mllp-wizard-edit-rest"><span class="zato-link-face wizard-toggle-summary" id="mllp-wizard-summary-rest"></span><span class="zato-soft-hint">Click to edit</span></a>
                         </div>
 
-                        <div class="mllp-wizard-toggle-row" id="mllp-wizard-row-routing">
-                            <label class="mllp-wizard-toggle-label" for="mllp-wizard-edit-routing">Match</label>
-                            <a href="javascript:void(0)" class="mllp-wizard-toggle-edit" id="mllp-wizard-edit-routing"><span class="zato-link-face mllp-wizard-toggle-summary" id="mllp-wizard-summary-routing"></span><span class="zato-soft-hint">Click to edit</span></a>
+                        <div class="wizard-toggle-row" id="mllp-wizard-row-routing">
+                            <label class="wizard-toggle-label" for="mllp-wizard-edit-routing">Match</label>
+                            <a href="javascript:void(0)" class="wizard-toggle-edit" id="mllp-wizard-edit-routing"><span class="zato-link-face wizard-toggle-summary" id="mllp-wizard-summary-routing"></span><span class="zato-soft-hint">Click to edit</span></a>
                         </div>
                     </div>
 
                 </div>
 
                 <!-- Step 2 - service, destinations and options -->
-                <div class="mllp-wizard-step-body" id="mllp-wizard-step-body-1" hidden>
+                <div class="wizard-step-body" id="mllp-wizard-step-body-1" hidden>
 
-                    <div class="mllp-wizard-section" id="mllp-wizard-service-section">
-                        <div class="mllp-wizard-section-title"><label for="id_service">Service</label></div>
-                        <div class="mllp-wizard-service-row" id="mllp-wizard-service-row">
+                    <div class="wizard-section" id="mllp-wizard-service-section">
+                        <div class="wizard-section-title"><label for="id_service">Service</label></div>
+                        <div class="wizard-service-row" id="mllp-wizard-service-row">
                             {{ form.service }}
                         </div>
                     </div>
 
-                    <div class="mllp-wizard-section">
-                        <div class="mllp-wizard-section-title">Destinations</div>
-                        <div class="mllp-wizard-conn-list" id="mllp-wizard-destination-rows"></div>
-                        <span class="mllp-wizard-conn-add" id="mllp-wizard-destination-add">+ Add a destination</span>
-                        <div class="mllp-wizard-respond-from-row" id="mllp-wizard-respond-from-row" hidden>
+                    <div class="wizard-section">
+                        <div class="wizard-section-title">Destinations</div>
+                        <div class="wizard-conn-list" id="mllp-wizard-destination-rows"></div>
+                        <span class="wizard-conn-add" id="mllp-wizard-destination-add">+ Add a destination</span>
+                        <div class="wizard-respond-from-row" id="mllp-wizard-respond-from-row" hidden>
                             <label for="mllp-wizard-respond-from">Respond from</label>
                             <select id="mllp-wizard-respond-from"></select>
                         </div>
                     </div>
 
-                    <div class="mllp-wizard-section">
-                        <div class="mllp-wizard-section-title">Options</div>
+                    <div class="wizard-section">
+                        <div class="wizard-section-title">Options</div>
 
-                        <div class="mllp-wizard-option-card" id="mllp-wizard-card-tolerance">
-                            <div class="mllp-wizard-option-header" id="mllp-wizard-tolerance-header">
-                                <svg class="mllp-wizard-chevron" id="mllp-wizard-tolerance-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                                <span class="mllp-wizard-option-label">Tolerance and message fixups</span>
-                                <span class="mllp-wizard-option-summary" id="mllp-wizard-summary-tolerance"></span>
+                        <div class="wizard-option-card" id="mllp-wizard-card-tolerance">
+                            <div class="wizard-option-header" id="mllp-wizard-tolerance-header">
+                                <svg class="wizard-chevron" id="mllp-wizard-tolerance-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                <span class="wizard-option-label">Tolerance and message fixups</span>
+                                <span class="wizard-option-summary" id="mllp-wizard-summary-tolerance"></span>
                             </div>
-                            <div class="mllp-wizard-option-body" id="mllp-wizard-tolerance-body">
+                            <div class="wizard-option-body" id="mllp-wizard-tolerance-body">
 
                                 <div class="mllp-wizard-tolerance-group-title">Wire-level fixups</div>
                                 <div class="mllp-wizard-tolerance-grid">
@@ -173,17 +178,17 @@ $(document).ready(function() {
                             </div>
                         </div>
 
-                        <div class="mllp-wizard-option-card mllp-wizard-option-card-clickable" id="mllp-wizard-card-dedup">
-                            <div class="mllp-wizard-option-header">
-                                <span class="mllp-wizard-option-label">Deduplication</span>
-                                <span class="mllp-wizard-option-summary" id="mllp-wizard-summary-dedup"></span>
+                        <div class="wizard-option-card wizard-option-card-clickable" id="mllp-wizard-card-dedup">
+                            <div class="wizard-option-header">
+                                <span class="wizard-option-label">Deduplication</span>
+                                <span class="wizard-option-summary" id="mllp-wizard-summary-dedup"></span>
                             </div>
                         </div>
 
-                        <div class="mllp-wizard-option-card mllp-wizard-option-card-clickable" id="mllp-wizard-card-logging">
-                            <div class="mllp-wizard-option-header">
-                                <span class="mllp-wizard-option-label">Logging and errors</span>
-                                <span class="mllp-wizard-option-summary" id="mllp-wizard-summary-logging"></span>
+                        <div class="wizard-option-card wizard-option-card-clickable" id="mllp-wizard-card-logging">
+                            <div class="wizard-option-header">
+                                <span class="wizard-option-label">Logging and errors</span>
+                                <span class="wizard-option-summary" id="mllp-wizard-summary-logging"></span>
                             </div>
                         </div>
 
@@ -192,25 +197,25 @@ $(document).ready(function() {
                 </div>
 
                 <!-- Step 3 - review -->
-                <div class="mllp-wizard-step-body" id="mllp-wizard-step-body-2" hidden>
-                    <div class="mllp-wizard-review" id="mllp-wizard-review"></div>
+                <div class="wizard-step-body" id="mllp-wizard-step-body-2" hidden>
+                    <div class="wizard-review" id="mllp-wizard-review"></div>
                 </div>
 
                 <!-- Help on the left, Back and Next in the middle, Cancel on the right -->
-                <div class="mllp-wizard-footer">
+                <div class="wizard-footer">
                     <span class="how-it-works-badge" id="mllp-wizard-how-it-works">How does it work?</span>
-                    <div class="mllp-wizard-footer-center">
+                    <div class="wizard-footer-center">
                         <button type="button" class="secondary-button" id="mllp-wizard-back">Back</button>
                         <button type="button" class="action-button" id="mllp-wizard-next">Next</button>
                     </div>
-                    <div class="mllp-wizard-footer-right">
-                        <span class="mllp-wizard-status" id="mllp-wizard-status"></span>
-                        <button type="button" class="secondary-button mllp-wizard-cancel" id="mllp-wizard-cancel">Cancel</button>
+                    <div class="wizard-footer-right">
+                        <span class="wizard-status" id="mllp-wizard-status"></span>
+                        <button type="button" class="secondary-button wizard-cancel" id="mllp-wizard-cancel">Cancel</button>
                     </div>
                 </div>
 
                 <!-- Fields edited through the popover micro-forms - never shown directly -->
-                <div class="mllp-wizard-hidden-fields" hidden>
+                <div class="wizard-hidden-fields" hidden>
 
                     {{ form.use_rest }}
                     {{ form.rest_only }}
