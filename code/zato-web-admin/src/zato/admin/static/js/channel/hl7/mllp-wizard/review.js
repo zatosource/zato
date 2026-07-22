@@ -2,14 +2,22 @@
 //
 // Every card on steps 1 and 2 carries a one-line summary of what is currently
 // configured, recomputed from the form each time a micro-form closes. The
-// review step renders the same data as grouped rows, each group with an Edit
-// link that jumps back to the step the answers came from.
+// review step renders the same data as grouped rows through the wizard kit's
+// renderer, each group with an Edit link that jumps back to the step the
+// answers came from.
 
 (function($) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.hl7.mllp.wizard.review.config = {
+var wizard = $.fn.zato.channel.hl7.mllp.wizard;
+var review = wizard.review;
+
+$.fn.zato.wizard_kit.review.setup(wizard);
+
+// ////////////////////////////////////////////////////////////////////////
+
+review.config = {
 
     // The routing summary when no matcher is filled in
     anyMessageLabel: 'All messages',
@@ -49,14 +57,12 @@ $.fn.zato.channel.hl7.mllp.wizard.review.config = {
 };
 
 // The tolerance defaults, snapshotted from the form before the user touches it
-$.fn.zato.channel.hl7.mllp.wizard.review._toleranceDefaults = {};
+review._toleranceDefaults = {};
 
 // ////////////////////////////////////////////////////////////////////////
 
 // The human label of a tolerance toggle - the text of the label wrapping it.
-$.fn.zato.channel.hl7.mllp.wizard.review._toleranceLabel = function(fieldName) {
-
-    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
+review._toleranceLabel = function(fieldName) {
 
     var label = wizard.field(fieldName).closest('label');
     var out = label.text().trim();
@@ -66,10 +72,8 @@ $.fn.zato.channel.hl7.mllp.wizard.review._toleranceLabel = function(fieldName) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.hl7.mllp.wizard.review.initOptionCards = function() {
+review.initOptionCards = function() {
 
-    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
-    var review = wizard.review;
     var config = review.config;
 
     // Remember what the tolerance defaults are so the review can diff against them ..
@@ -80,8 +84,8 @@ $.fn.zato.channel.hl7.mllp.wizard.review.initOptionCards = function() {
 
     // .. the tolerance card expands and collapses in place ..
     $('#mllp-wizard-tolerance-header').on('click', function() {
-        $('#mllp-wizard-tolerance-body').toggleClass('mllp-wizard-option-body-open');
-        $('#mllp-wizard-tolerance-chevron').toggleClass('mllp-wizard-chevron-open');
+        $('#mllp-wizard-tolerance-body').toggleClass('wizard-option-body-open');
+        $('#mllp-wizard-tolerance-chevron').toggleClass('wizard-chevron-open');
     });
 
     // .. its summary follows the checkboxes as they are toggled ..
@@ -101,28 +105,7 @@ $.fn.zato.channel.hl7.mllp.wizard.review.initOptionCards = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Sets a card summary, replaying its fade-in when the text changed.
-$.fn.zato.channel.hl7.mllp.wizard.review._setSummary = function(elementId, text) {
-
-    var element = $('#' + elementId);
-
-    if(element.text() === text) {
-        return;
-    }
-
-    element.removeClass('mllp-wizard-summary-fresh');
-    element.text(text);
-
-    // Reflowing between the class removal and re-add restarts the animation
-    void element[0].offsetWidth;
-    element.addClass('mllp-wizard-summary-fresh');
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.channel.hl7.mllp.wizard.review._transportSummary = function() {
-
-    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
+review._transportSummary = function() {
 
     var startSeq = wizard.field('start_seq').val();
     var endSeq = wizard.field('end_seq').val();
@@ -144,9 +127,7 @@ $.fn.zato.channel.hl7.mllp.wizard.review._transportSummary = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.hl7.mllp.wizard.review._restSummary = function() {
-
-    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
+review._restSummary = function() {
 
     var useRest = wizard.field('use_rest').prop('checked');
     if(!useRest) {
@@ -182,10 +163,9 @@ $.fn.zato.channel.hl7.mllp.wizard.review._restSummary = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.hl7.mllp.wizard.review._routingSummary = function() {
+review._routingSummary = function() {
 
-    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
-    var config = wizard.review.config;
+    var config = review.config;
 
     var parts = [];
 
@@ -210,10 +190,9 @@ $.fn.zato.channel.hl7.mllp.wizard.review._routingSummary = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.hl7.mllp.wizard.review._toleranceSummary = function() {
+review._toleranceSummary = function() {
 
-    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
-    var config = wizard.review.config;
+    var config = review.config;
 
     var enabledCount = 0;
 
@@ -229,9 +208,7 @@ $.fn.zato.channel.hl7.mllp.wizard.review._toleranceSummary = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.hl7.mllp.wizard.review._dedupSummary = function() {
-
-    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
+review._dedupSummary = function() {
 
     var ttlValue = parseInt(wizard.field('dedup_ttl_value').val());
     if(isNaN(ttlValue)) {
@@ -250,9 +227,7 @@ $.fn.zato.channel.hl7.mllp.wizard.review._dedupSummary = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.hl7.mllp.wizard.review._loggingSummary = function() {
-
-    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
+review._loggingSummary = function() {
 
     var parts = [];
 
@@ -271,36 +246,31 @@ $.fn.zato.channel.hl7.mllp.wizard.review._loggingSummary = function() {
 // ////////////////////////////////////////////////////////////////////////
 
 // Recomputes every card summary and the card selection states.
-$.fn.zato.channel.hl7.mllp.wizard.review.refreshSummaries = function() {
-
-    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
-    var review = wizard.review;
+review.refreshSummaries = function() {
 
     // A summary shows only while its transport is on - it doubles
     // as the link that opens the protocol options popover
     var isMllpOn = !wizard.field('rest_only').prop('checked');
     var useRest = wizard.field('use_rest').prop('checked');
 
-    review._setSummary('mllp-wizard-summary-transport', isMllpOn ? review._transportSummary() : '');
-    review._setSummary('mllp-wizard-summary-rest', review._restSummary());
-    review._setSummary('mllp-wizard-summary-tolerance', review._toleranceSummary());
-    review._setSummary('mllp-wizard-summary-dedup', review._dedupSummary());
-    review._setSummary('mllp-wizard-summary-logging', review._loggingSummary());
+    review.setSummary('mllp-wizard-summary-transport', isMllpOn ? review._transportSummary() : '');
+    review.setSummary('mllp-wizard-summary-rest', review._restSummary());
+    review.setSummary('mllp-wizard-summary-tolerance', review._toleranceSummary());
+    review.setSummary('mllp-wizard-summary-dedup', review._dedupSummary());
+    review.setSummary('mllp-wizard-summary-logging', review._loggingSummary());
 
     // .. and the transport toggles mirror the hidden form flags.
     $('#mllp-wizard-toggle-mllp').prop('checked', isMllpOn);
     $('#mllp-wizard-toggle-rest').prop('checked', useRest);
 
-    review._setSummary('mllp-wizard-summary-routing', review._routingSummary());
+    review.setSummary('mllp-wizard-summary-routing', review._routingSummary());
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
 // The tolerance rows for the review - only what differs from the defaults.
-$.fn.zato.channel.hl7.mllp.wizard.review._toleranceReviewRows = function() {
+review._toleranceReviewRows = function() {
 
-    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
-    var review = wizard.review;
     var config = review.config;
 
     var out = [];
@@ -326,10 +296,8 @@ $.fn.zato.channel.hl7.mllp.wizard.review._toleranceReviewRows = function() {
 // ////////////////////////////////////////////////////////////////////////
 
 // Renders the review step from the current form state.
-$.fn.zato.channel.hl7.mllp.wizard.review.render = function() {
+review.render = function() {
 
-    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
-    var review = wizard.review;
     var config = review.config;
 
     // Basics
@@ -350,7 +318,7 @@ $.fn.zato.channel.hl7.mllp.wizard.review.render = function() {
     // A REST bridge anyone can call deserves a loud reminder
     if(restSummary && !wizard.state.isSecurityEnabled) {
         var securityBadge = document.createElement('span');
-        securityBadge.className = 'mllp-wizard-badge mllp-wizard-badge-alert mllp-wizard-badge-blink';
+        securityBadge.className = 'wizard-badge wizard-badge-alert wizard-badge-blink';
         securityBadge.textContent = 'DISABLED';
         transportRows.push(['REST security', securityBadge]);
     }
@@ -402,7 +370,7 @@ $.fn.zato.channel.hl7.mllp.wizard.review.render = function() {
         serviceRows.push(['Respond from', respondFrom]);
     }
 
-    var groups = [
+    review.renderGroups([
         {label: 'Basics',       step: 0, rows: basicsRows},
         {label: 'Transport',    step: 0, rows: transportRows},
         {label: 'Routing',      step: 0, rows: routingRows},
@@ -410,67 +378,7 @@ $.fn.zato.channel.hl7.mllp.wizard.review.render = function() {
         {label: 'Tolerance',    step: 1, rows: review._toleranceReviewRows()},
         {label: 'Deduplication', step: 1, rows: [['Window', review._dedupSummary()]]},
         {label: 'Logging',      step: 1, rows: [['Behavior', review._loggingSummary()]]}
-    ];
-
-    var container = $('#mllp-wizard-review');
-    container.empty();
-
-    for(var groupIdx = 0; groupIdx < groups.length; groupIdx++) {
-        var group = groups[groupIdx];
-
-        var groupElement = document.createElement('div');
-        groupElement.className = 'mllp-wizard-review-group';
-
-        var header = document.createElement('div');
-        header.className = 'mllp-wizard-review-group-header';
-
-        var headerLabel = document.createElement('span');
-        headerLabel.className = 'mllp-wizard-review-group-label';
-        headerLabel.textContent = group.label;
-        header.appendChild(headerLabel);
-
-        var editLink = document.createElement('span');
-        editLink.className = 'mllp-wizard-review-edit';
-        editLink.textContent = 'Edit';
-        editLink.setAttribute('data-step', group.step);
-        header.appendChild(editLink);
-
-        groupElement.appendChild(header);
-
-        for(var rowIdx = 0; rowIdx < group.rows.length; rowIdx++) {
-            var row = group.rows[rowIdx];
-
-            var rowElement = document.createElement('div');
-            rowElement.className = 'mllp-wizard-review-row';
-
-            var key = document.createElement('span');
-            key.className = 'mllp-wizard-review-key';
-            key.textContent = row[0];
-            rowElement.appendChild(key);
-
-            var value = document.createElement('span');
-            value.className = 'mllp-wizard-review-value';
-
-            // A value is usually text, but rows like the security badge
-            // bring a ready element of their own
-            if(row[1] instanceof Node) {
-                value.appendChild(row[1]);
-            }
-            else {
-                value.textContent = row[1];
-            }
-            rowElement.appendChild(value);
-
-            groupElement.appendChild(rowElement);
-        }
-
-        container.append(groupElement);
-    }
-
-    // The Edit links jump back to the step their group came from
-    container.find('.mllp-wizard-review-edit').on('click', function() {
-        wizard.goToStep(parseInt(this.getAttribute('data-step')));
-    });
+    ]);
 };
 
 // ////////////////////////////////////////////////////////////////////////
