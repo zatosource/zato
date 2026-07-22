@@ -316,6 +316,72 @@
 }
 
 /* ------------------------------------------------------------ */
+/* Wizard - labeled field rows                                   */
+/* ------------------------------------------------------------ */
+
+/* A plain label-and-input row on a step body - the inline cousin of
+   the toggle rows, for fields that are always visible */
+.wizard-field-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 560px;
+    padding: 5px 0;
+}
+
+.wizard-field-row > label {
+    flex: 0 0 auto;
+    width: 7em;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--wizard-text);
+}
+
+.wizard-field-row input[type="text"] {
+    flex: 1;
+    box-sizing: border-box;
+    height: 24px;
+    padding: 0 10px;
+    border: 1px solid var(--wizard-border-strong);
+    border-radius: 3px;
+    font-size: 13px;
+}
+
+.wizard-field-row select {
+    height: 24px;
+    padding: 0 6px;
+    border: 1px solid var(--wizard-border-strong);
+    border-radius: 3px;
+    font-size: 12.5px;
+    background: #fff;
+}
+
+.wizard-field-hint {
+    font-size: 11px;
+    color: var(--wizard-text-faint);
+    white-space: nowrap;
+}
+
+/* Inside an unfolded choice card the rows read as details of the pick -
+   tighter and softer than the page-level rows above */
+.wizard-choice-body .wizard-field-row {
+    padding: 3px 0;
+}
+
+.wizard-choice-body .wizard-field-row > label {
+    width: 8em;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--wizard-text-muted);
+}
+
+/* min-width lets the flex basis win over the input's intrinsic size */
+.wizard-choice-body .wizard-field-row input[type="text"] {
+    flex: 0 1 180px;
+    min-width: 0;
+}
+
+/* ------------------------------------------------------------ */
 /* Wizard - toggle rows                                          */
 /* ------------------------------------------------------------ */
 
@@ -624,6 +690,16 @@ a.wizard-toggle-edit {
     color: var(--wizard-text-muted);
 }
 
+/* File names and suffixes quoted inside descriptions and hints */
+.wizard-choice-desc code,
+.wizard-section-hint code {
+    padding: 0 3px;
+    font-family: 'Ubuntu Mono', 'DejaVu Sans Mono', 'Menlo', 'Consolas', monospace;
+    font-size: 11px;
+    background: rgba(0, 0, 0, 0.045);
+    border-radius: 3px;
+}
+
 /* Only the selected card shows its body with the inline fields */
 .wizard-choice-body {
     display: none;
@@ -685,6 +761,15 @@ a.wizard-toggle-edit {
 
 .wizard-review-value {
     color: var(--wizard-text);
+}
+
+/* A review value carrying a path or a pattern wears the inline code look */
+.wizard-review-code {
+    padding: 1px 5px;
+    font-family: 'Ubuntu Mono', 'DejaVu Sans Mono', 'Menlo', 'Consolas', monospace;
+    font-size: 12.5px;
+    background: rgba(0, 0, 0, 0.045);
+    border-radius: 3px;
 }
 
 /* ------------------------------------------------------------ */

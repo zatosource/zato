@@ -51,6 +51,7 @@ from zato.admin.web.views.outgoing import llm as out_llm
 from zato.admin.web.views.outgoing import mongodb as out_mongodb
 from zato.admin.web.views.outgoing import odata as out_odata
 from zato.admin.web.views.outgoing import odoo as out_odoo
+from zato.admin.web.views.outgoing import file_transfer_schedule as out_file_transfer_schedule
 from zato.admin.web.views.outgoing import sftp as out_sftp
 from zato.admin.web.views.outgoing import smb as out_smb
 from zato.admin.web.views.outgoing import soap as out_soap
@@ -700,6 +701,12 @@ urlpatterns += [
         login_required(out_sftp.command_shell), name='out-sftp-command-shell'),
     url(r'^zato/outgoing/sftp/command-shell-action/(?P<id>.*)/cluster/(?P<cluster_id>.*)/(?P<name_slug>.*)/$',
         login_required(out_sftp.command_shell_action), name='out-sftp-command-shell-action'),
+    url(r'^zato/outgoing/sftp/schedules/(?P<conn_id>.*)/cluster/(?P<cluster_id>.*)/(?P<name_slug>.*)/$',
+        login_required(out_file_transfer_schedule.sftp_schedules), name='out-sftp-schedules'),
+    url(r'^zato/outgoing/sftp/schedule-wizard/(?P<conn_id>.*)/cluster/(?P<cluster_id>.*)/(?P<name_slug>.*)/$',
+        login_required(out_file_transfer_schedule.sftp_schedule_wizard_create), name='out-sftp-schedule-wizard-create'),
+    url(r'^zato/outgoing/sftp/schedule/create/$',
+        login_required(out_file_transfer_schedule.sftp_schedule_create_action), name='out-sftp-schedule-create'),
     ]
 
 # ################################################################################################################################
