@@ -1,0 +1,106 @@
+{% extends "zato/index.html" %}
+
+{% comment %}
+The list of file transfer schedules of one connection - each row is one
+recurring pickup task created through the schedule wizard. The view provides:
+
+* conn_id        - the connection the schedules belong to
+* conn_name      - its name
+* name_slug      - its name slugified, for links to the wizard
+* transfer_label - the connection type, e.g. SFTP
+* items          - the schedules themselves
+{% endcomment %}
+
+{% block html_title %}File transfer schedules{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    {% comment %} Common JS {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+
+    {% comment %} File transfer schedules {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/file-transfer-schedules.js"></script>
+
+{% endblock %}
+
+{% block "content" %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+    <div id="markup">
+        <h2 class="zato">File transfer schedules of {{ transfer_label }} connection `{{ conn_name }}`</h2>
+
+        <div class='page_prompt'>
+            <a href="{% url "out-sftp-schedule-wizard-create" conn_id cluster_id name_slug %}?name={{ conn_name|urlencode:"" }}">Create a new schedule</a>
+            &nbsp;|&nbsp;
+            <a href="{% url "out-sftp" %}?cluster={{ cluster_id }}&type_=outconn-sftp">Back to the connection list</a>
+        </div>
+
+        <table class="zato-table" id="data-table">
+            <thead>
+                <tr class='ignore'>
+                    <th>&nbsp;</th>
+                    <th>&nbsp;</th>
+
+                    {% comment %} 1 {% endcomment %}
+                    <th><a href="#">Name</a></th>
+                    <th><a href="#">Active</a></th>
+                    <th><a href="#">Directory</a></th>
+                    <th><a href="#">File pattern</a></th>
+
+                    {% comment %} 2 {% endcomment %}
+                    <th><a href="#">A file is ready</a></th>
+                    <th><a href="#">Service</a></th>
+                    <th><a href="#">Runs</a></th>
+
+                    {% comment %} 3 {% endcomment %}
+                    <th>&nbsp;</th>
+                    <th>&nbsp;</th>
+
+                </tr>
+            </thead>
+
+            <tbody>
+            {% if items %}
+                {% for item in items %}
+                <tr id='tr_{{ item.name }}'>
+                    <td class='numbering'>&nbsp;</td>
+                    <td class="impexp"><input type="checkbox" /></td>
+
+                    {% comment %} 1 {% endcomment %}
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                    <td>{{ item.directory }}</td>
+                    <td>{{ item.pattern }}</td>
+
+                    {% comment %} 2 {% endcomment %}
+                    <td>{{ item.ready }}</td>
+                    <td>{{ item.service }}</td>
+                    <td>{{ item.run_every }}</td>
+
+                    {% comment %} 3 {% endcomment %}
+                    <td><a href="{% url "out-sftp-schedule-wizard-create" conn_id cluster_id name_slug %}?name={{ conn_name|urlencode:"" }}&schedule={{ item.name|urlencode:"" }}">Edit</a></td>
+                    <td><a href="javascript:$.fn.zato.outgoing.file_transfer.schedules.delete_('{{ item.name }}')">Delete</a></td>
+
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr class='ignore'>
+                    <td colspan='11'>No schedules yet - create the first one above</td>
+                </tr>
+            {% endif %}
+
+            </tbody>
+        </table>
+
+    </div>
+
+{% endblock %}

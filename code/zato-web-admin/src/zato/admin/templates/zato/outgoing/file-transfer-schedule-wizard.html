@@ -1,0 +1,271 @@
+{% extends "zato/dashboard_base.html" %}
+
+{% comment %}
+Multi-step wizard for creating a new file transfer schedule - three steps.
+The schedule tells the platform how often to look into a directory of one
+SFTP connection, when a file counts as ready, which service handles it and
+what happens to the file afterwards. The generic machinery and look come
+from the wizard kit. The view provides:
+
+* cluster_id     - the current cluster
+* conn_id        - the connection the schedule belongs to
+* conn_name      - its name, shown in the context badge
+* name_slug      - its name slugified, for links back to the list
+* transfer_label - the connection type shown in the context badge, e.g. SFTP
+* form           - CreateForm, its fields carry all the defaults
+{% endcomment %}
+
+{% block html_title %}File transfer schedule - Create a new schedule{% endblock %}
+
+{% block dashboard_extra_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/settings.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
+<link rel="stylesheet" type="text/css" href="/static/css/jquery.ui.timepicker.addon.css">
+<link rel="stylesheet" type="text/css" href="/static/css/outgoing/file-transfer-schedule-wizard.css">
+{% endblock %}
+
+{% block dashboard_domain_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.ui.timepicker.addon.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/core.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/forms.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/review.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/choices.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/file-transfer-schedule-descriptions.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/file-transfer-schedule-wizard.js"></script>
+
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.outgoing.file_transfer.wizard.init({
+        list_url: '{% url "out-sftp-schedules" conn_id cluster_id name_slug %}?name={{ conn_name|urlencode:"" }}'
+    });
+});
+</script>
+{% endblock %}
+
+{% block dashboard_tiles %}{% endblock %}
+{% block dashboard_header_pill %}{% endblock %}
+{% block dashboard_chart_header_content %}{% endblock %}
+{% block dashboard_time_range_options %}{% endblock %}
+{% block dashboard_refresh_options %}{% endblock %}
+
+{% block dashboard_grid %}
+
+        <div id="user-message-div" style="display:none"><pre id="user-message" class="user-message"></pre></div>
+
+        <div class="dashboard-card wizard-card" id="file-transfer-wizard">
+
+            <div class="dashboard-card-header">
+                <!-- The label makes the title a regular "How does it work?"
+                     stop - clicking it shows the wizard-wide overview -->
+                <h3 id="file-transfer-wizard-title"><label for="file-transfer-wizard-title">New file transfer schedule</label></h3>
+                <span class="wizard-badge wizard-name-badge" id="file-transfer-wizard-name-badge" hidden></span>
+                <span class="wizard-badge wizard-badge-context" id="file-transfer-wizard-context-badge">{{ transfer_label }} &middot; {{ conn_name }}</span>
+            </div>
+
+            <form novalidate action="{% url "out-sftp-schedule-create" %}" method="post" id="create-form">
+
+                <!-- The step strip wears the shared dashboard tabs chrome - the tabs
+                     show progress, the walking itself happens through Next and Back -->
+                <div class="dashboard-tabs wizard-steps" id="file-transfer-wizard-steps" role="tablist" aria-label="Wizard steps">
+                    <button type="button" class="dashboard-tab wizard-step wizard-step-active dashboard-tab-active" data-step="0" role="tab" aria-selected="true">
+                        <span class="wizard-step-num">01</span>
+                        <span class="dashboard-tab-label">What to pick up?</span>
+                    </button>
+                    <button type="button" class="dashboard-tab wizard-step" data-step="1" role="tab" aria-selected="false">
+                        <span class="wizard-step-num">02</span>
+                        <span class="dashboard-tab-label">What happens next?</span>
+                    </button>
+                    <button type="button" class="dashboard-tab wizard-step" data-step="2" role="tab" aria-selected="false">
+                        <span class="wizard-step-num">03</span>
+                        <span class="dashboard-tab-label">Review and go</span>
+                    </button>
+                </div>
+
+                <!-- Step 1 - name, directory and readiness -->
+                <div class="wizard-step-body" id="file-transfer-wizard-step-body-0">
+
+                    <div class="wizard-name-row">
+                        <div class="wizard-name-field">
+                            <label for="id_name">Name</label>
+                            {{ form.name }}
+                        </div>
+                        <label class="wizard-active-field" for="id_is_active" data-help-placement="top">
+                            Active
+                            {{ form.is_active }}
+                        </label>
+                    </div>
+
+                    <div class="wizard-section">
+                        <div class="wizard-section-title">Where to look</div>
+                        <div class="wizard-field-row">
+                            <label for="id_directory">Directory</label>
+                            {{ form.directory }}
+                        </div>
+                        <div class="wizard-field-row">
+                            <label for="id_pattern">File pattern</label>
+                            {{ form.pattern }}
+                            <span class="wizard-field-hint">e.g. *.csv or report-*.xml</span>
+                        </div>
+                    </div>
+
+                    <div class="wizard-section">
+                        <div class="wizard-section-title" id="file-transfer-wizard-ready-title"><label for="file-transfer-wizard-ready-title">When is a file ready?</label></div>
+                        <div class="wizard-section-hint">A file being uploaded by the other side must not be picked up halfway through.</div>
+
+                        <div class="wizard-choice-card wizard-choice-card-selected" data-choice-group="ready" data-choice-id="stability">
+                            <div class="wizard-choice-header">
+                                <span class="wizard-choice-radio"></span>
+                                <span class="wizard-choice-label">When it stops changing</span>
+                                <span class="wizard-choice-summary" id="file-transfer-wizard-summary-stability"></span>
+                            </div>
+                            <div class="wizard-choice-desc">
+                                The file is looked at twice - if its size and modification time
+                                did not change in between, the upload is taken to be complete.
+                            </div>
+                            <div class="wizard-choice-body">
+                                <div class="wizard-field-row">
+                                    <label for="id_stability_check_gap">Check gap</label>
+                                    {{ form.stability_check_gap }}
+                                    <span class="wizard-field-hint">seconds between the two looks</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wizard-choice-card" data-choice-group="ready" data-choice-id="marker">
+                            <div class="wizard-choice-header">
+                                <span class="wizard-choice-radio"></span>
+                                <span class="wizard-choice-label">When a marker file appears</span>
+                                <span class="wizard-choice-summary" id="file-transfer-wizard-summary-marker"></span>
+                            </div>
+                            <div class="wizard-choice-desc">
+                                The sender confirms an upload by placing a second, empty file next to it -
+                                <code>invoices.csv</code> is only picked up once <code>invoices.csv.done</code> exists.
+                                The marker is removed together with the file.
+                            </div>
+                            <div class="wizard-choice-body">
+                                <div class="wizard-field-row">
+                                    <label for="id_marker_suffix">Marker suffix</label>
+                                    {{ form.marker_suffix }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="wizard-section">
+                        <div class="wizard-section-title">Competing consumers</div>
+                        <div class="wizard-claim-row">
+                            <label class="wizard-active-field" for="id_should_claim" data-help-placement="top">
+                                {{ form.should_claim }}
+                                Claim each file before processing
+                            </label>
+                        </div>
+                        <div class="wizard-section-hint file-transfer-wizard-claim-hint">
+                            The file is renamed to <code>name.processing</code> first, so that another environment
+                            watching the same directory never takes the same file. Leave off when this platform
+                            is the only consumer.
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Step 2 - service, post-processing and the schedule -->
+                <div class="wizard-step-body" id="file-transfer-wizard-step-body-1" hidden>
+
+                    <div class="wizard-section">
+                        <div class="wizard-section-title"><label for="id_scheduler_service">Service</label></div>
+                        <div class="wizard-section-hint">Invoked once per each file received, with the file's data and metadata on input.</div>
+                        <div class="wizard-service-row" id="file-transfer-wizard-service-row">
+                            {{ form.scheduler_service }}
+                        </div>
+                    </div>
+
+                    <div class="wizard-section">
+                        <div class="wizard-section-title" id="file-transfer-wizard-success-title"><label for="file-transfer-wizard-success-title">After a file is processed</label></div>
+
+                        <div class="wizard-choice-card wizard-choice-card-selected" data-choice-group="success" data-choice-id="move">
+                            <div class="wizard-choice-header">
+                                <span class="wizard-choice-radio"></span>
+                                <span class="wizard-choice-label">Move it away</span>
+                                <span class="wizard-choice-summary" id="file-transfer-wizard-summary-move"></span>
+                            </div>
+                            <div class="wizard-choice-desc">
+                                The file is moved into a subdirectory of the watched directory, so it is never
+                                picked up twice and stays available for audits. If the service fails, the file
+                                stays in place and is retried on the next run - no file is ever lost.
+                            </div>
+                            <div class="wizard-choice-body">
+                                <div class="wizard-field-row">
+                                    <label for="id_move_directory">Directory</label>
+                                    {{ form.move_directory }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wizard-choice-card" data-choice-group="success" data-choice-id="delete">
+                            <div class="wizard-choice-header">
+                                <span class="wizard-choice-radio"></span>
+                                <span class="wizard-choice-label">Delete it</span>
+                                <span class="wizard-choice-summary"></span>
+                            </div>
+                            <div class="wizard-choice-desc">
+                                The file is removed once the service has finished with it. Choose this when
+                                the remote side has limited space or keeps its own copies.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="wizard-section">
+                        <div class="wizard-section-title">How often to look</div>
+                        <div class="wizard-field-row file-transfer-wizard-run-every-row">
+                            <label for="id_run_every">Run every</label>
+                            {{ form.run_every }}
+                            {{ form.run_unit }}
+                        </div>
+                        <div class="wizard-field-row file-transfer-wizard-start-date-row">
+                            <label for="id_start_date">Start time</label>
+                            {{ form.start_date }}
+                            <span class="wizard-field-hint">in your own timezone</span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Step 3 - review -->
+                <div class="wizard-step-body" id="file-transfer-wizard-step-body-2" hidden>
+                    <div class="wizard-review" id="file-transfer-wizard-review"></div>
+                </div>
+
+                <!-- Help on the left, Back and Next in the middle, Cancel on the right -->
+                <div class="wizard-footer">
+                    <span class="how-it-works-badge" id="file-transfer-wizard-how-it-works">How does it work?</span>
+                    <div class="wizard-footer-center">
+                        <button type="button" class="secondary-button" id="file-transfer-wizard-back">Back</button>
+                        <button type="button" class="action-button" id="file-transfer-wizard-next">Next</button>
+                    </div>
+                    <div class="wizard-footer-right">
+                        <span class="wizard-status" id="file-transfer-wizard-status"></span>
+                        <button type="button" class="secondary-button wizard-cancel" id="file-transfer-wizard-cancel">Cancel</button>
+                    </div>
+                </div>
+
+                <!-- Fields written by the choice cards - never shown directly -->
+                <div class="wizard-hidden-fields" hidden>
+                    {{ form.ready_mode }}
+                    {{ form.on_success }}
+                </div>
+
+                <input type="hidden" id="id_cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                <input type="hidden" id="id_conn_id" name="conn_id" value="{{ conn_id }}" />
+
+                <!-- The date-time picker reads the user profile's formats from here -->
+                <input type="hidden" id="js_date_format" value="{{ js_date_format }}" />
+                <input type="hidden" id="js_time_format" value="{{ js_time_format }}" />
+                <input type="hidden" id="js_ampm" value="{{ js_ampm }}" />
+            </form>
+
+        </div>
+
+{% endblock %}
