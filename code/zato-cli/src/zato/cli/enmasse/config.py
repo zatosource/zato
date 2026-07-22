@@ -169,5 +169,13 @@ class ModuleCtx:
     ObjectType  = _object_type
     ObjectAlias = _object_alias
 
+    # Top-level YAML keys with this prefix are definitions of custom connector types
+    # built with the Connector SDK, e.g. custom_crm holds definitions of the crm type.
+    Custom_Key_Prefix = 'custom_'
+
+    # The prefix that turns a custom connector's short type name into its full connection type,
+    # e.g. crm becomes outconn-crm. It matches the prefix the server gives to SDK connector types.
+    Custom_Type_Prefix = 'outconn-'
+
 # ################################################################################################################################
 # ################################################################################################################################

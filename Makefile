@@ -731,6 +731,11 @@ test-sdk: ## Connector SDK tests through a live Zato server against a suite-owne
 		$(CURDIR)/code/tests/python/zato-server/sdk_live/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_sdk_live -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
+	$(ZATO_PY) -m pytest \
+		$(CURDIR)/code/zato-cli/test/zato/enmasse_/importers/test_importer_enmasse_custom.py \
+		$(CURDIR)/code/zato-cli/test/zato/enmasse_/exporters/test_exporter_enmasse_custom.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_sdk_enmasse -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-sql-cloud-live: ## Snowflake and Redshift tests through a live Zato server against local protocol simulators.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \

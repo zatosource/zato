@@ -13,6 +13,7 @@ import uuid
 from json import dumps as json_dumps, loads as json_loads
 
 # Zato
+from zato.cli.enmasse.config import ModuleCtx
 from zato.common.api import HTTP_SOAP, SCHEDULER, SchedulerLink, URL_TYPE
 from zato.common.odb.model import Job
 from zato.common.util.api import asbool
@@ -26,7 +27,7 @@ if 0:
     from sqlalchemy.orm.session import Session as SASession
     from zato.cli.enmasse.importer import EnmasseYAMLImporter
     from zato.common.odb.model import HTTPSOAP
-    from zato.common.typing_ import any_, anydict, bool_, strdict, strlist
+    from zato.common.typing_ import any_, anydict, anylist, bool_, strdict, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -554,6 +555,26 @@ def get_top_level_order() -> 'strlist':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def get_custom_object_order(items:'anylist') -> 'strlist':
+    """ Builds the field order for a custom connector section - the name and the active flag
+    come first and the declared fields follow, sorted by name across all the section's items.
+    """
+    field_names = set()
+
+    for item in items:
+        field_names.update(item)
+
+    _ = field_names.discard('name')
+    _ = field_names.discard('is_active')
+
+    out = ['name', 'is_active']
+    out.extend(sorted(field_names))
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def get_object_order(object_type:'str') -> 'strlist':
 
     order = {}
@@ -799,6 +820,10 @@ class FileWriter:
 
         top_level = get_top_level_order()
 
+        # Custom connector sections are dynamic, so any of them present on input goes last, in a stable order.
+        custom_keys = sorted(key for key in data_dict if key.startswith(ModuleCtx.Custom_Key_Prefix))
+        top_level.extend(custom_keys)
+
         with open(self.path, 'w') as f:
 
             previous_had_data = False
@@ -811,8 +836,12 @@ class FileWriter:
                     _ = f.write(f'\n{element}:\n')
                     previous_had_data = True
 
-                    # Get the field order dictionary
-                    fields = get_object_order(element)
+                    # Get the field order dictionary - custom connector sections build theirs
+                    # from the fields their items actually carry.
+                    if element.startswith(ModuleCtx.Custom_Key_Prefix):
+                        fields = get_custom_object_order(data_dict[element])
+                    else:
+                        fields = get_object_order(element)
 
                     # Process each item in the data
                     for item in data_dict[element]:

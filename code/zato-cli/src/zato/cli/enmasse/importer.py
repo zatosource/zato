@@ -43,6 +43,7 @@ from zato.cli.enmasse.importers.ibm_mq import ChannelIBMMQImporter, OutgoingIBMM
 from zato.cli.enmasse.importers.kafka import ChannelKafkaImporter, OutgoingKafkaImporter
 from zato.cli.enmasse.importers.mcp import GatewayMCPImporter
 from zato.cli.enmasse.importers.as2 import AS2Importer
+from zato.cli.enmasse.importers.custom import CustomConnectorImporter
 from zato.cli.enmasse.importers.ldap import LDAPImporter
 from zato.cli.enmasse.importers.llm import LLMImporter
 from zato.cli.enmasse.importers.microsoft_cloud import MicrosoftCloudImporter
@@ -220,6 +221,9 @@ class EnmasseYAMLImporter:
         self.pubsub_permission_importer = PubSubPermissionImporter(self)
         self.pubsub_subscription_importer = PubSubSubscriptionImporter(self)
         self.channel_openapi_importer = ChannelOpenAPIImporter(self)
+
+        # Importers for custom connector types are built on demand, one per top-level custom_ key.
+        self.custom_importers = {}
 
 # ################################################################################################################################
 
@@ -1347,6 +1351,29 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
+    def sync_custom_connectors(self, yaml_key:'str', conn_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes definitions of one custom connector type, e.g. custom_crm, with the database.
+        """
+        if not conn_list:
+            return [], []
+
+        count = len(conn_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} custom connector {noun} ({yaml_key})')
+
+        # Build the importer for this connector type if the key is seen for the first time.
+        if yaml_key not in self.custom_importers:
+            self.custom_importers[yaml_key] = CustomConnectorImporter(self, yaml_key)
+
+        custom_importer = self.custom_importers[yaml_key]
+        created, updated = custom_importer.sync_definitions(conn_list, session)
+
+        logger.info('Processed custom connector definitions (%s): created=%d updated=%d', yaml_key, len(created), len(updated))
+
+        return created, updated
+
+# ################################################################################################################################
+
     def sync_channel_openapi(self, channel_list:'list', session:'SASession') -> 'tuple':
         """ Synchronizes OpenAPI channel definitions from a YAML configuration with the database.
         """
@@ -1784,6 +1811,16 @@ class EnmasseYAMLImporter:
             self.created_objects['channel_openapi'] = channel_openapi_created
         if channel_openapi_updated:
             self.updated_objects['channel_openapi'] = channel_openapi_updated
+
+        # Process custom connector definitions - each top-level key with the custom_ prefix
+        # holds the definitions of one connector type built with the Connector SDK.
+        for yaml_key in sorted(yaml_config):
+            if yaml_key.startswith(ModuleCtx.Custom_Key_Prefix):
+                custom_created, custom_updated = self.sync_custom_connectors(yaml_key, yaml_config[yaml_key], session)
+                if custom_created:
+                    self.created_objects[yaml_key] = custom_created
+                if custom_updated:
+                    self.updated_objects[yaml_key] = custom_updated
 
         logger.info('YAML synchronization completed')
 

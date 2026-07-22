@@ -9,8 +9,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
+import subprocess
+import tempfile
 import time
 from base64 import b64encode
+
+# PyYAML
+import yaml
 
 # Zato
 from zato.common.crypto.api import CryptoManager
@@ -40,9 +45,13 @@ _customer_id = 'CUST-1001'
 
 _api_key = 'api.key.' + CryptoManager.generate_hex_string()
 _api_key_after_edit = 'api.key.' + CryptoManager.generate_hex_string()
+_api_key_enmasse = 'api.key.' + CryptoManager.generate_hex_string()
 
 _wait_timeout = 60
 _poll_interval = 0.5
+_enmasse_timeout = 180
+
+_zato_bin = os.path.join(os.environ['ZATO_TEST_BASE_DIR'], 'code', 'bin', 'zato')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -264,6 +273,79 @@ def test_delete_definition(zato_server:'stranydict') -> 'None':
             return False
 
     _ = _wait_for(_is_gone, f'connection {_conn_name} to be deleted')
+
+# ################################################################################################################################
+
+def _run_enmasse(arguments:'list', zato_server:'stranydict') -> 'None':
+    """ Runs the enmasse command against the suite's server, raising an exception if it fails.
+    """
+    command = [_zato_bin, 'enmasse', zato_server['server_directory']] + arguments + ['--verbose']
+
+    result = subprocess.run(command, capture_output=True, text=True, timeout=_enmasse_timeout)
+    if result.returncode != 0:
+        raise Exception(f'enmasse failed:\nstdout: {result.stdout}\nstderr: {result.stderr}')
+
+# ################################################################################################################################
+
+def test_enmasse_import_starts_connection(zato_server:'stranydict') -> 'None':
+    """ Importing a custom_crm definition with enmasse creates the connection on the live server
+    and services can use it right away, with no restarts.
+    """
+    yaml_content = f"""
+custom_crm:
+  - name: {_conn_name}
+    host: 127.0.0.1
+    port: {zato_server['echo_port']}
+    api_key: {_api_key_enmasse}
+"""
+
+    import_file = tempfile.NamedTemporaryFile(delete=False, suffix='.yaml', mode='w')
+    _ = import_file.write(yaml_content)
+    import_file.close()
+
+    try:
+        # The import writes the definition to the database and reloads the server's configuration.
+        _run_enmasse(['--import', '--input', import_file.name], zato_server)
+    finally:
+        os.unlink(import_file.name)
+
+    # The service reaches the connection the import created, proving the whole chain works -
+    # the YAML key became the connection type and the declared fields reached the connector.
+    client = _get_client(zato_server)
+
+    def _uses_enmasse_key() -> 'bool':
+        response = client.invoke(_service_name, {'customer_id': _customer_id})
+        out = response['response'] == f'{_api_key_enmasse} get-customer {_customer_id}'
+        return out
+
+    _ = _wait_for(_uses_enmasse_key, 'the enmasse-imported connection to answer')
+
+# ################################################################################################################################
+
+def test_enmasse_export_round_trip(zato_server:'stranydict') -> 'None':
+    """ Exporting with enmasse returns the definition under its custom_crm key with the fields intact.
+    """
+    export_file = tempfile.NamedTemporaryFile(delete=False, suffix='.yaml')
+    export_file.close()
+
+    try:
+        _run_enmasse(['--export', '--output', export_file.name, '--include-type', 'custom_crm'], zato_server)
+
+        with open(export_file.name, 'r') as f:
+            exported = yaml.safe_load(f.read())
+    finally:
+        os.unlink(export_file.name)
+
+    # The definition is under its own top-level key ..
+    items = exported['custom_crm']
+    assert len(items) == 1
+
+    # .. and the fields the YAML carried on import survived the round trip.
+    item = items[0]
+    assert item['name'] == _conn_name
+    assert item['host'] == '127.0.0.1'
+    assert item['port'] == zato_server['echo_port']
+    assert item['api_key'] == _api_key_enmasse
 
 # ################################################################################################################################
 # ################################################################################################################################
