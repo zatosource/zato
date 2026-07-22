@@ -81,6 +81,10 @@
             'health_check_callback_type',
             'health_check_callback_name',
             'is_audit_log_active',
+            'max_retries',
+            'retry_sleep_time',
+            'retry_backoff_threshold',
+            'retry_backoff_multiplier',
         ]
     }
     </script>
@@ -175,6 +179,12 @@
 
                         <th class='ignore'>&nbsp;</th> {% comment %} is_audit_log_active {% endcomment %}
 
+                        {% comment %} Retry config fields {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
                 </thead>
 
                 <tbody>
@@ -260,6 +270,12 @@
 
                         <td class='ignore'>{{ item.is_audit_log_active }}</td>
 
+                        {% comment %} Retry config fields {% endcomment %}
+                        <td class='ignore'>{{ item.max_retries }}</td>
+                        <td class='ignore'>{{ item.retry_sleep_time }}</td>
+                        <td class='ignore'>{{ item.retry_backoff_threshold }}</td>
+                        <td class='ignore'>{{ item.retry_backoff_multiplier }}</td>
+
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -332,6 +348,22 @@
                             <tr class="more-options-block hidden">
                                 <td><label for="id_content_type">Content type</label></td>
                                 <td>{{ create_form.content_type }}</td>
+                            </tr>
+                            <tr class="more-options-block hidden">
+                                <td><label for="id_max_retries">Max retries</label></td>
+                                <td>{{ create_form.max_retries }} <span class="form_hint">0 = no retries</span></td>
+                            </tr>
+                            <tr class="more-options-block hidden">
+                                <td><label for="id_retry_sleep_time">Retry sleep time</label></td>
+                                <td>{{ create_form.retry_sleep_time }} <span class="form_hint">seconds</span></td>
+                            </tr>
+                            <tr class="more-options-block hidden">
+                                <td><label for="id_retry_backoff_threshold">Retry backoff threshold</label></td>
+                                <td>{{ create_form.retry_backoff_threshold }} <span class="form_hint">seconds</span></td>
+                            </tr>
+                            <tr class="more-options-block hidden">
+                                <td><label for="id_retry_backoff_multiplier">Retry backoff multiplier</label></td>
+                                <td>{{ create_form.retry_backoff_multiplier }}</td>
                             </tr>
                         </table>
                     </div>
@@ -482,6 +514,22 @@
                             <tr class="more-options-block hidden">
                                 <td><label for="id_edit-content_type">Content type</label></td>
                                 <td>{{ edit_form.content_type }}</td>
+                            </tr>
+                            <tr class="more-options-block hidden">
+                                <td><label for="id_edit-max_retries">Max retries</label></td>
+                                <td>{{ edit_form.max_retries }} <span class="form_hint">0 = no retries</span></td>
+                            </tr>
+                            <tr class="more-options-block hidden">
+                                <td><label for="id_edit-retry_sleep_time">Retry sleep time</label></td>
+                                <td>{{ edit_form.retry_sleep_time }} <span class="form_hint">seconds</span></td>
+                            </tr>
+                            <tr class="more-options-block hidden">
+                                <td><label for="id_edit-retry_backoff_threshold">Retry backoff threshold</label></td>
+                                <td>{{ edit_form.retry_backoff_threshold }} <span class="form_hint">seconds</span></td>
+                            </tr>
+                            <tr class="more-options-block hidden">
+                                <td><label for="id_edit-retry_backoff_multiplier">Retry backoff multiplier</label></td>
+                                <td>{{ edit_form.retry_backoff_multiplier }}</td>
                             </tr>
                         </table>
                     </div>

@@ -15,7 +15,7 @@ from zato.admin.web.forms import add_http_soap_select, add_select_from_service
 from zato.admin.web.forms.outgoing.soap import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, extract_security_id, get_js_dt_format, id_only_service, \
     Index as _Index, method_allowed
-from zato.common.api import CONNECTION, SEC_DEF_TYPE_NAME, URL_TYPE, ZATO_NONE
+from zato.common.api import CONNECTION, HTTP_SOAP, SEC_DEF_TYPE_NAME, URL_TYPE, ZATO_NONE
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,6 +45,16 @@ _invocation_field_names = (
     'health_check_callback_type',
     'health_check_callback_name',
 )
+
+# The retry config of an outgoing connection - each field maps to its shared default
+_retry = HTTP_SOAP.Retry
+
+_retry_field_defaults = {
+    _retry.Field_Max_Retries: _retry.Default_Max_Retries,
+    _retry.Field_Sleep_Time: _retry.Default_Sleep_Time,
+    _retry.Field_Backoff_Threshold: _retry.Default_Backoff_Threshold,
+    _retry.Field_Backoff_Multiplier: _retry.Default_Backoff_Multiplier,
+}
 
 # The callback name arrives from the widget that matches the callback type selected
 _callback_widget_names = {
@@ -90,7 +100,7 @@ class Index(_Index):
     output_optional = ('host', 'url_path', 'soap_action', 'soap_version', 'security_id', 'security_name', 'sec_type', \
         'sec_type_name', 'validate_tls', 'ping_method', 'timeout', 'content_type', 'serialization_type', \
         'use_ws_addressing', 'use_mtom', 'body_credentials', 'tls_client_cert', 'tls_client_key', \
-        'is_audit_log_active') + _invocation_field_names
+        'is_audit_log_active') + _invocation_field_names + tuple(_retry_field_defaults)
     output_repeated = True
 
 # ################################################################################################################################
@@ -102,6 +112,13 @@ class Index(_Index):
 
         if security_id and security_id != ZATO_NONE:
             item.sec_type_name = SEC_DEF_TYPE_NAME[item.sec_type]
+
+        # The retry fields are opaque attributes - connections that predate them
+        # carry no values, in which case the shared defaults are displayed.
+        for name, default in _retry_field_defaults.items():
+            value = getattr(item, name, None)
+            if value is None:
+                setattr(item, name, default)
 
         # The start date is stored in UTC and displayed in the user's own timezone and format,
         # and only connections with a scheduler configured carry it at all.
@@ -152,7 +169,7 @@ class _CreateEdit(CreateEdit):
     input_optional = ('is_active', 'is_audit_log_active', 'url_path', 'soap_action', 'soap_version', 'security_id', \
         'validate_tls', 'ping_method', 'timeout', 'content_type', 'serialization_type', \
         'use_ws_addressing', 'use_mtom', 'body_credentials', 'tls_client_cert', 'tls_client_key') + \
-        _invocation_field_names + ('callback_service', 'callback_topic', 'callback_rest') + \
+        _invocation_field_names + tuple(_retry_field_defaults) + ('callback_service', 'callback_topic', 'callback_rest') + \
         ('health_check_callback_service', 'health_check_callback_topic', 'health_check_callback_rest')
     output_required = 'id', 'name'
 
@@ -179,6 +196,14 @@ class _CreateEdit(CreateEdit):
         # Checkboxes arrive as 'on' or not at all - the backend expects real booleans.
         for name in ('use_ws_addressing', 'use_mtom', 'is_audit_log_active'):
             input_dict[name] = bool(input_dict.get(name))
+
+        # The retry fields arrive as strings and the backend expects integers,
+        # with the shared defaults filling in for anything left empty in a form.
+        for name, default in _retry_field_defaults.items():
+            if value := input_dict.get(name):
+                input_dict[name] = int(value)
+            else:
+                input_dict[name] = default
 
         # The callback name comes from whichever widget matches the callback type selected
         if callback_type := input_dict.get('callback_type'):

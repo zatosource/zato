@@ -625,6 +625,11 @@ class ConfigManager(_ConfigManagerBase):
         for field_name in HTTP_SOAP.Invocation.FieldList:
             wrapper_config[field_name] = config.get(field_name)
 
+        # The retry config - also opaque attributes, absent from connections that never set them,
+        # in which case the wrapper falls back to the shared defaults at invocation time.
+        for field_name in HTTP_SOAP.Retry.FieldList:
+            wrapper_config[field_name] = config.get(field_name)
+
         wrapper_config.update(sec_config)
 
         # A WS-Security definition carries its whole mode-specific configuration - the wrapper

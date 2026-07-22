@@ -10,7 +10,7 @@ import logging
 from json import loads
 
 # Zato
-from zato.cli.enmasse.util import export_invocation_fields, Invocation_Fields_REST
+from zato.cli.enmasse.util import export_invocation_fields, export_retry_fields, Invocation_Fields_REST
 from zato.common.api import CONNECTION, URL_TYPE
 from zato.common.odb.model import to_json
 from zato.common.odb.query import http_soap_list
@@ -96,6 +96,9 @@ class OutgoingRESTExporter:
                 opaque = loads(opaque1) or {}
 
             export_invocation_fields(exported_conn, opaque, Invocation_Fields_REST)
+
+            # The retry config is exported only when it differs from the shared defaults
+            export_retry_fields(exported_conn, opaque)
 
             # The audit log is on by default so only the off state is exported
             if opaque.get('is_audit_log_active') is False:

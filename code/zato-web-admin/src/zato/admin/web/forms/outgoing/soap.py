@@ -12,7 +12,7 @@ from django import forms
 # Zato
 from zato.admin.web.forms import add_health_check_fields, add_security_select, add_services
 from zato.admin.web.forms.http_soap import callback_type_choices, response_map_mode_choices, scheduler_run_unit_choices
-from zato.common.api import DEFAULT_HTTP_PING_METHOD, MISC, SOAP_VERSIONS
+from zato.common.api import DEFAULT_HTTP_PING_METHOD, HTTP_SOAP, MISC, SOAP_VERSIONS
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -21,6 +21,8 @@ _validate_tls_choices = [
     (True, 'Yes'),
     (False, 'No'),
 ]
+
+_retry = HTTP_SOAP.Retry
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,6 +55,16 @@ class CreateForm(forms.Form):
     # More
     ping_method = forms.CharField(initial=DEFAULT_HTTP_PING_METHOD, widget=forms.TextInput(attrs={'style':'width:20%'}))
     content_type = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:40%'}))
+
+    # Retry config - how many times to retry a failed invocation and how long to sleep between attempts
+    max_retries = forms.CharField(
+        widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:10%'}), initial=_retry.Default_Max_Retries)
+    retry_sleep_time = forms.CharField(
+        widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:10%'}), initial=_retry.Default_Sleep_Time)
+    retry_backoff_threshold = forms.CharField(
+        widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:10%'}), initial=_retry.Default_Backoff_Threshold)
+    retry_backoff_multiplier = forms.CharField(
+        widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:10%'}), initial=_retry.Default_Backoff_Multiplier)
 
     serialization_type = forms.CharField(initial='string', widget=forms.HiddenInput())
 

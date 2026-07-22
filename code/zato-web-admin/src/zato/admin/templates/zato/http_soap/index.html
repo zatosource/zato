@@ -231,6 +231,14 @@
                 'health_check_callback_name',
             {% endif %}
 
+            // 41 - retry config for REST outgoing connections
+            {% if connection == 'outgoing' and transport == 'plain_http' %}
+                'max_retries',
+                'retry_sleep_time',
+                'retry_backoff_threshold',
+                'retry_backoff_multiplier',
+            {% endif %}
+
         ]
     }
     </script>
@@ -416,6 +424,14 @@
                             <th class='ignore'>&nbsp;</th> {% comment %} health_check_callback_name {% endcomment %}
                         {% endif %}
 
+                        <!-- 41 - retry config for REST outgoing connections -->
+                        {% if connection == 'outgoing' and transport == 'plain_http' %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} max_retries {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} retry_sleep_time {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} retry_backoff_threshold {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} retry_backoff_multiplier {% endcomment %}
+                        {% endif %}
+
                 </thead>
 
                 <tbody>
@@ -581,6 +597,14 @@
                             <td class='ignore'>{{ item.health_check_job_id|default_if_none:"" }}</td>
                             <td class='ignore'>{{ item.health_check_callback_type|default_if_none:"" }}</td>
                             <td class='ignore'>{{ item.health_check_callback_name|default_if_none:"" }}</td>
+                        {% endif %}
+
+                        <!-- 41 - retry config for REST outgoing connections -->
+                        {% if connection == 'outgoing' and transport == 'plain_http' %}
+                            <td class='ignore'>{{ item.max_retries }}</td>
+                            <td class='ignore'>{{ item.retry_sleep_time }}</td>
+                            <td class='ignore'>{{ item.retry_backoff_threshold }}</td>
+                            <td class='ignore'>{{ item.retry_backoff_multiplier }}</td>
                         {% endif %}
 
                     </tr>
@@ -849,6 +873,38 @@
                             <td style="vertical-align:middle"><label for="{{ create_form.validate_tls.id_for_label }}">Validate SSL/TLS</label></td>
                             <td>{{ create_form.validate_tls }}</td>
                         </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                            More options
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.more-options-block')">Toggle options</a>
+                            </td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td style="vertical-align:middle"><label for="{{ create_form.max_retries.id_for_label }}">Max retries</label>
+                            <br/>
+                            <span class="form_hint">0 = no retries</span>
+                            </td>
+                            <td>{{ create_form.max_retries }}</td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td style="vertical-align:middle"><label for="{{ create_form.retry_sleep_time.id_for_label }}">Retry sleep time (s)</label></td>
+                            <td>{{ create_form.retry_sleep_time }}</td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td style="vertical-align:middle"><label for="{{ create_form.retry_backoff_threshold.id_for_label }}">Retry backoff threshold (s)</label></td>
+                            <td>{{ create_form.retry_backoff_threshold }}</td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td style="vertical-align:middle"><label for="{{ create_form.retry_backoff_multiplier.id_for_label }}">Retry backoff multiplier</label></td>
+                            <td>{{ create_form.retry_backoff_multiplier }}</td>
+                        </tr>
                         {% endif %}
 
                         {% if connection != 'outgoing' or transport != 'plain_http' %}
@@ -1085,6 +1141,38 @@
                         <tr>
                             <td style="vertical-align:middle"><label for="{{ edit_form.validate_tls.id_for_label }}">Validate SSL/TLS</label></td>
                             <td>{{ edit_form.validate_tls }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                            More options
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.more-options-block')">Toggle options</a>
+                            </td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td style="vertical-align:middle"><label for="{{ edit_form.max_retries.id_for_label }}">Max retries</label>
+                            <br/>
+                            <span class="form_hint">0 = no retries</span>
+                            </td>
+                            <td>{{ edit_form.max_retries }}</td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td style="vertical-align:middle"><label for="{{ edit_form.retry_sleep_time.id_for_label }}">Retry sleep time (s)</label></td>
+                            <td>{{ edit_form.retry_sleep_time }}</td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td style="vertical-align:middle"><label for="{{ edit_form.retry_backoff_threshold.id_for_label }}">Retry backoff threshold (s)</label></td>
+                            <td>{{ edit_form.retry_backoff_threshold }}</td>
+                        </tr>
+
+                        <tr class="more-options-block hidden">
+                            <td style="vertical-align:middle"><label for="{{ edit_form.retry_backoff_multiplier.id_for_label }}">Retry backoff multiplier</label></td>
+                            <td>{{ edit_form.retry_backoff_multiplier }}</td>
                         </tr>
                         {% endif %}
 

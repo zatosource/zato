@@ -731,6 +731,34 @@ class HTTP_SOAP:
 
         FieldList = RequestFieldListREST + RequestFieldListSOAP + ResponseFieldList + CallbackFieldList + SchedulerFieldList
 
+    class Retry:
+        """ Retry config of outgoing REST and SOAP connections - how many times to retry a failed invocation
+        and how long to sleep between attempts. All the fields are stored in the connection's opaque attributes.
+        """
+
+        # Names of the fields, as stored in the opaque attributes and sent through enmasse
+        Field_Max_Retries = 'max_retries'
+        Field_Sleep_Time = 'retry_sleep_time'
+        Field_Backoff_Threshold = 'retry_backoff_threshold'
+        Field_Backoff_Multiplier = 'retry_backoff_multiplier'
+
+        # By default, there are no retries at all
+        Default_Max_Retries = 0
+
+        # How many seconds to sleep before the first retry
+        Default_Sleep_Time = 2
+
+        # A cap on the total sleep time across all the retries, in seconds
+        Default_Backoff_Threshold = 60
+
+        # Each retry sleeps this many times longer than the previous one
+        Default_Backoff_Multiplier = 2
+
+        # The longest single sleep between attempts, in seconds
+        Max_Sleep_Time = 8
+
+        FieldList = (Field_Max_Retries, Field_Sleep_Time, Field_Backoff_Threshold, Field_Backoff_Multiplier)
+
     class ResponseCache:
         """ Declarative response caching config of REST and SOAP channels - the whole block is stored
         in the channel's opaque attributes under the Opaque_Key name.

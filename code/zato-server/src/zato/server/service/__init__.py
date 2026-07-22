@@ -1438,10 +1438,13 @@ class RESTAdapter(Service):
     get_sec_def_name = None
     needs_raw_response = False
 
-    max_retries        = 0
-    retry_sleep_time   = 2
-    retry_backoff_threshold = 3
-    retry_backoff_multiplier = 2
+    # When these are None, the underlying connection's own retry config applies
+    # and, if the connection has none, the defaults from HTTP_SOAP.Retry do,
+    # e.g. max_retries = HTTP_SOAP.Retry.Default_Max_Retries, which is 0 (no retries).
+    max_retries        = None
+    retry_sleep_time   = None
+    retry_backoff_threshold = None
+    retry_backoff_multiplier = None
 
     has_query_string_id   = False
     query_string_id_param = None
@@ -1490,6 +1493,7 @@ class RESTAdapter(Service):
             max_retries=self.max_retries,
             retry_sleep_time=self.retry_sleep_time,
             retry_backoff_threshold=self.retry_backoff_threshold,
+            retry_backoff_multiplier=self.retry_backoff_multiplier,
         )
 
         if response is not None:
