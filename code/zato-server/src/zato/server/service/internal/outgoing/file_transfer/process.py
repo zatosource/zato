@@ -32,6 +32,15 @@ _scheduler = FileTransfer.Scheduler
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _get_file_name(entry:'any_') -> 'str':
+    """ Returns the base file name of a listing entry - SFTP listings return full paths
+    while SMB ones return base names, and everything downstream needs the base name.
+    """
+    out = entry.name.rsplit('/', 1)[-1]
+    return out
+
+# ################################################################################################################################
+
 def _get_candidates(schedule:'stranydict', entries:'anylist') -> 'anylist':
     """ Returns the listing entries that a schedule may pick up - files matching the pattern,
     leaving out claim files, marker files and, in marker mode, uploads whose marker has not arrived yet.
@@ -49,31 +58,33 @@ def _get_candidates(schedule:'stranydict', entries:'anylist') -> 'anylist':
     names:'strlist' = []
 
     for entry in entries:
-        names.append(entry.name)
+        names.append(_get_file_name(entry))
 
     for entry in entries:
+
+        file_name = _get_file_name(entry)
 
         # Only files are picked up, never directories or symlinks ..
         if not entry.is_file:
             continue
 
         # .. files claimed by any consumer are someone else's business ..
-        if entry.name.endswith(_scheduler.Claim_Suffix):
+        if file_name.endswith(_scheduler.Claim_Suffix):
             continue
 
         if is_marker_mode:
 
             # .. the markers themselves are never picked up ..
-            if entry.name.endswith(marker_suffix):
+            if file_name.endswith(marker_suffix):
                 continue
 
             # .. and an upload without its marker is not complete yet ..
-            marker_name = entry.name + marker_suffix
+            marker_name = file_name + marker_suffix
             if marker_name not in names:
                 continue
 
         # .. everything else must still match the schedule's pattern.
-        if not fnmatch(entry.name, pattern):
+        if not fnmatch(file_name, pattern):
             continue
 
         out.append(entry)
@@ -95,7 +106,7 @@ def _keep_stable_entries(conn:'any_', directory:'str', candidates:'anylist', sta
 
     for entry in candidates:
 
-        full_path = f'{directory}/{entry.name}'
+        full_path = f'{directory}/{_get_file_name(entry)}'
 
         # The file may be gone by now, e.g. another consumer took it
         try:
@@ -136,7 +147,8 @@ def _process_one_file(
     conn_name = context[_scheduler.Extra_Conn_Name]
     conn_type = context[_scheduler.Extra_Conn_Type]
 
-    full_path = f'{directory}/{entry.name}'
+    file_name = _get_file_name(entry)
+    full_path = f'{directory}/{file_name}'
 
     # The path the file is read from - it changes if the file is claimed first
     current_path = full_path
@@ -158,7 +170,7 @@ def _process_one_file(
         data = conn.read(current_path)
 
         # .. and hand it over to the target service, once per file.
-        item = FileTransferItem(conn_type, conn_name, schedule['name'], directory, entry.name, full_path,
+        item = FileTransferItem(conn_type, conn_name, schedule['name'], directory, file_name, full_path,
             entry.size, entry.last_modified_iso, data)
 
         _ = service.invoke(schedule['service'], item)
@@ -186,7 +198,7 @@ def _process_one_file(
         if not conn.exists(move_directory):
             _ = conn.create_directory(move_directory)
 
-        _ = conn.move(current_path, f'{move_directory}/{entry.name}')
+        _ = conn.move(current_path, f'{move_directory}/{file_name}')
 
     else:
         _ = conn.delete_file(current_path)

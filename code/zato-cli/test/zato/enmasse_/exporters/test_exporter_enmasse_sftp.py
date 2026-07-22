@@ -202,6 +202,84 @@ class TestEnmasseSFTPExporter(TestCase):
                     self.assertNotIn(self.sftp_server.password, value, 'Password must not appear in exported values')
 
 # ################################################################################################################################
+
+    def test_sftp_schedules_export(self):
+        """ Test that a connection's schedules round trip through import and export in their portable shape -
+        without database-specific fields and without options that match the defaults.
+        """
+        self._setup_test_environment()
+
+        # A connection with one schedule that overrides some options and leaves the rest at their defaults
+        conn_def = {
+            'name': ModuleCtx.Conn_Name,
+            'address': self.get_address(),
+            'username': self.sftp_server.username,
+            'private_key': ModuleCtx.Env_Key_Private_Key,
+            'schedules': [
+                {
+                    'name': 'invoices.hourly',
+                    'directory': '/incoming/invoices',
+                    'service': 'demo.ping',
+                    'run_every': 30,
+                    'run_unit': 'minutes',
+                    'pattern': '*.csv',
+                    'should_claim': True,
+                },
+            ],
+        }
+
+        # Import the connection along with its schedule ..
+        _ = self.importer.get_cluster(self.session)
+        created, _ = self.sftp_importer.sync_definitions([conn_def], self.session)
+        self.assertEqual(len(created), 1)
+
+        # .. and export everything back.
+        yaml_exporter = EnmasseYAMLExporter()
+        exported_data = yaml_exporter.export_to_dict(self.session)
+
+        exported_def = None
+        for item in exported_data['sftp']:
+            if item['name'] == ModuleCtx.Conn_Name:
+                exported_def = item
+                break
+
+        self.assertIsNotNone(exported_def)
+
+        # The schedule travels in its portable shape ..
+        schedules = exported_def['schedules']
+        self.assertEqual(len(schedules), 1)
+
+        schedule = schedules[0]
+
+        # .. with what was given on input ..
+        self.assertEqual(schedule['name'], 'invoices.hourly')
+        self.assertEqual(schedule['directory'], '/incoming/invoices')
+        self.assertEqual(schedule['service'], 'demo.ping')
+        self.assertEqual(schedule['run_every'], 30)
+        self.assertEqual(schedule['run_unit'], 'minutes')
+        self.assertEqual(schedule['pattern'], '*.csv')
+        self.assertTrue(schedule['should_claim'])
+
+        # .. without database-specific fields ..
+        self.assertNotIn('id', schedule)
+        self.assertNotIn('job_id', schedule)
+
+        # .. and without options left at their defaults.
+        self.assertNotIn('is_active', schedule)
+        self.assertNotIn('ready_how', schedule)
+        self.assertNotIn('stability_delay', schedule)
+        self.assertNotIn('marker_suffix', schedule)
+        self.assertNotIn('on_success', schedule)
+        self.assertNotIn('move_directory', schedule)
+
+        # The linked job must not be exported as a standalone scheduler job -
+        # it always travels as part of its connection.
+        job_name = 'sftp.{}.invoices.hourly'.format(ModuleCtx.Conn_Name)
+
+        for item in exported_data.get('scheduler', []):
+            self.assertNotEqual(item['name'], job_name)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':

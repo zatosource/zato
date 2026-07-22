@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from datetime import datetime
+from datetime import datetime, timezone
 from logging import getLogger
 from stat import S_ISDIR, S_ISLNK
 
@@ -147,7 +147,10 @@ class SMBConnection:
         out.type = entry_type
         out.name = name
         out.size = stat_result.st_size
-        out.last_modified = datetime.fromtimestamp(stat_result.st_mtime)
+
+        # The timestamp is made UTC-aware so it compares equal to what directory listings return -
+        # their modification times come from the SMB protocol layer as UTC-aware datetime objects.
+        out.last_modified = datetime.fromtimestamp(stat_result.st_mtime, tz=timezone.utc)
 
         return out
 

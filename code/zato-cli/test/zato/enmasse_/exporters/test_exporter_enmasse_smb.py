@@ -175,6 +175,72 @@ class TestEnmasseSMBExporter(TestCase):
                     self.assertNotIn(self.smb_server.password, value, 'Password must not appear in exported values')
 
 # ################################################################################################################################
+
+    def test_smb_schedules_export(self):
+        """ Test that a connection's schedules round trip through import and export in their portable shape.
+        """
+        self._setup_test_environment()
+
+        conn_def = {
+            'name': ModuleCtx.Conn_Name,
+            'host': self.smb_server.host,
+            'port': self.smb_server.port,
+            'username': self.smb_server.username,
+            'password': self.smb_server.password,
+            'schedules': [
+                {
+                    'name': 'invoices.hourly',
+                    'directory': 'my-share/incoming/invoices',
+                    'service': 'demo.ping',
+                    'run_every': 30,
+                    'run_unit': 'minutes',
+                },
+            ],
+        }
+
+        # Import the connection along with its schedule ..
+        _ = self.importer.get_cluster(self.session)
+        created, _ = self.smb_importer.sync_definitions([conn_def], self.session)
+        self.assertEqual(len(created), 1)
+
+        # .. and export everything back.
+        yaml_exporter = EnmasseYAMLExporter()
+        exported_data = yaml_exporter.export_to_dict(self.session)
+
+        exported_def = None
+        for item in exported_data['smb']:
+            if item['name'] == ModuleCtx.Conn_Name:
+                exported_def = item
+                break
+
+        self.assertIsNotNone(exported_def)
+
+        # The schedule travels in its portable shape - what was given on input,
+        # without database-specific fields or options left at their defaults.
+        schedules = exported_def['schedules']
+        self.assertEqual(len(schedules), 1)
+
+        schedule = schedules[0]
+
+        self.assertEqual(schedule['name'], 'invoices.hourly')
+        self.assertEqual(schedule['directory'], 'my-share/incoming/invoices')
+        self.assertEqual(schedule['service'], 'demo.ping')
+        self.assertEqual(schedule['run_every'], 30)
+        self.assertEqual(schedule['run_unit'], 'minutes')
+
+        self.assertNotIn('id', schedule)
+        self.assertNotIn('job_id', schedule)
+        self.assertNotIn('pattern', schedule)
+        self.assertNotIn('ready_how', schedule)
+
+        # The linked job must not be exported as a standalone scheduler job -
+        # it always travels as part of its connection.
+        job_name = 'smb.{}.invoices.hourly'.format(ModuleCtx.Conn_Name)
+
+        for item in exported_data.get('scheduler', []):
+            self.assertNotEqual(item['name'], job_name)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':

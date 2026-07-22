@@ -27,8 +27,8 @@ from env_helper import get_shared_environment
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.smb import SMBImporter
-from zato.common.api import GENERIC
-from zato.common.odb.model import GenericConn
+from zato.common.api import FileTransfer, GENERIC, SchedulerLink
+from zato.common.odb.model import GenericConn, Job
 from zato.common.test.smb_ import SMBTestServer
 from zato.common.typing_ import cast_
 from zato.common.util.sql import parse_instance_opaque_attr
@@ -276,6 +276,66 @@ class TestEnmasseSMBFromYAML(TestCase):
 
         # Make sure other fields were preserved
         self.assertEqual(updated_instance.type_, GENERIC.CONNECTION.TYPE.OUTCONN_SMB)
+
+# ################################################################################################################################
+
+    def test_smb_schedules_import(self):
+        """ Test that a connection's schedules from YAML create their scheduler jobs,
+        linked back to the connection.
+        """
+        self._setup_test_environment()
+
+        _scheduler = FileTransfer.Scheduler
+
+        conn_def = {
+            'name': ModuleCtx.Conn_Name,
+            'host': self.smb_server.host,
+            'port': self.smb_server.port,
+            'username': self.smb_server.username,
+            'password': self.smb_server.password,
+            'schedules': [
+                {
+                    'name': 'invoices.hourly',
+                    'directory': 'my-share/incoming/invoices',
+                    'service': 'demo.ping',
+                    'run_every': 30,
+                    'run_unit': 'minutes',
+                },
+            ],
+        }
+
+        # Import the connection along with its schedule
+        created, _ = self.smb_importer.sync_definitions([conn_def], self.session)
+        self.assertEqual(len(created), 1)
+
+        instance = created[0]
+        opaque = parse_instance_opaque_attr(instance)
+
+        # The stored list carries the full entry with the defaults filled in
+        schedules = opaque[_scheduler.Schedules_Field]
+        self.assertEqual(len(schedules), 1)
+
+        schedule = schedules[0]
+
+        self.assertEqual(schedule['id'], 'invoices.hourly')
+        self.assertEqual(schedule['directory'], 'my-share/incoming/invoices')
+        self.assertEqual(schedule['pattern'], _scheduler.Default_Pattern)
+        self.assertEqual(schedule['ready_how'], _scheduler.ReadyHow.Stability)
+
+        # The schedule has a linked job with the conventional name, the right interval,
+        # the SMB dispatch service and the link attributes.
+        job_name = 'smb.{}.invoices.hourly'.format(ModuleCtx.Conn_Name)
+        job = self.session.query(Job).filter_by(name=job_name).one()
+
+        self.assertEqual(schedule['job_id'], job.id)
+        self.assertEqual(job.interval_based.minutes, 30)
+        self.assertEqual(job.service.name, _scheduler.Dispatch_Service[GENERIC.CONNECTION.TYPE.OUTCONN_SMB])
+
+        job_opaque = parse_instance_opaque_attr(job)
+
+        self.assertEqual(job_opaque[SchedulerLink.Conn_ID], instance.id)
+        self.assertEqual(job_opaque[SchedulerLink.Conn_Type], GENERIC.CONNECTION.TYPE.OUTCONN_SMB)
+        self.assertEqual(job_opaque[SchedulerLink.Kind], 'invoices.hourly')
 
 # ################################################################################################################################
 

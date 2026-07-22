@@ -27,8 +27,8 @@ from env_helper import get_shared_environment
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.sftp import SFTPImporter
-from zato.common.api import GENERIC
-from zato.common.odb.model import GenericConn
+from zato.common.api import FileTransfer, GENERIC, SchedulerLink
+from zato.common.odb.model import GenericConn, Job
 from zato.common.test.sftp_ import SFTPTestServer
 from zato.common.typing_ import cast_
 from zato.common.util.sql import parse_instance_opaque_attr
@@ -316,6 +316,129 @@ class TestEnmasseSFTPFromYAML(TestCase):
 
         # Make sure other fields were preserved
         self.assertEqual(updated_instance.type_, GENERIC.CONNECTION.TYPE.OUTCONN_SFTP)
+
+# ################################################################################################################################
+
+    def test_sftp_schedules_import(self):
+        """ Test that a connection's schedules from YAML create their scheduler jobs, that a re-import
+        updates the same jobs in place and that removing a schedule from YAML deletes its job.
+        """
+        self._setup_test_environment()
+
+        _scheduler = FileTransfer.Scheduler
+
+        # A connection with two schedules - the first one relies on the defaults wherever possible
+        # and the second one overrides them all.
+        conn_def = {
+            'name': ModuleCtx.Key_Conn_Name,
+            'address': self.get_address(),
+            'username': self.sftp_server.username,
+            'private_key': ModuleCtx.Env_Key_Private_Key,
+            'strict_host_key_checking': False,
+            'schedules': [
+                {
+                    'name': 'invoices.hourly',
+                    'directory': '/incoming/invoices',
+                    'service': 'demo.ping',
+                    'run_every': 30,
+                    'run_unit': 'minutes',
+                },
+                {
+                    'name': 'reports.daily',
+                    'directory': '/incoming/reports',
+                    'service': 'demo.ping',
+                    'run_every': 1,
+                    'run_unit': 'days',
+                    'is_active': False,
+                    'pattern': '*.csv',
+                    'ready_how': 'marker',
+                    'marker_suffix': '.ok',
+                    'should_claim': True,
+                    'on_success': 'delete',
+                },
+            ],
+        }
+
+        # Import the connection along with its schedules
+        created, _ = self.sftp_importer.sync_definitions([conn_def], self.session)
+        self.assertEqual(len(created), 1)
+
+        instance = created[0]
+        opaque = parse_instance_opaque_attr(instance)
+
+        # The stored list carries the full entries with the defaults filled in
+        schedules = opaque[_scheduler.Schedules_Field]
+        self.assertEqual(len(schedules), 2)
+
+        first = schedules[0]
+
+        self.assertEqual(first['id'], 'invoices.hourly')
+        self.assertEqual(first['directory'], '/incoming/invoices')
+        self.assertEqual(first['pattern'], _scheduler.Default_Pattern)
+        self.assertEqual(first['ready_how'], _scheduler.ReadyHow.Stability)
+        self.assertEqual(first['on_success'], _scheduler.OnSuccess.Move)
+        self.assertEqual(first['move_directory'], _scheduler.Default_Move_Directory)
+        self.assertTrue(first['is_active'])
+
+        second = schedules[1]
+
+        self.assertEqual(second['pattern'], '*.csv')
+        self.assertEqual(second['ready_how'], _scheduler.ReadyHow.Marker)
+        self.assertEqual(second['marker_suffix'], '.ok')
+        self.assertTrue(second['should_claim'])
+        self.assertEqual(second['on_success'], _scheduler.OnSuccess.Delete)
+        self.assertFalse(second['is_active'])
+
+        # Each schedule has a linked job with the conventional name, the right interval and the link attributes
+        first_job_name = 'sftp.{}.invoices.hourly'.format(ModuleCtx.Key_Conn_Name)
+        second_job_name = 'sftp.{}.reports.daily'.format(ModuleCtx.Key_Conn_Name)
+
+        first_job = self.session.query(Job).filter_by(name=first_job_name).one()
+        second_job = self.session.query(Job).filter_by(name=second_job_name).one()
+
+        self.assertEqual(first['job_id'], first_job.id)
+        self.assertEqual(second['job_id'], second_job.id)
+
+        self.assertEqual(first_job.interval_based.minutes, 30)
+        self.assertEqual(second_job.interval_based.days, 1)
+
+        first_job_opaque = parse_instance_opaque_attr(first_job)
+
+        self.assertEqual(first_job_opaque[SchedulerLink.Conn_ID], instance.id)
+        self.assertEqual(first_job_opaque[SchedulerLink.Conn_Type], GENERIC.CONNECTION.TYPE.OUTCONN_SFTP)
+        self.assertEqual(first_job_opaque[SchedulerLink.Kind], 'invoices.hourly')
+
+        # A re-import with the first schedule changed and the second one removed
+        # must update the first job in place and delete the second one.
+        conn_def['schedules'] = [
+            {
+                'name': 'invoices.hourly',
+                'directory': '/incoming/invoices-v2',
+                'service': 'demo.ping',
+                'run_every': 3,
+                'run_unit': 'hours',
+            },
+        ]
+
+        _, updated = self.sftp_importer.sync_definitions([conn_def], self.session)
+        self.assertEqual(len(updated), 1)
+
+        updated_opaque = parse_instance_opaque_attr(updated[0])
+        updated_schedules = updated_opaque[_scheduler.Schedules_Field]
+
+        self.assertEqual(len(updated_schedules), 1)
+        self.assertEqual(updated_schedules[0]['directory'], '/incoming/invoices-v2')
+
+        # It is still the same job, just with a new interval ..
+        updated_job = self.session.query(Job).filter_by(name=first_job_name).one()
+
+        self.assertEqual(updated_job.id, first_job.id)
+        self.assertEqual(updated_job.interval_based.hours, 3)
+        self.assertEqual(updated_job.interval_based.minutes, 0)
+
+        # .. while the removed schedule's job is gone.
+        second_job_query = self.session.query(Job).filter_by(name=second_job_name).first()
+        self.assertIsNone(second_job_query)
 
 # ################################################################################################################################
 
