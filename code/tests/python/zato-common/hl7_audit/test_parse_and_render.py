@@ -55,11 +55,15 @@ class TestParseAndRender:
         # Fields render with their labels and wire values
         assert '  PID-8  Administrative Sex: M' in lines
 
-    def test_a_payload_that_does_not_parse_renders_as_an_empty_string(self) -> 'None':
+    def test_a_payload_that_does_not_parse_renders_segment_by_segment(self) -> 'None':
 
-        # An MSH header without a recognizable message structure fails to parse
+        # An MSH header without a recognizable message structure fails the full parse
+        # and renders segment by segment instead, without a header line
         text = parse_and_render('MSH|^~\\&|HIS')
-        assert text == ''
+        lines = text.split('\n')
+
+        assert lines[0] == 'MSH'
+        assert '  MSH-3  Sending Application: HIS' in lines
 
     def test_an_empty_payload_renders_as_an_empty_string(self) -> 'None':
 
