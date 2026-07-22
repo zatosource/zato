@@ -49,9 +49,24 @@ logger = logging.getLogger('zato.test.sdk_live.conftest')
 _zato_base = os.environ['ZATO_TEST_BASE_DIR']
 _zato_bin  = os.path.join(_zato_base, 'code', 'bin', 'zato')
 
-_connector_source_path = os.path.join(os.path.dirname(__file__), 'crm_connector.py')
-_mainframe_source_path = os.path.join(os.path.dirname(__file__), 'mainframe_connector.py')
-_services_source_path  = os.path.join(os.path.dirname(__file__), '_services.py')
+_suite_directory = os.path.dirname(__file__)
+
+# The connector modules and the test services deployed at the server's boot.
+_deployed_modules = [
+    'crm_connector.py',
+    'mainframe_connector.py',
+    'payments_connector.py',
+    'feed_connector.py',
+    'audit_connector.py',
+    'inventory_connector.py',
+    'textproc_connector.py',
+    'tunnel_connector.py',
+]
+
+_services_source_path = os.path.join(_suite_directory, '_services.py')
+
+# Fixture files the process-based connectors use - a prebuilt jar, a module run in a clean interpreter and a CLI tool.
+fixtures_directory = os.path.join(_suite_directory, 'fixtures')
 
 _process_kill_timeout = 5
 _server_wait_timeout  = 120
@@ -65,23 +80,88 @@ _slow_command_delay = 1.0
 # ################################################################################################################################
 # ################################################################################################################################
 
+class EchoState:
+    """ The failure switches of the echo mode - tests flip them to make the target stall
+    without closing the socket or start rejecting an auth token.
+    """
+    def __init__(self) -> 'None':
+
+        # When set, every reply goes out only after this many seconds.
+        self.stall_seconds = 0.0
+
+        # Requests carrying any of these keys are answered with a token-expired error.
+        self.expired_keys = set()
+
+        # What a renew-token request hands out.
+        self.renewed_key = ''
+
+echo_state = EchoState()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class _EchoHandler(socketserver.StreamRequestHandler):
     """ Answers each line it receives with the very same line - it stands in for the CRM gateway
-    the example connector talks to.
+    the example connector talks to. Failure switches make it stall or reject the auth token (7.2).
     """
     def handle(self) -> 'None':
         for line in self.rfile:
-            _ = self.wfile.write(line)
+            text = line.decode('utf8').strip()
+
+            # The stall switch keeps the reply from going out, without closing the socket.
+            if echo_state.stall_seconds:
+                time.sleep(echo_state.stall_seconds)
+
+            # Each request line starts with the caller's key.
+            key, _, rest = text.partition(' ')
+
+            # A token renewal always succeeds and hands out the key the test configured.
+            if rest == 'renew-token':
+                reply = f'token {echo_state.renewed_key}'
+
+            # An expired key is rejected until the caller renews it.
+            elif key in echo_state.expired_keys:
+                reply = 'error token-expired'
+
+            # The normal path echoes the line back whole.
+            else:
+                reply = text
+
+            _ = self.wfile.write(f'{reply}\n'.encode('utf8'))
             self.wfile.flush()
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class _EchoServer(socketserver.ThreadingTCPServer):
-    """ A TCP server that echoes lines back to whoever connects.
+    """ The TCP server every target mode runs on. It tracks its connections so that killing
+    the target severs them too, the way a real crash would.
     """
     allow_reuse_address = True
     daemon_threads = True
+
+    def __init__(self, *args:'any_') -> 'None':
+        super().__init__(*args)
+        self.active_connections = []
+
+    def process_request(self, request:'any_', client_address:'any_') -> 'None':
+        self.active_connections.append(request)
+        super().process_request(request, client_address)
+
+    def kill_connections(self) -> 'None':
+        """ Severs every connection this target ever accepted - closed ones are simply skipped.
+        """
+        for request in self.active_connections:
+            try:
+                request.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+            try:
+                request.close()
+            except OSError:
+                pass
+
+        self.active_connections.clear()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -130,6 +210,139 @@ class _HandshakeHandler(socketserver.StreamRequestHandler):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class CorrelationState:
+    """ What the correlation mode shares with tests - how many connections were ever made,
+    which is how tests prove that concurrent requests multiplex over one socket.
+    """
+    def __init__(self) -> 'None':
+        self.lock = threading.Lock()
+        self.connection_count = 0
+
+correlation_state = CorrelationState()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _CorrelationHandler(socketserver.StreamRequestHandler):
+    """ The correlation mode of the suite's target server - each request line is `corr_id payload`
+    and the reply `corr_id echo payload` goes out from its own thread, so slow requests are answered
+    after fast ones and replies arrive out of order (7.2).
+    """
+    def handle(self) -> 'None':
+
+        with correlation_state.lock:
+            correlation_state.connection_count += 1
+
+        # Replies come from many threads, so writes are serialized per connection.
+        write_lock = threading.Lock()
+
+        for line in self.rfile:
+            text = line.decode('utf8').strip()
+            corr_id, _, payload = text.partition(' ')
+
+            def _reply(corr_id:'str'=corr_id, payload:'str'=payload) -> 'None':
+
+                # A slow request is answered late, letting fast ones overtake it.
+                if payload.startswith('slow'):
+                    time.sleep(_slow_command_delay)
+
+                try:
+                    with write_lock:
+                        _ = self.wfile.write(f'{corr_id} echo {payload}\n'.encode('utf8'))
+                        self.wfile.flush()
+                except OSError:
+                    # The connection is gone, so there is nowhere to reply to.
+                    pass
+
+            reply_thread = threading.Thread(target=_reply, daemon=True)
+            reply_thread.start()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class PushState:
+    """ What the push mode shares with tests - the subscriber sockets messages are pushed to
+    and a counter of subscriptions, which is how tests prove that a reconnect resubscribed.
+    """
+    def __init__(self) -> 'None':
+        self.lock = threading.Lock()
+        self.subscribe_count = 0
+        self.subscribers = []
+
+# ################################################################################################################################
+
+    def push(self, message:'str') -> 'None':
+        """ Pushes one message to every subscriber, dropping the ones that are gone.
+        """
+        with self.lock:
+            for subscriber in list(self.subscribers):
+                try:
+                    _ = subscriber.write(f'push {message}\n'.encode('utf8'))
+                    subscriber.flush()
+                except OSError:
+                    self.subscribers.remove(subscriber)
+
+push_state = PushState()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _PushHandler(socketserver.StreamRequestHandler):
+    """ The push mode of the suite's target server - clients subscribe and from then on
+    the tests push messages to them through push_state, on the server's own initiative (7.2).
+    """
+    def handle(self) -> 'None':
+
+        for line in self.rfile:
+            text = line.decode('utf8').strip()
+
+            # A subscription registers this connection as a push target.
+            if text.startswith('subscribe'):
+                with push_state.lock:
+                    push_state.subscribe_count += 1
+                    push_state.subscribers.append(self.wfile)
+                _ = self.wfile.write(b'subscribed\n')
+                self.wfile.flush()
+
+            # Pings confirm the connection is alive between pushes.
+            elif text == 'ping':
+                _ = self.wfile.write(b'pong\n')
+                self.wfile.flush()
+
+        # The connection ended, so it stops being a push target.
+        with push_state.lock:
+            if self.wfile in push_state.subscribers:
+                push_state.subscribers.remove(self.wfile)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class CountingState:
+    """ What the counting mode shares with tests - every line the target ever received,
+    which is how tests prove that buffered senders flushed everything (7.2).
+    """
+    def __init__(self) -> 'None':
+        self.lock = threading.Lock()
+        self.received = []
+
+counting_state = CountingState()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _CountingHandler(socketserver.StreamRequestHandler):
+    """ The counting mode of the suite's target server - it never replies, it only records
+    every line it receives.
+    """
+    def handle(self) -> 'None':
+        for line in self.rfile:
+            text = line.decode('utf8').strip()
+            with counting_state.lock:
+                counting_state.received.append(text)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class _SessionState:
     """ Holds all mutable session state.
     """
@@ -137,8 +350,9 @@ class _SessionState:
     def __init__(self) -> 'None':
         self.server_process:'subprocess.Popen[bytes] | None' = None
         self.quickstart_directory:'str | None' = None
-        self.echo_server:'_EchoServer | None' = None
-        self.handshake_server:'_EchoServer | None' = None
+
+        # All the target servers the suite owns, one per mode, keyed by mode name.
+        self.target_servers:'dict[str, _EchoServer]' = {}
 
 # ################################################################################################################################
 
@@ -173,15 +387,11 @@ class _SessionState:
 
         self.kill_server()
 
-        if self.echo_server:
-            self.echo_server.shutdown()
-            self.echo_server.server_close()
-            self.echo_server = None
+        for target_server in self.target_servers.values():
+            target_server.shutdown()
+            target_server.server_close()
 
-        if self.handshake_server:
-            self.handshake_server.shutdown()
-            self.handshake_server.server_close()
-            self.handshake_server = None
+        self.target_servers.clear()
 
         if self.quickstart_directory:
             shutil.rmtree(self.quickstart_directory, ignore_errors=True)
@@ -208,34 +418,54 @@ def _find_free_port() -> 'int':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _start_echo_server() -> 'int':
-    """ Starts the echo server that stands in for the CRM gateway and returns its port.
+def _start_target_server(mode:'str', handler_class:'any_', port:'int'=0) -> 'int':
+    """ Starts one mode of the suite's target server and returns its port. A port of 0 means
+    any free port, a concrete port lets a mode restart in place after being killed.
     """
-    echo_server = _EchoServer(('127.0.0.1', 0), _EchoHandler)
-    _state.echo_server = echo_server
+    target_server = _EchoServer(('127.0.0.1', port), handler_class)
+    _state.target_servers[mode] = target_server
 
-    echo_thread = threading.Thread(target=echo_server.serve_forever, daemon=True)
-    echo_thread.start()
+    target_thread = threading.Thread(target=target_server.serve_forever, daemon=True)
+    target_thread.start()
 
-    out = echo_server.server_address[1]
-    logger.info('Echo server started on port %s', out)
+    out = target_server.server_address[1]
+    logger.info('Target server mode `%s` started on port %s', mode, out)
     return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _start_handshake_server() -> 'int':
-    """ Starts the handshake server that stands in for the mainframe gateway and returns its port.
+def kill_target_server(mode:'str') -> 'int':
+    """ Kills one mode of the target server, dropping all its connections, and returns its port
+    so that restart_target_server can bring it back in place.
     """
-    handshake_server = _EchoServer(('127.0.0.1', 0), _HandshakeHandler)
-    _state.handshake_server = handshake_server
+    target_server = _state.target_servers.pop(mode)
+    out = target_server.server_address[1]
 
-    handshake_thread = threading.Thread(target=handshake_server.serve_forever, daemon=True)
-    handshake_thread.start()
+    target_server.shutdown()
+    target_server.server_close()
 
-    out = handshake_server.server_address[1]
-    logger.info('Handshake server started on port %s', out)
+    # A real crash severs live connections too, which is what reconnect tests rely on.
+    target_server.kill_connections()
+
+    logger.info('Target server mode `%s` killed on port %s', mode, out)
     return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_mode_handlers = {
+    'echo': _EchoHandler,
+    'handshake': _HandshakeHandler,
+    'correlation': _CorrelationHandler,
+    'push': _PushHandler,
+    'counting': _CountingHandler,
+}
+
+def restart_target_server(mode:'str', port:'int') -> 'None':
+    """ Starts a killed mode of the target server again on its original port.
+    """
+    _ = _start_target_server(mode, _mode_handlers[mode], port)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -328,9 +558,12 @@ def zato_server() -> 'any_':
     # Generate the credentials used by the invoke API ..
     invoke_password = 'test.invoke.' + CryptoManager.generate_hex_string()
 
-    # .. start the target servers the connectors will talk to ..
-    echo_port = _start_echo_server()
-    handshake_port = _start_handshake_server()
+    # .. start the target servers the connectors will talk to, one per mode ..
+    echo_port = _start_target_server('echo', _EchoHandler)
+    handshake_port = _start_target_server('handshake', _HandshakeHandler)
+    correlation_port = _start_target_server('correlation', _CorrelationHandler)
+    push_port = _start_target_server('push', _PushHandler)
+    counting_port = _start_target_server('counting', _CountingHandler)
 
     # .. create a quickstart environment ..
     _state.quickstart_directory = tempfile.mkdtemp(prefix='zato_sdk_live_qs_')
@@ -362,9 +595,11 @@ def zato_server() -> 'any_':
     # .. drop the connector module and the test service into the pickup directory
     # .. so the boot scan deploys them ..
     pickup_directory = os.path.join(server_directory, 'pickup', 'incoming', 'services')
+
+    for module_name in _deployed_modules:
+        _ = shutil.copy2(os.path.join(_suite_directory, module_name), os.path.join(pickup_directory, module_name))
+
     connector_deployed_path = os.path.join(pickup_directory, 'crm_connector.py')
-    _ = shutil.copy2(_connector_source_path, connector_deployed_path)
-    _ = shutil.copy2(_mainframe_source_path, os.path.join(pickup_directory, 'mainframe_connector.py'))
     _ = shutil.copy2(_services_source_path, os.path.join(pickup_directory, 'crm_test_services.py'))
 
     # .. patch server.conf so the server binds to a dynamically allocated port ..
@@ -394,6 +629,10 @@ def zato_server() -> 'any_':
 
     logger.info('Total setup: %.1fs', time.monotonic() - start_time)
 
+    # Note that the shared state objects and the helper functions below are passed through
+    # this dict on purpose - pytest imports this conftest under a package-like module name,
+    # so a plain `from conftest import x` in a test file would create a second module instance
+    # with its own, disconnected copies of everything.
     yield {
         'host': host,
         'port': server_port,
@@ -401,8 +640,18 @@ def zato_server() -> 'any_':
         'base_url': base_url,
         'echo_port': echo_port,
         'handshake_port': handshake_port,
+        'correlation_port': correlation_port,
+        'push_port': push_port,
+        'counting_port': counting_port,
         'server_directory': server_directory,
         'connector_deployed_path': connector_deployed_path,
+        'echo_state': echo_state,
+        'correlation_state': correlation_state,
+        'push_state': push_state,
+        'counting_state': counting_state,
+        'kill_target_server': kill_target_server,
+        'restart_target_server': restart_target_server,
+        'restart_zato_server': restart_zato_server,
     }
 
     _state.cleanup()

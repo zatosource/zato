@@ -10,8 +10,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from contextlib import contextmanager
 from inspect import getmodule, isclass
 from logging import getLogger
+from time import time
 
 # gevent
+from gevent import sleep, spawn, Timeout
 from gevent.lock import RLock
 from gevent.queue import Empty, Queue
 
@@ -20,7 +22,8 @@ from zato.common.ext.bunch import Bunch, bunchify
 
 # Zato
 from zato.common.broker_message import GENERIC as BROKER_MSG_GENERIC
-from zato.common.sdk import Connector, Field, PooledConnector
+from zato.common.facade import PubSubFacade
+from zato.common.sdk import Connector, ConnectionLost, CredentialsExpired, Field, PooledConnector, SubscribingConnector
 from zato.common.sdk.connector import get_schema
 from zato.common.typing_ import cast_, list_
 from zato.common.util.api import as_bool
@@ -57,6 +60,34 @@ default_pool_size = 10
 
 # How long a caller waits for a free pooled connection before giving up, in seconds.
 pool_acquire_timeout = 30
+
+# The watchdog timeout around every invocation when a definition carries no timeout of its own, in seconds.
+default_invoke_timeout = 60
+
+# How long to wait before the first reconnect attempt and the cap the delay grows to, in seconds.
+reconnect_backoff_initial = 0.5
+reconnect_backoff_max = 30
+
+# How often the framework confirms that a subscribing connector's connection is still alive, in seconds.
+subscribing_monitor_interval = 2
+
+# How long a per-tenant client can stay unused before it is stopped, and how often expiry runs, in seconds.
+tenant_idle_expiry = 900
+tenant_sweep_interval = 30
+
+# The names of the methods the framework calls itself - everything else that is public and callable
+# on a connector is an invocation method and services get it wrapped with the framework behaviors.
+lifecycle_method_names = {
+    'create_client', 'ping', 'on_stop', 'validate', 'refresh_credentials', 'start_process',
+    'get_connection', 'on_get_from_pool', 'on_return_to_pool', 'on_started', 'invoke', 'publish',
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class InvocationTimeout(Exception):
+    """ Raised in the calling service when the watchdog timeout around an invocation passes (4.4).
+    """
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -101,30 +132,61 @@ class SDKConnectionPool:
 
     def _checkout(self) -> 'any_':
 
-        # An idle connection is used right away and building a new one is preferred over waiting ..
+        while True:
+
+            # A freshly built connection needs no validation below.
+            is_fresh = False
+
+            # An idle connection is used right away and building a new one is preferred over waiting ..
+            with self._lock:
+                try:
+                    conn = self._idle.get_nowait()
+                except Empty:
+                    if self._created < self.size:
+                        conn = self.connector.create_client()
+                        self._created += 1
+                        is_fresh = True
+                    else:
+                        conn = None
+
+            # .. with the pool exhausted, wait until someone returns a connection - outside the lock,
+            # .. so that returning callers are not blocked from doing so.
+            if conn is None:
+                try:
+                    conn = self._idle.get(timeout=pool_acquire_timeout)
+                except Empty:
+                    raise Exception('No free pooled connection for `{}` after {}s'.format(
+                        self.connector.name, pool_acquire_timeout))
+
+            # A reused connection is validated before use - one that is no longer usable
+            # is discarded and the loop builds or waits for another one (4.2).
+            if not is_fresh:
+                try:
+                    self.connector.validate(conn)
+                except Exception:
+                    logger.info('Discarding a pooled connection of `%s` that failed validation', self.connector.name)
+                    self._discard(conn)
+                    continue
+
+            # The hook lets the author reset any conversational state before the connection is used.
+            self.connector.on_get_from_pool(conn)
+
+            return conn
+
+# ################################################################################################################################
+
+    def _discard(self, conn:'any_') -> 'None':
+        """ Closes a connection that failed validation and makes room in the pool for its replacement.
+        """
+        try:
+            self.connector.on_stop(conn)
+        except Exception:
+            # The connection is already unusable, so failures while closing it change nothing.
+            pass
+
+        # Room for a replacement connection to be built.
         with self._lock:
-            try:
-                conn = self._idle.get_nowait()
-            except Empty:
-                if self._created < self.size:
-                    conn = self.connector.create_client()
-                    self._created += 1
-                else:
-                    conn = None
-
-        # .. with the pool exhausted, wait until someone returns a connection - outside the lock,
-        # .. so that returning callers are not blocked from doing so.
-        if conn is None:
-            try:
-                conn = self._idle.get(timeout=pool_acquire_timeout)
-            except Empty:
-                raise Exception('No free pooled connection for `{}` after {}s'.format(
-                    self.connector.name, pool_acquire_timeout))
-
-        # The hook lets the author reset any conversational state before the connection is used.
-        self.connector.on_get_from_pool(conn)
-
-        return conn
+            self._created -= 1
 
 # ################################################################################################################################
 
@@ -158,6 +220,23 @@ class SDKConnectionPool:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def resolve_invoke_timeout(config:'stranydict') -> 'int':
+    """ Returns the watchdog timeout for a definition - its own timeout column if it carries one,
+    the default otherwise. The value can arrive as a string or a no-value marker from opaque storage.
+    """
+    value = config.get('timeout')
+
+    if isinstance(value, str):
+        value = int(value) if value.isdigit() else 0
+
+    if not value:
+        value = default_invoke_timeout
+
+    return value
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class SDKConnectorWrapper(Wrapper):
     """ Hosts a single instance of a hot-deployed SDK connector along with the client the connector built.
     """
@@ -167,9 +246,21 @@ class SDKConnectorWrapper(Wrapper):
         super().__init__(config, server)
         self.connector:'Connector | None' = None
 
+        # The watchdog timeout around every invocation, overridable per call (4.4).
+        self.invoke_timeout = resolve_invoke_timeout(config)
+
+        # Per-tenant connectors, keyed by their resolved config overrides (4.6).
+        self.tenants:'stranydict' = {}
+
+        # Whether the greenlet that expires idle tenant clients is already running.
+        self._tenant_sweep_started = False
+
 # ################################################################################################################################
 
-    def _init_impl(self) -> 'None':
+    def _build_connector(self, overrides:'stranydict | None'=None) -> 'Connector':
+        """ Builds a new connector instance with all its ambient attributes and resolved config,
+        optionally overlaid with per-tenant overrides (4.6).
+        """
 
         # Look up the class registered for our connection type ..
         server = cast_('ParallelServer', self.server)
@@ -178,8 +269,13 @@ class SDKConnectorWrapper(Wrapper):
         # .. build a new connector instance ..
         connector = connector_class()
 
-        # .. give it its ambient attributes ..
+        # .. give it its ambient attributes (6.8) ..
         connector.name = self.config['name']
+        connector.invoke = server.invoke
+        connector.publish = PubSubFacade(server, self.config['name']).publish
+
+        # .. helper processes the connector starts report their unexpected exits here ..
+        connector._on_process_died = self._on_process_died
 
         # .. resolve the fields the class declares into the connector's own config ..
         schema = get_schema(connector_class)
@@ -188,10 +284,23 @@ class SDKConnectorWrapper(Wrapper):
         for field_name in schema:
             config[field_name] = self.config[field_name]
 
+        # .. per-tenant overrides take precedence over the definition's own values ..
+        if overrides:
+            for field_name, value in overrides.items():
+                config[field_name] = value
+
         connector.config = config
 
-        # .. pooled connectors get a framework-owned pool that builds connections lazily
-        # .. through create_client, everyone else gets a single shared client built now ..
+        return connector
+
+# ################################################################################################################################
+
+    def _build_client(self, connector:'Connector') -> 'any_':
+        """ Builds the client for a connector - a framework-owned pool for pooled connectors,
+        a single shared client built through create_client for everyone else.
+        """
+
+        # Pooled connectors get a pool that builds connections lazily through create_client ..
         if isinstance(connector, PooledConnector):
 
             # A definition without a pool size of its own uses the default one, e.g. one imported with enmasse.
@@ -201,14 +310,185 @@ class SDKConnectorWrapper(Wrapper):
 
             client = SDKConnectionPool(connector, pool_size)
             connector._pool = client
+
+        # .. everyone else gets a single shared client built now.
         else:
             client = connector.create_client()
 
-        # .. and expose both the connector and its client for later use.
         connector.client = client
+        return client
+
+# ################################################################################################################################
+
+    def _init_impl(self) -> 'None':
+
+        connector = self._build_connector()
+        client = self._build_client(connector)
+
+        # Subscribing connectors subscribe now, before anyone can use the connection (2.3).
+        if isinstance(connector, SubscribingConnector):
+            connector.on_started(client)
+
+        # Expose both the connector and its client for later use ..
         self.connector = connector
         self._impl = client
         self.is_connected = True
+
+        # .. and watch subscribing connections so a lost one reconnects and resubscribes on its own (4.3).
+        if isinstance(connector, SubscribingConnector):
+            _ = spawn(self._monitor_subscribing, connector, client)
+
+# ################################################################################################################################
+
+    def _stop_client(self, connector:'Connector') -> 'None':
+        """ Stops a connector's client - each pooled connection through on_stop for pools,
+        the one shared client otherwise - and stops the helper processes the connector started.
+        """
+        client = connector.client
+
+        try:
+            # A pool closes each of its connections through the connector's on_stop hook.
+            if isinstance(client, SDKConnectionPool):
+                client.stop()
+            else:
+                connector.on_stop(client)
+        except Exception:
+            # The connection is going away, so failures while closing it change nothing.
+            logger.warning('Could not stop the client of `%s`', connector.name, exc_info=True)
+
+        # Helper processes die with the connection they belong to (6.9).
+        for process in connector._processes:
+            process.stop()
+
+# ################################################################################################################################
+
+    def _rebuild_with_backoff(self, failed_client:'any_') -> 'None':
+        """ Evicts the current client and rebuilds the connection, retrying with a growing delay
+        until it succeeds or the definition is deleted (4.3).
+        """
+        with self.update_lock:
+
+            # Someone else already rebuilt the connection, e.g. a concurrent invocation noticed the loss first.
+            if self._impl is not failed_client:
+                return
+
+            # The old client goes away no matter what state it is in ..
+            self._stop_client(cast_('Connector', self.connector))
+
+            # .. and the new one is built with a growing delay between attempts.
+            delay = reconnect_backoff_initial
+
+            while not self.delete_requested:
+                try:
+                    self._init_impl()
+                except Exception:
+                    logger.warning('Could not reconnect `%s`, retrying in %ss', self.config['name'], delay, exc_info=True)
+                    sleep(delay)
+                    delay = min(delay * 2, reconnect_backoff_max)
+                else:
+                    logger.info('Reconnected `%s`', self.config['name'])
+                    return
+
+# ################################################################################################################################
+
+    def _on_process_died(self, process:'any_') -> 'None':
+        """ Called by a helper process's watcher when the process exits unexpectedly -
+        the whole connection is rebuilt with backoff, which re-runs create_client (3.1).
+        """
+
+        # The definition is going away, so the death needs no reaction.
+        if self.delete_requested:
+            return
+
+        logger.warning('Helper process of `%s` died, rebuilding the connection', self.config['name'])
+
+        # A moment of backoff before the restart, in case the process dies right away again.
+        sleep(reconnect_backoff_initial)
+
+        self._rebuild_with_backoff(self._impl)
+
+# ################################################################################################################################
+
+    def _monitor_subscribing(self, connector:'Connector', client:'any_') -> 'None':
+        """ Confirms periodically that a subscribing connector's connection is still alive and,
+        when it is not, rebuilds it - which re-runs on_started, resubscribing (4.3).
+        """
+        while True:
+            sleep(subscribing_monitor_interval)
+
+            # The definition was deleted, so there is nothing to watch anymore.
+            if self.delete_requested:
+                return
+
+            # The connection was rebuilt or edited - its new incarnation has its own monitor.
+            if self.connector is not connector:
+                return
+
+            try:
+                connector.validate(client)
+            except Exception:
+                logger.warning('Connection of `%s` is down, reconnecting', self.config['name'])
+                self._rebuild_with_backoff(client)
+                return
+
+# ################################################################################################################################
+
+    def get_tenant_connector(self, overrides:'stranydict') -> 'Connector':
+        """ Returns the connector serving one distinct set of config overrides, building it
+        on first use - one definition, one client per distinct resolved credential set (4.6).
+        """
+        key = tuple(sorted(overrides.items()))
+
+        with self.update_lock:
+
+            entry = self.tenants.get(key)
+
+            # The tenant already has a live client, so only its idle clock is reset.
+            if entry:
+                entry['last_used'] = time()
+                return entry['connector']
+
+            # First use of this credential set - build a connector and client of its own.
+            connector = self._build_connector(overrides)
+            _ = self._build_client(connector)
+
+            self.tenants[key] = {'connector': connector, 'last_used': time()}
+
+            # The sweep greenlet starts with the first tenant and serves all of them.
+            if not self._tenant_sweep_started:
+                self._tenant_sweep_started = True
+                _ = spawn(self._sweep_tenants)
+
+            return connector
+
+# ################################################################################################################################
+
+    def evict_tenant(self, connector:'Connector') -> 'None':
+        """ Removes a tenant's client after its connection was lost - the next use builds a new one.
+        """
+        with self.update_lock:
+            for key, entry in list(self.tenants.items()):
+                if entry['connector'] is connector:
+                    del self.tenants[key]
+                    self._stop_client(connector)
+                    return
+
+# ################################################################################################################################
+
+    def _sweep_tenants(self) -> 'None':
+        """ Stops per-tenant clients that have been idle for too long (4.6).
+        """
+        while not self.delete_requested:
+            sleep(tenant_sweep_interval)
+
+            now = time()
+
+            with self.update_lock:
+                for key, entry in list(self.tenants.items()):
+                    if now - entry['last_used'] > tenant_idle_expiry:
+                        logger.info('Stopping an idle tenant client of `%s`', self.config['name'])
+                        del self.tenants[key]
+                        self._stop_client(entry['connector'])
 
 # ################################################################################################################################
 
@@ -218,11 +498,14 @@ class SDKConnectorWrapper(Wrapper):
         if not self.connector:
             return
 
-        # A pool closes each of its connections through the connector's on_stop hook.
-        if isinstance(self._impl, SDKConnectionPool):
-            self._impl.stop()
-        else:
-            self.connector.on_stop(self._impl)
+        # The main client goes first ..
+        self._stop_client(self.connector)
+
+        # .. and each tenant's client follows.
+        with self.update_lock:
+            for entry in self.tenants.values():
+                self._stop_client(entry['connector'])
+            self.tenants.clear()
 
 # ################################################################################################################################
 
@@ -241,6 +524,134 @@ class SDKConnectorWrapper(Wrapper):
 # ################################################################################################################################
 # ################################################################################################################################
 
+def build_invocation(wrapper:'SDKConnectorWrapper', overrides:'stranydict | None', name:'str') -> 'any_':
+    """ Wraps one invocation method with the framework behaviors - a watchdog timeout overridable
+    per call (4.4), validate-before-use (4.2), a one-time retry after credential refresh (4.5)
+    and eviction with reconnect when the connection is lost (4.3).
+    """
+    def _invocation(*args:'any_', **kwargs:'any_') -> 'any_':
+
+        # The caller can override the definition's watchdog timeout for this one call.
+        timeout = kwargs.pop('timeout', None)
+        if timeout is None:
+            timeout = wrapper.invoke_timeout
+
+        timeout_exception = InvocationTimeout('Call `{}` to `{}` timed out after {}s'.format(
+            name, wrapper.config['name'], timeout))
+
+        # Everything below - validation, the call itself and any retry - runs under the watchdog.
+        with Timeout(timeout, timeout_exception):
+
+            connector = _resolve_connector(wrapper, overrides)
+
+            # Shared clients are validated before each use - pooled connections validate
+            # at checkout inside the pool instead (4.2).
+            if not isinstance(connector, PooledConnector):
+                try:
+                    connector.validate(connector.client)
+                except CredentialsExpired:
+                    # The client is alive, only its credentials expired - refresh and carry on (4.5).
+                    connector.refresh_credentials()
+                except InvocationTimeout:
+                    # The watchdog fired while validation was stuck - the caller gets the timeout as is.
+                    raise
+                except Exception:
+                    # The client is gone - evict it, reconnect and use the new instance.
+                    _evict(wrapper, connector, overrides)
+                    connector = _resolve_connector(wrapper, overrides)
+
+            method = getattr(connector, name)
+
+            try:
+                return method(*args, **kwargs)
+            except CredentialsExpired:
+                # Refresh the credentials and retry the invocation once (4.5).
+                connector.refresh_credentials()
+                return method(*args, **kwargs)
+            except ConnectionLost:
+                # The connection is gone - reconnect in the background and let the caller know (4.3).
+                _evict_async(wrapper, connector, overrides)
+                raise
+
+    return _invocation
+
+# ################################################################################################################################
+
+def _resolve_connector(wrapper:'SDKConnectorWrapper', overrides:'stranydict | None') -> 'Connector':
+    """ Returns the connector an invocation goes to - the definition's main one or a tenant's own.
+    """
+    if overrides is None:
+        out = cast_('Connector', wrapper.connector)
+    else:
+        out = wrapper.get_tenant_connector(overrides)
+
+    return out
+
+# ################################################################################################################################
+
+def _evict(wrapper:'SDKConnectorWrapper', connector:'Connector', overrides:'stranydict | None') -> 'None':
+    """ Evicts a client that failed validation and rebuilds it now, in the caller's own greenlet.
+    """
+    if overrides is None:
+        with wrapper.update_lock:
+            # Only rebuild if no concurrent invocation was faster.
+            if wrapper.connector is connector:
+                wrapper._stop_client(connector)
+                wrapper._init_impl()
+    else:
+        wrapper.evict_tenant(connector)
+
+# ################################################################################################################################
+
+def _evict_async(wrapper:'SDKConnectorWrapper', connector:'Connector', overrides:'stranydict | None') -> 'None':
+    """ Evicts a client whose connection was lost mid-call - the main client reconnects with backoff
+    in the background, a tenant's client is simply removed and rebuilt on its next use.
+    """
+    if overrides is None:
+        _ = spawn(wrapper._rebuild_with_backoff, connector.client)
+    else:
+        wrapper.evict_tenant(connector)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ConnectorProxy:
+    """ What a service gets from self.out - forwards attribute access to the connector while wrapping
+    every public invocation method with the framework behaviors (see build_invocation).
+    """
+    __slots__ = ('_wrapper', '_overrides')
+
+    def __init__(self, wrapper:'SDKConnectorWrapper', overrides:'stranydict | None'=None) -> 'None':
+        self._wrapper = wrapper
+        self._overrides = overrides
+
+# ################################################################################################################################
+
+    def with_config(self, **overrides:'any_') -> 'ConnectorProxy':
+        """ Returns access to a client built for this distinct set of config overrides -
+        one definition, one client per credential set, with idle expiry (4.6).
+        """
+        out = ConnectorProxy(self._wrapper, overrides)
+        return out
+
+# ################################################################################################################################
+
+    def __getattr__(self, name:'str') -> 'any_':
+
+        connector = _resolve_connector(self._wrapper, self._overrides)
+        item = getattr(connector, name)
+
+        # Only public invocation methods get the framework behaviors - lifecycle methods
+        # belong to the framework and plain attributes pass through as they are.
+        if name.startswith('_') or name in lifecycle_method_names or not callable(item):
+            return item
+
+        out = build_invocation(self._wrapper, self._overrides, name)
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ConnectorContainer:
     """ Dict-like access to all the connection definitions of one connector type, e.g. self.out.crm['My CRM'].
     """
@@ -251,7 +662,7 @@ class ConnectorContainer:
 
 # ################################################################################################################################
 
-    def __getitem__(self, name:'str') -> 'Connector':
+    def __getitem__(self, name:'str') -> 'ConnectorProxy':
 
         # This raises a KeyError if there is no definition of that name ..
         item = self._container[name]
@@ -266,7 +677,7 @@ class ConnectorContainer:
         if client is None:
             raise Exception('Connection `{}` could not be built'.format(name))
 
-        out = wrapper.connector
+        out = ConnectorProxy(wrapper)
         return out
 
 # ################################################################################################################################

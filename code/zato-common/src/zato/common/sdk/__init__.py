@@ -7,6 +7,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.sdk.connector import Connector, Field, PooledConnector
+from zato.common.sdk.connector import Connector, ConnectionLost, CredentialsExpired, Field, PooledConnector, \
+     SubscribingConnector
+from zato.common.sdk.process import Process
 
-__all__ = ['Connector', 'Field', 'PooledConnector']
+__all__ = ['Connector', 'ConnectionLost', 'CredentialsExpired', 'Field', 'PooledConnector', 'Process', \
+     'SubscribingConnector']

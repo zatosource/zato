@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import socket
 
 # Zato
-from zato.common.sdk import Field, PooledConnector
+from zato.common.sdk import ConnectionLost, Field, PooledConnector
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -77,7 +77,11 @@ class MainframeConnector(PooledConnector):
 # ################################################################################################################################
 
     def ping(self, conn:'MainframeConnection') -> 'None':
-        _ = conn.send('ping')
+
+        # A dead socket answers with an empty line - the framework will discard the connection.
+        response = conn.send('ping')
+        if not response.endswith('ping'):
+            raise ConnectionLost(f'The gateway did not answer a ping -> {response!r}')
 
 # ################################################################################################################################
 
