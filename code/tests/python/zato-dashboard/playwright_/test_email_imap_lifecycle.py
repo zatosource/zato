@@ -135,7 +135,7 @@ def _job_row_exists(page:'Page', base_url:'str', job_name:'str') -> 'bool':
     _ = page.goto(f'{base_url}{_Scheduler_Page_Url_Pattern}')
     page.wait_for_selector('#data-table', state='visible')
 
-    row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{job_name}"))')
+    row = page.query_selector(f'#data-table tbody tr:has(td a:text-is("{job_name}"))')
     out = row is not None
 
     return out

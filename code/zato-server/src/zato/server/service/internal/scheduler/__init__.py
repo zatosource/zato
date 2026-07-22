@@ -7,9 +7,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 from datetime import datetime, timedelta, timezone
 from json import loads
 from traceback import format_exc
+
+# requests
+from requests.exceptions import ConnectionError as RequestsConnectionError
 
 # ciso8601
 try:
@@ -24,10 +28,15 @@ from zato.common.exception import ServiceMissingException, ZatoException
 from zato.common.odb.model import Cluster, IntervalBasedJob, Job, Service as ServiceModel
 from zato.common.util.imap_scheduler import clear_imap_scheduler_fields, unit_from_interval, update_imap_scheduler_fields
 from zato.common.util.rest_invocation import clear_linked_job_fields, update_linked_job_fields
-from zato.common.typing_ import anylist, anytuple
+from zato.common.typing_ import any_, anylist, anytuple
 from zato.common.util.sql import elems_with_opaque, parse_instance_opaque_attr, set_instance_opaque_attrs
 from zato.server.service import Int, Bool, List
 from zato.server.service.internal import AdminService
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -69,6 +78,22 @@ def _item_by_id(items, id_):
         if item['id'] == id_:
             return item
     return None
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _get_job_summaries(server:'any_') -> 'anylist':
+    """ Returns runtime job summaries from the scheduler daemon. Environments that run without a scheduler,
+    e.g. quickstart ones created with --no-scheduler, get an empty list so that job listings can still
+    be served from the ODB, only without any last-run details.
+    """
+    try:
+        out = server._scheduler.get_job_summaries()
+    except RequestsConnectionError:
+        logger.info('Scheduler unreachable, returning no job summaries')
+        out = []
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -429,7 +454,7 @@ class GetList(_Get):
                 items.append(self._enrich_job(row))
 
         # Map runtime summaries by ID, with a lookup by name for jobs whose IDs changed, e.g. after a redeployment ..
-        summary_by_id, summary_by_name = _map_job_summaries(self.server._scheduler.get_job_summaries())
+        summary_by_id, summary_by_name = _map_job_summaries(_get_job_summaries(self.server))
 
         # .. and attach the last run details to each job - the time is an empty string
         # .. and the duration is None for jobs that never ran.
@@ -728,7 +753,7 @@ class GetLastRunList(_SchedulerAdmin):
                     name_by_id[job.id] = job.name
 
         # .. one call returns runtime summaries for all jobs ..
-        summary_by_id, summary_by_name = _map_job_summaries(self.server._scheduler.get_job_summaries())
+        summary_by_id, summary_by_name = _map_job_summaries(_get_job_summaries(self.server))
 
         # .. and each requested job is looked up by ID first and by name second - the last run time
         # .. is an empty string and the duration is None for jobs that never ran.
@@ -811,7 +836,7 @@ class GetCurrentState(_SchedulerAdmin):
             # .. recent_outcomes, and per-job outcome_counts ..
             runtime_by_id = {}
             runtime_by_name = {}
-            for summary in scheduler.get_job_summaries():
+            for summary in _get_job_summaries(self.server):
                 runtime_by_id[summary['id']] = summary
                 runtime_by_name[summary['name']] = summary
 

@@ -32,7 +32,7 @@ class TestConfigDBSQL:
 
     def test_01_page_loads(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Navigates to the SQL screen and verifies its structure:
-        - the database selector offers the audit log and analytics databases
+        - the database selector offers the audit log, analytics and pub/sub databases
         - the form shows SQLite as the default type
         - the Test and Save buttons are present
         """
@@ -53,7 +53,7 @@ class TestConfigDBSQL:
             value = option.get_attribute('value')
             option_values.append(value)
 
-        assert option_values == ['audit-log', 'analytics'], f'Unexpected databases: {option_values}'
+        assert option_values == ['audit-log', 'analytics', 'pubsub'], f'Unexpected databases: {option_values}'
 
         # .. by default the audit log database is shown, backed by SQLite ..
         database_value = page.input_value('#id_database')

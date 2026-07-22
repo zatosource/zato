@@ -87,6 +87,7 @@ $.namespace('zato.cluster.servers');
 $.namespace('zato.common');
 $.namespace('zato.common.security');
 $.namespace('zato.dashboard_kit');
+$.namespace('zato.wizard_kit');
 $.namespace('zato.data_table');
 $.namespace('zato.data_table.multirow');
 $.namespace('zato.definition');
