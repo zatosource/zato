@@ -12,6 +12,13 @@ import logging
 import os
 import time
 
+# SQLAlchemy
+from sqlalchemy import select
+
+# Zato
+from zato.common.pubsub.sql.config import get_pubsub_engine
+from zato.common.pubsub.sql.schema import message_table
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -88,34 +95,41 @@ def wait_for_callback_entry(marker:'str', timeout:'float'=Delivery_Timeout) -> '
 # ################################################################################################################################
 # ################################################################################################################################
 
-def wait_for_topic_stream_entry(
-    redis_port:'int',
+def wait_for_topic_message(
     topic_name:'str',
     marker:'str',
     timeout:'float'=Delivery_Timeout,
     ) -> 'anydict':
-    """ Waits until the Redis stream of the given pub/sub topic receives a message whose
-    data preview contains the marker and returns that message's fields.
+    """ Waits until the SQL pub/sub store receives a message published to the given topic
+    whose data preview contains the marker and returns that message's row as a dict.
     """
-    # Redis
-    from redis import Redis
-
-    # Zato
-    from zato.common.pubsub.redis_backend import ModuleCtx
-
-    client = Redis(host='127.0.0.1', port=redis_port, decode_responses=True)
+    # The store the server publishes to - selected through the same
+    # Zato_PubSub_DB_* environment variables the server itself reads.
+    engine = get_pubsub_engine()
 
     # Topic names are lowercased on publish
-    stream_key = ModuleCtx.Stream_Prefix + topic_name.lower()
+    topic_name = topic_name.lower()
+
+    query = select(message_table).where(message_table.c.topic_name == topic_name)
 
     deadline = time.monotonic() + timeout
 
     while time.monotonic() < deadline:
-        entries = client.xrange(stream_key)
-        for _entry_id, fields in entries:
-            if marker in fields['data_preview']:
-                logger.info('[wait_for_topic_stream_entry] found: %s', fields)
-                return fields
+
+        # Read all the messages the topic has so far ..
+        with engine.connect() as connection:
+            rows = connection.execute(query).mappings().all()
+
+        # .. and look for the marker in each one's preview, which is NULL until the payload is stored.
+        for row in rows:
+            data_preview = row['data_preview']
+            if data_preview is None:
+                continue
+            if marker in data_preview:
+                out = dict(row)
+                logger.info('[wait_for_topic_message] found: %s', out)
+                return out
+
         time.sleep(_Poll_Interval)
 
     raise Exception(f'No message with marker `{marker}` arrived on topic `{topic_name}` within {timeout}s')
@@ -371,7 +385,7 @@ def job_row_exists(page:'Page', base_url:'str', job_name:'str') -> 'bool':
     _ = page.goto(f'{base_url}/zato/scheduler/?cluster=1')
     page.wait_for_selector('#data-table', state='visible')
 
-    row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{job_name}"))')
+    row = page.query_selector(f'#data-table tbody tr:has(td a:text-is("{job_name}"))')
     out = row is not None
 
     return out
@@ -384,7 +398,7 @@ def get_job_row_id(page:'Page', base_url:'str', job_name:'str') -> 'str':
     _ = page.goto(f'{base_url}/zato/scheduler/?cluster=1')
     page.wait_for_selector('#data-table', state='visible')
 
-    row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{job_name}"))')
+    row = page.query_selector(f'#data-table tbody tr:has(td a:text-is("{job_name}"))')
     id_cell = row.query_selector('td[class*="job_id_"]')
 
     out = id_cell.inner_text().strip()

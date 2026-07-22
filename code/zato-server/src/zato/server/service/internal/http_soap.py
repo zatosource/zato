@@ -1126,6 +1126,7 @@ class Edit(_CreateEdit):
         Boolean('-is_deprecated'), '-deprecation_sunset', '-deprecation_successor', \
         Boolean('-use_ws_addressing'), Boolean('-use_mtom'), '-body_credentials', '-tls_client_cert', '-tls_client_key', \
         *_invocation_input, \
+        *_retry_input, \
         *_as4_input, \
         *_as2_input
     output = '-id', '-name'

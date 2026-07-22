@@ -31,7 +31,7 @@ if 0:
 # ################################################################################################################################
 
 from declarative import fill_rest_invocation_tabs, invoke_rest_declarative_from_service, wait_for_rest_declarative_invoker, \
-    wait_for_topic_stream_entry
+    wait_for_topic_message
 from http_test_server import HTTPTestServer
 from rest_outconn import create_outconn, fill_outconn_form, get_outconn_id, open_outconn_page, ping_outconn_until_success, \
     wait_for_outconn_row
@@ -205,12 +205,11 @@ class TestRESTOutconnCallbackTypes:
         http_test_server:'HTTPTestServer',
         ) -> 'None':
         """ A topic-type callback publishes the response-mapped result to a pub/sub topic,
-        which the test observes in the topic's Redis stream.
+        which the test observes in the SQL pub/sub store.
         """
 
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
-        redis_port = zato_dashboard['redis_port']
 
         name = _Test_Name_Prefix + 'topic'
         marker = rand_string()
@@ -243,10 +242,10 @@ class TestRESTOutconnCallbackTypes:
 
         assert result.get('status_code') == OK, f'Expected OK from the declarative invocation, got: {result}'
 
-        # .. and the mapped payload arrived on the topic's stream.
-        entry = wait_for_topic_stream_entry(redis_port, topic['name'], marker)
+        # .. and the mapped payload arrived on the topic.
+        entry = wait_for_topic_message(topic['name'], marker)
 
-        assert entry['topic_name'] == topic['name'].lower(), f'Expected the topic name in the stream entry, got: {entry}'
+        assert entry['topic_name'] == topic['name'].lower(), f'Expected the topic name in the message, got: {entry}'
         assert marker in entry['data_preview'], f'Expected the marker in the published data, got: {entry}'
 
 # ################################################################################################################################

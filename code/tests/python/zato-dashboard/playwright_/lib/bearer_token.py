@@ -45,6 +45,9 @@ Cell_Claims   = 24
 # Text fields the create and edit dialogs share, in both the dynamic and the inbound sections
 _Text_Fields = ('name', 'auth_server_url', 'username', 'secret', 'issuer', 'jwks_url', 'audience', 'claims')
 
+# The inbound verification fields live in a collapsed section that needs to be expanded before they can be filled
+_Verification_Fields = ('issuer', 'jwks_url', 'audience', 'claims')
+
 # Text fields specific to the static tokens tab - the token itself appears only in the create form
 _Static_Fields = ('static_header', 'static_prefix')
 
@@ -116,6 +119,23 @@ def _fill_definition_form(page:'Page', options:'anydict', prefix:'str'='') -> 'N
     """ Fills the Bearer token create or edit form. An empty prefix means the create form,
     the 'edit-' prefix means the edit form. Only the fields present in options are touched.
     """
+
+    # The dialog that is being filled - the create one is the one without a prefix.
+    dialog_id = 'edit-div' if prefix else 'create-div'
+
+    # Check if any of the collapsed inbound verification fields is to be filled ..
+    needs_verification_fields = False
+    for field_name in _Verification_Fields:
+        if field_name in options:
+            needs_verification_fields = True
+            break
+
+    # .. and if so, expand the channel verification section first, unless it is already expanded.
+    if needs_verification_fields:
+        block_selector = f'#{dialog_id} .channel-verification-block'
+        if not page.is_visible(block_selector):
+            page.click(f'#{dialog_id} a[href*="channel-verification-block"]')
+            _ = page.wait_for_selector(block_selector, state='visible', timeout=5000)
 
     # Plain text fields of the dynamic tab and the inbound verification section ..
     for field_name in _Text_Fields:

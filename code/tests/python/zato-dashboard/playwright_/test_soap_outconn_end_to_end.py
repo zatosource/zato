@@ -239,7 +239,20 @@ class TestSOAPOutconnEndToEnd:
         assert result['fields']['status'] == 'ok', f'Expected an ok response, got: {result}'
 
         # The assertion carried the definition's audience restriction on the wire.
-        audience_element = soap_test_server.last_request['envelope'].find(f'.//{qname(NS.SAML2, "Audience")}')
+        # A ping may arrive after the invocation and overwrite last_request, so look
+        # for the newest SOAP request recorded on this test's path instead.
+        envelope = None
+        for record in reversed(soap_test_server.recorded_requests):
+            if record['path'] != path:
+                continue
+            if record['envelope'] is None:
+                continue
+            envelope = record['envelope']
+            break
+
+        assert envelope is not None, f'Expected a SOAP request recorded on `{path}`'
+
+        audience_element = envelope.find(f'.//{qname(NS.SAML2, "Audience")}')
 
         assert audience_element is not None, 'Expected an Audience element in the assertion'
         assert audience_element.text == audience, f'Expected the audience, got: {audience_element.text}'
