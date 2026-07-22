@@ -97,6 +97,15 @@ def _build_schedule_dict(input:'any_', schedule_id:'str', job_id:'int') -> 'stra
     stability_delay = input.stability_delay or _scheduler.Default_Stability_Delay
     pattern = input.pattern or _scheduler.Default_Pattern
 
+    # Optional inputs arrive as None when not given and the stored entry always uses concrete values
+    marker_suffix = input.marker_suffix
+    if marker_suffix is None:
+        marker_suffix = ''
+
+    should_claim = input.should_claim
+    if should_claim is None:
+        should_claim = False
+
     out = {
         'id': schedule_id,
         'name': input.name,
@@ -105,8 +114,8 @@ def _build_schedule_dict(input:'any_', schedule_id:'str', job_id:'int') -> 'stra
         'pattern': pattern,
         'ready_how': input.ready_how,
         'stability_delay': stability_delay,
-        'marker_suffix': input.marker_suffix,
-        'should_claim': input.should_claim,
+        'marker_suffix': marker_suffix,
+        'should_claim': should_claim,
         'service': input.service,
         'on_success': input.on_success,
         'move_directory': input.move_directory,

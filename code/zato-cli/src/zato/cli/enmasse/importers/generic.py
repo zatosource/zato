@@ -12,7 +12,7 @@ import logging
 # Zato
 from zato.cli.enmasse.util import preprocess_item
 from zato.common.api import FileTransfer, SCHEDULER, SchedulerLink
-from zato.common.odb.model import GenericConn, IntervalBasedJob, Job, to_json
+from zato.common.odb.model import GenericConn, Job, to_json
 from zato.common.odb.query.generic import connection_list
 from zato.common.util.file_transfer_scheduler import build_job_extra, get_job_name, schedule_from_yaml
 from zato.common.util.imap_scheduler import interval_from_unit
@@ -269,7 +269,8 @@ class GenericConnectionImporter:
         for job in existing_jobs:
             if job.name not in wanted_job_names:
                 logger.info('Deleting schedule job no longer in YAML: %s', job.name)
-                _ = session.query(IntervalBasedJob).filter_by(job_id=job.id).delete()
+
+                # Deleting the job cascades to its interval row through the ORM relationship
                 session.delete(job)
 
         # Store the full list with the connection
