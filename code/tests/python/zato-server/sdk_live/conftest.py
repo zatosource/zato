@@ -50,12 +50,17 @@ _zato_base = os.environ['ZATO_TEST_BASE_DIR']
 _zato_bin  = os.path.join(_zato_base, 'code', 'bin', 'zato')
 
 _connector_source_path = os.path.join(os.path.dirname(__file__), 'crm_connector.py')
+_mainframe_source_path = os.path.join(os.path.dirname(__file__), 'mainframe_connector.py')
 _services_source_path  = os.path.join(os.path.dirname(__file__), '_services.py')
 
 _process_kill_timeout = 5
 _server_wait_timeout  = 120
 _quickstart_timeout   = 180
 _ping_poll_interval   = 0.5
+
+# How long the handshake gateway sleeps over a slow command, which is what lets concurrent
+# service invocations overlap and prove that each of them borrowed a distinct pooled connection.
+_slow_command_delay = 1.0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -81,6 +86,50 @@ class _EchoServer(socketserver.ThreadingTCPServer):
 # ################################################################################################################################
 # ################################################################################################################################
 
+# Each logon gets the next session number, letting tests tell pooled connections apart.
+_session_lock = threading.Lock()
+_next_session_number = [1]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _HandshakeHandler(socketserver.StreamRequestHandler):
+    """ The handshake mode of the suite's target server - it stands in for a mainframe gateway.
+    A client must log on first, gets a unique session ID back and each subsequent line is answered
+    with the session ID prepended, which is how tests tell pooled connections apart.
+    A line starting with 'slow' is answered only after a delay, keeping the connection busy.
+    """
+    def handle(self) -> 'None':
+
+        # The very first line must be the logon ..
+        first_line = self.rfile.readline().decode('utf8').strip()
+
+        if not first_line.startswith('logon '):
+            _ = self.wfile.write(b'error logon-required\n')
+            return
+
+        # .. each logon gets a unique session ..
+        with _session_lock:
+            session_id = f'session-{_next_session_number[0]}'
+            _next_session_number[0] += 1
+
+        _ = self.wfile.write(f'ok {session_id}\n'.encode('utf8'))
+        self.wfile.flush()
+
+        # .. and from now on, each line is answered with the session ID prepended.
+        for line in self.rfile:
+            text = line.decode('utf8').strip()
+
+            # A slow command keeps the connection busy so concurrent callers need other connections
+            if text.startswith('slow'):
+                time.sleep(_slow_command_delay)
+
+            _ = self.wfile.write(f'{session_id} {text}\n'.encode('utf8'))
+            self.wfile.flush()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class _SessionState:
     """ Holds all mutable session state.
     """
@@ -89,6 +138,7 @@ class _SessionState:
         self.server_process:'subprocess.Popen[bytes] | None' = None
         self.quickstart_directory:'str | None' = None
         self.echo_server:'_EchoServer | None' = None
+        self.handshake_server:'_EchoServer | None' = None
 
 # ################################################################################################################################
 
@@ -128,6 +178,11 @@ class _SessionState:
             self.echo_server.server_close()
             self.echo_server = None
 
+        if self.handshake_server:
+            self.handshake_server.shutdown()
+            self.handshake_server.server_close()
+            self.handshake_server = None
+
         if self.quickstart_directory:
             shutil.rmtree(self.quickstart_directory, ignore_errors=True)
 
@@ -164,6 +219,22 @@ def _start_echo_server() -> 'int':
 
     out = echo_server.server_address[1]
     logger.info('Echo server started on port %s', out)
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _start_handshake_server() -> 'int':
+    """ Starts the handshake server that stands in for the mainframe gateway and returns its port.
+    """
+    handshake_server = _EchoServer(('127.0.0.1', 0), _HandshakeHandler)
+    _state.handshake_server = handshake_server
+
+    handshake_thread = threading.Thread(target=handshake_server.serve_forever, daemon=True)
+    handshake_thread.start()
+
+    out = handshake_server.server_address[1]
+    logger.info('Handshake server started on port %s', out)
     return out
 
 # ################################################################################################################################
@@ -257,8 +328,9 @@ def zato_server() -> 'any_':
     # Generate the credentials used by the invoke API ..
     invoke_password = 'test.invoke.' + CryptoManager.generate_hex_string()
 
-    # .. start the echo server the connector will talk to ..
+    # .. start the target servers the connectors will talk to ..
     echo_port = _start_echo_server()
+    handshake_port = _start_handshake_server()
 
     # .. create a quickstart environment ..
     _state.quickstart_directory = tempfile.mkdtemp(prefix='zato_sdk_live_qs_')
@@ -292,6 +364,7 @@ def zato_server() -> 'any_':
     pickup_directory = os.path.join(server_directory, 'pickup', 'incoming', 'services')
     connector_deployed_path = os.path.join(pickup_directory, 'crm_connector.py')
     _ = shutil.copy2(_connector_source_path, connector_deployed_path)
+    _ = shutil.copy2(_mainframe_source_path, os.path.join(pickup_directory, 'mainframe_connector.py'))
     _ = shutil.copy2(_services_source_path, os.path.join(pickup_directory, 'crm_test_services.py'))
 
     # .. patch server.conf so the server binds to a dynamically allocated port ..
@@ -327,6 +400,7 @@ def zato_server() -> 'any_':
         'invoke_password': invoke_password,
         'base_url': base_url,
         'echo_port': echo_port,
+        'handshake_port': handshake_port,
         'server_directory': server_directory,
         'connector_deployed_path': connector_deployed_path,
     }

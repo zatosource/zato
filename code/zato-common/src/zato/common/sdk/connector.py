@@ -118,6 +118,45 @@ class Connector:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class PooledConnector(Connector):
+    """ Base class for connection types whose connections hold per-connection state, e.g. a logon
+    handshake followed by one call at a time. The framework owns a pool of connections - create_client
+    builds one connection and invocation methods borrow one for the duration of each call
+    through the get_connection context manager.
+    """
+
+    def __init__(self) -> 'None':
+        super().__init__()
+
+        # The framework-owned pool, set when the connection starts.
+        self._pool:'any_' = None
+
+# ################################################################################################################################
+
+    def get_connection(self) -> 'any_':
+        """ Returns a context manager that borrows a connection from the pool for the duration
+        of a with block. Provided by the framework, never overridden.
+        """
+        return self._pool.acquire()
+
+# ################################################################################################################################
+
+    def on_get_from_pool(self, conn:'any_') -> 'None':
+        """ Resets conversational state when a connection is taken from the pool.
+        Called by the framework each time get_connection hands a connection out.
+        The default implementation does nothing.
+        """
+
+# ################################################################################################################################
+
+    def on_return_to_pool(self, conn:'any_') -> 'None':
+        """ Cleans up when a connection goes back to the pool. Called by the framework
+        each time a with block using get_connection ends. The default implementation does nothing.
+        """
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def get_schema(connector_class:'type[Connector]') -> 'fielddict':
     """ Returns all the fields the connector class declares, mapping each field's name to its Field instance.
     """

@@ -29,3 +29,18 @@ class GetCustomer(Service):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class SendMainframeCommand(Service):
+    """ Sends one command to the mainframe gateway over a pooled connection.
+    """
+    name = 'demo.mainframe.send-command'
+
+    input = 'command'
+
+    def handle(self) -> 'None':
+        conn = self.out.mainframe['My Mainframe']
+        response = conn.send_command(self.request.input.command)
+        self.response.payload = json.dumps({'response': response})
+
+# ################################################################################################################################
+# ################################################################################################################################
