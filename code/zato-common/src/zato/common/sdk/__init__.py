@@ -7,6 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.sdk.connector import Connector, Field
+from zato.common.sdk.connector import Connector, Field, PooledConnector
 
-__all__ = ['Connector', 'Field']
+__all__ = ['Connector', 'Field', 'PooledConnector']

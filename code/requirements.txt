@@ -73,7 +73,7 @@ prometheus-client==0.22.1
 psutil==5.9.4
 py-cpuinfo==3.3.0
 pyaml==20.4.0
-pyasn1==0.6.3
+pyasn1==0.6.4
 pycparser==2.21
 pycryptodome==3.19.1
 pydantic==2.12.5
@@ -99,7 +99,7 @@ requests-toolbelt==0.9.1
 rule-engine==4.5.3
 sarge==0.1.7.post1
 setproctitle==1.3.2
-setuptools==80.9.0
+setuptools==83.0.0
 simple-parsing==0.0.17
 smbprotocol==1.17.0
 snowflake-connector-python==4.6.0
