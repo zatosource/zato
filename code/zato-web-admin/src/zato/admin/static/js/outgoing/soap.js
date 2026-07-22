@@ -368,6 +368,10 @@ $.fn.zato.outgoing.soap.field_descriptions = {
     // More options in the main tab
     'id_ping_method': 'HTTP method used when pinging<br>the connection, e.g. HEAD or GET.',
     'id_content_type': 'Overrides the default Content-Type header.<br>Leave empty to use the default matching<br>the SOAP version selected.',
+    'id_max_retries': 'How many times a failed invocation is retried<br>after a timeout or a connection error.<br>0 means no retries at all.',
+    'id_retry_sleep_time': 'How many seconds to sleep before the first retry.<br>Each subsequent sleep is multiplied<br>by the backoff multiplier.',
+    'id_retry_backoff_threshold': 'A cap on the total time spent sleeping<br>between retries, in seconds.<br>Once reached, no more retries take place.',
+    'id_retry_backoff_multiplier': 'Each retry sleeps this many times longer<br>than the previous one, up to 8 seconds<br>per a single sleep.',
 
     // Scheduler tab
     'id_scheduler_run_every': 'How often this connection is invoked,<br>e.g. every 6 hours.<br>Leave empty for no scheduled invocations.',
@@ -507,6 +511,14 @@ $.fn.zato.outgoing.soap.data_table.new_row = function(item, data, include_tr) {
     });
 
     row += String.format("<td class='ignore'>{0}</td>", to_django_bool(item.is_audit_log_active));
+
+    // Retry config fields
+    var retryFields = [
+        'max_retries', 'retry_sleep_time', 'retry_backoff_threshold', 'retry_backoff_multiplier'
+    ];
+    $.each(retryFields, function(ignored, name) {
+        row += String.format("<td class='ignore'>{0}</td>", item[name]);
+    });
 
     if(include_tr) {
         row += '</tr>';

@@ -457,6 +457,12 @@ $.fn.zato.http_soap.rest_outgoing_field_descriptions = {
     'id_security': 'Security definition used with each request,<br>e.g. Basic Auth or an OAuth bearer token.',
     'id_data_format': 'Format of the data this connection exchanges,<br>e.g. JSON. Responses are parsed accordingly,<br>so services receive ready-to-use objects.',
 
+    // Config tab - retry config under More options
+    'id_max_retries': 'How many times a failed invocation is retried<br>after a timeout or a connection error.<br>0 means no retries at all.',
+    'id_retry_sleep_time': 'How many seconds to sleep before the first retry.<br>Each subsequent sleep is multiplied<br>by the backoff multiplier.',
+    'id_retry_backoff_threshold': 'A cap on the total time spent sleeping<br>between retries, in seconds.<br>Once reached, no more retries take place.',
+    'id_retry_backoff_multiplier': 'Each retry sleeps this many times longer<br>than the previous one, up to 8 seconds<br>per a single sleep.',
+
     // Scheduler tab
     'id_scheduler_run_every': 'How often this connection is invoked,<br>e.g. every 6 hours.<br>Leave empty for no scheduled invocations.',
     'id_scheduler_start_date': 'When the first scheduled invocation takes place,<br>entered in your own timezone.',
@@ -790,6 +796,14 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         ];
         $.each(invocation_fields, function(ignored, name) {
             row += String.format("<td class='ignore'>{0}</td>", item[name] ? item[name] : '');
+        });
+
+        /* 41 - retry config */
+        var retry_fields = [
+            'max_retries', 'retry_sleep_time', 'retry_backoff_threshold', 'retry_backoff_multiplier'
+        ];
+        $.each(retry_fields, function(ignored, name) {
+            row += String.format("<td class='ignore'>{0}</td>", item[name]);
         });
     }
 

@@ -187,6 +187,46 @@ class TestEnmasseOutgoingRESTExporter(TestCase):
 
 # ################################################################################################################################
 
+    def test_outgoing_rest_retry_export(self) -> 'None':
+        """ Tests that the retry config fields are exported only when they differ from the shared defaults.
+        """
+        self._setup_test_environment()
+
+        retry_def = {
+            'name': 'enmasse.outgoing.rest.retry.export.1',
+            'host': 'https://example.com',
+            'url_path': '/retry-export',
+            'max_retries': 5,
+            'retry_sleep_time': 2, # Equal to the shared default, so it must not be exported
+            'retry_backoff_threshold': 120,
+            'retry_backoff_multiplier': 4,
+        }
+
+        # Create the connection and store it in the database
+        _ = self.outgoing_rest_importer.create_outgoing_rest(retry_def, self.session)
+        _ = self.session.commit()
+
+        # Export everything and find the connection just created
+        all_exported_connections = self.outgoing_rest_exporter.export(self.session, self.importer.cluster_id)
+
+        exported = cast_('stranydict', None)
+        for conn in all_exported_connections:
+            if conn['name'] == 'enmasse.outgoing.rest.retry.export.1':
+                exported = conn
+                break
+
+        self.assertIsNotNone(exported, 'The retry test connection was not exported')
+
+        # The values that differ from the shared defaults are exported ..
+        self.assertEqual(exported['max_retries'], 5)
+        self.assertEqual(exported['retry_backoff_threshold'], 120)
+        self.assertEqual(exported['retry_backoff_multiplier'], 4)
+
+        # .. while the sleep time equals the shared default so it is not.
+        self.assertNotIn('retry_sleep_time', exported)
+
+# ################################################################################################################################
+
     def tearDown(self) -> 'None':
         if self.session:
             _ = self.session.close()

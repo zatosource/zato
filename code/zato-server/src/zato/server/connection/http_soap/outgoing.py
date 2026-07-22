@@ -29,7 +29,7 @@ from requests_ntlm import HttpNtlmAuth
 from requests_toolbelt import MultipartEncoder
 
 # Zato
-from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, NotGiven, SEC_DEF_TYPE, URL_TYPE, \
+from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, HTTP_SOAP, NotGiven, SEC_DEF_TYPE, URL_TYPE, \
     Wrapper_Name_Prefix_List
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.exception import BadRequest, Inactive, BackendInvocationError
@@ -82,6 +82,30 @@ _MTLS = SEC_DEF_TYPE.MTLS
 _NTLM = SEC_DEF_TYPE.NTLM
 _OAuth = SEC_DEF_TYPE.OAUTH
 _SPNEGO = SEC_DEF_TYPE.SPNEGO
+
+_retry = HTTP_SOAP.Retry
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _resolve_retry_value(kwargs:'stranydict', config:'stranydict', name:'str', default:'int') -> 'int':
+    """ Returns one retry parameter, with explicit call arguments winning over the connection's
+    own config, which in turn wins over the shared defaults.
+    """
+
+    # Our response to produce
+    out = kwargs.pop(name, None)
+
+    # .. no explicit argument was given, so look the value up in the connection's config,
+    # .. which will not have it at all if the connection was never configured with retries ..
+    if out is None:
+        out = config.get(name)
+
+    # .. with no config value either, use the shared default.
+    if out is None:
+        out = default
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -535,9 +559,12 @@ class BaseHTTPSOAPWrapper:
             logger.info(message)
 
             # .. extract retry parameters ..
-            max_retries = kwargs.pop('max_retries', None) or 0
-            retry_sleep_time = kwargs.pop('retry_sleep_time', None) or 2
-            retry_backoff_threshold = kwargs.pop('retry_backoff_threshold', None) or 60
+            max_retries = _resolve_retry_value(kwargs, self.config, _retry.Field_Max_Retries, _retry.Default_Max_Retries)
+            retry_sleep_time = _resolve_retry_value(kwargs, self.config, _retry.Field_Sleep_Time, _retry.Default_Sleep_Time)
+            retry_backoff_threshold = _resolve_retry_value(
+                kwargs, self.config, _retry.Field_Backoff_Threshold, _retry.Default_Backoff_Threshold)
+            retry_backoff_multiplier = _resolve_retry_value(
+                kwargs, self.config, _retry.Field_Backoff_Multiplier, _retry.Default_Backoff_Multiplier)
 
             # .. retry loop ..
             attempt = 0
@@ -574,7 +601,8 @@ class BaseHTTPSOAPWrapper:
                             cid, attempt, current_sleep_time, e)
                         sleep(current_sleep_time)
                         total_sleep_time += current_sleep_time
-                        current_sleep_time = min(current_sleep_time * 2, 8, retry_backoff_threshold - total_sleep_time)
+                        next_sleep_time = current_sleep_time * retry_backoff_multiplier
+                        current_sleep_time = min(next_sleep_time, _retry.Max_Sleep_Time, retry_backoff_threshold - total_sleep_time)
                         if current_sleep_time <= 0:
                             current_sleep_time = 1
                     else:
@@ -1154,6 +1182,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         max_retries=None,     # type: int | None
         retry_sleep_time=None,   # type: int | None
         retry_backoff_threshold=None, # type: int | None
+        retry_backoff_multiplier=None, # type: int | None
     ) -> 'any_':
 
         # Invoke the system ..
@@ -1169,6 +1198,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                 max_retries=max_retries,
                 retry_sleep_time=retry_sleep_time,
                 retry_backoff_threshold=retry_backoff_threshold,
+                retry_backoff_multiplier=retry_backoff_multiplier,
             )
         except Exception as e:
             if needs_exception:

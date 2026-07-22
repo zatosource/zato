@@ -16,6 +16,10 @@ from zato.common.api import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HT
 
 # ################################################################################################################################
 
+_retry = HTTP_SOAP.Retry
+
+# ################################################################################################################################
+
 params_priority = (
     (PARAMS_PRIORITY.CHANNEL_PARAMS_OVER_MSG, 'URL over message'),
     (PARAMS_PRIORITY.MSG_OVER_CHANNEL_PARAMS, 'Message over URL'),
@@ -99,6 +103,16 @@ class CreateForm(DataFormatForm):
     data_formats_allowed = IO.HTTP_SOAP_FORMAT
     http_accept = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=HTTP_SOAP.ACCEPT.ANY)
     validate_tls = forms.ChoiceField(widget=forms.Select())
+
+    # Retry config - how many times to retry a failed invocation and how long to sleep between attempts
+    max_retries = forms.CharField(
+        widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:10%'}), initial=_retry.Default_Max_Retries)
+    retry_sleep_time = forms.CharField(
+        widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:10%'}), initial=_retry.Default_Sleep_Time)
+    retry_backoff_threshold = forms.CharField(
+        widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:10%'}), initial=_retry.Default_Backoff_Threshold)
+    retry_backoff_multiplier = forms.CharField(
+        widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:10%'}), initial=_retry.Default_Backoff_Multiplier)
 
     data_encoding = forms.CharField(widget=forms.HiddenInput())
 

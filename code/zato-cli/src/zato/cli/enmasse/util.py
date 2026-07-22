@@ -50,6 +50,18 @@ SQL_TYPE_MAP = {
 
 _invocation = HTTP_SOAP.Invocation
 _health_check = HTTP_SOAP.HealthCheck
+_retry = HTTP_SOAP.Retry
+
+# The retry config fields shared by outgoing REST and SOAP connections,
+# each mapped to its shared default value.
+Retry_Field_Defaults = {
+    _retry.Field_Max_Retries: _retry.Default_Max_Retries,
+    _retry.Field_Sleep_Time: _retry.Default_Sleep_Time,
+    _retry.Field_Backoff_Threshold: _retry.Default_Backoff_Threshold,
+    _retry.Field_Backoff_Multiplier: _retry.Default_Backoff_Multiplier,
+}
+
+Retry_Fields = tuple(Retry_Field_Defaults)
 
 # Row-based invocation fields are YAML lists of {key, value, mode} mappings in enmasse files
 # and JSON strings in the database.
@@ -158,6 +170,23 @@ def export_invocation_fields(exported_conn:'anydict', opaque:'anydict', field_na
                 continue
 
         exported_conn[field_name] = value
+
+# ################################################################################################################################
+
+def export_retry_fields(exported_conn:'anydict', opaque:'anydict') -> 'None':
+    """ Copies the retry config fields from a connection's opaque attributes to its exported
+    definition - only values different from the shared defaults are exported.
+    """
+    for field_name, default in Retry_Field_Defaults.items():
+
+        # Connections that predate the retry config carry no values at all
+        value = opaque.get(field_name)
+        if value is None:
+            continue
+
+        # A value equal to the default would be redundant in an enmasse file
+        if value != default:
+            exported_conn[field_name] = value
 
 # ################################################################################################################################
 
@@ -544,7 +573,7 @@ def get_object_order(object_type:'str') -> 'strlist':
     order['channel_soap'] = 'name', 'is_active', 'service', 'url_path', 'security', 'soap_action', 'soap_version', 'use_mtom', \
         'groups:list', 'rate_limiting:list', 'response_cache:dict',
     order['outgoing_rest'] = ('name', 'is_active', 'host', 'url_path', 'security', 'data_format', 'timeout', 'ping_method', \
-        'tls_verify') + Invocation_Order_Fields_REST
+        'tls_verify') + Retry_Fields + Invocation_Order_Fields_REST
     order['scheduler'] = 'name', 'is_active', 'service', 'job_type', 'start_date', 'seconds', 'minutes', 'hours', 'days', 'extra:list',
     order['ldap'] = 'name', 'is_active', 'username', 'auth_type', 'server_list:list',
     order['llm'] = 'name', 'is_active', 'model', 'address', 'pool_size', 'timeout', 'max_tokens', \
@@ -557,7 +586,7 @@ def get_object_order(object_type:'str') -> 'strlist':
 
     order['sql'] = 'name', 'is_active', 'type', 'host', 'port', 'db_name', 'username',
     order['outgoing_soap'] = ('name', 'is_active', 'host', 'port', 'url_path', 'security', 'soap_action', 'soap_version', \
-        'timeout', 'tls_verify') + Invocation_Order_Fields_SOAP
+        'timeout', 'tls_verify') + Retry_Fields + Invocation_Order_Fields_SOAP
     order['outgoing_as2'] = 'name', 'is_active', 'as2_from', 'as2_to', 'endpoint_url', 'isa_qualifier', 'isa_id', \
         'gs_id', 'unb_id', 'sign', 'sign_algorithm', 'encrypt', 'encryption_algorithm', 'compress', \
         'compress_before_signing', 'mdn_mode', 'mdn_signed', 'async_mdn_url', 'subject', 'content_type', \

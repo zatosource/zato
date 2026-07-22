@@ -252,6 +252,35 @@ class TestEnmasseOutgoingRESTFromYAML(TestCase):
         self.assertEqual(conn5['tls_verify'], False)
 
 # ################################################################################################################################
+
+    def test_outgoing_rest_retry_config(self):
+        """ Test that the retry config fields are stored as opaque attributes on import.
+        """
+        self._setup_test_environment()
+
+        retry_def = {
+            'name': 'enmasse.outgoing.rest.retry.1',
+            'host': 'https://example.com',
+            'url_path': '/retry',
+            'max_retries': 5,
+            'retry_sleep_time': 3,
+            'retry_backoff_threshold': 120,
+            'retry_backoff_multiplier': 4,
+        }
+
+        # Create the connection and store it in the database
+        instance = self.outgoing_rest_importer.create_outgoing_rest(retry_def, self.session)
+        self.session.commit()
+
+        # All the retry fields are kept in the opaque attributes
+        opaque = loads(instance.opaque1)
+
+        self.assertEqual(opaque['max_retries'], 5)
+        self.assertEqual(opaque['retry_sleep_time'], 3)
+        self.assertEqual(opaque['retry_backoff_threshold'], 120)
+        self.assertEqual(opaque['retry_backoff_multiplier'], 4)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':

@@ -10,7 +10,7 @@ import logging
 from json import loads
 
 # Zato
-from zato.cli.enmasse.util import export_invocation_fields, Invocation_Fields_SOAP
+from zato.cli.enmasse.util import export_invocation_fields, export_retry_fields, Invocation_Fields_SOAP
 from zato.common.api import CONNECTION, URL_TYPE
 from zato.common.odb.model import to_json
 from zato.common.odb.query import http_soap_list
@@ -122,6 +122,9 @@ class OutgoingSOAPExporter:
             # The declarative invocation and health check fields are exported the same way,
             # with row-based fields as YAML lists and without the environment-local job IDs.
             export_invocation_fields(exported_conn, opaque, Invocation_Fields_SOAP)
+
+            # The retry config is exported only when it differs from the shared defaults
+            export_retry_fields(exported_conn, opaque)
 
             # The audit log is on by default so only the off state is exported
             if opaque.get('is_audit_log_active') is False:

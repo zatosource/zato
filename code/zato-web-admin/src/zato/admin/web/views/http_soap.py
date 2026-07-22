@@ -25,7 +25,7 @@ from zato.admin.web.views import get_group_list as common_get_group_list, get_ht
         method_allowed, SecurityList
 from zato.admin.web.views.security.tier import get_tier_list
 from zato.common.api import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
-     generic_attrs, Groups, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
+     generic_attrs, Groups, HTTP_SOAP, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
      SOAP_CHANNEL_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE
 from zato.common.content_type import format_content, get_content_type
 from zato.common.exception import ZatoException
@@ -93,6 +93,16 @@ _invocation_field_names = (
     'health_check_callback_type',
     'health_check_callback_name',
 )
+
+# The retry config of an outgoing connection - each field maps to its shared default
+_retry = HTTP_SOAP.Retry
+
+_retry_field_defaults = {
+    _retry.Field_Max_Retries: _retry.Default_Max_Retries,
+    _retry.Field_Sleep_Time: _retry.Default_Sleep_Time,
+    _retry.Field_Backoff_Threshold: _retry.Default_Backoff_Threshold,
+    _retry.Field_Backoff_Multiplier: _retry.Default_Backoff_Multiplier,
+}
 
 # The callback name arrives from the widget that matches the callback type selected
 _callback_widget_names = {
@@ -165,6 +175,15 @@ def _get_edit_create_message(params, prefix='', user_profile=None): # type: igno
     # The declarative invocation fields exist only in the forms of outgoing connections
     for name in _invocation_field_names:
         message[name] = params.get(prefix + name)
+
+    # The retry fields exist only in the forms of outgoing connections too - they are sent
+    # as integers, with the shared defaults filling in for anything left empty in a form.
+    if params['connection'] == 'outgoing':
+        for name, default in _retry_field_defaults.items():
+            if value := params.get(prefix + name):
+                message[name] = int(value)
+            else:
+                message[name] = default
 
     # The start date is entered in the user's own timezone and format and it is stored in UTC
     if scheduler_start_date := message['scheduler_start_date']:
@@ -373,6 +392,14 @@ def index(req): # type: ignore
             if connection == 'outgoing' and transport == URL_TYPE.PLAIN_HTTP:
                 for name in _invocation_field_names:
                     setattr(http_soap, name, item.get(name))
+
+                # The retry fields are opaque attributes too - connections that predate them
+                # carry no values, in which case the shared defaults are displayed.
+                for name, default in _retry_field_defaults.items():
+                    value = item.get(name)
+                    if value is None:
+                        value = default
+                    setattr(http_soap, name, value)
 
                 # The start date is stored in UTC and displayed in the user's own timezone and format
                 if scheduler_start_date := http_soap.get('scheduler_start_date'):

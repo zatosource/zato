@@ -232,6 +232,37 @@ class TestEnmasseOutgoingSOAPFromYAML(TestCase):
 
 # ################################################################################################################################
 
+    def test_outgoing_soap_retry_config(self):
+        """ Test that the retry config fields are stored as opaque attributes on import.
+        """
+        self._setup_test_environment()
+
+        retry_def = {
+            'name': 'enmasse.outgoing.soap.retry.1',
+            'host': 'https://example.com',
+            'url_path': '/retry/SOAP',
+            'soap_action': 'urn:retry-action',
+            'soap_version': '1.1',
+            'max_retries': 5,
+            'retry_sleep_time': 3,
+            'retry_backoff_threshold': 120,
+            'retry_backoff_multiplier': 4,
+        }
+
+        # Create the connection and store it in the database
+        instance = self.outgoing_soap_importer.create_outgoing_soap(retry_def, self.session)
+        self.session.commit()
+
+        # All the retry fields are kept in the opaque attributes
+        opaque = loads(instance.opaque1)
+
+        self.assertEqual(opaque['max_retries'], 5)
+        self.assertEqual(opaque['retry_sleep_time'], 3)
+        self.assertEqual(opaque['retry_backoff_threshold'], 120)
+        self.assertEqual(opaque['retry_backoff_multiplier'], 4)
+
+# ################################################################################################################################
+
     def test_outgoing_soap_update(self):
         """ Test updating existing outgoing SOAP connections.
         """

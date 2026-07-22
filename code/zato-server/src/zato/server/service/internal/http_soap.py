@@ -35,7 +35,7 @@ from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque, get_se
 from zato.server.connection.http_soap import BadRequest
 from zato.server.connection.http_soap.response_cache import get_default_config as get_default_response_cache_config, \
     parse_config as parse_response_cache_config, purge_channel as purge_response_cache
-from zato.server.service import AsIs, Boolean
+from zato.server.service import AsIs, Boolean, Int
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -66,6 +66,16 @@ for _invocation_field_name in _invocation.FieldList + _health_check.FieldList:
     _invocation_fields.append('-' + _invocation_field_name)
 
 _invocation_input = tuple(_invocation_fields)
+
+_retry = HTTP_SOAP.Retry
+
+# All the retry fields of outgoing connections, each an optional integer on input and output.
+_retry_fields = []
+
+for _retry_field_name in _retry.FieldList:
+    _retry_fields.append(Int('-' + _retry_field_name))
+
+_retry_input = tuple(_retry_fields)
 
 # The row-based fields whose JSONata-mode values are validated at create/edit time
 _row_fields = (
@@ -115,6 +125,17 @@ def _is_declarative(input:'Bunch') -> 'bool':
 
     out = input.transport in _declarative_transports
     return out
+
+# ################################################################################################################################
+
+def _normalize_retry_config(input:'Bunch') -> 'None':
+    """ Fills in the retry config of an outgoing connection with the shared defaults
+    for any field that was not given on input.
+    """
+    input.max_retries = input.max_retries or _retry.Default_Max_Retries
+    input.retry_sleep_time = input.retry_sleep_time or _retry.Default_Sleep_Time
+    input.retry_backoff_threshold = input.retry_backoff_threshold or _retry.Default_Backoff_Threshold
+    input.retry_backoff_multiplier = input.retry_backoff_multiplier or _retry.Default_Backoff_Multiplier
 
 # ################################################################################################################################
 
@@ -503,6 +524,7 @@ class _BaseGet(AdminService):
         '-security_group_member_count', '-needs_security_group_names', Boolean('-validate_tls'), '-gateway_service_list', \
         '-transport', Boolean('-is_audit_log_active'), \
         *_invocation_input, \
+        *_retry_input, \
         *_as4_input, \
         *_as2_input
 
@@ -585,6 +607,7 @@ class GetList(_BaseGet):
         '-connection', '-transport', Boolean('-is_audit_log_active'), \
         Boolean('-use_ws_addressing'), Boolean('-use_mtom'), '-body_credentials', '-tls_client_cert', '-tls_client_key', \
         *_invocation_input, \
+        *_retry_input, \
         *_as4_input, \
         *_as2_input
 
@@ -885,6 +908,7 @@ class Create(_CreateEdit):
         Boolean('-is_deprecated'), '-deprecation_sunset', '-deprecation_successor', \
         Boolean('-use_ws_addressing'), Boolean('-use_mtom'), '-body_credentials', '-tls_client_cert', '-tls_client_key', \
         *_invocation_input, \
+        *_retry_input, \
         *_as4_input, \
         *_as2_input
     output = 'id', 'name', '-url_path'
@@ -958,9 +982,11 @@ class Create(_CreateEdit):
             input.content_type = input_content_type.strip()
 
         # The declarative invocation profile of an outgoing connection is validated
-        # before anything is committed to the database.
+        # before anything is committed to the database, and the connection's retry config
+        # receives the shared defaults for any field that was not given on input.
         if _is_declarative(input):
             _validate_invocation_config(self, input)
+            _normalize_retry_config(input)
 
         # AS2/AS4 objects are stored in the external database when one is configured
         is_ext = needs_ext_db(input.transport)
@@ -1166,9 +1192,11 @@ class Edit(_CreateEdit):
             input.content_type = input_content_type.strip()
 
         # The declarative invocation profile of an outgoing connection is validated
-        # before anything is committed to the database.
+        # before anything is committed to the database, and the connection's retry config
+        # receives the shared defaults for any field that was not given on input.
         if _is_declarative(input):
             _validate_invocation_config(self, input)
+            _normalize_retry_config(input)
 
         # AS2/AS4 objects are stored in the external database when one is configured,
         # under their local ids, without the offset they are known under everywhere else.
