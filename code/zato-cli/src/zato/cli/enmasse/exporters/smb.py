@@ -10,9 +10,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
-from zato.common.api import GENERIC, SMB
+from zato.common.api import FileTransfer, GENERIC, SMB
 from zato.common.odb.model import to_json
 from zato.common.odb.query.generic import connection_list
+from zato.common.util.file_transfer_scheduler import export_schedule_list
 from zato.common.util.sql import parse_instance_opaque_attr
 
 # ################################################################################################################################
@@ -92,6 +93,10 @@ class SMBExporter:
                 default = _field_defaults[field]
                 if value != default:
                     item[field] = value
+
+            # File transfer schedules travel in their portable YAML shape
+            if schedules := row.get(FileTransfer.Scheduler.Schedules_Field):
+                item['schedules'] = export_schedule_list(schedules)
 
             exported_smb.append(item)
 

@@ -86,6 +86,9 @@ $.fn.zato.outgoing.smb.data_table.new_row = function(item, data, include_tr) {
     // 2
     row += String.format('<td>{0}</td>', item.port ? item.port : $.fn.zato.empty_value);
     row += String.format('<td>{0}</td>', item.username ? item.username : $.fn.zato.empty_value);
+    row += String.format('<td>{0}</td>',
+        String.format("<a href=\"/zato/outgoing/file-transfer/schedules/smb/{0}/cluster/{1}/{2}/?name={3}\">Schedules</a>",
+        item.id, item.cluster_id, data.name_slug, item.name));
 
     // 3
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.smb.edit('{0}')\">Edit</a>", item.id));

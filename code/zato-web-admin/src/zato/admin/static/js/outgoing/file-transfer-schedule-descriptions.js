@@ -13,7 +13,7 @@ $.fn.zato.outgoing.file_transfer.field_descriptions = {
     'id_directory': 'The remote directory looked into on each run,<br>e.g. /incoming/invoices.',
     'id_pattern': 'Which files in the directory count.<br>Shell-style wildcards, e.g. *.csv<br>or report-*.xml. Everything else is ignored.',
     'file-transfer-wizard-ready-title': 'How the platform decides that an upload is complete.<br>A file still being uploaded by the other side<br>must not be picked up halfway through.',
-    'id_stability_check_gap': 'How many seconds pass between the two looks.<br>If size and modification time did not change<br>in between, the file is taken to be complete.',
+    'id_stability_delay': 'How many seconds pass between the two looks.<br>If size and modification time did not change<br>in between, the file is taken to be complete.',
     'id_marker_suffix': 'The suffix of the marker file the sender places<br>next to each upload, e.g. with .done,<br>invoices.csv waits for invoices.csv.done.',
     'id_should_claim': 'When on, each file is renamed to name.processing<br>before anything reads it, so another environment<br>watching the same directory never takes the same file.<br>Leave off when this platform is the only consumer.',
 

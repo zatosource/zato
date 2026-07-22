@@ -39,9 +39,9 @@ recurring pickup task created through the schedule wizard. The view provides:
         <h2 class="zato">File transfer schedules of {{ transfer_label }} connection `{{ conn_name }}`</h2>
 
         <div class='page_prompt'>
-            <a href="{% url "out-sftp-schedule-wizard-create" conn_id cluster_id name_slug %}?name={{ conn_name|urlencode:"" }}">Create a new schedule</a>
+            <a href="{% url "out-file-transfer-schedule-wizard-create" transfer_type conn_id cluster_id name_slug %}?name={{ conn_name|urlencode:"" }}">Create a new schedule</a>
             &nbsp;|&nbsp;
-            <a href="{% url "out-sftp" %}?cluster={{ cluster_id }}&type_=outconn-sftp">Back to the connection list</a>
+            <a href="{{ back_url }}">Back to the connection list</a>
         </div>
 
         <table class="zato-table" id="data-table">
@@ -71,7 +71,7 @@ recurring pickup task created through the schedule wizard. The view provides:
             <tbody>
             {% if items %}
                 {% for item in items %}
-                <tr id='tr_{{ item.name }}'>
+                <tr id='tr_{{ item.id }}'>
                     <td class='numbering'>&nbsp;</td>
                     <td class="impexp"><input type="checkbox" /></td>
 
@@ -87,8 +87,8 @@ recurring pickup task created through the schedule wizard. The view provides:
                     <td>{{ item.run_every }}</td>
 
                     {% comment %} 3 {% endcomment %}
-                    <td><a href="{% url "out-sftp-schedule-wizard-create" conn_id cluster_id name_slug %}?name={{ conn_name|urlencode:"" }}&schedule={{ item.name|urlencode:"" }}">Edit</a></td>
-                    <td><a href="javascript:$.fn.zato.outgoing.file_transfer.schedules.delete_('{{ item.name }}')">Delete</a></td>
+                    <td><a href="{% url "out-file-transfer-schedule-wizard-edit" transfer_type conn_id cluster_id name_slug item.id %}?name={{ conn_name|urlencode:"" }}">Edit</a></td>
+                    <td><a href="javascript:$.fn.zato.outgoing.file_transfer.schedules.delete_('{{ item.id }}', '{{ item.name }}')">Delete</a></td>
 
                 </tr>
                 {% endfor %}
@@ -100,6 +100,10 @@ recurring pickup task created through the schedule wizard. The view provides:
 
             </tbody>
         </table>
+
+        {% comment %} The delete function reads these {% endcomment %}
+        <input type="hidden" id="ft-schedules-conn-id" value="{{ conn_id }}" />
+        <input type="hidden" id="ft-schedules-delete-url" value="{% url "out-file-transfer-schedule-delete" %}" />
 
     </div>
 

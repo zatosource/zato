@@ -14,6 +14,7 @@ from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.util.sql import get_instance_by_id
 from zato.server.service import Int
 from zato.server.service.internal import AdminService
+from zato.server.service.internal.outgoing.file_transfer.process import process_files
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,6 +44,20 @@ class Execute(AdminService):
         self.response.payload.stdout = response.stdout
         self.response.payload.stderr = response.stderr
         self.response.payload.command_no = response.command_no
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ProcessFiles(AdminService):
+    """ Invoked by the scheduler on behalf of one file transfer schedule of an SFTP connection -
+    looks into the schedule's directory and invokes the target service once per each file that is ready.
+    """
+
+    def handle(self) -> 'None':
+
+        # The scheduler job carries the connection's identity and the full schedule in its extra data,
+        # which arrives here as a dict no matter if the invocation came from the scheduler or over HTTP.
+        process_files(self, self.request.payload)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -11,8 +11,11 @@ import logging
 
 # Zato
 from zato.cli.enmasse.util import preprocess_item
-from zato.common.odb.model import GenericConn, to_json
+from zato.common.api import FileTransfer, SCHEDULER, SchedulerLink
+from zato.common.odb.model import GenericConn, IntervalBasedJob, Job, to_json
 from zato.common.odb.query.generic import connection_list
+from zato.common.util.file_transfer_scheduler import build_job_extra, get_job_name, schedule_from_yaml
+from zato.common.util.imap_scheduler import interval_from_unit
 from zato.common.util.sql import set_instance_opaque_attrs
 
 # ################################################################################################################################
@@ -38,6 +41,9 @@ class GenericConnectionImporter:
     connection_extra_field_defaults = {}
     connection_secret_keys = ['password', 'secret', 'api_token']
     connection_required_attrs = ['name', 'address', 'username']
+
+    # File transfer connections carry a list of schedules, each with a linked scheduler job
+    supports_schedules = False
 
     def __init__(self, importer:'EnmasseYAMLImporter') -> 'None':
         self.importer = importer
@@ -100,6 +106,10 @@ class GenericConnectionImporter:
 
     def create_definition(self, connection_def:'anydict', session:'SASession') -> 'any_':
 
+        # Take the schedules out of the definition first - they are synchronized separately
+        # after the connection exists, so they must not land in the opaque attributes as-is.
+        schedules = connection_def.pop('schedules', None) if self.supports_schedules else None
+
         # Get the cluster instance from the importer
         cluster = self.importer.get_cluster(session)
 
@@ -140,11 +150,20 @@ class GenericConnectionImporter:
         session.add(connection)
         session.flush()
 
+        # Now that the connection has an ID, its schedules and their jobs can be built
+        if schedules is not None:
+            self._sync_schedules(schedules, connection, session)
+
         return connection
 
 # ################################################################################################################################
 
     def update_definition(self, connection_def:'anydict', session:'SASession') -> 'any_':
+
+        # Take the schedules out of the definition first - they are synchronized separately
+        # and must not land in the opaque attributes as-is.
+        schedules = connection_def.pop('schedules', None) if self.supports_schedules else None
+
         connection_id = connection_def['id']
         def_name = connection_def['name']
 
@@ -175,7 +194,86 @@ class GenericConnectionImporter:
         set_instance_opaque_attrs(connection, merged_def)
 
         session.add(connection)
+
+        # An explicit schedules key in YAML - even an empty list - means the YAML
+        # is the source of truth for this connection's schedules.
+        if schedules is not None:
+            self._sync_schedules(schedules, connection, session)
+
         return connection
+
+# ################################################################################################################################
+
+    def _sync_schedules(self, schedules:'anylist', connection:'any_', session:'SASession') -> 'None':
+        """ Creates or updates the scheduler job of each file transfer schedule from YAML,
+        deletes the jobs of schedules that the YAML no longer contains and stores
+        the full list with the connection.
+        """
+        _scheduler = FileTransfer.Scheduler
+
+        # The full entries to store with the connection, and the job names the YAML wants to exist
+        entries = []
+        wanted_job_names = set()
+
+        for schedule_def in schedules:
+
+            # Turn the YAML shape into a full entry with all the defaults filled in
+            entry = schedule_from_yaml(schedule_def)
+
+            # The job invokes the internal dispatch service and its extra data carries
+            # the connection's identity along with the schedule itself.
+            job_name = get_job_name(connection.type_, connection.name, entry['name'])
+            extra = build_job_extra(connection.id, connection.name, connection.type_, entry)
+
+            job_def = {
+                'name': job_name,
+                'service': _scheduler.Dispatch_Service[connection.type_],
+                'job_type': SCHEDULER.JOB_TYPE.INTERVAL_BASED,
+                'is_active': entry['is_active'],
+                'extra': extra,
+
+                # The link lets the scheduler screens sync edits and deletions back to this connection
+                SchedulerLink.Conn_ID: connection.id,
+                SchedulerLink.Conn_Type: connection.type_,
+                SchedulerLink.Kind: entry['id'],
+            }
+
+            interval = interval_from_unit(int(entry['run_every']), entry['run_unit'])
+            job_def.update(interval)
+
+            if entry['start_date']:
+                job_def['start_date'] = entry['start_date']
+
+            # The job may already exist from a previous import, in which case it is updated in place
+            existing_job = session.query(Job).filter_by(name=job_name, cluster_id=self.importer.cluster_id).first()
+
+            if existing_job:
+                job_def['id'] = existing_job.id
+                job = self.importer.scheduler_importer.update_job_definition(job_def, session)
+            else:
+                job = self.importer.scheduler_importer.create_job_definition(job_def, session)
+
+            # The entry stores the resolved start date of its job so both always describe the same moment
+            entry['job_id'] = job.id
+            entry['start_date'] = job.start_date.isoformat()
+
+            entries.append(entry)
+            wanted_job_names.add(job_name)
+
+        # Delete the jobs of schedules that the YAML no longer contains - they are recognized
+        # by the naming convention that ties a job to its connection.
+        prefix = get_job_name(connection.type_, connection.name, '')
+        job_query = session.query(Job).filter(Job.name.startswith(prefix)) # type: ignore
+        existing_jobs = job_query.filter(Job.cluster_id==self.importer.cluster_id).all() # type: ignore
+
+        for job in existing_jobs:
+            if job.name not in wanted_job_names:
+                logger.info('Deleting schedule job no longer in YAML: %s', job.name)
+                _ = session.query(IntervalBasedJob).filter_by(job_id=job.id).delete()
+                session.delete(job)
+
+        # Store the full list with the connection
+        set_instance_opaque_attrs(connection, {_scheduler.Schedules_Field: entries})
 
 # ################################################################################################################################
 

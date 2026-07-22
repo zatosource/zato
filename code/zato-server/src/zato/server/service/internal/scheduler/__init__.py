@@ -22,10 +22,11 @@ except ImportError:
     from dateutil.parser import parse as parse_datetime
 
 # Zato
-from zato.common.api import EMAIL, SCHEDULER, SchedulerLink, ZATO_NONE
+from zato.common.api import EMAIL, FileTransfer, SCHEDULER, SchedulerLink, ZATO_NONE
 from zato.common.defaults import default_cluster_id
 from zato.common.exception import ServiceMissingException, ZatoException
 from zato.common.odb.model import Cluster, IntervalBasedJob, Job, Service as ServiceModel
+from zato.common.util.file_transfer_scheduler import delete_schedule_entry, update_schedule_job_fields
 from zato.common.util.imap_scheduler import clear_imap_scheduler_fields, unit_from_interval, update_imap_scheduler_fields
 from zato.common.util.rest_invocation import clear_linked_job_fields, update_linked_job_fields
 from zato.common.typing_ import any_, anylist, anytuple
@@ -382,11 +383,21 @@ def _create_edit(self, action):
                 if job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED:
                     if link_conn_id := job_opaque.get(SchedulerLink.Conn_ID):
                         link_kind = job_opaque[SchedulerLink.Kind]
+                        link_conn_type = job_opaque[SchedulerLink.Conn_Type]
                         run = unit_from_interval(data['weeks'], data['days'], data['hours'], data['minutes'], data['seconds'])
 
-                        with closing(self.odb.session()) as session:
-                            update_linked_job_fields(session, link_conn_id, link_kind, run.run_every, run.run_unit,
-                                start_iso, job_id)
+                        # A file transfer job's link kind is the id of the schedule entry it belongs to,
+                        # stored in the list of schedules the connection carries ..
+                        if link_conn_type in FileTransfer.ConnTypeList:
+                            with closing(self.odb.session()) as session:
+                                update_schedule_job_fields(session, link_conn_id, link_kind, run.run_every, run.run_unit,
+                                    start_iso, job_id)
+
+                        # .. other connection types describe their linked job in their own opaque fields.
+                        else:
+                            with closing(self.odb.session()) as session:
+                                update_linked_job_fields(session, link_conn_id, link_kind, run.run_every, run.run_unit,
+                                    start_iso, job_id)
 
         self.response.payload.id = job_row.id
         self.response.payload.name = input.name
@@ -628,8 +639,18 @@ class Delete(_SchedulerAdmin):
             # no matter if the job ran scheduled invocations or health checks.
             if link_conn_id := job_opaque.get(SchedulerLink.Conn_ID):
                 link_kind = job_opaque[SchedulerLink.Kind]
-                with closing(self.odb.session()) as session:
-                    clear_linked_job_fields(session, link_conn_id, link_kind)
+                link_conn_type = job_opaque[SchedulerLink.Conn_Type]
+
+                # A file transfer job's link kind is the id of the schedule entry it belongs to -
+                # the entry goes away with the job because a schedule without a job would never run ..
+                if link_conn_type in FileTransfer.ConnTypeList:
+                    with closing(self.odb.session()) as session:
+                        delete_schedule_entry(session, link_conn_id, link_kind)
+
+                # .. other connection types clear the fields describing the job from their opaque attributes.
+                else:
+                    with closing(self.odb.session()) as session:
+                        clear_linked_job_fields(session, link_conn_id, link_kind)
 
         except Exception:
             self.logger.error('Could not delete the job, e:`%s`', format_exc())

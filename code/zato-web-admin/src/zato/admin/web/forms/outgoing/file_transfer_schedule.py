@@ -11,6 +11,7 @@ from django import forms
 
 # Zato
 from zato.admin.web.forms import add_services
+from zato.common.api import FileTransfer
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -24,18 +25,11 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How often a schedule may run - one entry per interval unit.
-_run_unit_list = ['seconds', 'minutes', 'hours', 'days', 'weeks']
+_scheduler = FileTransfer.Scheduler
 
 # What the wizard starts out with before the user changes anything.
-_default_pattern             = '*'
-_default_ready_mode          = 'stability'
-_default_stability_check_gap = '2'
-_default_marker_suffix       = '.done'
-_default_on_success          = 'move'
-_default_move_directory      = 'processed'
-_default_run_every           = '5'
-_default_run_unit            = 'minutes'
+_default_run_every = '5'
+_default_run_unit  = _scheduler.Unit.Minutes
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,23 +38,23 @@ class CreateForm(forms.Form):
 
     # What to pick up
     name = forms.CharField(widget=forms.TextInput(attrs={'placeholder':'e.g. invoices.hourly'}))
-    is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    is_active = forms.BooleanField(required=False, initial=True, widget=forms.CheckboxInput())
     directory = forms.CharField(widget=forms.TextInput(attrs={'placeholder':'/incoming/invoices'}))
-    pattern = forms.CharField(initial=_default_pattern, widget=forms.TextInput())
+    pattern = forms.CharField(initial=_scheduler.Default_Pattern, widget=forms.TextInput())
 
     # When is a file ready - the choice cards write the mode into the hidden field
-    ready_mode = forms.CharField(initial=_default_ready_mode, widget=forms.HiddenInput())
-    stability_check_gap = forms.CharField(
-        initial=_default_stability_check_gap, widget=forms.TextInput(attrs={'class':'validate-digits'}))
-    marker_suffix = forms.CharField(initial=_default_marker_suffix, widget=forms.TextInput())
+    ready_how = forms.CharField(initial=_scheduler.ReadyHow.Stability, widget=forms.HiddenInput())
+    stability_delay = forms.CharField(
+        initial=_scheduler.Default_Stability_Delay, widget=forms.TextInput(attrs={'class':'validate-digits'}))
+    marker_suffix = forms.CharField(initial=_scheduler.Default_Marker_Suffix, widget=forms.TextInput())
 
     # Competing consumers
     should_claim = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
     # What happens next
     scheduler_service = forms.ChoiceField(widget=forms.Select())
-    on_success = forms.CharField(initial=_default_on_success, widget=forms.HiddenInput())
-    move_directory = forms.CharField(initial=_default_move_directory, widget=forms.TextInput())
+    on_success = forms.CharField(initial=_scheduler.OnSuccess.Move, widget=forms.HiddenInput())
+    move_directory = forms.CharField(initial=_scheduler.Default_Move_Directory, widget=forms.TextInput())
 
     # How often to look
     run_every = forms.CharField(initial=_default_run_every, widget=forms.TextInput(attrs={'class':'validate-digits'}))
@@ -73,7 +67,7 @@ class CreateForm(forms.Form):
 
         # One choice per interval unit the scheduler understands.
         choices = []
-        for item in _run_unit_list:
+        for item in _scheduler.UnitList:
             choices.append([item, item])
 
         self.fields['run_unit'].choices = choices

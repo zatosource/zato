@@ -46,6 +46,9 @@ class SMBImporter(GenericConnectionImporter):
     connection_secret_keys = ['password', 'secret']
     connection_required_attrs = ['name', 'host']
 
+    # SMB connections may carry file transfer schedules
+    supports_schedules = True
+
 # ################################################################################################################################
 
     def update_definition(self, connection_def:'anydict', session:'SASession') -> 'any_':

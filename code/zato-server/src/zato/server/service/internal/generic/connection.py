@@ -15,8 +15,8 @@ from urllib.parse import parse_qsl
 from uuid import uuid4
 
 # Zato
-from zato.common.api import AS2, Audit_Config, GENERIC as COMMON_GENERIC, generic_attrs, query_parameters, SEC_DEF_TYPE, \
-     SEC_DEF_TYPE_NAME, ZATO_NONE
+from zato.common.api import AS2, Audit_Config, FileTransfer, GENERIC as COMMON_GENERIC, generic_attrs, query_parameters, \
+     SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, ZATO_NONE
 from zato.common.as2.rotation import complete_rotation, needs_rotation_completion
 from zato.common.audit_log.common import AuditEvent
 from zato.common.broker_message import GENERIC
@@ -37,6 +37,7 @@ from zato.server.generic.connection import GenericConnection
 from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService, ChangePasswordBase
 from zato.server.service.internal.generic import _BaseService
+from zato.server.service.internal.outgoing.file_transfer.schedule import delete_connection_jobs, resync_connection_jobs
 from zato.server.service.meta import DeleteMeta
 
 # Python 2/3 compatibility
@@ -83,6 +84,12 @@ def delete_hook(service, input, instance, attrs):
     """ Called after delete commit. The deletion lands in the audit trail
     with what the connection looked like when it was removed.
     """
+
+    # File transfer schedules go away with their connection - each one has a linked scheduler job
+    # that would otherwise keep firing against a connection that no longer exists.
+    if instance.type_ in FileTransfer.ConnTypeList:
+        delete_connection_jobs(service, instance)
+
     before_snapshot = get_model_snapshot(instance)
 
     record_service_config_change(
@@ -363,6 +370,14 @@ class _CreateEdit(_BaseService):
                             data[name] = stored_value
                             conn.opaque[name] = stored_value
 
+                # File transfer schedules are managed on their own screen so an edit of the connection
+                # itself must not lose them - the connection's edit form does not carry them.
+                if data.get('type_') in FileTransfer.ConnTypeList:
+                    model_opaque = parse_instance_opaque_attr(model)
+                    if stored_schedules := model_opaque.get(FileTransfer.Scheduler.Schedules_Field):
+                        data[FileTransfer.Scheduler.Schedules_Field] = stored_schedules
+                        conn.opaque[FileTransfer.Scheduler.Schedules_Field] = stored_schedules
+
                 # Use the secret that was given on input because it may be a new one.
                 # Otherwise, if no secret is given on input, it means that we are not changing it
                 # so we can reuse the same secret that the model already uses.
@@ -442,6 +457,13 @@ class _CreateEdit(_BaseService):
 
             self.response.payload.id = public_id
             self.response.payload.name = instance.name
+
+            # File transfer schedules follow their connection's name - a rename rebuilds each linked job
+            # so its name and extra data point to the connection under its new name.
+            if self.is_edit:
+                if instance.type_ in FileTransfer.ConnTypeList:
+                    if old_name != instance.name:
+                        resync_connection_jobs(self, instance)
 
         data['old_name'] = old_name
         data['action'] = GENERIC.CONNECTION_EDIT.value if self.is_edit else GENERIC.CONNECTION_CREATE.value

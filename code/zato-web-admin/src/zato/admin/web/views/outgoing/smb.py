@@ -11,7 +11,8 @@ from zato.common.ext.bunch import Bunch
 
 # Zato
 from zato.admin.web.forms.outgoing.smb import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, ping_connection, SKIP_VALUE
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, ping_connection, slugify, \
+     SKIP_VALUE
 from zato.common.api import GENERIC
 
 # ################################################################################################################################
@@ -65,6 +66,11 @@ class _CreateEdit(CreateEdit):
         if name == 'secret' and not value:
             return SKIP_VALUE
         return value
+
+    def post_process_return_data(self, return_data):
+        # The Schedules link of a newly added row needs the connection's name in its URL form
+        return_data['name_slug'] = slugify(return_data['name'])
+        return return_data
 
     def success_message(self, item):
         return 'Successfully {} outgoing SMB connection `{}`'.format(self.verb, item.name)

@@ -1174,6 +1174,86 @@ class GENERIC:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class FileTransfer:
+    """ File transfer schedules - each one polls a remote directory of an SFTP or SMB connection
+    and invokes a target service once per each file received.
+    """
+
+    class ConnType:
+        SFTP = GENERIC.CONNECTION.TYPE.OUTCONN_SFTP
+        SMB = GENERIC.CONNECTION.TYPE.OUTCONN_SMB
+
+    ConnTypeList = (ConnType.SFTP, ConnType.SMB)
+
+    class Scheduler:
+
+        class Unit:
+            Seconds = 'seconds'
+            Minutes = 'minutes'
+            Hours = 'hours'
+            Days = 'days'
+            Weeks = 'weeks'
+
+        UnitList = (Unit.Seconds, Unit.Minutes, Unit.Hours, Unit.Days, Unit.Weeks)
+
+        # How a schedule decides that a file's upload is complete
+        class ReadyHow:
+            Stability = 'stability'
+            Marker = 'marker'
+
+        ReadyHowList = (ReadyHow.Stability, ReadyHow.Marker)
+
+        ReadyHowHuman = {
+            ReadyHow.Stability: 'When it stops changing',
+            ReadyHow.Marker: 'Marker file',
+        }
+
+        # What happens to a file once the target service has finished with it
+        class OnSuccess:
+            Move = 'move'
+            Delete = 'delete'
+
+        OnSuccessList = (OnSuccess.Move, OnSuccess.Delete)
+
+        OnSuccessHuman = {
+            OnSuccess.Move: 'Move it away',
+            OnSuccess.Delete: 'Delete it',
+        }
+
+        # Name of the opaque attribute that a connection carries with its list of schedules
+        Schedules_Field = 'scheduler_schedules'
+
+        # Prefixes of the names of the jobs that are auto-created for schedules, one per connection type
+        Job_Prefix = {
+            GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: 'sftp.',
+            GENERIC.CONNECTION.TYPE.OUTCONN_SMB: 'smb.',
+        }
+
+        # Names of the internal services that the auto-created jobs invoke to poll a directory
+        Dispatch_Service = {
+            GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: 'zato.outgoing.sftp.process-files',
+            GENERIC.CONNECTION.TYPE.OUTCONN_SMB: 'zato.outgoing.smb.process-files',
+        }
+
+        # Names of the keys in the extra data that an auto-created job carries - the schedule itself
+        # travels in full under Extra_Schedule so a fire event is self-contained.
+        Extra_Conn_ID = 'conn_id'
+        Extra_Conn_Name = 'conn_name'
+        Extra_Conn_Type = 'conn_type'
+        Extra_Schedule = 'schedule'
+
+        # What a schedule starts out with before the user changes anything
+        Default_Pattern = '*'
+        Default_Marker_Suffix = '.done'
+        Default_Move_Directory = 'processed'
+        Default_Stability_Delay = 2
+
+        # The suffix a file is renamed to when a schedule claims it for itself
+        Claim_Suffix = '.processing'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Groups:
     class Type:
         Group_Parent    = 'zato-group'

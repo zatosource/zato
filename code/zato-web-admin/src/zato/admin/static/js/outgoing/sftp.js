@@ -91,7 +91,7 @@ $.fn.zato.outgoing.sftp.data_table.new_row = function(item, data, include_tr) {
         String.format("<a href=\"./command-shell/{0}/cluster/{1}/{2}/?name={3}\">Command shell</a>",
         item.id, item.cluster_id, data.name_slug, item.name));
     row += String.format('<td>{0}</td>',
-        String.format("<a href=\"./schedules/{0}/cluster/{1}/{2}/?name={3}\">Schedules</a>",
+        String.format("<a href=\"/zato/outgoing/file-transfer/schedules/sftp/{0}/cluster/{1}/{2}/?name={3}\">Schedules</a>",
         item.id, item.cluster_id, data.name_slug, item.name));
 
     // 3
