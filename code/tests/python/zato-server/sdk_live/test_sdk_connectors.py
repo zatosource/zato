@@ -21,9 +21,6 @@ import yaml
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.client import AdminClient
 
-# Test suite
-from conftest import restart_zato_server
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -241,7 +238,9 @@ def test_redeploy_module_keeps_definitions(zato_server:'stranydict') -> 'None':
 def test_server_restart_restores_connections(zato_server:'stranydict') -> 'None':
     """ After a restart, registering the connector type starts the definitions stored in the database.
     """
-    restart_zato_server(zato_server)
+    # The helper comes through the fixture - importing it from conftest would create
+    # a second module instance with its own, disconnected session state.
+    zato_server['restart_zato_server'](zato_server)
 
     client = _get_client(zato_server)
 

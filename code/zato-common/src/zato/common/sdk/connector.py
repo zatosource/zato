@@ -13,13 +13,30 @@ from logging import getLogger
 from zato.common.ext.bunch import Bunch
 
 # Zato
+from zato.common.sdk.process import Process
 from zato.common.typing_ import dict_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, strlist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ConnectionLost(Exception):
+    """ Raised by a connector's ping, validate or any invocation method to signal that the underlying
+    connection is gone - the framework evicts the client and reconnects with backoff.
+    """
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class CredentialsExpired(Exception):
+    """ Raised by a connector's invocation method to signal that its credentials expired -
+    the framework calls refresh_credentials and retries the invocation once.
+    """
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -93,6 +110,18 @@ class Connector:
         # A logger for the connector to use.
         self.logger = getLogger('zato')
 
+        # Hands a message over to a service, matching self.invoke in services. Set by the framework.
+        self.invoke:'any_' = None
+
+        # Publishes a message to a pub/sub topic, matching self.publish in services. Set by the framework.
+        self.publish:'any_' = None
+
+        # The helper processes this connector started, stopped by the framework with the connection.
+        self._processes:'list[Process]' = []
+
+        # What start_process gives each process to call if it dies unexpectedly. Set by the framework.
+        self._on_process_died:'any_' = None
+
 # ################################################################################################################################
 
     def create_client(self) -> 'any_':
@@ -113,6 +142,48 @@ class Connector:
     def on_stop(self, client:'any_') -> 'None':
         """ Closes the client. Called by the framework when the definition is deleted or edited
         and when the server shuts down. The default implementation does nothing.
+        """
+
+# ################################################################################################################################
+
+    def validate(self, client:'any_') -> 'None':
+        """ Checks whether the client is still usable before each use, raising an exception
+        to make the framework evict it and reconnect. The default implementation calls self.ping.
+        """
+        self.ping(client)
+
+# ################################################################################################################################
+
+    def refresh_credentials(self) -> 'None':
+        """ Called by the framework when an invocation raises CredentialsExpired, after which
+        the invocation is retried once. The default implementation does nothing.
+        """
+
+# ################################################################################################################################
+
+    def start_process(self, command:'strlist') -> 'Process':
+        """ Starts and supervises a helper process. Provided by the framework, never overridden.
+        Any '{port}' placeholder in the command is replaced with a local port allocated for the process.
+        The process is stopped with the connection and, if it dies unexpectedly, the framework
+        rebuilds the whole connection with backoff, re-running create_client.
+        """
+        process = Process(command, self._on_process_died)
+        self._processes.append(process)
+        return process
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SubscribingConnector(Connector):
+    """ Base class for connection types where the remote side pushes messages on its own.
+    The framework calls on_started when the connection first starts and again after every reconnect,
+    which is the moment to subscribe and replay state. Received messages are handed over to services
+    with self.invoke or published to pub/sub topics with self.publish.
+    """
+
+    def on_started(self, client:'any_') -> 'None':
+        """ Subscribes and replays state. Called by the framework when the connection first starts
+        and again after every reconnect. The default implementation does nothing.
         """
 
 # ################################################################################################################################

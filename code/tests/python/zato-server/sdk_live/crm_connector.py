@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import socket
 
 # Zato
-from zato.common.sdk import Connector, Field
+from zato.common.sdk import Connector, CredentialsExpired, Field
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,6 +41,20 @@ class CRMClient:
                 response = reader.readline()
 
         out = response.strip()
+
+        # The gateway rejected our key - the framework will refresh it and retry once.
+        if out == 'error token-expired':
+            raise CredentialsExpired(f'API key expired for {self.host}:{self.port}')
+
+        return out
+
+# ################################################################################################################################
+
+    def renew_token(self) -> 'str':
+        """ Asks the gateway for a fresh API key and returns it.
+        """
+        response = self.send('renew-token')
+        out = response[len('token '):]
         return out
 
 # ################################################################################################################################
@@ -71,6 +85,12 @@ class CRMConnector(Connector):
 
     def on_stop(self, client:'CRMClient') -> 'None':
         self.logger.info('CRM client for `%s` stopped', self.name)
+
+# ################################################################################################################################
+
+    def refresh_credentials(self) -> 'None':
+        self.client.api_key = self.client.renew_token()
+        self.logger.info('CRM key refreshed for `%s`', self.name)
 
 # ################################################################################################################################
 

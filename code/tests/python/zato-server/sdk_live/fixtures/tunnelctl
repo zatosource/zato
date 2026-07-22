@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+# Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+# Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+
+# The CLI tool of the live end-to-end suite - it stands in for tools like ngrok.
+# One-shot mode prints and exits:      tunnelctl status <name>
+# Long-lived mode serves a local API:  tunnelctl serve <port>
+
+# stdlib
+import json
+import os
+import socketserver
+import sys
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def main():
+
+    command = sys.argv[1]
+
+    # The one-shot mode answers on stdout and exits.
+    if command == 'status':
+        name = sys.argv[2]
+        print(json.dumps({'name': name, 'status': 'active'}))
+        return
+
+    # The long-lived mode serves a local API, the way ngrok serves its tunnel API -
+    # each 'address' line is answered with the tunnel address and this process's pid.
+    port = int(sys.argv[2])
+    pid = os.getpid()
+
+    class Handler(socketserver.StreamRequestHandler):
+        def handle(self):
+            for line in self.rfile:
+                text = line.decode('utf8').strip()
+                if text == 'address':
+                    _ = self.wfile.write(f'tcp://127.0.0.1:20000 pid={pid}\n'.encode('utf8'))
+                    self.wfile.flush()
+
+    class Server(socketserver.ThreadingTCPServer):
+        allow_reuse_address = True
+        daemon_threads = True
+
+    server = Server(('127.0.0.1', port), Handler)
+    server.serve_forever()
+
+# ################################################################################################################################
+
+if __name__ == '__main__':
+    main()
+
+# ################################################################################################################################
+# ################################################################################################################################
