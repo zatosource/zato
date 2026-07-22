@@ -439,6 +439,8 @@ def _amqp_subtype_filter(query:'any_', column:'any_', subtype:'str') -> 'any_':
 # ################################################################################################################################
 
 def _out_amqp(session, cluster_id):
+    # Note that out_amqp has no cluster_id column - there is always one cluster only,
+    # which is why the cluster_id parameter is not used in the query.
     return session.query(
         OutgoingAMQP.id,
         OutgoingAMQP.name,
@@ -455,7 +457,6 @@ def _out_amqp(session, cluster_id):
         OutgoingAMQP.user_id,
         OutgoingAMQP.app_id
         ).\
-        filter(Cluster.id==cluster_id).\
         order_by(OutgoingAMQP.name)
 
 def out_amqp(session, cluster_id, id):
@@ -480,6 +481,8 @@ def out_amqp_list(session, cluster_id, subtype:'strnone'=None, needs_columns=Fal
 # ################################################################################################################################
 
 def _channel_amqp(session, cluster_id):
+    # Note that channel_amqp has no cluster_id column - there is always one cluster only,
+    # which is why the cluster_id parameter is not used in the query.
     return session.query(
         ChannelAMQP.id,
         ChannelAMQP.name,
@@ -496,7 +499,6 @@ def _channel_amqp(session, cluster_id):
         Service.name.label('service_name'),
         Service.impl_name.label('service_impl_name')).\
         filter(ChannelAMQP.service_id==Service.id).\
-        filter(Cluster.id==cluster_id).\
         order_by(ChannelAMQP.name)
 
 def channel_amqp(session, cluster_id, id):
