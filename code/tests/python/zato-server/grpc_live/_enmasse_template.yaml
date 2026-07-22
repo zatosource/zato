@@ -1,0 +1,46 @@
+security:
+
+  - name: test.grpc.basic_auth
+    type: basic_auth
+    username: test.grpc.user
+    password: "{{basic_auth_password}}"
+
+  - name: test.grpc.apikey
+    type: apikey
+    username: X-API-Key
+    password: "{{apikey_value}}"
+
+outgoing_grpc:
+
+  - name: test.grpc.proto
+    address: 127.0.0.1:{{grpc_port}}
+    is_tls: false
+    proto_path: {{proto_path}}
+
+  - name: test.grpc.stubs
+    address: 127.0.0.1:{{grpc_port}}
+    is_tls: false
+    stub_module: billing_pb2_grpc
+
+  - name: test.grpc.basic_auth
+    address: 127.0.0.1:{{grpc_port}}
+    is_tls: false
+    stub_module: billing_pb2_grpc
+    security: test.grpc.basic_auth
+
+  - name: test.grpc.apikey
+    address: 127.0.0.1:{{grpc_port}}
+    is_tls: false
+    stub_module: billing_pb2_grpc
+    security: test.grpc.apikey
+
+  - name: test.grpc.tls
+    address: localhost:{{grpc_tls_port}}
+    tls_ca_certs_file: {{tls_ca_certs_file}}
+    stub_module: billing_pb2_grpc
+
+channel_rest:
+
+  - name: test.grpc.channel.get-invoice
+    service: test.grpc.channel.get-invoice
+    url_path: /test/grpc/invoice

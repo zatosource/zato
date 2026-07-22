@@ -23,6 +23,8 @@ from zato.server.generic.api.outconn_as2 import outconn_as2_bool_config_keys, ou
     outconn_as2_int_config_keys
 from zato.server.generic.api.outconn_es import outconn_es_bool_config_keys, outconn_es_config_defaults, \
     outconn_es_int_config_keys
+from zato.server.generic.api.outconn_grpc import outconn_grpc_bool_config_keys, outconn_grpc_config_defaults, \
+    outconn_grpc_int_config_keys
 from zato.server.generic.api.outconn_hl7_fhir import outconn_fhir_config_defaults, outconn_fhir_int_config_keys
 from zato.server.generic.api.outconn_hl7_mllp import outconn_config_defaults, outconn_int_config_keys
 from zato.server.generic.api.outconn_llm import llm_config_defaults, llm_int_config_keys
@@ -516,6 +518,30 @@ class Generic(ConfigManagerImpl):
 
         # .. and make sure boolean fields are booleans.
         for key in outconn_sftp_bool_config_keys:
+            value = config[key]
+            if isinstance(value, str):
+                config[key] = as_bool(value)
+
+# ################################################################################################################################
+
+    def _generic_normalize_config_outconn_grpc(self, config:'stranydict') -> 'None':
+        """ Fills in defaults for fields that the create path did not supply and coerces
+        numeric and boolean fields that may arrive as strings from opaque storage.
+        """
+
+        # Apply a default for every field that is missing or None ..
+        for key, default in outconn_grpc_config_defaults.items():
+            if config.get(key) is None:
+                config[key] = default
+
+        # .. make sure numeric fields are integers ..
+        for key in outconn_grpc_int_config_keys:
+            value = config[key]
+            if isinstance(value, str):
+                config[key] = int(value)
+
+        # .. and make sure boolean fields are booleans.
+        for key in outconn_grpc_bool_config_keys:
             value = config[key]
             if isinstance(value, str):
                 config[key] = as_bool(value)

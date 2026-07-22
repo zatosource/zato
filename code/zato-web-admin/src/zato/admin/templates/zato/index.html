@@ -369,6 +369,7 @@
                                                 </ul>
                                             </li>
                                             <li class="child"><a class="menu-link" href="{% url "out-graphql" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-graphql">GraphQL</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "out-grpc" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-grpc">gRPC</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-ldap" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-ldap">LDAP</a></li>
                                             {% if 0%}
                                             <li class="child"><a class="menu-link" href="{% url "out-mongodb" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-mongodb">MongoDB</a></li>

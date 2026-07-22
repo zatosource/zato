@@ -48,6 +48,7 @@ from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.facade import AS2Facade, AS4Facade, ESFacade, FHIRFacade, IBMMQFacade, KafkaFacade, GraphQLFacade, \
     KeysightContainer, MLLPFacade, MongoDBFacade, ODataFacade, RESTFacade, SchedulerFacade, SFTPFacade, SMBFacade, SOAPFacade
+from zato.server.connection.grpc_ import GRPCFacade
 from zato.server.pattern.api import FanOut
 from zato.server.pattern.api import InvokeRetry
 from zato.server.pattern.api import ParallelExec
@@ -517,6 +518,9 @@ class Service:
         # Elasticsearch facade for outgoing connections
         self.es = ESFacade()
 
+        # gRPC facade for outgoing connections
+        self.grpc = GRPCFacade()
+
 # ################################################################################################################################
 
     @staticmethod
@@ -674,6 +678,9 @@ class Service:
 
         # Elasticsearch facade
         self.es.init(self.cid, self._config_manager)
+
+        # gRPC facade
+        self.grpc.init(self.cid, self._config_manager)
 
         # Vendors - Keysight
         self.keysight = KeysightContainer()

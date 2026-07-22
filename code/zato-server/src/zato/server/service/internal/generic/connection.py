@@ -868,6 +868,52 @@ class InvokeGraphQL(_BaseService):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class InvokeGRPC(_BaseService):
+    """ Invokes a unary method of a gRPC outgoing connection with a JSON request.
+    """
+    name = 'zato.generic.connection.invoke-grpc'
+    input = Int('id'), '-method', '-request_data'
+    output = '-response_data', '-response_time'
+
+    def handle(self) -> 'None':
+
+        import time
+
+        from zato.server.connection.grpc_ import invoke_unary_from_json
+
+        # Look up the connection's name by its ID ..
+        with closing(self.odb.session()) as session:
+            instance = self._get_instance_by_id(session, ModelGenericConn, self.request.input.id)
+            name = instance.name
+
+        method = self.request.input.method
+        if not method:
+            raise Exception('No method provided')
+
+        request_data = self.request.input.request_data or '{}'
+
+        # .. the connection's wrapper holds the underlying channel and stub ..
+        config = self.server.config_manager.outconn_grpc[name]
+        wrapper = config['conn']
+
+        start = time.monotonic()
+
+        # .. and now the method can be invoked.
+        try:
+            response_data = invoke_unary_from_json(wrapper, method, request_data, self.cid)
+        except Exception as e:
+            elapsed = time.monotonic() - start
+            self.response.payload.response_data = str(e)
+            self.response.payload.response_time = f'{elapsed:.3f}s'
+            raise Exception(str(e)) from None
+
+        elapsed = time.monotonic() - start
+        self.response.payload.response_data = response_data
+        self.response.payload.response_time = f'{elapsed:.3f}s'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # The entries of a live connection's config dict that must not travel to the edit service -
 # the live wrapper objects plus the values the config manager adds at runtime,
 # with the secret left out so the edit keeps the one already stored.

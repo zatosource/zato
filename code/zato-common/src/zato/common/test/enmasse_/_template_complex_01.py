@@ -457,6 +457,21 @@ outgoing_graphql:
     address: https://api.github.com/graphql
     default_query_timeout: 60
 
+outgoing_grpc:
+
+  - name: enmasse.grpc.outgoing.1
+    is_active: true
+    address: billing.example.com:50051
+    proto_path: /opt/zato/proto/billing.proto
+    ping_timeout: 20
+
+  - name: enmasse.grpc.outgoing.2
+    is_active: true
+    address: inventory.example.com:50051
+    is_tls: false
+    stub_module: inventory_pb2_grpc
+    stub_class: InventoryServiceStub
+
 ldap:
 
   - name: enmasse.ldap.1
