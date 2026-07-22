@@ -36,6 +36,7 @@ from zato.cli.enmasse.exporters.odata import ODataExporter
 from zato.cli.enmasse.exporters.sftp import SFTPExporter
 from zato.cli.enmasse.exporters.smb import SMBExporter
 from zato.cli.enmasse.exporters.confluence import ConfluenceExporter
+from zato.cli.enmasse.exporters.custom import CustomConnectorExporter
 from zato.cli.enmasse.exporters.channel_hl7_mllp import ChannelHL7MLLPExporter
 from zato.cli.enmasse.exporters.outgoing_hl7_mllp import OutgoingHL7MLLPExporter
 from zato.cli.enmasse.exporters.es import ElasticSearchExporter
@@ -118,6 +119,7 @@ class EnmasseYAMLExporter:
         self.microsoft_fabric_exporter = MicrosoftFabricExporter(self)
         self.microsoft_power_automate_exporter = MicrosoftPowerAutomateExporter(self)
         self.confluence_exporter = ConfluenceExporter(self)
+        self.custom_exporter = CustomConnectorExporter(self)
         self.elastic_search_exporter = ElasticSearchExporter(self)
         self.outgoing_rest_exporter = OutgoingRESTExporter(self)
         self.outgoing_soap_exporter = OutgoingSOAPExporter(self)
@@ -572,6 +574,15 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
+    def export_custom_connectors(self, session:'SASession') -> 'stranydict':
+        """ Exports custom connector definitions, mapping each type's top-level key, e.g. custom_crm, to its definitions.
+        """
+        _ = self.get_cluster(session)
+        custom_defs = self.custom_exporter.export(session, self.cluster_id)
+        return custom_defs
+
+# ################################################################################################################################
+
     def export_to_dict(self, session:'SASession') -> 'stranydict':
         """ Exports all configured Zato objects to a dictionary.
             This dictionary can then be serialized to YAML.
@@ -819,6 +830,11 @@ class EnmasseYAMLExporter:
         channel_openapi_defs = self.export_channel_openapi(session)
         if channel_openapi_defs:
             output_dict['channel_openapi'] = channel_openapi_defs
+
+        # Export custom connector definitions - each type is a top-level key of its own
+        custom_defs = self.export_custom_connectors(session)
+        for custom_key, custom_items in custom_defs.items():
+            output_dict[custom_key] = custom_items
 
         logger.info('Successfully exported objects to dictionary format: %s', output_dict)
         return output_dict
