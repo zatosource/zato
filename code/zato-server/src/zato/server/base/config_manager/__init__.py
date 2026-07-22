@@ -80,6 +80,7 @@ from zato.server.generic.api.outconn_ldap import OutconnLDAPWrapper
 from zato.server.generic.api.outconn_llm import OutconnLLMWrapper
 from zato.server.generic.api.outconn_mongodb import OutconnMongoDBWrapper
 from zato.server.generic.api.outconn_odata import OutconnODataWrapper
+from zato.server.generic.api.outconn_sdk import attach_connector_type
 from zato.server.generic.api.outconn_sftp import OutconnSFTPWrapper
 from zato.server.generic.api.outconn_smb import OutconnSMBWrapper
 
@@ -266,6 +267,10 @@ class ConfigManager(_ConfigManagerBase):
         # Generic connections - SMB outconns
         self.outconn_smb = {}
 
+        # Generic connections - connector types registered from hot-deployed SDK modules,
+        # mapping full type names, e.g. outconn-crm, to their Connector subclasses.
+        self.sdk_connector_types = {}
+
         # Pub/sub push subscriptions keyed by sub_key -> list of sub config dicts
         self._push_subs = {} # type: dict[str, list]
 
@@ -417,6 +422,12 @@ class ConfigManager(_ConfigManagerBase):
 
         # Generic connections
         self.init_generic_connections_config()
+
+        # Re-attach connector types that hot-deployed SDK modules registered before this method ran,
+        # e.g. during a configuration reload - the maps above were rebuilt from scratch.
+        for sdk_type in self.sdk_connector_types:
+            attach_connector_type(self, sdk_type)
+
         self.init_generic_connections()
 
         # All set, whoever is waiting for us, if anyone at all, can now proceed

@@ -23,6 +23,7 @@ from zato.common.json_internal import loads
 from zato.common.typing_ import cast_
 from zato.common.util.api import make_repr
 from zato.common.util.http_ import get_form_data as util_get_form_data
+from zato.server.generic.api.outconn_sdk import ConnectorContainer, type_prefix as sdk_type_prefix
 
 # Zato
 from zato.input_output import ServiceInput
@@ -44,6 +45,7 @@ if 0:
     # Zato
     from zato.common.odb.api import PoolStore
     from zato.common.typing_ import any_, callable_, stranydict, strnone
+    from zato.server.base.config_manager import ConfigManager
     from zato.server.config import ConfigDict, ConfigStore
     from zato.server.connection.cloud.aws import AWSClient
     from zato.server.connection.cloud.microsoft_365 import Microsoft365Client
@@ -66,6 +68,7 @@ if 0:
     Microsoft365Client = Microsoft365Client
     MicrosoftPowerAutomateClient = MicrosoftPowerAutomateClient
     ConfigDict = ConfigDict
+    ConfigManager = ConfigManager
     ConfigStore = ConfigStore
     IOProcessor = IOProcessor
     EMailAPI = EMailAPI
@@ -296,10 +299,10 @@ class Outgoing:
     fetched from the service's config manager.
     """
     __slots__ = ('amqp', 'as2', 'as4', 'ftp', 'graphql', 'kafka', 'odoo', 'plain_http', 'rest', 'soap', 'sql', 'ldap',
-        'redis')
+        'redis', '_config_manager')
 
     def __init__(self, amqp=None, graphql=None, kafka=None, odoo=None, plain_http=None, soap=None, sql=None,
-            ldap=None, redis=None, as2=None, as4=None):
+            ldap=None, redis=None, as2=None, as4=None, config_manager=None):
 
         self.amqp = cast_('AMQPFacade', amqp)
 
@@ -322,6 +325,29 @@ class Outgoing:
         self.ldap = cast_('stranydict', ldap)
 
         self.redis = cast_('KVDBAPI', redis)
+
+        self._config_manager = cast_('ConfigManager', config_manager)
+
+    def __getattr__(self, name:'str') -> 'any_':
+        """ Resolves attribute names that are not built-in containers as hot-deployed connector types,
+        e.g. self.out.crm reaches connections of the outconn-crm type registered through the SDK.
+        """
+
+        # Names of the class's own attributes never resolve to connector types - this also prevents
+        # recursion when the config manager slot itself is looked up below.
+        if name.startswith('_'):
+            raise AttributeError(name)
+
+        # E.g. the crm attribute points to the outconn-crm type.
+        type_ = sdk_type_prefix + name.replace('_', '-')
+
+        # Connections of a registered type are accessed through their container ..
+        if type_ in self._config_manager.sdk_connector_types:
+            out = ConnectorContainer(self._config_manager.generic_conn_api[type_])
+            return out
+
+        # .. anything else is a genuine miss.
+        raise AttributeError(name)
 
 # ################################################################################################################################
 # ################################################################################################################################

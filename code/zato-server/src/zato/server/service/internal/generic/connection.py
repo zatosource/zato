@@ -33,6 +33,7 @@ from zato.common.util.sql import parse_instance_opaque_attr
 from zato.common.util.gateway import on_mcp_gateway_create_edit, on_mcp_gateway_delete
 from zato.common.util.time_ import utcnow
 from zato.server.config_audit import get_model_snapshot, record_service_config_change
+from zato.server.generic.api.outconn_sdk import get_secret_field_names
 from zato.server.generic.connection import GenericConnection
 from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService, ChangePasswordBase
@@ -236,14 +237,25 @@ class _CreateEdit(_BaseService):
         if isinstance(raw_request, (str, bytes)):
             raw_request = loads(raw_request)
 
+        # The connection type arrives either through the declared input or in the raw request
+        type_ = data.get('type_')
+        if not type_:
+            type_ = raw_request.get('type_', '')
+
+        # Secret fields declared by hot-deployed connector types are encrypted like the built-in ones
+        # and, like the built-in ones, their values always stay strings.
+        sdk_secret_keys = get_secret_field_names(self.server.config_manager, type_)
+        secret_keys = extra_secret_keys + sdk_secret_keys
+        skip_keys = skip_simple_type | set(sdk_secret_keys)
+
         for key, value in raw_request.items():
 
             if key not in data:
-                if key not in skip_simple_type:
+                if key not in skip_keys:
                     value = parse_simple_type(value)
                     value = self._io.eval_(key, value, self.server.encrypt)
 
-            if key in extra_secret_keys:
+            if key in secret_keys:
                 if value is None:
                     value = 'auto.generic.{}'.format(uuid4().hex)
                 value = self.crypto.encrypt(value)
@@ -554,6 +566,10 @@ class GetList(AdminService):
         for key in never_returned_keys:
             _ = conn_dict.pop(key, None)
 
+        # .. neither do secret fields declared by hot-deployed connector types ..
+        for key in get_secret_field_names(self.server.config_manager, conn_dict['type_']):
+            _ = conn_dict.pop(key, None)
+
         # .. mask out all the relevant attributes.
         replace_query_string_items_in_dict(self.server, conn_dict)
 
@@ -665,6 +681,10 @@ class GetByID(AdminService):
 
         # .. secrets never leave the server ..
         for key in never_returned_keys:
+            _ = conn_dict.pop(key, None)
+
+        # .. neither do secret fields declared by hot-deployed connector types ..
+        for key in get_secret_field_names(self.server.config_manager, conn_dict['type_']):
             _ = conn_dict.pop(key, None)
 
         # .. mask out all the relevant secret attributes ..
