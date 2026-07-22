@@ -30,6 +30,7 @@ from zato.server.generic.api.outconn_hl7_mllp import outconn_config_defaults, ou
 from zato.server.generic.api.outconn_llm import llm_config_defaults, llm_int_config_keys
 from zato.server.generic.api.outconn_odata import outconn_odata_bool_config_keys, outconn_odata_config_defaults, \
     outconn_odata_int_config_keys, outconn_sap_config_defaults
+from zato.server.generic.api.outconn_sdk import normalize_connector_config
 from zato.server.generic.api.outconn_sftp import outconn_sftp_bool_config_keys, outconn_sftp_config_defaults, \
     outconn_sftp_int_config_keys
 from zato.server.generic.api.outconn_mongodb import outconn_mongodb_bool_config_keys, outconn_mongodb_config_defaults, \
@@ -67,6 +68,7 @@ class Generic(ConfigManagerImpl):
     """
     logger: 'Logger'
     generic_conn_api: 'stranydict'
+    sdk_connector_types: 'stranydict'
     _generic_conn_handler: 'stranydict'
     _get_generic_impl_func: 'callable_'
 
@@ -644,6 +646,12 @@ class Generic(ConfigManagerImpl):
 
         # Normalize type name to one that can potentially point to a method of ours
         type_ = config['type_'] # type: str
+
+        # Connector types registered at runtime normalize through the schema their class declares
+        if connector_class := self.sdk_connector_types.get(type_):
+            normalize_connector_config(connector_class, config)
+            return
+
         preprocess_type = type_.replace('-', '_')
 
         # Check if there is such a method and if so, invoke it to preprocess the message

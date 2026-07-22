@@ -726,6 +726,12 @@ test-aws: ## AWS connection tests through a live Zato server against a simulated
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_aws_live -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
+test-sdk: ## Connector SDK tests through a live Zato server against a suite-owned target server.
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/sdk_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_sdk_live -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
 test-sql-cloud-live: ## Snowflake and Redshift tests through a live Zato server against local protocol simulators.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/sql_cloud_live/ \

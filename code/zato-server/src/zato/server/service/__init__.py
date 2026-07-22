@@ -477,6 +477,7 @@ class Service:
             self._config_manager.outconn_ldap,
             as2=self._config_manager.outconn_as2,
             as4=self._config_manager.config_store.out_as4,
+            config_manager=self._config_manager,
         ) # type: Outgoing
 
         # AS2 facade for outgoing connections

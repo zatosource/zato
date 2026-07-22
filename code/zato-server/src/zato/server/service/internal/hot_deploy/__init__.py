@@ -20,10 +20,11 @@ from zato.common.ext.bunch import Bunch
 
 # Zato
 from zato.common.typing_ import cast_
-from zato.common.util.api import is_python_file, is_archive_file, publish_file
+from zato.common.util.api import import_module_from_path, is_python_file, is_archive_file, publish_file
 from zato.common.util.file_system import fs_safe_now
 from zato.common.util.open_ import open_w
 from zato.common.util.python_ import import_module_by_path
+from zato.server.generic.api.outconn_sdk import extract_connector_classes, register_connector_type
 from zato.server.service import AsIs
 from zato.server.service.internal import AdminService
 
@@ -45,9 +46,10 @@ _first_prefix = '0' * (len(str(MAX_BACKUPS)) - 1) # So it runs from, e.g.,  000 
 
 @dataclass(init=False)
 class DeploymentCtx:
-    model_name_list:   'strlist'
-    service_id_list:   'intlist'
-    service_name_list: 'strlist'
+    connector_type_list: 'strlist'
+    model_name_list:     'strlist'
+    service_id_list:     'intlist'
+    service_name_list:   'strlist'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -197,6 +199,34 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
+    def _deploy_sdk_connectors(self, current_work_dir:'str', file_name:'str') -> 'strlist':
+
+        # Our response to produce
+        out:'strlist' = []
+
+        # Files that the service store ignores are not scanned for connectors either
+        if self.server.service_store._should_ignore_file(file_name, current_work_dir):
+            return out
+
+        # Import the module to look for connector classes inside ..
+        try:
+            mod_info = import_module_from_path(file_name, current_work_dir)
+        except Exception:
+            self.logger.warning('Could not import module `%s` to look for connectors, e:`%s`', file_name, format_exc())
+            return out
+
+        # .. collect all the connector classes defined in it ..
+        connector_classes = extract_connector_classes(mod_info.module)
+
+        # .. and register each one with the config manager.
+        for connector_class in connector_classes:
+            type_ = register_connector_type(self.server.config_manager, connector_class)
+            out.append(type_)
+
+        return out
+
+# ################################################################################################################################
+
     def _deploy_services(self, current_work_dir:'str', service_file_name:'str') -> 'intlist':
 
         # Local aliases
@@ -237,10 +267,12 @@ class Create(AdminService):
             with open(file_name, 'wb') as f:
                 _ = f.write(payload)
 
+        connector_type_list = self._deploy_sdk_connectors(current_work_dir, file_name)
         model_name_list = self._deploy_models(current_work_dir, file_name)
         service_id_list = self._deploy_services(current_work_dir, file_name)
 
         ctx = DeploymentCtx()
+        ctx.connector_type_list = connector_type_list
         ctx.model_name_list = model_name_list # type: ignore
         ctx.service_id_list = service_id_list
         ctx.service_name_list = [self.server.service_store.get_service_name_by_id(elem) for elem in service_id_list]
@@ -271,8 +303,12 @@ class Create(AdminService):
         # Deploy some objects of interest from the file ..
         ctx = self._deploy_file(work_dir, payload, file_name, should_deploy_in_place)
 
-        # We enter here if there were some models or services that we deployed ..
-        if ctx.model_name_list or ctx.service_name_list:
+        # We enter here if there were some connectors, models or services that we deployed ..
+        if ctx.connector_type_list or ctx.model_name_list or ctx.service_name_list:
+
+            # .. report any connector types found ..
+            if ctx.connector_type_list:
+                self._report_deployment(file_name, ctx.connector_type_list, 'connector type')
 
             # .. report any models found ..
             if ctx.model_name_list:
@@ -289,7 +325,7 @@ class Create(AdminService):
         else:
             # Log only if payload does not point to our own store.py module.
             if payload_name != 'store.py':
-                msg = 'No services nor models were deployed from module `%s`'
+                msg = 'No services, models nor connector types were deployed from module `%s`'
                 self.logger.info(msg, payload_name)
 
 # ################################################################################################################################
