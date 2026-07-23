@@ -22,7 +22,8 @@ class TestMatchDefaults(unittest.TestCase):
     """ Tests default value handling in rule conditions.
     """
     def setUp(self) -> 'None':
-        rules_dir = Path(os.path.dirname(os.path.abspath(__file__)))
+        # The shared zrules fixtures live one level up, next to the test subdirectories.
+        rules_dir = Path(os.path.dirname(os.path.abspath(__file__))).parent
         self.helper = RuleTestHelper(rules_dir)
 
 # ################################################################################################################################

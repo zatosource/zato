@@ -28,7 +28,8 @@ class TestRoundTrip(unittest.TestCase):
     """
 
     def _get_fixture_files(self) -> 'path_list':
-        current_dir = Path(os.path.dirname(os.path.abspath(__file__)))
+        # The shared zrules fixtures live one level up, next to the test subdirectories.
+        current_dir = Path(os.path.dirname(os.path.abspath(__file__))).parent
         zrules_dir = current_dir / 'zrules'
 
         out = []
