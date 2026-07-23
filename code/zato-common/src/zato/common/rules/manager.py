@@ -14,7 +14,7 @@ from pathlib import Path
 from zato.common.rules.cache import build_field_index
 from zato.common.rules.evaluation import RuleEvaluator
 from zato.common.rules.loader import RuleLoader
-from zato.common.rules.models import Container, MatchResult, Rule
+from zato.common.rules.models import Ruleset, MatchResult, Rule
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,23 +38,23 @@ class RulesManager:
 
     def __init__(self) -> 'None':
         self._all_rules = {}
-        self._containers = {}
+        self._rulesets = {}
         self.cached_rules = {}  # type: dict_[str, CachedRule]
         self.evaluator = RuleEvaluator()
         self.loader = RuleLoader()
         self._rules_by_complexity = []  # Rules sorted by complexity
         self._field_to_rules = {}  # Index of rules by field access
 
-    def __getitem__(self, name:'str') -> 'Rule | Container':
+    def __getitem__(self, name:'str') -> 'Rule | Ruleset':
         return getattr(self, name)
 
-    def __getattr__(self, name:'str') -> 'Rule | Container':
+    def __getattr__(self, name:'str') -> 'Rule | Ruleset':
 
-        # Check if we have a matching container
-        if name in self._containers:
+        # Check if we have a matching ruleset
+        if name in self._rulesets:
 
             # .. if yes, return it to the caller ..
-            return self._containers[name]
+            return self._rulesets[name]
 
         # .. try to see if we have a rule of that name ..
         elif name in self._all_rules:
@@ -64,7 +64,7 @@ class RulesManager:
 
         # .. otherwise, give up
         else:
-            raise AttributeError(f'No such rule, container or attribute -> {name}')
+            raise AttributeError(f'No such rule, ruleset or attribute -> {name}')
 
     def _count_nodes(self, expression:'any_') -> 'int':
         """ Count the number of nodes in an expression tree to determine complexity.
@@ -171,11 +171,11 @@ class RulesManager:
         """
         self.evaluator.reset_performance_stats()
 
-    def load_parsed_rules(self, parsed:'strdict', container_name:'str') -> 'strlist':
+    def load_parsed_rules(self, parsed:'strdict', ruleset_name:'str') -> 'strlist':
         """ Load rules from parsed data.
         """
         result = self.loader.load_parsed_rules(
-            parsed, container_name, self._all_rules, self._containers, self.cached_rules
+            parsed, ruleset_name, self._all_rules, self._rulesets, self.cached_rules
         )
 
         # Update common expressions for optimization
@@ -193,7 +193,7 @@ class RulesManager:
         """ Load rules from a file.
         """
         result = self.loader.load_rules_from_file(
-            file_path, self._all_rules, self._containers, self.cached_rules
+            file_path, self._all_rules, self._rulesets, self.cached_rules
         )
 
         # Update common expressions for optimization
@@ -211,7 +211,7 @@ class RulesManager:
         """ Load rules from a directory.
         """
         result = self.loader.load_rules_from_directory(
-            root_dir, self._all_rules, self._containers, self.cached_rules
+            root_dir, self._all_rules, self._rulesets, self.cached_rules
         )
 
         # Update common expressions for optimization

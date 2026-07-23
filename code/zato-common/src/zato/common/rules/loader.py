@@ -13,7 +13,7 @@ from threading import RLock
 
 # Zato
 from zato.common.rules.cache import CachedRule
-from zato.common.rules.models import Container, Rule, rule_from_document
+from zato.common.rules.models import Ruleset, Rule, rule_from_document
 from zato.common.rules.parser import parse_file
 
 # ################################################################################################################################
@@ -37,24 +37,24 @@ class RuleLoader:
     def __init__(self):
         self._lock = RLock()
 
-    def load_parsed_rules(self, parsed:'strdict', container_name:'str',
-                          all_rules:'dict_[str, Rule]', containers:'dict_[str, Container]',
+    def load_parsed_rules(self, parsed:'strdict', ruleset_name:'str',
+                          all_rules:'dict_[str, Rule]', rulesets:'dict_[str, Ruleset]',
                           cached_rules:'dict_[str, any_]') -> 'strlist':
         """ Load rules from parsed data.
         """
         # Our response to produce
         out = []
 
-        # First, delete that container completely ..
-        _ = containers.pop(container_name, None)
+        # First, delete that ruleset completely ..
+        _ = rulesets.pop(ruleset_name, None)
 
         # .. recreate it ..
-        container = Container(container_name)
-        containers[container.name] = container
+        ruleset = Ruleset(ruleset_name)
+        rulesets[ruleset.name] = ruleset
 
         # .. go through each rule found ..
         # .. and note that we're iterating the full names alpabetically (because parsed is a SortedDict) ..
-        # .. so the container's own dict will also always iterate over them alphabetically ..
+        # .. so the ruleset's own dict will also always iterate over them alphabetically ..
         for document in parsed.values():
 
             # .. build a new rule out of its document ..
@@ -68,8 +68,8 @@ class RuleLoader:
             # .. we can now add it to the global dict ..
             all_rules[rule.full_name] = rule
 
-            # .. add it to the container as well ..
-            container.add_rule(rule)
+            # .. add it to the ruleset as well ..
+            ruleset.add_rule(rule)
 
             # Create a cached version of the rule
             cached_rules[rule.full_name] = CachedRule(rule)
@@ -81,7 +81,7 @@ class RuleLoader:
         return out
 
     def load_rules_from_file(self, file_path:'str | Path',
-                            all_rules:'dict_[str, Rule]', containers:'dict_[str, Container]',
+                            all_rules:'dict_[str, Rule]', rulesets:'dict_[str, Ruleset]',
                             cached_rules:'dict_[str, any_]') -> 'strlist':
         """ Load rules from a file.
         """
@@ -93,7 +93,7 @@ class RuleLoader:
             parsed = parse_file(file_path, file_name)
 
             # .. load it all ..
-            result = self.load_parsed_rules(parsed, file_name, all_rules, containers, cached_rules)
+            result = self.load_parsed_rules(parsed, file_name, all_rules, rulesets, cached_rules)
 
             # .. log what was loaded ...
             logger.info(f'Loaded rules (loader.py): {result}')
@@ -102,7 +102,7 @@ class RuleLoader:
             return result
 
     def load_rules_from_directory(self, root_dir:'str | Path',
-                                 all_rules:'dict_[str, Rule]', containers:'dict_[str, Container]',
+                                 all_rules:'dict_[str, Rule]', rulesets:'dict_[str, Ruleset]',
                                  cached_rules:'dict_[str, any_]') -> 'strlist':
         """ Load rules from a directory.
         """
@@ -113,7 +113,7 @@ class RuleLoader:
         for elem in Path(root_dir).glob('*.zrules'):
 
             # .. read them all in.
-            result = self.load_rules_from_file(elem, all_rules, containers, cached_rules)
+            result = self.load_rules_from_file(elem, all_rules, rulesets, cached_rules)
 
             # .. append it for later use ..
             out.extend(result)

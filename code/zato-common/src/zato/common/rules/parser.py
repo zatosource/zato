@@ -12,6 +12,7 @@ from logging import getLogger
 
 # Zato
 from zato.common.rules.document import Arity, Comparator, Comparator_Aliases, Comparator_Arity, NodeKind
+from zato.common.rules.errors import Severity
 from zato.common.rules.tokens import find_top_level, has_top_level_parenthesis, identifier_pattern, parse_scalar, \
     parse_value, rule_name_pattern, split_top_level, strip_comment
 from zato.common.util.open_ import open_r
@@ -88,7 +89,7 @@ _subject_pattern = re.compile(r'^([A-Za-z_][\w.]*)\s+(.*)$')
 # ################################################################################################################################
 
 def _new_error(rule:'str', block:'str', line:'int', field:'str', code:'str', message:'str') -> 'anydict':
-    """ Builds a structured parse error.
+    """ Builds a structured parse error - parse errors always block, so their severity is always error.
     """
     out = {
         'rule': rule,
@@ -97,6 +98,7 @@ def _new_error(rule:'str', block:'str', line:'int', field:'str', code:'str', mes
         'field': field,
         'code': code,
         'message': message,
+        'severity': Severity.Error,
     }
     return out
 
@@ -369,7 +371,7 @@ def _parse_assignments(lines:'anylist', block:'str', rule_name:'str', errors:'di
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _build_document(blocks:'anydict', container_name:'str', errors:'dictlist') -> 'anydict | None':
+def _build_document(blocks:'anydict', ruleset_name:'str', errors:'dictlist') -> 'anydict | None':
     """ Builds a rule document out of the blocks collected for one rule.
     """
 
@@ -416,7 +418,7 @@ def _build_document(blocks:'anydict', container_name:'str', errors:'dictlist') -
     if len(errors) > error_count:
         return None
 
-    full_name = container_name + '_' + name
+    full_name = ruleset_name + '_' + name
 
     out = {
         'name': name,
@@ -426,7 +428,7 @@ def _build_document(blocks:'anydict', container_name:'str', errors:'dictlist') -
         'joiners': joiners,
         'then': then_actions,
         'else': else_actions,
-        'container_name': container_name,
+        'ruleset_name': ruleset_name,
         'full_name': full_name,
     }
     return out
@@ -434,7 +436,7 @@ def _build_document(blocks:'anydict', container_name:'str', errors:'dictlist') -
 # ################################################################################################################################
 # ################################################################################################################################
 
-def parse_data_details(data:'str', container_name:'str') -> 'anytuple':
+def parse_data_details(data:'str', ruleset_name:'str') -> 'anytuple':
     """ Parses rules text into documents keyed by full name, plus a list of structured errors.
     """
     errors = []
@@ -492,7 +494,7 @@ def parse_data_details(data:'str', container_name:'str') -> 'anytuple':
     documents = SortedDict()
 
     for blocks in collected:
-        document = _build_document(blocks, container_name, errors)
+        document = _build_document(blocks, ruleset_name, errors)
         if document:
             documents[document['full_name']] = document
 
@@ -502,10 +504,10 @@ def parse_data_details(data:'str', container_name:'str') -> 'anytuple':
 
 # ################################################################################################################################
 
-def parse_data(data:'str', container_name:'str') -> 'strdict':
+def parse_data(data:'str', ruleset_name:'str') -> 'strdict':
     """ Parses rules text into documents keyed by full name, logging any errors found.
     """
-    documents, errors = parse_data_details(data, container_name)
+    documents, errors = parse_data_details(data, ruleset_name)
 
     for error in errors:
         logger.warning(f'Rule parse error -> {error}')
@@ -514,7 +516,7 @@ def parse_data(data:'str', container_name:'str') -> 'strdict':
 
 # ################################################################################################################################
 
-def parse_file(path:'str | Path', container_name:'str') -> 'strdict':
+def parse_file(path:'str | Path', ruleset_name:'str') -> 'strdict':
     """ Parses a rules file into documents keyed by full name.
     """
     path = str(path)
@@ -522,7 +524,7 @@ def parse_file(path:'str | Path', container_name:'str') -> 'strdict':
     with open_r(path) as file_object:
         data = file_object.read()
 
-    out = parse_data(data, container_name)
+    out = parse_data(data, ruleset_name)
     return out
 
 # ################################################################################################################################

@@ -139,11 +139,11 @@ class TestMatchBasic(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_container_access(self) -> 'None':
-        """ Rules are reachable through their container as well as by full name.
+    def test_ruleset_access(self) -> 'None':
+        """ Rules are reachable through their ruleset as well as by full name.
         """
-        container = self.helper.rules_manager['simple']
-        rule = container['03_Simple_Equality_Test_3']
+        ruleset = self.helper.rules_manager['simple']
+        rule = ruleset['03_Simple_Equality_Test_3']
         self.assertEqual(rule.full_name, 'simple_03_Simple_Equality_Test_3')
 
         result = rule.match({'customer_segment': 'premium'})
@@ -156,7 +156,8 @@ class TestMatchBasic(unittest.TestCase):
         """
         rule_names = ['simple_01_Simple_Equality_Test_1', 'simple_02_Simple_Equality_Test_2']
 
-        result = self.helper.rules_manager.match({'xyz': 456}, rule_names)
+        # Both fields are provided because every checked rule needs its own value present.
+        result = self.helper.rules_manager.match({'xyz': 456, 'abc': 0}, rule_names)
         self.assertTrue(result)
 
         if result:

@@ -17,6 +17,7 @@ from rule_engine import Rule as RuleImpl
 # Zato
 from zato.common.marshal_.api import Model
 from zato.common.rules.document import compile_when, resolve_actions, resolve_defaults
+from zato.common.rules.errors import build_evaluation_error
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,7 +53,7 @@ class MatchResult(Model):
 class Rule(Model):
     full_name: 'str'
     name: 'str'
-    container_name: 'str'
+    ruleset_name: 'str'
     docs: 'str'
     defaults: 'strdict'
     document: 'anydict'
@@ -97,20 +98,26 @@ class Rule(Model):
         # Fill in defaults for any keys the input does not provide ..
         match_data = self._apply_defaults(data)
 
-        # .. evaluate our rule with the appropriate data ..
-        has_matched = self.when_impl.matches(match_data)
+        # .. evaluate our rule with the appropriate data, turning a missing value or
+        # .. a type mismatch into a loud readable error instead of a silent non-match ..
+        try:
+            has_matched = self.when_impl.matches(match_data)
+        except Exception as e:
+            raise build_evaluation_error(self.full_name, e) from e
 
         # .. and build a result object ..
         match_result = MatchResult(has_matched)
         match_result.full_name = self.full_name
 
-        # .. a match applies the then actions ..
-        if has_matched:
-            match_result.then = resolve_actions(self.then, match_data)
-
-        # .. and a non-match still applies the else actions.
-        else:
-            match_result.else_ = resolve_actions(self.else_, match_data)
+        # .. a match applies the then actions and a non-match still applies the else actions,
+        # .. with an unresolvable reference turned into a loud readable error either way.
+        try:
+            if has_matched:
+                match_result.then = resolve_actions(self.then, match_data)
+            else:
+                match_result.else_ = resolve_actions(self.else_, match_data)
+        except Exception as e:
+            raise build_evaluation_error(self.full_name, e) from e
 
         return match_result
 
@@ -125,7 +132,7 @@ def rule_from_document(document:'anydict') -> 'Rule | None':
     rule = Rule()
     rule.full_name = document['full_name']
     rule.name = document['name']
-    rule.container_name = document['container_name']
+    rule.ruleset_name = document['ruleset_name']
     rule.document = document
     rule.docs = document['docs']
 
@@ -151,7 +158,7 @@ def rule_from_document(document:'anydict') -> 'Rule | None':
 # ################################################################################################################################
 
 @dataclass(init=False)
-class Container(Model):
+class Ruleset(Model):
     name: 'str'
     _rules: 'dict_[str, Rule]'
 

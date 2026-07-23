@@ -147,6 +147,7 @@ class TestMatchSpecialOperators(unittest.TestCase):
             'doc_id': 'AAABBB 123',
             'abc': datetime(2025, 1, 1),
             'hello': 123,
+            'channel': 'push',
         }
         return out
 

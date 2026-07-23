@@ -389,7 +389,10 @@ def resolve_value_node(node:'anydict', data:'anydict') -> 'any_':
 # ################################################################################################################################
 
 def _resolve_reference(term:'str', data:'anydict') -> 'any_':
-    """ Resolves a reference term against input data, following dotted paths, returning None when absent.
+    """ Resolves a reference term against input data, following dotted paths.
+
+    A reference that cannot be resolved raises a readable error - a missing value
+    never turns into a None that flows onward.
     """
     key = reference_key(term)
 
@@ -399,11 +402,11 @@ def _resolve_reference(term:'str', data:'anydict') -> 'any_':
 
         # .. a segment can only be followed through a mapping ..
         if not isinstance(current, dict):
-            return None
+            raise Exception(f'the input has no value for {key!r}')
 
         # .. and only if the mapping actually has it.
         if part not in current:
-            return None
+            raise Exception(f'the input has no value for {key!r}')
 
         current = current[part]
 
