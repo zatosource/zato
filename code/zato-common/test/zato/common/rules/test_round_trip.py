@@ -48,11 +48,11 @@ class TestRoundTrip(unittest.TestCase):
         checked = 0
 
         for path in fixture_files:
-            container_name = path.stem
+            ruleset_name = path.stem
 
             # Parse the original text ..
             text = path.read_text()
-            documents, errors = parse_data_details(text, container_name)
+            documents, errors = parse_data_details(text, ruleset_name)
             self.assertListEqual(errors, [], f'Parse errors in {path}')
 
             for full_name, document in documents.items():
@@ -61,7 +61,7 @@ class TestRoundTrip(unittest.TestCase):
                 rendered = render_document(document)
 
                 # .. reparse the rendered text ..
-                reparsed_documents, reparse_errors = parse_data_details(rendered, container_name)
+                reparsed_documents, reparse_errors = parse_data_details(rendered, ruleset_name)
                 self.assertListEqual(reparse_errors, [], f'Reparse errors for {full_name} in {path}')
 
                 # .. and the reparsed document has to be identical.
@@ -85,15 +85,15 @@ class TestRoundTrip(unittest.TestCase):
             if path.name.startswith('perf_'):
                 continue
 
-            container_name = path.stem
+            ruleset_name = path.stem
             text = path.read_text()
 
             # The first render establishes the canonical text ..
-            documents, _ = parse_data_details(text, container_name)
+            documents, _ = parse_data_details(text, ruleset_name)
             canonical = render_documents(documents)
 
             # .. and rendering what that text parses into changes nothing.
-            reparsed_documents, _ = parse_data_details(canonical, container_name)
+            reparsed_documents, _ = parse_data_details(canonical, ruleset_name)
             rendered_again = render_documents(reparsed_documents)
 
             self.assertEqual(rendered_again, canonical, f'Rendering is not idempotent for {path}')

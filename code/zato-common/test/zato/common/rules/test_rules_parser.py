@@ -40,12 +40,12 @@ class TestRulesParser(unittest.TestCase):
         loaded_rules = []
 
         for zrules_file in zrules_files:
-            container_name = zrules_file.stem
+            ruleset_name = zrules_file.stem
 
-            documents = parse_file(zrules_file, container_name)
+            documents = parse_file(zrules_file, ruleset_name)
             self.assertTrue(documents, f'No rules parsed from {zrules_file}')
 
-            rule_names = rules_manager.load_parsed_rules(documents, container_name)
+            rule_names = rules_manager.load_parsed_rules(documents, ruleset_name)
             self.assertTrue(rule_names, f'No rules loaded from {zrules_file}')
 
             loaded_rules.extend(rule_names)
@@ -89,7 +89,7 @@ class TestRulesParser(unittest.TestCase):
         self.assertListEqual(document['joiners'], [])
         self.assertEqual(document['then'], [{'target': 'priority', 'value': {'kind': NodeKind.Literal, 'value': 'high'}}])
         self.assertEqual(document['else'], [{'target': 'priority', 'value': {'kind': NodeKind.Literal, 'value': 'standard'}}])
-        self.assertEqual(document['container_name'], 'orders')
+        self.assertEqual(document['ruleset_name'], 'orders')
         self.assertEqual(document['full_name'], 'orders_Order_priority')
 
 # ################################################################################################################################

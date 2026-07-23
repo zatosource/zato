@@ -30,7 +30,7 @@ rule
     03_Simple_Equality_Test_3
 docs
     Third simple rule with an equality condition for testing.
-    This rule is used to test container access methods.
+    This rule is used to test ruleset access methods.
 when
     customer_segment is 'premium'
 then

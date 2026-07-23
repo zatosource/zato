@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato - import all components and re-export them
-from zato.common.rules.models import Container, MatchResult, Rule, rule_from_document
+from zato.common.rules.models import Ruleset, MatchResult, Rule, rule_from_document
 from zato.common.rules.cache import CachedRule
 
 # ################################################################################################################################
@@ -26,7 +26,7 @@ from zato.common.rules.parser import parse_file
 # ################################################################################################################################
 
 # For flake8
-Container = Container
+Ruleset = Ruleset
 MatchResult = MatchResult
 Rule = Rule
 
@@ -50,7 +50,7 @@ class RulesManager:
 
     def __init__(self) -> 'None':
         self._all_rules = {}
-        self._containers = {}
+        self._rulesets = {}
         self._lock = RLock()
         self.cached_rules = {}  # type: dict_[str, CachedRule]
         self.performance_stats = {
@@ -60,16 +60,16 @@ class RulesManager:
             'total_time': 0.0
         }  # type: dict_[str, int | float]
 
-    def __getitem__(self, name:'str') -> 'Rule | Container':
+    def __getitem__(self, name:'str') -> 'Rule | Ruleset':
         return getattr(self, name)
 
-    def __getattr__(self, name:'str') -> 'Rule | Container':
+    def __getattr__(self, name:'str') -> 'Rule | Ruleset':
 
-        # Check if we have a matching container
-        if name in self._containers:
+        # Check if we have a matching ruleset
+        if name in self._rulesets:
 
             # .. if yes, return it to the caller ..
-            return self._containers[name]
+            return self._rulesets[name]
 
         # .. try to see if we have a rule of that name ..
         elif name in self._all_rules:
@@ -79,7 +79,7 @@ class RulesManager:
 
         # .. otherwise, give up
         else:
-            raise AttributeError(f'No such rule, container or attribute -> {name}')
+            raise AttributeError(f'No such rule, ruleset or attribute -> {name}')
 
     def match(self, data:'strdict', rules:'any_') -> 'MatchResult | None':
         """ Match data against rules with condition caching.
@@ -155,21 +155,21 @@ class RulesManager:
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def load_parsed_rules(self, parsed:'strdict', container_name:'str') -> 'strlist':
+    def load_parsed_rules(self, parsed:'strdict', ruleset_name:'str') -> 'strlist':
 
         # Our response to produce
         out = []
 
-        # First, delete that container completely ..
-        _ = self._containers.pop(container_name, None)
+        # First, delete that ruleset completely ..
+        _ = self._rulesets.pop(ruleset_name, None)
 
         # .. recreate it ..
-        container = Container(container_name)
-        self._containers[container.name] = container
+        ruleset = Ruleset(ruleset_name)
+        self._rulesets[ruleset.name] = ruleset
 
         # .. go through each rule found ..
         # .. and note that we're iterating the full names alpabetically (because parsed is a SortedDict) ..
-        # .. so the container's own dict will also always iterate over them alphabetically ..
+        # .. so the ruleset's own dict will also always iterate over them alphabetically ..
         for document in parsed.values():
 
             # .. build a new rule out of its document ..
@@ -183,8 +183,8 @@ class RulesManager:
             # .. we can now add it to the global dict ..
             self._all_rules[rule.full_name] = rule
 
-            # .. add it to the container as well ..
-            container.add_rule(rule)
+            # .. add it to the ruleset as well ..
+            ruleset.add_rule(rule)
 
             # Create a cached version of the rule
             self.cached_rules[rule.full_name] = CachedRule(rule)

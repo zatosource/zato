@@ -91,6 +91,7 @@ class TestMatchDefaults(unittest.TestCase):
             'doc_id': 'AAABBB 123',
             'abc': datetime(2025, 1, 1),
             'hello': 123,
+            'channel': 'push',
         }
         result = self.helper.match_rule('parser_TELCO_002', data)
         self.assertTrue(result)

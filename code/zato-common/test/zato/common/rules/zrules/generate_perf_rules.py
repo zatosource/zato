@@ -193,7 +193,7 @@ ACTIONS = [
     "fraud_alert = true\n    account_review = 'immediate'\n    security_team_notification = true",
 ]
 
-def generate_rule_file(num_rules:'int', total_conditions:'int', common_conditions_count:'int', output_file:'str') -> 'None':
+def generate_rule_file(num_rules:'int', total_conditions:'int', common_conditions_count:'int', output_file:'str | Path') -> 'None':
     """Generate a rule file with the specified parameters."""
 
     # Validate inputs

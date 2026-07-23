@@ -43,11 +43,11 @@ class RulesManager(BaseRulesManager):
             'total_time': 0.0
         }  # type: dict_[str, int | float]
 
-    def load_parsed_rules(self, parsed:'strdict', container_name:'str') -> 'strlist':
+    def load_parsed_rules(self, parsed:'strdict', ruleset_name:'str') -> 'strlist':
         """ Override to create cached rules.
         """
         # Call the parent method to load the rules
-        rule_names = super().load_parsed_rules(parsed, container_name)
+        rule_names = super().load_parsed_rules(parsed, ruleset_name)
 
         # Create cached versions of all rules
         with self._lock:
