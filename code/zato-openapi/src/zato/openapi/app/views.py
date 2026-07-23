@@ -27,7 +27,7 @@ from zato.openapi.console.branding import Branding_Files, get_branding_context, 
 from zato.openapi.console.client import OpenAPIConsoleClient
 from zato.openapi.console.entra_auth import AuthType, complete_auth_code_flow, EntraAuthError, get_authorize_url, \
     is_entra_enabled
-from zato.openapi.console.session import Session_Credentials_Key, Session_Entra_Key, decrypt_credentials, \
+from zato.common.webapp.auth.session_tokens import Session_Credentials_Key, Session_Entra_Key, decrypt_credentials, \
     decrypt_entra_identity, encrypt_credentials, encrypt_entra_identity
 
 # ################################################################################################################################

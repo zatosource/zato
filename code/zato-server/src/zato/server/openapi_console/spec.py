@@ -9,19 +9,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import typing
-from base64 import b64decode
 from contextlib import closing
-from hashlib import pbkdf2_hmac
-from hmac import compare_digest
 from inspect import isclass
-
-# SQLAlchemy
-from sqlalchemy import text
 
 # Zato
 from zato.common.api import OpenAPI_Console_Auth, URL_TYPE
 from zato.common.crypto.api import is_string_equal
 from zato.common.typing_ import cast_
+from zato.common.webapp.auth.dashboard_users import is_dashboard_admin
 from zato.openapi.generator.io_scanner import TypeMapper, extract_model_fields_recursive
 from zato.openapi.generator.openapi_ import OpenAPIGenerator
 
@@ -46,49 +41,7 @@ _spec_title = 'Zato API'
 # The HTTP method used when a service has no method-specific handlers
 _default_http_method = 'post'
 
-# The only password hash algorithm the Dashboard's Django users are stored with
-_django_hash_algorithm = 'pbkdf2_sha256'
-
-# The Dashboard keeps its users in the same database the server uses, in Django's own table
-_dashboard_user_query = 'select password from auth_user where username = :username and is_active = :is_active'
-
 # ################################################################################################################################
-# ################################################################################################################################
-
-def _verify_django_password(password:'str', encoded:'str') -> 'bool':
-    """ Checks a password against a hash in Django's storage format - algorithm$iterations$salt$hash.
-    """
-    algorithm, iterations, salt, stored_hash = encoded.split('$', 3)
-
-    # Only the one algorithm the Dashboard uses is supported
-    if algorithm != _django_hash_algorithm:
-        return False
-
-    # Derive the hash from the incoming password the same way Django does ..
-    derived = pbkdf2_hmac('sha256', password.encode('utf8'), salt.encode('utf8'), int(iterations))
-
-    # .. and compare in constant time.
-    out = compare_digest(derived, b64decode(stored_hash))
-
-    return out
-
-# ################################################################################################################################
-
-def is_dashboard_admin(server:'ParallelServer', username:'str', password:'str') -> 'bool':
-    """ Checks the credentials against the Dashboard's own users - anyone who can sign in
-    to the Dashboard is the console's admin, with the same username and password.
-    """
-    with closing(server.odb.session()) as session:
-        row = session.execute(text(_dashboard_user_query), {'username':username, 'is_active':True}).fetchone()
-
-    # No such Dashboard user
-    if row is None:
-        return False
-
-    out = _verify_django_password(password, row[0])
-
-    return out
-
 # ################################################################################################################################
 
 def validate_credentials(server:'ParallelServer', username:'str', password:'str') -> 'intnone':
@@ -153,8 +106,12 @@ def resolve_caller(server:'ParallelServer', fields:'anydict') -> 'tuple_[intnone
     if fields['auth_type'] == OpenAPI_Console_Auth.Type_Entra:
         return None, True
 
-    # Dashboard users are the console's admins, so their credentials are checked first ..
-    if is_dashboard_admin(server, username, fields['password']):
+    # Dashboard users are the console's admins, so their credentials are checked first,
+    # against the auth_user table in the same database the server's ODB uses ..
+    with closing(server.odb.session()) as session:
+        is_admin = is_dashboard_admin(session, username, fields['password'])
+
+    if is_admin:
         return None, True
 
     # .. and every other caller is checked against the security definitions.

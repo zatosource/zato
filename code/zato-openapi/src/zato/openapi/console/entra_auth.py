@@ -9,10 +9,10 @@ This file is a proprietary product, not an open-source one.
 # stdlib
 import os
 
-# Zato - the console reuses the Dashboard's authentication modules as they are, so an environment
-# configured for Entra ID once covers both applications with the same identity and the same groups.
-from zato.admin.web.auth.common import auth_config, AuthType
-from zato.admin.web.auth.entra import complete_auth_code_flow, EntraAuthError, get_authorize_url
+# Zato - the console reuses the shared authentication modules as they are, so an environment
+# configured for Entra ID once covers all the applications with the same identity and the same groups.
+from zato.common.webapp.auth.config import auth_config, AuthType
+from zato.common.webapp.auth.entra import complete_auth_code_flow, EntraAuthError, get_authorize_url
 
 # ################################################################################################################################
 # ################################################################################################################################

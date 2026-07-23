@@ -20,8 +20,8 @@ from django.utils.http import url_has_allowed_host_and_scheme as is_safe_url
 
 # Zato
 from zato.admin.settings import LOGIN_REDIRECT_URL
-from zato.admin.web.auth.common import auth_config, AuthType
-from zato.admin.web.auth.entra import EntraAuthError, get_authorize_url, handle_callback
+from zato.common.webapp.auth.config import auth_config, AuthType
+from zato.common.webapp.auth.entra import EntraAuthError, get_authorize_url, handle_callback
 from zato.admin.web.forms.main import AuthenticationForm
 from zato.admin.web.util import get_user_profile
 from zato.admin.web.views import method_allowed
