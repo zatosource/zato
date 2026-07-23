@@ -22,8 +22,8 @@ import jwt
 import requests
 
 # Zato
-from zato.admin.web.auth.common import auth_config, provision_user
 from zato.common.typing_ import cast_
+from zato.common.webapp.auth.config import auth_config, provision_user
 
 # ################################################################################################################################
 # ################################################################################################################################

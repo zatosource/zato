@@ -3,7 +3,7 @@
 """
 Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 
-This file is a proprietary product, not an open-source one.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
@@ -36,8 +36,8 @@ Session_Credentials_Key = 'zato_openapi_credentials'
 # The session key under which the encrypted Entra ID identity is stored
 Session_Entra_Key = 'zato_openapi_entra'
 
-# The key is generated once per process tree - the console application is imported in the gunicorn master
-# before workers fork, so all workers share it. Restarting the console invalidates all sessions, which is desired.
+# The key is generated once per process tree - the application is imported in the gunicorn master
+# before workers fork, so all workers share it. Restarting the application invalidates all sessions, which is desired.
 _credentials_key = Fernet.generate_key()
 _credentials_fernet = Fernet(_credentials_key)
 
@@ -63,7 +63,7 @@ def decrypt_credentials(token:'str') -> 'strtuplenone':
     try:
         data = _credentials_fernet.decrypt(token.encode('utf8'))
     except InvalidToken:
-        logger.info('Could not decrypt session credentials - the console may have been restarted')
+        logger.info('Could not decrypt session credentials - the application may have been restarted')
         return None
 
     credentials = json.loads(data)
@@ -93,7 +93,7 @@ def decrypt_entra_identity(token:'str') -> 'any_':
     try:
         data = _credentials_fernet.decrypt(token.encode('utf8'))
     except InvalidToken:
-        logger.info('Could not decrypt session identity - the console may have been restarted')
+        logger.info('Could not decrypt session identity - the application may have been restarted')
         return None
 
     identity = json.loads(data)

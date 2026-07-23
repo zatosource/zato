@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.admin.web.auth.common import build_auth_config, AuthType
+from zato.common.webapp.auth.config import build_auth_config, AuthType
 
 # ################################################################################################################################
 # ################################################################################################################################

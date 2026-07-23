@@ -18,7 +18,7 @@ from django.test import Client
 import requests
 
 # Zato
-from zato.admin.web.auth.common import auth_config
+from zato.common.webapp.auth.config import auth_config
 from zato.common.crypto.api import CryptoManager
 
 # ################################################################################################################################
