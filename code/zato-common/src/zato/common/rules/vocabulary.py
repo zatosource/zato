@@ -67,6 +67,14 @@ class ErrorCode:
     # Codes reported when validating input data against a vocabulary.
     Unknown_Field = 'unknown_field'
 
+    # Codes reported when validating KPI definitions.
+    Bad_Kpi = 'bad_kpi'
+
+    # Codes reported when validating a test set.
+    Bad_Test_Set       = 'bad_test_set'
+    Bad_Scenario       = 'bad_scenario'
+    Duplicate_Scenario = 'duplicate_scenario'
+
     # Codes reported when validating a decision table.
     Bad_Row          = 'bad_row'
     Duplicate_Row    = 'duplicate_row'
