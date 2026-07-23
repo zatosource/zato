@@ -66,7 +66,7 @@ class RulesManager:
         else:
             raise AttributeError(f'No such rule, container or attribute -> {name}')
 
-    def _count_nodes(self, expression) -> 'int':
+    def _count_nodes(self, expression:'any_') -> 'int':
         """ Count the number of nodes in an expression tree to determine complexity.
         """
         if not hasattr(expression, 'left') or not hasattr(expression, 'right'):
@@ -88,7 +88,7 @@ class RulesManager:
             rule_complexity.append((rule_name, complexity))
 
         # Sort by complexity (ascending)
-        def get_complexity(item):
+        def get_complexity(item:'any_') -> 'int':
             """ Get complexity from a (rule_name, complexity) tuple.
             """
             return item[1]
@@ -150,7 +150,7 @@ class RulesManager:
             complexity_rank = {name: idx for idx, (name, _) in enumerate(self._rules_by_complexity)}
 
             # Sort the filtered rules by complexity
-            def get_complexity_rank(rule_name):
+            def get_complexity_rank(rule_name:'str') -> 'float':
                 return complexity_rank.get(rule_name, float('inf'))
 
             sorted_rules = sorted(filtered_rules, key=get_complexity_rank)

@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato - import all components and re-export them
-from zato.common.rules.models import Container, MatchResult, Rule
+from zato.common.rules.models import Container, MatchResult, Rule, rule_from_document
 from zato.common.rules.cache import CachedRule
 
 # ################################################################################################################################
@@ -18,9 +18,6 @@ from logging import getLogger
 from pathlib import Path
 from threading import RLock
 from time import time
-
-# rule-engine
-from rule_engine import Rule as RuleImpl
 
 # Zato
 from zato.common.rules.parser import parse_file
@@ -37,7 +34,7 @@ Rule = Rule
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, dict_, float_, int_, strdict, strlist
+    from zato.common.typing_ import any_, dict_, strdict, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -61,7 +58,7 @@ class RulesManager:
             'cache_hits': 0,
             'cache_misses': 0,
             'total_time': 0.0
-        }  # type: dict_[str, int_ | float_]
+        }  # type: dict_[str, int | float]
 
     def __getitem__(self, name:'str') -> 'Rule | Container':
         return getattr(self, name)
@@ -115,7 +112,7 @@ class RulesManager:
         self._update_stats(condition_cache, None, start_time)
         return None
 
-    def _update_stats(self, condition_cache:'dict_[str, any_]', cached_rule:'CachedRule | None'=None, start_time:'float_'=0) -> 'None':
+    def _update_stats(self, condition_cache:'dict_[str, any_]', cached_rule:'CachedRule | None'=None, start_time:'float'=0) -> 'None':
         """ Update performance statistics.
         """
         self.performance_stats['total_evaluations'] += 1
@@ -126,7 +123,7 @@ class RulesManager:
 
         self.performance_stats['total_time'] += time() - start_time
 
-    def get_performance_stats(self) -> 'dict_[str, int_ | float_]':
+    def get_performance_stats(self) -> 'dict_[str, int | float]':
         """ Get performance statistics.
         """
         stats = self.performance_stats.copy()
@@ -173,25 +170,12 @@ class RulesManager:
         # .. go through each rule found ..
         # .. and note that we're iterating the full names alpabetically (because parsed is a SortedDict) ..
         # .. so the container's own dict will also always iterate over them alphabetically ..
-        for full_name, rule_data in parsed.items():
+        for document in parsed.values():
 
-            # .. build a new rule ..
-            rule = Rule()
-            rule.full_name = full_name
-            rule.name = rule_data['name']
-            rule.container_name = rule_data['container_name']
-            rule.when = rule_data['when']
-
-            try:
-                rule.when_impl = RuleImpl(rule.when)
-            except Exception as e:
-                logger.warning(f'Rule loading error -> {full_name} -> {rule.when} -> {e}')
+            # .. build a new rule out of its document ..
+            rule = rule_from_document(document)
+            if rule is None:
                 continue
-
-            rule.then = rule_data['then']
-            rule.defaults = rule_data.get('defaults', {})
-            rule.docs = rule_data.get('docs', '')
-            rule.invoke = rule_data.get('invoke', '')
 
             # .. make sure to delete it first from the global dict ..
             _ = self._all_rules.pop(rule.full_name, None)

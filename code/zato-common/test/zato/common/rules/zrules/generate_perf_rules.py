@@ -26,86 +26,86 @@ defaults
 when
 {conditions}
 then
-{actions}
+    {actions}
 """
 
 # Define common conditions that can be reused across rules
 COMMON_CONDITIONS = [
-    'account_status == \'active\'',                      # Condition 001
-    'customer_id =~ \'[A-Z]{{2}}\\d{{6}}\'',             # Condition 002
-    'customer_type == \'business\'',                     # Condition 003
-    'is_contract_signed == true',                        # Condition 004
-    'monthly_spend > 500',                               # Condition 005
-    'region in high_priority_regions',                   # Condition 006
-    'service_level == \'premium\'',                      # Condition 007
-    'subscription_months > min_subscription_months',     # Condition 008
-    'usage_percentage > 75',                             # Condition 009
-    'customer_segment == \'enterprise\'',                # Condition 010
+    "account_status is 'active'",                                # Condition 001
+    "customer_id matches '[A-Z]{2}\\d{6}'",                      # Condition 002
+    "customer_type is 'business'",                               # Condition 003
+    'is_contract_signed is true',                                # Condition 004
+    'monthly_spend is more than 500',                            # Condition 005
+    'region is one of high_priority_regions',                    # Condition 006
+    "service_level is 'premium'",                                # Condition 007
+    'subscription_months is more than min_subscription_months',  # Condition 008
+    'usage_percentage is more than 75',                          # Condition 009
+    "customer_segment is 'enterprise'",                          # Condition 010
 ]
 
 # Define unique conditions that can be used to create variety
 UNIQUE_CONDITIONS = [
-    'support_tickets_open < 5',                        # Condition 101
-    'usage_decline_months >= high_risk_threshold',     # Condition 102
-    'upgrade_eligibility_score > 7',                   # Condition 103
-    'peak_usage_percentage > capacity_threshold',      # Condition 104
-    'outage_duration_minutes > min_outage_minutes',    # Condition 105
-    'services_subscribed < 3',                         # Condition 106
-    'equipment_age_months > 24',                       # Condition 107
-    'current_platform in legacy_platforms',            # Condition 108
-    'contract_end_days < 90',                          # Condition 109
-    'customer_industry in iot_compatible_industries',  # Condition 110
-    'billing_complaints > 0',                          # Condition 111
-    'churn_prediction_score > 0.7',                    # Condition 112
-    'bandwidth_utilization > 80',                      # Condition 113
-    'credit_score > 700',                              # Condition 114
-    'business_customers_affected > 50',                # Condition 115
-    'network_segment_congestion == true',              # Condition 116
-    'projected_growth_rate > 5',                       # Condition 117
-    'business_impact_level > 2',                       # Condition 118
-    'fault_responsibility == \'provider\'',            # Condition 119
-    'sla_breach == true',                              # Condition 120
-    'cross_sell_propensity > 0.6',                     # Condition 121
-    'last_upsell_attempt_days > 90',                   # Condition 122
-    'service_usage_complementary == true',             # Condition 123
-    'hardware_compatibility_new_features == false',    # Condition 124
-    'service_calls_equipment > 1',                     # Condition 125
-    'has_custom_integrations == false',                # Condition 126
-    'migration_complexity_score < 7',                  # Condition 127
-    'competitive_pressure_score > 3',                  # Condition 128
-    'customer_lifetime_value > 50000',                 # Condition 129
-    'data_service_subscribed == true',                 # Condition 130
-    'digital_transformation_score > 6',                # Condition 131
-    'monthly_data_usage > 500',                        # Condition 132
-    'technology_adoption_score > 7',                   # Condition 133
-    'priority_support_eligible == true',               # Condition 134
-    'critical_business_process == true',               # Condition 135
-    'dedicated_support_eligible == true',              # Condition 136
-    'satisfaction_score < 7',                          # Condition 137
-    'retention_score < 6',                             # Condition 138
-    'competitor_mentions_support > 0',                 # Condition 139
-    'payment_method == \'auto\'',                      # Condition 140
-    'growth_trajectory_positive == true',              # Condition 141
-    'payment_history_months > 12',                     # Condition 142
-    'customer_complaints_capacity > 10',               # Condition 143
-    'last_upgrade_months > 12',                        # Condition 144
-    'customer_reported_issue == true',                 # Condition 145
-    'multiple_services_affected == true',              # Condition 146
-    'service_affected == \'critical\'',                # Condition 147
-    'customer_growth_phase == \'expansion\'',          # Condition 148
-    'contract_remaining_months > 12',                  # Condition 149
-    'current_equipment_model_discontinued == true',    # Condition 150
-    'monthly_spend > 2000',                            # Condition 151
-    'upgrade_program_eligible == true',                # Condition 152
-    'platform_support_end_months < 12',                # Condition 153
-    'service_compatibility_new_platform == true',      # Condition 154
-    'technology_refresh_budget_approved == true',      # Condition 155
-    'market_share_strategic_account == true',          # Condition 156
-    'price_sensitivity_score > 7',                     # Condition 157
-    'renewal_propensity_score < 0.7',                  # Condition 158
-    'subscription_type in premium_subscription_types', # Condition 159
-    'competitor_iot_mentions > 0',                     # Condition 160
-    'iot_inquiries > 0',                               # Condition 161
+    'support_tickets_open is less than 5',                            # Condition 101
+    'usage_decline_months is at least high_risk_threshold',           # Condition 102
+    'upgrade_eligibility_score is more than 7',                       # Condition 103
+    'peak_usage_percentage is more than capacity_threshold',          # Condition 104
+    'outage_duration_minutes is more than min_outage_minutes',        # Condition 105
+    'services_subscribed is less than 3',                             # Condition 106
+    'equipment_age_months is more than 24',                           # Condition 107
+    'current_platform is one of supported_platforms',                 # Condition 108
+    'contract_end_days is less than 90',                              # Condition 109
+    'customer_industry is one of iot_compatible_industries',          # Condition 110
+    'billing_complaints is more than 0',                              # Condition 111
+    'churn_prediction_score is more than 0.7',                        # Condition 112
+    'bandwidth_utilization is more than 80',                          # Condition 113
+    'credit_score is more than 700',                                  # Condition 114
+    'business_customers_affected is more than 50',                    # Condition 115
+    'network_segment_congestion is true',                             # Condition 116
+    'projected_growth_rate is more than 5',                           # Condition 117
+    'business_impact_level is more than 2',                           # Condition 118
+    "fault_responsibility is 'provider'",                             # Condition 119
+    'sla_breach is true',                                             # Condition 120
+    'cross_sell_propensity is more than 0.6',                         # Condition 121
+    'last_upsell_attempt_days is more than 90',                       # Condition 122
+    'service_usage_complementary is true',                            # Condition 123
+    'hardware_compatibility_new_features is false',                   # Condition 124
+    'service_calls_equipment is more than 1',                         # Condition 125
+    'has_custom_integrations is false',                               # Condition 126
+    'migration_complexity_score is less than 7',                      # Condition 127
+    'competitive_pressure_score is more than 3',                      # Condition 128
+    'customer_lifetime_value is more than 50000',                     # Condition 129
+    'data_service_subscribed is true',                                # Condition 130
+    'digital_transformation_score is more than 6',                    # Condition 131
+    'monthly_data_usage is more than 500',                            # Condition 132
+    'technology_adoption_score is more than 7',                       # Condition 133
+    'priority_support_eligible is true',                              # Condition 134
+    'critical_business_process is true',                              # Condition 135
+    'dedicated_support_eligible is true',                             # Condition 136
+    'satisfaction_score is less than 7',                              # Condition 137
+    'retention_score is less than 6',                                 # Condition 138
+    'competitor_mentions_support is more than 0',                     # Condition 139
+    "payment_method is 'auto'",                                       # Condition 140
+    'growth_trajectory_positive is true',                             # Condition 141
+    'payment_history_months is more than 12',                         # Condition 142
+    'customer_complaints_capacity is more than 10',                   # Condition 143
+    'last_upgrade_months is more than 12',                            # Condition 144
+    'customer_reported_issue is true',                                # Condition 145
+    'multiple_services_affected is true',                             # Condition 146
+    "service_affected is 'critical'",                                 # Condition 147
+    "customer_growth_phase is 'expansion'",                           # Condition 148
+    'contract_remaining_months is more than 12',                      # Condition 149
+    'current_equipment_model_discontinued is true',                   # Condition 150
+    'monthly_spend is more than 2000',                                # Condition 151
+    'upgrade_program_eligible is true',                               # Condition 152
+    'platform_support_end_months is less than 12',                    # Condition 153
+    'service_compatibility_new_platform is true',                     # Condition 154
+    'technology_refresh_budget_approved is true',                     # Condition 155
+    'market_share_strategic_account is true',                         # Condition 156
+    'price_sensitivity_score is more than 7',                         # Condition 157
+    'renewal_propensity_score is less than 0.7',                      # Condition 158
+    'subscription_type is one of premium_subscription_types',         # Condition 159
+    'competitor_iot_mentions is more than 0',                         # Condition 160
+    'iot_inquiries is more than 0',                                   # Condition 161
 ]
 
 # Define rule descriptions and purposes
@@ -163,7 +163,7 @@ DEFAULT_VALUES = [
     "min_outage_minutes = 30\n    premium_subscription_types = ['platinum', 'gold', 'enterprise']",
     "min_subscription_months = 6\n    high_priority_regions = ['EMEA', 'APAC', 'NA']",
     "premium_subscription_types = ['platinum', 'gold', 'enterprise']\n    min_subscription_months = 6",
-    "high_priority_regions = ['EMEA', 'APAC', 'NA']\n    legacy_platforms = ['TDM', 'PSTN', 'ISDN']",
+    "high_priority_regions = ['EMEA', 'APAC', 'NA']\n    supported_platforms = ['FIBER', 'CABLE', 'FIXED_WIRELESS']",
     "premium_subscription_types = ['platinum', 'gold', 'enterprise']\n    high_priority_regions = ['EMEA', 'APAC', 'NA']\n    min_subscription_months = 6",
     "iot_compatible_industries = ['manufacturing', 'healthcare', 'logistics', 'retail', 'utilities']\n    high_priority_regions = ['EMEA', 'APAC', 'NA']",
     "support_tiers = ['standard', 'premium', 'platinum']\n    response_time_thresholds = {'standard': 24, 'premium': 8, 'platinum': 4}",

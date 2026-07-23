@@ -10,6 +10,7 @@
 	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-pubsub-backend test-pubsub-backend-perf test-pubsub-backend-perf-mass test-pubsub-system-perf test-enmasse \
 	test-cli test-mcp _test-mcp test-bearer _test-bearer test-graphql test-grpc test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-llm test-hl7 test-hl7-volume test-ui test-ui-pubsub test-ui-openapi _test-ui test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-audit-log-ui test-alerting test-analytics test-analytics-ui test-demo-seed test-logging test-ibm-mq test-mongodb test-es \
+	test-rule-engine test-rule-engine-perf \
 	test-all test \
 	health-ruff health-clippy \
 	format format-zato \
@@ -896,6 +897,38 @@ test-es: ## Elasticsearch connection tests against a live server, plain and TLS.
 test-audit-log-ui: ## Audit log dashboard and unit tests against every database backend.
 	$(ZATO_PY) $(CURDIR)/code/tests/python/zato-common/audit_log/run_matrix.py
 
+test-rule-engine: ## Rule engine tests - grammar, matching, round trip and the SQL backend, fully offline.
+	$(CURDIR)/code/bin/ruff check \
+		$(CURDIR)/code/zato-common/src/zato/common/rules/ \
+		$(CURDIR)/code/zato-common/test/zato/common/rules/ \
+		$(CURDIR)/code/tests/python/zato-common/rule_engine_sql/
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/zato-common/test/zato/common/rules/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rule_engine \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/rule_engine_sql/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rule_engine_sql \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
+test-rule-engine-perf: ## Rule engine SQL backend performance tests against SQLite, MySQL and PostgreSQL, plain and TLS - ingest, batch, definitions, reporting and retention floors.
+	$(CURDIR)/code/bin/ruff check \
+		$(CURDIR)/code/tests/python/zato-common/rule_engine_perf/
+	pyright \
+		$(CURDIR)/code/tests/python/zato-common/rule_engine_perf/
+	basetemp="$${TMPDIR:-/tmp}/zato-rule-engine-perf-$$USER"; \
+	trap 'rm -rf "$$basetemp"' EXIT INT TERM; \
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/rule_engine_perf/test_rule_engine_perf_sqlite.py \
+		$(CURDIR)/code/tests/python/zato-common/rule_engine_perf/test_rule_engine_perf_mysql.py \
+		$(CURDIR)/code/tests/python/zato-common/rule_engine_perf/test_rule_engine_perf_mysql_ssl.py \
+		$(CURDIR)/code/tests/python/zato-common/rule_engine_perf/test_rule_engine_perf_postgresql.py \
+		$(CURDIR)/code/tests/python/zato-common/rule_engine_perf/test_rule_engine_perf_postgresql_ssl.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rule_engine_perf \
+		-o log_cli=false \
+		--basetemp="$$basetemp" \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
 test-analytics: ## Analytics rollup, view and baseline tests against live SQLite, MySQL and PostgreSQL, plain and TLS.
 	$(CURDIR)/code/bin/ruff check $(CURDIR)/code/tests/python/zato-common/analytics/
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
@@ -967,7 +1000,7 @@ test-request-response: ## Unified service I/O tests - messages, request.raw, req
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-all: test-server test-rest test-scheduler test-rate-limiting test-pubsub test-enmasse \
-	test-cli test-mcp test-bearer test-graphql test-grpc test-as2 test-as4 test-edifact test-x12 test-llm test-hl7 test-ui test-audit-log test-audit-log-ui test-alerting test-analytics test-demo-seed test-logging test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response ## Everything.
+	test-cli test-mcp test-bearer test-graphql test-grpc test-as2 test-as4 test-edifact test-x12 test-llm test-hl7 test-ui test-audit-log test-audit-log-ui test-alerting test-analytics test-demo-seed test-logging test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response test-rule-engine ## Everything.
 
 test: test-all ## Alias for test-all.
 

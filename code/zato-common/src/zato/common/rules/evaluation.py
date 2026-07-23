@@ -17,7 +17,7 @@ from zato.common.rules.cache import CachedRule, identify_common_expressions, pre
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, dict_, float_, strdict
+    from zato.common.typing_ import any_, dict_, strdict
     from zato.common.rules.models import MatchResult
 
 # ################################################################################################################################
@@ -38,7 +38,7 @@ class RuleEvaluator:
             'cache_hits': 0,
             'cache_misses': 0,
             'total_time': 0.0
-        }  # type: dict_[str, int | float_]
+        }  # type: dict_[str, int | float]
         self.common_expressions = []
 
     def match(self, data:'strdict', rule_names:'any_', cached_rules:'dict_[str, CachedRule]') -> 'MatchResult | None':
@@ -71,7 +71,7 @@ class RuleEvaluator:
         self._update_stats(condition_cache, None, start_time)
         return None
 
-    def _update_stats(self, condition_cache:'dict_[str, any_]', cached_rule:'CachedRule | None'=None, start_time:'float_'=0) -> 'None':
+    def _update_stats(self, condition_cache:'dict_[str, any_]', cached_rule:'CachedRule | None'=None, start_time:'float'=0) -> 'None':
         """ Update performance statistics.
         """
         self.performance_stats['total_evaluations'] += 1
@@ -82,7 +82,7 @@ class RuleEvaluator:
 
         self.performance_stats['total_time'] += time() - start_time
 
-    def get_performance_stats(self) -> 'dict_[str, int | float_]':
+    def get_performance_stats(self) -> 'dict_[str, int | float]':
         """ Get performance statistics.
         """
         stats = self.performance_stats.copy()

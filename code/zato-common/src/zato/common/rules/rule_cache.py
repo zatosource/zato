@@ -15,12 +15,13 @@ from rule_engine.ast import ExpressionBase, LogicExpression
 
 # Zato
 from zato.common.rules.api import MatchResult, Rule
+from zato.common.rules.document import resolve_actions
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, bool_, dict_
+    from zato.common.typing_ import any_, anydict, dict_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,7 +41,7 @@ class CachedRule:
         self.cache_hits = 0
         self.cache_misses = 0
 
-    def match(self, data:'anydict', condition_cache:'dict_[str, any_]'=None) -> 'MatchResult':
+    def match(self, data:'anydict', condition_cache:'dict_[str, any_] | None'=None) -> 'MatchResult':
         """ Match data against the rule using condition caching.
         """
         # Reset statistics for this evaluation
@@ -69,13 +70,17 @@ class CachedRule:
 
         # Build a match result object
         match_result = MatchResult(result)
+        match_result.full_name = self.rule.full_name
+
+        # A match applies the then actions, a non-match still applies the else actions.
         if result:
-            match_result.then = self.rule.then
-            match_result.full_name = self.rule.full_name
+            match_result.then = resolve_actions(self.rule.then, data)
+        else:
+            match_result.else_ = resolve_actions(self.rule.else_, data)
 
         return match_result
 
-    def _evaluate_with_cache(self, expression:'ExpressionBase', data:'anydict', cache:'dict_[str, any_]') -> 'bool_':
+    def _evaluate_with_cache(self, expression:'ExpressionBase', data:'anydict', cache:'dict_[str, any_]') -> 'bool':
         """ Evaluate an expression with caching.
         """
         # Generate a cache key based on the expression

@@ -7,10 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import logging
 import os
 import unittest
-from logging import getLogger
 from pathlib import Path
 
 # Zato
@@ -19,285 +17,158 @@ from zato.common.test.rules import RuleTestHelper
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = getLogger(__name__)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class TestMatchBasic(unittest.TestCase):
     """ Tests basic rule matching functionality.
     """
     def setUp(self) -> 'None':
-
-        # Initialize the rule test helper with the path to the rules directory
         rules_dir = Path(os.path.dirname(os.path.abspath(__file__)))
         self.helper = RuleTestHelper(rules_dir)
 
+# ################################################################################################################################
+
     def test_simple_equality_match(self) -> 'None':
-        """ Test simple equality matching (abc == 123).
+        """ A simple equality condition matches equal input and rejects anything else.
         """
 
-        # Find rules with simple equality conditions
-        equality_rules = self.helper.find_simple_equality_rules()
+        # The matching value produces a match with the expected actions ..
+        result = self.helper.match_rule('simple_01_Simple_Equality_Test_1', {'abc': 123})
+        self.assertTrue(result)
+        self.assertEqual(result.then['result'], 'matched_abc_123')
+        self.assertEqual(result.then['action'], 'process')
+        self.assertEqual(result.full_name, 'simple_01_Simple_Equality_Test_1')
 
-        if not equality_rules:
-            self.skipTest('No rules with simple equality conditions found')
+        # .. and a different value does not match.
+        result = self.helper.match_rule('simple_01_Simple_Equality_Test_1', {'abc': 124})
+        self.assertFalse(result)
 
-        # Use the first rule with a simple equality condition
-        rule_name = equality_rules[0]
-        logger.info(f'Testing simple equality for rule: {rule_name}')
+# ################################################################################################################################
 
-        # Get the rule condition to determine what data to use
-        rule_condition = self.helper.get_rule_condition(rule_name)
-        logger.info(f'Rule condition: {rule_condition}')
+    def test_equality_alias(self) -> 'None':
+        """ The == alias behaves exactly like the is comparator.
+        """
+        result = self.helper.match_rule('simple_02_Simple_Equality_Test_2', {'xyz': 456})
+        self.assertTrue(result)
+        self.assertEqual(result.then['result'], 'matched_xyz_456')
 
-        # Extract the field name and value from the condition
-        # For example, from 'abc == 123', extract 'abc' and 123
-        parts = rule_condition.split('==')
-        if len(parts) != 2:
-            self.skipTest(f'Rule condition {rule_condition} does not have expected format')
+        result = self.helper.match_rule('simple_02_Simple_Equality_Test_2', {'xyz': 457})
+        self.assertFalse(result)
 
-        field_name = parts[0].strip()
-        expected_value = parts[1].strip()
+# ################################################################################################################################
 
-        # Convert the expected value to the appropriate type
-        if expected_value.startswith('\'') and expected_value.endswith('\''):
-            # String value
-            expected_value = expected_value[1:-1]
-        elif expected_value.isdigit():
-            # Integer value
-            expected_value = int(expected_value)
+    def test_string_equality(self) -> 'None':
+        """ String equality matches exact values only.
+        """
+        result = self.helper.match_rule('simple_03_Simple_Equality_Test_3', {'customer_segment': 'premium'})
+        self.assertTrue(result)
+        self.assertEqual(result.then['service_level'], 'high')
+        self.assertEqual(result.then['priority'], 1)
 
-        # Create test data with the matching value
-        data = {field_name: expected_value}
-        logger.info(f'Test data: {data}')
+        result = self.helper.match_rule('simple_03_Simple_Equality_Test_3', {'customer_segment': 'standard'})
+        self.assertFalse(result)
 
-        # Test that the rule matches
-        result = self.helper.match_rule(rule_name, data)
-        self.assertTrue(result, f'Rule {rule_name} should have matched with {data}')
+# ################################################################################################################################
 
-        # Create test data with a non-matching value
-        if isinstance(expected_value, int):
-            non_matching_value = expected_value + 1
-        else:
-            non_matching_value = expected_value + '_different'
-
-        data = {field_name: non_matching_value}
-        logger.info(f'Test data with non-matching value: {data}')
-
-        # Test that the rule does not match
-        result = self.helper.match_rule(rule_name, data)
-        self.assertFalse(result, f'Rule {rule_name} should not have matched with {data}')
-
-    def test_complex_condition_match(self) -> 'None':
-        """ Test more complex conditions like greater than, less than, etc.
+    def test_numeric_comparisons(self) -> 'None':
+        """ Numeric comparison comparators respect their boundaries.
         """
 
-        # Find rules with complex conditions (>, <, >=, <=)
-        complex_rules = []
-        for rule_name, condition in self.helper.rule_conditions.items():
-            if any(op in condition for op in ['>', '<', '>=', '<=']):
-                complex_rules.append(rule_name)
+        # All three conditions hold ..
+        data = {'x': 5, 'max_x': 10, 'amount': 2000, 'min_amount': 1000, 'income_ratio': 0.5}
+        result = self.helper.match_rule('parser_ABC_BANK_001', data)
+        self.assertTrue(result)
+        self.assertEqual(result.then['addition'], 2.5)
+        self.assertEqual(result.then['extra_requirements'], True)
+        self.assertEqual(result.then['max_term_years'], 3)
 
-        if not complex_rules:
-            self.skipTest('No rules with complex conditions found')
+        # .. x reaching max_x breaks is less than ..
+        data = {'x': 10, 'max_x': 10, 'amount': 2000, 'min_amount': 1000, 'income_ratio': 0.5}
+        result = self.helper.match_rule('parser_ABC_BANK_001', data)
+        self.assertFalse(result)
 
-        # Use the first rule with a complex condition
-        rule_name = complex_rules[0]
-        logger.info(f'Testing complex condition for rule: {rule_name}')
+        # .. and income_ratio at the boundary breaks is more than.
+        data = {'x': 5, 'max_x': 10, 'amount': 2000, 'min_amount': 1000, 'income_ratio': 0.4}
+        result = self.helper.match_rule('parser_ABC_BANK_001', data)
+        self.assertFalse(result)
 
-        # Get the rule condition to determine what data to use
-        rule_condition = self.helper.get_rule_condition(rule_name)
-        logger.info(f'Rule condition: {rule_condition}')
+# ################################################################################################################################
 
-        # For a rule with account_balance_average > 500000
-        if 'account_balance_average' in rule_condition and '>' in rule_condition:
+    def test_list_value_in_then(self) -> 'None':
+        """ A list-valued action arrives as a real list.
+        """
+        result = self.helper.match_rule('simple_04_Simple_Equality_Test_4', {'account_tier': 'gold'})
+        self.assertTrue(result)
+        self.assertEqual(result.then['fee_waiver'], True)
+        self.assertListEqual(result.then['special_offers'], ['premium_service', 'extended_support'])
 
-            # Test with a value above the threshold
-            data = {'account_balance_average': 600000}
-            result = self.helper.match_rule(rule_name, data)
-            self.assertTrue(result, f'Rule {rule_name} should have matched with value above threshold')
+# ################################################################################################################################
 
-            # Test with a value below the threshold
-            data = {'account_balance_average': 400000}
-            result = self.helper.match_rule(rule_name, data)
-            self.assertFalse(result, f'Rule {rule_name} should not have matched with value below threshold')
-
-        # For a rule with transaction_amount < 1000
-        elif 'transaction_amount' in rule_condition and '<' in rule_condition:
-
-            # Test with a value below the threshold
-            data = {'transaction_amount': 500}
-            result = self.helper.match_rule(rule_name, data)
-            self.assertTrue(result, f'Rule {rule_name} should have matched with value below threshold')
-
-            # Test with a value above the threshold
-            data = {'transaction_amount': 1500}
-            result = self.helper.match_rule(rule_name, data)
-            self.assertFalse(result, f'Rule {rule_name} should not have matched with value above threshold')
-
-        # For other rules with complex conditions
-        else:
-            logger.info(f'Skipping specific tests for {rule_name} - would need custom test data')
-
-    def test_rule_access_methods(self) -> 'None':
-        """ Test different ways to access rules (direct access, container access).
+    def test_else_branch_application(self) -> 'None':
+        """ A non-match still carries the else actions for the caller to apply.
         """
 
-        # Find a rule with a simple condition for testing
-        simple_rules = self.helper.find_simple_equality_rules()
+        # A match applies the then actions, including a reference to input data ..
+        data = {'channel': 'email', 'priority': 2}
+        result = self.helper.match_rule('parser_Routing_004', data)
+        self.assertTrue(result)
+        self.assertEqual(result.then['routing'], 'automated')
+        self.assertEqual(result.then['handler'], 'email')
 
-        if not simple_rules:
-            self.skipTest('No rules with simple conditions found')
+        # .. and a non-match applies the else actions instead.
+        data = {'channel': 'fax', 'priority': 2}
+        result = self.helper.match_rule('parser_Routing_004', data)
+        self.assertFalse(result)
+        self.assertEqual(result.else_['routing'], 'manual')
+        self.assertEqual(result.else_['review_queue'], 'operations')
+        self.assertEqual(result.full_name, 'parser_Routing_004')
 
-        # Use the first rule with a simple condition
-        rule_name = simple_rules[0]
+# ################################################################################################################################
 
-        # Parse the rule name to extract container and rule short name
-        # Rule names are now in format 'container.rulename'
-        parts = rule_name.split('.')
-        if len(parts) != 2:
-            self.skipTest(f'Rule name {rule_name} does not have expected format')
-
-        # Extract container name and rule short name
-        container_name = parts[0]
-        rule_short_name = parts[1]
-
-        logger.info(f'Testing container access for rule: {rule_name}')
-        logger.info(f'Container: {container_name}, Rule short name: {rule_short_name}')
-
-        # Create test data that should match the rule
-        data = {'abc': 123}
-
-        # Test direct access to the rule
-        result = self.helper.match_rule(rule_name, data)
-        self.assertTrue(result, 'Rule should have matched with direct access')
-
-    def test_rule_list_match(self) -> 'None':
-        """ Test matching against a list of rules.
+    def test_object_value_delivered_intact(self) -> 'None':
+        """ An object-valued action is delivered as the same mapping the rule declares.
         """
+        data = {
+            'account_balance_average': 600000,
+            'customer_segment': 'private_banking',
+            'relationship_tenure_years': 3,
+        }
+        result = self.helper.match_rule('parser_Payments_003', data)
+        self.assertTrue(result)
+        self.assertEqual(result.then['fee_waiver'], True)
+        self.assertEqual(result.then['dedicated_advisor'], True)
+        self.assertDictEqual(result.then['status'], {'key1': 'value1', 'key2': 'value2'})
 
-        # Find rules with simple equality conditions
-        equality_rules = self.helper.find_simple_equality_rules()
+# ################################################################################################################################
 
-        if len(equality_rules) < 2:
-            self.skipTest('Need at least 2 rules with simple equality conditions')
-
-        # Use the first two rules
-        rule_names = equality_rules[:2]
-        logger.info(f'Testing rule list matching for rules: {rule_names}')
-
-        # Create test data that should match the first rule but not the second
-        # We need to examine the rule conditions to create appropriate data
-        rule1_condition = self.helper.get_rule_condition(rule_names[0])
-        rule2_condition = self.helper.get_rule_condition(rule_names[1])
-
-        logger.info(f'Rule 1 condition: {rule1_condition}')
-        logger.info(f'Rule 2 condition: {rule2_condition}')
-
-        # Extract field names and values from the conditions
-        # For example, from 'abc == 123', extract 'abc' and 123
-        rule1_parts = rule1_condition.split('==')
-        rule2_parts = rule2_condition.split('==')
-
-        if len(rule1_parts) != 2 or len(rule2_parts) != 2:
-            self.skipTest('Rule conditions do not have expected format')
-
-        field1_name = rule1_parts[0].strip()
-        expected1_value = rule1_parts[1].strip()
-        field2_name = rule2_parts[0].strip()
-        expected2_value = rule2_parts[1].strip()
-
-        # Convert the expected values to the appropriate types
-        if expected1_value.startswith('\'') and expected1_value.endswith('\''):
-            expected1_value = expected1_value[1:-1]
-        elif expected1_value.isdigit():
-            expected1_value = int(expected1_value)
-
-        if expected2_value.startswith('\'') and expected2_value.endswith('\''):
-            expected2_value = expected2_value[1:-1]
-        elif expected2_value.isdigit():
-            expected2_value = int(expected2_value)
-
-        # Create data that matches rule1 but not rule2
-        data = {field1_name: expected1_value}
-
-        # Add a value for field2 that doesn't match rule2
-        if field2_name != field1_name:
-            if isinstance(expected2_value, int):
-                data[field2_name] = expected2_value + 1  # Use a different value
-            else:
-                data[field2_name] = expected2_value + '_different'  # Use a different string
-
-        logger.info(f'Test data: {data}')
-
-        # Test matching against individual rules
-        result1 = self.helper.match_rule(rule_names[0], data)
-        result2 = self.helper.match_rule(rule_names[1], data)
-
-        self.assertTrue(result1, f'Rule {rule_names[0]} should have matched')
-        self.assertFalse(result2, f'Rule {rule_names[1]} should not have matched')
-
-    def test_service_activation_rule(self) -> 'None':
-        """ Test a rule that would be used to activate a service.
+    def test_container_access(self) -> 'None':
+        """ Rules are reachable through their container as well as by full name.
         """
+        container = self.helper.rules_manager['simple']
+        rule = container['03_Simple_Equality_Test_3']
+        self.assertEqual(rule.full_name, 'simple_03_Simple_Equality_Test_3')
 
-        # Find rules with 'premium' in the condition
-        premium_rules = self.helper.find_rules_with_condition('premium')
+        result = rule.match({'customer_segment': 'premium'})
+        self.assertTrue(result)
 
-        if not premium_rules:
-            # Try with 'tier' instead
-            premium_rules = self.helper.find_rules_with_condition('tier')
+# ################################################################################################################################
 
-        if not premium_rules:
-            self.skipTest('No rules with premium/tier conditions found')
+    def test_manager_match_with_rule_list(self) -> 'None':
+        """ The manager returns the first match when given a list of rules.
+        """
+        rule_names = ['simple_01_Simple_Equality_Test_1', 'simple_02_Simple_Equality_Test_2']
 
-        # Use the first rule with a premium/tier condition
-        rule_name = premium_rules[0]
-        logger.info(f'Testing service activation for rule: {rule_name}')
+        result = self.helper.rules_manager.match({'xyz': 456}, rule_names)
+        self.assertTrue(result)
 
-        # Get the rule condition to determine what data to use
-        rule_condition = self.helper.get_rule_condition(rule_name)
-        logger.info(f'Rule condition: {rule_condition}')
+        if result:
+            self.assertEqual(result.full_name, 'simple_02_Simple_Equality_Test_2')
 
-        # For a rule with customer_segment == 'premium'
-        if 'customer_segment' in rule_condition and 'premium' in rule_condition:
-
-            # Test with a premium customer
-            data = {'customer_segment': 'premium'}
-            result = self.helper.match_rule(rule_name, data)
-            self.assertTrue(result, f'Rule {rule_name} should have matched for premium customer')
-
-            # Test with a non-premium customer
-            data = {'customer_segment': 'standard'}
-            result = self.helper.match_rule(rule_name, data)
-            self.assertFalse(result, f'Rule {rule_name} should not have matched for standard customer')
-
-        # For a rule with account_tier == 'gold'
-        elif 'account_tier' in rule_condition and 'gold' in rule_condition:
-
-            # Test with a gold tier account
-            data = {'account_tier': 'gold'}
-            result = self.helper.match_rule(rule_name, data)
-            self.assertTrue(result, f'Rule {rule_name} should have matched for gold tier')
-
-            # Test with a non-gold tier account
-            data = {'account_tier': 'silver'}
-            result = self.helper.match_rule(rule_name, data)
-            self.assertFalse(result, f'Rule {rule_name} should not have matched for silver tier')
-
-        # For other rules with premium/tier conditions
-        else:
-            logger.info(f'Skipping specific tests for {rule_name} - would need custom test data')
+        result = self.helper.rules_manager.match({'xyz': 111, 'abc': 111}, rule_names)
+        self.assertIsNone(result)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
-
-    log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
-    logging.basicConfig(level=logging.INFO, format=log_format)
-
     _ = unittest.main()
 
 # ################################################################################################################################

@@ -12,14 +12,15 @@ from pathlib import Path
 from threading import RLock
 
 # Zato
-from zato.common.rules.models import Container, Rule
+from zato.common.rules.cache import CachedRule
+from zato.common.rules.models import Container, Rule, rule_from_document
 from zato.common.rules.parser import parse_file
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, dict_, str, strdict, strlist
+    from zato.common.typing_ import any_, dict_, strdict, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,26 +55,12 @@ class RuleLoader:
         # .. go through each rule found ..
         # .. and note that we're iterating the full names alpabetically (because parsed is a SortedDict) ..
         # .. so the container's own dict will also always iterate over them alphabetically ..
-        for full_name, rule_data in parsed.items():
+        for document in parsed.values():
 
-            # .. build a new rule ..
-            rule = Rule()
-            rule.full_name = full_name
-            rule.name = rule_data['name']
-            rule.container_name = rule_data['container_name']
-            rule.when = rule_data['when']
-
-            try:
-                from rule_engine import Rule as RuleImpl
-                rule.when_impl = RuleImpl(rule.when)
-            except Exception as e:
-                logger.warning(f'Rule loading error -> {full_name} -> {rule.when} -> {e}')
+            # .. build a new rule out of its document ..
+            rule = rule_from_document(document)
+            if rule is None:
                 continue
-
-            rule.then = rule_data['then']
-            rule.defaults = rule_data.get('defaults', {})
-            rule.docs = rule_data.get('docs', '')
-            rule.invoke = rule_data.get('invoke', '')
 
             # .. make sure to delete it first from the global dict ..
             _ = all_rules.pop(rule.full_name, None)
@@ -85,7 +72,6 @@ class RuleLoader:
             container.add_rule(rule)
 
             # Create a cached version of the rule
-            from zato.common.rules.cache import CachedRule
             cached_rules[rule.full_name] = CachedRule(rule)
 
             # .. append it for later use ..

@@ -10,13 +10,13 @@ defaults
     premium_data_threshold = 100
     loyalty_months_threshold = 24
 when
-    monthly_data_usage > premium_data_threshold and
-    subscription_months > loyalty_months_threshold and
-    premium_services_enrolled == True
+    monthly_data_usage is more than default.premium_data_threshold and
+    subscription_months is more than default.loyalty_months_threshold and
+    premium_services_enrolled is true
 then
-    billing_tier = "Premium"
-    support_priority = "High"
-    eligible_for_promotions = ["exclusive_events", "device_upgrades", "international_packages"]
+    billing_tier = 'Premium'
+    support_priority = 'High'
+    eligible_for_promotions = ['exclusive_events', 'device_upgrades', 'international_packages']
 
 # ################################################################################################################################
 
@@ -27,15 +27,15 @@ docs
     Checks if customer address is within service coverage area and has required infrastructure.
     Verifies customer has no outstanding balances and meets regulatory requirements.
 when
-    address_serviceable == True and
-    infrastructure_available == True and
-    outstanding_balance < 50 and
-    service_restrictions_count == 0 and
-    credit_score >= 600
+    address_serviceable is true and
+    infrastructure_available is true and
+    outstanding_balance is less than 50 and
+    service_restrictions_count is 0 and
+    credit_score is at least 600
 then
-    service_activation_eligible = True
-    activation_fee_waived = subscription_months > 12
-    installation_type = "standard"
+    service_activation_eligible = true
+    activation_fee_waived = true
+    installation_type = 'standard'
 
 # ################################################################################################################################
 
@@ -49,15 +49,15 @@ defaults
     high_value_threshold = 1000000
     volatility_threshold = 0.05
 when
-    trade_amount > high_value_threshold and
-    (currency_volatility > volatility_threshold or
-    client_trading_history_months < 6 or
-    market_condition == "volatile")
+    trade_amount is more than default.high_value_threshold and
+    currency_volatility is more than default.volatility_threshold or
+    trade_amount is more than default.high_value_threshold and
+    client_trading_history_months is less than 6
 then
-    requires_additional_approval = True
-    approval_level = "senior_trader"
-    documentation_required = ["trade_rationale", "risk_assessment", "client_verification"]
-    notification_recipients = ["risk_management", "compliance", "trading_desk_head"]
+    requires_additional_approval = true
+    approval_level = 'senior_trader'
+    documentation_required = ['trade_rationale', 'risk_assessment', 'client_verification']
+    notification_recipients = ['risk_management', 'compliance', 'trading_desk_head']
 
 # ################################################################################################################################
 
@@ -67,23 +67,16 @@ docs
     Determines if manufactured items should be rejected based on quality control measurements.
     Evaluates dimensional tolerances, surface defects, material properties, and test results.
     Ensures only products meeting quality standards proceed to packaging and shipping.
-defaults
-    rejection_reason_dimensional = "dimensional_error"
-    rejection_reason_surface = "surface_quality"
-    rejection_reason_material = "material_properties"
-    alert_level_high = "high"
-    alert_level_normal = "normal"
 when
-    (dimensional_deviation > tolerance_threshold and material_strength >= minimum_strength_requirement) or
-    (surface_defect_count > 3 and surface_defect_count < 7) or
-    material_strength < minimum_strength_requirement or
-    (test_result == "fail" and retest_result == "fail")
+    dimensional_deviation is more than tolerance_threshold or
+    surface_defect_count is between 4 and 6 or
+    material_strength is less than minimum_strength_requirement
 then
-    product_status = "rejected"
-    rejection_reason = rejection_reason_dimensional
-    rework_eligible = True
-    quality_alert_level = alert_level_normal
-    inspection_frequency = "increased"
+    product_status = 'rejected'
+    rejection_reason = 'quality_standards'
+    rework_eligible = true
+    quality_alert_level = 'normal'
+    inspection_frequency = 'increased'
 
 # ################################################################################################################################
 
@@ -94,16 +87,16 @@ docs
     Evaluates species counts, migration patterns, and habitat conditions from field sensors.
     Determines conservation priorities and habitat management recommendations.
 when
-    species_diversity_index > previous_year_index and
-    endangered_species_sightings > 0 and
-    habitat_condition_score > 65 and
-    invasive_species_percentage < 10
+    species_diversity_index is more than previous_year_index and
+    endangered_species_sightings is more than 0 and
+    habitat_condition_score is more than 65 and
+    invasive_species_percentage is less than 10
 then
-    ecosystem_status = "improving"
-    conservation_priority = "maintain"
-    monitoring_frequency = "quarterly"
-    management_actions = ["continue_restoration", "educational_outreach", "citizen_science_program"]
-    success_indicators = ["increased_nesting", "expanded_range", "population_growth"]
+    ecosystem_status = 'improving'
+    conservation_priority = 'maintain'
+    monitoring_frequency = 'quarterly'
+    management_actions = ['continue_restoration', 'educational_outreach', 'citizen_science_program']
+    success_indicators = ['increased_nesting', 'expanded_range', 'population_growth']
 
 # ################################################################################################################################
 
@@ -114,13 +107,13 @@ docs
     Evaluates age, income, residency status, and previous benefit history.
     Calculates benefit levels and identifies additional programs for which seniors may qualify.
 when
-    applicant_age >= 65 and
-    annual_income <= 35000 and
-    years_of_residency >= 5
+    applicant_age is at least 65 and
+    annual_income is at most 35000 and
+    years_of_residency is at least 5
 then
-    eligible_programs = ["senior_tax_relief", "utility_assistance", "transportation_subsidy"]
-    benefit_level = annual_income < 20000 ? "maximum" : "standard"
-    priority_processing = applicant_age >= 75
+    eligible_programs = ['senior_tax_relief', 'utility_assistance', 'transportation_subsidy']
+    benefit_level = 'standard'
+    priority_processing = true
     notification_method = preferred_contact_method
 
 # ################################################################################################################################
@@ -134,15 +127,15 @@ docs
 defaults
     historical_review_year = 1950
 when
-    zoning_code == "residential" and
-    proposed_height_feet <= 35 and
-    proposed_setback_feet >= 15 and
-    environmental_concerns == False and
-    (construction_year > historical_review_year or historical_district == False)
+    zoning_code is 'residential' and
+    proposed_height_feet is at most 35 and
+    proposed_setback_feet is at least 15 and
+    environmental_concerns is false and
+    construction_year is more than default.historical_review_year
 then
-    permit_status = "approved"
-    inspection_required = True
-    fee_amount = base_fee + (square_footage * 0.1)
+    permit_status = 'approved'
+    inspection_required = true
+    fee_amount = 250
     permit_valid_days = 180
 
 # ################################################################################################################################
@@ -154,14 +147,14 @@ docs
     Evaluates population affected, critical infrastructure involvement, and resource availability.
     Determines appropriate response units and notification protocols.
 when
-    incident_severity >= 8 or
-    population_affected >= 100 or
-    critical_infrastructure_involved in ["power_plant", "water_treatment", "government"]
+    incident_severity is at least 8 or
+    population_affected is at least 100 or
+    critical_infrastructure_involved is one of 'power_plant', 'water_treatment', 'government'
 then
-    priority_level = "high"
-    response_units = ["fire", "hazmat"]
-    notification_level = "emergency_broadcast"
-    command_center_activation = True
+    priority_level = 'high'
+    response_units = ['fire', 'hazmat']
+    notification_level = 'emergency_broadcast'
+    command_center_activation = true
 
 # ################################################################################################################################
 
@@ -172,16 +165,16 @@ docs
     Considers aircraft type, passenger volume, and terminal capabilities.
     Optimizes gate usage while ensuring passenger convenience and operational efficiency.
 defaults
-    widebody_types = ["B777", "B787", "A330", "A350", "A380", "B747"]
+    widebody_types = ['B777', 'B787', 'A330', 'A350', 'A380', 'B747']
 when
-    aircraft_type in widebody_types and
-    gate_width_meters >= 45 and
-    jetbridge_length_meters >= 12 and
-    gate_currently_available == True
+    aircraft_type is one of default.widebody_types and
+    gate_width_meters is at least 45 and
+    jetbridge_length_meters is at least 12 and
+    gate_currently_available is true
 then
     assigned_gate = nearest_available_gate
-    priority_boarding = True
-    ground_services_level = "premium"
+    priority_boarding = true
+    ground_services_level = 'premium'
     arrival_preparation_minutes = 45
 
 # ################################################################################################################################
@@ -193,15 +186,15 @@ docs
     Evaluates connecting flight times, passenger status, and special item designations.
     Ensures time-sensitive baggage receives expedited processing to prevent missed connections.
 when
-    connecting_flight_minutes < 90 or
-    passenger_status in ["diplomatic", "unaccompanied_minor"] or
-    baggage_tag_priority == "rush" or
-    special_handling_code in ["FRAGILE", "DIPLOMATIC"]
+    connecting_flight_minutes is less than 90 or
+    passenger_status is one of 'diplomatic', 'unaccompanied_minor' or
+    baggage_tag_priority is 'rush' or
+    special_handling_code is one of 'FRAGILE', 'DIPLOMATIC'
 then
-    routing_priority = "expedited"
-    handling_instructions = "priority_lane"
-    tracking_frequency = "continuous"
-    staff_notification = True
-    estimated_processing_minutes = standard_processing_time * 0.6
+    routing_priority = 'expedited'
+    handling_instructions = 'priority_lane'
+    tracking_frequency = 'continuous'
+    staff_notification = true
+    estimated_processing_minutes = 25
 
 # ################################################################################################################################

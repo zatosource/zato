@@ -3,62 +3,60 @@
 rule
     01_Special_Regex_Test
 docs
-    Tests regex matching operator (=~).
+    Tests the matches comparator.
     This rule is used to test the regex matching functionality.
-defaults
-    pattern_prefix = "AAABBB"
 when
-    doc_id =~ r"AAABBB\\s\\S+" and
-    transaction_type == "purchase"
+    doc_id matches 'AAABBB\s\S+' and
+    transaction_type is 'purchase'
 then
-    result = "matched_regex"
-    action = "process"
+    result = 'matched_regex'
+    action = 'process'
 
 # ################################################################################################################################
 
 rule
-    02_Special_String_Operations_Test
+    02_Special_Between_Test
 docs
-    Tests string operations like as_upper.
-    This rule is used to test string manipulation in conditions.
+    Tests the is between comparator with two inclusive boundaries.
+    This rule is used to test range checks.
 when
-    title.as_upper == "QBC" and
-    transaction_type == "purchase"
+    transaction_amount is between 100 and 1000 and
+    transaction_type is 'purchase'
 then
-    result = "matched_string_operation"
-    action = "notify"
+    result = 'matched_between'
+    action = 'notify'
 
 # ################################################################################################################################
 
 rule
     03_Special_Collection_Membership_Test
 docs
-    Tests collection membership with 'in' operator.
+    Tests collection membership with the is one of comparator.
     This rule is used to test checking if a value is in a predefined list.
 defaults
-    allowed_types = ["power_plant", "water_treatment", "government", "hospital"]
+    allowed_types = ['power_plant', 'water_treatment', 'government', 'hospital']
 when
-    critical_infrastructure_involved in allowed_types and
-    incident_severity >= 5
+    critical_infrastructure_involved is one of default.allowed_types and
+    incident_severity is at least 5
 then
-    priority_level = "high"
-    response_units = ["fire", "hazmat"]
-    notification_level = "emergency_broadcast"
+    priority_level = 'high'
+    response_units = ['fire', 'hazmat']
+    notification_level = 'emergency_broadcast'
 
 # ################################################################################################################################
 
 rule
-    04_Special_Nested_String_Operations_Test
+    04_Special_Boolean_Test
 docs
-    Tests nested string operations with complex conditions.
-    This rule is used to test more complex string manipulations.
+    Tests the is true and is false comparators.
+    This rule is used to test boolean checks without explicit literals.
 when
-    customer_id.as_upper == "VIP123" and
-    (transaction_type == "purchase" or transaction_type == "refund") and
-    amount > 1000
+    premium_services_enrolled is true and
+    account_suspended is false and
+    amount is more than 1000
 then
-    priority = "high"
-    notify_manager = True
-    special_handling = True
+    priority = 'high'
+    notify_manager = true
+    special_handling = true
 
 # ################################################################################################################################
