@@ -67,6 +67,14 @@ class ErrorCode:
     # Codes reported when validating input data against a vocabulary.
     Unknown_Field = 'unknown_field'
 
+    # Codes reported when validating a decision table.
+    Bad_Row          = 'bad_row'
+    Duplicate_Row    = 'duplicate_row'
+    Bad_Column       = 'bad_column'
+    Duplicate_Column = 'duplicate_column'
+    Bad_Cell         = 'bad_cell'
+    Bad_Statement    = 'bad_statement'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
