@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import tempfile
 import time
 import signal
 import sys
@@ -18,6 +19,30 @@ from statistics import mean, median, stdev
 # Zato
 from zato.common.rules.api import RulesManager
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, anydict, anylist, anytuple, dictlist, intlist, strlist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _by_avg_time(result:'anydict') -> 'float':
+    return result['avg_time']
+
+def _by_total_time(result:'anydict') -> 'float':
+    return result['total_time']
+
+def _by_conditions_and_common(result:'anydict') -> 'anytuple':
+    return (result['num_conditions'], result['num_common'])
+
+def _by_rules_conditions_common(result:'anydict') -> 'anytuple':
+    return (result['num_rules'], result['num_conditions'], result['num_common'])
+
+def _by_second_item(item:'anytuple') -> 'any_':
+    return item[1]
+
 # Add colorama for terminal colors
 try:
     from colorama import Fore, Style, init
@@ -25,10 +50,10 @@ try:
 except ImportError:
     # Create dummy classes if colorama is not available
     class DummyFore:
-        def __getattr__(self, name):
+        def __getattr__(self, name:'str') -> 'str':
             return ''
     class DummyStyle:
-        def __getattr__(self, name):
+        def __getattr__(self, name:'str') -> 'str':
             return ''
     Fore = DummyFore()
     Style = DummyStyle()
@@ -40,7 +65,7 @@ class ASCIITable:
     """ Simple ASCII table generator without external dependencies. """
 
     @staticmethod
-    def make_table(data, headers):
+    def make_table(data:'anylist', headers:'strlist') -> 'str':
         """ Create an ASCII table with the given data and headers. """
         if not data:
             return "No data available"
@@ -70,7 +95,7 @@ class BarChart:
     """ Simple ASCII bar chart generator without external dependencies. """
 
     @staticmethod
-    def render(data, title='', xlabel='', ylabel='', width=60, height=10):
+    def render(data:'anylist', title:'str'='', xlabel:'str'='', ylabel:'str'='', width:'int'=60, height:'int'=10) -> 'str':
         """ Create an ASCII bar chart with the given data. """
         if not data:
             return "No data available"
@@ -96,7 +121,7 @@ class BarChart:
         max_label_length = max(len(label) for label in labels)
 
         # Create the bars
-        for i, (label, value) in enumerate(data):
+        for label, value in data:
             bar_height = int(value * scale)
             bar = '█' * bar_height
             # Format the value with consistent spacing for 3 digits
@@ -119,7 +144,7 @@ class BarChart:
 class RulePerformanceTester:
     """ Utility class for testing rule engine performance. """
 
-    def __init__(self, rules_dir=None, pattern=None):
+    def __init__(self, rules_dir:'Path | None'=None, pattern:'str | None'=None) -> 'None':
         """ Initialize the performance tester.
 
         Args:
@@ -153,14 +178,14 @@ class RulePerformanceTester:
         # Generate test data
         self.test_data = self._generate_test_data()
 
-    def _find_rule_files(self):
+    def _find_rule_files(self) -> 'anylist':
         """ Find all rule files matching the pattern. """
         if self.pattern:
             return list(self.perf_dir.glob(self.pattern))
         else:
             return list(self.perf_dir.glob('*.zrules'))
 
-    def _generate_test_data(self):
+    def _generate_test_data(self) -> 'anydict':
         """ Generate test data for each rule file. """
         # Common test data that should match multiple conditions in each file
         # We'll match 3 conditions for 5-condition rules and 5 conditions for 10-condition rules
@@ -189,8 +214,8 @@ class RulePerformanceTester:
             'outage_duration_minutes': 45,
             'services_subscribed': 2,
             'equipment_age_months': 36,
-            'current_platform': 'PSTN',
-            'legacy_platforms': ['TDM', 'PSTN', 'ISDN'],
+            'current_platform': 'CABLE',
+            'supported_platforms': ['FIBER', 'CABLE', 'FIXED_WIRELESS'],
             'contract_end_days': 60,
             'customer_industry': 'healthcare',
             'billing_complaints': 2,
@@ -263,16 +288,16 @@ class RulePerformanceTester:
 
         return base_data
 
-    def _setup_signal_handler(self):
+    def _setup_signal_handler(self) -> 'None':
         """ Set up a signal handler for Ctrl+C to gracefully exit the tests. """
-        def signal_handler(sig, frame):
+        def signal_handler(sig:'int', frame:'any_') -> 'None':
             print(f"\n{Fore.YELLOW}Interrupted by user. Finishing current test and displaying results...{Style.RESET_ALL}")
             self.interrupted = True
 
         # Register the signal handler for SIGINT (Ctrl+C)
-        signal.signal(signal.SIGINT, signal_handler)
+        _ = signal.signal(signal.SIGINT, signal_handler)
 
-    def test_file(self, file_path, iterations=3, runs_per_iteration=1000):
+    def test_file(self, file_path:'Path', iterations:'int'=3, runs_per_iteration:'int'=1000) -> 'anydict | None':
         """ Test a single rule file and return performance metrics. """
         # Extract file characteristics from the name
         # Format: perf_010_rules_XXX_conditions_YYY_common.zrules
@@ -288,19 +313,19 @@ class RulePerformanceTester:
         expected_matching_conditions = self.expected_matches.get(num_conditions, 1)
 
         # Use in-place printing for progress
-        sys.stdout.write(
-            f"\r{Fore.YELLOW}Testing {file_name} with {num_rules} rules, {num_conditions} conditions, "
-            f"{num_common} common conditions{' ' * 20}{Style.RESET_ALL}")
-        sys.stdout.flush()
+        shape = f'{num_rules} rules, {num_conditions} conditions, {num_common} common conditions'
+        progress = f'\r{Fore.YELLOW}Testing {file_name} with {shape}{" " * 20}{Style.RESET_ALL}'
+        _ = sys.stdout.write(progress)
+        _ = sys.stdout.flush()
 
         # Create a new rules manager for this test
         rules_manager = RulesManager()
 
         # Load the rules from the file
         try:
-            rules_manager.load_rules_from_file(file_path)
-            sys.stdout.write(f"\r{Fore.YELLOW}Testing {file_name} - Loaded {len(rules_manager._all_rules)} rules{' ' * 40}{Style.RESET_ALL}")
-            sys.stdout.flush()
+            _ = rules_manager.load_rules_from_file(file_path)
+            _ = sys.stdout.write(f"\r{Fore.YELLOW}Testing {file_name} - Loaded {len(rules_manager._all_rules)} rules{' ' * 40}{Style.RESET_ALL}")
+            _ = sys.stdout.flush()
         except Exception as e:
             print(f"\r{Fore.RED}Error loading rules from {file_name}: {e}{Style.RESET_ALL}")
             return None
@@ -317,8 +342,8 @@ class RulePerformanceTester:
 
         for i in range(iterations):
             # Update progress in-place
-            sys.stdout.write(f"\r{Fore.YELLOW}Testing {file_name} - Running iteration {i+1}/{iterations}{' ' * 40}{Style.RESET_ALL}")
-            sys.stdout.flush()
+            _ = sys.stdout.write(f"\r{Fore.YELLOW}Testing {file_name} - Running iteration {i+1}/{iterations}{' ' * 40}{Style.RESET_ALL}")
+            _ = sys.stdout.flush()
 
             # Measure the time it takes to match all rules multiple times
             start_time = time.time()
@@ -368,14 +393,14 @@ class RulePerformanceTester:
         self.rule_groups[num_rules].append(result)
 
         # Print completion message with proper spacing
-        matched_str = f"matched={len(set(match_results))}"
-        print(
-            f"\r{Fore.GREEN}Completed {file_name}: {Fore.CYAN}avg={avg_time:.4f}ms, total={total_time:.4f}ms, "
-            f"{Fore.MAGENTA}{matched_str}{' ' * 40}{Style.RESET_ALL}")
+        matched_str = f'matched={len(set(match_results))}'
+        timings = f'avg={avg_time:.4f}ms, total={total_time:.4f}ms'
+        completion = f'\r{Fore.GREEN}Completed {file_name}: {Fore.CYAN}{timings}, {Fore.MAGENTA}{matched_str}{" " * 40}{Style.RESET_ALL}'
+        print(completion)
 
         return result
 
-    def filter_by_rule_counts(self, rule_counts):
+    def filter_by_rule_counts(self, rule_counts:'intlist') -> 'None':
         """ Filter the rule files to only include those with the specified rule counts. """
         filtered_files = []
 
@@ -398,7 +423,7 @@ class RulePerformanceTester:
         self.rule_files = filtered_files
         print(f"Found {len(self.rule_files)} rule files matching the specified rule counts")
 
-    def run_tests(self, iterations=3, runs_per_iteration=1000):
+    def run_tests(self, iterations:'int'=3, runs_per_iteration:'int'=1000) -> 'None':
         """ Run performance tests for all matching rule files. """
         # Group files by rule count for ordered processing
         file_groups = {}
@@ -466,7 +491,7 @@ class RulePerformanceTester:
         else:
             print(f"\n{Fore.RED}No test results to display. All tests failed or were skipped.{Style.RESET_ALL}")
 
-    def _display_group_results(self, rule_count):
+    def _display_group_results(self, rule_count:'int') -> 'None':
         """ Display results for a specific rule count group. """
         if rule_count not in self.rule_groups or not self.rule_groups[rule_count]:
             return
@@ -474,7 +499,7 @@ class RulePerformanceTester:
         print(f"\n{Fore.CYAN}{'=' * 30} Performance Results for {rule_count} Rules {'=' * 30}{Style.RESET_ALL}")
 
         # Sort results by common conditions
-        sorted_results = sorted(self.rule_groups[rule_count], key=lambda x: (x['num_conditions'], x['num_common']))
+        sorted_results = sorted(self.rule_groups[rule_count], key=_by_conditions_and_common)
 
         # Create a table for this group
         table_data = []
@@ -505,10 +530,10 @@ class RulePerformanceTester:
 
         # Create side-by-side bar charts for average and total time
         avg_chart_data = [(f"{rule_count:003d} rules, {result['num_conditions']:003d} cond, {result['num_common']:003d} common", result['avg_time'])
-                         for result in sorted(sorted_results, key=lambda x: x['avg_time'])]
+                         for result in sorted(sorted_results, key=_by_avg_time)]
 
         total_chart_data = [(f"{rule_count:003d} rules, {result['num_conditions']:003d} cond, {result['num_common']:003d} common", result['total_time'])
-                           for result in sorted(sorted_results, key=lambda x: x['total_time'])]
+                           for result in sorted(sorted_results, key=_by_total_time)]
 
         # Find the maximum label length for alignment
         max_label_length = max(len(label) for label, _ in avg_chart_data)
@@ -528,8 +553,8 @@ class RulePerformanceTester:
 
         # Print the bars side by side with fixed column widths
         for (avg_label, avg_value), (total_label, total_value) in zip(
-            sorted(avg_chart_data, key=lambda x: x[1]),
-            sorted(total_chart_data, key=lambda x: x[1])
+            sorted(avg_chart_data, key=_by_second_item),
+            sorted(total_chart_data, key=_by_second_item)
         ):
             # Create the bars
             avg_bar_length = int(avg_value * avg_scale)
@@ -558,14 +583,14 @@ class RulePerformanceTester:
             duration = self.group_times[rule_count]
             print(f"\n{Fore.YELLOW}Group test time: {Fore.CYAN}{duration:.2f} seconds{Style.RESET_ALL}")
 
-    def display_results(self):
+    def display_results(self) -> 'None':
         """ Display the performance test results in an ASCII table. """
         if not self.results:
             print(f"{Fore.RED}No results to display. Run tests first.{Style.RESET_ALL}")
             return
 
         # Sort results by rule count, then conditions, then common conditions
-        sorted_results = sorted(self.results, key=lambda x: (x['num_rules'], x['num_conditions'], x['num_common']))
+        sorted_results = sorted(self.results, key=_by_rules_conditions_common)
 
         # Create a table
         table_data = []
@@ -608,11 +633,11 @@ class RulePerformanceTester:
         # Create side-by-side bar charts for average and total time
         avg_chart_data = [
             (f"{result['num_rules']:003d} rules, {result['num_conditions']:003d} cond, {result['num_common']:003d} common", result['avg_time'])
-            for result in sorted(sorted_results, key=lambda x: x['avg_time'])]
+            for result in sorted(sorted_results, key=_by_avg_time)]
 
         total_chart_data = [
             (f"{result['num_rules']:003d} rules, {result['num_conditions']:003d} cond, {result['num_common']:003d} common", result['total_time'])
-            for result in sorted(sorted_results, key=lambda x: x['total_time'])]
+            for result in sorted(sorted_results, key=_by_total_time)]
 
         # Find the maximum label length for alignment
         max_label_length = max(len(label) for label, _ in avg_chart_data)
@@ -632,8 +657,8 @@ class RulePerformanceTester:
 
         # Print the bars side by side with fixed column widths
         for (avg_label, avg_value), (total_label, total_value) in zip(
-            sorted(avg_chart_data, key=lambda x: x[1]),
-            sorted(total_chart_data, key=lambda x: x[1])
+            sorted(avg_chart_data, key=_by_second_item),
+            sorted(total_chart_data, key=_by_second_item)
         ):
             # Create the bars
             avg_bar_length = int(avg_value * avg_scale)
@@ -664,13 +689,10 @@ class RulePerformanceTester:
         # Generate a plain English explanation and save to a file in the temp directory
         self._save_plain_text_summary(sorted_results, total_time)
 
-    def _save_plain_text_summary(self, sorted_results, total_time):
+    def _save_plain_text_summary(self, sorted_results:'dictlist', total_time:'float') -> 'None':
         """ Generate a plain English explanation of the test results and save to a file. """
-        # Import tempfile here to avoid global import
-        import tempfile
-
         # Get the fastest and slowest configurations
-        by_avg_time = sorted(sorted_results, key=lambda x: x['avg_time'])
+        by_avg_time = sorted(sorted_results, key=_by_avg_time)
         fastest = by_avg_time[0]
         slowest = by_avg_time[-1]
 
@@ -732,7 +754,7 @@ Total test execution time: {total_time:.2f} seconds
             group_avg = mean(group_avg_times) if group_avg_times else 0
 
             # Sort by average time
-            sorted_group = sorted(group, key=lambda x: x['avg_time'])
+            sorted_group = sorted(group, key=_by_avg_time)
             fastest_in_group = sorted_group[0]
             slowest_in_group = sorted_group[-1]
 
@@ -785,6 +807,6 @@ Total test execution time: {total_time:.2f} seconds
         file_path = os.path.join(temp_dir, f"zato_rule_perf_results_{timestamp}.txt")
 
         with open(file_path, 'w') as f:
-            f.write(explanation)
+            _ = f.write(explanation)
 
         print(f"\n{Fore.GREEN}Plain English explanation saved to: {Fore.CYAN}{file_path}{Style.RESET_ALL}")

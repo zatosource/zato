@@ -9,18 +9,18 @@ defaults
     premium_subscription_types = ['platinum', 'gold', 'enterprise']
     min_subscription_months = 6
 when
-    account_status == 'active' and                      # Condition 001
-    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
-    customer_type == 'business' and                      # Condition 003
-    is_contract_signed == true and                      # Condition 004
-    monthly_spend > 500 and                      # Condition 005
-    region in high_priority_regions and                      # Condition 006
-    service_level == 'premium' and                      # Condition 007
-    subscription_months > min_subscription_months and                      # Condition 008
-    usage_percentage > 75 and                      # Condition 009
-    support_tickets_open < 5                            # Condition 101
+    account_status is 'active' and                      # Condition 001
+    customer_id matches '[A-Z]{2}\d{6}' and                      # Condition 002
+    customer_type is 'business' and                      # Condition 003
+    is_contract_signed is true and                      # Condition 004
+    monthly_spend is more than 500 and                      # Condition 005
+    region is one of high_priority_regions and                      # Condition 006
+    service_level is 'premium' and                      # Condition 007
+    subscription_months is more than min_subscription_months and                      # Condition 008
+    usage_percentage is more than 75 and                      # Condition 009
+    support_tickets_open is less than 5                            # Condition 101
 then
-churn_risk = 'high'
+    churn_risk = 'high'
     retention_action = 'executive_outreach'
     offer_discount = 15
 
@@ -34,18 +34,18 @@ defaults
     capacity_threshold = 75
     high_priority_regions = ['EMEA', 'APAC', 'NA']
 when
-    account_status == 'active' and                      # Condition 001
-    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
-    customer_type == 'business' and                      # Condition 003
-    is_contract_signed == true and                      # Condition 004
-    monthly_spend > 500 and                      # Condition 005
-    region in high_priority_regions and                      # Condition 006
-    service_level == 'premium' and                      # Condition 007
-    subscription_months > min_subscription_months and                      # Condition 008
-    usage_percentage > 75 and                      # Condition 009
-    usage_decline_months >= high_risk_threshold                            # Condition 102
+    account_status is 'active' and                      # Condition 001
+    customer_id matches '[A-Z]{2}\d{6}' and                      # Condition 002
+    customer_type is 'business' and                      # Condition 003
+    is_contract_signed is true and                      # Condition 004
+    monthly_spend is more than 500 and                      # Condition 005
+    region is one of high_priority_regions and                      # Condition 006
+    service_level is 'premium' and                      # Condition 007
+    subscription_months is more than min_subscription_months and                      # Condition 008
+    usage_percentage is more than 75 and                      # Condition 009
+    usage_decline_months is at least high_risk_threshold                            # Condition 102
 then
-upgrade_offer = 'bandwidth_increase'
+    upgrade_offer = 'bandwidth_increase'
     discount_percentage = 10
     offer_duration_months = 6
 
@@ -59,18 +59,18 @@ defaults
     min_outage_minutes = 30
     premium_subscription_types = ['platinum', 'gold', 'enterprise']
 when
-    account_status == 'active' and                      # Condition 001
-    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
-    customer_type == 'business' and                      # Condition 003
-    is_contract_signed == true and                      # Condition 004
-    monthly_spend > 500 and                      # Condition 005
-    region in high_priority_regions and                      # Condition 006
-    service_level == 'premium' and                      # Condition 007
-    subscription_months > min_subscription_months and                      # Condition 008
-    usage_percentage > 75 and                      # Condition 009
-    upgrade_eligibility_score > 7                            # Condition 103
+    account_status is 'active' and                      # Condition 001
+    customer_id matches '[A-Z]{2}\d{6}' and                      # Condition 002
+    customer_type is 'business' and                      # Condition 003
+    is_contract_signed is true and                      # Condition 004
+    monthly_spend is more than 500 and                      # Condition 005
+    region is one of high_priority_regions and                      # Condition 006
+    service_level is 'premium' and                      # Condition 007
+    subscription_months is more than min_subscription_months and                      # Condition 008
+    usage_percentage is more than 75 and                      # Condition 009
+    upgrade_eligibility_score is more than 7                            # Condition 103
 then
-capacity_planning_priority = 'high'
+    capacity_planning_priority = 'high'
     budget_allocation_percentage = 15
     implementation_timeline_months = 3
 
@@ -84,18 +84,18 @@ defaults
     min_subscription_months = 6
     high_priority_regions = ['EMEA', 'APAC', 'NA']
 when
-    account_status == 'active' and                      # Condition 001
-    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
-    customer_type == 'business' and                      # Condition 003
-    is_contract_signed == true and                      # Condition 004
-    monthly_spend > 500 and                      # Condition 005
-    region in high_priority_regions and                      # Condition 006
-    service_level == 'premium' and                      # Condition 007
-    subscription_months > min_subscription_months and                      # Condition 008
-    usage_percentage > 75 and                      # Condition 009
-    peak_usage_percentage > capacity_threshold                            # Condition 104
+    account_status is 'active' and                      # Condition 001
+    customer_id matches '[A-Z]{2}\d{6}' and                      # Condition 002
+    customer_type is 'business' and                      # Condition 003
+    is_contract_signed is true and                      # Condition 004
+    monthly_spend is more than 500 and                      # Condition 005
+    region is one of high_priority_regions and                      # Condition 006
+    service_level is 'premium' and                      # Condition 007
+    subscription_months is more than min_subscription_months and                      # Condition 008
+    usage_percentage is more than 75 and                      # Condition 009
+    peak_usage_percentage is more than capacity_threshold                            # Condition 104
 then
-credit_percentage = 15
+    credit_percentage = 15
     apology_communication = true
     follow_up_survey = true
 
@@ -109,18 +109,18 @@ defaults
     premium_subscription_types = ['platinum', 'gold', 'enterprise']
     min_subscription_months = 6
 when
-    account_status == 'active' and                      # Condition 001
-    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
-    customer_type == 'business' and                      # Condition 003
-    is_contract_signed == true and                      # Condition 004
-    monthly_spend > 500 and                      # Condition 005
-    region in high_priority_regions and                      # Condition 006
-    service_level == 'premium' and                      # Condition 007
-    subscription_months > min_subscription_months and                      # Condition 008
-    usage_percentage > 75 and                      # Condition 009
-    outage_duration_minutes > min_outage_minutes                            # Condition 105
+    account_status is 'active' and                      # Condition 001
+    customer_id matches '[A-Z]{2}\d{6}' and                      # Condition 002
+    customer_type is 'business' and                      # Condition 003
+    is_contract_signed is true and                      # Condition 004
+    monthly_spend is more than 500 and                      # Condition 005
+    region is one of high_priority_regions and                      # Condition 006
+    service_level is 'premium' and                      # Condition 007
+    subscription_months is more than min_subscription_months and                      # Condition 008
+    usage_percentage is more than 75 and                      # Condition 009
+    outage_duration_minutes is more than min_outage_minutes                            # Condition 105
 then
-bundle_offer = 'voice_data_cloud'
+    bundle_offer = 'voice_data_cloud'
     discount_percentage = 12
     promotion_duration_months = 12
 
@@ -132,20 +132,20 @@ docs
     Used for hardware refresh programs in the BSS system.
 defaults
     high_priority_regions = ['EMEA', 'APAC', 'NA']
-    legacy_platforms = ['TDM', 'PSTN', 'ISDN']
+    supported_platforms = ['FIBER', 'CABLE', 'FIXED_WIRELESS']
 when
-    account_status == 'active' and                      # Condition 001
-    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
-    customer_type == 'business' and                      # Condition 003
-    is_contract_signed == true and                      # Condition 004
-    monthly_spend > 500 and                      # Condition 005
-    region in high_priority_regions and                      # Condition 006
-    service_level == 'premium' and                      # Condition 007
-    subscription_months > min_subscription_months and                      # Condition 008
-    usage_percentage > 75 and                      # Condition 009
-    services_subscribed < 3                            # Condition 106
+    account_status is 'active' and                      # Condition 001
+    customer_id matches '[A-Z]{2}\d{6}' and                      # Condition 002
+    customer_type is 'business' and                      # Condition 003
+    is_contract_signed is true and                      # Condition 004
+    monthly_spend is more than 500 and                      # Condition 005
+    region is one of high_priority_regions and                      # Condition 006
+    service_level is 'premium' and                      # Condition 007
+    subscription_months is more than min_subscription_months and                      # Condition 008
+    usage_percentage is more than 75 and                      # Condition 009
+    services_subscribed is less than 3                            # Condition 106
 then
-equipment_upgrade_offer = true
+    equipment_upgrade_offer = true
     upgrade_fee_discount = 50
     contract_extension_months = 12
 
@@ -160,18 +160,18 @@ defaults
     high_priority_regions = ['EMEA', 'APAC', 'NA']
     min_subscription_months = 6
 when
-    account_status == 'active' and                      # Condition 001
-    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
-    customer_type == 'business' and                      # Condition 003
-    is_contract_signed == true and                      # Condition 004
-    monthly_spend > 500 and                      # Condition 005
-    region in high_priority_regions and                      # Condition 006
-    service_level == 'premium' and                      # Condition 007
-    subscription_months > min_subscription_months and                      # Condition 008
-    usage_percentage > 75 and                      # Condition 009
-    equipment_age_months > 24                            # Condition 107
+    account_status is 'active' and                      # Condition 001
+    customer_id matches '[A-Z]{2}\d{6}' and                      # Condition 002
+    customer_type is 'business' and                      # Condition 003
+    is_contract_signed is true and                      # Condition 004
+    monthly_spend is more than 500 and                      # Condition 005
+    region is one of high_priority_regions and                      # Condition 006
+    service_level is 'premium' and                      # Condition 007
+    subscription_months is more than min_subscription_months and                      # Condition 008
+    usage_percentage is more than 75 and                      # Condition 009
+    equipment_age_months is more than 24                            # Condition 107
 then
-migration_priority = 'high'
+    migration_priority = 'high'
     incentive_offer = 'free_installation'
     dedicated_migration_support = true
 
@@ -185,18 +185,18 @@ defaults
     iot_compatible_industries = ['manufacturing', 'healthcare', 'logistics', 'retail', 'utilities']
     high_priority_regions = ['EMEA', 'APAC', 'NA']
 when
-    account_status == 'active' and                      # Condition 001
-    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
-    customer_type == 'business' and                      # Condition 003
-    is_contract_signed == true and                      # Condition 004
-    monthly_spend > 500 and                      # Condition 005
-    region in high_priority_regions and                      # Condition 006
-    service_level == 'premium' and                      # Condition 007
-    subscription_months > min_subscription_months and                      # Condition 008
-    usage_percentage > 75 and                      # Condition 009
-    current_platform in legacy_platforms                            # Condition 108
+    account_status is 'active' and                      # Condition 001
+    customer_id matches '[A-Z]{2}\d{6}' and                      # Condition 002
+    customer_type is 'business' and                      # Condition 003
+    is_contract_signed is true and                      # Condition 004
+    monthly_spend is more than 500 and                      # Condition 005
+    region is one of high_priority_regions and                      # Condition 006
+    service_level is 'premium' and                      # Condition 007
+    subscription_months is more than min_subscription_months and                      # Condition 008
+    usage_percentage is more than 75 and                      # Condition 009
+    current_platform is one of supported_platforms                            # Condition 108
 then
-renewal_discount_percentage = 8
+    renewal_discount_percentage = 8
     extended_payment_terms = true
     value_added_services_free = 2
 
@@ -210,18 +210,18 @@ defaults
     support_tiers = ['standard', 'premium', 'platinum']
     response_time_thresholds = {'standard': 24, 'premium': 8, 'platinum': 4}
 when
-    account_status == 'active' and                      # Condition 001
-    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
-    customer_type == 'business' and                      # Condition 003
-    is_contract_signed == true and                      # Condition 004
-    monthly_spend > 500 and                      # Condition 005
-    region in high_priority_regions and                      # Condition 006
-    service_level == 'premium' and                      # Condition 007
-    subscription_months > min_subscription_months and                      # Condition 008
-    usage_percentage > 75 and                      # Condition 009
-    contract_end_days < 90                            # Condition 109
+    account_status is 'active' and                      # Condition 001
+    customer_id matches '[A-Z]{2}\d{6}' and                      # Condition 002
+    customer_type is 'business' and                      # Condition 003
+    is_contract_signed is true and                      # Condition 004
+    monthly_spend is more than 500 and                      # Condition 005
+    region is one of high_priority_regions and                      # Condition 006
+    service_level is 'premium' and                      # Condition 007
+    subscription_months is more than min_subscription_months and                      # Condition 008
+    usage_percentage is more than 75 and                      # Condition 009
+    contract_end_days is less than 90                            # Condition 109
 then
-iot_solution_offer = 'industry_specific'
+    iot_solution_offer = 'industry_specific'
     pilot_program_eligible = true
     consultation_scheduling = 'priority'
 
@@ -236,18 +236,18 @@ defaults
     premium_subscription_types = ['platinum', 'gold', 'enterprise']
     high_priority_regions = ['EMEA', 'APAC', 'NA']
 when
-    account_status == 'active' and                      # Condition 001
-    customer_id =~ '[A-Z]{{2}}\d{{6}}' and                      # Condition 002
-    customer_type == 'business' and                      # Condition 003
-    is_contract_signed == true and                      # Condition 004
-    monthly_spend > 500 and                      # Condition 005
-    region in high_priority_regions and                      # Condition 006
-    service_level == 'premium' and                      # Condition 007
-    subscription_months > min_subscription_months and                      # Condition 008
-    usage_percentage > 75 and                      # Condition 009
-    customer_industry in iot_compatible_industries                            # Condition 110
+    account_status is 'active' and                      # Condition 001
+    customer_id matches '[A-Z]{2}\d{6}' and                      # Condition 002
+    customer_type is 'business' and                      # Condition 003
+    is_contract_signed is true and                      # Condition 004
+    monthly_spend is more than 500 and                      # Condition 005
+    region is one of high_priority_regions and                      # Condition 006
+    service_level is 'premium' and                      # Condition 007
+    subscription_months is more than min_subscription_months and                      # Condition 008
+    usage_percentage is more than 75 and                      # Condition 009
+    customer_industry is one of iot_compatible_industries                            # Condition 110
 then
-customer_outreach = 'proactive'
+    customer_outreach = 'proactive'
     satisfaction_survey = true
     special_offer = 'loyalty_discount'
 

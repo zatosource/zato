@@ -15,7 +15,7 @@ from time import time
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, callable_, float_, int_, strdict
+    from zato.common.typing_ import any_, callable_, strdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,13 +53,13 @@ class CacheStats:
         self.misses += 1
 
     @property
-    def total(self) -> 'int_':
+    def total(self) -> 'int':
         """ Get the total number of cache operations.
         """
         return self.hits + self.misses
 
     @property
-    def hit_ratio(self) -> 'float_':
+    def hit_ratio(self) -> 'float':
         """ Get the cache hit ratio.
         """
         if self.total == 0:
@@ -101,7 +101,7 @@ class CacheKey:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def timed_execution(func:'callable_', *args:'any_', **kwargs:'any_') -> 'tuple[any_, float_]':
+def timed_execution(func:'callable_', *args:'any_', **kwargs:'any_') -> 'tuple[any_, float]':
     """ Execute a function and measure its execution time.
     """
     start_time = time()

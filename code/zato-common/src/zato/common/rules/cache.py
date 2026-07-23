@@ -11,16 +11,17 @@ from copy import deepcopy
 from logging import getLogger
 
 # rule-engine
-from rule_engine.ast import ExpressionBase, LogicExpression
+from rule_engine.ast import LogicExpression
 
 # Zato
-from zato.common.rules.models import MatchResult, resolve_then_values
+from zato.common.rules.document import resolve_actions
+from zato.common.rules.models import MatchResult
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, bool_, dict_
+    from zato.common.typing_ import any_, anydict, anylist, dict_
     from zato.common.rules.models import Rule
 
 # ################################################################################################################################
@@ -41,7 +42,7 @@ class CachedRule:
         self.cache_hits = 0
         self.cache_misses = 0
 
-    def match(self, data:'anydict', condition_cache:'dict_[str, any_]'=None) -> 'MatchResult':
+    def match(self, data:'anydict', condition_cache:'dict_[str, any_] | None'=None) -> 'MatchResult':
         """ Match data against the rule using condition caching.
         """
         # Reset statistics for this evaluation
@@ -70,13 +71,17 @@ class CachedRule:
 
         # Build a match result object
         match_result = MatchResult(result)
+        match_result.full_name = self.rule.full_name
+
+        # A match applies the then actions, a non-match still applies the else actions.
         if result:
-            match_result.then = resolve_then_values(self.rule.then, data)
-            match_result.full_name = self.rule.full_name
+            match_result.then = resolve_actions(self.rule.then, data)
+        else:
+            match_result.else_ = resolve_actions(self.rule.else_, data)
 
         return match_result
 
-    def _get_cache_key(self, expression:'ExpressionBase') -> 'str':
+    def _get_cache_key(self, expression:'any_') -> 'str':
         """ Generate an optimized cache key for expressions.
         """
         # For LogicExpression, use a more efficient key format
@@ -98,7 +103,7 @@ class CachedRule:
         expr_str = str(expression)
         return f'{type(expression).__name__}:{hash(expr_str)}'
 
-    def _evaluate_with_cache(self, expression:'ExpressionBase', data:'anydict', cache:'dict_[str, any_]') -> 'bool_':
+    def _evaluate_with_cache(self, expression:'any_', data:'anydict', cache:'dict_[str, any_]') -> 'bool':
         """ Evaluate an expression with caching.
         """
         # Generate a cache key based on the expression
@@ -206,7 +211,7 @@ def identify_common_expressions(rules:'dict_[str, Rule]') -> 'list[str]':
     result = []
 
     # Sort expressions by frequency (most common first)
-    def get_count(item):
+    def get_count(item:'any_') -> 'int':
         """ Get the count from an item tuple.
         """
         return item[1]
@@ -220,7 +225,7 @@ def identify_common_expressions(rules:'dict_[str, Rule]') -> 'list[str]':
 
     return result
 
-def _extract_expressions(expression:'ExpressionBase') -> 'list[ExpressionBase]':
+def _extract_expressions(expression:'any_') -> 'anylist':
     """ Extract all subexpressions from an expression tree.
     """
     result = [expression]
@@ -244,7 +249,7 @@ def precompute_common_expressions(common_expressions:'list[str]', data:'anydict'
     logger = getLogger(__name__)
     logger.info(f'Precomputing {len(common_expressions)} common expressions')
 
-def _extract_field_names(expression:'ExpressionBase') -> 'set[str]':
+def _extract_field_names(expression:'any_') -> 'set[str]':
     """ Extract all field names accessed by an expression.
     """
     field_names = set()

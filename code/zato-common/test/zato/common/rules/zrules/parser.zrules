@@ -3,12 +3,12 @@
 rule
     ABC_BANK_001
 when
-    x < max_x and
-    amount > min_amount and
-    income_ratio > 0.4
+    x is less than max_x and
+    amount is more than min_amount and
+    income_ratio is more than 0.4
 then
     addition = 2.5
-    extra_requirements = True
+    extra_requirements = true
     max_term_years = 3
 
 # ################################################################################################################################
@@ -20,24 +20,20 @@ docs
 defaults
     a = 123
     b = 456
-    max = 567
+    min_transaction_amount = 5000
 when
-    transaction_type != customer_type and
-    transaction_amount > default.transaction_amount and
-    (transaction_category == 'fixed' or transaction_time_hour == 5) and
-    title.as_upper == "QBC" and
-    doc_id =~ r"AAABBB\\s\\S+" and
-    abc == d'2025-01-01T00:00:00' and
-    hello == 123 # This is a comment too and
+    transaction_type is not customer_type and
+    transaction_amount is more than default.min_transaction_amount and
+    transaction_category is one of 'fixed', 'variable' and
+    title is 'QBC' and
+    doc_id matches 'AAABBB\s\S+' and
+    abc is d'2025-01-01T00:00:00' and
+    hello is 123 # This is a comment too
 then
     score = 85
-    block_transaction = True
+    block_transaction = true
     notification_channel = 'email', 'app_alert'
     outbound_channel = 'sms', channel
-    """
-    This is a multi
-    line comment
-    """
 
 # ################################################################################################################################
 
@@ -47,36 +43,28 @@ docs
     This is a docstring
     it can be multiline
 when
-    account_balance_average > 500000 and
-    customer_segment == 'private_banking' and
-    relationship_tenure_years > 2
+    account_balance_average is more than 500000 and
+    customer_segment is 'private_banking' and
+    relationship_tenure_years is more than 2
 then
-    fee_waiver = True
-    dedicated_advisor = True
-    status = {'key1':'value1', 'key2':'value2'}
-    '''
-    offer = '123'
-    This is a multiline
-    comment
-    '''
+    fee_waiver = true
+    dedicated_advisor = true
+    status = {'key1': 'value1', 'key2': 'value2'}
 
 # ################################################################################################################################
 
 rule
-    rule_4
+    Routing_004
 docs
-    This is a docstring
-    it can be multiline
-invoke
-    result1 = abc.service1(request1)
-    result2 = abc.service2(request2)
+    Routes work automatically unless it arrives through a channel that needs a person.
 when
-    abc == 123 or
-    abc == 456
-    # result1.customer_type in ['abc', 'def']
+    channel is not one of 'fax', 'pager' or
+    priority is at least 8
 then
-    fee_waiver = True
-    dedicated_advisor = True
-    status = {'key1':'value1', 'key2':'value2'}
+    routing = 'automated'
+    handler = channel
+else
+    routing = 'manual'
+    review_queue = 'operations'
 
 # ################################################################################################################################

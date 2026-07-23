@@ -16,31 +16,13 @@ from rule_engine import Rule as RuleImpl
 
 # Zato
 from zato.common.marshal_.api import Model
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def resolve_then_values(then_dict, data):
-    """ Resolve variable references in then values against input data.
-    """
-    # type: (dict, dict) -> dict
-    if not then_dict:
-        return then_dict
-
-    resolved = {}
-    for key, value in then_dict.items():
-        if isinstance(value, str) and value in data:
-            resolved[key] = data[value]
-        else:
-            resolved[key] = value
-
-    return resolved
+from zato.common.rules.document import compile_when, resolve_actions, resolve_defaults
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, dict_, strdict
+    from zato.common.typing_ import any_, anydict, dict_, dictlist, strdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,6 +36,7 @@ logger = getLogger(__name__)
 class MatchResult(Model):
     _has_matched: 'bool'
     then:'any_'
+    else_:'any_'
     full_name:'str'
 
     def __init__(self, has_matched:'bool') -> 'None':
@@ -72,50 +55,97 @@ class Rule(Model):
     container_name: 'str'
     docs: 'str'
     defaults: 'strdict'
-    invoke: 'strdict'
+    document: 'anydict'
     when: 'str'
     when_impl: 'RuleImpl'
-    then: 'str'
+    then: 'dictlist'
+    else_: 'dictlist'
 
     def __getattr__(self, name:'str') -> 'any_':
         pass
 
+# ################################################################################################################################
+
+    def _apply_defaults(self, data:'anydict') -> 'anydict':
+        """ Returns data with any missing default values filled in, copying only when needed.
+        """
+
+        # Without defaults there is nothing to fill in ..
+        if not self.defaults:
+            return data
+
+        # .. otherwise, copy the input lazily, only if a default is actually missing ..
+        modified_data = None
+
+        for key, value in self.defaults.items():
+            if key not in data:
+
+                # .. the first missing default triggers the copy ..
+                if modified_data is None:
+                    modified_data = deepcopy(data)
+
+                # .. and each missing default lands in the copy.
+                modified_data[key] = value
+
+        out = modified_data if modified_data is not None else data
+        return out
+
+# ################################################################################################################################
+
     def match(self, data:'anydict') -> 'MatchResult':
 
-        # Only process defaults if we have them defined
-        if self.defaults:
+        # Fill in defaults for any keys the input does not provide ..
+        match_data = self._apply_defaults(data)
 
-            # Create a modified data dict only if needed
-            modified_data = None
-
-            # Check for missing fields that have defaults
-            for key, value in self.defaults.items():
-                if key not in data:
-
-                    # Lazy initialization of the modified data
-                    if modified_data is None:
-                        modified_data = deepcopy(data)
-
-                    # Add the default value
-                    modified_data[key] = value
-
-            # Use the modified data if we created it
-            match_data = modified_data if modified_data is not None else data
-
-        else:
-            # No defaults, use original data
-            match_data = data
-
-        # Evaluate our rule with the appropriate data
+        # .. evaluate our rule with the appropriate data ..
         has_matched = self.when_impl.matches(match_data)
 
-        # Build a result object
+        # .. and build a result object ..
         match_result = MatchResult(has_matched)
+        match_result.full_name = self.full_name
+
+        # .. a match applies the then actions ..
         if has_matched:
-            match_result.then = resolve_then_values(self.then, match_data)
-            match_result.full_name = self.full_name
+            match_result.then = resolve_actions(self.then, match_data)
+
+        # .. and a non-match still applies the else actions.
+        else:
+            match_result.else_ = resolve_actions(self.else_, match_data)
 
         return match_result
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def rule_from_document(document:'anydict') -> 'Rule | None':
+    """ Builds a runtime Rule out of a parsed rule document, returning None if its when expression will not compile.
+    """
+
+    # Carry over the document and its identity ..
+    rule = Rule()
+    rule.full_name = document['full_name']
+    rule.name = document['name']
+    rule.container_name = document['container_name']
+    rule.document = document
+    rule.docs = document['docs']
+
+    # .. defaults resolve into plain values used at match time ..
+    rule.defaults = resolve_defaults(document['defaults'])
+
+    # .. the when expression is compiled from the conditions and joiners ..
+    rule.when = compile_when(document)
+
+    try:
+        rule.when_impl = RuleImpl(rule.when)
+    except Exception as e:
+        logger.warning(f'Rule loading error -> {rule.full_name} -> {rule.when} -> {e}')
+        return None
+
+    # .. and both action lists stay as tagged nodes, resolved per match.
+    rule.then = document['then']
+    rule.else_ = document['else']
+
+    return rule
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -139,11 +169,17 @@ class Container(Model):
         else:
             raise AttributeError(f'No such rule -> {full_name}')
 
+# ################################################################################################################################
+
     def add_rule(self, rule:'Rule') -> 'None':
         self._rules[rule.full_name] = rule
 
+# ################################################################################################################################
+
     def delete_rule(self, full_name:'str') -> 'None':
         _ = self._rules.pop(full_name, None)
+
+# ################################################################################################################################
 
     def match(self, data:'anydict') -> 'MatchResult | None':
 
