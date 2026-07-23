@@ -26,7 +26,8 @@ class TestRulesParser(unittest.TestCase):
         """
 
         # Find all the non-performance fixture files ..
-        current_dir = Path(os.path.dirname(os.path.abspath(__file__)))
+        # The shared zrules fixtures live one level up, next to the test subdirectories.
+        current_dir = Path(os.path.dirname(os.path.abspath(__file__))).parent
         zrules_dir = current_dir / 'zrules'
 
         zrules_files = []

@@ -30,8 +30,8 @@ def main():
 
     print(f'Starting performance tests at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
 
-    # Get the test directory
-    test_dir = Path(os.path.dirname(os.path.abspath(__file__)))
+    # The shared zrules fixtures live one level up, next to the test subdirectories.
+    test_dir = Path(os.path.dirname(os.path.abspath(__file__))).parent
 
     # Create the performance tester with the specified pattern or all files
     tester = RulePerformanceTester(rules_dir=test_dir, pattern=args.pattern)
