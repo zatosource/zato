@@ -14,7 +14,7 @@ from humanize import intcomma
 
 # Local
 from common import Floors, Measurement, PerfDatabase, Seeded_Definition_Count
-from zato.common.rules.sql import RuleSQLBackend
+from zato.common.rule_engine.sql import RuleSQLBackend
 from seeding import delete_all_rows, Seed_Definition_Base, Seed_Versions_Per_Definition, seed_definitions
 from traffic import Author, create_rulesets
 

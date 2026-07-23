@@ -43,7 +43,6 @@ windows_disabled = [
 
 # Names of built-in security definitions that pub/sub pages never display
 PubSub_Excluded_Sec_Names = {
-    'Rule engine default user',
     'admin.invoke',
     'ide_publisher'
 }

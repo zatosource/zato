@@ -20,7 +20,7 @@ from sqlalchemy.engine import Engine
 from typing_extensions import TypeAlias
 
 # Local
-from zato.common.rules.sql import create_database_engine, create_schema, RuleSQLBackend
+from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
 
 # ################################################################################################################################
 # ################################################################################################################################

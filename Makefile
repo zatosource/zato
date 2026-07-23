@@ -899,11 +899,11 @@ test-audit-log-ui: ## Audit log dashboard and unit tests against every database 
 
 test-rule-engine: ## Rule engine tests - grammar, matching, round trip and the SQL backend, fully offline.
 	$(CURDIR)/code/bin/ruff check \
-		$(CURDIR)/code/zato-common/src/zato/common/rules/ \
-		$(CURDIR)/code/zato-common/test/zato/common/rules/ \
+		$(CURDIR)/code/zato-common/src/zato/common/rule_engine/ \
+		$(CURDIR)/code/zato-common/test/zato/common/rule_engine/ \
 		$(CURDIR)/code/tests/python/zato-common/rule_engine_sql/
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/zato-common/test/zato/common/rules/ \
+		$(CURDIR)/code/zato-common/test/zato/common/rule_engine/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rule_engine \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \

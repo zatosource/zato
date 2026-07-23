@@ -40,7 +40,7 @@ class GroupExporter:
 
     def __init__(self, exporter:'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
-        self.excluded_groups = {'Rule engine API users'}
+        self.excluded_groups = set()
 
         # Maps quota tier ids to their names - populated at the start of each export
         self.tier_name_by_id = {}

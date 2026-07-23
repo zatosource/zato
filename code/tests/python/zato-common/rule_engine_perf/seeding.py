@@ -22,10 +22,10 @@ from zato.common.defaults import default_cluster_id
 # Local
 from common import build_ssl_context, PerfDatabase, Rollup_Day_Count, Rollup_Rule_Count, \
     Seeded_Decision_Count, Seeded_Definition_Count, Type_MySQL, Type_PostgreSQL, Type_SQLite
-from zato.common.rules.sql.constants import Definition_Type_Sentence_Rule, Event_Type_Rule_Fired_Daily, \
+from zato.common.rule_engine.sql.constants import Definition_Type_Sentence_Rule, Event_Type_Rule_Fired_Daily, \
     Event_Type_Version_Created, Event_Type_Version_Published, System_Actor
-from zato.common.rules.sql.document import serialize_document, serialize_string_list
-from zato.common.rules.sql.schema import rule_decision_table
+from zato.common.rule_engine.sql.document import serialize_document, serialize_string_list
+from zato.common.rule_engine.sql.schema import rule_decision_table
 from traffic import Author, business_key_for, catalog_for, duration_for, fired_rules_for, outcome_for, story_for, \
     version_for
 
@@ -34,8 +34,8 @@ from traffic import Author, business_key_for, catalog_for, duration_for, fired_r
 
 if 0:
     from collections.abc import Iterator
-    from zato.common.rules.sql.data import any_, anydict, strlist
-    from zato.common.rules.sql.database import SessionFactory
+    from zato.common.rule_engine.sql.data import any_, anydict, strlist
+    from zato.common.rule_engine.sql.database import SessionFactory
 
     any_ = any_
     anydict = anydict

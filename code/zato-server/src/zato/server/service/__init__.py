@@ -93,7 +93,7 @@ if 0:
     from zato.common.config_dispatcher import ConfigDispatcher
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
-    from zato.common.rules.api import RulesManager
+    from zato.common.rule_engine.api import RulesManager
     from zato.common.typing_ import any_, anydict, anydictnone, boolnone, callable_, callnone, dictnone, intnone, \
         listnone, modelnone, strdict, strdictnone, strstrdict, strnone, strlist
     from zato.common.pubsub.sql.backend import PublishResult

@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-import random
 from copy import deepcopy
 from uuid import uuid4
 
@@ -18,11 +17,6 @@ from uuid import uuid4
 from zato.cli import common_odb_opts, ZatoCommand
 from zato.common.const import ServiceConst
 from zato.common.util.api import utcnow
-
-# ################################################################################################################################
-
-def get_random_integer():
-    return random.randint(100_000, 1_000_000)
 
 # ################################################################################################################################
 
@@ -130,9 +124,6 @@ class Create(ZatoCommand):
             self.add_streaming_channels(session, cluster, ping_service, streaming_sec)
             create_openapi_channel(session, cluster, openapi_handler_service)
             self.add_pubsub_rest_channels(session, cluster)
-
-            # Add other configurations
-            self.add_rule_engine_configuration(session, cluster, ping_service)
 
             # Run ODB post-processing tasks
             odb_post_process.run()
@@ -271,58 +262,6 @@ class Create(ZatoCommand):
             IO.FORMAT.JSON, service=service, cluster=cluster,
             security=security)
         session.add(channel)
-
-# ################################################################################################################################
-
-    def add_rule_engine_configuration(self, session, cluster, ping_service):
-
-        # Zato
-        from zato.common.api import DATA_FORMAT, Groups, SEC_DEF_TYPE
-        from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP
-        from zato.server.groups.base import GroupsManager
-        from json import dumps
-
-        # Create a Basic Auth security definition for rule engine
-        basic_auth_id = get_random_integer()
-        basic_auth_password = os.environ.get('Zato_Password') or self.generate_password()
-        basic_auth = HTTPBasicAuth(
-            basic_auth_id, 'Rule engine default user', True, 'rules', 'Rule engine', basic_auth_password, cluster)
-        session.add(basic_auth)
-
-        class FakeServer:
-            cluster_id = 1
-
-        def fake_server_session():
-            return session
-
-        # Create a GroupsManager instance with our fake server
-        groups_manager = GroupsManager(FakeServer, fake_server_session) # type: ignore
-
-        # Create a security group for the rule engine
-        group_name = 'Rule engine API users'
-        group_id = groups_manager.create_group(Groups.Type.API_Clients, group_name)
-
-        # Format member IDs for the group
-        member_id_list = [
-            f'{SEC_DEF_TYPE.BASIC_AUTH}-{basic_auth_id}',
-        ]
-
-        # Add the security definitions to the group
-        groups_manager.add_members_to_group(group_id, member_id_list) # type: ignore
-
-        # Create the security_groups_ctx structure in opaque1
-        opaque1_data = {
-            'security_groups': [group_id],
-        }
-
-        # Create a REST channel for the rule engine
-        rule_engine_channel = HTTPSOAP(
-            None, 'Rule engine API', True, True, 'channel',
-            'plain_http', None, '/api/rules{action}', None, '', None, DATA_FORMAT.JSON,
-            service=ping_service, cluster=cluster)
-        rule_engine_channel.opaque1 = dumps(opaque1_data) # type: ignore
-
-        session.add(rule_engine_channel)
 
 # ################################################################################################################################
 

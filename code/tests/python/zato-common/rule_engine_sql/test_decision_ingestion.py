@@ -10,17 +10,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import json
 
 # Zato
-from zato.common.rules.ingestion import DecisionRecorder, Outcome
-from zato.common.rules.parser import parse_data_details
-from zato.common.rules.sql import CapturePolicy, RuleDefinitionRecord, RuleSQLBackend
-from zato.common.rules.sql.constants import Definition_Type_Ruleset, Documents_Key
-from zato.common.rules.testing import load_documents
+from zato.common.rule_engine.ingestion import DecisionRecorder, Outcome
+from zato.common.rule_engine.parser import parse_data_details
+from zato.common.rule_engine.sql import CapturePolicy, RuleDefinitionRecord, RuleSQLBackend
+from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Documents_Key
+from zato.common.rule_engine.testing import load_documents
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.rules.testing import LoadedRules
+    from zato.common.rule_engine.testing import LoadedRules
     from zato.common.typing_ import anydict
 
 # ################################################################################################################################

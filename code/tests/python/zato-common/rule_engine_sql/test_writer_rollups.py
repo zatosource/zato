@@ -16,11 +16,11 @@ import pytest
 from sqlalchemy import func, select
 
 # Local
-from zato.common.rules.sql import CapturePolicy, DecisionFilter, DecisionWrite, DecisionWriterConfig, DecisionWriterError, \
+from zato.common.rule_engine.sql import CapturePolicy, DecisionFilter, DecisionWrite, DecisionWriterConfig, DecisionWriterError, \
     RuleSQLBackend
-from zato.common.rules.sql.constants import Definition_Type_Ruleset, Event_Type_Rule_Fired_Daily
-from zato.common.rules.sql.data import anydict, strlist
-from zato.common.rules.sql.schema import rule_event_table
+from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Event_Type_Rule_Fired_Daily
+from zato.common.rule_engine.sql.data import anydict, strlist
+from zato.common.rule_engine.sql.schema import rule_event_table
 
 # ################################################################################################################################
 # ################################################################################################################################

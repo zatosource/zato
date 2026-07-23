@@ -17,8 +17,8 @@ from humanize import intcomma
 # Local
 from common import Floors, Full_Buffer_Sleep_Seconds, Ingest_Decision_Count, Ingest_Submitter_Count, Measurement, \
     percentile, PerfDatabase
-from zato.common.rules.sql import CapturePolicy, RuleSQLBackend
-from zato.common.rules.sql.errors import DecisionBufferFullError
+from zato.common.rule_engine.sql import CapturePolicy, RuleSQLBackend
+from zato.common.rule_engine.sql.errors import DecisionBufferFullError
 from seeding import count_decision_rows, delete_all_rows
 from traffic import build_decision, create_rulesets
 
@@ -27,8 +27,8 @@ from traffic import build_decision, create_rulesets
 
 if 0:
     from common import float_list, measurement_list
-    from zato.common.rules.sql import DecisionBatchWriter
-    from zato.common.rules.sql.data import strlist
+    from zato.common.rule_engine.sql import DecisionBatchWriter
+    from zato.common.rule_engine.sql.data import strlist
 
     DecisionBatchWriter = DecisionBatchWriter
     float_list = float_list

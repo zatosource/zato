@@ -15,7 +15,7 @@ from humanize import intcomma
 
 # Local
 from common import Batch_Count, Batch_Size, Floors, Measurement, PerfDatabase
-from zato.common.rules.sql import CapturePolicy, RuleSQLBackend
+from zato.common.rule_engine.sql import CapturePolicy, RuleSQLBackend
 from seeding import count_decision_rows, delete_all_rows
 from traffic import build_decision, create_rulesets
 
@@ -24,7 +24,7 @@ from traffic import build_decision, create_rulesets
 
 if 0:
     from common import measurement_list
-    from zato.common.rules.sql.data import decision_write_list
+    from zato.common.rule_engine.sql.data import decision_write_list
 
     decision_write_list = decision_write_list
     measurement_list = measurement_list

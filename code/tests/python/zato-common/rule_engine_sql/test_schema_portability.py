@@ -16,7 +16,7 @@ from sqlalchemy.schema import CreateIndex, CreateTable
 from typing_extensions import TypeAlias
 
 # Local
-from zato.common.rules.sql.schema import metadata, rule_decision_table, rule_definition_table, rule_event_table, \
+from zato.common.rule_engine.sql.schema import metadata, rule_decision_table, rule_definition_table, rule_event_table, \
     rule_version_table
 
 # ################################################################################################################################

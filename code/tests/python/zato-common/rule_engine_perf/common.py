@@ -14,7 +14,7 @@ from typing import NamedTuple
 # ################################################################################################################################
 
 if 0:
-    from zato.common.rules.sql.data import anydict, strlist
+    from zato.common.rule_engine.sql.data import anydict, strlist
 
     anydict = anydict
     strlist = strlist

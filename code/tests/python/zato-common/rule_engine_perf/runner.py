@@ -13,7 +13,7 @@ from definitions_load import run_definitions_scenario
 from ingest import run_ingest_scenario
 from reporting_load import run_reporting_scenario
 from retention_load import run_retention_scenario
-from zato.common.rules.sql import create_database_engine, create_schema, RuleSQLBackend
+from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -10,10 +10,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import pytest
 
 # Local
-from zato.common.rules.sql import InvalidStoreInputError, RuleDefinitionRecord, RuleSQLBackend, VersionConflictError
-from zato.common.rules.sql.constants import Definition_Type_Ruleset, Definition_Type_Sentence_Rule, \
+from zato.common.rule_engine.sql import InvalidStoreInputError, RuleDefinitionRecord, RuleSQLBackend, VersionConflictError
+from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Definition_Type_Sentence_Rule, \
     Event_Type_Review_Commented
-from zato.common.rules.sql.data import anydict
+from zato.common.rule_engine.sql.data import anydict
 
 # ################################################################################################################################
 # ################################################################################################################################

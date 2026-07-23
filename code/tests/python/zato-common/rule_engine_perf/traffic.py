@@ -10,14 +10,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from datetime import datetime
 
 # Local
-from zato.common.rules.sql import DecisionWrite, RuleSQLBackend
-from zato.common.rules.sql.constants import Definition_Type_Ruleset
+from zato.common.rule_engine.sql import DecisionWrite, RuleSQLBackend
+from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.rules.sql.data import anydict, strlist
+    from zato.common.rule_engine.sql.data import anydict, strlist
 
     anydict = anydict
     strlist = strlist

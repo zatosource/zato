@@ -10,9 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import pytest
 
 # Zato
-from zato.common.rules.parser import parse_data_details
-from zato.common.rules.sql import RecordNotFoundError, RuleDefinitionRecord, RuleSQLBackend
-from zato.common.rules.sql.constants import Definition_Type_Ruleset, Documents_Key, Event_Type_Follow_Changed
+from zato.common.rule_engine.parser import parse_data_details
+from zato.common.rule_engine.sql import RecordNotFoundError, RuleDefinitionRecord, RuleSQLBackend
+from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Documents_Key, Event_Type_Follow_Changed
 
 # ################################################################################################################################
 # ################################################################################################################################
