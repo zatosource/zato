@@ -13,10 +13,10 @@ from datetime import datetime, timezone
 import pytest
 
 # Local
-from zato.common.rules.sql import CapturePolicy, CountPoint, DecisionAlreadyExistsError, DecisionFilter, DecisionWrite, \
+from zato.common.rule_engine.sql import CapturePolicy, CountPoint, DecisionAlreadyExistsError, DecisionFilter, DecisionWrite, \
     RecordNotFoundError, RuleSQLBackend
-from zato.common.rules.sql.constants import Definition_Type_Ruleset
-from zato.common.rules.sql.data import anydict, decision_write_list, strlist
+from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset
+from zato.common.rule_engine.sql.data import anydict, decision_write_list, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################

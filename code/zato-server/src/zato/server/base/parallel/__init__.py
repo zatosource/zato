@@ -43,7 +43,7 @@ from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.pubsub.subscriptions_store import SubscriptionsStore
 from zato.common.rate_limiting.common import client_address_headers
 from zato.common.rate_limiting.manager import RateLimitingManager
-from zato.common.rules.api import RulesManager
+from zato.common.rule_engine.api import RulesManager
 from zato.common.typing_ import cast_, intnone, optional, tuple_
 from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_user_config_name, \
     fs_safe_name, invoke_startup_services as _invoke_startup_services, make_list_from_string_list, new_cid_server, \

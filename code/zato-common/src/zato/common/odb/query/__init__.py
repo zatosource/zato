@@ -604,8 +604,7 @@ def http_soap_list(session, cluster_id, connection=None, transport=None, return_
             not_(
                 HTTPSOAP.name.startswith('zato') |
                 HTTPSOAP.name.startswith('pub.zato') |
-                HTTPSOAP.name.startswith('admin.invoke') |
-                HTTPSOAP.name.startswith('Rule engine API')
+                HTTPSOAP.name.startswith('admin.invoke')
             )
         )
 

@@ -15,7 +15,7 @@ from humanize import intcomma
 
 # Local
 from common import Floors, Measurement, PerfDatabase, Rollup_Day_Count, Rollup_Rule_Count, Seeded_Decision_Count
-from zato.common.rules.sql import DecisionFilter, RuleSQLBackend
+from zato.common.rule_engine.sql import DecisionFilter, RuleSQLBackend
 from seeding import delete_all_rows, seed_reporting_decisions, seed_rollups
 from traffic import Admin_Rule_Ids, create_rulesets
 
@@ -24,7 +24,7 @@ from traffic import Admin_Rule_Ids, create_rulesets
 
 if 0:
     from common import measurement_list
-    from zato.common.rules.sql.data import strlist
+    from zato.common.rule_engine.sql.data import strlist
 
     measurement_list = measurement_list
     strlist = strlist
