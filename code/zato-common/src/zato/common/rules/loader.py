@@ -46,7 +46,14 @@ class RuleLoader:
         out = []
 
         # First, delete that ruleset completely ..
-        _ = rulesets.pop(ruleset_name, None)
+        previous = rulesets.pop(ruleset_name, None)
+
+        # .. including every rule it used to hold, so a reload never keeps firing rules
+        # .. that the new version of the ruleset no longer has ..
+        if previous is not None:
+            for full_name in previous._rules:
+                _ = all_rules.pop(full_name, None)
+                _ = cached_rules.pop(full_name, None)
 
         # .. recreate it ..
         ruleset = Ruleset(ruleset_name)

@@ -18,7 +18,11 @@ from .data import RuleDecisionRecord as RuleDecisionRecord
 from .data import RuleDefinitionRecord as RuleDefinitionRecord
 from .data import RuleEventRecord as RuleEventRecord
 from .data import RuleFirePoint as RuleFirePoint
+from .data import RuleFollowRecord as RuleFollowRecord
+from .data import RuleRecentRecord as RuleRecentRecord
+from .data import RuleReferenceRecord as RuleReferenceRecord
 from .data import RuleVersionRecord as RuleVersionRecord
+from .data import RuleViewRecord as RuleViewRecord
 from .decisions import CapturePolicy as CapturePolicy
 from .errors import DecisionAlreadyExistsError as DecisionAlreadyExistsError
 from .errors import DecisionBufferFullError as DecisionBufferFullError

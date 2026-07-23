@@ -40,7 +40,7 @@ def database_engine(tmp_path:'Path') -> 'engine_generator':
     connection_options = {'check_same_thread': False}
     engine = create_database_engine(database_url, connect_args=connection_options)
 
-    # .. create only the four rule-engine tables ..
+    # .. create only the rule-engine tables ..
     create_schema(engine)
 
     # .. hand the engine to the test ..

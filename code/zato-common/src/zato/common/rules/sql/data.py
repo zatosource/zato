@@ -26,6 +26,7 @@ if 0:
 
 any_:TypeAlias = Any
 anydict:TypeAlias = dict[str, any_]
+dictlist:TypeAlias = list[anydict]
 strlist:TypeAlias = list[str]
 strset:TypeAlias = set[str]
 intset:TypeAlias = set[int]
@@ -37,6 +38,10 @@ event_record_list:TypeAlias = list['RuleEventRecord']
 decision_record_list:TypeAlias = list['RuleDecisionRecord']
 count_point_list:TypeAlias = list['CountPoint']
 rule_fire_point_list:TypeAlias = list['RuleFirePoint']
+reference_record_list:TypeAlias = list['RuleReferenceRecord']
+follow_record_list:TypeAlias = list['RuleFollowRecord']
+view_record_list:TypeAlias = list['RuleViewRecord']
+recent_record_list:TypeAlias = list['RuleRecentRecord']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -194,6 +199,59 @@ class RuleDecisionRecord(NamedTuple):
     has_payload:    'bool'
     payload:        'str | None'
     fired_rule_ids: 'str | None'
+
+# ################################################################################################################################
+
+class RuleReferenceRecord(NamedTuple):
+    """ One place where one stored rule references one vocabulary term.
+    """
+
+    id:            'int'
+    cluster_id:    'int'
+    definition_id: 'int'
+    rule_name:     'str'
+    term:          'str'
+    block:         'str'
+    role:          'str'
+
+# ################################################################################################################################
+
+class RuleFollowRecord(NamedTuple):
+    """ One actor following one definition, with when they last looked at it.
+    """
+
+    id:            'int'
+    cluster_id:    'int'
+    definition_id: 'int'
+    actor:         'str'
+    created_at:    'datetime'
+    last_seen_at:  'datetime'
+
+# ################################################################################################################################
+
+class RuleViewRecord(NamedTuple):
+    """ One saved view - a named filter payload owned by one actor.
+    """
+
+    id:         'int'
+    cluster_id: 'int'
+    actor:      'str'
+    name:       'str'
+    payload:    'str'
+    created_at: 'datetime'
+    updated_at: 'datetime'
+
+# ################################################################################################################################
+
+class RuleRecentRecord(NamedTuple):
+    """ One actor's most recent visit to one definition.
+    """
+
+    id:            'int'
+    cluster_id:    'int'
+    definition_id: 'int'
+    actor:         'str'
+    visited_at:    'datetime'
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -14,8 +14,12 @@ from .database import create_session_factory, SessionFactory
 from .decisions import CapturePolicy, DecisionStore
 from .definitions import DefinitionStore
 from .events import EventStore
+from .follows import FollowStore
+from .reference_index import ReferenceIndex
 from .reporting import RuleReporting
+from .search import ContentSearch
 from .versions import VersionStore
+from .views import ViewStore
 from .writer import DecisionBatchWriter, DecisionWriterConfig
 
 # ################################################################################################################################
@@ -48,6 +52,10 @@ class RuleSQLBackend:
         self.events      = EventStore(session_factory)
         self.decisions   = DecisionStore(session_factory)
         self.reporting   = RuleReporting(session_factory)
+        self.references  = ReferenceIndex(session_factory)
+        self.follows     = FollowStore(session_factory)
+        self.views       = ViewStore(session_factory)
+        self.search      = ContentSearch(session_factory)
 
 # ################################################################################################################################
 
