@@ -244,4 +244,104 @@ _ = Index(
 )
 
 # ################################################################################################################################
+
+_reference_id                 = Column('id', _integer_type, primary_key=True, autoincrement=True)
+_reference_cluster_id         = Column('cluster_id', _integer_type, nullable=False)
+_reference_definition_foreign = ForeignKey('rule_definition.id', ondelete='RESTRICT')
+_reference_definition_id      = Column('definition_id', _integer_type, _reference_definition_foreign, nullable=False)
+_reference_rule_name          = Column('rule_name', _string_191_type, nullable=False)
+_reference_term               = Column('term', _string_191_type, nullable=False)
+_reference_block              = Column('block', _string_64_type, nullable=False)
+_reference_role               = Column('role', _string_64_type, nullable=False)
+
+rule_reference_table = Table(
+    'rule_reference',
+    metadata,
+    _reference_id,
+    _reference_cluster_id,
+    _reference_definition_id,
+    _reference_rule_name,
+    _reference_term,
+    _reference_block,
+    _reference_role,
+)
+
+_ = Index('rref_term', rule_reference_table.c.cluster_id, rule_reference_table.c.term)
+_ = Index('rref_parent', rule_reference_table.c.definition_id)
+
+# ################################################################################################################################
+
+_follow_id                 = Column('id', _integer_type, primary_key=True, autoincrement=True)
+_follow_cluster_id         = Column('cluster_id', _integer_type, nullable=False)
+_follow_definition_foreign = ForeignKey('rule_definition.id', ondelete='RESTRICT')
+_follow_definition_id      = Column('definition_id', _integer_type, _follow_definition_foreign, nullable=False)
+_follow_actor              = Column('actor', _string_191_type, nullable=False)
+_follow_created_at         = Column('created_at', _datetime_type, nullable=False)
+_follow_last_seen_at       = Column('last_seen_at', _datetime_type, nullable=False)
+_follow_unique_actor       = UniqueConstraint('cluster_id', 'actor', 'definition_id', name='rf_uq_follow')
+
+rule_follow_table = Table(
+    'rule_follow',
+    metadata,
+    _follow_id,
+    _follow_cluster_id,
+    _follow_definition_id,
+    _follow_actor,
+    _follow_created_at,
+    _follow_last_seen_at,
+    _follow_unique_actor,
+)
+
+_ = Index('rf_actor', rule_follow_table.c.cluster_id, rule_follow_table.c.actor)
+
+# ################################################################################################################################
+
+_view_id         = Column('id', _integer_type, primary_key=True, autoincrement=True)
+_view_cluster_id = Column('cluster_id', _integer_type, nullable=False)
+_view_actor      = Column('actor', _string_191_type, nullable=False)
+_view_name       = Column('name', _string_191_type, nullable=False)
+_view_payload    = Column('payload', _text_type, nullable=False)
+_view_created_at = Column('created_at', _datetime_type, nullable=False)
+_view_updated_at = Column('updated_at', _datetime_type, nullable=False)
+_view_unique_name = UniqueConstraint('cluster_id', 'actor', 'name', name='rvw_uq_name')
+
+rule_view_table = Table(
+    'rule_view',
+    metadata,
+    _view_id,
+    _view_cluster_id,
+    _view_actor,
+    _view_name,
+    _view_payload,
+    _view_created_at,
+    _view_updated_at,
+    _view_unique_name,
+)
+
+_ = Index('rvw_actor', rule_view_table.c.cluster_id, rule_view_table.c.actor)
+
+# ################################################################################################################################
+
+_recent_id                 = Column('id', _integer_type, primary_key=True, autoincrement=True)
+_recent_cluster_id         = Column('cluster_id', _integer_type, nullable=False)
+_recent_definition_foreign = ForeignKey('rule_definition.id', ondelete='RESTRICT')
+_recent_definition_id      = Column('definition_id', _integer_type, _recent_definition_foreign, nullable=False)
+_recent_actor              = Column('actor', _string_191_type, nullable=False)
+_recent_visited_at         = Column('visited_at', _datetime_type, nullable=False)
+_recent_unique_visit       = UniqueConstraint('cluster_id', 'actor', 'definition_id', name='rrec_uq_visit')
+
+rule_recent_table = Table(
+    'rule_recent',
+    metadata,
+    _recent_id,
+    _recent_cluster_id,
+    _recent_definition_id,
+    _recent_actor,
+    _recent_visited_at,
+    _recent_unique_visit,
+)
+
+_ = Index('rrec_actor', rule_recent_table.c.cluster_id, rule_recent_table.c.actor, rule_recent_table.c.visited_at)
+
+# ################################################################################################################################
 # ################################################################################################################################

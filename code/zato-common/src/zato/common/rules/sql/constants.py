@@ -42,6 +42,9 @@ Event_Type_Rule_Fired_Daily     = 'rule.fired.daily'
 System_Actor    = 'zato.rule-engine'
 Root_Parent_Key = 0
 
+# The key under which a stored ruleset document keeps its canonical rule documents.
+Documents_Key = 'documents'
+
 # ################################################################################################################################
 
 Default_Batch_Size              = 200
@@ -52,6 +55,10 @@ Default_Success_Capture_Percent = 100
 
 Minimum_Capture_Percent = 0
 Maximum_Capture_Percent = 100
+
+Default_Feed_Limit   = 100
+Default_Recent_Limit = 20
+Default_Search_Limit = 100
 
 # ################################################################################################################################
 

@@ -66,14 +66,14 @@ def create_session_factory(engine:'Engine') -> 'SessionFactory':
 # ################################################################################################################################
 
 def create_schema(engine:'Engine') -> 'None':
-    """ Creates the four rule-engine tables.
+    """ Creates the rule-engine tables.
     """
     metadata.create_all(engine)
 
 # ################################################################################################################################
 
 def drop_schema(engine:'Engine') -> 'None':
-    """ Drops the four rule-engine tables.
+    """ Drops the rule-engine tables.
     """
     metadata.drop_all(engine)
 

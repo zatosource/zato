@@ -43,14 +43,24 @@ def _dialects() -> 'dialect_list':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_schema_has_exactly_four_write_pattern_tables() -> 'None':
-    """ The backend follows write patterns with four tables rather than entity proliferation.
+def test_schema_has_exactly_the_planned_tables() -> 'None':
+    """ The backend follows planned write patterns rather than entity proliferation.
     """
     # Read the complete metadata table set ..
     table_names:'table_name_set' = set(metadata.tables)
 
-    # .. and verify that it contains exactly the four planned write patterns.
-    expected = {'rule_definition', 'rule_version', 'rule_event', 'rule_decision'}
+    # .. and verify that it contains exactly the planned write patterns - the four
+    # .. core ones plus the where-used index and the per-actor workspace stores.
+    expected = {
+        'rule_definition',
+        'rule_version',
+        'rule_event',
+        'rule_decision',
+        'rule_reference',
+        'rule_follow',
+        'rule_view',
+        'rule_recent',
+    }
     assert table_names == expected
 
 # ################################################################################################################################
