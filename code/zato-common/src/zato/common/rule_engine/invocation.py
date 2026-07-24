@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from bisect import bisect_left
 from dataclasses import dataclass
 from typing import NamedTuple
 
@@ -229,6 +230,52 @@ def is_ruleset_allowed(name:'str', patterns:'strlist') -> 'bool':
     # No pattern matched, so the ruleset is not granted.
     else:
         out = False
+
+    return out
+
+# ################################################################################################################################
+
+def unmatched_ruleset_patterns(patterns:'strlist', published_names:'strlist') -> 'strlist':
+    """ Returns grant patterns that match no published ruleset.
+
+    Published names must be sorted the way Python compares strings - an SQL ORDER BY is not enough
+    because database collations may order names differently. Exact and prefix grants use binary
+    search, so checking several grants never scans the whole published catalog per grant.
+    """
+    out = []
+    published_count = len(published_names)
+
+    # Check each grant independently ..
+    for pattern in patterns:
+
+        # .. a global grant matches whenever at least one published ruleset exists ..
+        if pattern == Match_All_Pattern:
+            is_matched = published_count > 0
+
+        # .. a subtree grant starts at the first catalog name with its prefix ..
+        elif pattern.endswith(Match_Prefix_Suffix):
+            prefix_length = len(Match_Prefix_Suffix) - 1
+            prefix = pattern[:-prefix_length]
+            position = bisect_left(published_names, prefix)
+
+            if position < published_count:
+                candidate = published_names[position]
+                is_matched = candidate.startswith(prefix)
+            else:
+                is_matched = False
+
+        # .. and an exact grant uses the same binary-search index.
+        else:
+            position = bisect_left(published_names, pattern)
+
+            if position < published_count:
+                candidate = published_names[position]
+                is_matched = candidate == pattern
+            else:
+                is_matched = False
+
+        if not is_matched:
+            out.append(pattern)
 
     return out
 
