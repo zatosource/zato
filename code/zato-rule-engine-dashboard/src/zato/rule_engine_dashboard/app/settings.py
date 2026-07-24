@@ -37,6 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'zato.common.webapp.ui',
     'zato.rule_engine_dashboard.app',
 ]
 
@@ -53,6 +55,8 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'zato.rule_engine_dashboard.app.urls'
 
 LOGIN_URL = '/login/'
+
+STATIC_URL = 'static/'
 
 TEMPLATES = [
     {

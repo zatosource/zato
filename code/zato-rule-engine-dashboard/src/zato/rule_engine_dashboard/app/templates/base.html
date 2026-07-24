@@ -1,240 +1,52 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Rule engine - {% block title %}{% endblock %}</title>
-    <style>
-        :root {
-            --color-bg: #f4f6f8;
-            --color-surface: #ffffff;
-            --color-border: #dde3ea;
-            --color-text: #1f2933;
-            --color-muted: #7b8794;
-            --color-primary: #012845;
-            --color-success-bg: #e3f4e8;
-            --color-success-text: #1e6b3a;
-            --color-error-bg: #fbe4e4;
-            --color-error-text: #9b1c1c;
-            --color-badge-admin-bg: #e0ecf7;
-            --color-badge-admin-text: #12507b;
-            --color-badge-user-bg: #eef1f4;
-            --color-badge-user-text: #52606d;
-            --color-badge-disabled-bg: #f9e8e8;
-            --color-badge-disabled-text: #8f2020;
-            --color-danger: #b4232a;
-        }
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            background: var(--color-bg);
-            color: var(--color-text);
-            font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-            font-size: 15px;
-        }
-        header.topbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: var(--color-primary);
-            color: #ffffff;
-            padding: 14px 28px;
-            font-size: 17px;
-            font-weight: 600;
-        }
-        nav.topbar-navigation {
-            display: flex;
-            align-items: center;
-            gap: 18px;
-            font-size: 14.5px;
-            font-weight: 400;
-        }
-        nav.topbar-navigation a {
-            color: #ffffff;
-            text-decoration: none;
-            opacity: 0.85;
-        }
-        nav.topbar-navigation a:hover { opacity: 1; text-decoration: underline; }
-        nav.topbar-navigation form { margin: 0; }
-        nav.topbar-navigation button {
-            background: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            border-radius: 6px;
-            padding: 4px 12px;
-            color: #ffffff;
-            font-size: 13.5px;
-            cursor: pointer;
-        }
-        nav.topbar-navigation button:hover { border-color: #ffffff; }
-        main.content {
-            max-width: 1100px;
-            margin: 28px auto;
-            padding: 0 20px;
-        }
-        h1 {
-            font-size: 21px;
-            font-weight: 600;
-            margin: 0 0 18px 0;
-        }
-        .messages { margin: 0 0 18px 0; padding: 0; list-style: none; }
-        .messages li {
-            padding: 10px 14px;
-            border-radius: 6px;
-            margin-bottom: 8px;
-        }
-        .messages li.success { background: var(--color-success-bg); color: var(--color-success-text); }
-        .messages li.error { background: var(--color-error-bg); color: var(--color-error-text); }
-        .messages li.info { background: var(--color-badge-admin-bg); color: var(--color-badge-admin-text); }
-        table.list {
-            width: 100%;
-            border-collapse: collapse;
-            background: var(--color-surface);
-            border: 1px solid var(--color-border);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        table.list th, table.list td {
-            text-align: left;
-            padding: 10px 14px;
-            border-bottom: 1px solid var(--color-border);
-        }
-        table.list th {
-            background: var(--color-bg);
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            color: var(--color-muted);
-        }
-        table.list tr:last-child td { border-bottom: none; }
-        .badge {
-            display: inline-block;
-            padding: 2px 10px;
-            border-radius: 999px;
-            font-size: 12.5px;
-            font-weight: 600;
-        }
-        .badge.admin { background: var(--color-badge-admin-bg); color: var(--color-badge-admin-text); }
-        .badge.user { background: var(--color-badge-user-bg); color: var(--color-badge-user-text); }
-        .badge.active { background: var(--color-success-bg); color: var(--color-success-text); }
-        .badge.disabled { background: var(--color-badge-disabled-bg); color: var(--color-badge-disabled-text); }
-        .actions { display: flex; gap: 8px; }
-        .actions form { margin: 0; }
-        button.action, a.action {
-            display: inline-block;
-            background: var(--color-surface);
-            border: 1px solid var(--color-border);
-            border-radius: 6px;
-            padding: 5px 12px;
-            font-size: 13.5px;
-            cursor: pointer;
-            color: var(--color-text);
-            text-decoration: none;
-        }
-        button.action:hover, a.action:hover { border-color: var(--color-muted); }
-        button.action.danger { color: var(--color-danger); }
-        button.action.danger:hover { border-color: var(--color-danger); }
-        .muted { color: var(--color-muted); }
-        .page-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin: 0 0 18px 0;
-        }
-        .page-header h1 { margin: 0; }
-        .form-card {
-            max-width: 460px;
-            background: var(--color-surface);
-            border: 1px solid var(--color-border);
-            border-radius: 8px;
-            padding: 20px 24px;
-            margin-bottom: 18px;
-        }
-        .form-row { margin-bottom: 14px; }
-        .form-row label {
-            display: block;
-            margin-bottom: 5px;
-            font-size: 13.5px;
-            font-weight: 600;
-            color: var(--color-muted);
-        }
-        .form-row input[type=text], .form-row input[type=password] {
-            width: 100%;
-            padding: 8px 10px;
-            border: 1px solid var(--color-border);
-            border-radius: 6px;
-            font-size: 14.5px;
-            color: var(--color-text);
-        }
-        .form-row-checkbox {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 14px;
-        }
-        .form-row-checkbox label { font-size: 14.5px; }
-        button.button-primary, a.button-primary {
-            display: inline-block;
-            background: var(--color-primary);
-            border: 1px solid var(--color-primary);
-            border-radius: 6px;
-            padding: 8px 18px;
-            font-size: 14.5px;
-            cursor: pointer;
-            color: #ffffff;
-            text-decoration: none;
-        }
-        button.button-primary:hover, a.button-primary:hover { opacity: 0.92; }
-        form.filters {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 18px;
-        }
-        form.filters input[type=text], form.filters select {
-            padding: 7px 10px;
-            border: 1px solid var(--color-border);
-            border-radius: 6px;
-            font-size: 14px;
-            color: var(--color-text);
-            background: var(--color-surface);
-        }
-        .pagination {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            margin-top: 16px;
-        }
-    </style>
-</head>
-<body>
+{% extends 'webapp/base.html' %}
+{% load static %}
 
-    <header class="topbar">
-        <span>Rule engine</span>
-        {% if request.user.is_authenticated %}
-        <nav class="topbar-navigation">
-            {% if request.user.is_superuser %}
-            <a href="{% url 'users' %}">Users</a>
-            <a href="{% url 'events' %}">Events</a>
-            {% endif %}
-            <a href="{% url 'profile' %}">My profile</a>
-            <form method="post" action="{% url 'logout' %}">
-                {% csrf_token %}
-                <button type="submit">Sign out</button>
-            </form>
-        </nav>
-        {% endif %}
-    </header>
+{% block full_title %}Rule engine - {% block title %}{% endblock %}{% endblock %}
 
-    <main class="content">
-        {% if messages %}
-        <ul class="messages">
-            {% for message in messages %}
-            <li class="{{ message.tags }}">{{ message }}</li>
-            {% endfor %}
-        </ul>
-        {% endif %}
+{% block styles %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+{% endblock %}
 
-        {% block content %}{% endblock %}
-    </main>
+{% block body %}
 
-</body>
-</html>
+{% if request.user.is_authenticated %}
+{% with current=request.resolver_match.url_name %}
+<!-- Left navigation, one copy serving every screen -->
+<div class="navigation" id="navigation">
+  <div class="navigation-top">
+    <img src="{% static 'webapp/assets/zato-logo.svg' %}" class="navigation-logo" alt="Zato">
+    <button class="navigation-collapse" id="navigation-collapse-button" onclick="shared.toggleNavigation()"></button>
+  </div>
+  <div class="navigation-items">
+    <a class="navigation-item{% if current == 'screen-rulesets' %} active{% endif %}" href="{% url 'screen-rulesets' %}">Rulesets</a>
+    <a class="navigation-item{% if current == 'screen-editor' %} active{% endif %}" href="{% url 'screen-editor' %}">Rules</a>
+    <a class="navigation-item{% if current == 'screen-tables' %} active{% endif %}" href="{% url 'screen-tables' %}">Decision tables</a>
+    <a class="navigation-item{% if current == 'screen-tests' %} active{% endif %}" href="{% url 'screen-tests' %}">Tests and simulation</a>
+    <a class="navigation-item{% if current == 'screen-versions' %} active{% endif %}" href="{% url 'screen-versions' %}">Versions</a>
+    <a class="navigation-item{% if current == 'screen-log' %} active{% endif %}" href="{% url 'screen-log' %}">Decision log</a>
+    <a class="navigation-item{% if current == 'screen-vocabulary' %} active{% endif %}" href="{% url 'screen-vocabulary' %}">Vocabulary</a>
+  </div>
+  <div class="navigation-bottom">
+    {% if request.user.is_superuser %}
+    <a class="navigation-item{% if current == 'users' %} active{% endif %}" href="{% url 'users' %}">Users</a>
+    <a class="navigation-item{% if current == 'events' %} active{% endif %}" href="{% url 'events' %}">Events</a>
+    {% endif %}
+    <a class="navigation-item{% if current == 'profile' %} active{% endif %}" href="{% url 'profile' %}">My profile</a>
+    <form method="post" action="{% url 'logout' %}">
+      {% csrf_token %}
+      <button class="navigation-item" type="submit">Sign out</button>
+    </form>
+  </div>
+</div>
+{% endwith %}
+{% endif %}
+
+{% block content %}{% endblock %}
+
+{% endblock %}
+
+{% block scripts %}
+{% if request.user.is_authenticated %}
+<script>shared.initShell();</script>
+{% endif %}
+{% endblock %}

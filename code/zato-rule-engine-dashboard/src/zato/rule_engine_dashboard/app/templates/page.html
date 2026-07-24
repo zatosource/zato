@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{# The chrome the administration screens share: the main column with its topbar line
+   (the settings switcher attaches itself there) and the message list above the content. #}
+
+{% block content %}
+<div class="main-column">
+  <div class="main-topbar">
+    <div class="main-topbar-line"></div>
+  </div>
+  <div class="page-body">
+    {% if messages %}
+    <ul class="messages">
+      {% for message in messages %}
+      <li class="{{ message.tags }}">{{ message }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% block page_content %}{% endblock %}
+  </div>
+</div>
+{% endblock %}

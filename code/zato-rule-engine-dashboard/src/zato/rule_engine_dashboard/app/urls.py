@@ -7,10 +7,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Django
-from django.urls import path
+from django.contrib.staticfiles.views import serve as serve_static
+from django.urls import path, re_path
 
 # Zato
-from zato.rule_engine_dashboard.app.views import auth, decisions, editor, events, notifications, rulesets, tables, \
+from zato.rule_engine_dashboard.app.views import auth, decisions, editor, events, notifications, rulesets, screens, tables, \
     test_sets, users, versions, vocabulary
 
 # ################################################################################################################################
@@ -22,6 +23,18 @@ urlpatterns = [
     path('login/', auth.login, name='login'),
     path('login/callback/', auth.login_callback, name='login-callback'),
     path('logout/', auth.logout, name='logout'),
+
+    # Static files come through the staticfiles finders, straight from the installed apps
+    re_path(r'^static/(?P<path>.*)$', serve_static, {'insecure': True}, name='static'),
+
+    # The screens, one route each
+    path('rulesets/', screens.rulesets, name='screen-rulesets'),
+    path('editor/', screens.editor, name='screen-editor'),
+    path('tables/', screens.tables, name='screen-tables'),
+    path('tests/', screens.tests, name='screen-tests'),
+    path('versions/', screens.versions, name='screen-versions'),
+    path('log/', screens.log, name='screen-log'),
+    path('vocabulary/', screens.vocabulary, name='screen-vocabulary'),
 
     # User management
     path('users/', users.users_list, name='users'),

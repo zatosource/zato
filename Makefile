@@ -12,6 +12,7 @@
 	test-audit-log test-audit-log-ui test-alerting test-analytics test-analytics-ui test-demo-seed test-logging test-ibm-mq test-mongodb test-es \
 	test-rule-engine test-rule-engine-perf test-rule-engine-jobs \
 	rule-engine-notify rule-engine-retention rule-engine-spike-alerts \
+	themes test-webapp-ui \
 	test-all test \
 	health-ruff health-clippy \
 	format format-zato \
@@ -341,6 +342,9 @@ rule-engine-retention: ## Rule engine retention sweep - one pass deleting decisi
 
 rule-engine-spike-alerts: ## Rule engine spike sweep - one pass comparing the current hour's decisions against the typical rate.
 	$(ZATO_PY) -m zato.common.rule_engine.jobs.spikes $(Zato_Rule_Engine_Job_Args)
+
+themes: ## Regenerate the shared webapp UI theme css files from their sources.
+	$(ZATO_PY) -m zato.common.webapp.ui.themes.convert
 
 stop-server:
 	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py stop-server
@@ -927,6 +931,18 @@ test-rule-engine: ## Rule engine tests - grammar, matching, round trip, the SQL 
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rule_views \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
+test-webapp-ui: ## Shared webapp UI kit tests - the theme contract, fully offline.
+	$(CURDIR)/code/bin/ruff check \
+		$(CURDIR)/code/zato-common/src/zato/common/webapp/ui/ \
+		$(CURDIR)/code/tests/python/zato-common/webapp_ui/
+	pyright \
+		$(CURDIR)/code/zato-common/src/zato/common/webapp/ui/ \
+		$(CURDIR)/code/tests/python/zato-common/webapp_ui/
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/webapp_ui/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_webapp_ui \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
 test-rule-engine-jobs: ## Rule engine job tests - credentials, destinations, the notify loop with chat simulators, retention and spike sweeps, fully offline.
 	$(CURDIR)/code/bin/ruff check \
 		$(CURDIR)/code/zato-common/src/zato/common/rule_engine/notify/ \
@@ -1029,7 +1045,7 @@ test-request-response: ## Unified service I/O tests - messages, request.raw, req
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-all: test-server test-rest test-scheduler test-rate-limiting test-pubsub test-enmasse \
-	test-cli test-mcp test-bearer test-graphql test-grpc test-as2 test-as4 test-edifact test-x12 test-llm test-hl7 test-ui test-audit-log test-audit-log-ui test-alerting test-analytics test-demo-seed test-logging test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response test-rule-engine test-rule-engine-jobs ## Everything.
+	test-cli test-mcp test-bearer test-graphql test-grpc test-as2 test-as4 test-edifact test-x12 test-llm test-hl7 test-ui test-audit-log test-audit-log-ui test-alerting test-analytics test-demo-seed test-logging test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response test-rule-engine test-rule-engine-jobs test-webapp-ui ## Everything.
 
 test: test-all ## Alias for test-all.
 

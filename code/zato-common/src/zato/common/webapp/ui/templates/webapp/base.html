@@ -1,0 +1,37 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block full_title %}{% block title %}{% endblock %}{% endblock %}</title>
+<script>
+// The stored theme lands on the html element before the first paint,
+// so the page never flashes the wrong colors
+(function() {
+    var stored = window.localStorage.getItem('ui-theme');
+    if (stored === null) { stored = 'zato-default'; }
+    document.documentElement.dataset.theme = stored;
+})();
+</script>
+<link rel="stylesheet" href="{% static 'webapp/fonts.css' %}">
+<link rel="stylesheet" href="{% static 'webapp/vendor/tippy.css' %}">
+<link rel="stylesheet" href="{% static 'webapp/vendor/shift-away.css' %}">
+<link rel="stylesheet" href="{% static 'webapp/css/tokens.css' %}">
+{% include 'webapp/themes.html' %}
+{% block styles %}{% endblock %}
+<script src="{% static 'webapp/vendor/popper.min.js' %}"></script>
+<script src="{% static 'webapp/vendor/tippy-bundle.umd.min.js' %}"></script>
+</head>
+<body>
+
+{% block body %}{% endblock %}
+
+<script src="{% static 'webapp/js/shared.js' %}"></script>
+<script src="{% static 'webapp/js/panel.js' %}"></script>
+<script src="{% static 'webapp/js/shell.js' %}"></script>
+<script src="{% static 'webapp/js/context-menu.js' %}"></script>
+<script src="{% static 'webapp/js/themes-index.js' %}"></script>
+<script src="{% static 'webapp/js/settings.js' %}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
