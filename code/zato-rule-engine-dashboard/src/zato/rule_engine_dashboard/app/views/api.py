@@ -17,8 +17,8 @@ from django.http import JsonResponse
 
 # Zato
 from zato.common.rule_engine.notify.credentials import NotifyConfigError
-from zato.common.rule_engine.sql import InvalidDocumentError, InvalidStoreInputError, RecordNotFoundError, \
-    VersionConflictError
+from zato.common.rule_engine.sql import ApprovalContentMismatchError, ApprovalRequiredError, InvalidDocumentError, \
+    InvalidStoreInputError, RecordNotFoundError, SelfApprovalNotAllowedError, VersionConflictError
 from zato.common.rule_engine.sql.constants import Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
 from zato.rule_engine_dashboard.app.views.common import signed_in_required
@@ -62,9 +62,10 @@ def json_api(view:'any_') -> 'any_':
             out = _error(str(e), BAD_REQUEST)
         except RecordNotFoundError as e:
             out = _error(str(e), NOT_FOUND)
-        except VersionConflictError as e:
+        except (ApprovalContentMismatchError, VersionConflictError) as e:
             out = _error(str(e), CONFLICT)
-        except (InvalidDocumentError, InvalidStoreInputError, NotifyConfigError) as e:
+        except (ApprovalRequiredError, InvalidDocumentError, InvalidStoreInputError, NotifyConfigError,
+                SelfApprovalNotAllowedError) as e:
             out = _error(str(e), BAD_REQUEST)
 
         return out

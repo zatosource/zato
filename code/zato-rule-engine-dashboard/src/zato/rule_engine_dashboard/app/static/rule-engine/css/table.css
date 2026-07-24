@@ -1,0 +1,136 @@
+/* ------------------------------------------------------------ */
+/* Table - grid area and geometry                                */
+/* ------------------------------------------------------------ */
+
+.table-grid-area{flex:1;overflow:auto;padding:18px 24px}
+table.table-grid{border-collapse:separate;border-spacing:0;font-size:13px;min-width:720px}
+table.table-grid td,table.table-grid th{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:0;vertical-align:middle}
+table.table-grid tr>td:first-child,table.table-grid tr>th:first-child{border-left:1px solid var(--border)}
+table.table-grid tr:first-child th{border-top:1px solid var(--border)}
+
+.table-empty-note{padding:40px 24px;font-size:13px;color:var(--text4)}
+
+/* ------------------------------------------------------------ */
+/* Table - expression column on the left                        */
+/* ------------------------------------------------------------ */
+
+.table-expression-column{width:290px;min-width:290px;max-width:290px;background:var(--panel);padding:7px 10px !important;text-align:left}
+.table-expression{font-family:var(--mono);font-size:12px;color:var(--text2)}
+.table-expression-phrase{font-size:12.5px;color:var(--text2);font-style:italic}
+
+/* ------------------------------------------------------------ */
+/* Table - column headers                                        */
+/* ------------------------------------------------------------ */
+
+.table-column-head{background:var(--panel);padding:6px 8px;min-width:104px;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;text-align:center;user-select:none;position:relative}
+.table-column-head:hover{color:var(--text)}
+.table-column-subtitle{display:block;font-size:9.5px;font-weight:500;color:var(--text5);text-transform:uppercase;letter-spacing:0.06em;margin-top:1px}
+.table-column-zero{background:var(--panel-raised)}
+
+/* Gentle unfold and fold indicators, quiet until hovered */
+.table-unfold-hint{position:absolute;top:2px;right:3px;display:inline-flex;align-items:center;gap:1px;font-size:9px;font-weight:500;color:var(--text5);cursor:pointer;line-height:1;padding:2px 3px;border-radius:3px}
+.table-unfold-hint:hover{color:var(--text2);background:var(--background)}
+
+/* ------------------------------------------------------------ */
+/* Table - section rows                                          */
+/* ------------------------------------------------------------ */
+
+.table-section-row td{background:var(--background);border-right:none !important;padding:10px 2px 4px !important;font-size:10px;font-weight:700;color:var(--text5);text-transform:uppercase;letter-spacing:0.1em;border-bottom:none !important;border-left:none !important}
+.table-section-hint{font-weight:400;text-transform:none;letter-spacing:0;color:var(--text5);margin-left:10px;font-size:11px}
+.table-section-row .button-mini{margin-left:10px}
+
+/* ------------------------------------------------------------ */
+/* Table - value cells                                           */
+/* ------------------------------------------------------------ */
+
+.table-cell{min-width:104px;text-align:center;padding:6px 8px;cursor:pointer;color:var(--text);font-family:var(--mono);font-size:12.5px;background:var(--input-background)}
+.table-cell:hover{background:var(--cell-hover)}
+.table-any-dash{color:var(--text5)}
+.table-cell-readonly{cursor:default;color:var(--text5);font-style:italic;font-family:var(--font);background:var(--panel-raised)}
+.table-cell-readonly:hover{background:var(--panel-raised)}
+/* The in-place editor takes the cell's exact box, so nothing shifts */
+.table-cell.cell-editing{padding:0}
+.table-cell input,.table-cell select{display:block;width:100%;background:var(--panel);border:none;box-shadow:inset 0 0 0 1px var(--blue);color:var(--text);font-size:12.5px;font-family:var(--mono);padding:6px 8px;outline:none;text-align:center}
+
+.table-cell-invalid{box-shadow:inset 0 0 0 2px var(--red)}
+.table-cell-generated{background:var(--green-tint-13);box-shadow:inset 0 0 0 1px var(--green-tint-55)}
+.table-cell-conflict{background:var(--red-tint-16) !important}
+th.table-cell-conflict,th.table-column-head.table-cell-conflict{box-shadow:inset 0 -2px 0 var(--red)}
+.table-column-hover{background:var(--column-hover) !important}
+.table-column-selected{background:var(--column-selected) !important}
+th.table-column-selected{box-shadow:inset 0 -2px 0 var(--blue)}
+.table-flash{animation:table-column-flash 1.1s ease-out}
+@keyframes table-column-flash{0%{background:var(--blue-tint-45)}100%{background:inherit}}
+.table-find-hit{box-shadow:inset 0 0 0 2px var(--amber)}
+
+/* ------------------------------------------------------------ */
+/* Table - filter rows                                           */
+/* ------------------------------------------------------------ */
+
+.table-filter-span{background:var(--filter-span-background);color:var(--text5);font-size:11.5px;font-style:italic;text-align:center;padding:7px 8px}
+.table-filter-remove{float:right;color:var(--text5);cursor:pointer;line-height:1;padding:2px 3px;border-radius:3px;opacity:0;transition:opacity 0.12s}
+.table-filter-row:hover .table-filter-remove{opacity:1}
+.table-filter-remove:hover{color:var(--red);background:var(--background)}
+
+/* The filter editor matches the expression text's own metrics */
+.table-filter-input{background:var(--panel);border:none;box-shadow:inset 0 0 0 1px var(--blue);color:var(--text);font-family:var(--mono);font-size:12px;padding:0 2px;outline:none;vertical-align:baseline}
+
+/* ------------------------------------------------------------ */
+/* Table - overrides row                                         */
+/* ------------------------------------------------------------ */
+
+.table-override-cell{background:var(--input-background);text-align:center;padding:4px 6px}
+.table-override-cell select{background:transparent;border:none;color:var(--text4);font-size:11px;font-family:var(--font);outline:none;cursor:pointer;text-align:center;width:100%}
+.table-override-cell select:hover{color:var(--text2)}
+.table-override-cell select.table-has-override{color:var(--amber);font-weight:600}
+
+/* ------------------------------------------------------------ */
+/* Table - decision message row                                  */
+/* ------------------------------------------------------------ */
+
+.table-statement-cell{background:var(--input-background);padding:5px 6px;min-width:104px}
+.table-statement-wrap{display:flex;align-items:flex-start;gap:5px}
+.table-statement-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;cursor:pointer;margin-top:3px}
+.table-severity-info{background:var(--text5)}
+.table-severity-warning{background:var(--amber)}
+.table-severity-violation{background:var(--red)}
+.table-statement-text{font-family:var(--font);font-size:11px;color:var(--text3);text-align:left;line-height:1.35;cursor:pointer;word-break:break-word}
+.table-statement-text:hover{color:var(--text2)}
+.table-statement-placeholder{font-family:var(--mono);color:var(--indigo);font-size:10.5px}
+.table-statement-cell textarea{width:100%;background:var(--panel);border:none;box-shadow:inset 0 0 0 1px var(--blue);color:var(--text);font-size:11px;font-family:var(--font);line-height:1.35;padding:0;outline:none;resize:vertical}
+
+/* ------------------------------------------------------------ */
+/* Table - sentence bar                                          */
+/* ------------------------------------------------------------ */
+
+.table-sentence-bar{padding:9px 24px;font-size:12.5px;color:var(--text3);background:var(--sentence-bar-background);min-height:38px;display:flex;align-items:center;gap:10px}
+.table-sentence-tag{flex-shrink:0;font-size:10px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:0.08em}
+.table-sentence-text{font-style:italic;color:var(--text2)}
+.table-sentence-keyword{color:var(--blue);font-weight:600;font-style:normal}
+
+/* ------------------------------------------------------------ */
+/* Table - row handles, checkboxes and drop marks                */
+/* ------------------------------------------------------------ */
+
+.table-drag-handle{cursor:grab;color:var(--text5);margin-right:7px;user-select:none;display:inline-block;opacity:0;transition:opacity 0.12s}
+.table-row-checkbox{accent-color:var(--blue);margin-right:8px;cursor:pointer;vertical-align:-1px;width:12px;height:12px;opacity:0;transition:opacity 0.12s}
+tr:hover .table-drag-handle{opacity:1}
+tr:hover .table-row-checkbox,.table-row-checkbox:checked{opacity:0.75}
+.table-drag-handle:hover{color:var(--text2)}
+.table-drop-target{outline:2px dashed var(--blue);outline-offset:-2px;background:var(--blue-tint-07)}
+
+/* ------------------------------------------------------------ */
+/* Table - source dimming and column drop edge                   */
+/* ------------------------------------------------------------ */
+
+tr.table-row-dragging td{opacity:0.35}
+.table-column-dragging{opacity:0.35}
+
+/* ------------------------------------------------------------ */
+/* Table - keyboard cursor                                       */
+/* ------------------------------------------------------------ */
+
+.table-cell-cursor{outline:2px solid var(--blue);outline-offset:-2px}
+
+.table-phrase-note{display:none;font-size:11px;color:var(--amber);margin-left:8px;font-weight:600}
+.table-phrase-note.visible{display:inline}

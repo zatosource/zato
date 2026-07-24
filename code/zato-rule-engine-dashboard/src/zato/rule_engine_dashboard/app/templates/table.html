@@ -1,11 +1,76 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block page_title %}Decision tables{% endblock %}
-{% block screen_title %}Decision tables{% endblock %}
 
-{% block problems %}
-<div class="problems-panel">
-  <div class="problems-head" id="problems-head">Problems</div>
-  <div class="problems-list" id="problems-list"></div>
+{% block styles %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'rule-engine/css/table.css' %}">
+{% endblock %}
+
+{% block content %}
+<!-- Main column -->
+<div class="main-column">
+  <div class="main-topbar">
+    <div class="main-topbar-line">
+      <h2>Decision tables</h2>
+      <span class="main-subtitle" id="main-subtitle"></span>
+      <span class="table-phrase-note" id="table-phrase-note">Phrase view: a safe read-and-tweak mode, values open, logic closed</span>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <button class="button-ghost" id="button-completeness" onclick="tableView.checkCompleteness()"
+      data-tippy-content="Walks through every combination of the condition values and adds any missing one as a new column, shaded green. It only fills in conditions, every action stays yours to decide.">Check completeness</button>
+    <button class="button-ghost" id="button-conflicts" onclick="tableView.checkConflicts()"
+      data-tippy-content="Finds rule columns that can fire on the same data with different actions. Conflicting columns are shaded red. You resolve a conflict with an override or by changing an action.">Check conflicts</button>
+    <button class="button-ghost" id="button-unfold" onclick="tableView.toggleUnfoldAll()"
+      data-tippy-content="Unfolds every column whose cells hold several values into numbered sub-rules, so nothing stays bundled in one cell. Single columns unfold from the small indicator in their header.">Unfold rules</button>
+    <button class="button-ghost" id="button-compress" onclick="tableView.compress()"
+      data-tippy-content="Merges rule columns that differ in exactly one row into membership cells, the inverse of unfolding. The surviving rules renumber.">Compress</button>
+    <span class="toolbar-separator"></span>
+    <button class="button-ghost" id="button-phrases" onclick="tableView.togglePhrases()"
+      data-tippy-content="Shows every row as an everyday phrase, a safe read-and-tweak mode: values can be changed, the logic itself cannot.">Phrases</button>
+    <span class="toolbar-separator"></span>
+    <input type="text" id="find-input" placeholder="Find in table..." oninput="tableView.render()">
+    <input type="text" id="replace-input" placeholder="Replace with...">
+    <button class="button-ghost" id="button-replace" onclick="tableView.doReplace()">Replace</button>
+    <span class="toolbar-separator"></span>
+    <button class="button-ghost" id="button-add-column" onclick="tableView.addColumn()">Add rule column</button>
+    <button class="button-ghost" onclick="tableView.openTests()"
+      data-tippy-content="Opens the test screen, testing lives one click away from authoring.">Test</button>
+    <button class="button-primary" onclick="tableView.save(this)"
+      data-tippy-content="Stores the whole table as a new version. Publishing stays a separate, deliberate step.">Save</button>
+  </div>
+
+  <div class="table-grid-area" id="table-grid-area"></div>
+
+  <div class="table-sentence-bar" id="table-sentence-bar"></div>
+
+  <div class="problems-panel">
+    <div class="problems-head" id="problems-head">Problems</div>
+    <div class="problems-list" id="problems-list"></div>
+  </div>
 </div>
+
+<!-- Vocabulary pane -->
+<div class="vocabulary-pane" id="vocabulary-pane">
+  <div class="vocabulary-head">
+    <span class="vocabulary-head-label">Vocabulary</span>
+    <button class="vocabulary-collapse" id="vocabulary-collapse-button" onclick="shared.toggleVocabulary()"></button>
+  </div>
+  <div class="vocabulary-hint">Drag an attribute onto the Conditions or Actions section to add a row. The drop target lights up.</div>
+  <div class="vocabulary-list" id="vocabulary-list"></div>
+</div>
+{% endblock %}
+
+{% block screen_scripts %}
+<script src="{% static 'rule-engine/js/data.js' %}"></script>
+<script src="{% static 'rule-engine/js/vocabulary.js' %}"></script>
+<script src="{% static 'rule-engine/js/table-model.js' %}"></script>
+<script src="{% static 'rule-engine/js/table-checks.js' %}"></script>
+<script src="{% static 'rule-engine/js/table-render.js' %}"></script>
+<script src="{% static 'rule-engine/js/table-drag.js' %}"></script>
+<script src="{% static 'rule-engine/js/table-menu.js' %}"></script>
+<script src="{% static 'rule-engine/js/table-actions.js' %}"></script>
 {% endblock %}

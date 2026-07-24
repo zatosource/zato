@@ -1,11 +1,67 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block page_title %}Versions{% endblock %}
-{% block screen_title %}Versions{% endblock %}
+{% block page_title %}Versions and changes{% endblock %}
 
-{% block problems %}
-<div class="problems-panel">
-  <div class="problems-head" id="problems-head">Problems</div>
-  <div class="problems-list" id="problems-list"></div>
+{% block styles %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'rule-engine/css/versions.css' %}">
+{% endblock %}
+
+{% block content %}
+<!-- Main column -->
+<div class="main-column">
+  <div class="main-topbar">
+    <div class="main-topbar-line">
+      <h2>Versions and changes</h2>
+      <span class="main-subtitle" id="main-subtitle"></span>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <span class="versions-compare-label">Compare</span>
+    <select id="versions-from" class="versions-select" onchange="versionsView.setCompare()"
+      data-tippy-content="The older version, everything is shown as the change from here."></select>
+    <span class="versions-compare-label">with</span>
+    <select id="versions-to" class="versions-select" onchange="versionsView.setCompare()"
+      data-tippy-content="The newer version, usually the draft under review."></select>
+    <span class="toolbar-separator"></span>
+    <button class="button-ghost" id="button-changes-only" onclick="versionsView.toggleChangesOnly()"
+      data-tippy-content="Hides every rule the two versions agree on, so a large ruleset reads as just its changes.">Changes only</button>
+    <button class="button-ghost" id="button-split-view" onclick="versionsView.toggleSplit()"
+      data-tippy-content="Updated rules side by side instead of one merged text.">Split view</button>
+    <span class="toolbar-separator"></span>
+    <span class="keyboard-hint">Mark each change as viewed, the bar counts down, comments anchor to the rule they are about</span>
+  </div>
+
+  <!-- Timeline on the left, the rendered diff on the right -->
+  <div class="versions-body">
+    <div class="versions-timeline-pane" id="versions-timeline-pane">
+      <div class="versions-timeline-head">History, linear, never branched</div>
+      <div class="versions-timeline" id="versions-timeline"></div>
+    </div>
+    <div class="pane-resizer pane-resizer-vertical" id="versions-timeline-resizer"></div>
+    <div class="versions-detail-pane" id="versions-detail-pane"></div>
+  </div>
+
+  <div class="problems-panel">
+    <div class="problems-head" id="problems-head">Before this can go live</div>
+    <div class="problems-list" id="problems-list"></div>
+  </div>
 </div>
+
+<!-- Approval and activity pane -->
+<div class="vocabulary-pane" id="review-pane">
+  <div class="vocabulary-head"><span class="vocabulary-head-label">Approval</span></div>
+  <div id="versions-review-card"></div>
+  <div class="vocabulary-head"><span class="vocabulary-head-label">Activity</span></div>
+  <div class="versions-activity" id="versions-activity"></div>
+</div>
+{% endblock %}
+
+{% block screen_scripts %}
+<script src="{% static 'rule-engine/js/data.js' %}"></script>
+<script src="{% static 'rule-engine/js/versions-model.js' %}"></script>
+<script src="{% static 'rule-engine/js/versions-render.js' %}"></script>
+<script src="{% static 'rule-engine/js/versions-actions.js' %}"></script>
 {% endblock %}

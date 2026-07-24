@@ -95,6 +95,25 @@ urlpatterns = [
         versions.version_compare_outcomes,
         name='rules-version-compare-outcomes',
     ),
+    path('rules/rulesets/<int:definition_id>/comment/', versions.version_comment, name='rules-version-comment'),
+
+    # The publish approval gate
+    path(
+        'rules/rulesets/<int:definition_id>/approvals/<int:version>/',
+        versions.approval_status,
+        name='rules-approval-status',
+    ),
+    path(
+        'rules/rulesets/<int:definition_id>/approvals/<int:version>/approve/',
+        versions.approval_approve,
+        name='rules-approval-approve',
+    ),
+    path('rules/rulesets/<int:definition_id>/approvals/gate/', versions.approval_set_gate, name='rules-approval-gate'),
+    path(
+        'rules/rulesets/<int:definition_id>/approvals/self-approval/',
+        versions.approval_set_self_approval,
+        name='rules-approval-self-approval',
+    ),
 
     # The decision log
     path('rules/decisions/', decisions.decision_list, name='rules-decision-list'),
