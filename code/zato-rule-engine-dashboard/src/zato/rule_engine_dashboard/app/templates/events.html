@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}Events{% endblock %}
+
+{% block content %}
+
+<h1>Events</h1>
+
+<form method="get" action="{% url 'events' %}" class="filters">
+    <input type="text" name="actor" value="{{ actor }}" placeholder="Actor">
+    <input type="text" name="subject" value="{{ subject }}" placeholder="Subject">
+    <select name="action">
+        <option value="">All actions</option>
+        {% for item in actions %}
+        <option value="{{ item }}" {% if item == action %}selected{% endif %}>{{ item }}</option>
+        {% endfor %}
+    </select>
+    <button class="action" type="submit">Filter</button>
+    <a class="action" href="{% url 'events' %}">Clear</a>
+</form>
+
+<table class="list">
+    <thead>
+        <tr>
+            <th>When</th>
+            <th>Actor</th>
+            <th>Action</th>
+            <th>Subject</th>
+            <th>Remote address</th>
+            <th>Details</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for event in events %}
+        <tr>
+            <td>{{ event.created_at|date:'Y-m-d H:i:s' }}</td>
+            <td>{{ event.actor }}</td>
+            <td>{{ event.action }}</td>
+            <td>{{ event.subject }}</td>
+            <td>{{ event.remote_addr }}</td>
+            <td>{{ event.details }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="6"><span class="muted">No events</span></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if events.has_other_pages %}
+<div class="pagination">
+    {% if events.has_previous %}
+    <a class="action"
+        href="?actor={{ actor|urlencode }}&subject={{ subject|urlencode }}&action={{ action|urlencode }}&page={{ events.previous_page_number }}">
+        Previous</a>
+    {% endif %}
+    <span class="muted">Page {{ events.number }} of {{ events.paginator.num_pages }}</span>
+    {% if events.has_next %}
+    <a class="action"
+        href="?actor={{ actor|urlencode }}&subject={{ subject|urlencode }}&action={{ action|urlencode }}&page={{ events.next_page_number }}">
+        Next</a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}
