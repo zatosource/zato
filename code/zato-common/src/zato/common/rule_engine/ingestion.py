@@ -86,8 +86,11 @@ class DecisionRecorder:
 
 # ################################################################################################################################
 
-    def record(self, loaded:'LoadedRules', data:'anydict') -> 'anydict':
+    def record(self, loaded:'LoadedRules', data:'anydict', caller:'str | None'=None) -> 'anydict':
         """ Evaluates one input against the loaded rules, logs the complete decision and returns the outcome.
+
+        The optional caller is the name of the authenticated system this evaluation was run for,
+        so every decision in the log carries who asked for it.
         """
         # Time the complete evaluation, which never raises - an input a rule
         # cannot evaluate comes back with a readable error instead ..
@@ -141,6 +144,7 @@ class DecisionRecorder:
             duration_ms=duration_ms,
             story=story,
             fired_rule_ids=fired_rule_ids,
+            caller=caller,
         )
 
         # .. hand the decision to the non-blocking writer ..

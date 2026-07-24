@@ -58,6 +58,7 @@ class DecisionWrite:
     rules_version:  'int'
     occurred_at:    'datetime'
     business_key:   'str | None'
+    caller:         'str | None'
     outcome:        'str'
     is_error:       'bool'
     duration_ms:    'int'
@@ -77,6 +78,7 @@ class DecisionWrite:
         duration_ms:'int',
         story:'anydict',
         fired_rule_ids:'strlist',
+        caller:'str | None' = None,
         ) -> 'None':
 
         self.decision_id    = decision_id
@@ -84,6 +86,7 @@ class DecisionWrite:
         self.rules_version  = rules_version
         self.occurred_at    = occurred_at
         self.business_key   = business_key
+        self.caller         = caller
         self.outcome        = outcome
         self.is_error       = is_error
         self.duration_ms    = duration_ms
@@ -195,6 +198,7 @@ class RuleDecisionRecord(NamedTuple):
     occurred_at:    'datetime'
     time_bucket:    'str'
     business_key:   'str | None'
+    caller:         'str | None'
     outcome:        'str'
     is_error:       'bool'
     duration_ms:    'int'

@@ -164,6 +164,7 @@ _decision_rules_version      = Column('rules_version', _integer_type, nullable=F
 _decision_occurred_at        = Column('occurred_at', _datetime_type, nullable=False)
 _decision_time_bucket        = Column('time_bucket', _string_14_type, nullable=False)
 _decision_business_key       = Column('business_key', _string_191_type, nullable=True)
+_decision_caller             = Column('caller', _string_191_type, nullable=True)
 _decision_outcome            = Column('outcome', _string_191_type, nullable=False)
 _decision_is_error           = Column('is_error', _boolean_type, nullable=False)
 _decision_duration_ms        = Column('duration_ms', _integer_type, nullable=False)
@@ -185,6 +186,7 @@ rule_decision_table = Table(
     _decision_occurred_at,
     _decision_time_bucket,
     _decision_business_key,
+    _decision_caller,
     _decision_outcome,
     _decision_is_error,
     _decision_duration_ms,
@@ -201,6 +203,12 @@ _ = Index(
     'rdec_business',
     rule_decision_table.c.cluster_id,
     rule_decision_table.c.business_key,
+    rule_decision_table.c.occurred_at,
+)
+_ = Index(
+    'rdec_caller',
+    rule_decision_table.c.cluster_id,
+    rule_decision_table.c.caller,
     rule_decision_table.c.occurred_at,
 )
 _ = Index(

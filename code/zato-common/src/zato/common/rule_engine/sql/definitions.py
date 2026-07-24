@@ -185,6 +185,42 @@ class DefinitionStore:
 
 # ################################################################################################################################
 
+    def find_by_name(self, *, name:'str', object_type:'str') -> 'definition_record_list':
+        """ Returns every active definition of one type with the given name, across all parents.
+
+        Names are unique only within one parent, so a bare name can match more than one
+        definition - the caller decides what an ambiguous match means at its boundary.
+        """
+        # Match the exact name of one type anywhere in the tree ..
+        query = select(rule_definition_table)
+        cluster_condition = rule_definition_table.c.cluster_id == default_cluster_id
+        type_condition = rule_definition_table.c.object_type == object_type
+        name_condition = rule_definition_table.c.name == name
+        active_condition = rule_definition_table.c.is_active.is_(True)
+        query = query.where(cluster_condition)
+        query = query.where(type_condition)
+        query = query.where(name_condition)
+        query = query.where(active_condition)
+        query = query.order_by(rule_definition_table.c.id)
+        session = self._session_factory()
+
+        # .. load every match ..
+        try:
+            result = session.execute(query)
+            out:'definition_record_list' = []
+
+            for row in result:
+                record = definition_record(row)
+                out.append(record)
+
+        # .. and release the read-only session.
+        finally:
+            session.close()
+
+        return out
+
+# ################################################################################################################################
+
     def list(
         self,
         *,

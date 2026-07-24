@@ -1156,6 +1156,7 @@ class GENERIC:
             CLOUD_MICROSOFT_POWER_AUTOMATE = 'cloud-microsoft-power-automate'
             CLOUD_SALESFORCE = 'cloud-salesforce'
             GATEWAY_MCP = 'gateway-mcp'
+            GATEWAY_RULE_ENGINE = 'gateway-rule-engine'
             OUTCONN_AS2 = 'outconn-as2'
             OUTCONN_ES = 'outconn-es'
             OUTCONN_LDAP = 'outconn-ldap'

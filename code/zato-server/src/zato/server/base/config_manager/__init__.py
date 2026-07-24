@@ -67,6 +67,7 @@ from zato.server.generic.api.cloud_microsoft_fabric import CloudMicrosoftFabricW
 from zato.server.generic.api.cloud_microsoft_power_automate import CloudMicrosoftPowerAutomateWrapper
 from zato.server.generic.api.cloud_salesforce import CloudSalesforceWrapper
 from zato.server.generic.api.gateway_mcp import GatewayMCPWrapper
+from zato.server.generic.api.gateway_rule_engine import GatewayRuleEngineWrapper
 from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper
 from zato.server.generic.api.channel_ibm_mq import ChannelIBMMQWrapper
 from zato.server.generic.api.channel_kafka import ChannelKafkaWrapper
@@ -221,6 +222,9 @@ class ConfigManager(_ConfigManagerBase):
         # Generic connections - Gateway - MCP
         self.gateway_mcp = {}
 
+        # Generic connections - Rule engine API
+        self.gateway_rule_engine = {}
+
         # Generic connections - AS2 outconns
         self.outconn_as2 = {}
 
@@ -325,6 +329,7 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_POWER_AUTOMATE: self.cloud_microsoft_power_automate,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE: self.cloud_salesforce,
             COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP: self.gateway_mcp,
+            COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_RULE_ENGINE: self.gateway_rule_engine,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: self.channel_hl7_mllp,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_AS2: self.outconn_as2,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ES: self.outconn_es,
@@ -357,6 +362,7 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_POWER_AUTOMATE: CloudMicrosoftPowerAutomateWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE: CloudSalesforceWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP: GatewayMCPWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_RULE_ENGINE: GatewayRuleEngineWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: ChannelHL7MLLPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_AS2: OutconnAS2Wrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ES: OutconnESWrapper,
@@ -1010,6 +1016,8 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_POWER_AUTOMATE, {})
         cloud_salesforce_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE, {})
         gateway_mcp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP, {})
+        gateway_rule_engine_map = self.generic_impl_func_map.setdefault(
+            COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_RULE_ENGINE, {})
         outconn_as2_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_AS2, {})
         outconn_es_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ES, {})
         outconn_graphql_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRAPHQL, {})
@@ -1042,6 +1050,7 @@ class ConfigManager(_ConfigManagerBase):
             cloud_microsoft_power_automate_map,
             cloud_salesforce_map,
             gateway_mcp_map,
+            gateway_rule_engine_map,
             outconn_as2_map,
             outconn_es_map,
             outconn_graphql_map,
