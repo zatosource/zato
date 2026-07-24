@@ -14,11 +14,14 @@ from .database import drop_schema as drop_schema
 from .data import CountPoint as CountPoint
 from .data import DecisionFilter as DecisionFilter
 from .data import DecisionWrite as DecisionWrite
+from .data import RuleChatConfigRecord as RuleChatConfigRecord
 from .data import RuleDecisionRecord as RuleDecisionRecord
 from .data import RuleDefinitionRecord as RuleDefinitionRecord
 from .data import RuleEventRecord as RuleEventRecord
 from .data import RuleFirePoint as RuleFirePoint
 from .data import RuleFollowRecord as RuleFollowRecord
+from .data import RuleJobCursorRecord as RuleJobCursorRecord
+from .data import RuleNotifyDestinationRecord as RuleNotifyDestinationRecord
 from .data import RuleRecentRecord as RuleRecentRecord
 from .data import RuleReferenceRecord as RuleReferenceRecord
 from .data import RuleVersionRecord as RuleVersionRecord

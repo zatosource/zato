@@ -16,6 +16,7 @@ from http.client import BAD_REQUEST, CONFLICT, NOT_FOUND
 from django.http import JsonResponse
 
 # Zato
+from zato.common.rule_engine.notify.credentials import NotifyConfigError
 from zato.common.rule_engine.sql import InvalidDocumentError, InvalidStoreInputError, RecordNotFoundError, \
     VersionConflictError
 from zato.common.rule_engine.sql.constants import Documents_Key
@@ -63,7 +64,7 @@ def json_api(view:'any_') -> 'any_':
             out = _error(str(e), NOT_FOUND)
         except VersionConflictError as e:
             out = _error(str(e), CONFLICT)
-        except (InvalidDocumentError, InvalidStoreInputError) as e:
+        except (InvalidDocumentError, InvalidStoreInputError, NotifyConfigError) as e:
             out = _error(str(e), BAD_REQUEST)
 
         return out

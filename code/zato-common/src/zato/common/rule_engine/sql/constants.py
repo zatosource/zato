@@ -36,6 +36,8 @@ Event_Type_State_Changed        = 'state.changed'
 Event_Type_Follow_Changed       = 'follow.changed'
 Event_Type_Test_Run             = 'test.run'
 Event_Type_Rule_Fired_Daily     = 'rule.fired.daily'
+Event_Type_Advisory_Run         = 'advisory.run'
+Event_Type_Decisions_Spiked     = 'decisions.spiked'
 
 # ################################################################################################################################
 
@@ -64,6 +66,30 @@ Default_Search_Limit = 100
 
 Hour_Bucket_Format = '%Y-%m-%dT%H'
 Day_Bucket_Format  = '%Y-%m-%d'
+
+# ################################################################################################################################
+
+# The chat platforms that notifications can be delivered to.
+Chat_Kind_Teams = 'teams'
+Chat_Kind_Slack = 'slack'
+
+Chat_Kinds = (
+    Chat_Kind_Teams,
+    Chat_Kind_Slack,
+)
+
+# What a destination's last delivery attempt ended with.
+Delivery_Status_Delivered = 'delivered'
+Delivery_Status_Error     = 'error'
+
+# The named feed cursor that advisory suite runs read version events through.
+Job_Cursor_Advisory = 'advisory-runs'
+
+# ################################################################################################################################
+
+# Which database the rule engine and its jobs share, the same variable the dashboard reads.
+Env_DB_URL     = 'Zato_Rule_Engine_Dashboard_DB_URL'
+Default_DB_URL = 'sqlite:///zato-rule-engine-dashboard.db'
 
 # ################################################################################################################################
 # ################################################################################################################################
