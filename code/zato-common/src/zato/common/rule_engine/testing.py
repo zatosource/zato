@@ -98,7 +98,7 @@ def validate_test_set(test_set:'anydict') -> 'dictlist':
 # ################################################################################################################################
 
 def _statement_of(document:'anydict') -> 'anydict':
-    """ The plain-language statement a fired rule reports - its own, or its docs as a fallback.
+    """ The plain-language statement a fired rule reports - its own, or its docs as the default.
     """
     statement = document.get('statement')
 
