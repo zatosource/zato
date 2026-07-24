@@ -13,8 +13,9 @@ from datetime import datetime
 # Zato
 from zato.common.rule_engine.notify.matrix import notification_matrix, Notified_Event_Types, should_notify
 from zato.common.rule_engine.sql import RuleEventRecord
-from zato.common.rule_engine.sql.constants import Event_Type_Advisory_Run, Event_Type_Decisions_Spiked, \
-    Event_Type_Follow_Changed, Event_Type_Version_Created, Event_Type_Version_Published, Event_Type_Version_Restored
+from zato.common.rule_engine.sql.constants import Event_Type_Advisory_Run, Event_Type_Approval_Requested, \
+    Event_Type_Decisions_Spiked, Event_Type_Follow_Changed, Event_Type_Version_Approved, Event_Type_Version_Created, \
+    Event_Type_Version_Published, Event_Type_Version_Restored
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -85,6 +86,18 @@ def test_publications_rollbacks_and_spikes_always_notify() -> 'None':
     assert should_notify(published) is True
     assert should_notify(restored) is True
     assert should_notify(spiked) is True
+
+# ################################################################################################################################
+
+def test_approval_events_always_notify() -> 'None':
+    """ Both awaiting-approval and approved events produce a message no matter their payload.
+    """
+    awaiting = _event(Event_Type_Approval_Requested, None)
+    approved_payload = {'content_hash': 'a3f2b1c4d5e6f7a8', 'comment': 'Reviewed against the lending policy'}
+    approved = _event(Event_Type_Version_Approved, approved_payload)
+
+    assert should_notify(awaiting) is True
+    assert should_notify(approved) is True
 
 # ################################################################################################################################
 

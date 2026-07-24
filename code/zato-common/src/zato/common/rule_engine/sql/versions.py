@@ -15,8 +15,9 @@ from sqlalchemy.exc import IntegrityError
 from zato.common.typing_ import cast_
 
 # Local
-from .approvals import assert_version_publishable
-from .constants import Event_Type_Version_Created, Event_Type_Version_Published, Event_Type_Version_Restored
+from .approvals import assert_version_publishable, is_gate_enabled
+from .constants import Event_Type_Approval_Requested, Event_Type_Version_Created, Event_Type_Version_Published, \
+    Event_Type_Version_Restored
 from .data import anydict, RuleVersionRecord
 from .database import SessionFactory
 from .document import serialize_document
@@ -104,6 +105,18 @@ class VersionStore:
                     actor=author,
                     payload=payload,
                 )
+
+                # .. a version created while the approval gate is on cannot go live yet,
+                # .. which the feed announces with its own awaiting-approval event ..
+                if is_gate_enabled(session, definition_id):
+                    _ = add_event(
+                        session,
+                        definition_id=definition_id,
+                        version=new_version,
+                        event_type=Event_Type_Approval_Requested,
+                        actor=author,
+                        payload=None,
+                    )
 
                 # .. and build the detached snapshot from the values just written, avoiding a redundant re-read.
                 version = RuleVersionRecord(

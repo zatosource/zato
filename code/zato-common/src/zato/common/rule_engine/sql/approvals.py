@@ -85,16 +85,26 @@ def get_version_approval(session:'Session', definition_id:'int', version:'int') 
 
 # ################################################################################################################################
 
-def assert_version_publishable(session:'Session', definition_id:'int', version:'int', document_text:'str') -> 'None':
-    """ Blocks publication in the caller's transaction while the gate is on and the version has no matching approval.
+def is_gate_enabled(session:'Session', definition_id:'int') -> 'bool':
+    """ Returns one definition's effective gate state in the caller's transaction,
+    an unconfigured definition uses the module-level default.
     """
-    # Read the effective gate state, an unconfigured definition uses the module-level default ..
     config = get_config_row(session, definition_id)
 
     if config is None:
-        gate_enabled = Default_Approval_Gate_Enabled
+        out = Default_Approval_Gate_Enabled
     else:
-        gate_enabled = config.gate_enabled
+        out = config.gate_enabled
+
+    return out
+
+# ################################################################################################################################
+
+def assert_version_publishable(session:'Session', definition_id:'int', version:'int', document_text:'str') -> 'None':
+    """ Blocks publication in the caller's transaction while the gate is on and the version has no matching approval.
+    """
+    # Read the effective gate state ..
+    gate_enabled = is_gate_enabled(session, definition_id)
 
     # .. a definition with the gate off publishes exactly as before ..
     if not gate_enabled:

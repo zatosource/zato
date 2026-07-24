@@ -65,7 +65,7 @@ def test_event_matrix_names_every_notified_event(client:'any_') -> 'None':
     assert response.status_code == OK
 
     items = response.json()['items']
-    assert len(items) == 4
+    assert len(items) == 6
 
     codes = []
     for item in items:
@@ -74,7 +74,14 @@ def test_event_matrix_names_every_notified_event(client:'any_') -> 'None':
         assert item['description']
         assert item['example']
 
-    assert codes == ['version.published', 'version.restored', 'advisory.run', 'decisions.spiked']
+    assert codes == [
+        'version.published',
+        'version.restored',
+        'approval.requested',
+        'version.approved',
+        'advisory.run',
+        'decisions.spiked',
+    ]
 
 # ################################################################################################################################
 

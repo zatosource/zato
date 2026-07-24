@@ -16,7 +16,7 @@ from sqlalchemy import update
 from zato.common.rule_engine.sql import ApprovalContentMismatchError, ApprovalRequiredError, InvalidStoreInputError, \
     RuleDefinitionRecord, RuleSQLBackend, SelfApprovalNotAllowedError
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Event_Type_Approval_Gate_Off, \
-    Event_Type_Approval_Gate_On, Event_Type_Self_Approval, Event_Type_Version_Approved
+    Event_Type_Approval_Gate_On, Event_Type_Approval_Requested, Event_Type_Self_Approval, Event_Type_Version_Approved
 from zato.common.rule_engine.sql.data import anydict, strset
 from zato.common.rule_engine.sql.document import content_hash
 from zato.common.rule_engine.sql.schema import rule_version_table
@@ -275,6 +275,50 @@ def test_config_change_that_changes_nothing_logs_nothing(backend:'RuleSQLBackend
     event_types = _event_types(backend, definition.id)
     assert Event_Type_Approval_Gate_On not in event_types
     assert Event_Type_Approval_Gate_Off not in event_types
+
+# ################################################################################################################################
+
+def test_new_version_announces_awaiting_approval_only_while_the_gate_is_on(backend:'RuleSQLBackend') -> 'None':
+    """ A version created while the gate is on leaves an awaiting-approval event, a gate-off version does not.
+    """
+    # Create one definition and a second version while the gate is still off ..
+    definition = _create_ruleset(backend)
+    second_document = _ruleset_document(720)
+    _ = backend.versions.create(
+        definition_id=definition.id,
+        expected_current_version=1,
+        document=second_document,
+        author=_author,
+        comment='Lower the minimum score after portfolio review',
+    )
+
+    # .. verify no awaiting-approval event was appended ..
+    event_types = _event_types(backend, definition.id)
+    assert Event_Type_Approval_Requested not in event_types
+
+    # .. turn the gate on and create a third version ..
+    _ = backend.approvals.set_gate(definition_id=definition.id, enabled=True, actor='compliance.admin')
+    third_document = _ruleset_document(700)
+    third = backend.versions.create(
+        definition_id=definition.id,
+        expected_current_version=2,
+        document=third_document,
+        author=_author,
+        comment='Lower the minimum score again for the pilot region',
+    )
+
+    # .. and verify the feed now announces the version awaiting its approval.
+    events = backend.events.list(definition_id=definition.id)
+
+    for event in events:
+        if event.event_type == Event_Type_Approval_Requested:
+            awaiting = event
+            break
+    else:
+        raise Exception('No awaiting-approval event was appended')
+
+    assert awaiting.version == third.version
+    assert awaiting.actor == _author
 
 # ################################################################################################################################
 

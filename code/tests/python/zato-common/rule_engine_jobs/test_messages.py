@@ -11,8 +11,8 @@ import os
 
 # Zato
 from zato.common.rule_engine.notify.messages import build_message, Env_Dashboard_Base_URL
-from zato.common.rule_engine.sql.constants import Event_Type_Decisions_Spiked, Event_Type_Version_Published, \
-    Event_Type_Version_Restored, System_Actor
+from zato.common.rule_engine.sql.constants import Event_Type_Approval_Requested, Event_Type_Decisions_Spiked, \
+    Event_Type_Version_Approved, Event_Type_Version_Published, Event_Type_Version_Restored, System_Actor
 
 # Test helpers
 from jobs_test_data import add_version, Author, create_ruleset, Rules_Text_Lower_Bar
@@ -111,6 +111,51 @@ def test_spike_message_reports_both_counts(backend:'any_') -> 'None':
     message = build_message(backend, event)
 
     assert message == "'Loans' decided 4,200 times in the last hour against a typical 300."
+
+# ################################################################################################################################
+
+def test_awaiting_approval_message_names_the_version_and_author(backend:'any_') -> 'None':
+    """ A version saved while the gate is on produces a message naming the version and its author.
+    """
+    ruleset = create_ruleset(backend)
+    _ = backend.approvals.set_gate(definition_id=ruleset.id, enabled=True, actor='compliance.admin')
+    _ = add_version(backend, ruleset, Rules_Text_Lower_Bar)
+
+    event = _newest_event_of_type(backend, ruleset.id, Event_Type_Approval_Requested)
+    message = build_message(backend, event)
+
+    assert message == f"Version 2 of 'Loans' by {Author} awaits approval."
+
+# ################################################################################################################################
+
+def test_approved_message_names_the_approver_and_carries_the_comment(backend:'any_') -> 'None':
+    """ An approval message names the version and the approver, extended with the optional comment.
+    """
+    ruleset = create_ruleset(backend)
+    _ = backend.approvals.approve(
+        definition_id=ruleset.id,
+        version=1,
+        approver='risk.reviewer',
+        comment='Reviewed against the lending policy.',
+    )
+
+    event = _newest_event_of_type(backend, ruleset.id, Event_Type_Version_Approved)
+    message = build_message(backend, event)
+
+    assert message == "Version 1 of 'Loans' was approved by risk.reviewer. Reviewed against the lending policy."
+
+# ################################################################################################################################
+
+def test_approved_message_without_a_comment_stays_short(backend:'any_') -> 'None':
+    """ An approval given with no comment produces just the one sentence.
+    """
+    ruleset = create_ruleset(backend)
+    _ = backend.approvals.approve(definition_id=ruleset.id, version=1, approver='risk.reviewer')
+
+    event = _newest_event_of_type(backend, ruleset.id, Event_Type_Version_Approved)
+    message = build_message(backend, event)
+
+    assert message == "Version 1 of 'Loans' was approved by risk.reviewer."
 
 # ################################################################################################################################
 
