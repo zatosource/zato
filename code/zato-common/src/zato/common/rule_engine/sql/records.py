@@ -7,9 +7,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Local
-from .data import any_, RuleChatConfigRecord, RuleDecisionRecord, RuleDefinitionRecord, RuleEventRecord, \
-    RuleFollowRecord, RuleJobCursorRecord, RuleNotifyDestinationRecord, RuleRecentRecord, RuleReferenceRecord, \
-    RuleVersionRecord, RuleViewRecord
+from .data import any_, RuleApprovalConfigRecord, RuleApprovalRecord, RuleChatConfigRecord, RuleDecisionRecord, \
+    RuleDefinitionRecord, RuleEventRecord, RuleFollowRecord, RuleJobCursorRecord, RuleNotifyDestinationRecord, \
+    RuleRecentRecord, RuleReferenceRecord, RuleVersionRecord, RuleViewRecord
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -153,6 +153,32 @@ def job_cursor_record(row:'any_') -> 'RuleJobCursorRecord':
 
     # .. and return a backend-owned immutable record.
     out = RuleJobCursorRecord(**values)
+    return out
+
+# ################################################################################################################################
+
+def approval_record(row:'any_') -> 'RuleApprovalRecord':
+    """ Converts one SQL row into a detached approval record.
+    """
+    # Copy the SQLAlchemy mapping ..
+    mapping = row._mapping
+    values = dict(mapping)
+
+    # .. and return a backend-owned immutable record.
+    out = RuleApprovalRecord(**values)
+    return out
+
+# ################################################################################################################################
+
+def approval_config_record(row:'any_') -> 'RuleApprovalConfigRecord':
+    """ Converts one SQL row into a detached approval-gate configuration record.
+    """
+    # Copy the SQLAlchemy mapping ..
+    mapping = row._mapping
+    values = dict(mapping)
+
+    # .. and return a backend-owned immutable record.
+    out = RuleApprovalConfigRecord(**values)
     return out
 
 # ################################################################################################################################

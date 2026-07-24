@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import hashlib
 import json
 
 # Zato
@@ -20,6 +21,9 @@ from .errors import InvalidDocumentError
 # ################################################################################################################################
 
 JSON_Separators = (',', ':')
+
+# The character encoding the content hash is computed over, fixed so an approval binds to identical bytes everywhere.
+Content_Hash_Encoding = 'utf-8'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,6 +40,19 @@ def serialize_document(document:'anydict') -> 'str':
         message = f'Rule document is not valid JSON -> {e}'
         raise InvalidDocumentError(message) from e
 
+    return out
+
+# ################################################################################################################################
+
+def content_hash(document_text:'str') -> 'str':
+    """ Returns the SHA-256 hex digest binding an approval to one exact serialized document.
+    """
+    # Hash the canonical TEXT the version already stores, so the approved bytes equal the published bytes ..
+    encoded = document_text.encode(Content_Hash_Encoding)
+    digest = hashlib.sha256(encoded)
+
+    # .. and return the stable hex form recorded on the approval.
+    out = digest.hexdigest()
     return out
 
 # ################################################################################################################################

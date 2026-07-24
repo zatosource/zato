@@ -15,6 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from zato.common.typing_ import cast_
 
 # Local
+from .approvals import assert_version_publishable
 from .constants import Event_Type_Version_Created, Event_Type_Version_Published, Event_Type_Version_Restored
 from .data import anydict, RuleVersionRecord
 from .database import SessionFactory
@@ -146,6 +147,10 @@ class VersionStore:
 
                 target = get_version(session, definition_id, version)
 
+                # .. block publication while the approval gate is on and this snapshot
+                # .. has no approval matching its exact content ..
+                assert_version_publishable(session, definition_id, version, target.document)
+
                 # .. move the one live pointer, the promoted definition column, to the requested snapshot ..
                 statement = update(rule_definition_table)
                 id_condition = rule_definition_table.c.id == definition_id
@@ -183,6 +188,10 @@ class VersionStore:
         comment:'str',
         ) -> 'RuleVersionRecord':
         """ Copies a past snapshot into a new linear version and publishes the copy atomically.
+
+        Restore deliberately bypasses the publish approval gate - a rollback is the emergency path back
+        to a previously live document and must never wait for an approval, while still leaving
+        its own restored and published events in the audit trail.
         """
         # Validate history metadata and reserve the next linear number ..
         require_text(actor, 'Restore actor')

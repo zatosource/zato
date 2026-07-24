@@ -50,7 +50,8 @@ def test_schema_has_exactly_the_planned_tables() -> 'None':
     table_names:'table_name_set' = set(metadata.tables)
 
     # .. and verify that it contains exactly the planned write patterns - the four
-    # .. core ones plus the where-used index and the per-actor workspace stores.
+    # .. core ones, the where-used index, the per-actor workspace stores,
+    # .. the notification stores and the publish approval gate.
     expected = {
         'rule_definition',
         'rule_version',
@@ -60,6 +61,11 @@ def test_schema_has_exactly_the_planned_tables() -> 'None':
         'rule_follow',
         'rule_view',
         'rule_recent',
+        'rule_chat_config',
+        'rule_notify_destination',
+        'rule_job_cursor',
+        'rule_approval',
+        'rule_approval_config',
     }
     assert table_names == expected
 

@@ -38,6 +38,10 @@ Event_Type_Test_Run             = 'test.run'
 Event_Type_Rule_Fired_Daily     = 'rule.fired.daily'
 Event_Type_Advisory_Run         = 'advisory.run'
 Event_Type_Decisions_Spiked     = 'decisions.spiked'
+Event_Type_Version_Approved     = 'version.approved'
+Event_Type_Approval_Gate_On     = 'approval.gate.enabled'
+Event_Type_Approval_Gate_Off    = 'approval.gate.disabled'
+Event_Type_Self_Approval        = 'approval.self.changed'
 
 # ################################################################################################################################
 
@@ -57,6 +61,12 @@ Default_Success_Capture_Percent = 100
 
 Minimum_Capture_Percent = 0
 Maximum_Capture_Percent = 100
+
+# The publish approval gate is off by default, so an unconfigured ruleset publishes exactly as before ..
+Default_Approval_Gate_Enabled = False
+
+# .. and while the gate is on, the author of a version may not approve their own work unless this is turned on.
+Default_Allow_Self_Approval = False
 
 Default_Feed_Limit   = 100
 Default_Recent_Limit = 20
