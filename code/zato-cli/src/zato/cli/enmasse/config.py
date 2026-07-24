@@ -46,6 +46,8 @@ class _object_type:
     Microsoft_Cloud = 'microsoft_cloud'           #
     Microsoft_Fabric = 'cloud_microsoft_fabric'   #
     Microsoft_Power_Automate = 'cloud_microsoft_power_automate' #
+    Microsoft_Teams = 'microsoft_teams'           #
+    Slack = 'slack'                               #
     Search_ElasticSearch = 'elastic_search'       #
 
     Channel_AMQP = 'channel_amqp'                 #
@@ -71,6 +73,8 @@ _object_alias[_object_type.MongoDB] = 'outgoing_mongodb'
 _object_alias[_object_type.OData] = 'outgoing_odata'
 _object_alias[_object_type.SAP] = 'outgoing_sap'
 _object_alias[_object_type.Microsoft_Cloud] = ['zato_generic_connection:cloud-confluence', 'cloud-microsoft-365']
+_object_alias[_object_type.Microsoft_Teams] = 'chat-microsoft-teams'
+_object_alias[_object_type.Slack] = 'chat-slack'
 _object_alias[_object_type.Odoo] = 'outconn_odoo'
 _object_alias[_object_type.Outgoing_GRPC] = 'grpc'
 _object_alias[_object_type.Outgoing_SOAP] = 'outconn_soap'

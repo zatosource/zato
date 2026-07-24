@@ -52,7 +52,8 @@ from zato.server.connection.grpc_ import GRPCFacade
 from zato.server.pattern.api import FanOut
 from zato.server.pattern.api import InvokeRetry
 from zato.server.pattern.api import ParallelExec
-from zato.server.service.reqresp import AMQPRequestData, AWSFacade, Cloud, LLMFacade, Microsoft, Outgoing, Request
+from zato.server.service.reqresp import AMQPRequestData, AWSFacade, Cloud, LLMFacade, Microsoft, Outgoing, Request, \
+    SlackFacade
 
 # Zato
 from zato.server.reqresp.payload import IOPayload
@@ -379,6 +380,7 @@ class Service:
     cloud = Cloud()
     llm = LLMFacade()
     microsoft = Microsoft()
+    slack = SlackFacade()
     odb:'ODBManager'
     static_config:'Bunch'
 

@@ -57,6 +57,8 @@ from zato.server.connection.http_soap.response_cache import purge_channel as pur
 from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.odoo import OdooWrapper
 from zato.server.generic.api.channel_openapi import ChannelOpenAPIWrapper
+from zato.server.generic.api.chat_microsoft_teams import ChatMicrosoftTeamsWrapper
+from zato.server.generic.api.chat_slack import ChatSlackWrapper
 from zato.server.generic.api.cloud_aws import CloudAWSWrapper
 from zato.server.generic.api.cloud_confluence import CloudConfluenceWrapper
 from zato.server.generic.api.cloud_jira import CloudJiraWrapper
@@ -186,6 +188,12 @@ class ConfigManager(_ConfigManagerBase):
         # Generic connections - Channel - OpenAPI
         self.channel_openapi = {}
 
+        # Generic connections - Chat - Microsoft Teams
+        self.chat_microsoft_teams = {}
+
+        # Generic connections - Chat - Slack
+        self.chat_slack = {}
+
         # Generic connections - Cloud - AWS
         self.cloud_aws = {}
 
@@ -307,6 +315,8 @@ class ConfigManager(_ConfigManagerBase):
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI: self.channel_openapi,
+            COMMON_GENERIC.CONNECTION.TYPE.CHAT_MICROSOFT_TEAMS: self.chat_microsoft_teams,
+            COMMON_GENERIC.CONNECTION.TYPE.CHAT_SLACK: self.chat_slack,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_AWS: self.cloud_aws,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: self.cloud_confluence,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA: self.cloud_jira,
@@ -337,6 +347,8 @@ class ConfigManager(_ConfigManagerBase):
 
         self._generic_conn_handler = {
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI: ChannelOpenAPIWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.CHAT_MICROSOFT_TEAMS: ChatMicrosoftTeamsWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.CHAT_SLACK: ChatSlackWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_AWS: CloudAWSWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: CloudConfluenceWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA: CloudJiraWrapper,
@@ -985,6 +997,9 @@ class ConfigManager(_ConfigManagerBase):
         channel_ibm_mq_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_IBM_MQ, {})
         channel_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_KAFKA, {})
         channel_openapi_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI, {})
+        chat_microsoft_teams_map = self.generic_impl_func_map.setdefault(
+            COMMON_GENERIC.CONNECTION.TYPE.CHAT_MICROSOFT_TEAMS, {})
+        chat_slack_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHAT_SLACK, {})
         cloud_aws_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_AWS, {})
         cloud_confluence_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE, {})
         cloud_jira_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA, {})
@@ -1017,6 +1032,8 @@ class ConfigManager(_ConfigManagerBase):
             channel_ibm_mq_map,
             channel_kafka_map,
             channel_openapi_map,
+            chat_microsoft_teams_map,
+            chat_slack_map,
             cloud_aws_map,
             cloud_confluence_map,
             cloud_jira_map,
@@ -1043,6 +1060,8 @@ class ConfigManager(_ConfigManagerBase):
         ]
 
         password_maps = [
+            chat_microsoft_teams_map,
+            chat_slack_map,
             cloud_aws_map,
             cloud_microsoft_fabric_map,
             cloud_microsoft_power_automate_map,

@@ -42,23 +42,27 @@ OPAQUE_FIELDS = [
 
 class MicrosoftCloudExporter:
 
+    # Subclasses that run on this implementation, e.g. Microsoft Teams, override these two.
+    connection_type = GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365
+    label = 'Microsoft 365'
+
     def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
     def export(self, session: 'SASession', cluster_id: 'int') -> 'microsoft_cloud_def_list':
-        """ Exports Microsoft 365 connection definitions.
+        """ Exports connection definitions of this exporter's type.
         """
-        logger.info('Exporting Microsoft 365 connection definitions')
+        logger.info('Exporting %s connection definitions', self.label)
 
-        # Get Microsoft 365 connections from database using the generic connection query
-        db_microsoft_cloud = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365)
+        # Get the connections from database using the generic connection query
+        db_microsoft_cloud = connection_list(session, cluster_id, self.connection_type)
 
         if not db_microsoft_cloud:
-            logger.info('No Microsoft 365 connection definitions found in DB')
+            logger.info('No %s connection definitions found in DB', self.label)
             return []
 
         microsoft_cloud_connections = to_json(db_microsoft_cloud, return_as_dict=True)
-        logger.debug('Processing %d Microsoft 365 connection definitions', len(microsoft_cloud_connections))
+        logger.debug('Processing %d %s connection definitions', len(microsoft_cloud_connections), self.label)
 
         exported_microsoft_cloud = []
 
@@ -101,7 +105,7 @@ class MicrosoftCloudExporter:
 
             exported_microsoft_cloud.append(item)
 
-        logger.info('Successfully prepared %d Microsoft 365 connection definitions for export', len(exported_microsoft_cloud))
+        logger.info('Successfully prepared %d %s connection definitions for export', len(exported_microsoft_cloud), self.label)
         return exported_microsoft_cloud
 
 # ################################################################################################################################

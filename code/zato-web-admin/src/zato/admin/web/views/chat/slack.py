@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2022, Zato Source s.r.o. https://zato.io
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,25 +12,25 @@ from json import loads
 
 # Zato
 from zato.admin.web.forms import ChangePasswordForm
-from zato.admin.web.forms.cloud.microsoft_365 import CreateForm, EditForm
+from zato.admin.web.forms.chat.slack import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
     method_allowed, ping_connection
 from zato.common.api import GENERIC, generic_attrs
-from zato.common.model.microsoft_365 import Microsoft365ConfigObject
+from zato.common.model.slack import SlackConfigObject
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Index(_Index):
     method_allowed = 'GET'
-    url_name = 'cloud-microsoft-365'
-    template = 'zato/cloud/microsoft-365.html'
+    url_name = 'chat-slack'
+    template = 'zato/chat/slack.html'
     service_name = 'zato.generic.connection.get-list'
-    output_class = Microsoft365ConfigObject
+    output_class = SlackConfigObject
     paginate = True
 
     input_required = 'cluster_id', 'type_'
-    output_required = 'id', 'name', 'is_active', 'client_id', 'scopes', 'tenant_id'
+    output_required = 'id', 'name', 'is_active'
     output_optional = generic_attrs
     output_repeated = True
 
@@ -50,17 +50,13 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    # Subclasses that run on this implementation, e.g. Microsoft Teams, override these two.
-    conn_type = GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365
-    conn_label = 'Microsoft 365'
-
-    input_required = 'name', 'is_active', 'client_id', 'scopes', 'tenant_id'
+    input_required = 'name', 'is_active'
     output_required = 'id', 'name'
 
 # ################################################################################################################################
 
     def populate_initial_input_dict(self, initial_input_dict):
-        initial_input_dict['type_'] = self.conn_type
+        initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.CHAT_SLACK
         initial_input_dict['is_internal'] = False
         initial_input_dict['is_channel'] = False
         initial_input_dict['is_outgoing'] = True
@@ -71,29 +67,29 @@ class _CreateEdit(CreateEdit):
 # ################################################################################################################################
 
     def success_message(self, item):
-        return 'Successfully {} {} connection `{}`'.format(self.verb, self.conn_label, item.name)
+        return 'Successfully {} Slack connection `{}`'.format(self.verb, item.name)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Create(_CreateEdit):
-    url_name = 'cloud-microsoft-365-create'
+    url_name = 'chat-slack-create'
     service_name = 'zato.generic.connection.create'
 
     def __call__(self, req, *args, **kwargs):
 
-        # The secret from the create form is stored in a follow-up call.
+        # The token from the create form is stored in a follow-up call.
         response = super().__call__(req, *args, **kwargs)
 
         if response.status_code == HTTPStatus.OK:
             data = loads(response.content)
-            secret = req.POST.get('secret_value', '')
+            token = req.POST.get('token', '')
 
-            if secret:
+            if token:
                 _ = req.zato.client.invoke('zato.generic.connection.change-password', {
                     'id': data['id'],
-                    'password': secret,
-                    'type_': self.conn_type,
+                    'password': token,
+                    'type_': GENERIC.CONNECTION.TYPE.CHAT_SLACK,
                 })
 
         return response
@@ -102,7 +98,7 @@ class Create(_CreateEdit):
 # ################################################################################################################################
 
 class Edit(_CreateEdit):
-    url_name = 'cloud-microsoft-365-edit'
+    url_name = 'chat-slack-edit'
     form_prefix = 'edit-'
     service_name = 'zato.generic.connection.edit'
 
@@ -110,8 +106,8 @@ class Edit(_CreateEdit):
 # ################################################################################################################################
 
 class Delete(_Delete):
-    url_name = 'cloud-microsoft-365-delete'
-    error_message = 'Could not delete Microsoft 365 connection'
+    url_name = 'chat-slack-delete'
+    error_message = 'Could not delete Slack connection'
     service_name = 'zato.generic.connection.delete'
 
 # ################################################################################################################################
@@ -119,12 +115,15 @@ class Delete(_Delete):
 
 @method_allowed('POST')
 def change_password(req):
-    return _change_password(req, 'zato.generic.connection.change-password', success_msg='Secret updated')
+    out = _change_password(req, 'zato.generic.connection.change-password', success_msg='Token updated')
+    return out
 
 # ################################################################################################################################
 
 @method_allowed('POST')
 def ping(req, id, cluster_id):
-    return ping_connection(req, 'zato.generic.connection.ping', id, 'Microsoft 365 connection')
+    out = ping_connection(req, 'zato.generic.connection.ping', id, 'Slack connection')
+    return out
 
+# ################################################################################################################################
 # ################################################################################################################################

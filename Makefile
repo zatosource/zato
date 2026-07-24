@@ -897,11 +897,13 @@ test-es: ## Elasticsearch connection tests against a live server, plain and TLS.
 test-audit-log-ui: ## Audit log dashboard and unit tests against every database backend.
 	$(ZATO_PY) $(CURDIR)/code/tests/python/zato-common/audit_log/run_matrix.py
 
-test-rule-engine: ## Rule engine tests - grammar, matching, round trip and the SQL backend, fully offline.
+test-rule-engine: ## Rule engine tests - grammar, matching, round trip, the SQL backend and the dashboard views, fully offline.
 	$(CURDIR)/code/bin/ruff check \
 		$(CURDIR)/code/zato-common/src/zato/common/rule_engine/ \
 		$(CURDIR)/code/zato-common/test/zato/common/rule_engine/ \
-		$(CURDIR)/code/tests/python/zato-common/rule_engine_sql/
+		$(CURDIR)/code/tests/python/zato-common/rule_engine_sql/ \
+		$(CURDIR)/code/zato-rule-engine-dashboard/src/zato/rule_engine_dashboard/ \
+		$(CURDIR)/code/tests/python/zato-rule-engine-dashboard/rule_views/
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/zato-common/test/zato/common/rule_engine/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rule_engine \
@@ -909,6 +911,10 @@ test-rule-engine: ## Rule engine tests - grammar, matching, round trip and the S
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/rule_engine_sql/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rule_engine_sql \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-rule-engine-dashboard/rule_views/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rule_views \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-rule-engine-perf: ## Rule engine SQL backend performance tests against SQLite, MySQL and PostgreSQL, plain and TLS - ingest, batch, definitions, reporting and retention floors.
