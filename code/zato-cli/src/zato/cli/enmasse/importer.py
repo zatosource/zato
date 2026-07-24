@@ -49,6 +49,8 @@ from zato.cli.enmasse.importers.llm import LLMImporter
 from zato.cli.enmasse.importers.microsoft_cloud import MicrosoftCloudImporter
 from zato.cli.enmasse.importers.microsoft_fabric import MicrosoftFabricImporter
 from zato.cli.enmasse.importers.microsoft_power_automate import MicrosoftPowerAutomateImporter
+from zato.cli.enmasse.importers.microsoft_teams import MicrosoftTeamsImporter
+from zato.cli.enmasse.importers.slack import SlackImporter
 from zato.cli.enmasse.importers.mongodb import MongoDBImporter
 from zato.cli.enmasse.importers.odata import ODataImporter
 from zato.cli.enmasse.importers.sftp import SFTPImporter
@@ -100,6 +102,8 @@ for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse
                         'zato.cli.enmasse.importers.microsoft_cloud',
                         'zato.cli.enmasse.importers.microsoft_fabric',
                         'zato.cli.enmasse.importers.microsoft_power_automate',
+                        'zato.cli.enmasse.importers.microsoft_teams',
+                        'zato.cli.enmasse.importers.slack',
                         'zato.cli.enmasse.importers.mongodb',
                         'zato.cli.enmasse.importers.odata',
                         'zato.cli.enmasse.importers.sftp', 'zato.cli.enmasse.importers.smb',
@@ -157,6 +161,8 @@ class EnmasseYAMLImporter:
         self.microsoft_cloud_defs = {}
         self.microsoft_fabric_defs = {}
         self.microsoft_power_automate_defs = {}
+        self.microsoft_teams_defs = {}
+        self.slack_defs = {}
         self.outgoing_rest_defs = {}
         self.outgoing_soap_defs = {}
         self.outgoing_as2_defs = {}
@@ -213,6 +219,8 @@ class EnmasseYAMLImporter:
         self.microsoft_cloud_importer = MicrosoftCloudImporter(self)
         self.microsoft_fabric_importer = MicrosoftFabricImporter(self)
         self.microsoft_power_automate_importer = MicrosoftPowerAutomateImporter(self)
+        self.microsoft_teams_importer = MicrosoftTeamsImporter(self)
+        self.slack_importer = SlackImporter(self)
         self.outgoing_rest_importer = OutgoingRESTImporter(self)
         self.outgoing_soap_importer = OutgoingSOAPImporter(self)
         self.as2_importer = AS2Importer(self)
@@ -1181,6 +1189,57 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
+    def sync_microsoft_teams(self, microsoft_teams_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes Microsoft Teams connection definitions from a YAML configuration with the database.
+        """
+        if not microsoft_teams_list:
+            return [], []
+
+        count = len(microsoft_teams_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} Microsoft Teams connection {noun}')
+
+        # Examine each Microsoft Teams connection item
+        for idx, item in enumerate(microsoft_teams_list):
+            logger.info('Microsoft Teams connection item %d: %s', idx, item)
+
+        microsoft_teams_created, microsoft_teams_updated = self.microsoft_teams_importer.sync_definitions(
+            microsoft_teams_list, session)
+
+        # Get Microsoft Teams definitions from the Microsoft Teams importer
+        self.microsoft_teams_defs = self.microsoft_teams_importer.connection_defs
+        logger.info('Processed Microsoft Teams connection definitions: created=%d updated=%d',
+            len(microsoft_teams_created), len(microsoft_teams_updated))
+
+        return microsoft_teams_created, microsoft_teams_updated
+
+# ################################################################################################################################
+
+    def sync_slack(self, slack_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes Slack connection definitions from a YAML configuration with the database.
+        """
+        if not slack_list:
+            return [], []
+
+        count = len(slack_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} Slack connection {noun}')
+
+        # Examine each Slack connection item
+        for idx, item in enumerate(slack_list):
+            logger.info('Slack connection item %d: %s', idx, item)
+
+        slack_created, slack_updated = self.slack_importer.sync_definitions(slack_list, session)
+
+        # Get Slack definitions from the Slack importer
+        self.slack_defs = self.slack_importer.connection_defs
+        logger.info('Processed Slack connection definitions: created=%d updated=%d',
+            len(slack_created), len(slack_updated))
+
+        return slack_created, slack_updated
+
+# ################################################################################################################################
+
     def sync_microsoft_fabric(self, microsoft_fabric_list:'list', session:'SASession') -> 'tuple':
         """ Synchronizes Microsoft Fabric connection definitions from a YAML configuration with the database.
         """
@@ -1719,6 +1778,34 @@ class EnmasseYAMLImporter:
             self.created_objects['microsoft_cloud'] = microsoft_cloud_created
         if microsoft_cloud_updated:
             self.updated_objects['microsoft_cloud'] = microsoft_cloud_updated
+
+        # Process Microsoft Teams connection definitions
+        microsoft_teams_list = yaml_config.get('microsoft_teams', [])
+        generic_list = yaml_config.get('zato_generic_connection')
+        if generic_list:
+            for item in generic_list:
+                item_type = item.get('type_')
+                if item_type == 'chat-microsoft-teams':
+                    microsoft_teams_list.append(item)
+        microsoft_teams_created, microsoft_teams_updated = self.sync_microsoft_teams(microsoft_teams_list, session)
+        if microsoft_teams_created:
+            self.created_objects['microsoft_teams'] = microsoft_teams_created
+        if microsoft_teams_updated:
+            self.updated_objects['microsoft_teams'] = microsoft_teams_updated
+
+        # Process Slack connection definitions
+        slack_list = yaml_config.get('slack', [])
+        generic_list = yaml_config.get('zato_generic_connection')
+        if generic_list:
+            for item in generic_list:
+                item_type = item.get('type_')
+                if item_type == 'chat-slack':
+                    slack_list.append(item)
+        slack_created, slack_updated = self.sync_slack(slack_list, session)
+        if slack_created:
+            self.created_objects['slack'] = slack_created
+        if slack_updated:
+            self.updated_objects['slack'] = slack_updated
 
         # Process Microsoft Fabric connection definitions
         fabric_list = yaml_config.get('microsoft_fabric', [])

@@ -1146,6 +1146,8 @@ class GENERIC:
             CHANNEL_IBM_MQ = 'channel-ibm-mq'
             CHANNEL_OPENAPI = 'channel-openapi'
             CHANNEL_KAFKA = 'channel-kafka'
+            CHAT_MICROSOFT_TEAMS = 'chat-microsoft-teams'
+            CHAT_SLACK = 'chat-slack'
             CLOUD_AWS = 'cloud-aws'
             CLOUD_CONFLUENCE = 'cloud-confluence'
             CLOUD_JIRA = 'cloud-jira'
@@ -1580,6 +1582,15 @@ class Microsoft365:
             'https://graph.microsoft.com/.default'
         ]
         Verify_TLS = True
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Slack:
+
+    class Default:
+        Address = 'https://slack.com/api'
+        Pool_Size = 20
 
 # ################################################################################################################################
 # ################################################################################################################################

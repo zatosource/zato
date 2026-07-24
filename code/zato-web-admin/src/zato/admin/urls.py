@@ -25,8 +25,10 @@ from zato.admin.web.views.channel import openapi_ as channel_openapi
 from zato.admin.web.views.cloud import aws as cloud_aws
 from zato.admin.web.views.cloud import confluence as cloud_confluence
 from zato.admin.web.views.cloud import jira as cloud_jira
+from zato.admin.web.views.chat import slack as chat_slack
 from zato.admin.web.views.cloud import microsoft_365 as cloud_microsoft_365
 from zato.admin.web.views.cloud import microsoft_fabric as cloud_microsoft_fabric
+from zato.admin.web.views.cloud import microsoft_teams as chat_microsoft_teams
 from zato.admin.web.views.cloud import microsoft_power_automate as cloud_microsoft_power_automate
 from zato.admin.web.views.cloud import salesforce as cloud_salesforce
 from zato.admin.web.views.email import imap as email_imap
@@ -1242,6 +1244,42 @@ urlpatterns += [
         login_required(cloud_jira.ping), name='cloud-jira-ping'),
     url(r'^zato/cloud/jira/change-password/$',
         login_required(cloud_jira.change_password), name='cloud-jira-change-password'),
+    ]
+
+urlpatterns += [
+
+    # .. Chat - Microsoft Teams - runs on the Microsoft 365 implementation, mounted as its own page
+
+    url(r'^zato/chat/microsoft-teams/$',
+        login_required(chat_microsoft_teams.Index()), name=chat_microsoft_teams.Index.url_name),
+    url(r'^zato/chat/microsoft-teams/create/$',
+        login_required(chat_microsoft_teams.Create()), name=chat_microsoft_teams.Create.url_name),
+    url(r'^zato/chat/microsoft-teams/edit/$',
+        login_required(chat_microsoft_teams.Edit()), name=chat_microsoft_teams.Edit.url_name),
+    url(r'^zato/chat/microsoft-teams/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(chat_microsoft_teams.Delete()), name=chat_microsoft_teams.Delete.url_name),
+    url(r'^zato/chat/microsoft-teams/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(chat_microsoft_teams.ping), name='chat-microsoft-teams-ping'),
+    url(r'^zato/chat/microsoft-teams/change-password/$',
+        login_required(chat_microsoft_teams.change_password), name='chat-microsoft-teams-change-password'),
+    ]
+
+urlpatterns += [
+
+    # .. Chat - Slack
+
+    url(r'^zato/chat/slack/$',
+        login_required(chat_slack.Index()), name=chat_slack.Index.url_name),
+    url(r'^zato/chat/slack/create/$',
+        login_required(chat_slack.Create()), name=chat_slack.Create.url_name),
+    url(r'^zato/chat/slack/edit/$',
+        login_required(chat_slack.Edit()), name=chat_slack.Edit.url_name),
+    url(r'^zato/chat/slack/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(chat_slack.Delete()), name=chat_slack.Delete.url_name),
+    url(r'^zato/chat/slack/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(chat_slack.ping), name='chat-slack-ping'),
+    url(r'^zato/chat/slack/change-password/$',
+        login_required(chat_slack.change_password), name='chat-slack-change-password'),
     ]
 
 urlpatterns += [

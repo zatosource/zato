@@ -44,13 +44,15 @@ if 0:
 
     # Zato
     from zato.common.odb.api import PoolStore
-    from zato.common.typing_ import any_, callable_, stranydict, strnone
+    from zato.common.typing_ import any_, anylistnone, callable_, stranydict, strnone
     from zato.server.base.config_manager import ConfigManager
     from zato.server.config import ConfigDict, ConfigStore
+    from zato.server.connection.chat.slack import SlackClient
     from zato.server.connection.cloud.aws import AWSClient
     from zato.server.connection.cloud.microsoft_365 import Microsoft365Client
     from zato.server.connection.cloud.microsoft_fabric import MicrosoftFabricClient
     from zato.server.connection.cloud.microsoft_power_automate import MicrosoftPowerAutomateClient
+    from zato.server.connection.cloud.microsoft_teams import MicrosoftTeamsClient
     from zato.server.connection.email import EMailAPI
     from zato.server.connection.facade import GraphQLFacade, KafkaFacade
     from zato.server.connection.ftp import FTPStore
@@ -67,6 +69,8 @@ if 0:
     AWSClient = AWSClient
     Microsoft365Client = Microsoft365Client
     MicrosoftPowerAutomateClient = MicrosoftPowerAutomateClient
+    MicrosoftTeamsClient = MicrosoftTeamsClient
+    SlackClient = SlackClient
     ConfigDict = ConfigDict
     ConfigManager = ConfigManager
     ConfigStore = ConfigStore
@@ -478,19 +482,50 @@ class MicrosoftFabricFacade:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class MicrosoftTeamsFacade:
+    """ The API through which Microsoft Teams connections are accessed by their names,
+    e.g. self.microsoft.teams.send('My Teams', to='My Team/General', text='Hello').
+    """
+    __slots__ = ('conn_dict',)
+
+    conn_dict: 'stranydict'
+
+    def __getitem__(self, name:'str') -> 'MicrosoftTeamsClient':
+
+        # Look up the connection's configuration ..
+        item = self.conn_dict[name]
+
+        # .. and hand back the client that its wrapper maintains.
+        out = item.conn.shared_client
+        return out
+
+    def send(self, name:'str', to:'str', text:'str') -> 'stranydict':
+        """ Sends a message through the named connection. The target is either 'Team name/Channel name'
+        for channels or a chat ID for chats with people and groups. The text is HTML, which is how rich content is sent.
+        """
+        client = self[name]
+
+        out = client.send(to, text)
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Microsoft:
     """ A container for Microsoft connections a service can establish.
     """
-    __slots__ = 'cloud', 'fabric', 'power_platform'
+    __slots__ = 'cloud', 'fabric', 'power_platform', 'teams'
 
     cloud: 'MicrosoftCloudFacade'
     fabric: 'MicrosoftFabricFacade'
     power_platform: 'MicrosoftPowerPlatformFacade'
+    teams: 'MicrosoftTeamsFacade'
 
     def __init__(self) -> 'None':
         self.cloud = MicrosoftCloudFacade()
         self.fabric = MicrosoftFabricFacade()
         self.power_platform = MicrosoftPowerPlatformFacade()
+        self.teams = MicrosoftTeamsFacade()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -528,6 +563,35 @@ class LLMFacade:
 
         # .. and hand back its wrapper, whose invoke, chat and ping check a client out of the queue internally.
         out = item.conn
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SlackFacade:
+    """ The API through which Slack connections are accessed by their names,
+    e.g. self.slack.send('My Slack', channel='#general', text='Hello').
+    """
+    __slots__ = ('conn_dict',)
+
+    conn_dict: 'stranydict'
+
+    def __getitem__(self, name:'str') -> 'SlackClient':
+
+        # Look up the connection's configuration ..
+        item = self.conn_dict[name]
+
+        # .. and hand back the client that its wrapper maintains.
+        out = item.conn.shared_client
+        return out
+
+    def send(self, name:'str', channel:'str', text:'str', blocks:'anylistnone'=None) -> 'stranydict':
+        """ Sends a message through the named connection to a channel, person or group. The text may use
+        Slack's rich formatting (mrkdwn) and blocks, if given, carry Block Kit content.
+        """
+        client = self[name]
+
+        out = client.send(channel, text, blocks)
         return out
 
 # ################################################################################################################################

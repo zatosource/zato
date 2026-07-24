@@ -31,6 +31,8 @@ from zato.cli.enmasse.exporters.llm import LLMExporter
 from zato.cli.enmasse.exporters.microsoft_cloud import MicrosoftCloudExporter
 from zato.cli.enmasse.exporters.microsoft_fabric import MicrosoftFabricExporter
 from zato.cli.enmasse.exporters.microsoft_power_automate import MicrosoftPowerAutomateExporter
+from zato.cli.enmasse.exporters.microsoft_teams import MicrosoftTeamsExporter
+from zato.cli.enmasse.exporters.slack import SlackExporter
 from zato.cli.enmasse.exporters.mongodb import MongoDBExporter
 from zato.cli.enmasse.exporters.odata import ODataExporter
 from zato.cli.enmasse.exporters.sftp import SFTPExporter
@@ -118,6 +120,8 @@ class EnmasseYAMLExporter:
         self.microsoft_cloud_exporter = MicrosoftCloudExporter(self)
         self.microsoft_fabric_exporter = MicrosoftFabricExporter(self)
         self.microsoft_power_automate_exporter = MicrosoftPowerAutomateExporter(self)
+        self.microsoft_teams_exporter = MicrosoftTeamsExporter(self)
+        self.slack_exporter = SlackExporter(self)
         self.confluence_exporter = ConfluenceExporter(self)
         self.custom_exporter = CustomConnectorExporter(self)
         self.elastic_search_exporter = ElasticSearchExporter(self)
@@ -520,6 +524,24 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
+    def export_microsoft_teams(self, session:'SASession') -> 'list':
+        """ Exports Microsoft Teams connection definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded
+        microsoft_teams_list = self.microsoft_teams_exporter.export(session, self.cluster_id)
+        return microsoft_teams_list
+
+# ################################################################################################################################
+
+    def export_slack(self, session:'SASession') -> 'list':
+        """ Exports Slack connection definitions.
+        """
+        _ = self.get_cluster(session) # Ensure cluster info is loaded
+        slack_list = self.slack_exporter.export(session, self.cluster_id)
+        return slack_list
+
+# ################################################################################################################################
+
     def export_confluence(self, session:'SASession') -> 'list':
         """ Exports Confluence connection definitions.
         """
@@ -800,6 +822,16 @@ class EnmasseYAMLExporter:
         microsoft_power_automate_defs = self.export_microsoft_power_automate(session)
         if microsoft_power_automate_defs:
             output_dict['microsoft_power_automate'] = microsoft_power_automate_defs
+
+        # Export Microsoft Teams connection definitions
+        microsoft_teams_defs = self.export_microsoft_teams(session)
+        if microsoft_teams_defs:
+            output_dict['microsoft_teams'] = microsoft_teams_defs
+
+        # Export Slack connection definitions
+        slack_defs = self.export_slack(session)
+        if slack_defs:
+            output_dict['slack'] = slack_defs
 
         # Export Confluence connection definitions
         confluence_defs = self.export_confluence(session)

@@ -1,0 +1,336 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block html_title %}Microsoft Teams connections{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/chat/microsoft-teams.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+
+            {% comment %} 1 {% endcomment %}
+            'name',
+            '_is_active',
+            'tenant_id',
+            'client_id',
+
+            {% comment %} 2 {% endcomment %}
+            '_change_secret',
+            '_edit',
+            '_delete',
+
+            {% comment %} 3 {% endcomment %}
+            '_ping',
+            'scopes',
+
+            {% comment %} 4 {% endcomment %}
+            'id',
+            'is_active',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+    {% if cluster_id %}
+        <div id="markup">
+<h2 class="zato">Microsoft Teams connections</h2>
+
+{% with has_generic="1" generic_type="chat-microsoft-teams" %}
+    {% include "zato/search-form.html" with page_prompt="Show connections"%}
+{% endwith %}
+
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.chat.microsoft_teams.create()">Create a new connection</a>
+        </div>
+
+            <table class="zato-table" id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        {% comment %} 1 {% endcomment %}
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Active</a></th>
+                        <th><a href="#">Tenant ID</a></th>
+                        <th><a href="#">Client ID</a></th>
+
+                        {% comment %} 2 {% endcomment %}
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        {% comment %} 3 {% endcomment %}
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 4 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+
+                        {% comment %} 1 {% endcomment %}
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.tenant_id }}</td>
+                        <td>{{ item.client_id }}</td>
+
+                        {% comment %} 2 {% endcomment %}
+                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}', 'Change secret')">Change secret</a></td>
+                        <td><a href="javascript:$.fn.zato.chat.microsoft_teams.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.chat.microsoft_teams.delete_('{{ item.id }}')">Delete</a></td>
+
+                        {% comment %} 3 {% endcomment %}
+                        <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)">Ping</a></td>
+                        <td class='ignore'>{{ item.scopes }}</td>
+
+                        {% comment %} 4 {% endcomment %}
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='15'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+
+{% include "zato/paginate/action-panel.html" %}
+
+        </div>
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "chat-microsoft-teams-create" %}" method="post" id="create-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle;width:13%">
+                                <label for="{{ create_form.name.id_for_label }}">
+                                Name
+                                </label>
+                            </td>
+                            <td>{{ create_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>
+                                <label for="{{ create_form.is_active.id_for_label }}">
+                                Active
+                                {{ create_form.is_active }}
+                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label for="{{ create_form.tenant_id.id_for_label }}">
+                                Tenant ID
+                                </label>
+                            </td>
+                            <td>
+                                {{ create_form.tenant_id }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label for="{{ create_form.client_id.id_for_label }}">
+                                Client ID
+                                </label>
+                            </td>
+                            <td>
+                                {{ create_form.client_id }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label for="{{ create_form.secret_value.id_for_label }}">
+                                Secret value
+                                </label>
+                            </td>
+                            <td>
+                                {{ create_form.secret_value }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">
+                            OAuth2
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.oauth2-options-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="oauth2-options-block hidden">
+                            <td>
+                                <label for="{{ create_form.scopes.id_for_label }}">
+                                Scopes
+                                </label>
+                            </td>
+                            <td>
+                                {{ create_form.scopes }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "chat-microsoft-teams-edit" %}" method="post" id="edit-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle;width:13%">
+                                <label for="{{ edit_form.name.id_for_label }}">
+                                Name
+                                </label>
+                            </td>
+                            <td>{{ edit_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>
+                                <label for="{{ edit_form.is_active.id_for_label }}">
+                                Active
+                                {{ edit_form.is_active }}
+                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label for="{{ edit_form.tenant_id.id_for_label }}">
+                                Tenant ID
+                                </label>
+                            </td>
+                            <td>
+                                {{ edit_form.tenant_id }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label for="{{ edit_form.client_id.id_for_label }}">
+                                Client ID
+                                </label>
+                            </td>
+                            <td>
+                                {{ edit_form.client_id }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">
+                            OAuth2
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.oauth2-options-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="oauth2-options-block hidden">
+                            <td>
+                                <label for="{{ edit_form.scopes.id_for_label }}">
+                                Scopes
+                                </label>
+                            </td>
+                            <td>
+                                {{ edit_form.scopes }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+
+        <div id="change_password-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "chat-microsoft-teams-change-password" %}" method="post" id="change_password-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle; width:19%">Name</td>
+                            <td id="change-password-name"></td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle"><label for="{{ change_password_form.password.id_for_label }}">Secret</label></td>
+                            <td>{{ change_password_form.password }}
+                                <input type="hidden" id="id_change_password-id" name="id" />
+                                <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+        </div>
+
+        {% endif %}
+
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

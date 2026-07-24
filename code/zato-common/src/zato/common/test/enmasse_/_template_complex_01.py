@@ -685,6 +685,21 @@ microsoft_power_automate:
     tenant_id: 98765432-5432-5432-5432-dcba98765432
     environment_id: Default-98765432-5432-5432-5432-dcba98765432
 
+microsoft_teams:
+
+  - name: enmasse.chat.microsoft-teams.1
+    is_active: true
+    client_id: 45678901-4567-4567-4567-4567890abcde
+    secret_value: Zato_Enmasse_Env.MicrosoftTeamsSecretValue
+    scopes: https://graph.microsoft.com/.default
+    tenant_id: 87654321-7654-7654-7654-fedcba987654
+
+slack:
+
+  - name: enmasse.chat.slack.1
+    is_active: true
+    token: Zato_Enmasse_Env.SlackToken
+
 confluence:
 
   - name: enmasse.confluence.1
