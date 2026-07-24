@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}Sign in{% endblock %}
+
+{% block content %}
+
+<h1>Sign in</h1>
+
+{% if entra_error %}
+<ul class="messages">
+    <li class="error">{{ entra_error }}</li>
+</ul>
+{% endif %}
+
+{% if entra_enabled %}
+<div class="form-card">
+    <a class="button-primary" href="{% url 'login' %}?auth=entra&next={{ next|urlencode }}">Sign in with Microsoft</a>
+</div>
+{% endif %}
+
+<form method="post" action="{% url 'login' %}" class="form-card">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <div class="form-row">
+        <label for="id_username">Username</label>
+        <input id="id_username" type="text" name="username" autofocus>
+    </div>
+    <div class="form-row">
+        <label for="id_password">Password</label>
+        <input id="id_password" type="password" name="password">
+    </div>
+    <button class="button-primary" type="submit">Sign in</button>
+</form>
+
+{% endblock %}

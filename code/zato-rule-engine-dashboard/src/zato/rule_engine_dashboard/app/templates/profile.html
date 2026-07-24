@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}My profile{% endblock %}
+
+{% block content %}
+
+<h1>My profile</h1>
+
+{% if is_root %}
+
+<div class="form-card">
+    <p>The <strong>{{ request.user.username }}</strong> account cannot be changed - not even by itself.</p>
+</div>
+
+{% else %}
+
+<form method="post" action="{% url 'profile' %}" class="form-card">
+    {% csrf_token %}
+    <div class="form-row">
+        <label for="id_username">Username</label>
+        <input id="id_username" type="text" value="{{ request.user.username }}" disabled>
+    </div>
+    <div class="form-row">
+        <label for="id_display_name">Display name</label>
+        <input id="id_display_name" type="text" name="display_name" value="{{ request.user.get_full_name }}">
+    </div>
+    <button class="button-primary" type="submit">Save</button>
+</form>
+
+<div class="form-card">
+    <a class="action" href="{% url 'user-change-password' request.user.username %}">Change my password</a>
+</div>
+
+{% endif %}
+
+{% endblock %}

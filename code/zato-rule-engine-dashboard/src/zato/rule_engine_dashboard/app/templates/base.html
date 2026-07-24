@@ -33,12 +33,39 @@
             font-size: 15px;
         }
         header.topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             background: var(--color-primary);
             color: #ffffff;
             padding: 14px 28px;
             font-size: 17px;
             font-weight: 600;
         }
+        nav.topbar-navigation {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            font-size: 14.5px;
+            font-weight: 400;
+        }
+        nav.topbar-navigation a {
+            color: #ffffff;
+            text-decoration: none;
+            opacity: 0.85;
+        }
+        nav.topbar-navigation a:hover { opacity: 1; text-decoration: underline; }
+        nav.topbar-navigation form { margin: 0; }
+        nav.topbar-navigation button {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 6px;
+            padding: 4px 12px;
+            color: #ffffff;
+            font-size: 13.5px;
+            cursor: pointer;
+        }
+        nav.topbar-navigation button:hover { border-color: #ffffff; }
         main.content {
             max-width: 1100px;
             margin: 28px auto;
@@ -57,6 +84,7 @@
         }
         .messages li.success { background: var(--color-success-bg); color: var(--color-success-text); }
         .messages li.error { background: var(--color-error-bg); color: var(--color-error-text); }
+        .messages li.info { background: var(--color-badge-admin-bg); color: var(--color-badge-admin-text); }
         table.list {
             width: 100%;
             border-collapse: collapse;
@@ -91,7 +119,8 @@
         .badge.disabled { background: var(--color-badge-disabled-bg); color: var(--color-badge-disabled-text); }
         .actions { display: flex; gap: 8px; }
         .actions form { margin: 0; }
-        button.action {
+        button.action, a.action {
+            display: inline-block;
             background: var(--color-surface);
             border: 1px solid var(--color-border);
             border-radius: 6px;
@@ -99,16 +128,101 @@
             font-size: 13.5px;
             cursor: pointer;
             color: var(--color-text);
+            text-decoration: none;
         }
-        button.action:hover { border-color: var(--color-muted); }
+        button.action:hover, a.action:hover { border-color: var(--color-muted); }
         button.action.danger { color: var(--color-danger); }
         button.action.danger:hover { border-color: var(--color-danger); }
         .muted { color: var(--color-muted); }
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 0 0 18px 0;
+        }
+        .page-header h1 { margin: 0; }
+        .form-card {
+            max-width: 460px;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            padding: 20px 24px;
+            margin-bottom: 18px;
+        }
+        .form-row { margin-bottom: 14px; }
+        .form-row label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 13.5px;
+            font-weight: 600;
+            color: var(--color-muted);
+        }
+        .form-row input[type=text], .form-row input[type=password] {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            font-size: 14.5px;
+            color: var(--color-text);
+        }
+        .form-row-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        .form-row-checkbox label { font-size: 14.5px; }
+        button.button-primary, a.button-primary {
+            display: inline-block;
+            background: var(--color-primary);
+            border: 1px solid var(--color-primary);
+            border-radius: 6px;
+            padding: 8px 18px;
+            font-size: 14.5px;
+            cursor: pointer;
+            color: #ffffff;
+            text-decoration: none;
+        }
+        button.button-primary:hover, a.button-primary:hover { opacity: 0.92; }
+        form.filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+        form.filters input[type=text], form.filters select {
+            padding: 7px 10px;
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            font-size: 14px;
+            color: var(--color-text);
+            background: var(--color-surface);
+        }
+        .pagination {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-top: 16px;
+        }
     </style>
 </head>
 <body>
 
-    <header class="topbar">Rule engine</header>
+    <header class="topbar">
+        <span>Rule engine</span>
+        {% if request.user.is_authenticated %}
+        <nav class="topbar-navigation">
+            {% if request.user.is_superuser %}
+            <a href="{% url 'users' %}">Users</a>
+            <a href="{% url 'events' %}">Events</a>
+            {% endif %}
+            <a href="{% url 'profile' %}">My profile</a>
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit">Sign out</button>
+            </form>
+        </nav>
+        {% endif %}
+    </header>
 
     <main class="content">
         {% if messages %}

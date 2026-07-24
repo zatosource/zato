@@ -4,7 +4,10 @@
 
 {% block content %}
 
-<h1>Users</h1>
+<div class="page-header">
+    <h1>Users</h1>
+    <a class="button-primary" href="{% url 'user-create' %}">Create user</a>
+</div>
 
 <table class="list">
     <thead>
@@ -38,10 +41,13 @@
             </td>
             <td>{{ user.date_joined|date:'Y-m-d H:i' }}</td>
             <td>
-                {% if user.username == root_username or user.username == request.user.username %}
+                {% if user.username == root_username %}
                 <span class="muted">-</span>
                 {% else %}
                 <div class="actions">
+                    <a class="action" href="{% url 'user-edit' user.username %}">Edit</a>
+                    <a class="action" href="{% url 'user-change-password' user.username %}">Change password</a>
+                    {% if user.username != request.user.username %}
                     {% if user.is_active %}
                     <form method="post" action="{% url 'user-disable' user.username %}">
                         {% csrf_token %}
@@ -58,6 +64,7 @@
                         {% csrf_token %}
                         <button class="action danger" type="submit">Delete</button>
                     </form>
+                    {% endif %}
                 </div>
                 {% endif %}
             </td>

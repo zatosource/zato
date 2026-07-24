@@ -37,6 +37,9 @@ class UserEvent(models.Model):
     details     = models.TextField()
     created_at  = models.DateTimeField(default=timezone.now, db_index=True)
 
+    # Django adds the default manager dynamically, so it is declared here for the type checkers' sake
+    objects = models.Manager()
+
     class Meta:
         app_label = 'rule_engine_dashboard'
         db_table = 'rule_user_event'

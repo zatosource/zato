@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}Create user{% endblock %}
+
+{% block content %}
+
+<h1>Create user</h1>
+
+<form method="post" action="{% url 'user-create' %}" class="form-card">
+    {% csrf_token %}
+    <div class="form-row">
+        <label for="id_username">Username</label>
+        <input id="id_username" type="text" name="username" value="{{ username }}" autofocus>
+    </div>
+    <div class="form-row">
+        <label for="id_display_name">Display name</label>
+        <input id="id_display_name" type="text" name="display_name" value="{{ display_name }}">
+    </div>
+    <div class="form-row">
+        <label for="id_password">Password</label>
+        <input id="id_password" type="password" name="password">
+    </div>
+    <div class="form-row-checkbox">
+        <input id="id_is_admin" type="checkbox" name="is_admin" {% if is_admin %}checked{% endif %}>
+        <label for="id_is_admin">Admin</label>
+    </div>
+    <button class="button-primary" type="submit">Create</button>
+    <a class="action" href="{% url 'users' %}">Cancel</a>
+</form>
+
+{% endblock %}

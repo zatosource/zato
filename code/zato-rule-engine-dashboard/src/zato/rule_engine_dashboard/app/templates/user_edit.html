@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit user{% endblock %}
+
+{% block content %}
+
+<h1>Edit user {{ subject.username }}</h1>
+
+<form method="post" action="{% url 'user-edit' subject.username %}" class="form-card">
+    {% csrf_token %}
+    <div class="form-row">
+        <label for="id_display_name">Display name</label>
+        <input id="id_display_name" type="text" name="display_name" value="{{ subject.get_full_name }}" autofocus>
+    </div>
+    <div class="form-row-checkbox">
+        <input id="id_is_admin" type="checkbox" name="is_admin"
+            {% if subject.is_superuser %}checked{% endif %} {% if is_self %}disabled{% endif %}>
+        <label for="id_is_admin">Admin</label>
+    </div>
+    <div class="form-row-checkbox">
+        <input id="id_is_active" type="checkbox" name="is_active"
+            {% if subject.is_active %}checked{% endif %} {% if is_self %}disabled{% endif %}>
+        <label for="id_is_active">Active</label>
+    </div>
+    {% if is_self %}
+    <p class="muted">Your own role and status cannot be changed here.</p>
+    {% endif %}
+    <button class="button-primary" type="submit">Save</button>
+    <a class="action" href="{% url 'users' %}">Cancel</a>
+</form>
+
+{% endblock %}
