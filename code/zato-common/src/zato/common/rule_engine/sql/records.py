@@ -7,8 +7,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Local
-from .data import any_, RuleDecisionRecord, RuleDefinitionRecord, RuleEventRecord, RuleFollowRecord, \
-    RuleRecentRecord, RuleReferenceRecord, RuleVersionRecord, RuleViewRecord
+from .data import any_, RuleChatConfigRecord, RuleDecisionRecord, RuleDefinitionRecord, RuleEventRecord, \
+    RuleFollowRecord, RuleJobCursorRecord, RuleNotifyDestinationRecord, RuleRecentRecord, RuleReferenceRecord, \
+    RuleVersionRecord, RuleViewRecord
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -113,6 +114,45 @@ def recent_record(row:'any_') -> 'RuleRecentRecord':
 
     # .. and return a backend-owned immutable record.
     out = RuleRecentRecord(**values)
+    return out
+
+# ################################################################################################################################
+
+def chat_config_record(row:'any_') -> 'RuleChatConfigRecord':
+    """ Converts one SQL row into a detached chat-credentials record.
+    """
+    # Copy the SQLAlchemy mapping ..
+    mapping = row._mapping
+    values = dict(mapping)
+
+    # .. and return a backend-owned immutable record.
+    out = RuleChatConfigRecord(**values)
+    return out
+
+# ################################################################################################################################
+
+def destination_record(row:'any_') -> 'RuleNotifyDestinationRecord':
+    """ Converts one SQL row into a detached notification-destination record.
+    """
+    # Copy the SQLAlchemy mapping ..
+    mapping = row._mapping
+    values = dict(mapping)
+
+    # .. and return a backend-owned immutable record.
+    out = RuleNotifyDestinationRecord(**values)
+    return out
+
+# ################################################################################################################################
+
+def job_cursor_record(row:'any_') -> 'RuleJobCursorRecord':
+    """ Converts one SQL row into a detached job-cursor record.
+    """
+    # Copy the SQLAlchemy mapping ..
+    mapping = row._mapping
+    values = dict(mapping)
+
+    # .. and return a backend-owned immutable record.
+    out = RuleJobCursorRecord(**values)
     return out
 
 # ################################################################################################################################

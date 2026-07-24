@@ -42,6 +42,8 @@ reference_record_list:TypeAlias = list['RuleReferenceRecord']
 follow_record_list:TypeAlias = list['RuleFollowRecord']
 view_record_list:TypeAlias = list['RuleViewRecord']
 recent_record_list:TypeAlias = list['RuleRecentRecord']
+chat_config_record_list:TypeAlias = list['RuleChatConfigRecord']
+destination_record_list:TypeAlias = list['RuleNotifyDestinationRecord']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -252,6 +254,50 @@ class RuleRecentRecord(NamedTuple):
     definition_id: 'int'
     actor:         'str'
     visited_at:    'datetime'
+
+# ################################################################################################################################
+
+class RuleChatConfigRecord(NamedTuple):
+    """ One chat platform's encrypted credentials payload.
+    """
+
+    id:         'int'
+    cluster_id: 'int'
+    kind:       'str'
+    payload:    'str'
+    updated_at: 'datetime'
+    updated_by: 'str'
+
+# ################################################################################################################################
+
+class RuleNotifyDestinationRecord(NamedTuple):
+    """ One channel or person that one ruleset notifies, with its own delivery cursor.
+    """
+
+    id:               'int'
+    cluster_id:       'int'
+    definition_id:    'int'
+    kind:             'str'
+    target:           'str'
+    is_active:        'bool'
+    cursor_id:        'int'
+    last_status:      'str | None'
+    last_error:       'str | None'
+    last_delivery_at: 'datetime | None'
+    created_at:       'datetime'
+    created_by:       'str'
+
+# ################################################################################################################################
+
+class RuleJobCursorRecord(NamedTuple):
+    """ One named job's position in the event feed.
+    """
+
+    id:         'int'
+    cluster_id: 'int'
+    name:       'str'
+    last_id:    'int'
+    updated_at: 'datetime'
 
 # ################################################################################################################################
 # ################################################################################################################################

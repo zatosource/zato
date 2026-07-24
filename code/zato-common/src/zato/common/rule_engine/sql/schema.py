@@ -344,4 +344,87 @@ rule_recent_table = Table(
 _ = Index('rrec_actor', rule_recent_table.c.cluster_id, rule_recent_table.c.actor, rule_recent_table.c.visited_at)
 
 # ################################################################################################################################
+
+_chat_config_id         = Column('id', _integer_type, primary_key=True, autoincrement=True)
+_chat_config_cluster_id = Column('cluster_id', _integer_type, nullable=False)
+_chat_config_kind       = Column('kind', _string_64_type, nullable=False)
+_chat_config_payload    = Column('payload', _text_type, nullable=False)
+_chat_config_updated_at = Column('updated_at', _datetime_type, nullable=False)
+_chat_config_updated_by = Column('updated_by', _string_191_type, nullable=False)
+_chat_config_unique_kind = UniqueConstraint('cluster_id', 'kind', name='rcc_uq_kind')
+
+rule_chat_config_table = Table(
+    'rule_chat_config',
+    metadata,
+    _chat_config_id,
+    _chat_config_cluster_id,
+    _chat_config_kind,
+    _chat_config_payload,
+    _chat_config_updated_at,
+    _chat_config_updated_by,
+    _chat_config_unique_kind,
+)
+
+# ################################################################################################################################
+
+_destination_id                 = Column('id', _integer_type, primary_key=True, autoincrement=True)
+_destination_cluster_id         = Column('cluster_id', _integer_type, nullable=False)
+_destination_definition_foreign = ForeignKey('rule_definition.id', ondelete='RESTRICT')
+_destination_definition_id      = Column('definition_id', _integer_type, _destination_definition_foreign, nullable=False)
+_destination_kind               = Column('kind', _string_64_type, nullable=False)
+_destination_target             = Column('target', _string_191_type, nullable=False)
+_destination_is_active          = Column('is_active', _boolean_type, nullable=False)
+_destination_cursor_id          = Column('cursor_id', _integer_type, nullable=False)
+_destination_last_status        = Column('last_status', _string_64_type, nullable=True)
+_destination_last_error         = Column('last_error', _text_type, nullable=True)
+_destination_last_delivery_at   = Column('last_delivery_at', _datetime_type, nullable=True)
+_destination_created_at         = Column('created_at', _datetime_type, nullable=False)
+_destination_created_by         = Column('created_by', _string_191_type, nullable=False)
+_destination_unique_target      = UniqueConstraint('cluster_id', 'definition_id', 'kind', 'target', name='rnd_uq_target')
+_destination_cursor_check       = CheckConstraint('cursor_id >= 0', name='rnd_ck_cursor')
+
+rule_notify_destination_table = Table(
+    'rule_notify_destination',
+    metadata,
+    _destination_id,
+    _destination_cluster_id,
+    _destination_definition_id,
+    _destination_kind,
+    _destination_target,
+    _destination_is_active,
+    _destination_cursor_id,
+    _destination_last_status,
+    _destination_last_error,
+    _destination_last_delivery_at,
+    _destination_created_at,
+    _destination_created_by,
+    _destination_unique_target,
+    _destination_cursor_check,
+)
+
+_ = Index('rnd_parent', rule_notify_destination_table.c.cluster_id, rule_notify_destination_table.c.definition_id)
+
+# ################################################################################################################################
+
+_job_cursor_id         = Column('id', _integer_type, primary_key=True, autoincrement=True)
+_job_cursor_cluster_id = Column('cluster_id', _integer_type, nullable=False)
+_job_cursor_name       = Column('name', _string_64_type, nullable=False)
+_job_cursor_last_id    = Column('last_id', _integer_type, nullable=False)
+_job_cursor_updated_at = Column('updated_at', _datetime_type, nullable=False)
+_job_cursor_unique_name = UniqueConstraint('cluster_id', 'name', name='rjc_uq_name')
+_job_cursor_check       = CheckConstraint('last_id >= 0', name='rjc_ck_last_id')
+
+rule_job_cursor_table = Table(
+    'rule_job_cursor',
+    metadata,
+    _job_cursor_id,
+    _job_cursor_cluster_id,
+    _job_cursor_name,
+    _job_cursor_last_id,
+    _job_cursor_updated_at,
+    _job_cursor_unique_name,
+    _job_cursor_check,
+)
+
+# ################################################################################################################################
 # ################################################################################################################################

@@ -10,8 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django.urls import path
 
 # Zato
-from zato.rule_engine_dashboard.app.views import auth, decisions, editor, events, rulesets, tables, test_sets, users, \
-    versions, vocabulary
+from zato.rule_engine_dashboard.app.views import auth, decisions, editor, events, notifications, rulesets, tables, \
+    test_sets, users, versions, vocabulary
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -105,6 +105,28 @@ urlpatterns = [
     path('rules/test-sets/<int:test_set_id>/promote/', test_sets.test_set_promote, name='rules-test-set-promote'),
     path('rules/simulation/', test_sets.simulation_run, name='rules-simulation'),
     path('rules/champion-challenger/', test_sets.champion_challenger_run, name='rules-champion-challenger'),
+
+    # Notifications - chat credentials, destinations, the live picker and the event matrix
+    path('rules/notifications/chat-config/', notifications.chat_config_status, name='rules-chat-config'),
+    path('rules/notifications/chat-config/save/', notifications.chat_config_save, name='rules-chat-config-save'),
+    path('rules/notifications/chat-config/test/', notifications.chat_config_test, name='rules-chat-config-test'),
+    path('rules/notifications/targets/', notifications.target_list, name='rules-notification-targets'),
+    path('rules/notifications/matrix/', notifications.event_matrix, name='rules-notification-matrix'),
+    path(
+        'rules/rulesets/<int:definition_id>/destinations/',
+        notifications.destination_list,
+        name='rules-destination-list',
+    ),
+    path(
+        'rules/rulesets/<int:definition_id>/destinations/add/',
+        notifications.destination_add,
+        name='rules-destination-add',
+    ),
+    path(
+        'rules/notifications/destinations/<int:destination_id>/delete/',
+        notifications.destination_delete,
+        name='rules-destination-delete',
+    ),
 ]
 
 # ################################################################################################################################

@@ -10,7 +10,8 @@
 	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-pubsub-backend test-pubsub-backend-perf test-pubsub-backend-perf-mass test-pubsub-system-perf test-enmasse \
 	test-cli test-mcp _test-mcp test-bearer _test-bearer test-graphql test-grpc test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-llm test-hl7 test-hl7-volume test-ui test-ui-pubsub test-ui-openapi _test-ui test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-audit-log-ui test-alerting test-analytics test-analytics-ui test-demo-seed test-logging test-ibm-mq test-mongodb test-es \
-	test-rule-engine test-rule-engine-perf \
+	test-rule-engine test-rule-engine-perf test-rule-engine-jobs \
+	rule-engine-notify rule-engine-retention rule-engine-spike-alerts \
 	test-all test \
 	health-ruff health-clippy \
 	format format-zato \
@@ -331,6 +332,15 @@ cron-update:
 
 analytics: ## Aggregate new audit log events into the analytics store.
 	$(CURDIR)/code/bin/zato analytics rollup --verbose
+
+rule-engine-notify: ## Rule engine notification dispatcher - a resident loop running advisory suites and delivering to Slack and Teams.
+	$(ZATO_PY) -m zato.common.rule_engine.jobs.notify $(Zato_Rule_Engine_Job_Args)
+
+rule-engine-retention: ## Rule engine retention sweep - one pass deleting decisions past the retention window.
+	$(ZATO_PY) -m zato.common.rule_engine.jobs.retention $(Zato_Rule_Engine_Job_Args)
+
+rule-engine-spike-alerts: ## Rule engine spike sweep - one pass comparing the current hour's decisions against the typical rate.
+	$(ZATO_PY) -m zato.common.rule_engine.jobs.spikes $(Zato_Rule_Engine_Job_Args)
 
 stop-server:
 	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py stop-server
@@ -917,6 +927,19 @@ test-rule-engine: ## Rule engine tests - grammar, matching, round trip, the SQL 
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rule_views \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
+test-rule-engine-jobs: ## Rule engine job tests - credentials, destinations, the notify loop with chat simulators, retention and spike sweeps, fully offline.
+	$(CURDIR)/code/bin/ruff check \
+		$(CURDIR)/code/zato-common/src/zato/common/rule_engine/notify/ \
+		$(CURDIR)/code/zato-common/src/zato/common/rule_engine/jobs/ \
+		$(CURDIR)/code/tests/python/zato-common/rule_engine_jobs/
+	pyright \
+		$(CURDIR)/code/zato-common/src/zato/common/rule_engine/notify/ \
+		$(CURDIR)/code/zato-common/src/zato/common/rule_engine/jobs/
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/rule_engine_jobs/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rule_engine_jobs \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
 test-rule-engine-perf: ## Rule engine SQL backend performance tests against SQLite, MySQL and PostgreSQL, plain and TLS - ingest, batch, definitions, reporting and retention floors.
 	$(CURDIR)/code/bin/ruff check \
 		$(CURDIR)/code/tests/python/zato-common/rule_engine_perf/
@@ -1006,7 +1029,7 @@ test-request-response: ## Unified service I/O tests - messages, request.raw, req
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-all: test-server test-rest test-scheduler test-rate-limiting test-pubsub test-enmasse \
-	test-cli test-mcp test-bearer test-graphql test-grpc test-as2 test-as4 test-edifact test-x12 test-llm test-hl7 test-ui test-audit-log test-audit-log-ui test-alerting test-analytics test-demo-seed test-logging test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response test-rule-engine ## Everything.
+	test-cli test-mcp test-bearer test-graphql test-grpc test-as2 test-as4 test-edifact test-x12 test-llm test-hl7 test-ui test-audit-log test-audit-log-ui test-alerting test-analytics test-demo-seed test-logging test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response test-rule-engine test-rule-engine-jobs ## Everything.
 
 test: test-all ## Alias for test-all.
 

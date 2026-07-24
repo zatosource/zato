@@ -15,6 +15,7 @@ from .decisions import CapturePolicy, DecisionStore
 from .definitions import DefinitionStore
 from .events import EventStore
 from .follows import FollowStore
+from .notifications import NotificationStore
 from .reference_index import ReferenceIndex
 from .reporting import RuleReporting
 from .search import ContentSearch
@@ -47,15 +48,16 @@ class RuleSQLBackend:
         self.session_factory = session_factory
 
         # .. and expose each write pattern through its focused repository.
-        self.definitions = DefinitionStore(session_factory)
-        self.versions    = VersionStore(session_factory)
-        self.events      = EventStore(session_factory)
-        self.decisions   = DecisionStore(session_factory)
-        self.reporting   = RuleReporting(session_factory)
-        self.references  = ReferenceIndex(session_factory)
-        self.follows     = FollowStore(session_factory)
-        self.views       = ViewStore(session_factory)
-        self.search      = ContentSearch(session_factory)
+        self.definitions   = DefinitionStore(session_factory)
+        self.versions      = VersionStore(session_factory)
+        self.events        = EventStore(session_factory)
+        self.decisions     = DecisionStore(session_factory)
+        self.reporting     = RuleReporting(session_factory)
+        self.references    = ReferenceIndex(session_factory)
+        self.follows       = FollowStore(session_factory)
+        self.views         = ViewStore(session_factory)
+        self.search        = ContentSearch(session_factory)
+        self.notifications = NotificationStore(session_factory)
 
 # ################################################################################################################################
 

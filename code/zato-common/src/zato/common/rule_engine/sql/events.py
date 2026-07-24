@@ -13,7 +13,7 @@ from sqlalchemy import select
 from zato.common.defaults import default_cluster_id
 
 # Local
-from .data import anydict, event_record_list, RuleEventRecord
+from .data import anydict, event_record_list, RuleEventRecord, strlist
 from .database import SessionFactory
 from .errors import InvalidStoreInputError
 from .records import event_record
@@ -102,6 +102,61 @@ class EventStore:
         # .. request one stable page from newest to oldest ..
         event_id_descending = rule_event_table.c.id.desc()
         query = query.order_by(event_id_descending)
+        query = query.limit(limit)
+        session = self._session_factory()
+
+        # .. load the page ..
+        try:
+            result = session.execute(query)
+            out:'event_record_list' = []
+
+            for row in result:
+                record = event_record(row)
+                out.append(record)
+
+        # .. and release the read-only session.
+        finally:
+            session.close()
+
+        return out
+
+# ################################################################################################################################
+
+    def list_since(
+        self,
+        *,
+        since_id:'int',
+        definition_id:'int | None' = None,
+        event_types:'strlist | None' = None,
+        limit:'int' = 100,
+        ) -> 'event_record_list':
+        """ Returns events newer than a cursor, oldest first, for forward-reading consumers.
+        """
+        # Validate pagination before constructing the query ..
+        if limit < 1:
+            raise InvalidStoreInputError('Event list limit must be at least 1')
+
+        # .. start with the cluster shared by all feed views ..
+        query = select(rule_event_table)
+        cluster_condition = rule_event_table.c.cluster_id == default_cluster_id
+        query = query.where(cluster_condition)
+
+        # .. everything a consumer reads lies strictly past its cursor ..
+        cursor_condition = rule_event_table.c.id > since_id
+        query = query.where(cursor_condition)
+
+        # .. add the optional parent and event-type filters ..
+        if definition_id is not None:
+            definition_condition = rule_event_table.c.definition_id == definition_id
+            query = query.where(definition_condition)
+
+        if event_types is not None:
+            type_condition = rule_event_table.c.event_type.in_(event_types)
+            query = query.where(type_condition)
+
+        # .. request one stable page from oldest to newest ..
+        event_id_ascending = rule_event_table.c.id.asc()
+        query = query.order_by(event_id_ascending)
         query = query.limit(limit)
         session = self._session_factory()
 
