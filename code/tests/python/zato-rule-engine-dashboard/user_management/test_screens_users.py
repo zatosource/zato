@@ -385,7 +385,7 @@ class TestChangePassword:
         })
 
         assert response.status_code == FOUND
-        assert response['Location'] == '/profile/'
+        assert response['Location'] == '/rulesets/'
 
         other.refresh_from_db()
         assert other.check_password(other_password)

@@ -15,8 +15,8 @@ from zato.common.rule_engine.render import render_documents
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
 from zato.rule_engine_dashboard.app.storage import get_backend, get_manager
-from zato.rule_engine_dashboard.app.views.api import BadRequestError, definition_row, event_row, json_api, read_int, \
-    read_json, recent_row, required, serialize_all, view_row
+from zato.rule_engine_dashboard.app.views.api import BadRequestError, definition_row, event_row, follow_row, json_api, \
+    read_int, read_json, recent_row, required, serialize_all, view_row
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -172,6 +172,19 @@ def ruleset_unfollow(req:'any_', definition_id:'int') -> 'any_':
     backend.follows.unfollow(actor=req.user.username, definition_id=definition_id)
 
     out = JsonResponse({'definition_id': definition_id, 'is_following': False})
+    return out
+
+# ################################################################################################################################
+
+@json_api
+def follow_list(req:'any_') -> 'any_':
+    """ Everything the requesting user follows - the Followed chip and the row stars read this.
+    """
+    backend = get_backend()
+    records = backend.follows.list_followed(req.user.username)
+    items = serialize_all(records, follow_row)
+
+    out = JsonResponse({'items': items})
     return out
 
 # ################################################################################################################################

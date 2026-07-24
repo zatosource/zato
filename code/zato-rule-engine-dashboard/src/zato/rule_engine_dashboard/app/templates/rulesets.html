@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block page_title %}Rulesets{% endblock %}
+
+{% block styles %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'rule-engine/css/test.css' %}">
+<link rel="stylesheet" href="{% static 'rule-engine/css/log.css' %}">
+<link rel="stylesheet" href="{% static 'rule-engine/css/rulesets.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="main-column">
+  <div class="main-topbar">
+    <div class="main-topbar-line">
+      <h2>Rulesets</h2>
+      <span class="main-subtitle">everything lives here, searched by what the rules say, not just their names</span>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <input class="log-search rulesets-search" id="rulesets-search" type="text"
+      placeholder="Search rule text and names..."
+      data-tippy-content="Full text: typing score finds every rule mentioning it, anywhere.">
+    <button class="button-ghost rulesets-chip toggled" data-view="all" onclick="rulesetsView.setView(this, 'all')">All</button>
+    <button class="button-ghost rulesets-chip" data-view="live" onclick="rulesetsView.setView(this, 'live')">Live</button>
+    <button class="button-ghost rulesets-chip" data-view="drafts" onclick="rulesetsView.setView(this, 'drafts')">Drafts</button>
+    <button class="button-ghost rulesets-chip" data-view="followed" onclick="rulesetsView.setView(this, 'followed')">Followed</button>
+    <span id="rulesets-saved-views"></span>
+    <button class="button-ghost" id="rulesets-save-view-button" onclick="rulesetsView.openSaveViewPanel(this)"
+      data-tippy-content="Saves the current search and view filter as a named chip here. Views stay few and named, there is a cap.">Save view</button>
+    <span class="toolbar-separator"></span>
+    <span id="rulesets-count" class="rulesets-count"></span>
+    <button class="button-ghost" onclick="rulesetsView.newRuleset()"
+      data-tippy-content="One pasted example payload is enough to start, the vocabulary screen shows the whole path.">New ruleset</button>
+    <span class="keyboard-hint"><kbd>/</kbd> searches, <kbd>Arrows</kbd> walk the list, <kbd>Enter</kbd> opens, right-click a row for its menu</span>
+  </div>
+
+  <!-- The recents strip, hidden until something was opened -->
+  <div class="rulesets-recents" id="rulesets-recents"></div>
+
+  <!-- The list on the left, the feed or one ruleset's preview on the right -->
+  <div class="rulesets-split">
+    <div class="rulesets-list" id="rulesets-list"></div>
+    <div class="pane-resizer pane-resizer-vertical" id="rulesets-side-resizer"></div>
+    <div class="rulesets-side" id="rulesets-side"></div>
+  </div>
+
+  <div class="problems-panel">
+    <div class="problems-head" id="problems-head">Problems</div>
+    <div class="problems-list" id="problems-list"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block screen_scripts %}
+<script src="{% static 'rule-engine/js/data.js' %}"></script>
+<script src="{% static 'rule-engine/js/rulesets-model.js' %}"></script>
+<script src="{% static 'rule-engine/js/rulesets-render.js' %}"></script>
+<script src="{% static 'rule-engine/js/rulesets-actions.js' %}"></script>
+<script src="{% static 'rule-engine/js/rulesets-menu.js' %}"></script>
+{% endblock %}

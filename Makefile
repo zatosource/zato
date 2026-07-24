@@ -11,7 +11,7 @@
 	test-cli test-mcp _test-mcp test-bearer _test-bearer test-graphql test-grpc test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-llm test-hl7 test-hl7-volume test-ui test-ui-pubsub test-ui-openapi _test-ui test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-audit-log-ui test-alerting test-analytics test-analytics-ui test-demo-seed test-logging test-ibm-mq test-mongodb test-es \
 	test-rule-engine test-rule-engine-perf test-rule-engine-jobs \
-	rule-engine-notify rule-engine-retention rule-engine-spike-alerts \
+	rule-engine-notify rule-engine-retention rule-engine-spike-alerts rule-engine-dashboard \
 	test-all test \
 	health-ruff health-clippy \
 	format format-zato \
@@ -22,7 +22,7 @@
 	geiger geiger-zato \
 	rust-lint lint \
 	hl7-haproxy hl7-backend-mllp hl7-backend-rest hl7-send-message \
-	quickstart dashboard server listener haproxy dev sbom scalar-update
+	quickstart dashboard server listener haproxy dev sbom scalar-update themes
 
 SHELL := /bin/bash
 .SHELLFLAGS := -o pipefail -c
@@ -51,14 +51,12 @@ Zato_Test_Python := $(ZATO_PY)
 include $(CURDIR)/code/tests/check.mk
 
 # ----------------------------------------------------------------------------
-# Zato_Projects_Root - needed by health, test, and lint targets only.
+# Zato_Health_Root - needed by health, test, and lint targets only.
 # Existing build/install/clean/restart targets work without it.
 # ----------------------------------------------------------------------------
 
-ifdef Zato_Projects_Root
-Zato_Health := $(Zato_Projects_Root)/private-zato-health
+Zato_Health := $(Zato_Health_Root)
 Zato_Libs   := $(CURDIR)/code/zato-libs
-endif
 
 FAIL_ON_FIRST   ?=
 SKIP_PASSED_F   ?=
@@ -132,15 +130,15 @@ queue-bridge-build: mq-client
 
 fhir-rust-build:
 	@echo ">>> Building FHIR Rust extension"
-	@if [ -z "$(Zato_Health)" ]; then echo "ERROR: Zato_Projects_Root is not set"; exit 1; fi
+	@if [ -z "$(Zato_Health)" ]; then echo "ERROR: Zato_Health_Root is not set"; exit 1; fi
 	$(MAKE) -C $(Zato_Health) fhir-rust-build
 
 fhir-rust-clean:
-	@if [ -z "$(Zato_Health)" ]; then echo "ERROR: Zato_Projects_Root is not set"; exit 1; fi
+	@if [ -z "$(Zato_Health)" ]; then echo "ERROR: Zato_Health_Root is not set"; exit 1; fi
 	rm -rf $(Zato_Health)/rust/target
 
 health-build: ## Build the healthcare Rust extensions and copy .so files into zato-libs.
-	@if [ -z "$(Zato_Health)" ]; then echo "ERROR: Zato_Projects_Root is not set"; exit 1; fi
+	@if [ -z "$(Zato_Health)" ]; then echo "ERROR: Zato_Health_Root is not set"; exit 1; fi
 	$(MAKE) -C $(Zato_Health) build
 
 
@@ -173,9 +171,17 @@ dashboard:
 	clear
 	cd ~/env/qs-1/ && zato start web-admin/ --fg --verbose
 
+# The database the rule engine dashboard and the server share - the server runs
+# the rules and logs decisions there, the dashboard reads and edits everything
+Zato_Rule_Engine_Dashboard_DB_URL ?= sqlite:///$(HOME)/env/qs-1/zato-rule-engine-dashboard.db
+
 server:
 	clear
-	cd ~/env/qs-1/ && zato start server1/ --fg --verbose
+	cd ~/env/qs-1/ && Zato_Rule_Engine_Dashboard_DB_URL=$(Zato_Rule_Engine_Dashboard_DB_URL) zato start server1/ --fg --verbose
+
+rule-engine-dashboard:
+	clear
+	Zato_Rule_Engine_Dashboard_DB_URL=$(Zato_Rule_Engine_Dashboard_DB_URL) $(ZATO_PY) -m zato.rule_engine_dashboard.app.run
 
 scheduler:
 	clear
@@ -226,7 +232,7 @@ install-deps: ## Create local venv and install test dependencies.
 	cd $(CURDIR)/code/tests && uv pip install -r requirements.txt
 
 health-install: ## Install health deps and build.
-	@if [ -z "$(Zato_Health)" ]; then echo "ERROR: Zato_Projects_Root is not set"; exit 1; fi
+	@if [ -z "$(Zato_Health)" ]; then echo "ERROR: Zato_Health_Root is not set"; exit 1; fi
 	$(MAKE) -C $(Zato_Health) install
 
 server-install: server-build
@@ -263,7 +269,7 @@ queue-bridge-clean:
 
 
 health-clean: ## Clean health build artifacts and zato-libs entries.
-	@if [ -z "$(Zato_Health)" ]; then echo "ERROR: Zato_Projects_Root is not set"; exit 1; fi
+	@if [ -z "$(Zato_Health)" ]; then echo "ERROR: Zato_Health_Root is not set"; exit 1; fi
 	$(MAKE) -C $(Zato_Health) clean
 
 # ############################################################################
@@ -302,12 +308,17 @@ sbom: ## Generate a CycloneDX SBOM of the Python environment.
 		--spec-version 1.6 \
 		--mc-type application \
 		--output-file $(CURDIR)/sbom/zato.cdx.json
+# Locally installed packages carry file:// distribution URLs that expose build machine paths
 	@$(CURDIR)/code/bin/python -c "\
 	import json; \
-	sbom = json.load(open('$(CURDIR)/sbom/zato.cdx.json')); \
+	path = '$(CURDIR)/sbom/zato.cdx.json'; \
+	sbom = json.load(open(path)); \
+	strip = lambda item: item | {'externalReferences': [elem for elem in item['externalReferences'] if not elem['url'].startswith('file://')]}; \
+	sbom['components'] = [strip(item) if 'externalReferences' in item else item for item in sbom['components']]; \
+	json.dump(sbom, open(path, 'w'), indent=2); \
 	components = sbom['components']; \
 	suffix = 'component' if len(components) == 1 else 'components'; \
-	print(f'>>> Wrote $(CURDIR)/sbom/zato.cdx.json ({len(components)} {suffix})'); \
+	print(f'>>> Wrote {path} ({len(components)} {suffix})'); \
 	"
 
 scalar-update: ## Re-download the Scalar bundle pinned in zato-openapi/package.json into the console's static directory.
@@ -315,6 +326,9 @@ scalar-update: ## Re-download the Scalar bundle pinned in zato-openapi/package.j
 	echo ">>> Downloading @scalar/api-reference@$$version" && \
 	curl -fL https://cdn.jsdelivr.net/npm/@scalar/api-reference@$$version/dist/browser/standalone.min.js -o $(SCALAR_BUNDLE) && \
 	echo ">>> Wrote $(SCALAR_BUNDLE)"
+
+themes: ## Regenerate the webapp UI kit's theme css files, themes-index.js and themes.html from the sources in themes-in/.
+	$(ZATO_PY) -m zato.common.webapp.ui.themes
 
 help:
 	grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -1165,13 +1179,13 @@ geiger: geiger-zato ## Report unsafe usage everywhere.
 rust-lint: format clippy dylint deny vet geiger ## Full Rust static analysis pipeline.
 
 health-ruff: ## Run ruff inside the health repo.
-	@if [ -z "$(Zato_Health)" ]; then echo "ERROR: Zato_Projects_Root is not set"; exit 1; fi
+	@if [ -z "$(Zato_Health)" ]; then echo "ERROR: Zato_Health_Root is not set"; exit 1; fi
 	$(MAKE) -C $(Zato_Health) ruff
 
 lint: rust-lint ## Full static analysis pipeline.
 
 health-clippy: ## Run clippy inside the health repo.
-	@if [ -z "$(Zato_Health)" ]; then echo "ERROR: Zato_Projects_Root is not set"; exit 1; fi
+	@if [ -z "$(Zato_Health)" ]; then echo "ERROR: Zato_Health_Root is not set"; exit 1; fi
 	$(MAKE) -C $(Zato_Health) clippy
 
 # ############################################################################

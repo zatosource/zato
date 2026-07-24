@@ -1,10 +1,9 @@
 {% extends 'base.html' %}
 
-{% block title %}Events{% endblock %}
+{% block page_title %}Events{% endblock %}
+{% block screen_title %}Events{% endblock %}
 
-{% block content %}
-
-<h1>Events</h1>
+{% block main %}
 
 <form method="get" action="{% url 'events' %}" class="filters">
     <input type="text" name="actor" value="{{ actor }}" placeholder="Actor">
