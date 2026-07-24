@@ -1,10 +1,9 @@
 {% extends 'base.html' %}
 
-{% block title %}Edit user{% endblock %}
+{% block page_title %}Edit user{% endblock %}
+{% block screen_title %}Edit user {{ subject.username }}{% endblock %}
 
-{% block content %}
-
-<h1>Edit user {{ subject.username }}</h1>
+{% block main %}
 
 <form method="post" action="{% url 'user-edit' subject.username %}" class="form-card">
     {% csrf_token %}

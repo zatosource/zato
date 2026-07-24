@@ -1,0 +1,29 @@
+{
+	"$schema": "vscode://schemas/color-theme",
+	"name": "Zato Default",
+	"type": "dark",
+	"colors": {
+		"editor.background": "#0f172a",
+		"editor.foreground": "#e2e8f0",
+		"foreground": "#cbd5e1",
+		"descriptionForeground": "#8091a8",
+		"disabledForeground": "#6d7f99",
+		"sideBar.background": "#0b1222",
+		"editorWidget.background": "#1e293b",
+		"panel.border": "#334155",
+		"textLink.foreground": "#3b82f6",
+		"button.background": "#2563eb",
+		"button.hoverBackground": "#1d4ed8",
+		"button.foreground": "#ffffff",
+		"input.background": "#0f172a",
+		"scrollbarSlider.background": "#334155",
+		"scrollbarSlider.hoverBackground": "#475569",
+		"list.hoverBackground": "#17233c",
+		"list.inactiveSelectionBackground": "#1a2742",
+		"list.activeSelectionBackground": "#1c2c4f",
+		"editorError.foreground": "#ef4444",
+		"editorWarning.foreground": "#f59e0b",
+		"charts.green": "#22c55e",
+		"charts.purple": "#6366f1"
+	}
+}

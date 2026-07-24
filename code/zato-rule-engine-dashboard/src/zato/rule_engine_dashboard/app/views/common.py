@@ -113,13 +113,9 @@ def set_display_name(user:'any_', display_name:'str') -> 'None':
 # ################################################################################################################################
 
 def default_screen(user:'any_') -> 'str':
-    """ The screen a person lands on by default - the users list for admins, the profile for everyone else.
+    """ The screen a person lands on by default - the rulesets home, the front door of the product.
     """
-    if user.is_superuser:
-        out = resolve_url('users')
-    else:
-        out = resolve_url('profile')
-
+    out = resolve_url('rulesets')
     return out
 
 # ################################################################################################################################

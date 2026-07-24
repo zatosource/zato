@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block page_title %}Rule editor{% endblock %}
+
+{% block styles %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'rule-engine/css/editor.css' %}">
+{% endblock %}
+
+{% block content %}
+<!-- Main column -->
+<div class="main-column">
+  <div class="main-topbar">
+    <div class="main-topbar-line">
+      <h2>Rule editor</h2>
+      <span class="main-subtitle" id="main-subtitle"></span>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <span class="view-switcher"
+      data-tippy-content="Four renderings of the same stored document: the sentence, its expression form, the table geometry and the canonical artifact itself. Nothing is generated one-way and nothing can drift, an edit in any editable view lands in the one document.">
+      <button class="button-ghost toggled" id="view-sentence" onclick="editorView.setView('sentence')">Sentence</button>
+      <button class="button-ghost" id="view-expression" onclick="editorView.setView('expression')">Expression</button>
+      <button class="button-ghost" id="view-table" onclick="editorView.setView('table')">Table</button>
+      <button class="button-ghost" id="view-document" onclick="editorView.setView('document')">Document</button>
+    </span>
+    <button class="button-ghost" onclick="editorView.openRuleMenu(event)"
+      data-tippy-content="Every rule of this ruleset, the editor works on one at a time.">Rules</button>
+    <span class="toolbar-separator"></span>
+    <span class="keyboard-hint"><kbd>Arrows</kbd> walk the sentence, <kbd>Enter</kbd> opens the choices of the focused part</span>
+    <button class="button-ghost" onclick="editorView.openTests()"
+      data-tippy-content="Opens the test set for this ruleset, testing lives one click away from authoring.">Test</button>
+    <button class="button-primary" onclick="editorView.save(this)"
+      data-tippy-content="Stores the whole ruleset with this rule swapped in, as a new version. Publishing stays a separate, deliberate step.">Save</button>
+  </div>
+
+  <div class="editor-area" id="editor-area"></div>
+
+  <div class="live-panel" id="live-panel"></div>
+
+  <div class="problems-panel">
+    <div class="problems-head" id="problems-head">Problems</div>
+    <div class="problems-list" id="problems-list"></div>
+  </div>
+</div>
+
+<!-- Vocabulary pane -->
+<div class="vocabulary-pane" id="vocabulary-pane">
+  <div class="vocabulary-head">
+    <span class="vocabulary-head-label">Vocabulary</span>
+    <button class="vocabulary-collapse" id="vocabulary-collapse-button" onclick="shared.toggleVocabulary()"></button>
+  </div>
+  <div class="vocabulary-hint">Click an attribute to start a new condition for it, or drag it onto a line to append, or onto an existing condition or action to insert right after it.</div>
+  <div class="vocabulary-list" id="vocabulary-list"></div>
+</div>
+{% endblock %}
+
+{% block screen_scripts %}
+<script src="{% static 'rule-engine/js/data.js' %}"></script>
+<script src="{% static 'rule-engine/js/vocabulary.js' %}"></script>
+<script src="{% static 'rule-engine/js/editor-model.js' %}"></script>
+<script src="{% static 'rule-engine/js/editor-render.js' %}"></script>
+<script src="{% static 'rule-engine/js/editor-live.js' %}"></script>
+<script src="{% static 'rule-engine/js/editor-drag.js' %}"></script>
+<script src="{% static 'rule-engine/js/editor-actions.js' %}"></script>
+{% endblock %}

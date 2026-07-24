@@ -31,12 +31,15 @@ DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 
-# Application definition
+# Application definition - the shared webapp UI kit contributes its templates
+# and static files through the standard Django loaders.
 INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'zato.common.webapp.ui',
     'zato.rule_engine_dashboard.app',
 ]
 
@@ -68,6 +71,8 @@ TEMPLATES = [
         },
     },
 ]
+
+STATIC_URL = 'static/'
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 SESSION_COOKIE_NAME = 'zato-rule-engine-dashboard'

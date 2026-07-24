@@ -1,0 +1,8 @@
+{
+	"meta": {
+		"name": "Ayu Dark",
+		"origin": "https://github.com/ayu-theme/vscode-ayu, the built ayu-dark.json",
+		"license": "MIT"
+	},
+	"tokens": {}
+}

@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block page_title %}Vocabulary{% endblock %}
+
+{% block styles %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'rule-engine/css/test.css' %}">
+<link rel="stylesheet" href="{% static 'rule-engine/css/log.css' %}">
+<link rel="stylesheet" href="{% static 'rule-engine/css/vocabulary.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="main-column">
+  <div class="main-topbar">
+    <div class="main-topbar-line">
+      <h2>Vocabulary</h2>
+      <span class="main-subtitle" id="main-subtitle"></span>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <input class="log-search" id="vocabulary-filter" type="text" placeholder="Filter terms..."
+      data-tippy-content="Matches names and phrases, the list stays scannable.">
+    <span class="toolbar-separator"></span>
+    <span class="keyboard-hint"><kbd>/</kbd> jumps to the filter, <kbd>Arrows</kbd> walk the terms, right-click a term for its menu</span>
+    <button class="button-ghost" id="vocabulary-payload-button"
+      onclick="vocabularyView.openPayloadPanel(this)"
+      data-tippy-content="Paste one example JSON payload, the terms fall out of it: names from the fields, types from the values.">Add from example</button>
+    <button class="button-ghost" id="vocabulary-rules-button"
+      onclick="vocabularyView.openRulesPanel(this)"
+      data-tippy-content="Paste typed rules, every unknown term they use comes back as a proposal with its type inferred from usage.">Add from rules</button>
+  </div>
+
+  <!-- The term tree on the left, one term's story on the right -->
+  <div class="vocabulary-split">
+    <div class="vocabulary-tree-pane" id="vocabulary-tree-pane">
+      <div class="vocabulary-tree-head">
+        <span id="vocabulary-tree-count"></span>
+        <button class="button-mini" id="vocabulary-add-button" onclick="vocabularyView.openAddPanel(this)"
+          data-tippy-content="A new entity or term, by hand: entity, name and type, the rest is edited in place afterwards.">Add term</button>
+      </div>
+      <div class="vocabulary-tree-list" id="vocabulary-tree-list"></div>
+    </div>
+    <div class="pane-resizer pane-resizer-vertical" id="vocabulary-tree-resizer"></div>
+    <div class="vocabulary-detail-pane" id="vocabulary-detail-pane"></div>
+  </div>
+
+  <div class="problems-panel">
+    <div class="problems-head" id="problems-head">Problems</div>
+    <div class="problems-list" id="problems-list"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block screen_scripts %}
+<script src="{% static 'rule-engine/js/data.js' %}"></script>
+<script src="{% static 'rule-engine/js/vocabulary.js' %}"></script>
+<script src="{% static 'rule-engine/js/vocabulary-model.js' %}"></script>
+<script src="{% static 'rule-engine/js/vocabulary-render.js' %}"></script>
+<script src="{% static 'rule-engine/js/vocabulary-actions.js' %}"></script>
+<script src="{% static 'rule-engine/js/vocabulary-menu.js' %}"></script>
+<script src="{% static 'rule-engine/js/vocabulary-drag.js' %}"></script>
+{% endblock %}

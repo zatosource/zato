@@ -34,26 +34,26 @@ if 0:
 
 class TestSignIn:
 
-    def test_admin_lands_on_the_users_list(self:'any_') -> 'None':
+    def test_admin_lands_on_the_rulesets_home(self:'any_') -> 'None':
         user, password = new_account(is_admin=True)
         client = Client()
 
         response:'any_' = client.post('/login/', {'username': user.username, 'password': password, 'next': ''})
 
         assert response.status_code == FOUND
-        assert response['Location'] == '/users/'
+        assert response['Location'] == '/rulesets/'
         assert is_signed_in(client)
 
 # ################################################################################################################################
 
-    def test_regular_user_lands_on_the_profile(self:'any_') -> 'None':
+    def test_regular_user_lands_on_the_rulesets_home(self:'any_') -> 'None':
         user, password = new_account()
         client = Client()
 
         response:'any_' = client.post('/login/', {'username': user.username, 'password': password, 'next': ''})
 
         assert response.status_code == FOUND
-        assert response['Location'] == '/profile/'
+        assert response['Location'] == '/rulesets/'
         assert is_signed_in(client)
 
 # ################################################################################################################################
@@ -77,7 +77,7 @@ class TestSignIn:
             '/login/', {'username': user.username, 'password': password, 'next': 'https://example.com/elsewhere'})
 
         assert response.status_code == FOUND
-        assert response['Location'] == '/users/'
+        assert response['Location'] == '/rulesets/'
 
 # ################################################################################################################################
 

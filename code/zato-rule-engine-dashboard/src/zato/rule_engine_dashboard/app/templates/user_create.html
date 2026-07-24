@@ -1,10 +1,9 @@
 {% extends 'base.html' %}
 
-{% block title %}Create user{% endblock %}
+{% block page_title %}Create user{% endblock %}
+{% block screen_title %}Create user{% endblock %}
 
-{% block content %}
-
-<h1>Create user</h1>
+{% block main %}
 
 <form method="post" action="{% url 'user-create' %}" class="form-card">
     {% csrf_token %}

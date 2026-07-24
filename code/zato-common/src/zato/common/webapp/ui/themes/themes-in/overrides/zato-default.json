@@ -1,0 +1,15 @@
+{
+	"meta": {
+		"origin": "authored here, this is our own palette in the VS Code theme format",
+		"license": "same as the product"
+	},
+	"tokens": {
+		"--panel-raised": "#182236",
+		"--text3": "#94a3b8",
+		"--filter-row-background": "#1b2030",
+		"--filter-span-background": "#151a28",
+		"--sentence-bar-background": "#131c31",
+		"--problems-background": "#191d2e",
+		"--problems-border": "#334155"
+	}
+}

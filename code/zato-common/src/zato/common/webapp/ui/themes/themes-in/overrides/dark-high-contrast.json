@@ -1,0 +1,10 @@
+{
+	"meta": {
+		"origin": "https://github.com/microsoft/vscode, extensions/theme-defaults/themes/hc_black.json",
+		"license": "MIT",
+		"type": "dark"
+	},
+	"tokens": {
+		"--border": "#6fc3df"
+	}
+}

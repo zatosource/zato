@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django.urls import path
 
 # Zato
-from zato.rule_engine_dashboard.app.views import auth, decisions, editor, events, notifications, rulesets, tables, \
+from zato.rule_engine_dashboard.app.views import auth, decisions, editor, events, notifications, rulesets, screens, tables, \
     test_sets, users, versions, vocabulary
 
 # ################################################################################################################################
@@ -38,6 +38,15 @@ urlpatterns = [
     # The event trail
     path('events/', events.events_list, name='events'),
 
+    # The screens, one route per screen, each behind login
+    path('rulesets/', screens.rulesets, name='rulesets'),
+    path('editor/', screens.editor, name='editor'),
+    path('tables/', screens.tables, name='tables'),
+    path('tests/', screens.tests, name='tests'),
+    path('versions/', screens.versions, name='versions'),
+    path('decision-log/', screens.decision_log, name='decision-log'),
+    path('vocabulary/', screens.vocabulary, name='vocabulary'),
+
     # Rulesets home
     path('rules/rulesets/', rulesets.ruleset_list, name='rules-ruleset-list'),
     path('rules/search/', rulesets.ruleset_search, name='rules-search'),
@@ -47,6 +56,7 @@ urlpatterns = [
     path('rules/rulesets/<int:definition_id>/follow/', rulesets.ruleset_follow, name='rules-ruleset-follow'),
     path('rules/rulesets/<int:definition_id>/unfollow/', rulesets.ruleset_unfollow, name='rules-ruleset-unfollow'),
     path('rules/rulesets/<int:definition_id>/seen/', rulesets.ruleset_mark_seen, name='rules-ruleset-seen'),
+    path('rules/follows/', rulesets.follow_list, name='rules-follow-list'),
 
     # Saved views and recents
     path('rules/views/', rulesets.view_list, name='rules-view-list'),

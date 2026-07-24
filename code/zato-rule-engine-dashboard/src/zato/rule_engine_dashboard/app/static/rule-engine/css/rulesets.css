@@ -1,0 +1,97 @@
+/* ------------------------------------------------------------ */
+/* Rulesets home - toolbar and the split layout                  */
+/* ------------------------------------------------------------ */
+
+.rulesets-search{width:320px}
+.rulesets-chip{padding:4px 12px}
+.rulesets-count{font-size:11.5px;color:var(--text4)}
+
+.rulesets-saved-chip{display:inline-flex;align-items:center;gap:6px}
+.rulesets-view-x{display:inline-flex;color:var(--text5);cursor:pointer}
+.rulesets-view-x:hover{color:var(--red)}
+
+/* ------------------------------------------------------------ */
+/* Rulesets home - the recents strip                             */
+/* ------------------------------------------------------------ */
+
+.rulesets-recents{display:flex;align-items:center;gap:8px;padding:6px 24px;border-bottom:1px solid var(--border)}
+.rulesets-recents-label{font-size:11px;color:var(--text5);text-transform:uppercase;letter-spacing:0.05em}
+.rulesets-recent-chip{padding:3px 11px;font-size:11.5px}
+
+.rulesets-split{flex:1;display:flex;overflow:hidden}
+.rulesets-list{flex:1;overflow:auto;padding:10px 0 16px}
+.rulesets-side{width:380px;flex-shrink:0;overflow:auto;background:var(--chrome);padding:14px 18px}
+
+/* ------------------------------------------------------------ */
+/* Rulesets home - the rows, status always visible               */
+/* ------------------------------------------------------------ */
+
+.rulesets-row{display:flex;align-items:flex-start;gap:18px;padding:10px 24px;cursor:pointer}
+.rulesets-row:nth-child(even){background:var(--panel-raised)}
+.rulesets-row:hover{background:var(--cell-hover)}
+.rulesets-row-selected,.rulesets-row-selected:nth-child(even){background:var(--column-selected)}
+
+.rulesets-row-main{flex:1;min-width:0}
+.rulesets-row-name{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600}
+.rulesets-open-link{color:var(--text);text-decoration:none}
+.rulesets-open-link:hover{color:var(--blue)}
+.rulesets-row-description{margin-top:2px;font-size:12px;color:var(--text4)}
+
+.rulesets-star{display:inline-flex;color:var(--text5);cursor:pointer}
+.rulesets-star-on{color:var(--amber)}
+.rulesets-star-on svg{fill:currentColor}
+
+.rulesets-badge{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;border-radius:3px;padding:1px 7px}
+.rulesets-badge-live{background:var(--green-tint-14);color:var(--green)}
+.rulesets-badge-draft{background:var(--indigo-tint-16);color:var(--indigo)}
+.rulesets-badge-problems{border:1px dashed var(--amber);color:var(--amber)}
+
+/* The publish button lives right next to the draft badge it acts on */
+.rulesets-publish{color:var(--green)}
+
+/* The lines of the publish confirmation and its closing report */
+.rulesets-publish-line{padding:5px 14px;font-size:12.5px;color:var(--text3);line-height:1.45;max-width:440px}
+.rulesets-publish-warning{color:var(--amber)}
+
+.rulesets-row-columns{display:flex;flex-direction:column;gap:3px;width:330px;flex-shrink:0;font-size:11.5px;color:var(--text4)}
+.rulesets-cell-change{color:var(--text5)}
+
+.rulesets-empty{padding:18px 24px;font-size:12.5px;color:var(--text5);font-style:italic}
+.rulesets-more{padding:10px 24px;font-size:11.5px;color:var(--text5);font-style:italic}
+
+/* ------------------------------------------------------------ */
+/* Rulesets home - full-text matches, readable sentences         */
+/* ------------------------------------------------------------ */
+
+.rulesets-match{margin-top:5px;padding:4px 10px;background:var(--panel);border-radius:5px;font-size:12px;color:var(--text3);max-width:640px}
+.rulesets-match-where{margin-left:9px;font-size:10px;color:var(--text5);text-transform:uppercase;letter-spacing:0.05em}
+.rulesets-match-overflow{margin-top:4px;font-size:11.5px;color:var(--text5);font-style:italic}
+.rulesets-mark{background:var(--blue-tint-28);color:var(--text);border-radius:2px;padding:0 1px}
+
+/* ------------------------------------------------------------ */
+/* Rulesets home - term cross-references into the vocabulary     */
+/* ------------------------------------------------------------ */
+
+.rulesets-term-strip{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:2px 24px 8px;padding:7px 12px;background:var(--panel);border-radius:6px}
+.rulesets-term-strip-label{font-size:11px;color:var(--text5);text-transform:uppercase;letter-spacing:0.05em}
+.rulesets-term-link{display:inline-flex;align-items:baseline;gap:7px;font-size:11.5px;font-family:var(--mono);color:var(--blue);text-decoration:none;background:var(--panel-raised);border-radius:5px;padding:3px 10px}
+.rulesets-term-link:hover{background:var(--column-selected);color:var(--text)}
+.rulesets-term-count{font-size:10px;font-family:var(--font);color:var(--text5)}
+.rulesets-term-deprecated{font-size:9.5px;font-family:var(--font);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--amber)}
+.rulesets-term-overflow{font-size:11.5px;color:var(--text5);font-style:italic}
+.rulesets-preview-terms{display:flex;flex-wrap:wrap;gap:6px}
+
+/* ------------------------------------------------------------ */
+/* Rulesets home - the side pane: feed, then preview             */
+/* ------------------------------------------------------------ */
+
+.rulesets-feed-entry{margin-bottom:12px}
+.rulesets-feed-head{font-size:11.5px;color:var(--text4)}
+.rulesets-feed-ruleset{color:var(--blue);font-weight:600}
+.rulesets-feed-what{margin-top:2px;font-size:12.5px;color:var(--text3)}
+
+.rulesets-preview-description{margin-bottom:8px;font-size:12.5px;color:var(--text3)}
+.rulesets-preview-links{display:flex;flex-wrap:wrap;gap:8px}
+.rulesets-preview-link{font-size:12px;color:var(--blue);text-decoration:none;background:var(--panel);border-radius:5px;padding:4px 11px}
+.rulesets-preview-link:hover{background:var(--column-selected);color:var(--text)}
+.rulesets-preview-note{font-size:11.5px;color:var(--text5);font-style:italic;margin:6px 0}
