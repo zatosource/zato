@@ -11,6 +11,7 @@ import os
 from logging import getLogger
 
 # Zato
+from zato.rule_engine_dashboard.app.storage import init_storage
 from zato.rule_engine_dashboard.app.user_rules import Root_Username
 
 # ################################################################################################################################
@@ -93,11 +94,12 @@ def ensure_root_admin() -> 'None':
 
 def bootstrap() -> 'None':
     """ Everything the application needs before it can serve anyone - Django itself,
-    its tables and the root account.
+    its tables, the root account and the rule engine's own storage.
     """
     setup_django()
     create_tables()
     ensure_root_admin()
+    init_storage()
 
 # ################################################################################################################################
 # ################################################################################################################################
