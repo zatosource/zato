@@ -10,8 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import json
 
 # Zato
-from zato.common.rule_engine.sql.constants import Event_Type_Advisory_Run, Event_Type_Decisions_Spiked, \
-    Event_Type_Version_Published, Event_Type_Version_Restored
+from zato.common.rule_engine.sql.constants import Event_Type_Advisory_Run, Event_Type_Approval_Requested, \
+    Event_Type_Decisions_Spiked, Event_Type_Version_Approved, Event_Type_Version_Published, Event_Type_Version_Restored
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,6 +39,19 @@ Notification_Matrix = (
         'example': "'Loan approval' was rolled back to version 11 by Mike, now live as version 14.",
     },
     {
+        'code': Event_Type_Approval_Requested,
+        'name': 'A version awaits approval',
+        'description': 'A new version of this ruleset was saved while the approval gate is on - ' +
+            'it cannot go live until someone approves it.',
+        'example': "Version 12 of 'Loan approval' by Sarah awaits approval.",
+    },
+    {
+        'code': Event_Type_Version_Approved,
+        'name': 'A version is approved',
+        'description': 'A named approver signed off one exact version of this ruleset, clearing it for publication.',
+        'example': "Version 12 of 'Loan approval' was approved by Mike.",
+    },
+    {
         'code': Event_Type_Advisory_Run,
         'name': 'Advisory tests fail',
         'description': 'A new version fails the test suites attached to this ruleset - passing runs stay quiet.',
@@ -56,6 +69,8 @@ Notification_Matrix = (
 Notified_Event_Types = [
     Event_Type_Version_Published,
     Event_Type_Version_Restored,
+    Event_Type_Approval_Requested,
+    Event_Type_Version_Approved,
     Event_Type_Advisory_Run,
     Event_Type_Decisions_Spiked,
 ]

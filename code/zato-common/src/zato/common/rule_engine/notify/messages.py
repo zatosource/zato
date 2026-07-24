@@ -13,8 +13,8 @@ import os
 # Zato
 from zato.common.rule_engine.diff import diff_documents
 from zato.common.rule_engine.notify.documents import documents_of_version
-from zato.common.rule_engine.sql.constants import Event_Type_Advisory_Run, Event_Type_Decisions_Spiked, \
-    Event_Type_Version_Published, Event_Type_Version_Restored
+from zato.common.rule_engine.sql.constants import Event_Type_Advisory_Run, Event_Type_Approval_Requested, \
+    Event_Type_Decisions_Spiked, Event_Type_Version_Approved, Event_Type_Version_Published, Event_Type_Version_Restored
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -181,13 +181,51 @@ def _build_spiked(
     return out
 
 # ################################################################################################################################
+
+def _build_approval_requested(
+    backend:'RuleSQLBackend',
+    event:'RuleEventRecord',
+    definition:'RuleDefinitionRecord',
+    payload:'anydict',
+    ) -> 'str':
+    """ The message for a version awaiting approval.
+    """
+    _ = backend
+    _ = payload
+
+    out = f"Version {event.version} of '{definition.name}' by {event.actor} awaits approval."
+    return out
+
+# ################################################################################################################################
+
+def _build_approved(
+    backend:'RuleSQLBackend',
+    event:'RuleEventRecord',
+    definition:'RuleDefinitionRecord',
+    payload:'anydict',
+    ) -> 'str':
+    """ The message for an approved version, with the approver's optional comment.
+    """
+    _ = backend
+    out = f"Version {event.version} of '{definition.name}' was approved by {event.actor}."
+
+    # The approval comment is optional, so it extends the message only when it was given.
+    comment = payload['comment']
+    if comment is not None:
+        out = f'{out} {comment}'
+
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 _builders = {
-    Event_Type_Version_Published: _build_published,
-    Event_Type_Version_Restored:  _build_restored,
-    Event_Type_Advisory_Run:      _build_advisory,
-    Event_Type_Decisions_Spiked:  _build_spiked,
+    Event_Type_Version_Published:  _build_published,
+    Event_Type_Version_Restored:   _build_restored,
+    Event_Type_Approval_Requested: _build_approval_requested,
+    Event_Type_Version_Approved:   _build_approved,
+    Event_Type_Advisory_Run:       _build_advisory,
+    Event_Type_Decisions_Spiked:   _build_spiked,
 }
 
 # ################################################################################################################################
