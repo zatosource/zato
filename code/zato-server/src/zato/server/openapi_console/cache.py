@@ -17,6 +17,7 @@ from gevent.lock import RLock
 # Zato
 from zato.common.typing_ import cast_
 from zato.server.openapi_console.diff import report_breaking_changes
+from zato.server.openapi_console.rule_engine import merge_rule_engine_spec
 from zato.server.openapi_console.spec import build_full_spec, filter_spec, resolve_caller
 
 # ################################################################################################################################
@@ -99,8 +100,13 @@ def get_spec(server:'ParallelServer', fields:'anydict') -> 'anydictnone':
         if not is_admin:
             return None
 
-    # .. the per-request work is filtering only, the full document comes from the cache ..
+    # .. the channel part of the document comes from the cache, since it is derived from
+    # scanning deployed services, which is expensive ..
     spec, channel_map = spec_cache.get(server)
+
+    # .. while the rule engine part is built fresh from its database on every request -
+    # a spec fetch is a cold path, so the document is always exactly what the database holds ..
+    spec, channel_map = merge_rule_engine_spec(server, spec, channel_map)
 
     # .. admin callers receive the complete document ..
     if is_admin:

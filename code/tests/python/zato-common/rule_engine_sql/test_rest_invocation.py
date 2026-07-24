@@ -7,6 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
+from zato.common.rule_engine.changes import Change_Definition_Archived, Change_Definition_Created, \
+    Change_Version_Created, Change_Version_Published, Change_Version_Restored
 from zato.common.rule_engine.ingestion import Outcome
 from zato.common.rule_engine.invocation import flatten_for_validation, InvocationStatus, is_ruleset_allowed, \
     parse_ruleset_path, RulesetInvoker, Vocabulary_Key
@@ -107,7 +109,7 @@ def _create_ruleset(
     ) -> 'RuleDefinitionRecord':
     """ Stores one ruleset definition, optionally bound to a vocabulary.
     """
-    document = {Documents_Key: _documents(text)}
+    document:'anydict' = {Documents_Key: _documents(text)}
 
     if vocabulary_id:
         document[Vocabulary_Key] = vocabulary_id
@@ -131,14 +133,26 @@ def _publish(backend:'RuleSQLBackend', definition_id:'int', version:'int'=1) -> 
 
 # ################################################################################################################################
 
-def _new_invoker(backend:'RuleSQLBackend', cache_ttl_seconds:'float'=0.0) -> 'RulesetInvoker':
-    """ Builds an invoker whose caches expire immediately, so every test sees the current store state.
+def _new_invoker(backend:'RuleSQLBackend') -> 'RulesetInvoker':
+    """ Builds an invoker over the test backend - its caches are correct until `apply_change` evicts,
+    exactly as the change stream listener does on a server.
     The tests enter `invoker.writer` as a context manager, which starts the writer and flushes it on exit.
     """
     writer = backend.decision_writer()
 
-    out = RulesetInvoker(backend, writer, cache_ttl_seconds=cache_ttl_seconds)
+    out = RulesetInvoker(backend, writer)
     return out
+
+# ################################################################################################################################
+
+class _RecordingPublisher:
+    """ Stands in for the Redis-backed change publisher, recording what would land on the stream.
+    """
+    def __init__(self) -> 'None':
+        self.published = []
+
+    def publish(self, kind:'str', definition_id:'int', name:'str', object_type:'str') -> 'None':
+        self.published.append((kind, definition_id, name, object_type))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -296,8 +310,9 @@ def test_ambiguous_name_is_refused(backend:'RuleSQLBackend') -> 'None':
 
 # ################################################################################################################################
 
-def test_publish_moves_what_the_live_invocation_runs(backend:'RuleSQLBackend') -> 'None':
-    """ Publishing a new version changes what a live invocation runs, with no restarts anywhere.
+def test_publish_becomes_visible_through_its_change_announcement(backend:'RuleSQLBackend') -> 'None':
+    """ A publish changes what a live invocation runs the moment its announcement is applied -
+    and until it is applied, the cache keeps serving what it holds, which is the whole point.
     """
     definition = _create_ruleset(backend)
     _publish(backend, definition.id)
@@ -324,6 +339,13 @@ def test_publish_moves_what_the_live_invocation_runs(backend:'RuleSQLBackend') -
             comment='Lower the bar',
         )
         _publish(backend, definition.id, version=2)
+
+        # .. with no announcement applied yet the cached entry still serves version one ..
+        unapplied = invoker.invoke('payments.discounts', {'credit_score': 650})
+        assert unapplied.version == 1
+
+        # .. applying the announcement, as the server's stream listener does, evicts the entry ..
+        invoker.apply_change(definition.id, definition.name, definition.object_type)
 
         # .. and the same call now runs the new version.
         after = invoker.invoke('payments.discounts', {'credit_score': 650})
@@ -440,6 +462,141 @@ def test_evaluation_error_is_a_logged_decision(backend:'RuleSQLBackend') -> 'Non
     stored = backend.decisions.get(decision['decision_id'])
     assert stored.is_error is True
     assert stored.caller == 'crm.prod'
+
+# ################################################################################################################################
+
+def test_every_write_announces_itself(backend:'RuleSQLBackend') -> 'None':
+    """ Each committed write of the mutating stores lands on the change stream exactly once,
+    carrying the definition id, its name and its type.
+    """
+    publisher = _RecordingPublisher()
+    backend.set_change_publisher(publisher)
+
+    # Creating a definition announces the creation ..
+    definition = _create_ruleset(backend)
+    assert publisher.published == [
+        (Change_Definition_Created, definition.id, 'payments.discounts', Definition_Type_Ruleset),
+    ]
+
+    # .. a new version announces itself ..
+    publisher.published.clear()
+    document = {Documents_Key: _documents(_rules_text_lower_bar)}
+    _ = backend.versions.create(
+        definition_id=definition.id,
+        expected_current_version=1,
+        document=document,
+        author=_author,
+        comment='Lower the bar',
+    )
+    assert publisher.published == [
+        (Change_Version_Created, definition.id, 'payments.discounts', Definition_Type_Ruleset),
+    ]
+
+    # .. a publish announces itself ..
+    publisher.published.clear()
+    _publish(backend, definition.id, version=2)
+    assert publisher.published == [
+        (Change_Version_Published, definition.id, 'payments.discounts', Definition_Type_Ruleset),
+    ]
+
+    # .. a restore announces itself ..
+    publisher.published.clear()
+    _ = backend.versions.restore(
+        definition_id=definition.id,
+        source_version=1,
+        expected_current_version=2,
+        actor=_author,
+        comment='Back to the strict bar',
+    )
+    assert publisher.published == [
+        (Change_Version_Restored, definition.id, 'payments.discounts', Definition_Type_Ruleset),
+    ]
+
+    # .. and so does an archival.
+    publisher.published.clear()
+    backend.definitions.archive(definition_id=definition.id, actor=_author)
+    assert publisher.published == [
+        (Change_Definition_Archived, definition.id, 'payments.discounts', Definition_Type_Ruleset),
+    ]
+
+# ################################################################################################################################
+
+def test_vocabulary_edit_becomes_visible_through_its_change_announcement(backend:'RuleSQLBackend') -> 'None':
+    """ Editing a vocabulary changes what the API validates against once its announcement is applied.
+    """
+    vocabulary = backend.definitions.create(
+        name='Loan approval',
+        object_type=Definition_Type_Vocabulary,
+        document=_vocabulary_document(),
+        author=_author,
+        comment='Create the vocabulary',
+    )
+
+    definition = _create_ruleset(backend, text=_rules_text_dotted, vocabulary_id=vocabulary.id)
+    _publish(backend, definition.id)
+
+    invoker = _new_invoker(backend)
+
+    with invoker.writer:
+
+        # A score of 800 is legal under the original range ..
+        before = invoker.invoke('payments.discounts', {'customer': {'creditScore': 800}})
+        assert before.status == InvocationStatus.OK
+
+        # .. now the vocabulary narrows the range to at most 750 ..
+        narrowed = _vocabulary_document()
+        narrowed['entities'][0]['attributes'][0]['domain'] = {'low': 300, 'high': 750}
+        _ = backend.versions.create(
+            definition_id=vocabulary.id,
+            expected_current_version=1,
+            document=narrowed,
+            author=_author,
+            comment='Narrow the range',
+        )
+
+        # .. the cached document still accepts 800 until the announcement is applied ..
+        unapplied = invoker.invoke('payments.discounts', {'customer': {'creditScore': 800}})
+        assert unapplied.status == InvocationStatus.OK
+
+        # .. and once it is, the same input is rejected in domain terms.
+        invoker.apply_change(vocabulary.id, vocabulary.name, vocabulary.object_type)
+
+        after = invoker.invoke('payments.discounts', {'customer': {'creditScore': 800}})
+        assert after.status == InvocationStatus.Invalid_Input
+
+# ################################################################################################################################
+
+def test_evict_all_drops_every_mutable_entry(backend:'RuleSQLBackend') -> 'None':
+    """ After a full eviction, e.g. when the stream listener reconnects, the next request
+    re-reads the database and sees everything that happened in the meantime.
+    """
+    definition = _create_ruleset(backend)
+    _publish(backend, definition.id)
+
+    invoker = _new_invoker(backend)
+
+    with invoker.writer:
+
+        # The first request caches the name's resolution ..
+        first = invoker.invoke('payments.discounts', {'credit_score': 720})
+        assert first.version == 1
+
+        # .. a publish lands with no announcement, as if the listener were down ..
+        document = {Documents_Key: _documents(_rules_text_lower_bar)}
+        _ = backend.versions.create(
+            definition_id=definition.id,
+            expected_current_version=1,
+            document=document,
+            author=_author,
+            comment='Lower the bar',
+        )
+        _publish(backend, definition.id, version=2)
+
+        # .. dropping everything, as the listener does on recovery, catches the caches up.
+        invoker.evict_all()
+
+        after = invoker.invoke('payments.discounts', {'credit_score': 720})
+        assert after.version == 2
 
 # ################################################################################################################################
 # ################################################################################################################################

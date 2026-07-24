@@ -1005,6 +1005,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # Start the listener that serves OpenAPI console requests
         self._start_openapi_console_listener()
 
+        # Start the listener that keeps rule engine caches correct
+        self._start_rule_engine_change_listener()
+
         # Optionally, if we appear to be a Docker quickstart environment, log all details about the environment.
         self.log_environment_details()
 
@@ -1706,6 +1709,18 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             start_openapi_console_listener(self)
         except Exception:
             logger.warning('OpenAPI console listener could not be started: %s', format_exc())
+
+# ################################################################################################################################
+
+    def _start_rule_engine_change_listener(self) -> 'None':
+        """ Starts the greenlet that consumes rule engine change announcements arriving via Redis Streams
+        and keeps this process's invocation caches correct.
+        """
+        try:
+            from zato.server.rule_engine_api import start_rule_engine_change_listener
+            start_rule_engine_change_listener(self)
+        except Exception:
+            logger.warning('Rule engine change listener could not be started: %s', format_exc())
 
 # ################################################################################################################################
 

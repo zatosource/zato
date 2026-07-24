@@ -13,11 +13,12 @@ from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.common.defaults import default_cluster_id
+from zato.common.rule_engine.changes import Change_Definition_Archived, Change_Definition_Created
 from zato.common.typing_ import cast_
 
 # Local
-from .constants import Definition_Types, Event_Type_Definition_Archived, Event_Type_Definition_Created, \
-    Event_Type_Version_Created
+from .constants import Definition_Type_Ruleset, Definition_Types, Event_Type_Definition_Archived, \
+    Event_Type_Definition_Created, Event_Type_Version_Created
 from .data import anydict, definition_record_list, RuleDefinitionRecord
 from .database import SessionFactory
 from .document import deserialize_document, serialize_document
@@ -30,12 +31,31 @@ from .time_ import utc_now
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.rule_engine.changes import ChangePublisher
+    ChangePublisher = ChangePublisher
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class DefinitionStore:
     """ Current rule-engine objects and their complete JSON documents.
     """
 
     def __init__(self, session_factory:'SessionFactory') -> 'None':
         self._session_factory = session_factory
+
+        # When set, every committed write is announced on the change stream,
+        # which is what lets server processes evict the RAM entries the write invalidates.
+        self.change_publisher:'ChangePublisher | None' = None
+
+# ################################################################################################################################
+
+    def _announce_change(self, kind:'str', definition_id:'int', name:'str', object_type:'str') -> 'None':
+        """ Announces one committed change, when a publisher is configured.
+        """
+        if self.change_publisher:
+            self.change_publisher.publish(kind, definition_id, name, object_type)
 
 # ################################################################################################################################
 
@@ -152,6 +172,9 @@ class DefinitionStore:
         finally:
             session.close()
 
+        # Announce the committed creation - a name that servers cached as unknown may exist now.
+        self._announce_change(Change_Definition_Created, definition.id, name, object_type)
+
         return definition
 
 # ################################################################################################################################
@@ -202,6 +225,42 @@ class DefinitionStore:
         query = query.where(name_condition)
         query = query.where(active_condition)
         query = query.order_by(rule_definition_table.c.id)
+        session = self._session_factory()
+
+        # .. load every match ..
+        try:
+            result = session.execute(query)
+            out:'definition_record_list' = []
+
+            for row in result:
+                record = definition_record(row)
+                out.append(record)
+
+        # .. and release the read-only session.
+        finally:
+            session.close()
+
+        return out
+
+# ################################################################################################################################
+
+    def list_published_rulesets(self) -> 'definition_record_list':
+        """ Returns every active ruleset with a live version, across all parents.
+
+        This is the complete REST-invokable catalog - what the generated API documentation
+        enumerates before grants narrow it down per API object.
+        """
+        # Match active rulesets whose live pointer is set, anywhere in the tree ..
+        query = select(rule_definition_table)
+        cluster_condition = rule_definition_table.c.cluster_id == default_cluster_id
+        type_condition = rule_definition_table.c.object_type == Definition_Type_Ruleset
+        active_condition = rule_definition_table.c.is_active.is_(True)
+        live_condition = rule_definition_table.c.live_version.isnot(None)
+        query = query.where(cluster_condition)
+        query = query.where(type_condition)
+        query = query.where(active_condition)
+        query = query.where(live_condition)
+        query = query.order_by(rule_definition_table.c.name, rule_definition_table.c.id)
         session = self._session_factory()
 
         # .. load every match ..
@@ -327,6 +386,9 @@ class DefinitionStore:
         # Release the transactional session in every case.
         finally:
             session.close()
+
+        # Announce the committed archival - servers stop resolving this definition's name.
+        self._announce_change(Change_Definition_Archived, definition_id, definition.name, definition.object_type)
 
 # ################################################################################################################################
 # ################################################################################################################################
