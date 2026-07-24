@@ -470,6 +470,7 @@ class EnvironmentManager:
                 'zato-client',
                 'zato-distlock',
                 'zato-openapi',
+                'zato-rule-engine-dashboard',
                 'zato-server',
                 'zato-web-admin',
             ])

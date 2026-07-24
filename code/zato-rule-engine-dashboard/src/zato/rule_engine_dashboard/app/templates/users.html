@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block title %}Users{% endblock %}
+
+{% block content %}
+
+<h1>Users</h1>
+
+<table class="list">
+    <thead>
+        <tr>
+            <th>Username</th>
+            <th>Display name</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Date joined</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in users %}
+        <tr>
+            <td>{{ user.username }}</td>
+            <td>{{ user.get_full_name }}</td>
+            <td>
+                {% if user.is_superuser %}
+                <span class="badge admin">Admin</span>
+                {% else %}
+                <span class="badge user">User</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if user.is_active %}
+                <span class="badge active">Active</span>
+                {% else %}
+                <span class="badge disabled">Disabled</span>
+                {% endif %}
+            </td>
+            <td>{{ user.date_joined|date:'Y-m-d H:i' }}</td>
+            <td>
+                {% if user.username == root_username or user.username == request.user.username %}
+                <span class="muted">-</span>
+                {% else %}
+                <div class="actions">
+                    {% if user.is_active %}
+                    <form method="post" action="{% url 'user-disable' user.username %}">
+                        {% csrf_token %}
+                        <button class="action" type="submit">Disable</button>
+                    </form>
+                    {% else %}
+                    <form method="post" action="{% url 'user-enable' user.username %}">
+                        {% csrf_token %}
+                        <button class="action" type="submit">Enable</button>
+                    </form>
+                    {% endif %}
+                    <form method="post" action="{% url 'user-delete' user.username %}"
+                        onsubmit="return confirm('Delete user {{ user.username }}? This cannot be undone.');">
+                        {% csrf_token %}
+                        <button class="action danger" type="submit">Delete</button>
+                    </form>
+                </div>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}
