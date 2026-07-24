@@ -11,6 +11,7 @@ import os
 
 # Zato
 from zato.common.rule_engine.api import RulesManager
+from zato.common.rule_engine.changes import ChangePublisher
 from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
 from zato.common.typing_ import cast_
 from zato.rule_engine_dashboard.app.settings import Default_DB_URL, Env_DB_URL
@@ -64,6 +65,10 @@ def init_storage() -> 'None':
     _engine = engine
     _backend = RuleSQLBackend.from_engine(engine)
     _manager = RulesManager()
+
+    # Every committed write announces itself on the change stream, which is how
+    # server processes keep their invocation caches correct with no polling.
+    _backend.set_change_publisher(ChangePublisher())
 
 # ################################################################################################################################
 

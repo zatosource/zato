@@ -8,19 +8,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-import os
 from http.client import BAD_REQUEST, CONFLICT, FORBIDDEN, METHOD_NOT_ALLOWED, NOT_FOUND, OK, SERVICE_UNAVAILABLE
-from threading import RLock
 
 # Zato
 from zato.common.json_internal import dumps, loads
 from zato.common.rule_engine.ingestion import Outcome
 from zato.common.rule_engine.invocation import InvocationStatus, is_ruleset_allowed, Message_Unknown_Ruleset, \
-    parse_ruleset_path, RulesetInvoker
-from zato.common.rule_engine.sql import RuleSQLBackend
-from zato.common.rule_engine.sql.constants import Default_DB_URL, Env_DB_URL
-from zato.common.rule_engine.sql.database import create_database_engine
+    parse_ruleset_path
 from zato.common.rule_engine.sql.errors import DecisionBufferFullError
+from zato.server.rule_engine_api import get_invoker
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -58,55 +54,6 @@ _status_code_map = {
     InvocationStatus.Ambiguous_Name:  CONFLICT,
     InvocationStatus.Invalid_Input:   BAD_REQUEST,
 }
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# The one invoker of this process, shared by every request - it owns the engine,
-# the non-blocking decision writer and the short-lived caches.
-_invoker:'RulesetInvoker | None' = None
-_invoker_lock = RLock()
-
-# ################################################################################################################################
-
-def _build_invoker() -> 'RulesetInvoker':
-    """ Builds the process-wide invoker over the rule engine's own database.
-    """
-    # The URL is the same one the rule engine dashboard reads ..
-    database_url = os.environ.get(Env_DB_URL)
-
-    if not database_url:
-        database_url = Default_DB_URL
-
-    # .. an SQLite connection has to be shareable with the writer thread ..
-    if database_url.startswith('sqlite'):
-        connection_options = {'check_same_thread': False}
-        engine = create_database_engine(database_url, connect_args=connection_options)
-    else:
-        engine = create_database_engine(database_url)
-
-    # .. build the SQL facade and its non-blocking decision writer ..
-    backend = RuleSQLBackend.from_engine(engine)
-    writer = backend.decision_writer()
-    writer.start()
-
-    # .. and hand both to the invoker that every request shares.
-    out = RulesetInvoker(backend, writer)
-    return out
-
-# ################################################################################################################################
-
-def get_invoker() -> 'RulesetInvoker':
-    """ Returns the process-wide invoker, building it on the first request.
-    """
-    global _invoker
-
-    with _invoker_lock:
-        if _invoker is None:
-            _invoker = _build_invoker()
-
-    out = _invoker
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

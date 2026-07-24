@@ -8,14 +8,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from dataclasses import dataclass
-from time import monotonic
 from typing import NamedTuple
 
 # Zato
 from zato.common.rule_engine.ingestion import DecisionRecorder
 from zato.common.rule_engine.loading import documents_from_version
 from zato.common.rule_engine.semantics import validate_data
-from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset
+from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Definition_Type_Vocabulary
 from zato.common.rule_engine.sql.document import deserialize_document
 from zato.common.rule_engine.sql.errors import RecordNotFoundError
 from zato.common.rule_engine.testing import load_documents
@@ -34,14 +33,10 @@ if 0:
 version_key           = tuple[int, int]
 resolved_name_dict    = dict[str, '_ResolvedName']
 loaded_version_dict   = dict[version_key, '_LoadedVersion']
-vocabulary_cache_dict = dict[int, '_CachedVocabulary']
+vocabulary_cache_dict = dict[int, 'anydict']
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# How long resolved names, live pointers and vocabulary documents stay cached before they are re-read,
-# which is also how quickly a publish or a rename becomes visible to callers.
-Default_Cache_TTL_Seconds = 0.5
 
 # The key under which a stored ruleset document optionally names the vocabulary its inputs are validated against.
 Vocabulary_Key = 'vocabulary_id'
@@ -91,11 +86,10 @@ class ParsedRulesetPath(NamedTuple):
 # ################################################################################################################################
 
 class _ResolvedName(NamedTuple):
-    """ One cached name lookup - the definition it maps to, whether the name is ambiguous and when it was read.
+    """ One cached name lookup - the definition it maps to and whether the name is ambiguous.
     """
     definition:   'RuleDefinitionRecord | None'
     is_ambiguous: 'bool'
-    checked_at:   'float'
 
 # ################################################################################################################################
 
@@ -104,14 +98,6 @@ class _LoadedVersion(NamedTuple):
     """
     loaded:        'LoadedRules'
     vocabulary_id: 'int | None'
-
-# ################################################################################################################################
-
-class _CachedVocabulary(NamedTuple):
-    """ One cached vocabulary document and when it was read.
-    """
-    document:   'anydict'
-    checked_at: 'float'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -250,10 +236,11 @@ def is_ruleset_allowed(name:'str', patterns:'strlist') -> 'bool':
 # ################################################################################################################################
 
 class RulesetInvoker:
-    """ Runs published rulesets by name over the SQL store, with short-lived caches in front of it.
+    """ Runs published rulesets by name over the SQL store, with RAM caches in front of it.
 
-    Names and live-version pointers are re-read once per TTL window, so a publish or a rename
-    in the dashboard is visible here within a fraction of a second, no matter the traffic.
+    The caches are kept correct by push, not by polling - every dashboard write announces itself
+    on the change stream and `apply_change` evicts exactly what that write invalidated, so a cache
+    miss reads the database once and the entry is then correct until the next announcement.
     Version snapshots are immutable so once compiled they are kept for the invoker's lifetime.
     """
 
@@ -261,12 +248,10 @@ class RulesetInvoker:
         self,
         backend:'RuleSQLBackend',
         writer:'DecisionBatchWriter',
-        cache_ttl_seconds:'float' = Default_Cache_TTL_Seconds,
         ) -> 'None':
 
         self.backend = backend
         self.writer = writer
-        self.cache_ttl_seconds = cache_ttl_seconds
 
         # One entry per ruleset name, including names that resolved to nothing,
         # so unknown names cannot force a database read per request.
@@ -275,22 +260,52 @@ class RulesetInvoker:
         # One compiled ruleset per (definition id, version) - versions are immutable so entries never expire.
         self._loaded:'loaded_version_dict' = {}
 
-        # One entry per vocabulary the loaded rulesets validate against.
+        # One document per vocabulary the loaded rulesets validate against.
         self._vocabularies:'vocabulary_cache_dict' = {}
 
 # ################################################################################################################################
 
-    def _resolve_name(self, name:'str') -> '_ResolvedName':
-        """ Returns the definition one ruleset name maps to, re-reading it once per TTL window.
+    def apply_change(self, definition_id:'int', name:'str', object_type:'str') -> 'None':
+        """ Evicts whatever one announced change invalidated - the next request re-reads it once.
         """
-        now = monotonic()
+        # The name's resolution may have changed - this also covers names cached as unknown
+        # that a creation just brought into being ..
+        _ = self._resolved.pop(name, None)
 
-        # A fresh cached answer is the common case and costs no database work ..
+        # .. entries resolved under other names can point at the same definition, e.g. after
+        # a rename the old name still maps to this id, so they are evicted by id too ..
+        stale_names = []
+
+        for cached_name, entry in self._resolved.items():
+            if entry.definition:
+                if entry.definition.id == definition_id:
+                    stale_names.append(cached_name)
+
+        for cached_name in stale_names:
+            del self._resolved[cached_name]
+
+        # .. and an edited vocabulary is re-read the next time a ruleset validates against it.
+        if object_type == Definition_Type_Vocabulary:
+            _ = self._vocabularies.pop(definition_id, None)
+
+# ################################################################################################################################
+
+    def evict_all(self) -> 'None':
+        """ Drops every mutable cache entry - called when change announcements may have been missed,
+        e.g. after the stream listener reconnects, so correctness never depends on a gap-free stream.
+        """
+        self._resolved.clear()
+        self._vocabularies.clear()
+
+# ################################################################################################################################
+
+    def _resolve_name(self, name:'str') -> '_ResolvedName':
+        """ Returns the definition one ruleset name maps to, reading it on the first request
+        and after every announced change to it.
+        """
+        # A cached answer is correct until a change announcement evicts it ..
         if entry := self._resolved.get(name):
-            age = now - entry.checked_at
-
-            if age < self.cache_ttl_seconds:
-                return entry
+            return entry
 
         # .. otherwise read the current state of that name from the store ..
         matches = self.backend.definitions.find_by_name(name=name, object_type=Definition_Type_Ruleset)
@@ -298,13 +313,13 @@ class RulesetInvoker:
 
         # .. no match and more than one match are both cached, so they are as cheap as a hit ..
         if match_count == 0:
-            entry = _ResolvedName(None, False, now)
+            entry = _ResolvedName(None, False)
         elif match_count == 1:
-            entry = _ResolvedName(matches[0], False, now)
+            entry = _ResolvedName(matches[0], False)
         else:
-            entry = _ResolvedName(None, True, now)
+            entry = _ResolvedName(None, True)
 
-        # .. and remember the answer for the next TTL window.
+        # .. and remember the answer until a change to this name is announced.
         self._resolved[name] = entry
 
         return entry
@@ -342,24 +357,18 @@ class RulesetInvoker:
 # ################################################################################################################################
 
     def _get_vocabulary(self, vocabulary_id:'int') -> 'anydict':
-        """ Returns one vocabulary document, re-reading it once per TTL window so edits apply quickly.
+        """ Returns one vocabulary document, reading it on the first request
+        and after every announced edit to it.
         """
-        now = monotonic()
+        # A cached document is correct until a change announcement evicts it ..
+        if document := self._vocabularies.get(vocabulary_id):
+            return document
 
-        # A fresh cached document is the common case ..
-        if entry := self._vocabularies.get(vocabulary_id):
-            age = now - entry.checked_at
-
-            if age < self.cache_ttl_seconds:
-                out = entry.document
-                return out
-
-        # .. otherwise read the current document and cache it for the next TTL window.
+        # .. otherwise read the current document and cache it until the next announcement.
         document = self.backend.definitions.get_document(vocabulary_id)
-        self._vocabularies[vocabulary_id] = _CachedVocabulary(document, now)
+        self._vocabularies[vocabulary_id] = document
 
-        out = document
-        return out
+        return document
 
 # ################################################################################################################################
 
@@ -373,8 +382,8 @@ class RulesetInvoker:
         """ Evaluates one input against a published ruleset and logs the complete decision.
 
         Without an explicit version the live one runs, so a publish in the dashboard changes
-        what this method runs within the cache TTL. The optional caller is the name of the
-        authenticated system this evaluation runs for and it lands in the decision log.
+        what this method runs the moment its announcement arrives. The optional caller is the
+        name of the authenticated system this evaluation runs for and it lands in the decision log.
         """
 
         # Our response to produce

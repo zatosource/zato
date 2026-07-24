@@ -29,7 +29,9 @@ from .writer import DecisionBatchWriter, DecisionWriterConfig
 
 if 0:
     from sqlalchemy.engine import Engine
+    from zato.common.rule_engine.changes import ChangePublisher
 
+    ChangePublisher = ChangePublisher
     Engine = Engine
 
 # ################################################################################################################################
@@ -73,6 +75,15 @@ class RuleSQLBackend:
         # .. and return the one facade that owns them.
         out = backend_class(session_factory)
         return out
+
+# ################################################################################################################################
+
+    def set_change_publisher(self, change_publisher:'ChangePublisher') -> 'None':
+        """ Makes every committed write of the mutating stores announce itself on the change stream.
+        The dashboard installs this once at startup, so server caches learn of each change the moment it lands.
+        """
+        self.definitions.change_publisher = change_publisher
+        self.versions.change_publisher = change_publisher
 
 # ################################################################################################################################
 

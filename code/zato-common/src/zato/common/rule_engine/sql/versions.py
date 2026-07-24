@@ -12,6 +12,7 @@ from sqlalchemy.engine import CursorResult
 from sqlalchemy.exc import IntegrityError
 
 # Zato
+from zato.common.rule_engine.changes import Change_Version_Created, Change_Version_Published, Change_Version_Restored
 from zato.common.typing_ import cast_
 
 # Local
@@ -29,12 +30,31 @@ from .time_ import utc_now
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.rule_engine.changes import ChangePublisher
+    ChangePublisher = ChangePublisher
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class VersionStore:
     """ Immutable full snapshots, optimistic edits, atomic publishing and linear restores.
     """
 
     def __init__(self, session_factory:'SessionFactory') -> 'None':
         self._session_factory = session_factory
+
+        # When set, every committed write is announced on the change stream,
+        # which is what lets server processes evict the RAM entries the write invalidates.
+        self.change_publisher:'ChangePublisher | None' = None
+
+# ################################################################################################################################
+
+    def _announce_change(self, kind:'str', definition_id:'int', name:'str', object_type:'str') -> 'None':
+        """ Announces one committed change, when a publisher is configured.
+        """
+        if self.change_publisher:
+            self.change_publisher.publish(kind, definition_id, name, object_type)
 
 # ################################################################################################################################
 
@@ -138,6 +158,9 @@ class VersionStore:
         finally:
             session.close()
 
+        # Announce the committed snapshot - for a vocabulary this is also an edit of its current document.
+        self._announce_change(Change_Version_Created, definition_id, definition.name, definition.object_type)
+
         return version
 
 # ################################################################################################################################
@@ -186,6 +209,9 @@ class VersionStore:
         # Release the transactional session in every case.
         finally:
             session.close()
+
+        # Announce the committed publication - servers re-read the live pointer on their next request.
+        self._announce_change(Change_Version_Published, definition_id, definition.name, definition.object_type)
 
         return target
 
@@ -299,6 +325,9 @@ class VersionStore:
         # .. and every path releases the session.
         finally:
             session.close()
+
+        # Announce the committed restore - it moved the live pointer just like a publish does.
+        self._announce_change(Change_Version_Restored, definition_id, definition.name, definition.object_type)
 
         return restored
 
