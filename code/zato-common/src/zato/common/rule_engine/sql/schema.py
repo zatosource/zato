@@ -427,4 +427,65 @@ rule_job_cursor_table = Table(
 )
 
 # ################################################################################################################################
+
+_approval_id                 = Column('id', _integer_type, primary_key=True, autoincrement=True)
+_approval_cluster_id         = Column('cluster_id', _integer_type, nullable=False)
+_approval_definition_foreign = ForeignKey('rule_definition.id', ondelete='RESTRICT')
+_approval_definition_id      = Column('definition_id', _integer_type, _approval_definition_foreign, nullable=False)
+_approval_version            = Column('version', _integer_type, nullable=False)
+_approval_content_hash       = Column('content_hash', _string_64_type, nullable=False)
+_approval_approver           = Column('approver', _string_191_type, nullable=False)
+_approval_comment            = Column('comment', _string_1000_type, nullable=True)
+_approval_created_at         = Column('created_at', _datetime_type, nullable=False)
+_approval_unique_version     = UniqueConstraint('cluster_id', 'definition_id', 'version', name='rap_uq_version')
+_approval_version_check      = CheckConstraint('version >= 1', name='rap_ck_version')
+
+rule_approval_table = Table(
+    'rule_approval',
+    metadata,
+    _approval_id,
+    _approval_cluster_id,
+    _approval_definition_id,
+    _approval_version,
+    _approval_content_hash,
+    _approval_approver,
+    _approval_comment,
+    _approval_created_at,
+    _approval_unique_version,
+    _approval_version_check,
+)
+
+_ = Index('rap_parent', rule_approval_table.c.cluster_id, rule_approval_table.c.definition_id)
+
+# ################################################################################################################################
+
+_approval_config_id                 = Column('id', _integer_type, primary_key=True, autoincrement=True)
+_approval_config_cluster_id         = Column('cluster_id', _integer_type, nullable=False)
+_approval_config_definition_foreign = ForeignKey('rule_definition.id', ondelete='RESTRICT')
+_approval_config_definition_id      = Column(
+    'definition_id',
+    _integer_type,
+    _approval_config_definition_foreign,
+    nullable=False,
+)
+_approval_config_gate_enabled       = Column('gate_enabled', _boolean_type, nullable=False)
+_approval_config_allow_self         = Column('allow_self_approval', _boolean_type, nullable=False)
+_approval_config_updated_at         = Column('updated_at', _datetime_type, nullable=False)
+_approval_config_updated_by         = Column('updated_by', _string_191_type, nullable=False)
+_approval_config_unique_definition  = UniqueConstraint('cluster_id', 'definition_id', name='rac_uq_definition')
+
+rule_approval_config_table = Table(
+    'rule_approval_config',
+    metadata,
+    _approval_config_id,
+    _approval_config_cluster_id,
+    _approval_config_definition_id,
+    _approval_config_gate_enabled,
+    _approval_config_allow_self,
+    _approval_config_updated_at,
+    _approval_config_updated_by,
+    _approval_config_unique_definition,
+)
+
+# ################################################################################################################################
 # ################################################################################################################################

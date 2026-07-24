@@ -300,6 +300,49 @@ class RuleJobCursorRecord(NamedTuple):
     updated_at: 'datetime'
 
 # ################################################################################################################################
+
+class RuleApprovalRecord(NamedTuple):
+    """ One immutable approval binding a named approver to one exact version and its content hash.
+    """
+
+    id:            'int'
+    cluster_id:    'int'
+    definition_id: 'int'
+    version:       'int'
+    content_hash:  'str'
+    approver:      'str'
+    comment:       'str | None'
+    created_at:    'datetime'
+
+# ################################################################################################################################
+
+class RuleApprovalConfigRecord(NamedTuple):
+    """ One ruleset's approval-gate configuration - whether the gate is on and whether self-approval is allowed.
+    """
+
+    id:                  'int'
+    cluster_id:          'int'
+    definition_id:       'int'
+    gate_enabled:        'bool'
+    allow_self_approval: 'bool'
+    updated_at:          'datetime'
+    updated_by:          'str'
+
+# ################################################################################################################################
+
+class ApprovalStatus(NamedTuple):
+    """ The readable approval state of one version - the effective gate settings and its one-hop approval, if any.
+    """
+
+    definition_id:       'int'
+    version:             'int'
+    gate_enabled:        'bool'
+    allow_self_approval: 'bool'
+    is_approved:         'bool'
+    content_matches:     'bool'
+    approval:            'RuleApprovalRecord | None'
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class CountPoint(NamedTuple):

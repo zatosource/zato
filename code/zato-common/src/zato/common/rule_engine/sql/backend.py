@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from typing_extensions import TypeAlias
 
 # Local
+from .approvals import ApprovalStore
 from .database import create_session_factory, SessionFactory
 from .decisions import CapturePolicy, DecisionStore
 from .definitions import DefinitionStore
@@ -58,6 +59,7 @@ class RuleSQLBackend:
         self.views         = ViewStore(session_factory)
         self.search        = ContentSearch(session_factory)
         self.notifications = NotificationStore(session_factory)
+        self.approvals     = ApprovalStore(session_factory)
 
 # ################################################################################################################################
 

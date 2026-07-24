@@ -56,4 +56,22 @@ class DecisionWriterError(RuleSQLStoreError):
     """
 
 # ################################################################################################################################
+
+class ApprovalRequiredError(RuleSQLStoreError):
+    """ Publishing is blocked because the approval gate is on and the version has no approval.
+    """
+
+# ################################################################################################################################
+
+class ApprovalContentMismatchError(RuleSQLStoreError):
+    """ An approval exists for the version but its content hash does not match the current document.
+    """
+
+# ################################################################################################################################
+
+class SelfApprovalNotAllowedError(RuleSQLStoreError):
+    """ The author of a version tried to approve their own work while self-approval is disabled.
+    """
+
+# ################################################################################################################################
 # ################################################################################################################################
