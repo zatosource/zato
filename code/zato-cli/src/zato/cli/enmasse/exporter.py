@@ -48,6 +48,7 @@ from zato.cli.enmasse.exporters.amqp import ChannelAMQPExporter, OutgoingAMQPExp
 from zato.cli.enmasse.exporters.ibm_mq import ChannelIBMMQExporter, OutgoingIBMMQExporter
 from zato.cli.enmasse.exporters.kafka import ChannelKafkaExporter, OutgoingKafkaExporter
 from zato.cli.enmasse.exporters.mcp import GatewayMCPExporter
+from zato.cli.enmasse.exporters.rule_engine_api import RuleEngineAPIExporter
 from zato.cli.enmasse.exporters.as2 import AS2Exporter
 from zato.cli.enmasse.exporters.outgoing_as4 import OutgoingAS4Exporter
 from zato.cli.enmasse.exporters.outgoing_rest import OutgoingRESTExporter
@@ -108,6 +109,7 @@ class EnmasseYAMLExporter:
         self.outgoing_azure_service_bus_exporter = OutgoingAMQPExporter(self, 'azure-service-bus')
         self.channel_kafka_exporter = ChannelKafkaExporter(self)
         self.gateway_mcp_exporter = GatewayMCPExporter(self)
+        self.rule_engine_api_exporter = RuleEngineAPIExporter(self)
         self.outgoing_kafka_exporter = OutgoingKafkaExporter(self)
         self.jira_exporter = JiraExporter(self)
         self.ldap_exporter = LDAPExporter(self)
@@ -368,6 +370,15 @@ class EnmasseYAMLExporter:
         _ = self.get_cluster(session)
         gateway_mcp_list = self.gateway_mcp_exporter.export(session, self.cluster_id)
         return gateway_mcp_list
+
+# ################################################################################################################################
+
+    def export_rule_engine_api(self, session:'SASession') -> 'list':
+        """ Exports Rule engine API definitions.
+        """
+        _ = self.get_cluster(session)
+        rule_engine_api_list = self.rule_engine_api_exporter.export(session, self.cluster_id)
+        return rule_engine_api_list
 
 # ################################################################################################################################
 
@@ -732,6 +743,11 @@ class EnmasseYAMLExporter:
         gateway_mcp_defs = self.export_gateway_mcp(session)
         if gateway_mcp_defs:
             output_dict['mcp_gateway'] = gateway_mcp_defs
+
+        # Export Rule engine API definitions
+        rule_engine_api_defs = self.export_rule_engine_api(session)
+        if rule_engine_api_defs:
+            output_dict['rule_engine_api'] = rule_engine_api_defs
 
         # Export GraphQL outgoing definitions
         outgoing_graphql_defs = self.export_outgoing_graphql(session)

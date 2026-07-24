@@ -42,6 +42,7 @@ from zato.cli.enmasse.importers.amqp import ChannelAMQPImporter, OutgoingAMQPImp
 from zato.cli.enmasse.importers.ibm_mq import ChannelIBMMQImporter, OutgoingIBMMQImporter
 from zato.cli.enmasse.importers.kafka import ChannelKafkaImporter, OutgoingKafkaImporter
 from zato.cli.enmasse.importers.mcp import GatewayMCPImporter
+from zato.cli.enmasse.importers.rule_engine_api import RuleEngineAPIImporter
 from zato.cli.enmasse.importers.as2 import AS2Importer
 from zato.cli.enmasse.importers.custom import CustomConnectorImporter
 from zato.cli.enmasse.importers.ldap import LDAPImporter
@@ -147,6 +148,7 @@ class EnmasseYAMLImporter:
         self.channel_ibm_mq_defs = {}
         self.channel_kafka_defs = {}
         self.gateway_mcp_defs = {}
+        self.rule_engine_api_defs = {}
         self.outgoing_graphql_defs = {}
         self.outgoing_grpc_defs = {}
         self.outgoing_ibm_mq_defs = {}
@@ -205,6 +207,7 @@ class EnmasseYAMLImporter:
         self.outgoing_azure_service_bus_importer = OutgoingAMQPImporter(self, 'azure-service-bus')
         self.channel_kafka_importer = ChannelKafkaImporter(self)
         self.gateway_mcp_importer = GatewayMCPImporter(self)
+        self.rule_engine_api_importer = RuleEngineAPIImporter(self)
         self.outgoing_graphql_importer = OutgoingGraphQLImporter(self)
         self.outgoing_grpc_importer = OutgoingGRPCImporter(self)
         self.outgoing_ibm_mq_importer = OutgoingIBMMQImporter(self)
@@ -1106,6 +1109,25 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
+    def sync_rule_engine_api(self, rule_engine_api_list:'list', session:'SASession') -> 'tuple':
+        if not rule_engine_api_list:
+            return [], []
+
+        count = len(rule_engine_api_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} Rule engine API {noun}')
+
+        for idx, item in enumerate(rule_engine_api_list):
+            logger.info('Rule engine API item %d: %s', idx, item)
+
+        created, updated = self.rule_engine_api_importer.sync_definitions(rule_engine_api_list, session)
+        self.rule_engine_api_defs = self.rule_engine_api_importer.connection_defs
+        logger.info('Processed Rule engine API definitions: created=%d updated=%d', len(created), len(updated))
+
+        return created, updated
+
+# ################################################################################################################################
+
     def sync_outgoing_kafka(self, outgoing_kafka_list:'list', session:'SASession') -> 'tuple':
         if not outgoing_kafka_list:
             return [], []
@@ -1724,6 +1746,14 @@ class EnmasseYAMLImporter:
             self.created_objects['mcp_gateway'] = gateway_mcp_created
         if gateway_mcp_updated:
             self.updated_objects['mcp_gateway'] = gateway_mcp_updated
+
+        # Process Rule engine API definitions
+        rule_engine_api_list = yaml_config.get('rule_engine_api', [])
+        rule_engine_api_created, rule_engine_api_updated = self.sync_rule_engine_api(rule_engine_api_list, session)
+        if rule_engine_api_created:
+            self.created_objects['rule_engine_api'] = rule_engine_api_created
+        if rule_engine_api_updated:
+            self.updated_objects['rule_engine_api'] = rule_engine_api_updated
 
         # Process Kafka outgoing definitions
         outgoing_kafka_list = yaml_config.get('outgoing_kafka', [])

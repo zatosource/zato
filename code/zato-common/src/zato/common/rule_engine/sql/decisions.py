@@ -160,6 +160,7 @@ def decision_to_row(decision:'DecisionWrite', capture_policy:'CapturePolicy') ->
         'occurred_at':    occurred_at,
         'time_bucket':    time_bucket,
         'business_key':   decision.business_key,
+        'caller':         decision.caller,
         'outcome':        decision.outcome,
         'is_error':       decision.is_error,
         'duration_ms':    decision.duration_ms,

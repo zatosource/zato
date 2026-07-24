@@ -31,6 +31,7 @@ from zato.common.util.api import parse_simple_type
 from zato.common.util.config import replace_query_string_items_in_dict
 from zato.common.util.sql import parse_instance_opaque_attr
 from zato.common.util.gateway import on_mcp_gateway_create_edit, on_mcp_gateway_delete
+from zato.common.util.rule_engine_api import on_rule_engine_api_create_edit, on_rule_engine_api_delete
 from zato.common.util.time_ import utcnow
 from zato.server.config_audit import get_model_snapshot, record_service_config_change
 from zato.server.generic.api.outconn_sdk import get_secret_field_names
@@ -69,15 +70,19 @@ extra_delete_attrs = ['type_']
 
 hook = {
     COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP: on_mcp_gateway_create_edit,
+    COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_RULE_ENGINE: on_rule_engine_api_create_edit,
 }
 
 # ################################################################################################################################
 
 def instance_hook(service, input, instance, attrs):
-    """ Called before delete commit. Cleans up the HTTPSOAP channel for MCP connections.
+    """ Called before delete commit. Cleans up the HTTPSOAP channel for MCP and Rule engine API connections.
     """
     if instance.type_ == COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP:
         on_mcp_gateway_delete(service, attrs._meta_session, instance.name, instance.cluster_id)
+
+    elif instance.type_ == COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_RULE_ENGINE:
+        on_rule_engine_api_delete(service, instance.name)
 
 # ################################################################################################################################
 
