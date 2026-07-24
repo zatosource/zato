@@ -38,6 +38,12 @@
 
     <link rel="stylesheet" media="screen" href="/static/css/navigation/pure-css-navigation.css" />
 
+    <style nonce="{{ CSP_NONCE }}">
+        .menu-wide {
+            width: 9.9rem !important;
+        }
+    </style>
+
     {% endif %}
 
     {% include "zato/css-titlebar-padding.html" %}
@@ -332,15 +338,17 @@
                                     <li class="child"><a class="menu-link" href="{% url "security-spnego" %}?cluster={{ cluster_id|default:"1" }}">Kerberos</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "security-mtls" %}?cluster={{ cluster_id|default:"1" }}">mTLS</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "security-ntlm" %}?cluster={{ cluster_id|default:"1" }}">NTLM</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "security-tier" %}?cluster={{ cluster_id|default:"1" }}">Quota tiers</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "security-wss" %}?cluster={{ cluster_id|default:"1" }}">WS-Security</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "security-tier" %}?cluster={{ cluster_id|default:"1" }}">Quota tiers</a></li>
+                                    {% if 0 %}
                                     <li class="child"><a class="menu-link" href="{% url "security-posture" %}?cluster={{ cluster_id|default:"1" }}&tab=authentication">Security posture</a></li>
+                                    {% endif %}
                                 </ul>
                             </li>
                             <li class="first-level">
                                 <a class="menu-link" href="#">Connections &darr;</a>
                                 <ul>
-                                    <li class="child">
+                                    <li class="child menu-wide">
                                         <a class="menu-link" href="#">Channels &rarr;</a>
                                         <ul>
                                             <li class="child">
@@ -355,14 +363,7 @@
                                             <li class="child"><a class="menu-link" href="{% url "http-soap" %}?cluster={{ cluster_id|default:"1" }}&amp;connection=channel&amp;transport=soap">SOAP</a></li>
                                         </ul>
                                     </li>
-                                    <li class="child">
-                                        <a class="menu-link" href="#">Chat &rarr;</a>
-                                        <ul>
-                                            <li class="child"><a class="menu-link" href="{% url "chat-microsoft-teams" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=chat-microsoft-teams">Microsoft Teams</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "chat-slack" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=chat-slack">Slack</a></li>
-                                        </ul>
-                                    </li>
-                                    <li>
+                                    <li class="menu-wide">
                                         <a class="menu-link" href="#">Outgoing &rarr;</a>
                                         <ul>
                                             {% if False %}
@@ -389,31 +390,31 @@
                                             <li class="child"><a class="menu-link" href="{% url "out-sql" %}?cluster={{ cluster_id|default:"1" }}">SQL</a></li>
                                         </ul>
                                     </li>
-                                    <li class="child">
+                                    <li class="child menu-wide">
                                         <a class="menu-link" href="#">Message queues &rarr;</a>
                                         <ul>
-                                            <li class="child">
+                                            <li class="child menu-wide">
                                                 <a class="menu-link" href="#">AMQP &rarr;</a>
                                                 <ul>
                                                     <li class="child"><a class="menu-link" href="{% url "channel-amqp" %}?cluster={{ cluster_id|default:"1" }}">Channels</a></li>
                                                     <li class="child"><a class="menu-link" href="{% url "out-amqp" %}?cluster={{ cluster_id|default:"1" }}">Outgoing</a></li>
                                                 </ul>
                                             </li>
-                                            <li class="child">
+                                            <li class="child menu-wide">
                                                 <a class="menu-link" href="#">Azure Service Bus &rarr;</a>
                                                 <ul>
                                                     <li class="child"><a class="menu-link" href="{% url "channel-azure-service-bus" %}?cluster={{ cluster_id|default:"1" }}">Channels</a></li>
                                                     <li class="child"><a class="menu-link" href="{% url "out-azure-service-bus" %}?cluster={{ cluster_id|default:"1" }}">Outgoing</a></li>
                                                 </ul>
                                             </li>
-                                            <li class="child">
+                                            <li class="child menu-wide">
                                                 <a class="menu-link" href="#">IBM MQ &rarr;</a>
                                                 <ul>
                                                     <li class="child"><a class="menu-link" href="{% url "channel-ibm-mq" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-ibm-mq">Channels</a></li>
                                                     <li class="child"><a class="menu-link" href="{% url "out-ibm-mq" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-ibm-mq">Outgoing</a></li>
                                                 </ul>
                                             </li>
-                                            <li class="child">
+                                            <li class="child menu-wide">
                                                 <a class="menu-link" href="#">Kafka &rarr;</a>
                                                 <ul>
                                                     <li class="child"><a class="menu-link" href="{% url "channel-kafka" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-kafka">Channels</a></li>
@@ -422,21 +423,28 @@
                                             </li>
                                         </ul>
                                     </li>
-                                    <li class="child">
+                                    <li class="child menu-wide">
                                         <a class="menu-link" href="#">File transfer &rarr;</a>
                                         <ul>
                                             <li class="child"><a class="menu-link" href="{% url "out-sftp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-sftp">SFTP</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "out-smb" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-smb">SMB</a></li>
                                         </ul>
                                     </li>
-                                    <li class="child">
+                                    <li class="child menu-wide">
                                         <a class="menu-link" href="#">E-mail &rarr;</a>
                                         <ul>
                                             <li class="child"><a class="menu-link" href="{% url "email-imap" %}?cluster={{ cluster_id|default:"1" }}">IMAP</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "email-smtp" %}?cluster={{ cluster_id|default:"1" }}">SMTP</a></li>
                                         </ul>
                                     </li>
-                                    <li class="child">
+                                    <li class="child menu-wide">
+                                        <a class="menu-link" href="#">Chat &rarr;</a>
+                                        <ul>
+                                            <li class="child"><a class="menu-link" href="{% url "chat-microsoft-teams" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=chat-microsoft-teams">Microsoft Teams</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "chat-slack" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=chat-slack">Slack</a></li>
+                                        </ul>
+                                    </li>
+                                    <li class="child menu-wide">
                                         <a class="menu-link" href="#">Search &rarr;</a>
                                         <ul>
                                             <li class="child"><a class="menu-link" href="{% url "out-es" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-es">ElasticSearch</a></li>
@@ -462,17 +470,17 @@
                                     <li class="child">
                                         <a class="menu-link" href="#">Microsoft &rarr;</a>
                                         <ul>
-                                            <li class="child">
+                                            <li class="child menu-wide">
                                                 <a class="menu-link" href="#">Azure Service Bus &rarr;</a>
                                                 <ul>
                                                     <li class="child"><a class="menu-link" href="{% url "channel-azure-service-bus" %}?cluster={{ cluster_id|default:"1" }}">Channels</a></li>
                                                     <li class="child"><a class="menu-link" href="{% url "out-azure-service-bus" %}?cluster={{ cluster_id|default:"1" }}">Outgoing</a></li>
                                                 </ul>
                                             </li>
-                                            <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-365" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-365">Cloud 365</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-fabric" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-fabric">Fabric</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-power-automate" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-power-automate">Power Automate</a></li>
-                                            <li class="child"><a class="menu-link" href="{% url "chat-microsoft-teams" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=chat-microsoft-teams">Teams</a></li>
+                                            <li class="child menu-wide"><a class="menu-link" href="{% url "cloud-microsoft-365" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-365">Cloud 365</a></li>
+                                            <li class="child menu-wide"><a class="menu-link" href="{% url "cloud-microsoft-fabric" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-fabric">Fabric</a></li>
+                                            <li class="child menu-wide"><a class="menu-link" href="{% url "cloud-microsoft-power-automate" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-power-automate">Power Automate</a></li>
+                                            <li class="child menu-wide"><a class="menu-link" href="{% url "chat-microsoft-teams" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=chat-microsoft-teams">Teams</a></li>
                                         </ul>
                                     </li>
                                     <li class="child"><a class="menu-link" href="{% url "cloud-salesforce" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-salesforce">Salesforce</a></li>
@@ -506,7 +514,7 @@
                                     <li class="child">
                                         <a class="menu-link" href="#">Microsoft &rarr;</a>
                                         <ul>
-                                            <li class="child">
+                                            <li class="child menu-wide">
                                                 <a class="menu-link" href="#">365 &rarr;</a>
                                                 <ul>
                                                     <li class="child">
@@ -517,23 +525,23 @@
                                                     </li>
                                                 </ul>
                                             </li>
-                                            <li class="child">
+                                            <li class="child menu-wide">
                                                 <a class="menu-link" href="#">Azure Service Bus &rarr;</a>
                                                 <ul>
                                                     <li class="child"><a class="menu-link" href="{% url "channel-azure-service-bus" %}?cluster={{ cluster_id|default:"1" }}">Channels</a></li>
                                                     <li class="child"><a class="menu-link" href="{% url "out-azure-service-bus" %}?cluster={{ cluster_id|default:"1" }}">Outgoing</a></li>
                                                 </ul>
                                             </li>
-                                            <li class="child">
+                                            <li class="child menu-wide">
                                                 <a class="menu-link" href="{% url "cloud-microsoft-fabric" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-fabric">Fabric</a>
                                             </li>
-                                            <li class="child">
+                                            <li class="child menu-wide">
                                                 <a class="menu-link" href="{% url "out-ldap" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-ldap">LDAP (AD)</a>
                                             </li>
-                                            <li class="child">
+                                            <li class="child menu-wide">
                                                 <a class="menu-link" href="{% url "cloud-microsoft-power-automate" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-power-automate">Power Automate</a>
                                             </li>
-                                            <li class="child">
+                                            <li class="child menu-wide">
                                                 <a class="menu-link" href="{% url "chat-microsoft-teams" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=chat-microsoft-teams">Teams</a>
                                             </li>
                                         </ul>
