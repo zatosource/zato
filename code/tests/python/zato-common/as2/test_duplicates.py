@@ -22,7 +22,8 @@ from zato.common.util.api import utcnow
 def _make_store(tmp_path:'os.PathLike') -> 'DuplicateStore':
     """ Points the audit database at a per-test SQLite file and builds a duplicate store on it.
     """
-    database_path = os.path.join(str(tmp_path), 'audit.db')
+    tmp_dir = str(tmp_path)
+    database_path = os.path.join(tmp_dir, 'audit.db')
 
     os.environ[AuditLogCtx.Env_Type] = AuditLogCtx.Type_SQLite
     os.environ[AuditLogCtx.Env_Name] = database_path
@@ -115,24 +116,30 @@ def test_retention_deletes_entries_outside_the_window(tmp_path:'os.PathLike') ->
         store = _make_store(tmp_path)
 
         # One entry from long before the detection window and one fresh.
-        old_iso = (utcnow() - timedelta(days=store.window_days + 1)).isoformat()
+        old_window = timedelta(days=store.window_days + 1)
+        old_time = utcnow() - old_window
+        old_iso = old_time.isoformat()
 
-        insert_stmt = duplicate_table.insert().values(
-            as2_from='PartnerCorp',
-            as2_to='ZatoRetail',
-            message_id='old@partnercorp',
-            status_code=OK,
-            body=b'old',
-            headers='{}',
-            created_iso=old_iso,
-        )
+        old_values = {
+            'as2_from': 'PartnerCorp',
+            'as2_to': 'ZatoRetail',
+            'message_id': 'old@partnercorp',
+            'status_code': OK,
+            'body': b'old',
+            'headers': '{}',
+            'created_iso': old_iso,
+        }
+
+        insert_stmt = duplicate_table.insert()
+        insert_stmt = insert_stmt.values(**old_values)
 
         with store.engine.begin() as connection:
             _ = connection.execute(insert_stmt)
 
         _ = store.claim('PartnerCorp', 'ZatoRetail', 'fresh@partnercorp', OK, b'fresh', {})
 
-        store._run_retention(utcnow())
+        now = utcnow()
+        store._run_retention(now)
 
         # The old entry is gone, so its message is no longer a duplicate ..
         assert store.get('PartnerCorp', 'ZatoRetail', 'old@partnercorp') is None

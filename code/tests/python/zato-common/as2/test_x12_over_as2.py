@@ -117,7 +117,9 @@ def _new_exchange(
 
         body = request.read()
 
-        result = handle(body, dict(request.headers), out.receiver_partnerships, out.receiver_keystore, _is_duplicate)
+        headers = dict(request.headers)
+
+        result = handle(body, headers, out.receiver_partnerships, out.receiver_keystore, _is_duplicate)
         out.results.append(result)
 
         response = httpx.Response(result.status_code, content=result.body, headers=result.headers)

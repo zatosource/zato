@@ -12,7 +12,8 @@ import pytest
 # Zato
 from zato.common.as2.common import AS2Error, AS2ProtocolException, AS2SecurityException, Failure
 from zato.common.as2.mdn import disposition_from_exception, format_disposition, is_known_modifier, \
-    new_error_disposition, new_failure_disposition, new_processed_disposition, new_warning_disposition, parse_disposition
+    new_error_disposition, new_failure_disposition, new_processed_disposition, new_warning_disposition, \
+    parse_disposition
 
 # ################################################################################################################################
 # ################################################################################################################################

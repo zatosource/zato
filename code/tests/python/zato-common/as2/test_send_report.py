@@ -103,7 +103,15 @@ class TestDescribeSendResult:
 
     def test_an_error_disposition_carries_its_modifier(self) -> 'None':
 
-        mdn = _make_mdn(modifier_kind='error', modifier='unknown-trading-partner', mic='', mic_algorithm='', is_signed=False)
+        mdn_options = {
+            'modifier_kind': 'error',
+            'modifier': 'unknown-trading-partner',
+            'mic': '',
+            'mic_algorithm': '',
+            'is_signed': False,
+        }
+
+        mdn = _make_mdn(**mdn_options)
         result = _make_result(is_ok=False, mdn=mdn)
 
         report = describe_send_result(result)
