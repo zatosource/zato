@@ -92,10 +92,14 @@ def merge_declarative_request(
             rows = parse_param_rows(rows_json)
             declarative_params.update(evaluate_param_rows(rows, context))
 
-    # .. an explicit parameter wins per key ..
+    # .. an explicit parameter wins per key, and the merge runs on a copy so that
+    # .. a caller reusing one dict across calls does not find our values in it afterwards ..
     if declarative_params:
         if params is None:
             params = {}
+        else:
+            params = dict(params)
+
         for key, value in declarative_params.items():
             if key not in params:
                 params[key] = value
@@ -107,6 +111,9 @@ def merge_declarative_request(
 
         if headers is None:
             headers = {}
+        else:
+            headers = dict(headers)
+
         for key, value in declarative_headers.items():
             if key not in headers:
                 headers[key] = value

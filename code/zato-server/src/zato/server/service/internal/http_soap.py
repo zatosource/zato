@@ -17,7 +17,7 @@ from zato.common.api import AS2, AS4, CONNECTION, Groups, HTTP_SOAP, MISC, PARAM
 from zato.common.broker_message import CHANNEL, OUTGOING, SECURITY
 from zato.common.const import SECRETS
 from zato.common.defaults import default_cluster_id
-from zato.common.exception import ServiceMissingException
+from zato.common.exception import ServiceMissingException, ZatoException
 from zato.common.ext_db.api import ensure_security_copy, ensure_service_copy, get_ext_db_session, is_ext_db_configured, \
      is_ext_object_id, merge_ext_channel_items, needs_ext_db, to_local_id, to_public_id
 from zato.common.json_internal import dumps, loads
@@ -1492,7 +1492,7 @@ class Ping(AdminService):
     input = 'id', '-ping_path'
     output = 'id', 'is_success', '-info'
 
-    def handle(self):
+    def handle(self) -> 'None':
 
         # Objects from the external AS2/AS4 database are stored under their local ids there
         input_id = int(self.request.input.id)
@@ -1502,22 +1502,43 @@ class Ping(AdminService):
         else:
             local_id = input_id
 
+        # The name and the transport are read while the session is still open
+        # because the object is detached from it once it closes.
         with closing(self.server.get_config_session(object_id=input_id)) as session:
             item = session.query(HTTPSOAP).filter_by(id=local_id).one()
-            config_dict = getattr(self.outgoing, item.transport)
-            self.response.payload.id = self.request.input.id
+            name = item.name
+            transport = item.transport
 
-            wrapper = config_dict.get(item.name)
+        config_dict = getattr(self.outgoing, transport)
+        self.response.payload.id = self.request.input.id
 
-            try:
-                result = wrapper.ping(self.cid, ping_path=self.request.input.ping_path)
-                is_success = True
-            except Exception as e:
-                result = e.args[0]
-                is_success = False
-            finally:
-                self.response.payload.info = result
-                self.response.payload.is_success = is_success
+        # A connection that the database has may not have reached this server's RAM yet,
+        # which is a different answer than a ping that was sent and came back with an error.
+        config_item = config_dict.get(name)
+
+        if config_item is None:
+            self.response.payload.is_success = False
+            self.response.payload.info = f'No such outgoing connection on this server -> `{name}`'
+            return
+
+        try:
+            info = config_item.ping(self.cid, ping_path=self.request.input.ping_path)
+
+        # .. a Zato exception carries the message on its own attribute ..
+        except ZatoException as e:
+            is_success = False
+            info = e.msg
+
+        # .. and anything else describes itself.
+        except Exception as e:
+            is_success = False
+            info = str(e)
+
+        else:
+            is_success = True
+
+        self.response.payload.info = info
+        self.response.payload.is_success = is_success
 
 # ################################################################################################################################
 
@@ -1647,15 +1668,23 @@ class InvokeChannel(AdminService):
             'orig_username': username,
         }
 
-    def _resolve_url_path(self, channel_config):
-        url_path = channel_config.get('url_path', '/')
-        path_params = _parse_key_value_params(self.request.input.get('path_params', ''))
+    def _resolve_url_path(self, channel_config:'strdict') -> 'str':
+        """ Returns the channel's URL path with its placeholders filled in from the path parameters
+        given on input. A path that cannot be built is reported rather than sent out with its
+        placeholders still in it.
+        """
+        url_path = channel_config['url_path']
+        path_params = _parse_key_value_params(self.request.input.path_params)
+
         if path_params:
             try:
                 url_path = url_path.format(**path_params)
             except (KeyError, ValueError):
-                pass
-        return url_path
+                msg = f'Could not build URL path `{url_path}` out of path parameters `{path_params}`'
+                raise BadRequest(self.cid, msg, needs_msg=True)
+
+        out = url_path
+        return out
 
     def _build_temp_wrapper(self, channel_config, sec_config, url_path):
         from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper

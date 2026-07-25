@@ -21,7 +21,8 @@ from requests.exceptions import ConnectionError as RequestsConnectionError, Time
 from zato.common.api import HTTP_SOAP, URL_TYPE
 from zato.common.exception import BackendInvocationError
 from zato.common.typing_ import cast_
-from zato.server.connection.http_soap.outgoing import _resolve_retry_value, BaseHTTPSOAPWrapper
+from zato.common.util.http_retry import RetryPolicy
+from zato.server.connection.http_soap.outgoing import BaseHTTPSOAPWrapper
 from zato.server.service import RESTAdapter
 
 # ################################################################################################################################
@@ -42,8 +43,8 @@ class ModuleCtx:
     Address = 'https://example.com/api'
     Method = 'GET'
 
-# The target of the sleep patch - invoke_http sleeps between retries through this name
-_sleep_target = 'zato.server.connection.http_soap.outgoing.sleep'
+# The target of the sleep patch - the shared retry loop sleeps between attempts through this name
+_sleep_target = 'zato.common.util.http_retry.sleep'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -119,51 +120,67 @@ def _get_wrapper(config_extra:'stranydict | None', results:'anylist') -> '_Wrapp
 # ################################################################################################################################
 # ################################################################################################################################
 
-class RetryValueResolutionTestCase(TestCase):
+class RetryPolicyTestCase(TestCase):
     """ Tests the precedence of retry values - explicit call arguments win over the connection's
     own config, which wins over the shared defaults.
     """
 
+    def _get_policy(self, config_extra:'stranydict | None', kwargs:'stranydict') -> 'RetryPolicy':
+        """ Returns the policy that one invocation of a connection would run under.
+        """
+        ctx = _get_wrapper(config_extra, [])
+
+        out = ctx.wrapper._get_retry_policy(kwargs)
+        return out
+
+# ################################################################################################################################
+
     def test_kwarg_wins_over_config(self) -> 'None':
         kwargs = {'max_retries': 7}
-        config = {'max_retries': 3}
 
-        value = _resolve_retry_value(kwargs, config, _retry.Field_Max_Retries, _retry.Default_Max_Retries)
+        policy = self._get_policy({'max_retries': 3}, kwargs)
 
-        self.assertEqual(value, 7)
+        self.assertEqual(policy.max_retries, 7)
 
-        # The resolution also removes the argument so it does not propagate to the requests library
-        self.assertNotIn('max_retries', kwargs)
+        # All four settings are also taken out of kwargs, given that whatever is left there
+        # is handed to the requests library, which would reject a keyword it does not know
+        self.assertEqual(kwargs, {})
 
 # ################################################################################################################################
 
     def test_config_wins_over_default(self) -> 'None':
-        kwargs = {}
-        config = {'max_retries': 3}
+        policy = self._get_policy({'max_retries': 3}, {})
 
-        value = _resolve_retry_value(kwargs, config, _retry.Field_Max_Retries, _retry.Default_Max_Retries)
-
-        self.assertEqual(value, 3)
+        self.assertEqual(policy.max_retries, 3)
 
 # ################################################################################################################################
 
-    def test_default_when_no_kwarg_and_no_config(self) -> 'None':
-        kwargs = {}
-        config = {}
+    def test_defaults_when_nothing_is_configured(self) -> 'None':
+        policy = self._get_policy(None, {})
 
-        value = _resolve_retry_value(kwargs, config, _retry.Field_Max_Retries, _retry.Default_Max_Retries)
-
-        self.assertEqual(value, _retry.Default_Max_Retries)
+        self.assertEqual(policy.max_retries, _retry.Default_Max_Retries)
+        self.assertEqual(policy.sleep_time, _retry.Default_Sleep_Time)
+        self.assertEqual(policy.backoff_threshold, _retry.Default_Backoff_Threshold)
+        self.assertEqual(policy.backoff_multiplier, _retry.Default_Backoff_Multiplier)
 
 # ################################################################################################################################
 
     def test_explicit_zero_kwarg_is_respected(self) -> 'None':
-        kwargs = {'max_retries': 0}
-        config = {'max_retries': 5}
+        policy = self._get_policy({'max_retries': 5}, {'max_retries': 0})
 
-        value = _resolve_retry_value(kwargs, config, _retry.Field_Max_Retries, _retry.Default_Max_Retries)
+        self.assertEqual(policy.max_retries, 0)
 
-        self.assertEqual(value, 0)
+# ################################################################################################################################
+
+    def test_config_is_not_changed_by_an_override(self) -> 'None':
+
+        # An override applies to one invocation only - the connection's own config stays as it was
+        ctx = _get_wrapper({'max_retries': 3}, [])
+
+        policy = ctx.wrapper._get_retry_policy({'max_retries': 9})
+
+        self.assertEqual(policy.max_retries, 9)
+        self.assertEqual(ctx.wrapper.config['max_retries'], 3)
 
 # ################################################################################################################################
 # ################################################################################################################################
