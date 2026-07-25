@@ -120,8 +120,10 @@ class TestSend:
         pmode = _make_pmode(new_edelivery1_pmode)
 
         def responder(request:'httpx.Request') -> 'httpx.Response':
-            # The receiver cannot verify a message tampered with in transit.
-            tampered = request.content.replace(b'SubmitDeclaration', b'submitdeclaration', 1)
+            # The receiver cannot verify a message tampered with in transit. What changes here is a
+            # signed party identifier rather than the service or action, which is what selects the
+            # P-Mode the message is then held to.
+            tampered = request.content.replace(b'>party-a<', b'>party-x<', 1)
             result = handle(tampered, request.headers['content-type'], [pmode], rsa_parties.receiver)
 
             out = httpx.Response(OK, content=result.body, headers={'Content-Type': result.content_type})

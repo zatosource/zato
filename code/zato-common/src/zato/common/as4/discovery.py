@@ -20,7 +20,9 @@ import httpx
 
 # Zato
 from zato.common.as4.common import AS4Exception
-from zato.common.util.xml_.core import parse_xml
+from zato.common.util.xml_.core import parse_xml, XMLSecurityException
+from zato.common.util.xml_.dsig import verify_enveloped_signature
+from zato.common.util.xml_.keystore import certificate_list, new_keystore
 from zato.common.util.xml_.xmlsec import decode_base64
 
 # ################################################################################################################################
@@ -49,9 +51,13 @@ _ns_smp = 'http://busdox.org/serviceMetadata/publishing/1.0/'
 _ns_wsa = 'http://www.w3.org/2005/08/addressing'
 
 # The fully qualified names of the SMP metadata elements read below.
+_signed_service_metadata_element = f'{{{_ns_smp}}}SignedServiceMetadata'
 _endpoint_element    = f'{{{_ns_smp}}}Endpoint'
 _certificate_element = f'{{{_ns_smp}}}Certificate'
 _address_element     = f'{{{_ns_wsa}}}Address'
+
+# The only URL scheme an SMP may be reached over.
+_required_smp_scheme = 'https'
 
 # The transport profile identifier of Peppol AS4.
 Transport_Profile_Peppol_AS4 = 'peppol-transport-as4-v2_0'
@@ -124,9 +130,25 @@ def _default_naptr_lookup(dns_name:'str') -> 'strlist':
 
 # ################################################################################################################################
 
-def _default_http_get(url:'str') -> 'bytes':
-    """ Fetches SMP metadata over HTTP.
+def require_https(url:'str') -> 'None':
+    """ Requires an SMP URL to be an https one. The URL comes out of a DNS record, and both the
+    metadata request and everything read out of its response depend on the transport.
     """
+    scheme, separator, _ = url.partition('://')
+
+    if not separator:
+        raise AS4Exception(f'SMP URL `{url}` has no scheme')
+
+    if scheme.lower() != _required_smp_scheme:
+        raise AS4Exception(f'SMP URL `{url}` uses scheme `{scheme}`, `{_required_smp_scheme}` is required')
+
+# ################################################################################################################################
+
+def _default_http_get(url:'str') -> 'bytes':
+    """ Fetches SMP metadata.
+    """
+    require_https(url)
+
     with httpx.Client(timeout=_http_timeout_seconds) as client:
         response = client.get(url)
 
@@ -138,12 +160,35 @@ def _default_http_get(url:'str') -> 'bytes':
 
 # ################################################################################################################################
 
-def _parse_smp_metadata(data:'bytes', transport_profile:'str') -> 'EndpointDetails':
-    """ Extracts the endpoint matching a transport profile from SMP service metadata.
+def _verify_smp_metadata(root:'any_', trust_anchors:'certificate_list') -> 'None':
+    """ Verifies the signature of a SignedServiceMetadata document against the network's trust
+    anchors. The endpoint URL and the certificate read out of the metadata decide where a message
+    goes and who can read it, so an unsigned or unverifiable document is refused.
+    """
+    if root.tag != _signed_service_metadata_element:
+        raise AS4Exception(f'SMP metadata is not a SignedServiceMetadata document, root element is `{root.tag}`')
+
+    if not trust_anchors:
+        raise AS4Exception('No trust anchors are configured, SMP metadata cannot be verified')
+
+    keystore = new_keystore()
+    keystore.trust_anchors = trust_anchors
+
+    try:
+        _ = verify_enveloped_signature(root, keystore)
+    except XMLSecurityException as e:
+        raise AS4Exception(f'SMP metadata signature did not verify -> {e.args[0]}')
+
+# ################################################################################################################################
+
+def _parse_smp_metadata(data:'bytes', transport_profile:'str', trust_anchors:'certificate_list') -> 'EndpointDetails':
+    """ Extracts the endpoint matching a transport profile from SMP service metadata, once the
+    signature over that metadata has been verified.
     """
     root = parse_xml(data)
 
-    # The metadata may or may not be wrapped in SignedServiceMetadata.
+    _verify_smp_metadata(root, trust_anchors)
+
     for endpoint in root.iter(_endpoint_element):
 
         if endpoint.get('transportProfile') != transport_profile:
@@ -187,6 +232,7 @@ def lookup_endpoint(
     participant_scheme:'str',
     participant_id:'str',
     document_type:'str',
+    trust_anchors:'certificate_list',
     sml_domain:'str'=SML_Domain_Production,
     transport_profile:'str'=Transport_Profile_Peppol_AS4,
     naptr_lookup:'callnone'=None,
@@ -195,6 +241,8 @@ def lookup_endpoint(
     """ Discovers where to send documents for a participant: an SML DNS lookup
     finds their SMP, and the SMP's service metadata names the AS4 endpoint
     and its certificate for the given document type.
+
+    The trust anchors are the ones the metadata signature is verified against.
 
     The naptr_lookup and http_get callables exist so tests can run fully offline -
     production use leaves them empty and gets real DNS and HTTP.
@@ -218,11 +266,13 @@ def lookup_endpoint(
     document_part = quote(document_type, safe='')
 
     smp_uri = smp_uris[0]
+    require_https(smp_uri)
+
     metadata_url = f'{smp_uri}/{participant_part}/services/{document_part}'
     metadata = http_get(metadata_url)
 
     # .. and read the AS4 endpoint out of it.
-    out = _parse_smp_metadata(metadata, transport_profile)
+    out = _parse_smp_metadata(metadata, transport_profile, trust_anchors)
     return out
 
 # ################################################################################################################################

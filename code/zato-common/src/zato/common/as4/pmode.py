@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from dataclasses import dataclass
 
 # Zato
-from zato.common.as4.common import CryptoSuite, Default, MEP, MEPBinding
+from zato.common.as4.common import CryptoSuite, Default
 from zato.common.util.xml_.constants import Algorithm, TokenType
 
 # ################################################################################################################################
@@ -41,15 +41,13 @@ class SecurityConfig:
     # Which of the two crypto suites to use - this selects every algorithm below unless overridden.
     crypto_suite: str = CryptoSuite.RSA
 
-    # PMode[].Security.X509.Signature.*
+    # PMode[].Security.X509.Signature.Algorithm - the digest that goes with it is SHA-256,
+    # which is what both AS4 crypto suites prescribe.
     signature_algorithm: str = Algorithm.RSA_SHA256
-    digest_algorithm:    str = Algorithm.SHA256
 
-    # PMode[].Security.X509.Encryption.*
-    encryption_algorithm:    str = Algorithm.AES128_GCM
+    # PMode[].Security.X509.Encryption.Algorithm - AES-128-GCM under both suites, so only
+    # the key transport differs between them and only it is configured here.
     key_transport_algorithm: str = Algorithm.RSA_OAEP
-    key_transport_mgf:       str = Algorithm.MGF1_SHA256
-    key_transport_digest:    str = Algorithm.SHA256
 
     # Whether outgoing payload parts are to be encrypted at all.
     encrypt: bool = True
@@ -61,6 +59,10 @@ class SecurityConfig:
     # Whether receipts must be signed and carry non-repudiation information.
     sign_receipts: bool = True
 
+    # Whether the eb:From PartyId of an incoming message is required to be the common name of the
+    # certificate that signed it. Networks that issue one certificate per party identifier say yes.
+    party_id_is_certificate_cn: bool = False
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -71,10 +73,6 @@ class PMode:
     in the eDelivery profile and the ICS2 interface control document map to fields one to one.
     """
     id: str = ''
-
-    # PMode.MEP and PMode.MEPBinding
-    mep:         str = MEP.One_Way
-    mep_binding: str = MEPBinding.Push
 
     # PMode.Initiator.* and PMode.Responder.* - assigned by new_pmode.
     initiator: 'Party'

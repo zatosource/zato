@@ -28,8 +28,9 @@ from zato.common.util.xml_.constants import Algorithm, Transform
 from zato.common.util.xml_.core import Id_Size_Bits, new_id, qname, utc_timestamp, XMLSecurityException
 from zato.common.util.xml_.mime_ import part_list
 from zato.common.util.xml_.token import parse_x509v3
-from zato.common.util.xml_.wssec import compute_signature_value, recover_content_key, validate_certificate_chain, \
-    verify_signature_value
+from zato.common.util.xml_.keys import recover_content_key
+from zato.common.util.xml_.signature import compute_signature_value, verify_signature_value
+from zato.common.util.xml_.trust import validate_certificate_chain
 from zato.common.util.xml_.xmlsec import decode_base64, digest_bytes, encode_base64
 
 # ################################################################################################################################

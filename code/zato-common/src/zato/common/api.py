@@ -198,6 +198,10 @@ class AS4:
         Inbound_Topic  = 'zato.as4.inbound'
         Outbound_Topic = 'zato.as4.outbound'
 
+        # Where receipts and errors that arrive on their own go - they are about an earlier message
+        # of ours rather than about a payload, so they do not share the inbound topic.
+        Signal_Topic   = 'zato.as4.signal'
+
         # The MIME type payloads are sent with unless the caller says otherwise.
         Payload_MIME_Type = 'application/xml'
 

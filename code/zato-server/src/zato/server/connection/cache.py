@@ -94,6 +94,24 @@ class CacheAPI:
 
 # ################################################################################################################################
 
+    def set_if_absent(self, key:'str', value:'any_', expiry:'int'=0) -> 'bool':
+        """ Stores a value only if the key is not there already. Returns True when this call is the
+        one that stored it, which is what lets several processes claim the same key and have exactly
+        one of them win. Expiry is in seconds, 0 means no expiry.
+        """
+        redis_key = self._make_key(key)
+        serialized = dumps(value)
+
+        if expiry:
+            stored = self.redis.set(redis_key, serialized, ex=expiry, nx=True)
+        else:
+            stored = self.redis.set(redis_key, serialized, nx=True)
+
+        out = bool(stored)
+        return out
+
+# ################################################################################################################################
+
     def delete(self, key:'str') -> 'None':
         """ Deletes a key from the cache. No-op if the key does not exist.
         """

@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # cryptography
 from cryptography.hazmat.primitives.serialization import Encoding
 from cryptography.x509 import Certificate, load_der_x509_certificate
+from cryptography.x509.oid import NameOID
 
 # Zato
 from zato.common.util.xml_.core import XMLSecurityException
@@ -118,6 +119,25 @@ def parse_x509v3(data:'bytes') -> 'Certificate':
     """ Decodes a single DER certificate from an X509v3 token.
     """
     out = load_der_x509_certificate(data)
+    return out
+
+# ################################################################################################################################
+
+def certificate_common_name(certificate:'Certificate') -> 'str':
+    """ Returns the common name of a certificate's subject, which is what networks that issue one
+    certificate per party use to name that party.
+    """
+    common_names = certificate.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
+
+    if not common_names:
+        raise XMLSecurityException(f'Certificate `{certificate.subject}` has no common name')
+
+    out = common_names[0].value
+
+    # A common name is a string in practice, and the certificate API types it as bytes as well.
+    if isinstance(out, bytes):
+        out = out.decode('utf8')
+
     return out
 
 # ################################################################################################################################

@@ -16,8 +16,10 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.util.xml_.constants import Algorithm, TokenType
 from zato.common.util.xml_.core import qname
 from zato.common.util.xml_.mime_ import part_list
-from zato.common.util.xml_.wssec import add_attachment_reference, add_binary_security_token, add_element_reference, \
-    add_key_info_saml_reference, add_key_info_token_reference, add_saml_token, compute_signature_value
+from zato.common.util.xml_.references import add_attachment_reference, add_element_reference
+from zato.common.util.xml_.signature import compute_signature_value
+from zato.common.util.xml_.tokens import add_binary_security_token, add_key_info_saml_reference, \
+    add_key_info_token_reference, add_saml_token
 from zato.common.util.xml_.xmlsec import encode_base64
 
 # ################################################################################################################################

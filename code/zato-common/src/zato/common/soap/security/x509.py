@@ -27,9 +27,12 @@ from zato.common.typing_ import cast_
 from zato.common.util.xml_.constants import Algorithm, TokenType
 from zato.common.util.xml_.core import element_text, from_timestamp, new_id, parse_xml, qname, to_timestamp, XMLException, \
     XMLSecurityException
-from zato.common.util.xml_.wssec import add_binary_security_token, add_element_reference, add_key_info_token_reference, \
-    build_id_index, compute_signature_value, extract_signer_chain, recover_content_key, validate_certificate_chain, \
-    verify_one_reference, verify_signature_value
+from zato.common.util.xml_.keys import recover_content_key
+from zato.common.util.xml_.references import add_element_reference, build_id_index, verify_one_reference
+from zato.common.util.xml_.signature import compute_signature_value, verify_signature_value
+from zato.common.util.xml_.tokens import add_binary_security_token, add_key_info_token_reference, \
+    extract_signer_chain
+from zato.common.util.xml_.trust import validate_certificate_chain
 from zato.common.util.xml_.xmlsec import decode_base64, encode_base64
 
 # ################################################################################################################################
@@ -261,7 +264,7 @@ def verify(envelope:'any_', keystore:'Keystore', skew_seconds:'int'=Clock_Skew_S
         verified_elements = []
 
         for reference in signed_info.findall(qname(NS.DS, 'Reference')):
-            element = verify_one_reference(reference, envelope, [], id_index)
+            element = verify_one_reference(reference, envelope, {}, id_index)
             if element is not None:
                 verified_elements.append(element)
 

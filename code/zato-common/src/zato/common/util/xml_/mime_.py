@@ -59,8 +59,23 @@ class Part:
 # ################################################################################################################################
 
 part_list = list[Part]
+strpartdict = dict[str, Part]
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def build_part_index(parts:'part_list') -> 'strpartdict':
+    """ Walks a list of MIME parts once and returns them keyed by Content-ID. Everything that resolves
+    a cid: reference goes through such an index, so a message with many parts and many references
+    costs one walk rather than one per reference.
+    """
+    out:'strpartdict' = {}
+
+    for part in parts:
+        out[part.content_id] = part
+
+    return out
+
 # ################################################################################################################################
 
 def new_content_id(suffix:'str'='zato') -> 'str':

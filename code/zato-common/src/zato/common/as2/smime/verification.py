@@ -31,7 +31,7 @@ from zato.common.as2.smime.part import CRLF, parse_part
 from zato.common.typing_ import cast_, optional
 from zato.common.util.xml_.core import XMLSecurityException
 from zato.common.util.xml_.mime_ import parse_header_parameters, parse_mime_part
-from zato.common.util.xml_.wssec import validate_certificate_chain
+from zato.common.util.xml_.trust import validate_certificate_chain
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -25,7 +25,7 @@ from zato.common.soap.security.x509 import decrypt_body, encrypt_body, sign, ver
 from zato.common.util.xml_.constants import Algorithm
 from zato.common.util.xml_.core import qname
 from zato.common.util.xml_.keystore import new_keystore
-from zato.common.util.xml_.wssec import compute_signature_value
+from zato.common.util.xml_.signature import compute_signature_value
 from zato.common.util.xml_.xmlsec import encode_base64
 
 # ################################################################################################################################

@@ -93,6 +93,10 @@ class OutgoingAS4Exporter:
                 if value := opaque.get(name):
                     exported_conn[name] = value
 
+            # The audit log is on by default so only the off state is exported.
+            if opaque.get('is_audit_log_active') is False:
+                exported_conn['is_audit_log_active'] = False
+
             out.append(exported_conn)
 
         logger.info('Successfully prepared %d outgoing AS4 connection definitions for export', len(out))

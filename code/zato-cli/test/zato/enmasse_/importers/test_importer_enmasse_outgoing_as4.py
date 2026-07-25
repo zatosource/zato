@@ -122,6 +122,9 @@ class TestEnmasseOutgoingAS4FromYAML(TestCase):
         # A TLS validation toggle that is absent in YAML means TLS is validated
         self.assertTrue(opaque['validate_tls'])
 
+        # A definition that says nothing about the audit log gets it turned on
+        self.assertTrue(opaque['is_audit_log_active'])
+
 # ################################################################################################################################
 
     def test_outgoing_as4_creation_with_static_endpoint(self):
@@ -153,6 +156,9 @@ class TestEnmasseOutgoingAS4FromYAML(TestCase):
         self.assertEqual(opaque['as4_service'], 'eu.customs.ics2')
         self.assertEqual(opaque['as4_action'], 'IE3F26')
         self.assertEqual(opaque['as4_mpc'], 'urn:fdc:ec.europa.eu:2019:mpc')
+
+        # This is the connection whose audit log the template turns off
+        self.assertFalse(opaque['is_audit_log_active'])
 
 # ################################################################################################################################
 

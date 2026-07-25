@@ -42,6 +42,7 @@ _source_title = {
     'soap-outgoing': 'Outgoing SOAP audit log',
     'email-imap': 'IMAP audit log',
     'as2': 'AS2 audit log',
+    'as4': 'AS4 audit log',
     'x12': 'X12 audit log',
     'mcp': 'MCP audit log',
     'hl7': 'HL7 audit log',
@@ -124,6 +125,18 @@ _as2_columns = [
     {'key': 'action', 'label': 'Actions', 'type': 'action'},
 ]
 
+_as4_columns = [
+    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
+    {'key': 'event_type', 'label': 'Event', 'type': 'text'},
+    {'key': 'object_name', 'label': 'Partner', 'type': 'text'},
+    {'key': 'msg_id', 'label': 'Message id', 'type': 'text'},
+    {'key': 'conversation_id', 'label': 'Conversation id', 'type': 'text'},
+    {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
+    {'key': 'size', 'label': 'Size', 'type': 'size'},
+    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
+]
+
 _x12_columns = [
     {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
@@ -182,6 +195,7 @@ _source_columns = {
     'soap-outgoing': _soap_outgoing_columns,
     'email-imap': _email_imap_columns,
     'as2': _as2_columns,
+    'as4': _as4_columns,
     'x12': _x12_columns,
     'mcp': _mcp_columns,
     'hl7': _hl7_columns,

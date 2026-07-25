@@ -8,14 +8,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from hashlib import sha256
 
 # cryptography
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 from cryptography.hazmat.primitives.asymmetric.rsa import generate_private_key
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
 from cryptography.hazmat.primitives.hashes import SHA256
+from cryptography.hazmat.primitives.serialization import Encoding
 from cryptography.x509 import BasicConstraints, CertificateBuilder, Name, NameAttribute, random_serial_number
 from cryptography.x509.oid import NameOID
 
@@ -26,7 +30,11 @@ from lxml import etree
 import pytest
 
 # Zato
+from zato.common.util.xml_.constants import Algorithm, NS, Transform
+from zato.common.util.xml_.core import qname
 from zato.common.util.xml_.keystore import Keystore, new_keystore
+from zato.common.util.xml_.token import certificate_common_name
+from zato.common.util.xml_.xmlsec import canonicalize_inclusive, encode_base64
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -185,6 +193,67 @@ def eddsa_parties() -> 'TestParties':
     out.receiver = receiver
 
     _ = sender_key_exchange_certificate
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def set_party_ids(pmode:'any_', parties:'TestParties') -> 'None':
+    """ Names both parties the way the P-Mode requires - by certificate common name for the networks
+    that bind a party identifier to a certificate, by a plain identifier for the rest.
+    """
+    if pmode.security.party_id_is_certificate_cn:
+        pmode.initiator.party_id = certificate_common_name(parties.sender.signing_certificate_chain[0])
+        pmode.responder.party_id = certificate_common_name(parties.receiver.signing_certificate_chain[0])
+    else:
+        pmode.initiator.party_id = 'party-a'
+        pmode.responder.party_id = 'party-b'
+
+# ################################################################################################################################
+
+def sign_smp_metadata(data:'bytes', signing_key:'any_', certificate:'any_') -> 'bytes':
+    """ Signs an SMP document the way an SMP does - one enveloped signature over the whole document,
+    canonicalized with Canonical XML 1.0.
+    """
+    root = etree.fromstring(data)
+
+    signature = etree.SubElement(root, qname(NS.DS, 'Signature'), nsmap={'ds': NS.DS})
+    signed_info = etree.SubElement(signature, qname(NS.DS, 'SignedInfo'))
+
+    canonicalization_method = etree.SubElement(signed_info, qname(NS.DS, 'CanonicalizationMethod'))
+    canonicalization_method.set('Algorithm', Algorithm.C14N)
+
+    signature_method = etree.SubElement(signed_info, qname(NS.DS, 'SignatureMethod'))
+    signature_method.set('Algorithm', Algorithm.RSA_SHA256)
+
+    reference = etree.SubElement(signed_info, qname(NS.DS, 'Reference'))
+    reference.set('URI', '')
+
+    transforms = etree.SubElement(reference, qname(NS.DS, 'Transforms'))
+    transform = etree.SubElement(transforms, qname(NS.DS, 'Transform'))
+    transform.set('Algorithm', Transform.Enveloped)
+
+    digest_method = etree.SubElement(reference, qname(NS.DS, 'DigestMethod'))
+    digest_method.set('Algorithm', Algorithm.SHA256)
+
+    # The digest covers the document with the signature taken out of it.
+    covered = deepcopy(root)
+    covered_signature = cast_('any_', covered.find(qname(NS.DS, 'Signature')))
+    covered.remove(covered_signature)
+
+    digest_value = etree.SubElement(reference, qname(NS.DS, 'DigestValue'))
+    digest_value.text = encode_base64(sha256(canonicalize_inclusive(covered)).digest())
+
+    signature_value = etree.SubElement(signature, qname(NS.DS, 'SignatureValue'))
+    signature_bytes = signing_key.sign(canonicalize_inclusive(signed_info), PKCS1v15(), SHA256())
+    signature_value.text = encode_base64(signature_bytes)
+
+    key_info = etree.SubElement(signature, qname(NS.DS, 'KeyInfo'))
+    x509_data = etree.SubElement(key_info, qname(NS.DS, 'X509Data'))
+    x509_certificate = etree.SubElement(x509_data, qname(NS.DS, 'X509Certificate'))
+    x509_certificate.text = encode_base64(certificate.public_bytes(Encoding.DER))
+
+    out = etree.tostring(root, xml_declaration=True, encoding='UTF-8')
     return out
 
 # ################################################################################################################################

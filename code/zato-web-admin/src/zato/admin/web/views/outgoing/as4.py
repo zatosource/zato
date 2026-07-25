@@ -12,6 +12,7 @@ from django.http import HttpResponseServerError, JsonResponse
 # Zato
 from zato.admin.web.forms.outgoing.as4 import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, id_only_service, Index as _Index, method_allowed
+from zato.admin.web.views.audit_log.as4 import get_audit_log_object_name
 from zato.common.api import AS4, CONNECTION, URL_TYPE
 from zato.common.util.xml_.keystore import load_certificates_pem
 
@@ -69,7 +70,7 @@ class Index(_Index):
 
     input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active', 'is_internal'
-    output_optional = ('host', 'url_path', 'validate_tls', 'timeout') + _as4_field_names
+    output_optional = ('host', 'url_path', 'validate_tls', 'timeout', 'is_audit_log_active') + _as4_field_names
     output_repeated = True
 
 # ################################################################################################################################
@@ -96,6 +97,9 @@ class Index(_Index):
 
         item.as4_cert_expiry = get_cert_expiry(signing_cert_chain)
 
+        # The audit log of this connection's exchanges is filed under its party pair.
+        item.audit_log_object_name = get_audit_log_object_name(item)
+
         return item
 
 # ################################################################################################################################
@@ -117,7 +121,7 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     input_required = 'name', 'host'
-    input_optional = ('is_active', 'url_path', 'validate_tls', 'timeout') + _as4_field_names
+    input_optional = ('is_active', 'url_path', 'validate_tls', 'timeout', 'is_audit_log_active') + _as4_field_names
     output_required = 'id', 'name'
 
 # ################################################################################################################################
@@ -137,6 +141,7 @@ class _CreateEdit(CreateEdit):
 
         # Checkboxes arrive as 'on' or not at all - the backend expects real booleans.
         input_dict['as4_use_discovery'] = bool(input_dict.get('as4_use_discovery'))
+        input_dict['is_audit_log_active'] = bool(input_dict.get('is_audit_log_active'))
 
 # ################################################################################################################################
 

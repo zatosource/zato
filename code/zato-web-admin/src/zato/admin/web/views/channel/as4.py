@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.admin.web.forms.channel.as4 import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, extract_security_id, Index as _Index
+from zato.admin.web.views.audit_log.as4 import get_audit_log_object_name
 from zato.admin.web.views.outgoing.as4 import get_cert_expiry
 from zato.common.api import AS4, CONNECTION, SEC_DEF_TYPE_NAME, URL_TYPE, ZATO_NONE
 
@@ -43,7 +44,8 @@ class Index(_Index):
 
     input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active', 'is_internal', 'url_path'
-    output_optional = ('service_name', 'security_id', 'security_name', 'sec_type') + _as4_field_names
+    output_optional = ('service_name', 'security_id', 'security_name', 'sec_type', 'is_audit_log_active') + \
+        _as4_field_names
     output_repeated = True
 
 # ################################################################################################################################
@@ -86,6 +88,9 @@ class Index(_Index):
 
         item.as4_cert_expiry = get_cert_expiry(signing_cert_chain)
 
+        # The audit log of this channel's exchanges is filed under its party pair.
+        item.audit_log_object_name = get_audit_log_object_name(item)
+
         return item
 
 # ################################################################################################################################
@@ -108,7 +113,7 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     input_required = 'name', 'url_path'
-    input_optional = ('is_active', 'service', 'security_id') + _as4_field_names
+    input_optional = ('is_active', 'service', 'security_id', 'is_audit_log_active') + _as4_field_names
     output_required = 'id', 'name'
 
 # ################################################################################################################################
@@ -122,6 +127,9 @@ class _CreateEdit(CreateEdit):
 
     def pre_process_input_dict(self, input_dict:'anydict') -> 'None':
         input_dict['security_id'] = extract_security_id(input_dict)
+
+        # A checkbox arrives as 'on' or not at all - the backend expects a real boolean.
+        input_dict['is_audit_log_active'] = bool(input_dict.get('is_audit_log_active'))
 
 # ################################################################################################################################
 

@@ -8,20 +8,21 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from http.client import OK
 
 # lxml
 from lxml import etree
 
 # Zato
-from zato.common.as4.common import AS4ProtocolException, EbMSError, Severity
+from zato.common.as4.common import AS4ProtocolException, AS4SecurityException, EbMSError, Limits, Severity
 from zato.common.as4.ebms import build_envelope, build_error, build_receipt, parse_messaging
-from zato.common.as4.mime_ import decompress_part, parse_multipart
+from zato.common.as4.mime_ import parse_multipart, restore_payloads
 from zato.common.as4.security.sign import sign_envelope
 from zato.common.as4.security.verify import decrypt_parts, verify_envelope
-from zato.common.typing_ import optional
-from zato.common.util.xml_.core import parse_xml, XMLException
+from zato.common.util.xml_.core import from_timestamp, parse_xml, XMLException, XMLSecurityException
 from zato.common.util.xml_.mime_ import part_list
+from zato.common.util.xml_.token import certificate_common_name
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,14 +30,16 @@ from zato.common.util.xml_.mime_ import part_list
 if 0:
     from zato.common.as4.ebms import signal_details_list, UserMessageDetails
     from zato.common.as4.pmode import PMode
-    from zato.common.typing_ import any_, callnone, strnone
+    from zato.common.typing_ import any_, anylist, callnone, strnone, strset
     from zato.common.util.xml_.keystore import Keystore
     any_ = any_
+    anylist = anylist
     callnone = callnone
     Keystore = Keystore
     PMode = PMode
     signal_details_list = signal_details_list
     strnone = strnone
+    strset = strset
     UserMessageDetails = UserMessageDetails
 
 # ################################################################################################################################
@@ -44,10 +47,6 @@ if 0:
 
 #  Type aliases
 pmode_list = list['PMode']
-
-keystorenone           = optional['Keystore']
-pmodenone              = optional['PMode']
-usermessagedetailsnone = optional['UserMessageDetails']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -67,8 +66,12 @@ class InboundResult:
     body:         bytes = b''
 
     # The parsed user message and its decrypted, decompressed payloads.
-    user_message: 'usermessagedetailsnone' = None
+    user_message: 'UserMessageDetails | None' = None
     payloads: 'part_list'
+
+    # Whatever the validate callback read out of each payload, one entry per payload, so that
+    # a caller that routes the payloads afterwards does not read the same thing again.
+    payload_details: 'anylist'
 
     # Signals delivered to us - asynchronous receipts or errors from a previous exchange.
     signals: 'signal_details_list'
@@ -85,8 +88,9 @@ class InboundResult:
 # ################################################################################################################################
 
 def _match_pmode(pmodes:'pmode_list', user_message:'UserMessageDetails') -> 'PMode':
-    """ Finds the P-Mode that governs an incoming user message by its service and action,
-    defaulting to the first configured one when nothing matches exactly.
+    """ Finds the P-Mode that governs an incoming user message by its service and action. A message
+    that matches none of the configured P-Modes has no agreed terms to be processed under, which is
+    what EBMS:0010 says.
     """
     for pmode in pmodes:
         if pmode.service == user_message.service:
@@ -94,9 +98,9 @@ def _match_pmode(pmodes:'pmode_list', user_message:'UserMessageDetails') -> 'PMo
                 out = pmode
                 break
     else:
-        if not pmodes:
-            raise AS4ProtocolException(EbMSError.Processing_Mode_Mismatch, 'No P-Modes are configured')
-        out = pmodes[0]
+        raise AS4ProtocolException(
+            EbMSError.Processing_Mode_Mismatch,
+            f'No P-Mode is configured for service `{user_message.service}` and action `{user_message.action}`')
 
     return out
 
@@ -114,8 +118,8 @@ def build_error_response(
     ref_to_message_id:'strnone',
     error_code:'str',
     detail:'str',
-    keystore:'keystorenone',
-    pmode:'pmodenone',
+    keystore:'Keystore | None',
+    pmode:'PMode | None',
     ) -> 'bytes':
     """ Builds the ebMS error signal that goes back on the HTTP response,
     signing it when the P-Mode calls for signed signals and signing is possible.
@@ -134,45 +138,77 @@ def build_error_response(
 
 # ################################################################################################################################
 
-def _restore_payloads(user_message:'UserMessageDetails', parts:'part_list') -> 'part_list':
-    """ Matches decrypted MIME parts with their eb:PartInfo entries and undoes
-    the AS4 compression, returning the payloads as the sender originally submitted them.
+def _require_fresh_timestamp(user_message:'UserMessageDetails') -> 'None':
+    """ Requires the eb:Timestamp of an incoming message to be within the window around the current
+    time. The timestamp is covered by the signature, so a message replayed later than the window
+    allows cannot be given a new one.
     """
+    try:
+        timestamp = from_timestamp(user_message.timestamp)
+    except XMLException as e:
+        raise AS4ProtocolException(EbMSError.Invalid_Header, f'Could not read eb:Timestamp -> {e.args[0]}')
 
-    # Our response to produce
-    out:'part_list' = []
+    now = datetime.now(timezone.utc)
+    difference = abs((now - timestamp).total_seconds())
 
-    for part_details in user_message.part_details:
+    if difference > Limits.Timestamp_Window_Seconds:
+        seconds = int(difference)
+        window = Limits.Timestamp_Window_Seconds
 
-        # Only cid: references point at MIME parts - anything else would be
-        # an (unsupported) external or body reference.
-        if not part_details.href.startswith('cid:'):
-            raise AS4ProtocolException(EbMSError.Value_Not_Recognized, f'Unsupported PartInfo href `{part_details.href}`')
+        detail = f'eb:Timestamp `{user_message.timestamp}` is {seconds} seconds from now, the window is {window}'
+        raise AS4ProtocolException(EbMSError.Value_Inconsistent, detail)
 
-        content_id = part_details.href[4:]
+# ################################################################################################################################
 
-        for part in parts:
-            if part.content_id == content_id:
-                break
-        else:
-            raise AS4ProtocolException(
-                EbMSError.Mime_Inconsistency, f'PartInfo `{part_details.href}` has no matching MIME part')
+def _require_encryption(pmode:'PMode', parts:'part_list', decrypted_content_ids:'strset') -> 'None':
+    """ Requires every payload part to have arrived encrypted when the P-Mode says the exchange is
+    encrypted. Nothing is required of an exchange whose P-Mode does not encrypt.
+    """
+    if not pmode.security.encrypt:
+        return
 
-        if mime_type := part_details.properties.get('MimeType'):
-            part.mime_type = mime_type
+    for part in parts:
+        if part.content_id not in decrypted_content_ids:
+            raise AS4SecurityException(
+                EbMSError.Policy_Noncompliance, f'Part `{part.content_id}` did not arrive encrypted')
 
-        if character_set := part_details.properties.get('CharacterSet'):
-            part.character_set = character_set
+# ################################################################################################################################
 
-        # The CompressionType property is the receiver's only signal that a part is compressed.
-        if compression_type := part_details.properties.get('CompressionType'):
-            part.content_type = compression_type
-            part.compressed = True
-            decompress_part(part)
+def _require_party_binding(pmode:'PMode', user_message:'UserMessageDetails', certificate:'any_') -> 'None':
+    """ Requires the eb:From PartyId to be the common name of the certificate that signed the
+    message, for the networks whose P-Mode says the two are the same.
+    """
+    if not pmode.security.party_id_is_certificate_cn:
+        return
 
-        out.append(part)
+    try:
+        common_name = certificate_common_name(certificate)
+    except XMLSecurityException as e:
+        raise AS4SecurityException(EbMSError.Failed_Authentication, e.args[0])
 
-    return out
+    if common_name != user_message.from_party:
+        raise AS4SecurityException(
+            EbMSError.Failed_Authentication,
+            f'Message claims to be from `{user_message.from_party}` but is signed by `{common_name}`')
+
+# ################################################################################################################################
+
+def _handle_signals(envelope:'any_', messaging:'any_', keystore:'Keystore', out:'InboundResult') -> 'None':
+    """ Takes in the signals of a message that carries no user message - receipts and errors that
+    arrive on their own, delivered asynchronously after an earlier exchange of ours.
+    """
+    for signal in messaging.signals:
+        if signal.pull_mpc:
+            raise AS4ProtocolException(EbMSError.Feature_Not_Supported, 'This endpoint does not serve pull requests')
+
+    # A signal says an earlier message of ours was delivered or was refused, so it is required to be
+    # signed by the party it claims to come from, exactly as a user message is.
+    _ = verify_envelope(envelope, [], keystore)
+
+    for signal in messaging.signals:
+        out.signals.append(signal)
+
+# ################################################################################################################################
 
 # ################################################################################################################################
 
@@ -199,12 +235,13 @@ def handle(
     # Our response to produce
     out = InboundResult()
     out.payloads = []
+    out.payload_details = []
     out.signals = []
 
     ref_to_message_id:'strnone' = None
 
     # The P-Mode is looked up mid-pipeline - this keeps it reachable for the error path below.
-    matched_pmode:'pmodenone' = None
+    matched_pmode:'PMode | None' = None
 
     try:
         # Take the envelope and attachments apart ..
@@ -220,13 +257,7 @@ def handle(
         # Signals without a user message are receipts or errors delivered to us asynchronously -
         # they are surfaced to the caller and acknowledged with an empty response.
         if not messaging.user_messages:
-
-            for signal in messaging.signals:
-                if signal.pull_mpc:
-                    raise AS4ProtocolException(
-                        EbMSError.Feature_Not_Supported, 'This endpoint does not serve pull requests')
-                out.signals.append(signal)
-
+            _handle_signals(envelope, messaging, keystore, out)
             return out
 
         user_message = messaging.user_messages[0]
@@ -237,16 +268,25 @@ def handle(
 
         # Reverse the security processing - decrypt the wire bytes first,
         # then verify the signature that covers the plaintext ..
-        decrypt_parts(envelope, parts, keystore)
+        decrypted_content_ids = decrypt_parts(envelope, parts, keystore)
         verify_result = verify_envelope(envelope, parts, keystore)
 
+        # .. hold the message to the P-Mode's own policy, which the message itself cannot state ..
+        _require_encryption(pmode, parts, decrypted_content_ids)
+        _require_party_binding(pmode, user_message, verify_result.signer_certificate)
+
+        # .. the timestamp is only worth checking once it is known to be the signed one ..
+        _require_fresh_timestamp(user_message)
+
         # .. restore the payloads to what the sender submitted ..
-        payloads = _restore_payloads(user_message, parts)
+        payloads = restore_payloads(user_message, parts)
 
         # .. give the caller a chance to reject the message on business grounds,
         # .. e.g. a receiver that this endpoint does not serve ..
+        payload_details:'anylist' = []
+
         if validate:
-            validate(user_message, payloads)
+            payload_details = validate(user_message, payloads)
 
         # .. and only deliver them if this is not a replay of a message we already have.
         if is_duplicate:
@@ -255,6 +295,7 @@ def handle(
         if not out.is_duplicate:
             out.user_message = user_message
             out.payloads = payloads
+            out.payload_details = payload_details
 
         # The receipt echoes the verified references - that is the non-repudiation proof.
         receipt_envelope = build_envelope()

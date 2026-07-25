@@ -45,6 +45,19 @@ def canonicalize_exclusive(element:'any_') -> 'bytes':
 
 # ################################################################################################################################
 
+def canonicalize_inclusive(element:'any_') -> 'bytes':
+    """ Serializes an element with Canonical XML 1.0 without comments, which is what documents
+    outside the WS-Security family, such as SMP service metadata, are signed with.
+    """
+    buffer = BytesIO()
+    tree = etree.ElementTree(element)
+    tree.write_c14n(buffer, exclusive=False, with_comments=False)
+
+    out = buffer.getvalue()
+    return out
+
+# ################################################################################################################################
+
 def digest_element(element:'any_') -> 'str':
     """ Returns the base64 SHA-256 digest of the exclusive canonical form of an element.
     """

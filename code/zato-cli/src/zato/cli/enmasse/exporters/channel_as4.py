@@ -93,6 +93,10 @@ class ChannelAS4Exporter:
                 if value := opaque.get(name):
                     exported_channel[name] = value
 
+            # The audit log is on by default so only the off state is exported.
+            if opaque.get('is_audit_log_active') is False:
+                exported_channel['is_audit_log_active'] = False
+
             out.append(exported_channel)
 
         logger.info('Successfully prepared %d AS4 channel definitions for export', len(out))
