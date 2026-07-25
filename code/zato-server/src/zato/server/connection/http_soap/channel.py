@@ -699,7 +699,8 @@ class RequestDispatcher:
         payload:'bytes',
     ) -> 'bytes':
         """ Runs one incoming request through the AS4 inbound pipeline of the matched channel,
-        returning the signed receipt or an ebMS error signal.
+        returning the signed receipt, an ebMS error signal, or - for a pull request - the message
+        waiting on the partition channel it asked about.
         """
 
         # The runtime lives as long as this channel_item does -
@@ -720,7 +721,8 @@ class RequestDispatcher:
 
         result = runtime.handle(cid, payload, content_type)
 
-        # What goes back is always a SOAP document - a receipt or an error signal.
+        # What goes back is a signal for a delivery and a whole user message with its attachments
+        # for a pull request, so the pipeline is what says how the response is packaged.
         wsgi_environ['zato.http.response.headers']['Content-Type'] = result.content_type
         wsgi_environ['zato.http.response.status'] = status_response[result.status_code]
 

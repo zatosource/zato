@@ -213,6 +213,7 @@ def _outgoing_config(
     trust_anchors:'any_'='',
     use_discovery:'any_'=False,
     is_audit_log_active:'any_'=False,
+    mpc:'any_'='',
     ) -> 'any_':
     """ The configuration of one outgoing AS4 connection, the way the wrapper receives it.
     """
@@ -232,7 +233,7 @@ def _outgoing_config(
         'as4_service': service,
         'as4_action': action,
         'as4_agreement': '',
-        'as4_mpc': '',
+        'as4_mpc': mpc,
         'as4_original_sender': Serviced_Participant,
         'as4_final_recipient': '',
         'as4_use_discovery': use_discovery,
@@ -250,6 +251,7 @@ def _channel_config(
     serviced_participants:'any_'='',
     service_name:'any_'='',
     is_audit_log_active:'any_'=False,
+    mpc:'any_'='',
     ) -> 'any_':
     """ The configuration of one AS4 channel, the way the runtime receives it.
     """
@@ -264,7 +266,7 @@ def _channel_config(
         'as4_service': service,
         'as4_action': action,
         'as4_agreement': '',
-        'as4_mpc': '',
+        'as4_mpc': mpc,
         'as4_original_sender': '',
         'as4_final_recipient': '',
         'as4_extra_pmodes': '',
@@ -284,9 +286,10 @@ def _make_wrapper(
     trust_anchors:'any_'='',
     use_discovery:'any_'=False,
     is_audit_log_active:'any_'=False,
+    mpc:'any_'='',
     ) -> 'any_':
     server = cast_('ParallelServer', _FakeServer())
-    config = _outgoing_config(parties, profile, trust_anchors, use_discovery, is_audit_log_active)
+    config = _outgoing_config(parties, profile, trust_anchors, use_discovery, is_audit_log_active, mpc)
     out = AS4Wrapper(server, config)
     return out
 
@@ -307,9 +310,10 @@ def _make_channel(
     serviced_participants:'any_'='',
     service_name:'any_'='',
     is_audit_log_active:'any_'=False,
+    mpc:'any_'='',
     ) -> 'any_':
     server = cast_('ParallelServer', _FakeServer())
-    config = _channel_config(parties, profile, serviced_participants, service_name, is_audit_log_active)
+    config = _channel_config(parties, profile, serviced_participants, service_name, is_audit_log_active, mpc)
     out = AS4ChannelRuntime(server, config)
     return out
 

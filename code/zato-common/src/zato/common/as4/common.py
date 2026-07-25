@@ -43,6 +43,12 @@ class Default:
     # How long an attempt goes unanswered before it is repeated, in seconds.
     Retry_Interval_Seconds = 15 * 60
 
+    # How long a message handed over to a pull request waits for its receipt before it goes back on
+    # the channel it was queued on, in seconds. The partner asks for it again and receives it under
+    # the same eb:MessageId, so a hand-over that was processed but not acknowledged is recognized
+    # for what it is rather than processed twice.
+    Pull_Receipt_Seconds = 15 * 60
+
     # How long an exchange goes unanswered before its receipt counts as missing rather than late,
     # in seconds. This is what alerting reports on and what ends the retries whether the attempts
     # have run out or not.

@@ -492,6 +492,22 @@ class AS4Invoker:
 
 # ################################################################################################################################
 
+    def queue_for_pull(
+        self,
+        data:'strbytes',
+        mime_type:'str'=AS4.Default.Payload_MIME_Type,
+        conversation_id:'strnone'=None,
+        mpc:'strnone'=None,
+        ) -> 'str':
+        """ Puts one message on a message partition channel for the partner to pull, and returns the
+        eb:MessageId it will be handed over under - the sending half of One-Way/Pull, where the
+        partner asks and the AS4 channel serving its request hands the message over.
+        """
+        out = self.conn.queue_for_pull(self.cid, data, mime_type, conversation_id, mpc)
+        return out
+
+# ################################################################################################################################
+
     def ping(self) -> 'str':
         """ Performs a signed ping exchange with the connection's configured endpoint.
         """

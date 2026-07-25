@@ -12,6 +12,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.api import AS4
+from zato.common.as4.common import Default
+from zato.common.as4.mpc import requeue_stale
 from zato.common.as4.resend import collect_candidates, collect_missing_receipts
 from zato.common.util.api import utcnow
 from zato.server.service.internal import AdminService
@@ -49,6 +51,7 @@ class ResendOverdueMessages(AdminService):
         configs = self._get_configs()
 
         self._report_missing_receipts(configs, now)
+        self._requeue_pulled(now)
 
         candidates = collect_candidates(configs, now, self.server.name)
 
@@ -107,6 +110,22 @@ class ResendOverdueMessages(AdminService):
         for pending in missing:
             self.logger.warning('AS4 receipt is missing for message `%s` sent to `%s` at %s; cid:%s',
                 pending.message_id, pending.to_party, pending.sent_time_iso, pending.cid)
+
+# ################################################################################################################################
+
+    def _requeue_pulled(self, now:'datetime') -> 'None':
+        """ Puts back on their channels the messages that were handed over to a pull request whose
+        receipt never arrived. The partner asks for them again and gets them under the same
+        eb:MessageId, which is what its duplicate detection is for.
+        """
+        requeued = requeue_stale(now, Default.Pull_Receipt_Seconds)
+
+        if not requeued:
+            return
+
+        suffix = 'message' if requeued == 1 else 'messages'
+
+        self.logger.info('Requeued %d unacknowledged pulled AS4 %s', requeued, suffix)
 
 # ################################################################################################################################
 

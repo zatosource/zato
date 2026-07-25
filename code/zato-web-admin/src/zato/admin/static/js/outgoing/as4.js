@@ -83,7 +83,7 @@ $.fn.zato.outgoing.as4.field_descriptions = {
     'id_url_path': 'URL path of the AS4 endpoint<br>on the receiving access point,<br>e.g. /as4. Ignored when discovery is on.',
     'id_as4_use_discovery': 'When on, the receiver\'s endpoint is looked up<br>dynamically through SML and SMP<br>instead of using the configured address.',
     'id_as4_sml_domain': 'The SML domain that discovery queries,<br>e.g. edelivery.tech.ec.europa.eu for production<br>or acc.edelivery.tech.ec.europa.eu for tests.',
-    'id_as4_mpc': 'The message partition channel that pull<br>requests read from. Leave empty<br>unless the network assigns you one.',
+    'id_as4_mpc': 'The message partition channel that pull requests<br>read from and that messages queued for the<br>partner to pull wait on.',
     'id_timeout': 'How many seconds to wait for a response<br>before the invocation times out.',
     'id_validate_tls': 'Whether the TLS certificate of the remote<br>server must be validated. Turn it off<br>only in test environments.',
     'id_as4_retry_max_attempts': 'How many times one message is delivered<br>in total while no receipt arrives,<br>the first delivery included.<br>Empty means the profile\'s own value.',

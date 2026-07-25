@@ -236,9 +236,11 @@ def _get_pull_request(messaging:'any_') -> 'any_':
     for signal in messaging.signals:
         if signal.pull_mpc:
             out = signal
-            return out
+            break
+    else:
+        out = None
 
-    return None
+    return out
 
 # ################################################################################################################################
 
@@ -263,7 +265,7 @@ def _match_pull_pmode(pmodes:'pmode_list', mpc:'str') -> 'PMode':
 def _handle_pull_request(
     envelope:'any_',
     signal:'any_',
-    pmode:'PMode',
+    pmodes:'pmode_list',
     keystore:'Keystore',
     serve_pull:'callnone',
     out:'InboundResult',
@@ -277,11 +279,15 @@ def _handle_pull_request(
     mpc = signal.pull_mpc
     out.pull_mpc = mpc
 
+    # An endpoint holding messages for nobody says so, and looks at nothing else.
+    if serve_pull is None:
+        raise AS4ProtocolException(EbMSError.Feature_Not_Supported, 'This endpoint does not serve pull requests')
+
     # The request is authenticated before anything is looked up, let alone handed over.
     _ = verify_envelope(envelope, [], keystore)
 
-    if serve_pull is None:
-        raise AS4ProtocolException(EbMSError.Feature_Not_Supported, 'This endpoint does not serve pull requests')
+    # The messages of a channel are handed over only under the terms agreed for it.
+    pmode = _match_pull_pmode(pmodes, mpc)
 
     served = serve_pull(mpc, pmode)
 
@@ -357,8 +363,7 @@ def handle(
 
             if pull_request:
                 ref_to_message_id = pull_request.message_id
-                matched_pmode = _match_pull_pmode(pmodes, pull_request.pull_mpc)
-                _handle_pull_request(envelope, pull_request, matched_pmode, keystore, serve_pull, out)
+                _handle_pull_request(envelope, pull_request, pmodes, keystore, serve_pull, out)
             else:
                 _handle_signals(envelope, messaging, keystore, out)
 
