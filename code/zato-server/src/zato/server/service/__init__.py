@@ -1479,7 +1479,7 @@ class RESTAdapter(Service):
         method='',     # type: str
         sec_def_name=None, # type: any_
         auth_scopes=None,  # type: any_
-        log_response=True, # type: bool
+        log_response=False, # type: bool
     ):
         # Type checks
         data:'any_'

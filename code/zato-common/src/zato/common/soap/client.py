@@ -385,7 +385,7 @@ class SOAPClient:
 
     def _post(self, body:'bytes', content_type:'str', cid:'str'='') -> 'any_':
         """ Sends one request and returns the raw requests response, retrying a transport-level
-        failure for as long as the connection's retry configuration allows.
+        failure and a rate-limited answer for as long as the connection's retry configuration allows.
         """
         headers = self._request_headers(content_type)
 

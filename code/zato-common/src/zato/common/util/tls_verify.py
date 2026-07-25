@@ -23,15 +23,12 @@ if 0:
 
 logger = getLogger('zato')
 
-# The one environment variable that turns TLS verification off for the whole process. It exists for
-# development against endpoints with self-signed certificates - in production it means every
-# outgoing connection accepts any certificate, which is why it is announced rather than honoured
-# quietly. Two other spellings used to be accepted as well, which meant a deployment could have
-# verification off through a variable nobody was looking for.
+# The one environment variable that turns TLS verification off for the whole process. It is meant
+# for development against endpoints with self-signed certificates and it is spelled this way and
+# no other way.
 Skip_Verify_Env_Key = 'Zato_Skip_SSL_Verify'
 
-_skip_verify_warning = 'TLS verification is disabled process-wide by the %s environment variable - ' \
-    'every outgoing connection will accept any certificate presented to it'
+_skip_verify_warning = 'TLS verification is disabled process-wide by the %s environment variable'
 
 # Whether the warning above has already been emitted. It is a process-wide setting, so saying so
 # once at the first outgoing request is the point - repeating it per request would bury it.
@@ -60,21 +57,19 @@ def resolve_tls_verify(config:'stranydict') -> 'any_':
     """ Returns what to hand requests as its verify argument for a connection - False to skip
     verification, a path to a CA bundle to verify against, or True for the system trust store.
 
-    Every outgoing path resolves it here rather than each reading the pieces itself. The declarative
-    SOAP path used to read only validate_tls, which meant an mTLS definition's pinned CA bundle was
-    configured, stored, and then never reached the request - the connection verified against the
-    system trust store and the pinning silently did nothing.
+    Every outgoing path resolves it here rather than each reading the pieces itself.
     """
     if is_verification_skipped():
         return False
 
-    tls_verify = config.get('validate_tls', True)
+    tls_verify = config['validate_tls']
 
     if not tls_verify:
         return False
 
     # An mTLS definition may pin the remote end's CA bundle, and when it does the pinned bundle is
-    # what to verify against instead of the system trust store.
+    # what to verify against instead of the system trust store. It is carried by the definition,
+    # not by the connection, so it is only there when such a definition is attached.
     ca_certs_path = config.get('ca_certs_path')
 
     if ca_certs_path:

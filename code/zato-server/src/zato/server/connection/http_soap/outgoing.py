@@ -106,6 +106,7 @@ _OAuth = SEC_DEF_TYPE.OAUTH
 _SPNEGO = SEC_DEF_TYPE.SPNEGO
 
 _retry = HTTP_SOAP.Retry
+_invocation = HTTP_SOAP.Invocation
 
 # What a retry of an outgoing REST request is called in the logs.
 _rest_retry_label = 'REST out'
@@ -113,6 +114,25 @@ _rest_retry_label = 'REST out'
 # What a connection sends when it has said nothing at all about its content type - neither an explicit
 # one, nor a SOAP version, nor a data format.
 Default_Content_Type = 'text/plain'
+
+# An outgoing request goes to the address its connection is configured with and to no other one,
+# so a redirect, which names a different address, is not followed.
+Allow_Redirects = False
+
+# What a configuration field's value is replaced with before the configuration is logged.
+Masked_Value = '***'
+
+# The configuration fields that never reach a log. The password is the plain one, and the
+# declarative rows are where a token typed into a header, a query parameter or a body ends up.
+Masked_Config_Fields = (
+    'password',
+    'salt',
+    'security',
+    'body_credentials',
+    _invocation.Field_Request_Headers,
+    _invocation.Field_Request_Query_String,
+    _invocation.Field_Request_Data,
+)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -156,8 +176,7 @@ class Response(_RequestsResponse):
 
     # What the raw body turned into, which is genuinely of no one shape - the text as it arrived when
     # nothing says otherwise, whatever JSON parsed into when the response is JSON, and a model
-    # instance or a list of them when the caller named a model class. This used to be declared as a
-    # dict or nothing, which the very first assignment - the response text - already contradicted.
+    # instance or a list of them when the caller named a model class.
     data: 'any_'
 
     zato_method: 'str'
@@ -245,15 +264,11 @@ class BaseHTTPSOAPWrapper:
         # None. A zero handed to requests is not an absent timeout, it is one that expires before
         # the socket can connect, so every request through such a connection would fail outright.
         self.config['timeout'] = float(self.config['timeout']) if self.config['timeout'] else None
-        self.config_no_sensitive = deepcopy(self.config)
-        self.config_no_sensitive['password'] = '***'
+        self.config_no_sensitive = self._get_config_no_sensitive()
         self.server = cast_('ParallelServer', server)
         self.session = RequestsSession()
 
-        # The connection's configured pool size decides how many connections the adapter keeps
-        # alive, which is what that setting has always claimed to do and never did - the adapter
-        # used to be built with no arguments at all, so every connection got the requests default
-        # regardless of what was configured.
+        # The connection's configured pool size decides how many connections the adapters keep alive.
         pool_size = self._get_pool_size()
 
         self.https_adapter = HTTPSAdapter(pool_connections=pool_size, pool_maxsize=pool_size)
@@ -290,14 +305,30 @@ class BaseHTTPSOAPWrapper:
 
 # ################################################################################################################################
 
+    def _get_config_no_sensitive(self) -> 'stranydict':
+        """ Returns a copy of this connection's configuration that is safe to log.
+
+        Whatever a connection keeps its secrets in is masked - the password column, the security
+        definition it carries whole, and the declarative request rows, which hold whatever was
+        typed into a header, a query parameter or a body.
+        """
+        out = deepcopy(self.config)
+
+        for name in Masked_Config_Fields:
+            if name in out:
+                out[name] = Masked_Value
+
+        return out
+
+# ################################################################################################################################
+
     def _get_pool_size(self) -> 'int':
         """ Returns how many connections this wrapper's adapters keep pooled.
 
-        A connection created before pool sizing meant anything may carry no value or a zero, and a
-        zero pool is not a smaller pool, it is a pool that discards every connection - so anything
+        A pool of zero is not a smaller pool, it is one that discards every connection, so anything
         below the floor falls back to the shared default rather than being honoured literally.
         """
-        pool_size = self.config.get('pool_size')
+        pool_size = self.config['pool_size']
 
         if not pool_size or pool_size < Minimum_Pool_Size:
             pool_size = MISC.DEFAULT_HTTP_POOL_SIZE
@@ -340,13 +371,13 @@ class BaseHTTPSOAPWrapper:
         from an outgoing REST or SOAP connection.
         """
 
-        # Payloads may be bytes by the time they are sent out,
-        # which is why they are decoded here, replacing what cannot be decoded ..
+        # Payloads reach here in whatever shape their caller had them in - bytes as they went on the
+        # wire, which are decoded with what cannot be decoded replaced ..
         if isinstance(data, bytes):
             data = data.decode('utf-8', errors='replace')
 
-        # .. a payload may also be a non-string object, e.g. a dict or a multipart encoder ..
-        if not isinstance(data, str):
+        # .. or an object such as a dict or a multipart encoder, which is described rather than decoded.
+        elif not isinstance(data, str):
             data = str(data)
 
         # .. the source depends on the connection's transport ..
@@ -369,19 +400,39 @@ class BaseHTTPSOAPWrapper:
 
 # ################################################################################################################################
 
+    def _check_password(self) -> 'None':
+        """ Notes whether this connection's password is still the placeholder that an import leaves
+        behind for a value whose environment variable was not set. Such a connection has no
+        credentials at all, which is what invoking it reports rather than sending the placeholder.
+        """
+        self.missing_password = ''
+
+        # A connection may have no password to begin with - a definition that authenticates
+        # with a certificate or a keytab is the usual case.
+        password = self.config['password']
+
+        if password:
+            if password.startswith(EnvVariable.Missing_Value_Prefix):
+                self.missing_password = password
+                logger.warning('Connection `%s` has no password, its value was never provided -> `%s`',
+                    self.config['name'], password)
+
+# ################################################################################################################################
+
     def set_auth(self) -> 'None':
 
         # Local variables
         self.requests_auth = None
         self.username = None
 
-        # The headers that the security definition contributes are built from scratch on each call -
-        # a definition edited to use a different header name would otherwise keep sending
-        # the previous name alongside the new one for as long as the connection lived.
+        # The headers that the security definition contributes are rebuilt on each call, so the set
+        # always describes the definition as it stands now and not as it once stood.
         base_headers:'strstrdict' = {}
 
         # The SOAP client is built lazily and dropped here so security changes take effect on the next call.
         self._soap_client:'SOAPClient | None' = None
+
+        self._check_password()
 
         # #######################################
         #
@@ -389,13 +440,10 @@ class BaseHTTPSOAPWrapper:
         #
         # #######################################
         if self.sec_type == _API_Key:
-            username = self.config.get('orig_username')
+            username = self.config['orig_username']
             if not username:
                 username = self.config['username']
-            password = self.config['password']
-            if isinstance(password, str) and password.startswith('Missing_'):
-                password = ''
-            base_headers[username] = password
+            base_headers[username] = self.config['password']
 
         # #######################################
         #
@@ -403,10 +451,6 @@ class BaseHTTPSOAPWrapper:
         #
         # #######################################
         elif self.sec_type in {_Basic_Auth}:
-            password = self.config['password']
-            if isinstance(password, str) and password.startswith('Missing_'):
-                password = ''
-                self.config['password'] = password
             self.requests_auth = self.auth
             self.username = self.requests_auth[0]
 
@@ -417,9 +461,6 @@ class BaseHTTPSOAPWrapper:
         # #######################################
         elif self.sec_type == _NTLM:
             _username, _password = self.auth
-            if isinstance(_password, str) and _password.startswith('Missing_'):
-                _password = ''
-                self.config['password'] = _password
             _requests_auth = HttpNtlmAuth(_username, _password)
             self.requests_auth = _requests_auth
             self.username = _username
@@ -433,8 +474,14 @@ class BaseHTTPSOAPWrapper:
 
             # The definition's certificate material replaces whatever TLS details
             # the connection itself may have been configured with.
-            self.config['tls_client_cert'] = self.config.get('cert_path')
-            self.config['tls_client_key'] = self.config.get('key_path')
+            self.config['tls_client_cert'] = self.config['cert_path']
+            self.config['tls_client_key'] = self.config['key_path']
+
+            # Pooled connections were established with the material that was in place when they were
+            # opened, so they are discarded here - a definition edited to present a different
+            # certificate would otherwise keep presenting the previous one for as long as
+            # a pooled connection lasted.
+            self.https_adapter.clear_pool()
 
         # #######################################
         #
@@ -445,8 +492,8 @@ class BaseHTTPSOAPWrapper:
 
             principal = self.config['principal']
             keytab_path = self.config['keytab_path']
-            target_spn = self.config.get('target_spn')
-            needs_delegation = self.config.get('needs_delegation')
+            target_spn = self.config['target_spn']
+            needs_delegation = self.config['needs_delegation']
 
             # The auth object defers all gssapi work until the first request goes out.
             _requests_auth = SPNEGOAuth(principal, keytab_path, target_spn, bool(needs_delegation))
@@ -478,12 +525,12 @@ class BaseHTTPSOAPWrapper:
         both the certificate and its private key, a (certificate, key) path pair when the key lives
         in its own file, or None when the connection does not present a client certificate.
         """
-        client_cert = self.config.get('tls_client_cert')
+        client_cert = self.config['tls_client_cert']
 
         if not client_cert:
             return None
 
-        if client_key := self.config.get('tls_client_key'):
+        if client_key := self.config['tls_client_key']:
             out = (client_cert, client_key)
         else:
             out = client_cert
@@ -532,11 +579,16 @@ class BaseHTTPSOAPWrapper:
         **kwargs:'any_'
     ) -> '_RequestsResponse':
 
+        # A connection whose password was never provided has nothing to authenticate with,
+        # so it says so here rather than sending a request that carries a placeholder.
+        if self.missing_password:
+            msg = f'Connection `{self.config["name"]}` has no password -> `{self.missing_password}`'
+            raise BackendInvocationError(cid, msg, needs_msg=True)
+
         # Record start time for metrics
         start_time = utcnow()
 
         # Local variables
-        params = kwargs.get('params')
         json = kwargs.pop('json', None)
 
         # What to verify against - the process-wide skip, the connection's own flag and any pinned
@@ -620,9 +672,8 @@ class BaseHTTPSOAPWrapper:
             # .. we enter here if this is not a Bearer token definition ..
             else:
 
-                # .. otherwise, the credentials will have been already obtained
-                # .. but note that Suds connections don't have requests_auth, hence the getattr call ..
-                auth = getattr(self, 'requests_auth', None)
+                # .. otherwise, the credentials will have been already obtained ..
+                auth = self.requests_auth
 
                 # .. we have no token to report about.
                 token_is_cache_hit = None
@@ -630,8 +681,9 @@ class BaseHTTPSOAPWrapper:
             # .. how much we are about to send ..
             data_length = _get_body_length(data)
 
-            # .. basic details about what we are sending ..
-            message = f'REST out -> cid={cid}; {method} {address}; name:{self.config["name"]}; params={params}' + \
+            # .. basic details about what we are sending - the query string and the body are not
+            # .. among them, the audit log being where a connection records what it sent ..
+            message = f'REST out -> cid={cid}; {method} {address}; name:{self.config["name"]}' + \
                   f'; len={data_length}; sec={sec_def_name} ({_sec_type})'
 
             # .. optionally, log details of the Bearer token ..
@@ -650,7 +702,8 @@ class BaseHTTPSOAPWrapper:
                 # .. do send it ..
                 response = self.session.request(
                     method, address, data=data, json=json, auth=auth, headers=headers, hooks=hooks,
-                    verify=tls_verify, cert=tls_client_cert, timeout=self.config['timeout'], *args, **kwargs)
+                    verify=tls_verify, cert=tls_client_cert, timeout=self.config['timeout'],
+                    allow_redirects=Allow_Redirects, *args, **kwargs)
 
                 # Update metrics
                 self._push_metrics(start_time, str(response.status_code))
@@ -735,9 +788,7 @@ class BaseHTTPSOAPWrapper:
 
         transport = self.config['transport']
 
-        # A SOAP connection's content type is decided by its SOAP version, whatever data format it
-        # carries. This used to hang off the data-format branch below, which meant a SOAP connection
-        # with a data format set skipped the SOAP case entirely and went out as text/plain.
+        # A SOAP connection's content type is decided by its SOAP version, whatever data format it carries
         if transport == URL_TYPE.SOAP:
             out = SOAP_Content_Type[self.config['soap_version']]
 
@@ -766,7 +817,7 @@ class BaseHTTPSOAPWrapper:
             'X-Zato-Msg-TS': now or utcnow().isoformat(),
         })
 
-        if self.config.get('transport') == URL_TYPE.SOAP:
+        if self.config['transport'] == URL_TYPE.SOAP:
             self._add_soap_action(headers)
 
         content_type = user_headers.pop('Content-Type', self.default_content_type)
@@ -790,10 +841,9 @@ class BaseHTTPSOAPWrapper:
         if self.config['soap_version'] != SOAPVersion.V11:
             return
 
-        soap_action = self.config.get('soap_action')
+        # A connection with no action configured sends no header at all
+        soap_action = self.config['soap_action']
 
-        # A connection with no action configured sends no header rather than the string `None`,
-        # which is what an unchecked assignment used to put on the wire.
         if not soap_action:
             return
 
@@ -858,10 +908,11 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             for name in self.path_params:
                 value = qs_params.pop(name)
 
-                # Encode so a value cannot inject extra path segments into the address,
-                # keeping percent signs intact so values that arrive already
-                # percent-encoded - like company names with %20 - are not encoded twice.
-                path_params[name] = quote(str(value), safe='%')
+                # A path parameter fills in one segment of the address and nothing beyond it, so
+                # every character that means something to a URL is encoded, the percent sign
+                # included. A value arrives as it is meant to be read, so a slash in it is a slash
+                # in that one segment and a value spelled as ../ names no directory above it.
+                path_params[name] = quote(str(value), safe='')
 
             address = self.address.format(**path_params)
 
@@ -926,28 +977,28 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         """
         config:'stranydict' = {
             'address': self.address,
-            'soap_version': self.config.get('soap_version') or SOAPVersion.Default,
-            'soap_action': self.config.get('soap_action') or '',
-            'timeout': self.config.get('timeout'),
-            'validate_tls': self.config.get('validate_tls', True),
-            'content_type': self.config.get('content_type'),
-            'tls_client_cert': self.config.get('tls_client_cert'),
-            'tls_client_key': self.config.get('tls_client_key'),
+            'soap_version': self.config['soap_version'] or SOAPVersion.Default,
+            'soap_action': self.config['soap_action'] or '',
+            'timeout': self.config['timeout'],
+            'validate_tls': self.config['validate_tls'],
+            'content_type': self.config['content_type'],
+            'tls_client_cert': self.config['tls_client_cert'],
+            'tls_client_key': self.config['tls_client_key'],
 
-            # An mTLS definition's pinned CA bundle has to reach the client too - without it the
-            # declarative path verified against the system trust store and the pinning did nothing.
+            # An mTLS definition's pinned CA bundle is carried by the definition, not by the
+            # connection, so it is only there when such a definition is attached.
             'ca_certs_path': self.config.get('ca_certs_path'),
-            'use_ws_addressing': self.config.get('use_ws_addressing') or False,
-            'use_mtom': self.config.get('use_mtom') or False,
-            'wsa_action': self.config.get('wsa_action'),
-            'wsa_to': self.config.get('wsa_to'),
-            'wsa_reply_to': self.config.get('wsa_reply_to'),
+            'use_ws_addressing': self.config['use_ws_addressing'] or False,
+            'use_mtom': self.config['use_mtom'] or False,
+            'wsa_action': self.config['wsa_action'],
+            'wsa_to': self.config['wsa_to'],
+            'wsa_reply_to': self.config['wsa_reply_to'],
         }
 
         # The retry settings live in the connection's opaque attributes and the client runs the
         # loop that reads them, so each one that the connection carries is handed over by name.
         for name in _retry.FieldList:
-            config[name] = self.config.get(name)
+            config[name] = self.config[name]
 
         # Declarative WS-Addressing values imply the headers are wanted even if the flag is off
         if config['wsa_action'] or config['wsa_to'] or config['wsa_reply_to']:
@@ -955,13 +1006,13 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         # Body credentials pair the mapping rows with the username and password
         # of the security definition attached to the connection.
-        if mappings := self.config.get('body_credentials'):
+        if mappings := self.config['body_credentials']:
             if isinstance(mappings, str):
                 mappings = loads(mappings)
             if mappings:
                 config['body_credentials'] = {
-                    'username': self.config.get('username'),
-                    'password': self.config.get('password'),
+                    'username': self.config['username'],
+                    'password': self.config['password'],
                     'mappings': mappings,
                 }
 
@@ -969,7 +1020,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         # authoritative so a password change reaches the client without a full reload.
         if security := self.config.get('security'):
             security = dict(security)
-            if password := self.config.get('password'):
+            if password := self.config['password']:
                 security['password'] = password
             config['security'] = security
 
@@ -1073,7 +1124,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         # We do not serialize ourselves data based on this content type,
         # leaving it up to the underlying HTTP library to do it ..
-        needs_serialize_based_on_content_type = self.config.get('content_type') != ContentType.FormURLEncoded
+        needs_serialize_based_on_content_type = self.config['content_type'] != ContentType.FormURLEncoded
 
         # .. otherwise, our input data may need to be serialized ..
         if needs_serialize_based_on_content_type:
@@ -1263,7 +1314,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         method='',    # type: str
         sec_def_name=None,    # type: any_
         auth_scopes=None,     # type: any_
-        log_response=True,    # type: bool
+        log_response=False,   # type: bool
         needs_exception=True, # type: bool
         max_retries=None,     # type: int | None
         retry_sleep_time=None,   # type: int | None
@@ -1293,7 +1344,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                 logger.warning('Caught an exception -> %s -> %s', e, format_exc())
         else:
 
-            # .. optionally, log what we received ..
+            # .. a response body is only logged by a caller that asked for it ..
             if log_response:
                 logger.info('REST call response received -> %s', response.text)
 
@@ -1305,18 +1356,11 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                 msg =  f'Error calling outgoing connection: {self.config["name"]} -> {response.zato_method}'
                 msg += f' {response.zato_address}{qs_path} -> {response.data}'
 
-                # The request headers carry Authorization and API keys, and the body may carry
-                # credentials too, so neither of them goes to the log.
                 logger.info(msg)
                 raise BackendInvocationError(cid, msg, needs_msg=True)
 
             # .. extract the underlying data ..
             response_data = response.data
-
-            # What is produced below is a list of models, a single model or the response as it arrived.
-            # The three branches used to each re-annotate data with their own type, which left the
-            # name declared three incompatible ways in one function - the parameter above already
-            # types it, so none of them says anything the others do not contradict.
 
             # .. if we have a model, do make use of it here ..
             if model:
