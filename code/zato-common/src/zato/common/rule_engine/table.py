@@ -12,7 +12,7 @@ from typing import NamedTuple
 
 # Zato
 from zato.common.rule_engine.document import Comparator, NodeKind
-from zato.common.rule_engine.tokens import identifier_pattern, literal_node, parse_scalar
+from zato.common.rule_engine.tokens import identifier_pattern, literal_node, parse_scalar, split_top_level
 from zato.common.rule_engine.vocabulary import ErrorCode, new_error
 
 # ################################################################################################################################
@@ -38,7 +38,7 @@ Statement_Severities = {StatementSeverity.Info, StatementSeverity.Warning, State
 _letter_pattern = re.compile(r'^[a-z]$')
 
 # Cell text may open with a comparator symbol - two-character symbols must be tried before one-character ones.
-_cell_symbols = (
+Cell_Symbols = (
     ('==', Comparator.Is),
     ('!=', Comparator.Is_Not),
     ('<=', Comparator.Is_At_Most),
@@ -124,9 +124,10 @@ def _parse_set(text:'str', comparator:'str') -> 'CellParseResult':
     if not inner:
         return CellParseResult(None, 'A set needs at least one member')
 
-    # .. and each member has to be a scalar we recognize.
+    # .. and each member has to be a scalar we recognize, where a comma inside a
+    # quoted member belongs to that member rather than separating two of them.
     values = []
-    for part in inner.split(','):
+    for part in split_top_level(inner, ','):
         node = parse_cell_value(part.strip())
         if node is None:
             return CellParseResult(None, f'Not a recognized set member -> `{part.strip()}`')
@@ -191,7 +192,7 @@ def parse_cell(text:'str') -> 'CellParseResult':
             return out
 
     # .. a leading comparator symbol applies that comparison to what follows ..
-    for symbol, comparator in _cell_symbols:
+    for symbol, comparator in Cell_Symbols:
         if text.startswith(symbol):
             value_text = text[len(symbol):].strip()
             node = parse_cell_value(value_text)

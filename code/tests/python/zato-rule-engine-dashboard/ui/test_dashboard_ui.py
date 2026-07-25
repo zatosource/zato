@@ -157,8 +157,9 @@ def test_screens_boot_in_jsdom(client:'any_', live_server:'any_', tmp_path:'any_
 # ################################################################################################################################
 
 def test_editor_scale_budgets() -> 'None':
-    """ The completion list, type-to-filter and the grid stay within their
-    budgets at sizes where rule editors are commonly reported to degrade.
+    """ The completion list, type-to-filter, both grids, the decision log
+    and the versions diff stay within their budgets at sizes where rule
+    editors are commonly reported to degrade.
     """
     _run_node([
         os.path.join(_node_dir, 'check_scale.js'),

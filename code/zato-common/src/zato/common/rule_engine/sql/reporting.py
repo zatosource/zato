@@ -78,6 +78,31 @@ class RuleReporting:
 
 # ################################################################################################################################
 
+    def decision_count(self, filters:'DecisionFilter') -> 'int':
+        """ How many decisions one selection holds - one number, over promoted columns alone.
+
+        This is what tells a rename how much traffic addresses the ruleset it is about to rename,
+        so the count is answered by the database rather than by loading the rows.
+        """
+        # Count the selection itself, without grouping it by anything ..
+        decision_count = func.count(rule_decision_table.c.id)
+        query = select(decision_count)
+        query = apply_filters(query, filters)
+        session = self._session_factory()
+
+        # .. read the single row a count always answers with ..
+        try:
+            result = session.execute(query)
+            out = result.scalar_one()
+
+        # .. and release the read-only session.
+        finally:
+            session.close()
+
+        return out
+
+# ################################################################################################################################
+
     def outcome_counts(self, filters:'DecisionFilter') -> 'count_point_list':
         """ Counts decisions by outcome using only promoted columns.
         """

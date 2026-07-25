@@ -10,9 +10,18 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
+// A keystroke filters a whole page of decisions and re-initialises every
+// tooltip on the screen, so the typing is let finish first
 logView.setSearch = function(value) {
+    var self = this;
+
     this.search = value;
-    this.render();
+
+    if (this.searchTimer !== null) { clearTimeout(this.searchTimer); }
+    this.searchTimer = setTimeout(function() {
+        self.searchTimer = null;
+        self.render();
+    }, logModel.config.searchDelayMilliseconds);
 };
 
 // A range change reaches the server - the list and the aggregates both

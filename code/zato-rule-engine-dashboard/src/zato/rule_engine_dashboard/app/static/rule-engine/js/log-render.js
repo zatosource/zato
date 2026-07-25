@@ -18,6 +18,7 @@ var logView = {
     selectedId: null,
     columnWidths: {},
     folded: {},             // which detail sections are folded shut
+    searchTimer: null,      // the debounce behind the search
 
     outcomeDots: {
         'matched': 'status-dot-pass',
@@ -122,6 +123,16 @@ var logView = {
         }
         head.innerHTML = headHtml;
 
+        document.getElementById('log-list').innerHTML = this.listHtml(records);
+    },
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // The decision list as html, out of the records alone - no DOM is read
+    // here, which is what lets the scale check measure a full page of them
+    listHtml: function(records) {
+        var self = this;
+
         var html = '<table class="log-grid"><thead><tr>' +
             '<th>Decision</th><th>Key</th><th>Caller</th><th>When</th><th>Outcome</th>' +
             '</tr></thead><tbody>';
@@ -152,7 +163,8 @@ var logView = {
         if (records.length === 0) {
             html = '<div class="log-empty">Nothing matches. Widen the date range or clear the search.</div>';
         }
-        document.getElementById('log-list').innerHTML = html;
+
+        return html;
     },
 
     // Decision ids are long opaque handles, the list shows the readable

@@ -28,6 +28,10 @@ identifier_pattern = re.compile(r'^[A-Za-z_][\w.]*$')
 # Rule names may additionally start with a digit, e.g. 01_Regex_Basic_Test.
 rule_name_pattern = re.compile(r'^\w+$')
 
+# A ruleset name is dotted so that grants can address a whole subtree, e.g. payments.discounts,
+# and it is also the REST path a caller invokes, which is why nothing else is allowed in it.
+ruleset_name_pattern = re.compile(r'^\w+(\.\w+)*$')
+
 # Plain integer and floating-point literals.
 _integer_pattern = re.compile(r'^[+-]?\d+$')
 _float_pattern   = re.compile(r'^[+-]?(\d+\.\d*|\.\d+)$')

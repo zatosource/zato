@@ -1,8 +1,10 @@
 'use strict';
 
-// Rendering for the decision table editor: the grid itself, the problems
-// panel, the vocabulary pane and the sentence bar. Event handlers live
-// in table-actions.js, which augments the same namespace.
+// Rendering for the decision table editor: what one render reads out of
+// the screen, drawing the grid into it, the problems panel and the
+// vocabulary pane. The grid's own html lives in table-grid.js, the
+// sentence bar in table-phrases.js and the event handlers in
+// table-actions.js, all three augmenting the same namespace.
 
 (function() {
 
@@ -33,276 +35,46 @@ var tableView = {
         return out;
     },
 
-    cellDisplay: function(raw) {
-        var value = raw.trim();
-        if (value === '' || value === '-') { return '<span class="table-any-dash">-</span>'; }
-        return shared.escape(value);
+    // Everything every cell of one render needs to know, gathered once: the
+    // invalid cells as a lookup, the columns in conflict and the find term
+    // from the toolbar. Read per cell instead, this is what makes a grid of
+    // thousands of cells do thousands of DOM reads and rebuild both lists
+    // that many times over.
+    renderContext: function() {
+        var invalid = {};
+        tableModel.invalidCells().forEach(function(cell) { invalid[cell.column + '|' + cell.row] = true; });
+
+        var out = {
+            invalid: invalid,
+            conflictLabels: tableModel.conflictLabels(),
+            findTerm: this.findTerm(),
+        };
+        return out;
     },
 
-    statementHtml: function(text) {
-        var out = shared.escape(text).replace(/\{[a-zA-Z._]+\}/g, function(match) {
-            return '<span class="table-statement-placeholder">' + match + '</span>';
+    // The hints and the sentence both speak from the server's reading of the
+    // cells, so they are drawn again when a validation answer brings a new one
+    renderReadings: function() {
+        var self = this;
+
+        document.querySelectorAll('#table-grid-area .table-column-hint').forEach(function(wrapper) {
+            var column = tableModel.columnByLabel(wrapper.getAttribute('data-column'));
+            wrapper.innerHTML = self.columnHintHtml(column);
         });
-        return out;
-    },
 
-    cellClasses: function(column, raw, invalidList, rowKey) {
-        var label = tableModel.label(column);
-        var classes = ['table-cell'];
-
-        var isInvalid = invalidList.some(function(cell) { return cell.column === label && cell.row === rowKey; });
-        if (isInvalid) { classes.push('table-cell-invalid'); }
-        if (tableModel.generatedNumbers[label] === true) { classes.push('table-cell-generated'); }
-        if (tableModel.conflictLabels().indexOf(label) > -1) { classes.push('table-cell-conflict'); }
-        if (this.selectedColumn === label) { classes.push('table-column-selected'); }
-
-        var term = this.findTerm();
-        if (term !== '' && raw.indexOf(term) > -1) { classes.push('table-find-hit'); }
-
-        var out = classes.join(' ');
-        return out;
-    },
-
-    // Checkbox and drag handle in front of a row, hidden in the phrase view
-    rowControls: function(kind, rowKey) {
-        if (this.phraseMode) { return ''; }
-
-        var checked = tableModel.checked[kind][rowKey] === true ? ' checked' : '';
-        var out = '<input type="checkbox" class="table-row-checkbox"' + checked +
-            ' onchange="tableView.toggleRowCheck(\'' + kind + '\', \'' + rowKey + '\', this.checked)">' +
-            '<span class="table-drag-handle" draggable="true" data-kind="' + kind + '" data-row="' + rowKey + '" ' +
-            'data-tippy-content="Drag to reorder this row">' + shared.icon('grip-vertical', 11) + '</span>';
-
-        return out;
-    },
-
-// ////////////////////////////////////////////////////////////////////////
-
-    columnHeadHtml: function(column) {
-        var label = tableModel.label(column);
-        var classes = ['table-column-head'];
-        if (column.number === 0) { classes.push('table-column-zero'); }
-        if (tableModel.conflictLabels().indexOf(label) > -1) { classes.push('table-cell-conflict'); }
-        if (this.selectedColumn === label) { classes.push('table-column-selected'); }
-
-        var subtitle = '';
-        var tooltip = '';
-        if (column.number === 0) {
-            subtitle = '<span class="table-column-subtitle">always, fires first</span>';
-            tooltip = ' data-tippy-content="The Base column has actions only. It always fires and it fires first."';
-        }
-
-        // A gentle indicator when the column can unfold into sub-rules,
-        // or fold back when it already is a sub-rule.
-        var hint = '';
-        var parentLabel = tableModel.parentLabel(column);
-        if (parentLabel !== '') {
-            hint = '<span class="table-unfold-hint" onclick="tableView.foldColumn(event, \'' + parentLabel + '\')" ' +
-                'data-tippy-content="Sub-rule of ' + parentLabel + ', a read-only view of one logical possibility. ' +
-                'Click to fold the sub-rules back into one column.">' + shared.icon('chevrons-down-up', 10) + '</span>';
-        } else {
-            var unfoldableRow = tableModel.unfoldableRow(column);
-            if (unfoldableRow !== null) {
-                var parsed = tableModel.parseCondition(column, unfoldableRow.letter);
-                hint = '<span class="table-unfold-hint" onclick="tableView.unfoldColumn(event, \'' + label + '\')" ' +
-                    'data-tippy-content="The ' + unfoldableRow.subject + ' cell holds ' + parsed.items.length + ' values. ' +
-                    'Click to unfold into sub-rules, one per value, so nothing stays bundled in one cell.">' +
-                    shared.icon('chevrons-up-down', 10) + parsed.items.length + '</span>';
-            }
-        }
-
-        // Rule columns can be reordered by dragging their headers, Base stays put
-        var movable = column.number !== 0 && !this.phraseMode && parentLabel === '';
-        var dragAttribute = movable ? ' draggable="true" data-movable="true"' : '';
-
-        var out = '<th class="' + classes.join(' ') + '" data-column="' + label + '"' + dragAttribute + ' ' +
-            'onclick="tableView.selectColumn(\'' + label + '\')"' + tooltip + '>' +
-            label + subtitle + hint + '</th>';
-
-        return out;
-    },
-
-// ////////////////////////////////////////////////////////////////////////
-
-    filterRowsHtml: function(columnCount) {
-        var html = '';
-
-        var addFilterButton = '';
-        if (!this.phraseMode && tableModel.table.filter === undefined) {
-            addFilterButton = '<button class="button-mini" onclick="tableView.addFilter()">' +
-                shared.icon('plus', 9) + ' Filter</button>';
-        }
-
-        html += '<tr class="table-section-row"><td colspan="' + (columnCount + 1) + '">Filter' +
-            '<span class="table-section-hint">the filter narrows the data the whole table sees, ' +
-            'before any rule column runs</span>' + addFilterButton + '</td></tr>';
-
-        var filter = tableModel.table.filter;
-        if (filter !== undefined) {
-            var display = filter.subject + ' ' + filter.cell;
-            if (this.phraseMode) {
-                display = 'Only data where ' + tableModel.phraseFor(filter.subject) + ' ' + filter.cell + ' is considered';
-            }
-            var displayClass = this.phraseMode ? 'table-expression-phrase' : 'table-expression';
-
-            var removeControl = this.phraseMode ? '' :
-                '<span class="table-filter-remove" onclick="tableView.removeFilter(event)" ' +
-                'data-tippy-content="Remove the filter">' + shared.icon('x', 11) + '</span>';
-
-            html += '<tr class="table-filter-row"><td class="table-expression-column">' +
-                '<span class="' + displayClass + '" onclick="tableView.editFilter(this)" ' +
-                'data-tippy-content="The filter is not a rule, it fires no actions, it only narrows the data the table sees.">' +
-                shared.escape(display) + '</span>' + removeControl + '</td>';
-
-            html += '<td class="table-filter-span" colspan="' + columnCount + '">applies to every rule column</td></tr>';
-        }
-
-        return html;
-    },
-
-// ////////////////////////////////////////////////////////////////////////
-
-    sectionRowHtml: function(columnCount, title, hint, kind) {
-        var deleteButton = '';
-
-        // The delete control appears right where the checkboxes are, not in a toolbar
-        if (!this.phraseMode && kind !== '') {
-            var checkedCount = tableModel.checkedCount(kind);
-            if (checkedCount > 0) {
-                deleteButton = '<button class="button-mini button-mini-danger" ' +
-                    'onclick="tableView.deleteCheckedRows(\'' + kind + '\')">Delete selected (' + checkedCount + ')</button>';
-            }
-        }
-
-        var out = '<tr class="table-section-row"><td colspan="' + (columnCount + 1) + '">' + title +
-            '<span class="table-section-hint">' + hint + '</span>' + deleteButton + '</td></tr>';
-
-        return out;
-    },
-
-// ////////////////////////////////////////////////////////////////////////
-
-    // The screen without a stored table yet
-    emptyHtml: function() {
-        var out = '<div class="table-empty-note">There is no decision table yet. ' +
-            '<button class="button-ghost" onclick="tableView.startNew()">New table</button></div>';
-        return out;
+        this.renderSentence();
+        this.updateUnfoldAllButton();
     },
 
 // ////////////////////////////////////////////////////////////////////////
 
     render: function() {
-        var self = this;
-
         if (tableModel.table === null) {
             document.getElementById('table-grid-area').innerHTML = this.emptyHtml();
             return;
         }
 
-        var invalidList = tableModel.invalidCells();
-        var columnCount = tableModel.table.columns.length;
-        var html = '<table class="table-grid">';
-
-        // Column headers ..
-        html += '<tr><th class="table-expression-column" style="background:var(--background);border:none"></th>';
-        tableModel.table.columns.forEach(function(column) { html += self.columnHeadHtml(column); });
-        html += '</tr>';
-
-        // .. the filter row ..
-        html += this.filterRowsHtml(columnCount);
-
-        // .. condition rows, evaluated top to bottom because conditions short-circuit ..
-        html += this.sectionRowHtml(columnCount, 'Conditions',
-            'evaluated top to bottom, the first failing condition stops the rule', 'condition');
-        tableModel.table.conditions.forEach(function(row) {
-            var label = self.phraseMode
-                ? '<span class="table-expression-phrase">If ' + shared.escape(tableModel.phraseFor(row.subject)) + ' is &hellip;</span>'
-                : '<span class="table-expression">' + shared.escape(row.subject) + '</span>';
-
-            html += '<tr class="table-condition-row" data-kind="condition" data-row="' + row.letter + '"><td class="table-expression-column">' +
-                self.rowControls('condition', row.letter) + label + '</td>';
-
-            tableModel.table.columns.forEach(function(column) {
-                var columnLabel = tableModel.label(column);
-                var coordinates = 'data-column="' + columnLabel + '" data-kind="condition" data-row-id="' + row.letter + '"';
-                if (column.number === 0) {
-                    html += '<td class="table-cell table-cell-readonly" ' + coordinates + '>always</td>';
-                    return;
-                }
-                var raw = column.cells[row.letter];
-                html += '<td class="' + self.cellClasses(column, raw, invalidList, row.letter) + '" ' + coordinates + ' ' +
-                    'onclick="tableView.editCell(this, \'' + columnLabel + '\', \'' + row.letter + '\', \'condition\')">' +
-                    self.cellDisplay(raw) + '</td>';
-            });
-            html += '</tr>';
-        });
-
-        // .. action rows ..
-        html += this.sectionRowHtml(columnCount, 'Actions',
-            this.phraseMode ? '' : 'drag an attribute from the vocabulary to add a row', 'action');
-        tableModel.table.actions.forEach(function(row) {
-            var label = self.phraseMode
-                ? '<span class="table-expression-phrase">Then set ' + shared.escape(tableModel.phraseFor(row.target)) + ' to &hellip;</span>'
-                : '<span class="table-expression">' + shared.escape(row.target) + ' =</span>';
-
-            html += '<tr class="table-action-row" data-kind="action" data-row="' + row.target + '"><td class="table-expression-column">' +
-                self.rowControls('action', row.target) + label + '</td>';
-
-            tableModel.table.columns.forEach(function(column) {
-                var columnLabel = tableModel.label(column);
-                var coordinates = 'data-column="' + columnLabel + '" data-kind="action" data-row-id="' + row.target + '"';
-                var raw = tableModel.actionCell(column, row.target);
-                html += '<td class="' + self.cellClasses(column, raw, invalidList, row.target) + '" ' + coordinates + ' ' +
-                    'onclick="tableView.editCell(this, \'' + columnLabel + '\', \'' + row.target + '\', \'action\')">' +
-                    self.cellDisplay(raw) + '</td>';
-            });
-            html += '</tr>';
-        });
-
-        // .. the overrides row ..
-        html += this.sectionRowHtml(columnCount, 'Overrides', '', '');
-        html += '<tr><td class="table-expression-column">' +
-            '<span class="' + (this.phraseMode ? 'table-expression-phrase' : 'table-expression') + '" style="color:var(--text4)">' +
-            (this.phraseMode ? 'this rule wins over &hellip;' : 'overrides') + '</span></td>';
-        tableModel.table.columns.forEach(function(column) {
-            var columnLabel = tableModel.label(column);
-            if (column.number === 0) {
-                html += '<td class="table-override-cell" data-column="' + columnLabel + '"></td>';
-                return;
-            }
-            var current = column.overrides.length === 0 ? '' : String(column.overrides[0]);
-            var options = '<option value="">none</option>';
-            tableModel.ruleColumns().forEach(function(other) {
-                if (other.number === column.number) { return; }
-                var selected = current === String(other.number) ? ' selected' : '';
-                options += '<option value="' + other.number + '"' + selected + '>overrides rule ' + other.number + '</option>';
-            });
-            html += '<td class="table-override-cell" data-column="' + columnLabel + '">' +
-                '<select class="' + (current !== '' ? 'table-has-override' : '') + '" ' +
-                'data-tippy-content="When both rules match the same data, only this one wins. An override never reorders anything." ' +
-                'onchange="tableView.setOverride(\'' + columnLabel + '\', this.value)">' + options + '</select></td>';
-        });
-        html += '</tr>';
-
-        // .. and the decision messages row.
-        html += this.sectionRowHtml(columnCount, 'Decision messages',
-            'one plain sentence per rule, returned with every execution and shown in the decision log', '');
-        html += '<tr><td class="table-expression-column">' +
-            '<span class="table-expression" style="color:var(--text4)">message</span></td>';
-        tableModel.table.columns.forEach(function(column) {
-            var columnLabel = tableModel.label(column);
-            html += '<td class="table-statement-cell" data-column="' + columnLabel + '"><div class="table-statement-wrap">' +
-                '<span class="table-statement-dot table-severity-' + column.statement.severity + '" ' +
-                'data-tippy-content="Severity: ' + column.statement.severity + '. Click to cycle info, warning, violation." ' +
-                'onclick="tableView.cycleSeverity(\'' + columnLabel + '\')"></span>' +
-                '<span class="table-statement-text" onclick="tableView.editStatement(this, \'' + columnLabel + '\')">' +
-                self.statementHtml(column.statement.text) + '</span>' +
-                '</div></td>';
-        });
-        html += '</tr>';
-
-        html += '</table>';
-        document.getElementById('table-grid-area').innerHTML = html;
+        document.getElementById('table-grid-area').innerHTML = this.gridHtml(this.renderContext());
 
         this.attachColumnHover();
         this.attachDropTargets();
@@ -321,8 +93,9 @@ var tableView = {
 // ////////////////////////////////////////////////////////////////////////
 
     // Every edit re-runs the server validation after a short pause: the
-    // structural errors land in the problems panel and the invalid cells
-    // shade red in the grid
+    // structural errors land in the problems panel, the invalid cells shade
+    // red in the grid, and the sentence bar and the unfold hints speak from
+    // how the server read the cells back
     scheduleServerCheck: function() {
         var self = this;
 
@@ -337,6 +110,8 @@ var tableView = {
             tableModel.check(function() {
                 self.renderProblems();
                 self.shadeInvalidCells();
+                self.renderReadings();
+                shared.initTips();
             }, data.reportError);
         }, tableModel.config.checkDelayMilliseconds);
     },

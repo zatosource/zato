@@ -24,6 +24,11 @@ var rulesetsView = {
         // Views stay few and named, a long view list wastes more time
         // than it saves
         maxSavedViews: 5,
+        // A rename impact lists this many renamed rules, the count covers the rest
+        maxRenamedRules: 6,
+
+        // A ruleset name is dotted words, the same shape the server enforces
+        rulesetNamePattern: /^\w+(\.\w+)*$/,
 
         // Where a ruleset opens into, each screen reads the parameter
         openUrls: {
@@ -38,6 +43,7 @@ var rulesetsView = {
         // Every history event type as the phrase the feed shows
         eventPhrases: {
             'definition.created': 'created this ruleset',
+            'definition.renamed': 'renamed this ruleset',
             'definition.updated': 'updated this ruleset',
             'definition.archived': 'archived this ruleset',
             'version.created': 'stored a new version',
@@ -268,7 +274,12 @@ var rulesetsView = {
         var self = this;
         var ruleset = preview.definition;
         var draft = rulesetsModel.draftVersion(ruleset);
-        var html = '<div class="test-grid-title">' + shared.escape(ruleset.name) + '</div>';
+
+        var html = '<div class="test-grid-title">' + shared.escape(ruleset.name) +
+            '<button class="button-mini rulesets-rename" ' +
+            'onclick="rulesetsView.openRenamePanel(' + ruleset.id + ', this)" ' +
+            'data-tippy-content="Rename the ruleset: the impact first, including how many calls its ' +
+            'current name has served.">rename</button></div>';
 
         var statusValue = (ruleset.live_version === null ? 'never published' : 'live v' + ruleset.live_version) +
             (draft === null ? '' : ', draft v' + draft + ' in progress');

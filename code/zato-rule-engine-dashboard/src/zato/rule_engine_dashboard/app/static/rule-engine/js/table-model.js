@@ -1,9 +1,9 @@
 'use strict';
 
 // Data model for the decision table editor: loading the stored table
-// document, the display-side reading of the canonical cell syntax, and
-// the structure edits. The server-backed checks live in table-checks.js.
-// No DOM access in this file.
+// document and the structure edits. How a cell reads back is the server's
+// answer, never a grammar of our own, and the server-backed checks live
+// in table-checks.js. No DOM access in this file.
 
 (function() {
 
@@ -24,6 +24,10 @@ var tableModel = {
 
         // What the checks say when the table does not hold together yet
         structuralProblemsMessage: 'Fix the structural problems first, the panel below lists them.',
+
+        // What a cell reads as before the first validation has answered, the
+        // same as a cell that takes no part in its column
+        emptyReading: {kind: 'any'},
 
         urls: {
             tables: '/rules/rulesets/?object_type=decision-table',
@@ -51,9 +55,10 @@ var tableModel = {
     generatedNumbers: {},
     unfoldSnapshots: {},
 
-    // What the server said last: structural errors from validate and
-    // the on-demand check results
+    // What the server said last: structural errors from validate, how it
+    // read every cell back, and the on-demand check results
     serverErrors: [],
+    readings: {},
     conflictResult: null,
     subsumption: [],
     unreachable: [],
@@ -229,41 +234,17 @@ var tableModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The display-side reading of the canonical cell syntax the server
-    // parses: ranges, set membership, leading symbols and plain values.
-    // The server stays the authority on validity, this reading only feeds
-    // the sentence bar and the unfold indicators.
-    parseCell: function(raw) {
-        var text = raw.trim();
-        if (text === '' || text === '-') { return {kind: 'any'}; }
+    // How the server read one condition cell back - the cell grammar lives
+    // there alone, so the sentence bar and the unfold hints speak from its
+    // answer. Nothing has been read yet before the first validation lands,
+    // which is what the empty reading stands for.
+    reading: function(column, letter) {
+        var columnReadings = this.readings[String(column.number)];
+        if (columnReadings === undefined) { return this.config.emptyReading; }
 
-        var setMatch = /^(not in|in)\s*\{(.+)\}$/.exec(text);
-        if (setMatch !== null) {
-            var items = setMatch[2].split(',').map(function(item) { return item.trim(); });
-            var out = {kind: 'set', items: items, negated: setMatch[1] === 'not in'};
-            return out;
-        }
+        var out = columnReadings[letter];
+        if (out === undefined) { return this.config.emptyReading; }
 
-        var rangeMatch = /^(-?\d+(?:\.\d+)?)\.\.(-?\d+(?:\.\d+)?)$/.exec(text);
-        if (rangeMatch !== null) {
-            return {kind: 'interval', low: +rangeMatch[1], high: +rangeMatch[2]};
-        }
-
-        var symbolMatch = /^(==|!=|<=|>=|=~|<|>)\s*(.+)$/.exec(text);
-        if (symbolMatch !== null) {
-            return {kind: 'comparison', symbol: symbolMatch[1], value: symbolMatch[2]};
-        }
-
-        if (/^-?\d+(?:\.\d+)?$/.test(text)) {
-            return {kind: 'interval', low: +text, high: +text};
-        }
-
-        var result = {kind: 'value', value: text};
-        return result;
-    },
-
-    parseCondition: function(column, letter) {
-        var out = this.parseCell(column.cells[letter]);
         return out;
     },
 
@@ -277,8 +258,8 @@ var tableModel = {
         var self = this;
         this.table.conditions.forEach(function(row) {
             if (out !== null) { return; }
-            var parsed = self.parseCondition(column, row.letter);
-            if (parsed.kind === 'set' && !parsed.negated && parsed.items.length > 1) { out = row; }
+            var reading = self.reading(column, row.letter);
+            if (reading.kind === 'set' && !reading.negated && reading.items.length > 1) { out = row; }
         });
 
         return out;

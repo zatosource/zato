@@ -7,7 +7,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from http.client import OK
+from http.client import BAD_REQUEST, OK
+
+# Zato
+from zato.common.rule_engine.sql.constants import Documents_Key
+from zato.common.rule_engine.sql.document import deserialize_document
 
 # ################################################################################################################################
 
@@ -108,6 +112,76 @@ def test_publish_hot_reloads_a_ruleset(client:'any_', backend:'any_') -> 'None':
 
     published = backend.definitions.get(definition.id)
     assert published.live_version == 1
+
+# ################################################################################################################################
+
+def test_rename_previews_its_impact_without_changing_anything(client:'any_', backend:'any_') -> 'None':
+    """ The dry run reports the calls the current name served and the rule names it would rewrite.
+    """
+    definition = create_ruleset(backend)
+
+    body = {'new_name': 'mortgages', 'dry_run': True}
+    response = post_json(client, f'/rules/rulesets/{definition.id}/rename/', body)
+    assert response.status_code == OK
+
+    data = response.json()
+    assert data['old_name'] == 'Loans'
+    assert data['new_name'] == 'mortgages'
+    assert data['rest_call_count'] == 0
+    assert data['rules'] == [{'rule': 'loans_Preferential_rate', 'new_rule': 'mortgages_Preferential_rate'}]
+
+    # Nothing moved - the name and the stored rule names are what they were.
+    unchanged = backend.definitions.get(definition.id)
+    assert unchanged.name == 'Loans'
+    assert unchanged.current_version == 1
+
+# ################################################################################################################################
+
+def test_rename_renames_the_ruleset_and_every_rule_in_it(client:'any_', backend:'any_') -> 'None':
+    """ An applied rename gives the ruleset its new name and stores the rewritten rules as the next version.
+    """
+    definition = create_ruleset(backend)
+
+    body = {'new_name': 'mortgages', 'dry_run': False}
+    response = post_json(client, f'/rules/rulesets/{definition.id}/rename/', body)
+    assert response.status_code == OK
+    assert response.json()['version'] == 2
+
+    # The definition answers to the new name, which is the REST address of the ruleset ..
+    renamed = backend.definitions.get(definition.id)
+    assert renamed.name == 'mortgages'
+
+    # .. every rule of it carries the new name too ..
+    documents = backend.definitions.get_document(definition.id)[Documents_Key]
+    assert list(documents) == ['mortgages_Preferential_rate']
+
+    document = documents['mortgages_Preferential_rate']
+    assert document['ruleset_name'] == 'mortgages'
+    assert document['full_name'] == 'mortgages_Preferential_rate'
+
+    # .. the where-used index refers to the rule by the name it now has ..
+    usages = backend.references.where_used('credit_score')
+    assert usages[0].rule_name == 'mortgages_Preferential_rate'
+
+    # .. and the rename is in the history under the name it had before.
+    payloads = []
+    for event in backend.events.list(definition_id=definition.id, limit=20):
+        if event.event_type == 'definition.renamed':
+            payloads.append(deserialize_document(event.payload))
+
+    assert payloads == [{'old_name': 'Loans', 'new_name': 'mortgages'}]
+
+# ################################################################################################################################
+
+def test_rename_refuses_a_name_no_rest_path_can_carry(client:'any_', backend:'any_') -> 'None':
+    """ A ruleset name is dotted words - anything else is refused before a preview even runs.
+    """
+    definition = create_ruleset(backend)
+
+    body = {'new_name': 'mortgages/2', 'dry_run': True}
+    response = post_json(client, f'/rules/rulesets/{definition.id}/rename/', body)
+    assert response.status_code == BAD_REQUEST
+    assert 'dotted words' in response.json()['error']
 
 # ################################################################################################################################
 
