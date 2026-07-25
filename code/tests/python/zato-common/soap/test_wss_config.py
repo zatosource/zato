@@ -227,6 +227,30 @@ class TestUsernameTokenMode:
         with pytest.raises(SOAPSecurityException):
             enforce_wss(_reparse(envelope), channel_config)
 
+    def test_a_definition_without_the_digest_flag_uses_clear_text(self):
+        # The flag is an optional field kept in a definition's opaque attributes, so a definition
+        # written without it - which an enmasse YAML definition for a plaintext password naturally
+        # is - simply has no such key. Reading it directly used to raise a KeyError, and since only
+        # a security failure is caught on the channel path, the caller saw a 500 on every request
+        # instead of being authenticated. Absent means clear text, which is what the UsernameToken
+        # profile itself reads an absent password type as.
+        config = {'mode': Mode.UsernameToken, 'username': 'MYUSER', 'password': 'MYPASS'}
+
+        envelope = _sample_envelope()
+        apply_wss(envelope, config)
+
+        enforce_wss(_reparse(envelope), config)
+
+    def test_a_definition_without_the_digest_flag_still_refuses_a_wrong_password(self):
+        sender_config = {'mode': Mode.UsernameToken, 'username': 'MYUSER', 'password': 'WRONG'}
+        channel_config = {'mode': Mode.UsernameToken, 'username': 'MYUSER', 'password': 'MYPASS'}
+
+        envelope = _sample_envelope()
+        apply_wss(envelope, sender_config)
+
+        with pytest.raises(SOAPSecurityException):
+            enforce_wss(_reparse(envelope), channel_config)
+
     def test_missing_header_is_rejected(self):
         config = {'mode': Mode.UsernameToken, 'username': 'MYUSER', 'password': 'MYPASS', 'use_digest': False}
 
@@ -321,6 +345,97 @@ class TestX509Mode:
 
         with pytest.raises(SOAPSecurityException):
             enforce_wss(envelope, _receiver_x509_config(parties, sign=True, encrypt=False))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestTrustMaterial:
+    """ A definition with signature verification enabled and nothing to verify against.
+
+    The signer's certificate travels inside the message being verified, so a definition holding
+    neither trust anchors nor a pinned peer certificate has nothing to check it against, and a
+    verifier that carried on regardless would accept any self-signed certificate an attacker cared
+    to generate. What it would then report is that somebody signed something, which is not the
+    question a signature is asked.
+    """
+
+    def test_a_definition_with_no_trust_material_refuses_a_signed_message(self, parties):
+        envelope = _sample_envelope()
+        apply_wss(envelope, _sender_x509_config(parties, sign=True, encrypt=False))
+
+        # Signature verification is on, and there is nothing configured to establish trust with.
+        channel_config = {
+            'mode': Mode.X509,
+            'sign': True,
+            'encrypt': False,
+        }
+
+        with pytest.raises(SOAPSecurityException) as e:
+            enforce_wss(_reparse(envelope), channel_config)
+
+        assert 'No trust anchors and no pinned peer certificate' in str(e.value)
+
+    def test_a_self_signed_certificate_is_not_accepted_in_place_of_trust(self, parties):
+        # The attack the rule exists for. An attacker signs with a certificate it generated itself
+        # and attaches it to the message, so the signature is internally consistent and verifies
+        # against the key it travels with.
+        attacker_config = {
+            'mode': Mode.X509,
+            'sign': True,
+            'encrypt': False,
+            'signing_key': private_key_pem_path(parties.receiver.signing_key),
+            'signing_certificate_chain': certificate_pem_path(parties.receiver.signing_certificate),
+        }
+
+        envelope = _sample_envelope()
+        apply_wss(envelope, attacker_config)
+
+        channel_config = {
+            'mode': Mode.X509,
+            'sign': True,
+            'encrypt': False,
+        }
+
+        with pytest.raises(SOAPSecurityException):
+            enforce_wss(_reparse(envelope), channel_config)
+
+    def test_trust_anchors_alone_are_enough(self, parties):
+        envelope = _sample_envelope()
+        apply_wss(envelope, _sender_x509_config(parties, sign=True, encrypt=False))
+
+        channel_config = {
+            'mode': Mode.X509,
+            'sign': True,
+            'encrypt': False,
+            'trust_anchors': certificate_pem_path(parties.ca_certificate),
+        }
+
+        enforce_wss(_reparse(envelope), channel_config)
+
+    def test_a_pinned_certificate_alone_is_enough(self, parties):
+        envelope = _sample_envelope()
+        apply_wss(envelope, _sender_x509_config(parties, sign=True, encrypt=False))
+
+        channel_config = {
+            'mode': Mode.X509,
+            'sign': True,
+            'encrypt': False,
+            'peer_certificate': certificate_pem_path(parties.sender.signing_certificate),
+        }
+
+        enforce_wss(_reparse(envelope), channel_config)
+
+    def test_encryption_without_verification_needs_no_trust_material(self, parties):
+        # An encrypt-only definition verifies no signature, so it has nothing to establish trust
+        # for and must not be refused for lacking the means to do it.
+        envelope = _sample_envelope()
+        apply_wss(envelope, _sender_x509_config(parties, sign=False, encrypt=True))
+
+        received = _reparse(envelope)
+        enforce_wss(received, _receiver_x509_config(parties, sign=False, encrypt=True))
+
+        body = parse_body(received)
+        assert body.submitSingleMessage.facilityID == 'FL0001'
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -51,6 +51,21 @@ All_Modes = (Mode.UsernameToken, Mode.X509, Mode.SAML)
 # rather than with traffic.
 _keystore_cache:'anydict' = {}
 
+# What a definition that does not say so is taken to mean. All three are optional inputs stored in a
+# definition's opaque attributes, so a definition that never set one simply has no such key - the
+# dashboard always sends all three as real booleans, but an enmasse YAML definition carries only the
+# keys it was written with, and reading them directly turned a plaintext-password definition without
+# a use_digest line into a KeyError on every request, which surfaced to the caller as a 500 rather
+# than as an authentication result.
+#
+# False is what the absence means in each case rather than a lenient guess. The UsernameToken profile
+# reads an absent password type as clear text, and a definition that does not ask for a signature or
+# for encryption has not configured anything for these to skip - a definition that does ask and has
+# nothing to verify against still fails closed, in validate_certificate_chain.
+Default_Use_Digest = False
+Default_Sign = False
+Default_Encrypt = False
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -143,10 +158,24 @@ def invalidate_keystores(definition_id:'any_') -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _flag(config:'stranydict', name:'str', default:'bool') -> 'bool':
+    """ Returns one of a definition's optional boolean flags, or what its absence means.
+    """
+    out = config.get(name)
+
+    if out is None:
+        out = default
+
+    return out
+
+# ################################################################################################################################
+
 def _apply_username_token(envelope:'any_', config:'stranydict') -> 'None':
     """ Adds a UsernameToken with the definition's credentials, in clear text or digest form.
     """
-    _ = add_username_token(envelope, config['username'], config['password'], config['use_digest'])
+    use_digest = _flag(config, 'use_digest', Default_Use_Digest)
+
+    _ = add_username_token(envelope, config['username'], config['password'], use_digest)
 
 # ################################################################################################################################
 
@@ -156,11 +185,11 @@ def _apply_x509(envelope:'any_', config:'stranydict') -> 'None':
     keystore = get_keystore(config)
 
     # Signing comes first so the signature covers the plaintext body ..
-    if config['sign']:
+    if _flag(config, 'sign', Default_Sign):
         _ = sign(envelope, keystore)
 
     # .. and only then does the body turn into ciphertext.
-    if config['encrypt']:
+    if _flag(config, 'encrypt', Default_Encrypt):
         encrypt_body(envelope, keystore)
 
 # ################################################################################################################################
@@ -178,7 +207,7 @@ def _apply_saml(envelope:'any_', config:'stranydict') -> 'None':
             add_attribute(assertion, name, value)
 
     # A signed assertion is signed before it enters the header so the signature covers its final form.
-    if config.get('sign'):
+    if _flag(config, 'sign', Default_Sign):
         keystore = get_keystore(config)
         _ = sign_assertion(assertion, keystore)
 
@@ -191,7 +220,9 @@ def _enforce_username_token(envelope:'any_', config:'stranydict') -> 'VerifiedSi
     """ Checks the incoming UsernameToken against the definition's credentials, in the password
     form the definition configured.
     """
-    verify_username_token(envelope, config['username'], config['password'], config['use_digest'])
+    use_digest = _flag(config, 'use_digest', Default_Use_Digest)
+
+    verify_username_token(envelope, config['username'], config['password'], use_digest)
 
     # A UsernameToken proves who the caller is, it does not sign anything.
     return None
@@ -205,11 +236,11 @@ def _enforce_x509(envelope:'any_', config:'stranydict') -> 'VerifiedSignature | 
     keystore = get_keystore(config)
 
     # Decryption comes first so the signature can be checked over the plaintext body ..
-    if config['encrypt']:
+    if _flag(config, 'encrypt', Default_Encrypt):
         decrypt_body(envelope, keystore)
 
     # .. and now that the body is readable, the signature over it can be verified.
-    if config['sign']:
+    if _flag(config, 'sign', Default_Sign):
         out = verify(envelope, keystore)
     else:
         out = None

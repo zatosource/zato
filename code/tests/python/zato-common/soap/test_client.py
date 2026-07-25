@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from base64 import b64decode, b64encode
 from hashlib import sha256
+from http.client import BAD_GATEWAY, INTERNAL_SERVER_ERROR, OK
 from io import BytesIO
 
 # cryptography
@@ -26,9 +27,12 @@ from requests.exceptions import ReadTimeout, SSLError
 import pytest
 
 # Zato
+from zato.common.audit_log.api import AuditEvent
+from zato.common.soap.audit import Mask
 from zato.common.soap.client import SOAPClient
-from zato.common.soap.common import FaultCode, NS, SOAPFault, SOAPVersion
+from zato.common.soap.common import Content_Type, FaultCode, NS, SOAPException, SOAPFault, SOAPVersion
 from zato.common.soap.ebxml import decrypt_payload, EbXMLInfo, verify_payload
+from zato.common.soap.envelope import attach_body, build_envelope
 from zato.common.soap.message import SOAPMessage
 from zato.common.soap.security.wss import Mode
 from zato.common.util.xml_.mime_ import new_content_id, Part
@@ -41,6 +45,56 @@ from certs import certificate_pem_path, private_key_pem_path
 # ################################################################################################################################
 
 _ns_cdc = 'urn:cdc:iisb:2011'
+
+# The soap:Header of a 1.2 envelope, which is where injected header elements land.
+_soap_header = f'{{{NS.SOAP12}}}Header'
+
+# Text that only survives a round trip if the encoding is handled - every one of these characters
+# is outside ASCII and each has a different byte in iso-8859-2 than it does in UTF-8.
+_non_ascii_text = 'zażółć gęślą jaźń'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _record_audit(client:'SOAPClient') -> 'list':
+    """ Plugs an audit callback into a client and returns the list every event lands in.
+    """
+    recorded = []
+
+    def callback(cid, event, endpoint, outcome, data):
+        recorded.append((event, data))
+
+    client.audit_callback = callback
+    return recorded
+
+# ################################################################################################################################
+
+def _sent_request(recorded:'list') -> 'bytes':
+    """ Returns the data of the one request event out of a recorded audit exchange.
+    """
+    for event, data in recorded:
+        if event == AuditEvent.Request_Sent:
+            return data
+
+    raise AssertionError('No request event was recorded')
+
+# ################################################################################################################################
+
+def _build_response_envelope(text:'str'='ok', encoding:'str'='utf-8', declare:'bool'=True) -> 'bytes':
+    """ Builds the bytes of a plain SOAP 1.2 response envelope carrying one status element.
+
+    The encoding and whether the XML declaration names it are what the charset tests vary, so both
+    are built here rather than by patching serialized bytes after the fact.
+    """
+    response = SOAPMessage()
+    response.namespace = _ns_cdc
+    response.status = text
+
+    envelope = build_envelope(SOAPVersion.V12)
+    _ = attach_body(envelope, response, 'opResponse')
+
+    out = etree.tostring(envelope, xml_declaration=declare, encoding=encoding)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -172,6 +226,124 @@ class TestBodyCredentials:
             _ = client.invoke('submitSingleMessage', _cdc_message())
 
         client.close()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestCustomSOAPHeaders:
+    """ The custom header elements a declarative connection injects into every envelope.
+
+    A great many endpoints want a tenant id, a client version or a routing hint in the header rather
+    than the body, and having the connection put it there is what keeps it out of every service that
+    calls the connection.
+    """
+
+    def test_a_plain_header_is_injected(self, soap_server):
+        soap_server.configure('/hdr-plain')
+
+        config = {
+            'address': soap_server.url('/hdr-plain'),
+            'soap_version': SOAPVersion.V12,
+        }
+        client = SOAPClient(config)
+        _ = client.invoke('submitSingleMessage', _cdc_message(), soap_headers={'ClientVersion': '4.1'})
+        client.close()
+
+        envelope = soap_server.last_request['envelope']
+        element = envelope.find(f'.//{_soap_header}/ClientVersion')
+
+        assert element is not None
+        assert element.text == '4.1'
+
+    def test_a_namespaced_header_keeps_its_namespace(self, soap_server):
+        # A name in Clark notation carries its own namespace, which is how a header belonging to a
+        # specification the endpoint names is emitted rather than one in no namespace at all.
+        soap_server.configure('/hdr-ns')
+
+        config = {
+            'address': soap_server.url('/hdr-ns'),
+            'soap_version': SOAPVersion.V12,
+        }
+        client = SOAPClient(config)
+        _ = client.invoke('submitSingleMessage', _cdc_message(),
+            soap_headers={f'{{{_ns_cdc}}}TenantID': 'ACME'})
+        client.close()
+
+        envelope = soap_server.last_request['envelope']
+        element = envelope.find(f'.//{{{_ns_cdc}}}TenantID')
+
+        assert element is not None
+        assert element.text == 'ACME'
+
+    def test_several_headers_are_all_injected(self):
+        config = {
+            'address': 'http://127.0.0.1:1/never-reached',
+            'soap_version': SOAPVersion.V12,
+        }
+        client = SOAPClient(config)
+
+        headers = {'ClientVersion': '4.1', 'TenantID': 'ACME', 'Locale': 'en-GB'}
+        body, _, _, _ = client._build_request('submitSingleMessage', _cdc_message(), headers)
+        client.close()
+
+        for name, value in headers.items():
+            assert f'<{name}>{value}</{name}>'.encode() in body
+
+    def test_a_non_string_value_is_written_in_its_lexical_form(self):
+        # The rows a dashboard field produces are strings, but a JSONata expression may evaluate to
+        # a number or a boolean, and XML has no way to carry a Python repr.
+        config = {
+            'address': 'http://127.0.0.1:1/never-reached',
+            'soap_version': SOAPVersion.V12,
+        }
+        client = SOAPClient(config)
+
+        body, _, _, _ = client._build_request('submitSingleMessage', _cdc_message(),
+            {'Retries': 3, 'IsTest': True})
+        client.close()
+
+        assert b'<Retries>3</Retries>' in body
+
+        # A lexical boolean is lower case, which is what a schema-aware peer expects - Python's own
+        # str() would produce True and fail validation.
+        assert b'<IsTest>true</IsTest>' in body
+
+    def test_no_headers_leaves_the_envelope_alone(self):
+        config = {
+            'address': 'http://127.0.0.1:1/never-reached',
+            'soap_version': SOAPVersion.V12,
+        }
+        client = SOAPClient(config)
+
+        body, _, _, _ = client._build_request('submitSingleMessage', _cdc_message(), None)
+        client.close()
+
+        assert b'ClientVersion' not in body
+
+    def test_custom_headers_coexist_with_ws_security(self, parties, soap_server):
+        # Both write into soap:Header, so a connection doing both has two things appending to the
+        # same element - the custom header must arrive and the message must still verify.
+        soap_server.configure('/hdr-signed', security=_receiver_x509(parties, sign=True, encrypt=False))
+
+        config = {
+            'address': soap_server.url('/hdr-signed'),
+            'soap_version': SOAPVersion.V12,
+            'security': _sender_x509(parties, sign=True, encrypt=False),
+        }
+        client = SOAPClient(config)
+
+        # The server enforces the signature, so a failure to verify surfaces there as a fault
+        # rather than here as a local error.
+        response = client.invoke('submitSingleMessage', _cdc_message(), soap_headers={'ClientVersion': '4.1'})
+        client.close()
+
+        assert response.submitSingleMessageResponse.status == 'ok'
+
+        envelope = soap_server.last_request['envelope']
+
+        # The custom header sits alongside the security header rather than inside or instead of it.
+        assert envelope.find(f'.//{_soap_header}/ClientVersion') is not None
+        assert envelope.find(f'.//{{{NS.WSSE}}}Security') is not None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -693,6 +865,199 @@ class TestTransport:
             'soap_version': SOAPVersion.V12,
             'validate_tls': False,
         }
+        client = SOAPClient(config)
+        response = client.invoke('op', _cdc_message())
+        client.close()
+
+        assert response.opResponse.status == 'ok'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestAuditMasking:
+    """ What the audit log is allowed to keep. A record outlives the request and is read by more
+    people than the request was made for, so a credential written into one is a credential stored
+    in plaintext for as long as the log is kept - while the wire still has to carry the real thing.
+    """
+
+    def test_username_token_password_is_masked(self, soap_server):
+        channel = {'mode': Mode.UsernameToken, 'username': 'MYUSER', 'password': 'MYPASS', 'use_digest': False}
+        soap_server.configure('/audit-ut', enforce_wss=channel)
+
+        config = {
+            'address': soap_server.url('/audit-ut'),
+            'soap_version': SOAPVersion.V12,
+            'security': dict(channel),
+        }
+        client = SOAPClient(config)
+        recorded = _record_audit(client)
+
+        response = client.invoke('op', _cdc_message())
+        client.close()
+
+        assert response.opResponse.status == 'ok'
+
+        request_data = _sent_request(recorded)
+
+        assert b'MYPASS' not in request_data
+        assert Mask.encode('utf-8') in request_data
+
+        # The username identifies the exchange rather than proving anything, so it stays readable.
+        assert b'MYUSER' in request_data
+
+        # The endpoint still received the real password, otherwise it would have faulted.
+        assert b'MYPASS' in soap_server.last_request['raw_body']
+
+    def test_body_credentials_are_masked(self, soap_server):
+        expected = {'username': 'BODYUSER', 'password': 'BODYPASS'}
+        soap_server.configure('/audit-body', expect_credentials=expected)
+
+        config = {
+            'address': soap_server.url('/audit-body'),
+            'soap_version': SOAPVersion.V12,
+            'body_credentials': {'username': 'BODYUSER', 'password': 'BODYPASS'},
+        }
+        client = SOAPClient(config)
+        recorded = _record_audit(client)
+
+        response = client.invoke('op', _cdc_message())
+        client.close()
+
+        assert response.opResponse.status == 'ok'
+
+        request_data = _sent_request(recorded)
+
+        assert b'BODYPASS' not in request_data
+        assert b'BODYPASS' in soap_server.last_request['raw_body']
+
+    def test_a_message_without_credentials_is_recorded_whole(self, soap_server):
+        soap_server.configure('/audit-plain')
+
+        config = {'address': soap_server.url('/audit-plain'), 'soap_version': SOAPVersion.V12}
+        client = SOAPClient(config)
+        recorded = _record_audit(client)
+
+        _ = client.invoke('op', _cdc_message())
+        client.close()
+
+        request_data = _sent_request(recorded)
+
+        # Masking must not cost the record anything when there is nothing to mask.
+        assert b'FL0001' in request_data
+        assert Mask.encode('utf-8') not in request_data
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestResponseStatus:
+    """ What an error status means for a response body. Only a fault is a SOAP answer to a failure -
+    a gateway's error page and a non-fault envelope on a 500 are both transport-level failures, and
+    each one has to say so rather than surface as whatever the XML parser makes of it.
+    """
+
+    def test_gateway_error_page_is_refused(self, soap_server):
+        page = b'<html><head><title>502 Bad Gateway</title></head><body>nginx</body></html>'
+        soap_server.configure('/bad-gateway', respond_raw=(BAD_GATEWAY, page, 'text/html'))
+
+        config = {'address': soap_server.url('/bad-gateway'), 'soap_version': SOAPVersion.V12}
+        client = SOAPClient(config)
+
+        with pytest.raises(SOAPException) as exception_info:
+            _ = client.invoke('op', _cdc_message())
+
+        client.close()
+
+        message = str(exception_info.value)
+
+        # The status and the content type are what identify the failure, and the body's opening
+        # names the intermediary that produced it.
+        assert 'HTTP 502' in message
+        assert 'text/html' in message
+        assert '502 Bad Gateway' in message
+
+    def test_non_fault_envelope_on_an_error_status_is_refused(self, soap_server):
+        envelope = _build_response_envelope()
+        soap_server.configure('/error-body',
+            respond_raw=(INTERNAL_SERVER_ERROR, envelope, Content_Type[SOAPVersion.V12]))
+
+        config = {'address': soap_server.url('/error-body'), 'soap_version': SOAPVersion.V12}
+        client = SOAPClient(config)
+
+        with pytest.raises(SOAPException) as exception_info:
+            _ = client.invoke('op', _cdc_message())
+
+        client.close()
+
+        assert 'Non-fault envelope on HTTP 500' in str(exception_info.value)
+
+    def test_fault_on_an_error_status_is_still_a_fault(self, soap_server):
+        soap_server.configure('/fault-status', respond_fault=(FaultCode.Receiver, 'Backend unavailable'))
+
+        config = {'address': soap_server.url('/fault-status'), 'soap_version': SOAPVersion.V12}
+        client = SOAPClient(config)
+
+        # The status check must not get in the way of the fault that explains the status.
+        with pytest.raises(SOAPFault) as exception_info:
+            _ = client.invoke('op', _cdc_message())
+
+        client.close()
+
+        assert exception_info.value.reason == 'Backend unavailable'
+
+    def test_mislabelled_successful_response_is_still_parsed(self, soap_server):
+        envelope = _build_response_envelope()
+        soap_server.configure('/mislabelled', respond_raw=(OK, envelope, 'text/plain'))
+
+        config = {'address': soap_server.url('/mislabelled'), 'soap_version': SOAPVersion.V12}
+        client = SOAPClient(config)
+        response = client.invoke('op', _cdc_message())
+        client.close()
+
+        assert response.opResponse.status == 'ok'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestResponseCharset:
+    """ What the transport says a response is encoded in. A document declaring its own encoding is
+    self-describing, but one that declares none is read as UTF-8 unless the Content-Type says
+    otherwise, so a peer answering in another encoding has to be honoured or its text comes back
+    mangled.
+    """
+
+    def test_charset_from_the_transport_is_honoured(self, soap_server):
+        envelope = _build_response_envelope(text=_non_ascii_text, encoding='iso-8859-2', declare=False)
+        content_type = 'application/soap+xml; charset=iso-8859-2'
+        soap_server.configure('/latin2', respond_raw=(OK, envelope, content_type))
+
+        config = {'address': soap_server.url('/latin2'), 'soap_version': SOAPVersion.V12}
+        client = SOAPClient(config)
+        response = client.invoke('op', _cdc_message())
+        client.close()
+
+        assert response.opResponse.status == _non_ascii_text
+
+    def test_own_declaration_wins_over_the_transport(self, soap_server):
+        envelope = _build_response_envelope(text=_non_ascii_text, encoding='iso-8859-2', declare=True)
+
+        # The transport is wrong and the document is right - a document saying what it is in is
+        # what the parser reads, so the mislabelling has to make no difference.
+        content_type = 'application/soap+xml; charset=utf-8'
+        soap_server.configure('/declared', respond_raw=(OK, envelope, content_type))
+
+        config = {'address': soap_server.url('/declared'), 'soap_version': SOAPVersion.V12}
+        client = SOAPClient(config)
+        response = client.invoke('op', _cdc_message())
+        client.close()
+
+        assert response.opResponse.status == _non_ascii_text
+
+    def test_unknown_charset_falls_back_to_the_bytes_as_they_arrived(self, soap_server):
+        envelope = _build_response_envelope(declare=False)
+        content_type = 'application/soap+xml; charset=not-a-real-charset'
+        soap_server.configure('/bad-charset', respond_raw=(OK, envelope, content_type))
+
+        config = {'address': soap_server.url('/bad-charset'), 'soap_version': SOAPVersion.V12}
         client = SOAPClient(config)
         response = client.invoke('op', _cdc_message())
         client.close()

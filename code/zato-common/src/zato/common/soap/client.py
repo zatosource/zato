@@ -20,8 +20,9 @@ import requests
 from zato.common.audit_log.api import AuditEvent, AuditOutcome
 from zato.common.crypto.api import is_string_equal
 from zato.common.soap.addressing import add_addressing, AddressingInfo, Fault_Invalid_Addressing_Header, parse_addressing
-from zato.common.soap.common import Action_Parameter, Content_Type, NS, SOAP_Action_Header, SOAPAddressingException, \
-    SOAPException, SOAPVersion
+from zato.common.soap.audit import mask_credentials
+from zato.common.soap.common import Action_Parameter, Content_Type, NS, SOAP_Action_Header, SOAP_Media_Types, \
+    SOAPAddressingException, SOAPException, SOAPVersion
 from zato.common.soap.ebxml import build_message as build_ebxml_message, encrypt_payload, parse_message_header, sign_payload
 from zato.common.soap.envelope import attach_body, build_envelope, get_header, get_security_header, parse_body, \
     parse_envelope, raise_for_fault, to_bytes
@@ -31,13 +32,14 @@ from zato.common.soap.security.wss import apply_wss, keystore_from_config
 from zato.common.util.http_retry import RetryPolicy, send_with_retry
 from zato.common.util.tls_verify import resolve_tls_verify
 from zato.common.util.xml_.core import qname
+from zato.common.util.xml_.mime_ import parse_header_parameters
 from zato.common.util.xml_.keystore import new_keystore
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, anytuple, stranydict, strdictnone, strnone
+    from zato.common.typing_ import any_, anydict, anylist, anytuple, stranydict, strdictnone, strlist, strnone
     from zato.common.util.xml_.keystore import Keystore
     from zato.common.util.xml_.mime_ import part_list
     any_ = any_
@@ -48,6 +50,7 @@ if 0:
     part_list = part_list
     stranydict = stranydict
     strdictnone = strdictnone
+    strlist = strlist
     strnone = strnone
 
 # ################################################################################################################################
@@ -62,12 +65,61 @@ Minimum_Credential_Position = 1
 # What a retry of an outgoing SOAP request is called in the logs.
 _retry_label = 'SOAP out'
 
+# How much of a non-SOAP error body goes into the exception message. Enough to recognise the
+# intermediary that produced it, not enough to put an entire error page into a log.
+Error_Body_Excerpt_Size = 500
+
+# The encoding an XML parser assumes when a document declares none, and the one every envelope this
+# implementation emits is written in.
+Default_Encoding = 'utf-8'
+
+# What an XML declaration starts with. Its presence is what decides whether the transport's charset
+# has anything to add - a document that declares its own encoding is self-describing.
+_xml_declaration_prefix = b'<?xml'
+
 # What body credentials look like when a connection enables them without spelling out
 # a mapping of its own - one element per credential, each named after what it carries.
 Default_Body_Credential_Mappings = [
     {'name': 'username', 'source': 'username'},
     {'name': 'password', 'source': 'password'},
 ]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _to_utf8(envelope_bytes:'bytes', content_type:'str') -> 'bytes':
+    """ Returns the envelope bytes in the encoding an XML parser will read them as.
+
+    A document that carries its own XML declaration says what encoding it is in, and the parser
+    reads that, so the bytes are already right. A document that carries none is assumed by the
+    parser to be UTF-8, and for XML over HTTP the charset on the transport is what actually decides,
+    so a response declaring one of those has to be transcoded or every non-ASCII character in it
+    comes out wrong.
+    """
+    if envelope_bytes.startswith(_xml_declaration_prefix):
+        return envelope_bytes
+
+    parameters = parse_header_parameters(content_type)
+    charset = parameters.get('charset')
+
+    if not charset:
+        return envelope_bytes
+
+    charset = charset.strip().lower()
+
+    if charset == Default_Encoding:
+        return envelope_bytes
+
+    # An encoding name the peer made up is not something to guess at, and the bytes as they arrived
+    # are still the best thing to hand the parser.
+    try:
+        text = envelope_bytes.decode(charset)
+    except LookupError:
+        logger.warning('Ignoring unknown response charset `%s`', charset)
+        return envelope_bytes
+
+    out = text.encode(Default_Encoding)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -144,6 +196,19 @@ class SOAPClient:
 
 # ################################################################################################################################
 
+    def _credential_mappings(self) -> 'anylist':
+        """ Returns the body-credential mapping rows this connection injects by, which is the
+        default pair of a username and a password element when it spells out no mapping of its own.
+        """
+        out = self.body_credentials.get('mappings')
+
+        if not out:
+            out = Default_Body_Credential_Mappings
+
+        return out
+
+# ################################################################################################################################
+
     def _inject_body_credentials(self, operation:'any_') -> 'None':
         """ Injects the configured credentials as child elements of the operation element -
         by default as its first children in mapping order, or at explicit 1-based positions.
@@ -154,9 +219,7 @@ class SOAPClient:
         if operation.tag.startswith('{'):
             namespace = operation.tag[1:].partition('}')[0]
 
-        mappings = self.body_credentials.get('mappings')
-        if not mappings:
-            mappings = Default_Body_Credential_Mappings
+        mappings = self._credential_mappings()
 
         # Rows without a position prepend in mapping order, positioned rows slot in afterwards.
         default_rows = []
@@ -243,8 +306,9 @@ class SOAPClient:
     def _build_request(self, operation:'str', message:'SOAPMessage', soap_headers:'strdictnone'=None) -> 'anytuple':
         """ Builds the request body bytes and their Content-Type from a message - applying
         credential injection, custom headers, WS-Security, WS-Addressing and MTOM packaging as
-        configured. Returns the body, its Content-Type and the wsa:MessageID the request went out
-        under, which is None when the connection does not use WS-Addressing.
+        configured. Returns the body, its Content-Type, the wsa:MessageID the request went out
+        under, which is None when the connection does not use WS-Addressing, and the envelope the
+        body was serialized from, which is what the audit log is written out of.
         """
         envelope = build_envelope(self.soap_version)
 
@@ -279,7 +343,7 @@ class SOAPClient:
             body = envelope_bytes
             content_type = self._request_content_type()
 
-        out = (body, content_type, message_id)
+        out = (body, content_type, message_id, envelope)
         return out
 
 # ################################################################################################################################
@@ -335,12 +399,26 @@ class SOAPClient:
         """ Parses a raw response into a SOAPMessage, resolving MTOM parts, raising SOAP faults,
         and exposing the WS-Addressing headers and attachments as reserved attributes.
         """
-        envelope_bytes, parts = parse_message(response.content, response.headers.get('Content-Type', ''))
+        content_type = response.headers.get('Content-Type', '')
 
-        envelope = parse_envelope(envelope_bytes)
+        # An error status that does not carry a SOAP message is a transport-level failure, and
+        # saying so is what the caller needs - handing a proxy's HTML error page to an XML parser
+        # only turns a plain 502 into an lxml syntax error about an unexpected `<`.
+        self._check_content_type(response, content_type)
+
+        envelope_bytes, parts = parse_message(response.content, content_type)
+
+        envelope = parse_envelope(_to_utf8(envelope_bytes, content_type))
 
         # A fault surfaces as the one SOAPFault exception before anything else is read.
         raise_for_fault(envelope)
+
+        # A fault is the only thing an error status is allowed to carry. Having got this far the
+        # response is a well-formed envelope that is not a fault, so the peer is reporting a failure
+        # in a way its own binding does not allow, and treating it as a successful reply would hand
+        # the caller a body the peer never meant as an answer.
+        if not response.ok:
+            raise SOAPException(f'Non-fault envelope on HTTP {response.status_code} from `{self.address}`')
 
         addressing = parse_addressing(envelope)
 
@@ -355,6 +433,34 @@ class SOAPClient:
         object.__setattr__(body, 'attachments', parts)
 
         return body
+
+# ################################################################################################################################
+
+    def _check_content_type(self, response:'any_', content_type:'str') -> 'None':
+        """ Checks that an error response actually carries a SOAP message before it is parsed as one.
+
+        A successful response is parsed whatever it is labelled, because peers do mislabel replies
+        that are perfectly good envelopes and refusing those would break working exchanges. An error
+        status is the case worth guarding - the body is as likely to be a gateway's error page as it
+        is to be a fault, and the status is already the information the caller needs.
+        """
+        if response.ok:
+            return
+
+        parameters = parse_header_parameters(content_type)
+        media_type = parameters['']
+
+        if media_type in SOAP_Media_Types:
+            return
+
+        # The body goes into the message truncated, since an error page can be arbitrarily long and
+        # the opening of it is what identifies the intermediary that produced it.
+        excerpt = response.text[:Error_Body_Excerpt_Size]
+
+        raise SOAPException(
+            f'HTTP {response.status_code} from `{self.address}` with non-SOAP content type '
+            f'`{media_type}`: {excerpt}'
+        )
 
 # ################################################################################################################################
 
@@ -379,15 +485,26 @@ class SOAPClient:
 
 # ################################################################################################################################
 
-    def _audited_post(self, cid:'str', endpoint:'str', body:'bytes', content_type:'str') -> 'any_':
+    def _audited_post(
+        self,
+        cid,          # type: str
+        endpoint,     # type: str
+        body,         # type: bytes
+        content_type, # type: str
+        envelope      # type: any_
+    ) -> 'any_':
         """ Sends one request through the audit log - the outgoing body, a transport-level
         failure and the raw response are each recorded before the caller parses anything,
         so fault envelopes are captured too. Returns the raw requests response.
+
+        The envelope is handed over as well as the body because the record is made from it rather
+        than from what goes on the wire - the wire carries the credentials and the record must not.
         """
 
-        # The request goes out exactly as recorded here ..
+        # The request is recorded with every credential in it masked ..
         if self.audit_callback:
-            self.audit_callback(cid, AuditEvent.Request_Sent, endpoint, AuditOutcome.OK, body)
+            recorded = mask_credentials(envelope, self._body_credential_names())
+            self.audit_callback(cid, AuditEvent.Request_Sent, endpoint, AuditOutcome.OK, recorded)
 
         try:
             out = self._post(body, content_type, cid)
@@ -409,15 +526,33 @@ class SOAPClient:
 
 # ################################################################################################################################
 
+    def _body_credential_names(self) -> 'strlist | None':
+        """ Returns the names of the operation children that carry credentials, if any do.
+
+        Only the connection knows them, since they come from its own mapping rather than from
+        anything in the message, and an audit record cannot mask what it cannot name.
+        """
+        if not self.body_credentials:
+            return None
+
+        out = []
+
+        for row in self._credential_mappings():
+            out.append(row['name'])
+
+        return out
+
+# ################################################################################################################################
+
     def invoke(self, operation:'str', message:'SOAPMessage', cid:'str'='', soap_headers:'strdictnone'=None) -> 'SOAPMessage':
         """ Invokes a SOAP operation - builds the request from the message, sends it and returns
         the parsed response body. The operation name becomes the single child of soap:Body.
         """
-        body, content_type, message_id = self._build_request(operation, message, soap_headers)
+        body, content_type, message_id, envelope = self._build_request(operation, message, soap_headers)
 
         logger.info('SOAP out -> %s %s; len=%d', operation, self.address, len(body))
 
-        response = self._audited_post(cid, f'{operation} {self.address}', body, content_type)
+        response = self._audited_post(cid, f'{operation} {self.address}', body, content_type, envelope)
 
         logger.info('SOAP out <- %s; %s len=%d', operation, response.status_code, len(response.content))
 
@@ -459,7 +594,7 @@ class SOAPClient:
         envelope_bytes = to_bytes(envelope)
         body, content_type = build_swa(envelope_bytes, parts, SOAPVersion.V11)
 
-        response = self._audited_post(cid, f'{info.action} {self.address}', body, content_type)
+        response = self._audited_post(cid, f'{info.action} {self.address}', body, content_type, envelope)
 
         response_envelope_bytes, _ = parse_message(response.content, response.headers.get('Content-Type', ''))
         response_envelope = parse_envelope(response_envelope_bytes)

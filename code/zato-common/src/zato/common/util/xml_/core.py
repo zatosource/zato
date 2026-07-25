@@ -21,8 +21,9 @@ from zato.common.crypto.api import CryptoManager
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, strbytes
     any_ = any_
+    strbytes = strbytes
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,6 +55,36 @@ QName_Cache_Size = 4096
 xml_parser = etree.XMLParser(resolve_entities=False, no_network=True, load_dtd=False, huge_tree=False)
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def parse_xml(data:'strbytes') -> 'any_':
+    """ Parses untrusted XML and returns its root element. Every parse in the SOAP family goes
+    through here rather than calling lxml directly.
+
+    Two things happen, and both have to. The parse itself uses the hardened parser above, which is
+    what stops an entity from reading a file or reaching the network and what lets libxml2's
+    amplification guard refuse an entity-expansion bomb. Then the document is refused outright if it
+    carries a document type declaration at all.
+
+    The second check is not redundant. Leaving entity references unresolved defeats the attack but
+    still accepts the document, and a DTD in a message is worth nothing to a receiver even when it is
+    harmless - both SOAP 1.1 and SOAP 1.2 forbid one outright. Refusing it closes the whole class at
+    the door instead of relying on each individual expansion being declined, and it is the answer the
+    specification asks for anyway.
+    """
+    try:
+        out = etree.fromstring(data, xml_parser)
+    except etree.XMLSyntaxError as e:
+        raise XMLException(f'Malformed XML -> {e}') from e
+
+    # An empty doctype is what a document without one reports, so anything else is a declaration.
+    doctype = out.getroottree().docinfo.doctype
+
+    if doctype:
+        raise XMLException(f'Document type declarations are not allowed -> `{doctype}`')
+
+    return out
+
 # ################################################################################################################################
 
 @lru_cache(maxsize=QName_Cache_Size)

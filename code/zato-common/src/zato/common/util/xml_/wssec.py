@@ -27,7 +27,7 @@ from lxml import etree
 from zato.common.crypto.api import is_string_equal
 from zato.common.typing_ import cast_
 from zato.common.util.xml_.constants import Algorithm, NS, TokenType, Transform
-from zato.common.util.xml_.core import new_id, qname, xml_parser, XMLSecurityException, XMLSecurityUnsupportedAlgorithm
+from zato.common.util.xml_.core import new_id, parse_xml, qname, XMLSecurityException, XMLSecurityUnsupportedAlgorithm
 from zato.common.util.xml_.keystore import certificate_list
 from zato.common.util.xml_.mime_ import part_list
 from zato.common.util.xml_.token import build_pkipath, parse_pkipath, parse_x509v3
@@ -190,7 +190,7 @@ def add_saml_token(security:'any_', assertion:'any_') -> 'str':
         raise XMLSecurityException('No SAML assertion to add as a token')
 
     if isinstance(assertion, bytes):
-        assertion = etree.fromstring(assertion, xml_parser)
+        assertion = parse_xml(assertion)
 
     assertion_id = assertion.get('ID')
 

@@ -110,90 +110,92 @@ class TestEnmasseOutgoingSOAPExporter(TestCase):
         # Extract outgoing SOAP connections from YAML template
         outgoing_soap_list = self.yaml_config.get('outgoing_soap', [])
 
-        # Skip test if no outgoing SOAP connections in template
-        if outgoing_soap_list:
-            logger.info('Found %d outgoing SOAP connections in test YAML template', len(outgoing_soap_list))
+        # The template is what this test is written against, so one carrying no SOAP connections is a
+        # broken fixture rather than a reason to pass. The whole body used to run under an if that
+        # logged a warning otherwise, which meant the test asserted nothing at all the moment the
+        # section went missing from the template.
+        self.assertTrue(outgoing_soap_list, 'The test YAML template carries no outgoing SOAP connections')
 
-            # Import outgoing SOAP connections
-            created, updated = self.outgoing_soap_importer.sync_outgoing_soap(outgoing_soap_list, self.session)
-            _ = self.session.commit()
+        logger.info('Found %d outgoing SOAP connections in test YAML template', len(outgoing_soap_list))
 
-            # Log information about what was imported
-            logger.info('Imported %d outgoing SOAP connections (created=%d, updated=%d)',
-                len(created) + len(updated), len(created), len(updated))
+        # Import outgoing SOAP connections
+        created, updated = self.outgoing_soap_importer.sync_outgoing_soap(outgoing_soap_list, self.session)
+        _ = self.session.commit()
 
-            # Export outgoing SOAP connections from database
-            cluster_id = self.importer.cluster_id
-            exported_connections = self.outgoing_soap_exporter.export(self.session, cluster_id)
-            logger.info('Successfully exported %d outgoing SOAP connections', len(exported_connections))
+        # Log information about what was imported
+        logger.info('Imported %d outgoing SOAP connections (created=%d, updated=%d)',
+            len(created) + len(updated), len(created), len(updated))
 
-            # Verify the number of exported connections matches the number imported
-            self.assertEqual(len(created) + len(updated), len(exported_connections),
-                f'Expected {len(created) + len(updated)} exported connections, got {len(exported_connections)}')
+        # Export outgoing SOAP connections from database
+        cluster_id = self.importer.cluster_id
+        exported_connections = self.outgoing_soap_exporter.export(self.session, cluster_id)
+        logger.info('Successfully exported %d outgoing SOAP connections', len(exported_connections))
 
-            # Extract expected connection data directly from the YAML template
-            # Parse the template to get the expected values
-            template_dict = yaml.safe_load(template_complex_01)
+        # Verify the number of exported connections matches the number imported
+        self.assertEqual(len(created) + len(updated), len(exported_connections),
+            f'Expected {len(created) + len(updated)} exported connections, got {len(exported_connections)}')
 
-            # Build expected fields dictionary from the template
-            required_conn_fields = {}
-            for conn_def in template_dict.get('outgoing_soap', []):
-                conn_name = conn_def['name']
+        # Extract expected connection data directly from the YAML template
+        # Parse the template to get the expected values
+        template_dict = yaml.safe_load(template_complex_01)
 
-                # Create a copy of the connection definition for expected fields
-                conn_required = {
-                    'name': conn_name,
-                    'host': conn_def.get('host'),
-                    'url_path': conn_def.get('url_path'),
-                }
+        # Build expected fields dictionary from the template
+        required_conn_fields = {}
+        for conn_def in template_dict.get('outgoing_soap', []):
+            conn_name = conn_def['name']
 
-                # Add security if present
-                if 'security' in conn_def and conn_def['security']:
-                    conn_required['security'] = conn_def['security']
+            # Create a copy of the connection definition for expected fields
+            conn_required = {
+                'name': conn_name,
+                'host': conn_def.get('host'),
+                'url_path': conn_def.get('url_path'),
+            }
 
-                # Add SOAP-specific fields if present
-                if 'soap_action' in conn_def and conn_def['soap_action']:
-                    conn_required['soap_action'] = conn_def['soap_action']
+            # Add security if present
+            if 'security' in conn_def and conn_def['security']:
+                conn_required['security'] = conn_def['security']
 
-                if 'soap_version' in conn_def and conn_def['soap_version']:
-                    conn_required['soap_version'] = conn_def['soap_version']
+            # Add SOAP-specific fields if present
+            if 'soap_action' in conn_def and conn_def['soap_action']:
+                conn_required['soap_action'] = conn_def['soap_action']
 
-                # Add optional fields if present in the template
-                for field in ['data_format', 'is_active', 'timeout', 'content_type', 'pool_size', 'ping_method', 'tls_verify',
-                    'use_ws_addressing', 'use_mtom', 'tls_client_cert', 'tls_client_key', 'body_credentials']:
-                    if field in conn_def and conn_def[field] is not None:
-                        conn_required[field] = conn_def[field]
+            if 'soap_version' in conn_def and conn_def['soap_version']:
+                conn_required['soap_version'] = conn_def['soap_version']
 
-                # The audit log flag is exported only when it is off
-                if conn_def.get('is_audit_log_active') is False:
-                    conn_required['is_audit_log_active'] = False
+            # Add optional fields if present in the template
+            for field in ['data_format', 'is_active', 'timeout', 'content_type', 'pool_size', 'ping_method', 'tls_verify',
+                'use_ws_addressing', 'use_mtom', 'tls_client_cert', 'tls_client_key', 'body_credentials']:
+                if field in conn_def and conn_def[field] is not None:
+                    conn_required[field] = conn_def[field]
 
-                # Add this connection's requirements to our dictionary
-                required_conn_fields[conn_name] = conn_required
+            # The audit log flag is exported only when it is off
+            if conn_def.get('is_audit_log_active') is False:
+                conn_required['is_audit_log_active'] = False
 
-            # Verify each exported connection against required fields
-            for conn in exported_connections:
-                name = conn['name']
-                self.assertIn(name, required_conn_fields, f'Unexpected connection {name} in export')
-                expected = required_conn_fields[name]
+            # Add this connection's requirements to our dictionary
+            required_conn_fields[conn_name] = conn_required
 
-                # Check all required fields in the connection definition
-                # First check basic required fields that must always be present
-                for field in ['name', 'host', 'url_path']:
-                    self.assertIn(field, conn, f'Required field {field} missing in connection {name}')
-                    self.assertEqual(conn[field], expected[field],
-                        f'Field {field} has incorrect value in connection {name}, expected {expected[field]}, got {conn[field]}')
+        # Verify each exported connection against required fields
+        for conn in exported_connections:
+            name = conn['name']
+            self.assertIn(name, required_conn_fields, f'Unexpected connection {name} in export')
+            expected = required_conn_fields[name]
 
-                # Then check optional fields that might be in expected but not always in exported data
-                for field, value in expected.items():
-                    if field not in ['name', 'host', 'url_path']:
-                        if field in conn:
-                            self.assertEqual(conn[field], value,
-                                f'Field {field} has incorrect value in connection {name}, expected {value}, got {conn[field]}')
-                        else:
-                            logger.info(f'Optional field {field} not found in exported connection {name}, but was in template')
-        else:
-            logger.warning('No outgoing SOAP connections found in test YAML template')
+            # Check all required fields in the connection definition
+            # First check basic required fields that must always be present
+            for field in ['name', 'host', 'url_path']:
+                self.assertIn(field, conn, f'Required field {field} missing in connection {name}')
+                self.assertEqual(conn[field], expected[field],
+                    f'Field {field} has incorrect value in connection {name}, expected {expected[field]}, got {conn[field]}')
+
+            # Then check optional fields that might be in expected but not always in exported data
+            for field, value in expected.items():
+                if field not in ['name', 'host', 'url_path']:
+                    if field in conn:
+                        self.assertEqual(conn[field], value,
+                            f'Field {field} has incorrect value in connection {name}, expected {value}, got {conn[field]}')
+                    else:
+                        logger.info(f'Optional field {field} not found in exported connection {name}, but was in template')
 
 # ################################################################################################################################
 

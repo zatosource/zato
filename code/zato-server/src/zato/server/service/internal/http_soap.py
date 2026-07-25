@@ -12,9 +12,8 @@ from time import time
 from traceback import format_exc
 
 # Zato
-from zato.common.api import AS2, AS4, CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
-     Groups, HTTP_SOAP, MISC, PARAMS_PRIORITY, query_parameters, SCHEDULER, SEC_DEF_TYPE, \
-     SchedulerLink, URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
+from zato.common.api import AS2, AS4, CONNECTION, Groups, HTTP_SOAP, MISC, PARAMS_PRIORITY, query_parameters, \
+     SCHEDULER, SEC_DEF_TYPE, SchedulerLink, URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
 from zato.common.broker_message import CHANNEL, OUTGOING, SECURITY
 from zato.common.const import SECRETS
 from zato.common.defaults import default_cluster_id
@@ -976,7 +975,7 @@ class Create(_CreateEdit):
             input.url_path = input_url_path.strip()
 
         if input_ping_method:
-            input.ping_method = input_ping_method.strip() or DEFAULT_HTTP_PING_METHOD
+            input.ping_method = input_ping_method.strip() or MISC.DEFAULT_HTTP_PING_METHOD
 
         if input_content_type:
             input.content_type = input_content_type.strip()
@@ -1037,7 +1036,7 @@ class Create(_CreateEdit):
                 item.data_format = input.data_format
                 item.service = service
                 item.ping_method = input.ping_method
-                item.pool_size = input.get('pool_size') or DEFAULT_HTTP_POOL_SIZE
+                item.pool_size = input.get('pool_size') or MISC.DEFAULT_HTTP_POOL_SIZE
                 item.merge_url_params_req = input.merge_url_params_req
                 item.url_params_pri = input.get('url_params_pri') or URL_PARAMS_PRIORITY.DEFAULT
                 item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
@@ -1186,7 +1185,7 @@ class Edit(_CreateEdit):
             input.url_path = input_url_path.strip()
 
         if input_ping_method:
-            input.ping_method = input_ping_method.strip() or DEFAULT_HTTP_PING_METHOD
+            input.ping_method = input_ping_method.strip() or MISC.DEFAULT_HTTP_PING_METHOD
 
         if input_content_type:
             input.content_type = input_content_type.strip()
@@ -1300,7 +1299,7 @@ class Edit(_CreateEdit):
                 item.data_format = input.data_format
                 item.service = service
                 item.ping_method = input.ping_method
-                item.pool_size = input.get('pool_size') or DEFAULT_HTTP_POOL_SIZE
+                item.pool_size = input.get('pool_size') or MISC.DEFAULT_HTTP_POOL_SIZE
                 item.merge_url_params_req = input.merge_url_params_req
                 item.url_params_pri = input.get('url_params_pri') or URL_PARAMS_PRIORITY.DEFAULT
                 item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
@@ -1527,6 +1526,23 @@ class GetURLSecurity(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
+# How the dashboard's invoke feature reaches a channel - over the loopback address, on the port the
+# server handling the invocation is itself listening on. It is a plain-HTTP hop that never leaves the
+# host, which is why there is nothing here for TLS verification to do.
+_Invoke_Scheme = 'http://'
+_Invoke_Host = '127.0.0.1'
+
+# One connection is all a single invocation needs, and the wrapper is discarded straight afterwards.
+_Invoke_Pool_Size = 1
+
+# Long enough for a channel to do real work while still ending rather than hanging the dashboard.
+_Invoke_Timeout = 90
+
+# What the dashboard sends when the user names no method.
+_Invoke_Default_Method = 'POST'
+
+# ################################################################################################################################
+
 def _set_invoke_response(service, result):
     service.response.payload.status_code = result['status_code']
     service.response.payload.response_body = result['response_body']
@@ -1593,13 +1609,20 @@ class InvokeChannel(AdminService):
         if not sec_def:
             return {'sec_type': None, 'username': None, 'password': None, 'orig_username': None}
 
-        username = getattr(sec_def, 'username', '') or ''
-        password = getattr(sec_def, 'password', '') or ''
-        if password and hasattr(self.server, 'decrypt'):
-            try:
-                password = self.server.decrypt(password)
-            except Exception:
-                pass
+        username = sec_def.username
+        password = sec_def.password
+
+        if username is None:
+            username = ''
+
+        if password is None:
+            password = ''
+
+        # A stored secret is decrypted here, and decrypt returns anything that is not encrypted as
+        # it stands, so there is nothing to guard against. Swallowing a decryption failure would
+        # send the ciphertext as the password and turn a key problem into an authentication one.
+        if password:
+            password = self.server.decrypt(password)
 
         # API key definitions keep a placeholder username in the ODB while the actual
         # header name is an opaque attribute of the definition, so it is resolved here.
@@ -1628,8 +1651,11 @@ class InvokeChannel(AdminService):
     def _build_temp_wrapper(self, channel_config, sec_config, url_path):
         from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
 
-        port = getattr(self.server, 'port', 17010)
-        method = self.request.input.get('request_method', '') or 'POST'
+        # The channel is invoked over the loopback address on the port this very server is listening
+        # on, which the server always knows - a fallback port here would send the request to
+        # whatever else happened to be listening there.
+        port = self.server.port
+        method = self.request.input.get('request_method', '') or _Invoke_Default_Method
 
         wrapper_config = {
             'id': 'temp-invoke-{}'.format(self.cid),
@@ -1641,15 +1667,14 @@ class InvokeChannel(AdminService):
             'data_format': 'json',
             'name': 'temp-invoke-channel-{}'.format(self.cid),
             'transport': 'plain_http',
-            'address_host': 'http://127.0.0.1:{}'.format(port),
+            'address_host': '{}{}:{}'.format(_Invoke_Scheme, _Invoke_Host, port),
             'address_url_path': url_path,
             'soap_action': '',
             'soap_version': None,
-            'ping_method': 'HEAD',
-            'pool_size': 1,
-            'timeout': 90,
+            'ping_method': MISC.DEFAULT_HTTP_PING_METHOD,
+            'pool_size': _Invoke_Pool_Size,
+            'timeout': _Invoke_Timeout,
             'content_type': None,
-            'validate_tls': False,
             'security_name': None,
             'security_id': None,
             'sec_type': sec_config.get('sec_type'),
@@ -1663,7 +1688,7 @@ class InvokeChannel(AdminService):
         return HTTPSOAPWrapper(self.server, wrapper_config)
 
     def _invoke_wrapper(self, wrapper):
-        method = self.request.input.get('request_method', '') or 'POST'
+        method = self.request.input.get('request_method', '') or _Invoke_Default_Method
         payload = self.request.input.get('payload', '') or ''
         query_params = _parse_key_value_params(self.request.input.get('query_params', ''))
 
@@ -1700,7 +1725,7 @@ class InvokeOutconn(AdminService):
                 raise Exception('REST outgoing connection `{}` not found'.format(self.request.input.id))
             outconn_name = item.name
 
-        method = self.request.input.get('request_method', '') or 'POST'
+        method = self.request.input.get('request_method', '') or _Invoke_Default_Method
         payload = self.request.input.get('payload', '') or ''
         params = self._build_params()
 
