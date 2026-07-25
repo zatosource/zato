@@ -141,16 +141,14 @@ def decision_aggregates(req:'any_') -> 'any_':
     filters = _read_filters(req)
     backend = get_backend()
 
-    outcomes = _count_rows(backend.reporting.outcome_counts(filters))
-    versions = _count_rows(backend.reporting.version_counts(filters))
-    hourly = _count_rows(backend.reporting.hourly_counts(filters))
-    average_duration_ms = backend.reporting.average_duration_ms(filters)
+    # All four aggregates summarise the same selection, so they arrive from one scan of it.
+    aggregates = backend.reporting.aggregates(filters)
 
     out = JsonResponse({
-        'outcomes': outcomes,
-        'versions': versions,
-        'hourly': hourly,
-        'average_duration_ms': average_duration_ms,
+        'outcomes': _count_rows(aggregates.outcomes),
+        'versions': _count_rows(aggregates.versions),
+        'hourly': _count_rows(aggregates.hourly),
+        'average_duration_ms': aggregates.average_duration_ms,
     })
     return out
 

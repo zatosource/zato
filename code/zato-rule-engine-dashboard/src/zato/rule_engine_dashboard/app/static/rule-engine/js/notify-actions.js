@@ -144,8 +144,6 @@ notifyView.openMatrix = function(button) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-shared.initShell();
-
 // The credentials pane is rendered into the page for admins alone,
 // its presence is what tells the model who it works for
 notifyModel.isAdmin = document.getElementById('notify-credentials-pane') !== null;

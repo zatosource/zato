@@ -6,6 +6,12 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from dataclasses import dataclass
+
+# typing-extensions
+from typing_extensions import TypeAlias
+
 # Zato
 from zato.common.rule_engine.constraint_ops import constraint_covers, constraints_overlap
 from zato.common.rule_engine.constraints import any_constraint, condition_constraint
@@ -15,7 +21,12 @@ from zato.common.rule_engine.table import parse_cell
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, dictlist, strdict
+    from zato.common.typing_ import anydict, dictlist, intlist, strdict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+prepared_column_list:TypeAlias = list['PreparedColumn']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -77,29 +88,76 @@ def rule_columns(table:'anydict') -> 'dictlist':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _columns_overlap(first_cells:'strdict', second_cells:'strdict', letters:'dictlist') -> 'bool':
+@dataclass(init=False)
+class PreparedColumn:
+    """ One rule column with its per-row cell text and value-space constraint already parsed.
+
+    The conflict and subsumption checks below compare every column with every other one, so a cell
+    parsed inside those loops would be parsed again for each of the column's partners. Parsing every
+    cell once here keeps the work linear in the number of cells the table actually has.
+    """
+
+    number:      'int'
+    actions:     'strdict'
+    overrides:   'intlist'
+    cells:       'strdict'
+    constraints: 'anydict'
+
+    def __init__(self, column:'anydict', letters:'dictlist') -> 'None':
+        self.number = column['number']
+        self.actions = column['actions']
+        self.cells = column_cells(column, letters)
+        self.constraints = {}
+
+        # A column that overrides nothing leaves the key out of the document altogether.
+        declared = column.get('overrides')
+        if declared is None:
+            declared = []
+        self.overrides = declared
+
+        for letter, cell_text in self.cells.items():
+            self.constraints[letter] = cell_constraint(cell_text)
+
+# ################################################################################################################################
+
+def prepare_columns(table:'anydict') -> 'prepared_column_list':
+    """ Every lettered rule column of a table, in number order, with its cells parsed once.
+    """
+
+    # Our response to produce
+    out = []
+
+    letters = table['conditions']
+
+    for column in rule_columns(table):
+        prepared = PreparedColumn(column, letters)
+        out.append(prepared)
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _columns_overlap(first:'PreparedColumn', second:'PreparedColumn', letters:'dictlist') -> 'bool':
     """ Whether some single input satisfies both columns' cells in every row.
     """
     for row in letters:
         letter = row['letter']
 
-        first_constraint = cell_constraint(first_cells[letter])
-        second_constraint = cell_constraint(second_cells[letter])
-
-        if not constraints_overlap(first_constraint, second_constraint):
+        if not constraints_overlap(first.constraints[letter], second.constraints[letter]):
             return False
 
     return True
 
 # ################################################################################################################################
 
-def _differing_targets(first:'anydict', second:'anydict') -> 'dictlist':
+def _differing_targets(first:'PreparedColumn', second:'PreparedColumn') -> 'dictlist':
     """ The targets both columns assign, with different values.
     """
     out = []
 
-    for target, first_value in first['actions'].items():
-        second_value = second['actions'].get(target)
+    for target, first_value in first.actions.items():
+        second_value = second.actions.get(target)
 
         if second_value is None:
             continue
@@ -123,7 +181,7 @@ def check_conflicts(table:'anydict') -> 'anydict':
     out = {'conflicts': [], 'overridden': [], 'unknown_overrides': []}
 
     letters = table['conditions']
-    columns = rule_columns(table)
+    columns = prepare_columns(table)
 
     # Gather the declared overrides first, checking they point at real columns.
     known_numbers = set()
@@ -132,25 +190,18 @@ def check_conflicts(table:'anydict') -> 'anydict':
 
     overrides = set()
     for column in columns:
-        declared = column.get('overrides')
-        if not declared:
-            continue
-
-        for number in declared:
+        for number in column.overrides:
             if number in known_numbers:
-                overrides.add((column['number'], number))
+                overrides.add((column.number, number))
             else:
-                out['unknown_overrides'].append({'column': column['number'], 'overrides': number})
+                out['unknown_overrides'].append({'column': column.number, 'overrides': number})
 
     # Every pair of rule columns is checked once, lower number first.
     for first_index, first in enumerate(columns):
         for second in columns[first_index + 1:]:
 
-            first_cells = column_cells(first, letters)
-            second_cells = column_cells(second, letters)
-
             # Columns that cannot both fire never conflict ..
-            if not _columns_overlap(first_cells, second_cells, letters):
+            if not _columns_overlap(first, second, letters):
                 continue
 
             # .. nor do columns that agree on everything they both assign.
@@ -158,8 +209,8 @@ def check_conflicts(table:'anydict') -> 'anydict':
             if not targets:
                 continue
 
-            first_number = first['number']
-            second_number = second['number']
+            first_number = first.number
+            second_number = second.number
 
             # A declared override resolves the pair, in either direction.
             if (first_number, second_number) in overrides:
@@ -174,24 +225,18 @@ def check_conflicts(table:'anydict') -> 'anydict':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def column_covers_column(general_cells:'strdict', specific_cells:'strdict', letters:'dictlist') -> 'bool':
+def column_covers_column(general:'PreparedColumn', specific:'PreparedColumn', letters:'dictlist') -> 'bool':
     """ Whether every input firing the specific column also fires the general one.
     """
     for row in letters:
         letter = row['letter']
 
-        general_text = general_cells[letter]
-        specific_text = specific_cells[letter]
-
         # Equal cells cover each other trivially ..
-        if general_text == specific_text:
+        if general.cells[letter] == specific.cells[letter]:
             continue
 
         # .. otherwise coverage has to be provable from the constraints.
-        general_constraint = cell_constraint(general_text)
-        specific_constraint = cell_constraint(specific_text)
-
-        if not constraint_covers(general_constraint, specific_constraint):
+        if not constraint_covers(general.constraints[letter], specific.constraints[letter]):
             return False
 
     return True
@@ -210,21 +255,18 @@ def check_subsumption(table:'anydict') -> 'dictlist':
     out = []
 
     letters = table['conditions']
-    columns = rule_columns(table)
+    columns = prepare_columns(table)
 
     for first_index, first in enumerate(columns):
         for second in columns[first_index + 1:]:
 
-            first_cells = column_cells(first, letters)
-            second_cells = column_cells(second, letters)
-
-            first_covers = column_covers_column(first_cells, second_cells, letters)
-            second_covers = column_covers_column(second_cells, first_cells, letters)
+            first_covers = column_covers_column(first, second, letters)
+            second_covers = column_covers_column(second, first, letters)
 
             if first_covers:
-                out.append({'general': first['number'], 'specific': second['number']})
+                out.append({'general': first.number, 'specific': second.number})
             elif second_covers:
-                out.append({'general': second['number'], 'specific': first['number']})
+                out.append({'general': second.number, 'specific': first.number})
 
     return out
 
@@ -254,7 +296,7 @@ def check_unreachable(table:'anydict') -> 'dictlist':
         filter_subject = filter_['subject']
         filter_constraint = cell_constraint(filter_['cell'])
 
-    for column in rule_columns(table):
+    for column in prepare_columns(table):
 
         # Group this column's constraints by the subject they describe ..
         by_subject = {}
@@ -262,14 +304,13 @@ def check_unreachable(table:'anydict') -> 'dictlist':
         if filter_constraint:
             by_subject[filter_subject] = [filter_constraint]
 
-        cells = column_cells(column, table['conditions'])
-        for letter, cell_text in cells.items():
+        for letter, cell_text in column.cells.items():
 
             if not cell_text:
                 continue
 
             subject = subjects_by_letter[letter]
-            constraint = cell_constraint(cell_text)
+            constraint = column.constraints[letter]
 
             if subject not in by_subject:
                 by_subject[subject] = []
@@ -286,7 +327,7 @@ def check_unreachable(table:'anydict') -> 'dictlist':
                         is_reachable = False
 
             if not is_reachable:
-                out.append({'column': column['number'], 'subject': subject})
+                out.append({'column': column.number, 'subject': subject})
 
     return out
 

@@ -204,8 +204,6 @@ logView.openRuleCounts = function(button) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-shared.initShell();
-
 logModel.load(function() {
     if (logModel.rulesetId === null) {
         logView.render();

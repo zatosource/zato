@@ -13,7 +13,7 @@ import unittest
 from zato.common.rule_engine.errors import Severity
 from zato.common.rule_engine.parser import parse_data_details
 from zato.common.rule_engine.semantics import validate_data, validate_document
-from zato.common.rule_engine.vocabulary import ErrorCode
+from zato.common.rule_engine.vocabulary import build_attribute_index, ErrorCode
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -245,7 +245,7 @@ class TestValidateData(unittest.TestCase):
     """
 
     def setUp(self) -> 'None':
-        self.vocabulary = _get_vocabulary()
+        self.attribute_index = build_attribute_index(_get_vocabulary())
 
 # ################################################################################################################################
 
@@ -258,7 +258,7 @@ class TestValidateData(unittest.TestCase):
             'loan.amount': 250000,
             'loan.approved': False,
         }
-        errors = validate_data(data, self.vocabulary)
+        errors = validate_data(data, self.attribute_index)
         self.assertListEqual(errors, [])
 
 # ################################################################################################################################
@@ -267,7 +267,7 @@ class TestValidateData(unittest.TestCase):
         """ A field the vocabulary does not know is reported by name.
         """
         data = {'customer.height': 180}
-        errors = validate_data(data, self.vocabulary)
+        errors = validate_data(data, self.attribute_index)
         self.assertEqual(len(errors), 1)
 
         error = errors[0]
@@ -280,7 +280,7 @@ class TestValidateData(unittest.TestCase):
         """ A score outside its range is reported in domain terms, never as a bare 400.
         """
         data = {'customer.creditScore': 12000}
-        errors = validate_data(data, self.vocabulary)
+        errors = validate_data(data, self.attribute_index)
         self.assertEqual(len(errors), 1)
 
         error = errors[0]
@@ -293,7 +293,7 @@ class TestValidateData(unittest.TestCase):
         """ A text where a yes/no belongs is reported as a type mismatch.
         """
         data = {'loan.approved': 'yes'}
-        errors = validate_data(data, self.vocabulary)
+        errors = validate_data(data, self.attribute_index)
         self.assertEqual(len(errors), 1)
 
         error = errors[0]
@@ -309,7 +309,7 @@ class TestValidateData(unittest.TestCase):
             'loan.amount': 'a lot',
             'customer.category': 'Diamond',
         }
-        errors = validate_data(data, self.vocabulary)
+        errors = validate_data(data, self.attribute_index)
 
         codes = []
         for error in errors:

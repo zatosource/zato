@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # SQLAlchemy
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import and_, delete, insert, or_, select, update
 from sqlalchemy.engine import CursorResult
 
 # Zato
@@ -16,7 +16,7 @@ from zato.common.typing_ import cast_
 
 # Local
 from .constants import Default_Feed_Limit, Event_Type_Follow_Changed
-from .data import event_record_list, follow_record_list, RuleEventRecord, RuleFollowRecord
+from .data import event_record_list, follow_record_list, RuleFollowRecord
 from .database import SessionFactory
 from .errors import InvalidStoreInputError, RecordNotFoundError
 from .records import event_record, follow_record
@@ -266,40 +266,44 @@ class FollowStore:
 
         # .. resolve what the actor follows and each follow's clock ..
         follows = self.list_followed(actor)
-        collected:'event_record_list' = []
+
+        # .. an actor who follows nothing has no feed to read ..
+        if not follows:
+            return []
+
+        # .. every follow contributes the events newer than its own clock, and they are asked for
+        # .. together because one query per followed definition would put the cost of one page
+        # .. on the number of things the actor follows ..
+        follow_conditions = []
+
+        for follow in follows:
+            definition_condition = rule_event_table.c.definition_id == follow.definition_id
+            seen_condition = rule_event_table.c.created_at > follow.last_seen_at
+            follow_conditions.append(and_(definition_condition, seen_condition))
+
+        query = select(rule_event_table)
+        cluster_condition = rule_event_table.c.cluster_id == default_cluster_id
+        query = query.where(cluster_condition)
+        query = query.where(or_(*follow_conditions))
+
+        # .. the newest events across every follow make up the one page ..
+        event_id_descending = rule_event_table.c.id.desc()
+        query = query.order_by(event_id_descending)
+        query = query.limit(limit)
         session = self._session_factory()
 
         try:
-            for follow in follows:
+            result = session.execute(query)
+            out:'event_record_list' = []
 
-                # .. each followed definition contributes only events newer than its clock ..
-                query = select(rule_event_table)
-                cluster_condition = rule_event_table.c.cluster_id == default_cluster_id
-                definition_condition = rule_event_table.c.definition_id == follow.definition_id
-                seen_condition = rule_event_table.c.created_at > follow.last_seen_at
-                query = query.where(cluster_condition)
-                query = query.where(definition_condition)
-                query = query.where(seen_condition)
-                event_id_descending = rule_event_table.c.id.desc()
-                query = query.order_by(event_id_descending)
-                query = query.limit(limit)
-                result = session.execute(query)
+            for row in result:
+                record = event_record(row)
+                out.append(record)
 
-                for row in result:
-                    record = event_record(row)
-                    collected.append(record)
-
-        # Release the read-only session in every case.
+        # .. and release the read-only session.
         finally:
             session.close()
 
-        # Merge every definition's events into one page, newest first.
-        def _event_id(record:'RuleEventRecord') -> 'int':
-            return record.id
-
-        collected.sort(key=_event_id, reverse=True)
-
-        out = collected[:limit]
         return out
 
 # ################################################################################################################################

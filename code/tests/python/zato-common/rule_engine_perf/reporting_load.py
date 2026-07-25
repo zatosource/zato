@@ -137,6 +137,23 @@ def run_reporting_scenario(
     assert elapsed <= ceiling, f'Average duration too slow: {elapsed:.3f}s, ceiling {ceiling}s'
     out.append(Measurement('Report average duration seconds', f'{elapsed:.3f}', f'<= {ceiling}s'))
 
+    # .. the decision log asks for all four of the above at once, and one grouped scan
+    # .. has to beat the four it replaces ..
+    aggregate_ceiling = 4 * ceiling
+    start = monotonic()
+    aggregates = backend.reporting.aggregates(filters)
+    now = monotonic()
+    elapsed = now - start
+
+    aggregate_outcome_count = len(aggregates.outcomes)
+    aggregate_version_count = len(aggregates.versions)
+
+    assert aggregate_outcome_count == outcome_count, f'Expected {outcome_count} outcomes in the aggregate'
+    assert aggregate_version_count == version_count, f'Expected {version_count} versions in the aggregate'
+    assert aggregates.hourly, 'Expected hourly buckets in the aggregate'
+    assert elapsed <= aggregate_ceiling, f'Aggregates too slow: {elapsed:.3f}s, ceiling {aggregate_ceiling}s'
+    out.append(Measurement('Report aggregates seconds', f'{elapsed:.3f}', f'<= {aggregate_ceiling}s'))
+
     # .. sum ninety days of firing counters into the per-rule trend ..
     start = monotonic()
     fire_points = backend.reporting.daily_rule_counts(ruleset_id=admin_id)

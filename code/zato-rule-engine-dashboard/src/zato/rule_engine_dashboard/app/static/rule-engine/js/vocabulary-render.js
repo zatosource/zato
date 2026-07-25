@@ -66,16 +66,19 @@ var vocabularyView = {
                     ? '<span class="vocabulary-flag" data-tippy-content="Deprecated: existing rules keep running, every picker hides it.">deprecated</span>'
                     : '';
 
-                rows += '<div class="' + classes + '" draggable="true" data-path="' + path + '" ' +
-                    'onclick="vocabularyView.select(\'' + path + '\')">' +
-                    '<span class="vocabulary-tree-name">' + attribute.name + '</span>' + flag +
-                    '<span class="vocabulary-item-type">' + attribute.type + '</span>' +
+                var pathText = shared.escape(path);
+
+                rows += '<div class="' + classes + '" draggable="true" data-path="' + pathText + '" ' +
+                    'onclick="vocabularyView.select(\'' + pathText + '\')">' +
+                    '<span class="vocabulary-tree-name">' + shared.escape(attribute.name) + '</span>' + flag +
+                    '<span class="vocabulary-item-type">' + shared.escape(attribute.type) + '</span>' +
                     '</div>';
             });
 
             if (rows !== '') {
-                html += '<div class="vocabulary-entity" data-entity="' + entity.name + '">' +
-                    entity.name + '</div>' + rows;
+                var entityText = shared.escape(entity.name);
+                html += '<div class="vocabulary-entity" data-entity="' + entityText + '">' +
+                    entityText + '</div>' + rows;
             }
         });
 
@@ -120,7 +123,7 @@ var vocabularyView = {
         var out = '<div class="vocabulary-detail-head">' +
             '<span class="vocabulary-detail-name" onclick="vocabularyView.openRenamePopover(this)" ' +
                 'data-tippy-content="Click to rename. Every place it is used updates together, nothing is left behind to break.">' +
-                path + '</span>' + flag +
+                shared.escape(path) + '</span>' + flag +
             '</div>';
         return out;
     },
@@ -140,7 +143,7 @@ var vocabularyView = {
         };
 
         row('phrase, how rules read it', 'phrase', shared.escape(attribute.phrase), true);
-        row('type', 'type', attribute.type, false);
+        row('type', 'type', shared.escape(attribute.type), false);
 
         if (attribute.type === 'choice') {
             row('allowed values, everywhere at once', 'values', shared.escape(attribute.values.join(', ')), true);
@@ -196,7 +199,8 @@ var vocabularyView = {
             html += '<div class="vocabulary-usage-group">' + shared.escape(group.name) + '</div>';
             group.entries.forEach(function(entry) {
                 html += '<a class="vocabulary-usage-entry vocabulary-usage-link" ' +
-                    'href="' + self.config.editorUrl + '?ruleset=' + group.definitionId + '#term=' + path + '" ' +
+                    'href="' + self.config.editorUrl + '?ruleset=' + group.definitionId + '#term=' +
+                        encodeURIComponent(path) + '" ' +
                     'data-tippy-content="Opens the rule with this term highlighted in it.">' +
                     shared.escape(self.entryText(entry)) + shared.icon('external-link', 10) + '</a>';
             });
@@ -206,7 +210,7 @@ var vocabularyView = {
         // is a field in the generated endpoint documentation
         if (attribute.status !== 'deprecated') {
             html += '<div class="vocabulary-usage-group">Generated API contract</div>' +
-                '<div class="vocabulary-usage-entry">Field ' + path +
+                '<div class="vocabulary-usage-entry">Field ' + shared.escape(path) +
                 ' in the endpoint documentation and sample payloads</div>';
         }
 
@@ -243,13 +247,14 @@ var vocabularyView = {
 
         deprecated.forEach(function(path) {
             vocabularyModel.whereUsed(path, function(usage) {
+                var pathText = shared.escape(path);
                 if (usage.count > 0) {
                     items.push('<div class="problem-item"><span class="status-dot status-dot-warning"></span>' +
-                        '<span>' + path + ' is deprecated but still used in ' + usage.count +
+                        '<span>' + pathText + ' is deprecated but still used in ' + usage.count +
                         ' places, they keep working, move them over when convenient.</span></div>');
                 } else {
                     items.push('<div class="problem-item"><span class="status-dot status-dot-information"></span>' +
-                        '<span>' + path + ' is deprecated and nothing uses it, deleting it is safe.</span></div>');
+                        '<span>' + pathText + ' is deprecated and nothing uses it, deleting it is safe.</span></div>');
                 }
 
                 remaining -= 1;

@@ -41,7 +41,9 @@ from .errors import RecordNotFoundError as RecordNotFoundError
 from .errors import RuleSQLStoreError as RuleSQLStoreError
 from .errors import SelfApprovalNotAllowedError as SelfApprovalNotAllowedError
 from .errors import VersionConflictError as VersionConflictError
-from .reporting import ForensicResult as ForensicResult
+from .reporting_common import BucketSplit as BucketSplit
+from .reporting_common import DecisionAggregates as DecisionAggregates
+from .reporting_common import ForensicResult as ForensicResult
 from .writer import DecisionBatchWriter as DecisionBatchWriter
 from .writer import DecisionWriterConfig as DecisionWriterConfig
 

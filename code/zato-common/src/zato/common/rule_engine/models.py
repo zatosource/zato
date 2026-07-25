@@ -23,7 +23,7 @@ from zato.common.rule_engine.errors import build_evaluation_error
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, dict_, dictlist, strdict
+    from zato.common.typing_ import anydict, dict_, dictlist, strdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,12 +36,18 @@ logger = getLogger(__name__)
 @dataclass(init=False)
 class MatchResult(Model):
     _has_matched: 'bool'
-    then:'any_'
-    else_:'any_'
+    then:'strdict'
+    else_:'strdict'
     full_name:'str'
 
     def __init__(self, has_matched:'bool') -> 'None':
         self._has_matched = has_matched
+
+        # A match fills in the then actions and a non-match the else ones, so one of the two
+        # always stays empty. Both start out empty rather than absent, because reading the
+        # side that did not apply is normal and must answer with nothing, not raise.
+        self.then = {}
+        self.else_ = {}
 
     def __bool__(self) -> 'bool':
         return self._has_matched
@@ -61,9 +67,6 @@ class Rule(Model):
     when_impl: 'RuleImpl'
     then: 'dictlist'
     else_: 'dictlist'
-
-    def __getattr__(self, name:'str') -> 'any_':
-        pass
 
 # ################################################################################################################################
 

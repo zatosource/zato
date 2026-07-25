@@ -155,7 +155,6 @@ versionsView.restore = function(event, number, button) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-shared.initShell();
 shared.attachPaneResize(document.getElementById('versions-timeline-resizer'),
     document.getElementById('versions-timeline-pane'), 'x');
 document.getElementById('button-split-view').classList.add('toggled');

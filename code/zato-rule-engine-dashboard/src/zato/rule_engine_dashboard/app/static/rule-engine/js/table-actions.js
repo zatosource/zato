@@ -60,7 +60,18 @@ tableView.checkCompleteness = function() {
     if (this.checksBlocked(button)) { return; }
 
     tableModel.runChecks(function(payload) {
-        var proposed = payload.completeness.proposed;
+        var completeness = payload.completeness;
+        var proposed = completeness.proposed;
+
+        // A table whose rows multiply out past the ceiling is never swept, and saying
+        // so is the answer - narrowing the rows is what makes the check meaningful again
+        if (completeness.too_large) {
+            self.render();
+            shared.popover(button, 'This table asks for ' + completeness.combinations +
+                ' combinations, too many to check one by one. Narrowing the values in the ' +
+                'condition rows brings it back into range.', 'red');
+            return;
+        }
 
         if (proposed.length === 0) {
             self.render();

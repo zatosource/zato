@@ -19,6 +19,7 @@ from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Defin
 from zato.common.rule_engine.sql.document import deserialize_document
 from zato.common.rule_engine.sql.errors import RecordNotFoundError
 from zato.common.rule_engine.testing import load_documents
+from zato.common.rule_engine.vocabulary import build_attribute_index
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -307,7 +308,8 @@ class RulesetInvoker:
         # One compiled ruleset per (definition id, version) - versions are immutable so entries never expire.
         self._loaded:'loaded_version_dict' = {}
 
-        # One document per vocabulary the loaded rulesets validate against.
+        # One attribute index per vocabulary the loaded rulesets validate against. The index is
+        # what validation reads, so it is what gets cached - the document itself is only its source.
         self._vocabularies:'vocabulary_cache_dict' = {}
 
 # ################################################################################################################################
@@ -403,19 +405,21 @@ class RulesetInvoker:
 
 # ################################################################################################################################
 
-    def _get_vocabulary(self, vocabulary_id:'int') -> 'anydict':
-        """ Returns one vocabulary document, reading it on the first request
+    def _get_attribute_index(self, vocabulary_id:'int') -> 'anydict':
+        """ Returns one vocabulary's attribute index, building it on the first request
         and after every announced edit to it.
         """
-        # A cached document is correct until a change announcement evicts it ..
-        if document := self._vocabularies.get(vocabulary_id):
-            return document
+        # A cached index is correct until a change announcement evicts it ..
+        if index := self._vocabularies.get(vocabulary_id):
+            return index
 
-        # .. otherwise read the current document and cache it until the next announcement.
+        # .. otherwise read the current document, index it once and keep that
+        # until the next announcement, so a request never walks the vocabulary.
         document = self.backend.definitions.get_document(vocabulary_id)
-        self._vocabularies[vocabulary_id] = document
+        index = build_attribute_index(document)
+        self._vocabularies[vocabulary_id] = index
 
-        return document
+        return index
 
 # ################################################################################################################################
 
@@ -478,9 +482,9 @@ class RulesetInvoker:
         # so a caller gets domain-term errors rather than an evaluation failure - the vocabulary
         # speaks flat dotted paths while the rules read the nested input as sent, hence the flattening ..
         if entry.vocabulary_id:
-            vocabulary = self._get_vocabulary(entry.vocabulary_id)
+            attribute_index = self._get_attribute_index(entry.vocabulary_id)
             flat_data = flatten_for_validation(data)
-            errors = validate_data(flat_data, vocabulary)
+            errors = validate_data(flat_data, attribute_index)
 
             if errors:
                 out.status = InvocationStatus.Invalid_Input
