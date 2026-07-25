@@ -122,13 +122,13 @@ tableModel.buildProblems = function() {
 
 // The server parses every cell and answers with structural errors
 // shaped like the rule parser's
-tableModel.check = function(onDone) {
+tableModel.check = function(onDone, onError) {
     var self = this;
 
     data.post(this.config.urls.validate, {table: this.table}, function(payload) {
         self.serverErrors = payload.errors;
         onDone();
-    }, data.reportError);
+    }, onError);
 };
 
 // The checks, expand and compress endpoints answer a structurally
@@ -143,7 +143,7 @@ tableModel.withValidTable = function(onValid, onError) {
             return;
         }
         onValid();
-    });
+    }, onError);
 };
 
 // The four integrity checks in one server answer

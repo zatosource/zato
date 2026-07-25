@@ -66,10 +66,13 @@ versionsView.addComment = function(button) {
         return;
     }
 
-    var body = {version: versionsModel.toNumber, anchor: anchor, text: text};
-    data.post(versionsModel.config.urls.comment(versionsModel.rulesetId), body, function() {
+    var handlers = shared.inFlight(button, function() {
         versionsModel.loadTimeline(function() { self.render(); });
     }, function(message) { shared.popover(button, message, 'red'); });
+    if (handlers === null) { return; }
+
+    var body = {version: versionsModel.toNumber, anchor: anchor, text: text};
+    data.post(versionsModel.config.urls.comment(versionsModel.rulesetId), body, handlers.done, handlers.error);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -80,26 +83,32 @@ versionsView.approve = function(button) {
     var self = this;
     var url = versionsModel.config.urls.approve(versionsModel.rulesetId, versionsModel.toNumber);
 
-    data.post(url, {}, function(payload) {
+    var handlers = shared.inFlight(button, function(payload) {
         shared.popover(button, 'v' + payload.version + ' is approved, bound to its exact content. ' +
             'Publishing it is one click now.', 'green');
         versionsModel.loadTimeline(function() {
             versionsModel.loadApproval(function() { self.render(); });
         });
     }, function(message) { shared.popover(button, message, 'red'); });
+    if (handlers === null) { return; }
+
+    data.post(url, {}, handlers.done, handlers.error);
 };
 
 versionsView.publish = function(button) {
     var self = this;
     var url = versionsModel.config.urls.publish(versionsModel.rulesetId);
 
-    data.post(url, {version: versionsModel.toNumber}, function(payload) {
+    var handlers = shared.inFlight(button, function(payload) {
         shared.popover(button, 'v' + payload.version + ' is live, hot-reloaded without a restart. ' +
             'A snapshot exists, going back is one click on any older version.', 'green');
         versionsModel.loadTimeline(function() {
             versionsModel.loadApproval(function() { self.render(); });
         });
     }, function(message) { shared.popover(button, message, 'red'); });
+    if (handlers === null) { return; }
+
+    data.post(url, {version: versionsModel.toNumber}, handlers.done, handlers.error);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -108,22 +117,28 @@ versionsView.setGate = function(button, enabled) {
     var self = this;
     var url = versionsModel.config.urls.setGate(versionsModel.rulesetId);
 
-    data.post(url, {enabled: enabled}, function() {
+    var handlers = shared.inFlight(button, function() {
         versionsModel.loadTimeline(function() {
             versionsModel.loadApproval(function() { self.render(); });
         });
     }, function(message) { shared.popover(button, message, 'red'); });
+    if (handlers === null) { return; }
+
+    data.post(url, {enabled: enabled}, handlers.done, handlers.error);
 };
 
 versionsView.setSelfApproval = function(button, allowed) {
     var self = this;
     var url = versionsModel.config.urls.setSelfApproval(versionsModel.rulesetId);
 
-    data.post(url, {allowed: allowed}, function() {
+    var handlers = shared.inFlight(button, function() {
         versionsModel.loadTimeline(function() {
             versionsModel.loadApproval(function() { self.render(); });
         });
     }, function(message) { shared.popover(button, message, 'red'); });
+    if (handlers === null) { return; }
+
+    data.post(url, {allowed: allowed}, handlers.done, handlers.error);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -140,7 +155,7 @@ versionsView.restore = function(event, number, button) {
         comment: versionsModel.config.restoreComment(number),
     };
 
-    data.post(versionsModel.config.urls.rollback(versionsModel.rulesetId), body, function(payload) {
+    var handlers = shared.inFlight(button, function(payload) {
         shared.popover(button, 'Version ' + payload.version + ' was created from v' + number +
             ' and is live. The history stays linear.', 'green');
 
@@ -151,6 +166,9 @@ versionsView.restore = function(event, number, button) {
             versionsModel.compare(function() { self.render(); });
         });
     }, function(message) { shared.popover(button, message, 'red'); });
+    if (handlers === null) { return; }
+
+    data.post(versionsModel.config.urls.rollback(versionsModel.rulesetId), body, handlers.done, handlers.error);
 };
 
 // ////////////////////////////////////////////////////////////////////////

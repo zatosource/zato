@@ -364,13 +364,13 @@ var testModel = {
 // ////////////////////////////////////////////////////////////////////////
 
     // The server checks the suite structurally after every edit
-    check: function(onDone) {
+    check: function(onDone, onError) {
         var self = this;
 
         data.post(this.config.urls.validate, {test_set: this.suite}, function(payload) {
             self.serverErrors = payload.errors;
             onDone();
-        }, data.reportError);
+        }, onError);
     },
 
 // ////////////////////////////////////////////////////////////////////////

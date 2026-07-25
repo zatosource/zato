@@ -75,6 +75,9 @@ class ErrorCode:
     Bad_Scenario       = 'bad_scenario'
     Duplicate_Scenario = 'duplicate_scenario'
 
+    # Codes reported when validating a stored document structurally.
+    Bad_Document = 'bad_document'
+
     # Codes reported when validating a decision table.
     Bad_Row          = 'bad_row'
     Duplicate_Row    = 'duplicate_row'

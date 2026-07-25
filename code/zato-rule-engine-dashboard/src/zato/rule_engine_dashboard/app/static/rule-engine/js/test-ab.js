@@ -57,6 +57,17 @@ testView.compare = function(button) {
     this.championVersion = parseInt(document.getElementById('ab-champion-version').value);
     this.challengerVersion = parseInt(document.getElementById('ab-challenger-version').value);
 
+    // A comparison runs both versions over every scenario, so the button stays
+    // disabled until the answer is in
+    var handlers = shared.inFlight(button, function(payload) {
+        self.abResult = payload;
+        self.renderAb();
+        shared.initTips();
+    }, function(message) {
+        shared.popover(button, message, 'red');
+    });
+    if (handlers === null) { return; }
+
     // The same version on both sides is one simulation, not a comparison
     if (this.championVersion === this.challengerVersion) {
         var single = {
@@ -66,12 +77,8 @@ testView.compare = function(button) {
             kpis: this.abKpis(),
         };
         data.post(testModel.config.urls.simulation, single, function(payload) {
-            self.abResult = {champion: payload, challenger: null, diff: null};
-            self.renderAb();
-            shared.initTips();
-        }, function(message) {
-            shared.popover(button, message, 'red');
-        });
+            handlers.done({champion: payload, challenger: null, diff: null});
+        }, handlers.error);
         return;
     }
 
@@ -82,13 +89,7 @@ testView.compare = function(button) {
         scenarios: this.abScenarios(),
         kpis: this.abKpis(),
     };
-    data.post(testModel.config.urls.championChallenger, body, function(payload) {
-        self.abResult = payload;
-        self.renderAb();
-        shared.initTips();
-    }, function(message) {
-        shared.popover(button, message, 'red');
-    });
+    data.post(testModel.config.urls.championChallenger, body, handlers.done, handlers.error);
 };
 
 // ////////////////////////////////////////////////////////////////////////

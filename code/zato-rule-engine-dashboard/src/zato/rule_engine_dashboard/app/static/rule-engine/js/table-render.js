@@ -337,7 +337,7 @@ var tableView = {
             tableModel.check(function() {
                 self.renderProblems();
                 self.shadeInvalidCells();
-            });
+            }, data.reportError);
         }, tableModel.config.checkDelayMilliseconds);
     },
 

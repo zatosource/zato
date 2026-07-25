@@ -71,10 +71,13 @@ logView.copyText = function(event, text) {
 // ////////////////////////////////////////////////////////////////////////
 
 logView.addToTestSet = function(anchor) {
-    logModel.addToTestSet(function(suiteName) {
+    var handlers = shared.inFlight(anchor, function(suiteName) {
         shared.popover(anchor, 'Added to ' + suiteName + ' as a scenario, with what went out as the ' +
             'expectations. Yesterday\'s traffic is today\'s regression test.', 'green');
     }, function(message) { shared.popover(anchor, message, 'red'); });
+    if (handlers === null) { return; }
+
+    logModel.addToTestSet(handlers.done, handlers.error);
 };
 
 logView.replay = function(anchor) {
@@ -88,10 +91,13 @@ logView.replay = function(anchor) {
         return;
     }
 
-    logModel.replay(function() {
+    var handlers = shared.inFlight(anchor, function() {
         self.renderDetail();
         shared.initTips();
     }, function(message) { shared.popover(anchor, message, 'red'); });
+    if (handlers === null) { return; }
+
+    logModel.replay(handlers.done, handlers.error);
 };
 
 // ////////////////////////////////////////////////////////////////////////

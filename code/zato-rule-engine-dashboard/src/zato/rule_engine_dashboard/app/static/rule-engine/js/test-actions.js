@@ -45,7 +45,7 @@ testView.showView = function(viewName) {
 testView.runAll = function(button) {
     var self = this;
 
-    testModel.runAll(function(delta) {
+    var handlers = shared.inFlight(button, function(delta) {
         self.lastDelta = delta;
         self.render();
 
@@ -61,13 +61,16 @@ testView.runAll = function(button) {
     }, function(message) {
         shared.popover(button, message, 'red');
     });
+    if (handlers === null) { return; }
+
+    testModel.runAll(handlers.done, handlers.error);
 };
 
 testView.runOne = function(button) {
     var self = this;
     var scenario = this.selectedScenario();
 
-    testModel.runOne(scenario, function(entry) {
+    var handlers = shared.inFlight(button, function(entry) {
         // The popover is anchored to the button's rectangle before the
         // re-render replaces the button, otherwise it would open at 0, 0
         shared.popover(button, 'Ran "' + scenario.name + '", ' + self.statusLabels[entry.status] + '.');
@@ -75,6 +78,9 @@ testView.runOne = function(button) {
     }, function(message) {
         shared.popover(button, message, 'red');
     });
+    if (handlers === null) { return; }
+
+    testModel.runOne(scenario, handlers.done, handlers.error);
 };
 
 // The play button on a scenario row runs that one scenario without
@@ -84,12 +90,15 @@ testView.runFromList = function(event, index, button) {
     var self = this;
     var scenario = testModel.scenarioAt(index);
 
-    testModel.runOne(scenario, function(entry) {
+    var handlers = shared.inFlight(button, function(entry) {
         shared.popover(button, 'Ran "' + scenario.name + '", ' + self.statusLabels[entry.status] + '.');
         self.render();
     }, function(message) {
         shared.popover(button, message, 'red');
     });
+    if (handlers === null) { return; }
+
+    testModel.runOne(scenario, handlers.done, handlers.error);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -264,7 +273,7 @@ testView.promote = function(button) {
     var self = this;
     var scenario = this.selectedScenario();
 
-    testModel.promote(scenario, function() {
+    var handlers = shared.inFlight(button, function() {
         // Promotion changed the expectations, the fresh run scores them
         testModel.runOne(scenario, function() {
             self.render();
@@ -274,6 +283,9 @@ testView.promote = function(button) {
     }, function(message) {
         shared.popover(button, message, 'red');
     });
+    if (handlers === null) { return; }
+
+    testModel.promote(scenario, handlers.done, handlers.error);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -282,12 +294,15 @@ testView.save = function(button) {
     if (testModel.suite === null) { return; }
     var self = this;
 
-    testModel.save(function(payload) {
+    var handlers = shared.inFlight(button, function(payload) {
         self.renderSubtitle();
         shared.popover(button, 'Saved as version ' + payload.version + '.', 'green');
     }, function(message) {
         shared.popover(button, message, 'red');
     });
+    if (handlers === null) { return; }
+
+    testModel.save(handlers.done, handlers.error);
 };
 
 // ////////////////////////////////////////////////////////////////////////

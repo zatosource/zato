@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from http.client import CONFLICT, OK
+from http.client import BAD_REQUEST, CONFLICT, OK
 
 # ################################################################################################################################
 
@@ -143,6 +143,51 @@ def test_save_creates_versions_and_the_index(client:'any_', backend:'any_') -> '
     # .. and a save against a stale version is a conflict, never an overwrite.
     response = post_json(client, '/rules/editor/save/', body)
     assert response.status_code == CONFLICT
+
+# ################################################################################################################################
+
+def test_save_refuses_a_document_the_engine_could_not_run(client:'any_') -> 'None':
+    """ A ruleset document the browser did not build is refused with findings, never stored.
+    """
+    documents = parse_documents(Rules_Text)
+    full_name = next(iter(documents))
+
+    # A condition with no comparator is exactly what a hand-made request produces ..
+    del documents[full_name]['conditions'][0]['comparator']
+
+    body = {
+        'name': 'Loans',
+        'object_type': 'ruleset',
+        'document': {'documents': documents},
+        'comment': 'Create the ruleset',
+    }
+    response = post_json(client, '/rules/editor/save/', body)
+    assert response.status_code == BAD_REQUEST
+
+    errors = response.json()['errors']
+    assert len(errors) == 1
+    assert 'Not a comparator' in errors[0]['message']
+
+# ################################################################################################################################
+
+def test_save_refuses_a_document_of_the_wrong_type(client:'any_') -> 'None':
+    """ A document that is not what its type says it is comes back named, rather than as a broken endpoint.
+    """
+    body = {
+        'name': 'Loans',
+        'object_type': 'decision-table',
+        'document': {'documents': {}},
+        'comment': 'Create the table',
+    }
+    response = post_json(client, '/rules/editor/save/', body)
+    assert response.status_code == BAD_REQUEST
+
+    fields = []
+    for error in response.json()['errors']:
+        fields.append(error['field'])
+
+    assert 'conditions' in fields
+    assert 'columns' in fields
 
 # ################################################################################################################################
 
