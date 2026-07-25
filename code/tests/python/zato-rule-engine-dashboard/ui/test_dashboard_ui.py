@@ -83,6 +83,33 @@ def test_every_screen_renders_within_budget(client:'any_') -> 'None':
 
 # ################################################################################################################################
 
+def test_the_root_path_leads_to_the_rulesets_screen(client:'any_') -> 'None':
+    """ The root path is a redirect to the rulesets home screen.
+    """
+    response:'any_' = client.get('/')
+    assert response.status_code == FOUND, response.status_code
+    assert response.headers['Location'] == '/rulesets/', response.headers['Location']
+
+# ################################################################################################################################
+
+def test_static_files_are_served_with_their_content_types(client:'any_') -> 'None':
+    """ The application serves its own static files and each answers with its real content type,
+    never the HTML of an error page, which browsers would refuse to run.
+    """
+    expected = [
+        ('/static/webapp/js/shared.js', 'text/javascript'),
+        ('/static/webapp/css/tokens.css', 'text/css'),
+        ('/static/rule-engine/css/dashboard.css', 'text/css'),
+        ('/static/webapp/assets/zato-logo.svg', 'image/svg+xml'),
+    ]
+
+    for url_path, content_type in expected:
+        response:'any_' = client.get(url_path)
+        assert response.status_code == OK, (url_path, response.status_code)
+        assert response.headers['Content-Type'].startswith(content_type), (url_path, response.headers['Content-Type'])
+
+# ################################################################################################################################
+
 def test_signed_out_visitors_land_on_the_sign_in_screen() -> 'None':
     """ Without a session, every screen sends the visitor to sign in first.
     """
