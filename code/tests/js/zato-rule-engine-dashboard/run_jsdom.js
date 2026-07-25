@@ -159,9 +159,19 @@ const screens = [
         urlPath: '/tables/',
         // The seeded decision table renders its grid
         settled: (window) => window.document.body.textContent.includes('Loan approval'),
-        drive: (window) => {
+        drive: async (window) => {
             check('tables: the table model carries the seeded columns',
                 window.tableModel.table.columns.length === 3);
+
+            // The cell grammar lives on the server alone, so the sentence bar
+            // only speaks once the validation has answered with its readings
+            const read = await waitFor(() => Object.keys(window.tableModel.readings).length > 0);
+            check('tables: the server answers with how every cell reads', read);
+
+            window.tableView.selectColumn('1');
+            const sentence = window.document.getElementById('table-sentence-bar').textContent;
+            check('tables: the sentence bar speaks the range the server read, saw ' + JSON.stringify(sentence),
+                sentence.includes('between 700 and 850'));
         },
     },
     {
@@ -187,12 +197,17 @@ const screens = [
         urlPath: '/decision-log/',
         // The seeded decisions land in the list with their business keys
         settled: (window) => window.document.getElementById('log-list').textContent.includes('Mary Miller'),
-        drive: (window) => {
-            // The search filter is driven directly: one key stays, the other goes
+        drive: async (window) => {
+            // The search filter is driven directly: one key stays, the other
+            // goes, once the debounce behind the keystrokes has fired
             window.logView.setSearch('Mary');
-            const text = window.document.getElementById('log-list').textContent;
-            check('log: setSearch keeps the matching decision', text.includes('Mary Miller'));
-            check('log: setSearch filters the other decision out', !text.includes('James Carter'));
+
+            const filtered = await waitFor(
+                () => !window.document.getElementById('log-list').textContent.includes('James Carter'));
+
+            check('log: setSearch filters the other decision out', filtered);
+            check('log: setSearch keeps the matching decision',
+                window.document.getElementById('log-list').textContent.includes('Mary Miller'));
         },
     },
     {
@@ -227,8 +242,10 @@ async function main() {
         check(screen.file + ': the seeded data is on screen', isSettled);
         check(screen.file + ': no page errors, saw ' + JSON.stringify(pageErrors), pageErrors.length === 0);
 
+        // A driver may have to wait for a debounce of its own, so every one
+        // of them is awaited
         if (isSettled) {
-            screen.drive(window);
+            await screen.drive(window);
         }
     }
 

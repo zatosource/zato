@@ -17,6 +17,10 @@ var logModel = {
         ranges: [1, 3, 7],
         defaultRangeDays: 7,
 
+        // How long the search waits after the last keystroke before it
+        // filters a full page of decisions again
+        searchDelayMilliseconds: 120,
+
         // Every promoted outcome as the label its card shows
         outcomeLabels: {
             'matched': 'matched',

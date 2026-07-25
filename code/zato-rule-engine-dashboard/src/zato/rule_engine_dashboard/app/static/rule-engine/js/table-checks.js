@@ -120,13 +120,14 @@ tableModel.buildProblems = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The server parses every cell and answers with structural errors
-// shaped like the rule parser's
+// The server parses every cell and answers with structural errors shaped
+// like the rule parser's, together with how it read every cell back
 tableModel.check = function(onDone, onError) {
     var self = this;
 
     data.post(this.config.urls.validate, {table: this.table}, function(payload) {
         self.serverErrors = payload.errors;
+        self.readings = payload.readings;
         onDone();
     }, onError);
 };

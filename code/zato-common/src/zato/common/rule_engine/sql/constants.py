@@ -26,6 +26,7 @@ Definition_Types = (
 # ################################################################################################################################
 
 Event_Type_Definition_Created   = 'definition.created'
+Event_Type_Definition_Renamed   = 'definition.renamed'
 Event_Type_Definition_Updated   = 'definition.updated'
 Event_Type_Definition_Archived  = 'definition.archived'
 Event_Type_Version_Created      = 'version.created'

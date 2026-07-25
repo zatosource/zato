@@ -214,3 +214,49 @@ def apply_rename(old_term:'str', new_term:'str', documents:'anydict') -> 'anydic
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+def rename_ruleset(document:'anydict', new_ruleset_name:'str') -> 'anydict':
+    """ Returns a copy of one rule document belonging to a renamed ruleset.
+
+    A rule's full name is its ruleset's name and its own together, so a ruleset rename changes
+    both keys of every rule it holds. The input document is never modified.
+    """
+    rewritten = deepcopy(document)
+
+    rewritten['ruleset_name'] = new_ruleset_name
+    rewritten['full_name'] = new_ruleset_name + '_' + rewritten['name']
+
+    return rewritten
+
+# ################################################################################################################################
+
+def preview_ruleset_rename(new_ruleset_name:'str', documents:'anydict') -> 'dictlist':
+    """ Returns what a ruleset rename would do to every rule name - without changing anything.
+
+    Every rule of the ruleset is listed, because a ruleset rename renames all of them, which is
+    the difference from a term rename, where only the referencing rules change.
+    """
+    out = []
+
+    for document in documents.values():
+        rewritten = rename_ruleset(document, new_ruleset_name)
+        entry = {'rule': document['full_name'], 'new_rule': rewritten['full_name']}
+        out.append(entry)
+
+    return out
+
+# ################################################################################################################################
+
+def apply_ruleset_rename(new_ruleset_name:'str', documents:'anydict') -> 'anydict':
+    """ Rewrites every rule of a renamed ruleset, keyed by the full name each one now has.
+    """
+    out = {}
+
+    for document in documents.values():
+        rewritten = rename_ruleset(document, new_ruleset_name)
+        out[rewritten['full_name']] = rewritten
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################

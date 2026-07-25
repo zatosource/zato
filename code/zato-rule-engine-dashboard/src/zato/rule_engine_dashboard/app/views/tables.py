@@ -17,6 +17,7 @@ from zato.common.rule_engine.table import validate_table
 from zato.common.rule_engine.table_compile import compile_table
 from zato.common.rule_engine.table_checks import check_conflicts, check_subsumption, check_unreachable
 from zato.common.rule_engine.table_completeness import check_completeness
+from zato.common.rule_engine.table_reading import table_readings
 from zato.common.rule_engine.table_shape import compress_table, expand_table
 from zato.rule_engine_dashboard.app.views.api import json_api, read_json, required
 
@@ -48,14 +49,17 @@ def _valid_table(req:'any_') -> 'anydict | JsonResponse':
 
 @json_api
 def table_validate(req:'any_') -> 'any_':
-    """ Structural validation of one decision-table document.
+    """ Structural validation of one decision-table document, with how every cell of it reads back.
+
+    The readings travel with the errors because the screen speaks its sentences and its unfold
+    hints from them - the cell grammar lives here alone, so there is nothing to keep in step.
     """
     body = read_json(req)
     table = required(body, 'table')
 
     errors = validate_table(table)
 
-    out = JsonResponse({'errors': errors})
+    out = JsonResponse({'errors': errors, 'readings': table_readings(table)})
     return out
 
 # ################################################################################################################################

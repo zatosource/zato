@@ -155,6 +155,107 @@ rulesetsView.confirmPublish = function(id, version, button) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// Renaming a ruleset: the impact first, because the name is the REST path
+// callers invoke and every rule name carries it
+rulesetsView.openRenamePanel = function(id, anchor) {
+    if (shared.panelElement !== null) { shared.closePanel(); return; }
+
+    var ruleset = rulesetsModel.byId(id);
+
+    shared.openPanel(anchor,
+        '<div class="test-trace-title">Rename ' + shared.escape(ruleset.name) + '</div>' +
+        '<div class="floating-panel-line">' +
+        '<input id="rulesets-rename-input" type="text" value="' + shared.escape(ruleset.name) + '" ' +
+            'onkeydown="rulesetsView.renameKeys(event, ' + id + ')">' +
+        '<button class="button-primary button-mini" onclick="rulesetsView.previewRename(' + id + ', this)">' +
+            'Preview impact</button>' +
+        '</div>' +
+        '<div class="floating-panel-hint">The name is the address callers invoke, so the preview says how many ' +
+        'calls the current one has served. Every rule of the ruleset is renamed with it, as a new draft version.</div>' +
+        '<div id="rulesets-rename-impact"></div>');
+
+    document.getElementById('rulesets-rename-input').focus();
+};
+
+rulesetsView.renameKeys = function(event, id) {
+    if (event.key === 'Enter') { this.previewRename(id, event.target); }
+    if (event.key === 'Escape') { shared.closePanel(); }
+};
+
+rulesetsView.renameInput = function() {
+    var out = document.getElementById('rulesets-rename-input').value.trim();
+    return out;
+};
+
+rulesetsView.previewRename = function(id, button) {
+    var self = this;
+    var newName = this.renameInput();
+
+    if (!this.config.rulesetNamePattern.test(newName)) {
+        shared.popover(button, 'A ruleset name is dotted words, letters, digits and underscores only.', 'red');
+        return;
+    }
+
+    var handlers = shared.inFlight(button, function(report) {
+        document.getElementById('rulesets-rename-impact').innerHTML = self.renameImpactHtml(id, report);
+    }, function(message) {
+        shared.popover(button, message, 'red');
+    });
+    if (handlers === null) { return; }
+
+    rulesetsModel.renamePreview(id, newName, handlers.done, handlers.error);
+};
+
+// What the preview reports: the traffic the current name has served and
+// every rule name the rename rewrites
+rulesetsView.renameImpactHtml = function(id, report) {
+    var html = '<div class="rulesets-rename-line">' + report.rest_call_count +
+        ' logged calls used ' + shared.escape(report.old_name) +
+        ' - each caller has to be moved to ' + shared.escape(report.new_name) + '.</div>';
+
+    html += '<div class="rulesets-rename-line">' + report.rules.length + ' rules are renamed with it.</div>';
+
+    report.rules.slice(0, this.config.maxRenamedRules).forEach(function(entry) {
+        html += '<div class="rulesets-match">' + shared.escape(entry.rule) + ' becomes ' +
+            shared.escape(entry.new_rule) + '</div>';
+    });
+
+    if (report.rules.length > this.config.maxRenamedRules) {
+        html += '<div class="rulesets-match-overflow">and ' + (report.rules.length - this.config.maxRenamedRules) +
+            ' more rules</div>';
+    }
+
+    html += '<div class="floating-panel-actions">' +
+        '<button class="button-primary button-mini" onclick="rulesetsView.confirmRename(' + id + ', this)">' +
+            'Rename to ' + shared.escape(report.new_name) + '</button>' +
+        '</div>';
+
+    return html;
+};
+
+rulesetsView.confirmRename = function(id, button) {
+    var self = this;
+    var newName = this.renameInput();
+
+    var handlers = shared.inFlight(button, function(report) {
+        shared.closePanel();
+        self.renderList();
+        self.renderSide();
+        shared.initTips();
+
+        shared.popover(document.querySelector('.rulesets-row[data-id="' + id + '"]'),
+            'Renamed to ' + report.new_name + ', its ' + report.rules.length + ' rules with it, stored as draft v' +
+            report.version + '. Publish it to make the new names live.', 'green');
+    }, function(message) {
+        shared.popover(button, message, 'red');
+    });
+    if (handlers === null) { return; }
+
+    rulesetsModel.renameApply(id, newName, handlers.done, handlers.error);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 // Saving the current search and view filter as a named chip, capped so
 // the view list never turns into a graveyard of stale queries
 rulesetsView.openSaveViewPanel = function(button) {

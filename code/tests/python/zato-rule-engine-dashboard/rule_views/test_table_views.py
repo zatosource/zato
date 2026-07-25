@@ -32,6 +32,19 @@ def test_validate_accepts_a_clean_table(client:'any_') -> 'None':
 
 # ################################################################################################################################
 
+def test_validate_answers_with_how_every_cell_reads(client:'any_') -> 'None':
+    """ The readings travel with the validation - the screen has no cell grammar of its own.
+    """
+    response = post_json(client, '/rules/tables/validate/', {'table': table_document()})
+    assert response.status_code == OK
+
+    readings = response.json()['readings']
+    assert readings['1']['a'] == {'kind': 'range', 'low': 700, 'high': 850}
+    assert readings['1']['b'] == {'kind': 'set', 'items': ['Gold', 'Platinum'], 'negated': False}
+    assert readings['2']['a'] == {'kind': 'comparison', 'symbol': '<', 'value': 500}
+
+# ################################################################################################################################
+
 def test_validate_reports_a_broken_cell(client:'any_') -> 'None':
     """ A cell the grammar cannot accept is reported, never silently skipped.
     """

@@ -18,6 +18,7 @@ var versionsView = {
         // Every history event type as the phrase the activity feed shows
         eventPhrases: {
             'definition.created': 'created this ruleset',
+            'definition.renamed': 'renamed this ruleset',
             'definition.updated': 'updated this ruleset',
             'definition.archived': 'archived this ruleset',
             'version.created': 'stored a new version',

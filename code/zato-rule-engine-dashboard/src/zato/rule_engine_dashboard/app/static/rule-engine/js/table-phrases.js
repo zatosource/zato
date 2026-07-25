@@ -1,16 +1,28 @@
 'use strict';
 
 // The sentence bar of the decision table: one selected column read back
-// as a near-natural sentence, composed from the same parsed cells the
-// grid draws. Augments the tableView namespace from table-render.js.
+// as a near-natural sentence, spoken from the server's reading of every
+// cell. Augments the tableView namespace from table-render.js.
 
 (function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-tableView.formatIntervalPhrase = function(parsed) {
-    if (parsed.low === parsed.high) { return String(parsed.low); }
-    var out = 'between ' + parsed.low.toLocaleString('en-US') + ' and ' + parsed.high.toLocaleString('en-US');
+// A number reads with its thousands separators, anything else as it stands
+tableView.readingValue = function(value) {
+    if (typeof value === 'number') { return value.toLocaleString('en-US'); }
+
+    var out = String(value);
+    return out;
+};
+
+tableView.formatRangePhrase = function(reading) {
+    var low = this.readingValue(reading.low);
+    var high = this.readingValue(reading.high);
+
+    if (low === high) { return low; }
+
+    var out = 'between ' + low + ' and ' + high;
     return out;
 };
 
@@ -25,21 +37,28 @@ tableView.actionPhrases = function(column) {
     return out;
 };
 
-tableView.conditionPhrase = function(subject, parsed) {
+tableView.conditionPhrase = function(subject, reading) {
+    var self = this;
     var phrase = shared.escape(tableModel.phraseFor(subject));
 
-    if (parsed.kind === 'interval') { return phrase + ' is ' + this.formatIntervalPhrase(parsed); }
-    if (parsed.kind === 'set') {
-        var joined = shared.escape(parsed.items.join(', '));
-        if (parsed.negated) { return phrase + ' is none of ' + joined; }
-        if (parsed.items.length === 1) { return phrase + ' is ' + joined; }
+    if (reading.kind === 'range') { return phrase + ' is ' + shared.escape(this.formatRangePhrase(reading)); }
+
+    if (reading.kind === 'set') {
+        var texts = reading.items.map(function(item) { return self.readingValue(item); });
+        var joined = shared.escape(texts.join(', '));
+        if (reading.negated) { return phrase + ' is none of ' + joined; }
+        if (texts.length === 1) { return phrase + ' is ' + joined; }
         return phrase + ' is one of ' + joined;
     }
-    if (parsed.kind === 'comparison') {
-        return phrase + ' ' + tableModel.symbolPhrases[parsed.symbol] + ' ' + shared.escape(parsed.value);
+
+    if (reading.kind === 'comparison') {
+        return phrase + ' ' + tableModel.symbolPhrases[reading.symbol] + ' ' +
+            shared.escape(this.readingValue(reading.value));
     }
 
-    var out = phrase + ' is ' + shared.escape(parsed.value);
+    // Text the cell grammar does not read is spoken back as it was typed, so
+    // the sentence says what the cell says while the problems panel says why
+    var out = phrase + ' ' + shared.escape(reading.text);
     return out;
 };
 
@@ -54,9 +73,9 @@ tableView.composeSentence = function(column) {
 
     var parts = [];
     tableModel.table.conditions.forEach(function(row) {
-        var parsed = tableModel.parseCondition(column, row.letter);
-        if (parsed.kind === 'any') { return; }
-        parts.push(self.conditionPhrase(row.subject, parsed));
+        var reading = tableModel.reading(column, row.letter);
+        if (reading.kind === 'any') { return; }
+        parts.push(self.conditionPhrase(row.subject, reading));
     });
 
     var actions = this.actionPhrases(column);

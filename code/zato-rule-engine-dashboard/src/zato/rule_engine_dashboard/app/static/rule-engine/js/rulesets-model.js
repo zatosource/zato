@@ -26,6 +26,7 @@ var rulesetsModel = {
             search: '/rules/search/?q=',
             preview: function(id) { return '/rules/rulesets/' + id + '/preview/'; },
             publish: function(id) { return '/rules/rulesets/' + id + '/publish/'; },
+            rename: function(id) { return '/rules/rulesets/' + id + '/rename/'; },
             follow: function(id) { return '/rules/rulesets/' + id + '/follow/'; },
             unfollow: function(id) { return '/rules/rulesets/' + id + '/unfollow/'; },
             seen: function(id) { return '/rules/rulesets/' + id + '/seen/'; },
@@ -177,6 +178,22 @@ var rulesetsModel = {
     // for rulesets, starts answering requests without a restart
     publish: function(id, version, onDone, onError) {
         data.post(this.config.urls.publish(id), {version: version}, onDone, onError);
+    },
+
+    // A ruleset rename is previewed before it commits, because the name is
+    // the REST address callers use and every rule name carries it
+    renamePreview: function(id, newName, onDone, onError) {
+        data.post(this.config.urls.rename(id), {new_name: newName, dry_run: true}, onDone, onError);
+    },
+
+    renameApply: function(id, newName, onDone, onError) {
+        var self = this;
+        data.post(this.config.urls.rename(id), {new_name: newName, dry_run: false}, function(report) {
+
+            // The list shows the new name without a round trip
+            self.byId(id).name = report.new_name;
+            onDone(report);
+        }, onError);
     },
 
     follow: function(id, onDone) {

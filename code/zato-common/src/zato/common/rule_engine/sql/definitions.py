@@ -13,12 +13,13 @@ from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.common.defaults import default_cluster_id
-from zato.common.rule_engine.changes import Change_Definition_Archived, Change_Definition_Created
+from zato.common.rule_engine.changes import Change_Definition_Archived, Change_Definition_Created, \
+    Change_Definition_Renamed
 from zato.common.typing_ import cast_
 
 # Local
 from .constants import Definition_Type_Ruleset, Definition_Types, Event_Type_Definition_Archived, \
-    Event_Type_Definition_Created, Event_Type_Version_Created
+    Event_Type_Definition_Created, Event_Type_Definition_Renamed, Event_Type_Version_Created
 from .data import anydict, definition_record_list, RuleDefinitionRecord
 from .database import SessionFactory
 from .document import deserialize_document, serialize_document
@@ -349,6 +350,69 @@ class DefinitionStore:
         # .. and release the read-only session.
         finally:
             session.close()
+
+        return out
+
+# ################################################################################################################################
+
+    def rename(self, *, definition_id:'int', name:'str', actor:'str') -> 'RuleDefinitionRecord':
+        """ Gives one definition a new name, keeping its id, its history and its versions.
+
+        A ruleset is invoked by name, so this is what changes the address callers use - the rule
+        documents that carry the name are rewritten by the caller as a new version, in the same
+        way a term rename rewrites the documents that reference the term.
+        """
+        # Validate all user-facing fields before changing state ..
+        require_text(name, 'Definition name')
+        require_text(actor, 'Rename actor')
+
+        session = self._session_factory()
+
+        try:
+            with session.begin():
+
+                # Read the definition being renamed, so its old name can be preserved ..
+                definition = get_definition(session, definition_id)
+                old_name = definition.name
+
+                # .. a rename to the name a definition already has changes nothing ..
+                if name == old_name:
+                    return definition
+
+                # .. store the new name ..
+                now = utc_now()
+                statement = update(rule_definition_table)
+                id_condition = rule_definition_table.c.id == definition_id
+                statement = statement.where(id_condition)
+                statement = statement.values(name=name, updated_at=now)
+                _ = session.execute(statement)
+
+                # .. preserve which name it had before, in the same commit ..
+                renamed_payload = {'old_name': old_name, 'new_name': name}
+                _ = add_event(
+                    session,
+                    definition_id=definition_id,
+                    version=definition.current_version,
+                    event_type=Event_Type_Definition_Renamed,
+                    actor=actor,
+                    payload=renamed_payload,
+                )
+
+                # .. and answer with the definition as it now stands.
+                out = definition._replace(name=name, updated_at=now)
+
+        # Translate a name another definition already holds into a domain error ..
+        except IntegrityError as e:
+            message = f'A rule definition named "{name}" already exists under the same parent and type'
+            raise InvalidStoreInputError(message) from e
+
+        # .. and release the session in every case.
+        finally:
+            session.close()
+
+        # Announce the committed rename under the new name - the consumer also evicts every
+        # name that resolved to this id, which is what drops the old name.
+        self._announce_change(Change_Definition_Renamed, definition_id, name, definition.object_type)
 
         return out
 

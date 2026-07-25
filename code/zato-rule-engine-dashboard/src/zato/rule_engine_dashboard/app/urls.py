@@ -60,6 +60,7 @@ urlpatterns = [
     path('rules/feed/', rulesets.ruleset_feed, name='rules-feed'),
     path('rules/rulesets/<int:definition_id>/preview/', rulesets.ruleset_preview, name='rules-ruleset-preview'),
     path('rules/rulesets/<int:definition_id>/publish/', rulesets.ruleset_publish, name='rules-ruleset-publish'),
+    path('rules/rulesets/<int:definition_id>/rename/', rulesets.ruleset_rename, name='rules-ruleset-rename'),
     path('rules/rulesets/<int:definition_id>/follow/', rulesets.ruleset_follow, name='rules-ruleset-follow'),
     path('rules/rulesets/<int:definition_id>/unfollow/', rulesets.ruleset_unfollow, name='rules-ruleset-unfollow'),
     path('rules/rulesets/<int:definition_id>/seen/', rulesets.ruleset_mark_seen, name='rules-ruleset-seen'),

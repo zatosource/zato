@@ -11,9 +11,12 @@ from django.http import JsonResponse
 
 # Zato
 from zato.common.rule_engine.loading import publish_and_reload
+from zato.common.rule_engine.references import apply_ruleset_rename, preview_ruleset_rename
 from zato.common.rule_engine.render import render_documents
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Documents_Key
+from zato.common.rule_engine.sql.data import DecisionFilter
 from zato.common.rule_engine.sql.document import deserialize_document
+from zato.common.rule_engine.tokens import ruleset_name_pattern
 from zato.rule_engine_dashboard.app.storage import get_backend, get_manager
 from zato.rule_engine_dashboard.app.views.api import BadRequestError, definition_row, event_row, follow_row, json_api, \
     read_int, read_json, recent_row, required, serialize_all, view_row
@@ -35,6 +38,9 @@ _default_offset = 0
 
 # How many history events one preview shows.
 _preview_event_limit = 20
+
+# A rename that does not say otherwise only previews its impact.
+_default_dry_run = True
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -146,6 +152,86 @@ def ruleset_publish(req:'any_', definition_id:'int') -> 'any_':
     else:
         published = backend.versions.publish(definition_id=definition_id, version=version, actor=actor)
         result = {'version': published.version, 'rule_names': []}
+
+    out = JsonResponse(result)
+    return out
+
+# ################################################################################################################################
+
+@json_api
+def ruleset_rename(req:'any_', definition_id:'int') -> 'any_':
+    """ Renames one ruleset and every rule name inside it - a dry run reports the impact without changing anything.
+
+    A ruleset is addressed by name over REST, so the impact worth knowing before renaming is how many
+    calls the current name has already served, next to the rule names the rename rewrites.
+    """
+    body = read_json(req)
+    new_name = required(body, 'new_name')
+
+    # The name is the REST path callers invoke, so it has to be one a path can carry.
+    if not ruleset_name_pattern.match(new_name):
+        raise BadRequestError(f'A ruleset name is dotted words, letters, digits and underscores only -> {new_name}')
+
+    # A rename is a preview unless the request explicitly asks to apply it.
+    if 'dry_run' in body:
+        is_dry_run = body['dry_run']
+    else:
+        is_dry_run = _default_dry_run
+
+    backend = get_backend()
+    actor = req.user.username
+
+    record = backend.definitions.get(definition_id)
+    document = deserialize_document(record.document)
+
+    # Only a stored document carrying rule documents has rule names to rewrite.
+    if Documents_Key in document:
+        documents = document[Documents_Key]
+    else:
+        documents = {}
+
+    impact = preview_ruleset_rename(new_name, documents)
+
+    # How much traffic the name being renamed has served, as far back as the decision log keeps.
+    filters = DecisionFilter(ruleset_id=definition_id)
+    rest_call_count = backend.reporting.decision_count(filters)
+
+    result = {
+        'definition_id': definition_id,
+        'old_name': record.name,
+        'new_name': new_name,
+        'dry_run': is_dry_run,
+        'rules': impact,
+        'rest_call_count': rest_call_count,
+    }
+
+    # The dry run stops at the impact report ..
+    if is_dry_run:
+        out = JsonResponse(result)
+        return out
+
+    # .. while an applied rename rewrites every rule of the ruleset ..
+    renamed = apply_ruleset_rename(new_name, documents)
+    rewritten = dict(document)
+    rewritten[Documents_Key] = renamed
+
+    # .. stores the rewrite as a new optimistic version ..
+    comment = f'Rename ruleset {record.name} to {new_name}'
+    version = backend.versions.create(
+        definition_id=definition_id,
+        expected_current_version=record.current_version,
+        document=rewritten,
+        author=actor,
+        comment=comment,
+    )
+
+    # .. gives the definition its new name, which is what changes the address callers use ..
+    _ = backend.definitions.rename(definition_id=definition_id, name=new_name, actor=actor)
+
+    # .. and keeps the where-used index true to the rule names now stored.
+    _ = backend.references.rebuild(definition_id=definition_id, documents=renamed)
+
+    result['version'] = version.version
 
     out = JsonResponse(result)
     return out
