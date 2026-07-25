@@ -15,6 +15,7 @@ from zato.cli.enmasse.util import preprocess_item, security_needs_update
 from zato.common.api import CONNECTION, URL_TYPE
 from zato.common.odb.model import HTTPSOAP, Service, to_json
 from zato.common.util.api import utcnow
+from zato.common.util.channel import ensure_channel_definitions_are_unique
 from zato.common.util.sql import get_security_by_id, parse_instance_opaque_attr, set_instance_opaque_attrs
 
 # ################################################################################################################################
@@ -527,6 +528,10 @@ class ChannelImporter:
 
         db_channels = self.get_rest_channels_from_db(session, self.importer.cluster_id)
         to_create, to_update = self.compare_channel_rest(channel_list, db_channels)
+
+        # Nothing is written before every definition is known to have a URL path of its own,
+        # since two channels resolving to one match target leave only one of them reachable.
+        ensure_channel_definitions_are_unique(session, self.importer.cluster_id, to_create + to_update)
 
         out_created = []
         out_updated = []

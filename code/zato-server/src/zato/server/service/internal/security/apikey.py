@@ -162,7 +162,7 @@ class Edit(AdminService):
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of an API key.
     """
-    password_required = False
+    password_required = True
 
     def handle(self) -> 'None':
 

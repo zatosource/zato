@@ -98,6 +98,9 @@ class SECURITY(Constants):
 
     BASIC_AUTH_RATE_LIMITING_EDIT = ValueConstant('')
     APIKEY_RATE_LIMITING_EDIT = ValueConstant('')
+    MTLS_RATE_LIMITING_EDIT = ValueConstant('')
+    OAUTH_RATE_LIMITING_EDIT = ValueConstant('')
+    WSS_RATE_LIMITING_EDIT = ValueConstant('')
 
     QUOTA_TIER_EDIT = ValueConstant('')
 

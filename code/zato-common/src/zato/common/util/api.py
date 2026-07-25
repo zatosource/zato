@@ -1616,7 +1616,13 @@ def require_tcp_port(address):
 # ################################################################################################################################
 
 def update_apikey_username_to_channel(config):
-    config.header = 'HTTP_{}'.format(config.get('header', '').upper().replace('-', '_'))
+
+    header = config.get('header')
+
+    if not header:
+        raise ValueError(f'API key definition has no header name -> {config.get("name")}')
+
+    config.header = 'HTTP_{}'.format(header.upper().replace('-', '_'))
 
 # ################################################################################################################################
 

@@ -2523,7 +2523,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         value:'any_',
         filter_name:'str'='',
         filter_value:'str'='',
-        soap_action:'str'='',
         method:'str'='',
         http_accept:'str'='',
         ) -> 'str':
@@ -2578,14 +2577,14 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             raise Exception(f'Unmapped entity type `{entity_type}` in check_attr_exists')
 
         # A channel's url_path is shared across all transports, so this check must mirror
-        # ensure_channel_is_unique from the create service - scoped by connection and soap_action
-        # but not by transport, with a clash reported only when the existing channel also uses
+        # ensure_channel_is_unique from the create service - scoped by connection but not by
+        # transport, with a clash reported only when the existing channel also uses
         # the same HTTP method and the same Accept header ..
         if attr_name == 'url_path' and entity_type in ('channel_rest', 'channel_soap'):
 
             url_path_query = "SELECT method, opaque1 FROM http_soap WHERE url_path = :val "
-            url_path_query += "AND connection = 'channel' AND soap_action = :soap_action"
-            url_path_params = {'val': value, 'soap_action': soap_action}
+            url_path_query += "AND connection = 'channel'"
+            url_path_params = {'val': value}
 
             with closing(self.odb.session()) as session:
                 result = session.execute(

@@ -29,12 +29,15 @@ from zato.common.util.api import update_apikey_username_to_channel, wait_for_dic
 from zato.common.util.auth import enrich_with_sec_data, on_basic_auth
 from zato.common.util.url_dispatcher import get_match_target
 from zato.server.connection.http_soap import Unauthorized
-from zato.server.connection.http_soap.url_dispatcher import Matcher, PyURLData
+from zato.server.connection.http_soap.url_dispatcher import Matcher, PyURLData, resolve_match_slash
 
 # ################################################################################################################################
 
 if 0:
+    from zato.common.typing_ import anydict
     from zato.server.base.config_manager import ConfigManager
+
+    anydict = anydict
     ConfigManager = ConfigManager
 
 # ################################################################################################################################
@@ -56,6 +59,26 @@ _mtls_header_subject_dn  = 'HTTP_X_ZATO_SSL_CLIENT_SUBJECT_DN'
 
 # The value the TLS-terminating proxy reports for a successfully verified client certificate.
 _mtls_verify_success = 'SUCCESS'
+
+# Every definition type kept in an id-keyed index.
+_indexed_sec_types = (
+    SEC_DEF_TYPE.APIKEY,
+    SEC_DEF_TYPE.BASIC_AUTH,
+    SEC_DEF_TYPE.MTLS,
+    SEC_DEF_TYPE.NTLM,
+    SEC_DEF_TYPE.OAUTH,
+    SEC_DEF_TYPE.SPNEGO,
+    SEC_DEF_TYPE.WSS,
+)
+
+# Definition types a channel can authenticate against - each one has a _handle_security_* method here.
+_channel_sec_types = (
+    SEC_DEF_TYPE.APIKEY,
+    SEC_DEF_TYPE.BASIC_AUTH,
+    SEC_DEF_TYPE.MTLS,
+    SEC_DEF_TYPE.OAUTH,
+    SEC_DEF_TYPE.WSS,
+)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -80,13 +103,14 @@ class URLData(PyURLData):
         self.config_dispatcher = config_dispatcher
         self.odb = odb
 
-        self.sec_config_getter = Bunch()
-        self.sec_config_getter[SEC_DEF_TYPE.BASIC_AUTH] = self.basic_auth_get
-        self.sec_config_getter[SEC_DEF_TYPE.APIKEY] = self.apikey_get
-
         self.url_sec_lock = RLock()
         self.update_lock = RLock()
         self._target_separator = MISC.SEPARATOR
+
+        # Definitions by id, per definition type - group-authenticated requests look definitions up
+        # by id, so a scan would cost more the more definitions there are.
+        self._sec_def_by_id = {sec_type:{} for sec_type in _indexed_sec_types}
+        self._rebuild_sec_def_index()
 
         # Built on first use because the cache it needs may not exist yet when we are created
         self._bearer_token_verifier = None
@@ -110,6 +134,62 @@ class URLData(PyURLData):
         self.apikey_config = apikey_config
         self.wss_config = wss_config
 
+        with self.url_sec_lock:
+            self._rebuild_sec_def_index()
+
+# ################################################################################################################################
+
+    def _get_sec_config_dicts(self) -> 'anydict':
+        """ Returns each definition type's configuration dict, keyed by that type.
+        """
+        out = {
+            SEC_DEF_TYPE.APIKEY: self.apikey_config,
+            SEC_DEF_TYPE.BASIC_AUTH: self.basic_auth_config,
+            SEC_DEF_TYPE.MTLS: self.mtls_config,
+            SEC_DEF_TYPE.NTLM: self.ntlm_config,
+            SEC_DEF_TYPE.OAUTH: self.oauth_config,
+            SEC_DEF_TYPE.SPNEGO: self.spnego_config,
+            SEC_DEF_TYPE.WSS: self.wss_config,
+        }
+
+        return out
+
+# ################################################################################################################################
+
+    def _rebuild_sec_def_index(self) -> 'None':
+        """ Builds the id-keyed index from scratch, which is what a full configuration load needs.
+        """
+        for sec_type, config_dict in self._get_sec_config_dicts().items():
+
+            index = {}
+
+            # A definition type whose configuration has not been handed over yet has nothing to index
+            if config_dict is None:
+                self._sec_def_by_id[sec_type] = index
+                continue
+
+            for item_name in list(config_dict.keys()):
+                item = config_dict[item_name]
+
+                # An entry that is still being populated has no configuration to index yet
+                if not hasattr(item, 'config'):
+                    continue
+                if 'id' not in item.config:
+                    continue
+
+                index[int(item.config['id'])] = item.config
+
+            self._sec_def_by_id[sec_type] = index
+
+# ################################################################################################################################
+
+    def _index_sec_def(self, sec_type:'str', config:'anydict') -> 'None':
+        self._sec_def_by_id[sec_type][int(config['id'])] = config
+
+    def _unindex_sec_def(self, sec_type:'str', name:'str') -> 'None':
+        config = self._get_sec_config_dicts()[sec_type][name].config
+        del self._sec_def_by_id[sec_type][int(config['id'])]
+
 # ################################################################################################################################
 
     def dispatcher_callback(self, event, ctx, **opaque):
@@ -131,18 +211,25 @@ class URLData(PyURLData):
             else:
                 return False
 
-        expected_key = sec_def.get('password', '')
+        expected_key = sec_def.get('password')
 
-        # Passwords are not required, so only compare when one is configured.
-        if expected_key:
-            if not is_string_equal(wsgi_environ[sec_def['header']], expected_key):
-                if enforce_auth:
-                    msg = '401 Unauthorized path_info:`{}`, cid:`{}`'.format(path_info, cid)
-                    error_msg = '401 Unauthorized'
-                    logger.error(msg + ' (Password)')
-                    raise Unauthorized(cid, error_msg, None)
-                else:
-                    return False
+        if not expected_key:
+            if enforce_auth:
+                logger.error(
+                    '401 Unauthorized path_info:`%s`, cid:`%s` (API key definition `%s` has no key configured)',
+                    path_info, cid, sec_def['name'])
+                raise Unauthorized(cid, '401 Unauthorized', None)
+            else:
+                return False
+
+        if not is_string_equal(wsgi_environ[sec_def['header']], expected_key):
+            if enforce_auth:
+                msg = '401 Unauthorized path_info:`{}`, cid:`{}`'.format(path_info, cid)
+                error_msg = '401 Unauthorized'
+                logger.error(msg + ' (Password)')
+                raise Unauthorized(cid, error_msg, None)
+            else:
+                return False
 
         return True
 
@@ -305,6 +392,14 @@ class URLData(PyURLData):
         """
 
         sec_def, sec_def_type = sec.sec_def, sec.sec_def['sec_type']
+
+        # A definition of any other type has no inbound verification of its own, so there is nothing
+        # a caller could present that would be checked.
+        if sec_def_type not in _channel_sec_types:
+            logger.error('Sec type `%s` cannot authenticate a channel, path_info:`%s`, cid:`%s`',
+                sec_def_type, path_info, cid)
+            raise Unauthorized(cid, '401 Unauthorized', None)
+
         handler_name = '_handle_security_%s' % sec_def_type.replace('-', '_')
 
         auth_result = getattr(self, handler_name)(cid, sec_def, path_info, payload, wsgi_environ, post_data, enforce_auth)
@@ -326,10 +421,14 @@ class URLData(PyURLData):
         items = list(iteritems(self.url_sec))
         for target_match, url_info in items:
             sec_def = url_info.get('sec_def')
+
+            # One entry with no security definition of its own says nothing about the rest,
+            # so the remaining ones are still visited.
             if not sec_def:
                 if url_info.get('data_format') != 'xml':
                     self.logger.warning('Missing sec_def for url_info -> %s', url_info)
-                return
+                continue
+
             if sec_def != ZATO_NONE and sec_def.sec_type == sec_def_type:
                 name = msg.get('old_name') if msg.get('old_name') else msg.get('name')
                 if sec_def.name == name:
@@ -356,14 +455,31 @@ class URLData(PyURLData):
 # ################################################################################################################################
 
     def _delete_channel_data(self, sec_type, sec_name):
-        match_idx = ZATO_NONE
-        for item in self.channel_data:
-            if item.get('sec_type') == sec_type and item['security_name'] == sec_name:
-                match_idx = self.channel_data.index(item)
+        """ Removes every channel that used the given security definition, which is what the
+        database does to the channel rows pointing at that definition when it is deleted.
+        """
+        remaining = []
+        removed = []
 
-        # No error, let's delete channel info
-        if match_idx != ZATO_NONE:
-            self.channel_data.pop(match_idx)
+        # A channel created without security has no sec_type of its own
+        for item in self.channel_data:
+            if item.get('sec_type') == sec_type:
+                if item['security_name'] == sec_name:
+                    removed.append(item)
+                    continue
+
+            remaining.append(item)
+
+        # Nothing used that definition, so there is nothing to remove either
+        if not removed:
+            return
+
+        self.channel_data[:] = remaining
+        self.rebuild_match_target_index()
+
+        # A target cached for a channel that is gone would go on resolving to it
+        for item in removed:
+            self._remove_from_cache(item['match_target'])
 
 # ################################################################################################################################
 
@@ -372,6 +488,7 @@ class URLData(PyURLData):
         update_apikey_username_to_channel(config)
         self.apikey_config[name] = Bunch()
         self.apikey_config[name].config = config
+        self._index_sec_def(SEC_DEF_TYPE.APIKEY, config)
 
     def apikey_get(self, name):
         """ Returns the configuration of the API key of the given name.
@@ -384,7 +501,7 @@ class URLData(PyURLData):
         """ Same as apikey_get but returns information by definition ID.
         """
         with self.url_sec_lock:
-            return self._get_sec_def_by_id(self.apikey_config, def_id)
+            return self._get_sec_def_by_id(SEC_DEF_TYPE.APIKEY, def_id)
 
     def on_config_event_SECURITY_APIKEY_CREATE(self, msg, *args):
         """ Creates a new API key security definition.
@@ -405,6 +522,7 @@ class URLData(PyURLData):
         """
         with self.url_sec_lock:
             self._delete_channel_data('apikey', msg.name)
+            self._unindex_sec_def(SEC_DEF_TYPE.APIKEY, msg.name)
             del self.apikey_config[msg.name]
             self._update_url_sec(msg, SEC_DEF_TYPE.APIKEY, True)
 
@@ -418,24 +536,16 @@ class URLData(PyURLData):
 
 # ################################################################################################################################
 
-    def _get_sec_def_by_id(self, def_type, def_id):
-        def_id = int(def_id)
+    def _get_sec_def_by_id(self, sec_type, def_id):
         with self.url_sec_lock:
-            for item_name in def_type.keys():
-                item = def_type[item_name]
-                if not hasattr(item, 'config'):
-                    continue
-                if 'id' not in item.config:
-                    continue
-                item_id = int(item.config['id'])
-                if item_id == def_id:
-                    return item.config
+            return self._sec_def_by_id[sec_type].get(int(def_id))
 
 # ################################################################################################################################
 
     def _update_basic_auth(self, name, config):
         self.basic_auth_config[name] = Bunch()
         self.basic_auth_config[name].config = config
+        self._index_sec_def(SEC_DEF_TYPE.BASIC_AUTH, config)
 
     def basic_auth_get(self, name):
         """ Returns the configuration of the HTTP Basic Auth security definition of the given name.
@@ -448,7 +558,7 @@ class URLData(PyURLData):
         """ Same as basic_auth_get but returns information by definition ID.
         """
         with self.url_sec_lock:
-            return self._get_sec_def_by_id(self.basic_auth_config, def_id)
+            return self._get_sec_def_by_id(SEC_DEF_TYPE.BASIC_AUTH, def_id)
 
     def on_config_event_SECURITY_BASIC_AUTH_CREATE(self, msg, *args):
         """ Creates a new HTTP Basic Auth security definition.
@@ -471,6 +581,7 @@ class URLData(PyURLData):
         """
         with self.url_sec_lock:
             self._delete_channel_data('basic_auth', msg.name)
+            self._unindex_sec_def(SEC_DEF_TYPE.BASIC_AUTH, msg.name)
             del self.basic_auth_config[msg.name]
             self._update_url_sec(msg, SEC_DEF_TYPE.BASIC_AUTH, True)
 
@@ -488,6 +599,7 @@ class URLData(PyURLData):
     def _update_mtls(self, name, config):
         self.mtls_config[name] = Bunch()
         self.mtls_config[name].config = config
+        self._index_sec_def(SEC_DEF_TYPE.MTLS, config)
 
     def mtls_get(self, name):
         """ Returns the configuration of the mTLS security definition of the given name.
@@ -500,7 +612,7 @@ class URLData(PyURLData):
         """ Same as mtls_get but returns information by definition ID.
         """
         with self.url_sec_lock:
-            return self._get_sec_def_by_id(self.mtls_config, def_id)
+            return self._get_sec_def_by_id(SEC_DEF_TYPE.MTLS, def_id)
 
     def on_config_event_SECURITY_MTLS_CREATE(self, msg, *args):
         """ Creates a new mTLS security definition.
@@ -521,6 +633,7 @@ class URLData(PyURLData):
         """
         with self.url_sec_lock:
             self._delete_channel_data('mtls', msg.name)
+            self._unindex_sec_def(SEC_DEF_TYPE.MTLS, msg.name)
             del self.mtls_config[msg.name]
             self._update_url_sec(msg, SEC_DEF_TYPE.MTLS, True)
 
@@ -529,6 +642,7 @@ class URLData(PyURLData):
     def _update_ntlm(self, name, config):
         self.ntlm_config[name] = Bunch()
         self.ntlm_config[name].config = config
+        self._index_sec_def(SEC_DEF_TYPE.NTLM, config)
 
     def ntlm_get(self, name):
         """ Returns the configuration of the NTLM security definition of the given name.
@@ -558,6 +672,7 @@ class URLData(PyURLData):
         """
         with self.url_sec_lock:
             self._delete_channel_data('ntlm', msg.name)
+            self._unindex_sec_def(SEC_DEF_TYPE.NTLM, msg.name)
             del self.ntlm_config[msg.name]
             self._update_url_sec(msg, SEC_DEF_TYPE.NTLM, True)
 
@@ -574,6 +689,7 @@ class URLData(PyURLData):
     def _update_spnego(self, name, config):
         self.spnego_config[name] = Bunch()
         self.spnego_config[name].config = config
+        self._index_sec_def(SEC_DEF_TYPE.SPNEGO, config)
 
     def spnego_get(self, name):
         """ Returns the configuration of the Kerberos (SPNEGO) security definition of the given name.
@@ -586,7 +702,7 @@ class URLData(PyURLData):
         """ Same as spnego_get but returns information by definition ID.
         """
         with self.url_sec_lock:
-            return self._get_sec_def_by_id(self.spnego_config, def_id)
+            return self._get_sec_def_by_id(SEC_DEF_TYPE.SPNEGO, def_id)
 
     def on_config_event_SECURITY_SPNEGO_CREATE(self, msg, *args):
         """ Creates a new Kerberos (SPNEGO) security definition.
@@ -607,6 +723,7 @@ class URLData(PyURLData):
         """
         with self.url_sec_lock:
             self._delete_channel_data('spnego', msg.name)
+            self._unindex_sec_def(SEC_DEF_TYPE.SPNEGO, msg.name)
             del self.spnego_config[msg.name]
             self._update_url_sec(msg, SEC_DEF_TYPE.SPNEGO, True)
 
@@ -615,6 +732,7 @@ class URLData(PyURLData):
     def _update_wss(self, name, config):
         self.wss_config[name] = Bunch()
         self.wss_config[name].config = config
+        self._index_sec_def(SEC_DEF_TYPE.WSS, config)
 
     def wss_get(self, name):
         """ Returns the configuration of the WS-Security definition of the given name.
@@ -627,7 +745,7 @@ class URLData(PyURLData):
         """ Same as wss_get but returns information by definition ID.
         """
         with self.url_sec_lock:
-            return self._get_sec_def_by_id(self.wss_config, def_id)
+            return self._get_sec_def_by_id(SEC_DEF_TYPE.WSS, def_id)
 
     def on_config_event_SECURITY_WSS_CREATE(self, msg, *args):
         """ Creates a new WS-Security definition.
@@ -654,6 +772,7 @@ class URLData(PyURLData):
         """
         with self.url_sec_lock:
             self._delete_channel_data('wss', msg.name)
+            self._unindex_sec_def(SEC_DEF_TYPE.WSS, msg.name)
             del self.wss_config[msg.name]
             self._update_url_sec(msg, SEC_DEF_TYPE.WSS, True)
 
@@ -672,6 +791,7 @@ class URLData(PyURLData):
     def _update_oauth(self, name, config):
         self.oauth_config[name] = Bunch()
         self.oauth_config[name].config = config
+        self._index_sec_def(SEC_DEF_TYPE.OAUTH, config)
 
     def oauth_get(self, name):
         """ Returns the configuration of the OAuth account of the given name.
@@ -684,7 +804,7 @@ class URLData(PyURLData):
         """ Same as oauth_get but returns information by definition ID.
         """
         with self.url_sec_lock:
-            return self._get_sec_def_by_id(self.oauth_config, def_id)
+            return self._get_sec_def_by_id(SEC_DEF_TYPE.OAUTH, def_id)
 
     def on_config_event_SECURITY_OAUTH_CREATE(self, msg, *args):
         """ Creates a new OAuth account.
@@ -707,6 +827,7 @@ class URLData(PyURLData):
         """
         with self.url_sec_lock:
             self._delete_channel_data('oauth', msg.name)
+            self._unindex_sec_def(SEC_DEF_TYPE.OAUTH, msg.name)
             del self.oauth_config[msg.name]
             self._update_url_sec(msg, SEC_DEF_TYPE.OAUTH, True)
 
@@ -768,13 +889,20 @@ class URLData(PyURLData):
 
         self.channel_data[:] = channel_data
 
+        # Whatever channels there are now is what lookups by match target go against
+        self.rebuild_match_target_index()
+
 # ################################################################################################################################
 
     def _channel_item_from_msg(self, msg, match_target, old_data=None):
         """ Creates a channel info bunch out of an incoming CREATE_EDIT message.
         """
         old_data = old_data or {}
-        channel_item = {}
+
+        # The runtime hands this very object to services and to the dispatcher, both of which
+        # reach into it by attribute as well as by key.
+        channel_item = Bunch()
+
         for name in('connection', 'content_type', 'data_format', 'host', 'id', 'impl_name', 'is_active',
             'is_internal', 'merge_url_params_req', 'method', 'name', 'params_pri', 'ping_method', 'pool_size', 'service_id',
             'service_name', 'soap_action', 'soap_version', 'transport', 'url_params_pri', 'url_path',
@@ -818,7 +946,9 @@ class URLData(PyURLData):
 
         channel_item['service_impl_name'] = msg.get('impl_name')
         channel_item['match_target'] = match_target
-        channel_item['match_target_compiled'] = Matcher(channel_item['match_target'], channel_item['match_slash'])
+
+        match_slash = resolve_match_slash(channel_item['match_slash'])
+        channel_item['match_target_compiled'] = Matcher(channel_item['match_target'], match_slash)
 
         return channel_item
 
@@ -859,9 +989,11 @@ class URLData(PyURLData):
         sec_info = self._sec_info_from_msg(msg)
         self.url_sec[match_target] = sec_info
 
-        self._remove_from_cache(match_target)
-
+        # Re-sort all elements to match against, which indexes the new channel too - the cache
+        # invalidation below needs the new channel's own pattern to find what it takes over.
         self.sort_channel_data()
+
+        self._remove_from_cache(match_target)
 
 # ################################################################################################################################
 
@@ -879,17 +1011,24 @@ class URLData(PyURLData):
         # Delete from URL cache
         self._remove_from_cache(old_match_target)
 
-        # In case of an internal error, we won't have the match all
-        match_idx = ZATO_NONE
-        for item in self.channel_data:
-            if item['match_target'] == old_match_target:
-                match_idx = self.channel_data.index(item)
+        # The channel is found by its target rather than by walking the list, which is what
+        # keeps a cluster with many channels from paying for the walk on every configuration change
+        item = self.match_target_index.get(old_match_target)
 
-        # No error, let's delete channel info
-        if match_idx != ZATO_NONE:
-            old_data = self.channel_data.pop(match_idx)
-        else:
+        if item is None:
             old_data = {}
+
+        # .. the list is rebuilt without that one channel, compared by identity so that
+        # .. two channels holding equal data cannot be confused for each other.
+        else:
+            old_data = item
+            remaining = []
+
+            for elem in self.channel_data:
+                if elem is not item:
+                    remaining.append(elem)
+
+            self.channel_data[:] = remaining
 
         # Channel's security now
         del self.url_sec[old_match_target]

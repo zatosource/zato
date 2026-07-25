@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import unittest
 
 # Zato
+from zato.common.util.url_dispatcher import get_match_target
 from zato.server.connection.http_soap.url_dispatcher import Matcher, PyURLData, target_separator, Url_Path_Cache_Size
 
 # ################################################################################################################################
@@ -22,19 +23,21 @@ if 0:
 # ################################################################################################################################
 
 _any_accept = 'haanyHTTP_SEPhaany'
+_methods_allowed_re = '(?:GET|POST|PUT|PATCH|DELETE)'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _make_channel_item(url_path:'str', name:'str'='test.channel') -> 'anydict':
+def _make_channel_item(url_path:'str', name:'str'='test.channel', method:'str'='POST') -> 'anydict':
     """ Builds the one part of a channel item the dispatcher looks at - its match target and the
     matcher compiled from it.
     """
-    match_target = f'{target_separator}POST{target_separator}{_any_accept}{target_separator}{url_path}'
+    match_target = f'{target_separator}{method}{target_separator}{_any_accept}{target_separator}{url_path}'
 
     out:'anydict' = {
         'name': name,
         'url_path': url_path,
+        'method': method,
         'match_target': match_target,
         'match_target_compiled': Matcher(match_target),
     }
@@ -83,7 +86,7 @@ class StaticMatchTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_no_match_is_not_cached(self) -> 'None':
+    def test_no_match_yields_nothing(self) -> 'None':
         url_data = _make_url_data([_make_channel_item('/api/invoice')])
 
         match, channel_item = url_data.match('/api/nothing-here', 'POST', _any_accept)
@@ -198,6 +201,205 @@ class CacheBoundTestCase(unittest.TestCase):
     def _target(self, url_path:'str') -> 'str':
         out = f'{target_separator}POST{target_separator}{_any_accept}{target_separator}{url_path}'
         return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ConfiguredPatternTestCase(unittest.TestCase):
+    """ Tests that go through the pattern a channel is really configured with, rather than
+    through a target assembled by hand.
+    """
+
+# ################################################################################################################################
+
+    def _make_url_data(self, url_path:'str', method:'str'='', http_accept:'str'='') -> 'PyURLData':
+
+        config = {
+            'url_path': url_path,
+            'method': method,
+            'http_accept': http_accept,
+        }
+
+        match_target = get_match_target(config, http_methods_allowed_re=_methods_allowed_re)
+
+        channel_item:'anydict' = {
+            'name': 'test.channel',
+            'url_path': url_path,
+            'method': method,
+            'match_target': match_target,
+            'match_target_compiled': Matcher(match_target),
+        }
+
+        out = PyURLData([channel_item])
+        return out
+
+# ################################################################################################################################
+
+    def test_the_accept_slot_stays_within_its_own_part_of_the_target(self) -> 'None':
+        url_data = self._make_url_data('/api/invoice')
+
+        match, channel_item = url_data.match('/anything:::/api/invoice', 'GET', _any_accept)
+
+        self.assertIsNone(match)
+        self.assertIsNone(channel_item)
+
+# ################################################################################################################################
+
+    def test_a_parameter_value_that_reads_as_a_method_is_kept(self) -> 'None':
+        url_data = self._make_url_data('/api/{action}')
+
+        match = _match(url_data, '/api/POST')
+
+        self.assertEqual(match, {'action': 'POST'})
+
+# ################################################################################################################################
+
+    def test_a_parameter_value_may_carry_the_characters_a_URL_allows(self) -> 'None':
+        url_data = self._make_url_data('/api/invoice/{invoice_id}')
+
+        match = _match(url_data, '/api/invoice/a+b,c;d!e(f)@g')
+
+        self.assertEqual(match, {'invoice_id': 'a+b,c;d!e(f)@g'})
+
+# ################################################################################################################################
+
+    def test_a_parameter_value_may_carry_an_encoded_slash(self) -> 'None':
+        url_data = self._make_url_data('/api/invoice/{invoice_id}')
+
+        match = _match(url_data, '/api/invoice/INV%2F0001')
+
+        self.assertEqual(match, {'invoice_id': 'INV%2F0001'})
+
+# ################################################################################################################################
+
+    def test_a_path_with_regular_expression_syntax_matches_itself(self) -> 'None':
+        url_data = self._make_url_data('/api/invoice.list+all')
+
+        match, channel_item = url_data.match('/api/invoice.list+all', 'GET', _any_accept)
+
+        self.assertEqual(match, {})
+        self.assertEqual(channel_item['name'], 'test.channel')
+
+# ################################################################################################################################
+
+    def test_an_accept_header_with_regular_expression_syntax_matches_itself(self) -> 'None':
+        url_data = self._make_url_data('/api/invoice', 'GET', 'application/vnd.api+json')
+
+        accept = 'applicationHTTP_SEPvnd.api+json'
+        match, channel_item = url_data.match('/api/invoice', 'GET', accept)
+
+        self.assertEqual(match, {})
+        self.assertEqual(channel_item['name'], 'test.channel')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MissCacheTestCase(unittest.TestCase):
+    """ Tests for what a request to a path no channel matched costs the second time around.
+    """
+
+# ################################################################################################################################
+
+    def test_a_miss_is_remembered(self) -> 'None':
+        url_data = _make_url_data([_make_channel_item('/api/invoice')])
+
+        _ = _match(url_data, '/api/nothing-here')
+
+        self.assertEqual(len(url_data.url_path_miss_cache), 1)
+
+# ################################################################################################################################
+
+    def test_a_remembered_miss_still_matches_nothing(self) -> 'None':
+        url_data = _make_url_data([_make_channel_item('/api/invoice')])
+
+        _ = _match(url_data, '/api/nothing-here')
+        match, channel_item = url_data.match('/api/nothing-here', 'POST', _any_accept)
+
+        self.assertIsNone(match)
+        self.assertIsNone(channel_item)
+
+# ################################################################################################################################
+
+    def test_a_channel_appearing_forgets_the_misses(self) -> 'None':
+        invoice = _make_channel_item('/api/invoice')
+        channel_data = [invoice]
+        url_data = _make_url_data(channel_data)
+
+        _ = _match(url_data, '/api/payment')
+        self.assertEqual(len(url_data.url_path_miss_cache), 1)
+
+        # A path that missed can only start matching once a channel appears at it, which is
+        # what this invalidation stands for.
+        payment = _make_channel_item('/api/payment', 'payment.channel')
+        channel_data.append(payment)
+        url_data.rebuild_match_target_index()
+        url_data._remove_from_cache(payment['match_target'])
+
+        self.assertEqual(len(url_data.url_path_miss_cache), 0)
+
+        _, channel_item = url_data.match('/api/payment', 'POST', _any_accept)
+        self.assertEqual(channel_item['name'], 'payment.channel')
+
+# ################################################################################################################################
+
+    def test_miss_cache_stays_within_its_limit(self) -> 'None':
+        url_data = _make_url_data([_make_channel_item('/api/invoice')])
+
+        for counter in range(Url_Path_Cache_Size + 100):
+            _ = _match(url_data, f'/api/nothing-here/{counter}')
+
+        self.assertEqual(len(url_data.url_path_miss_cache), Url_Path_Cache_Size)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class AllowMethodsTestCase(unittest.TestCase):
+    """ Tests for what a path that channels do sit at reports when the method is not one of theirs.
+    """
+
+# ################################################################################################################################
+
+    def test_a_path_with_another_method_reports_it(self) -> 'None':
+        url_data = _make_url_data([_make_channel_item('/api/invoice', method='POST')])
+
+        match, _ = url_data.match('/api/invoice', 'DELETE', _any_accept)
+        allow_methods = url_data.get_allow_methods('/api/invoice', 'DELETE', _any_accept)
+
+        self.assertIsNone(match)
+        self.assertEqual(allow_methods, {'POST'})
+
+# ################################################################################################################################
+
+    def test_every_method_at_that_path_is_reported(self) -> 'None':
+        url_data = _make_url_data([
+            _make_channel_item('/api/invoice', 'invoice.get', 'GET'),
+            _make_channel_item('/api/invoice', 'invoice.post', 'POST'),
+        ])
+
+        _, _ = url_data.match('/api/invoice', 'DELETE', _any_accept)
+        allow_methods = url_data.get_allow_methods('/api/invoice', 'DELETE', _any_accept)
+
+        self.assertEqual(allow_methods, {'GET', 'POST'})
+
+# ################################################################################################################################
+
+    def test_a_path_no_channel_is_at_reports_no_methods(self) -> 'None':
+        url_data = _make_url_data([_make_channel_item('/api/invoice', method='POST')])
+
+        _, _ = url_data.match('/api/nothing-here', 'DELETE', _any_accept)
+        allow_methods = url_data.get_allow_methods('/api/nothing-here', 'DELETE', _any_accept)
+
+        self.assertEqual(allow_methods, set())
+
+# ################################################################################################################################
+
+    def test_a_dynamic_path_reports_its_methods(self) -> 'None':
+        url_data = _make_url_data([_make_channel_item('/api/invoice/{invoice_id}', method='GET')])
+
+        _, _ = url_data.match('/api/invoice/INV-0001', 'PATCH', _any_accept)
+        allow_methods = url_data.get_allow_methods('/api/invoice/INV-0001', 'PATCH', _any_accept)
+
+        self.assertEqual(allow_methods, {'GET'})
 
 # ################################################################################################################################
 # ################################################################################################################################

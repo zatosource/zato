@@ -919,7 +919,8 @@ class ConfigManager(_ConfigManagerBase):
         """ API keys need to be upper-cased and in the format that WSGI environment will have them in.
         """
         for config_dict in self.config_store.apikey.values():
-            config_dict.config.orig_header = config_dict.config.get('header') or API_Key.Default_Header
+            config_dict.config.header = config_dict.config.get('header') or API_Key.Default_Header
+            config_dict.config.orig_header = config_dict.config.header
             update_apikey_username_to_channel(config_dict.config)
 
 # ################################################################################################################################
@@ -1865,6 +1866,36 @@ class ConfigManager(_ConfigManagerBase):
         sec_def_id = msg['id']
         rule_dicts = msg['rule_dicts']
         logger.info('on_config_event_SECURITY_APIKEY_RATE_LIMITING_EDIT; sec_def_id:%s, rule_dicts:%s', sec_def_id, rule_dicts)
+        self.server.rate_limiting_manager.set_sec_def_config(sec_def_id, rule_dicts)
+
+# ################################################################################################################################
+
+    def on_config_event_SECURITY_MTLS_RATE_LIMITING_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
+        """ Updates rate limiting configuration for an mTLS security definition.
+        """
+        sec_def_id = msg['id']
+        rule_dicts = msg['rule_dicts']
+        logger.info('on_config_event_SECURITY_MTLS_RATE_LIMITING_EDIT; sec_def_id:%s, rule_dicts:%s', sec_def_id, rule_dicts)
+        self.server.rate_limiting_manager.set_sec_def_config(sec_def_id, rule_dicts)
+
+# ################################################################################################################################
+
+    def on_config_event_SECURITY_OAUTH_RATE_LIMITING_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
+        """ Updates rate limiting configuration for a bearer token security definition.
+        """
+        sec_def_id = msg['id']
+        rule_dicts = msg['rule_dicts']
+        logger.info('on_config_event_SECURITY_OAUTH_RATE_LIMITING_EDIT; sec_def_id:%s, rule_dicts:%s', sec_def_id, rule_dicts)
+        self.server.rate_limiting_manager.set_sec_def_config(sec_def_id, rule_dicts)
+
+# ################################################################################################################################
+
+    def on_config_event_SECURITY_WSS_RATE_LIMITING_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
+        """ Updates rate limiting configuration for a WS-Security definition.
+        """
+        sec_def_id = msg['id']
+        rule_dicts = msg['rule_dicts']
+        logger.info('on_config_event_SECURITY_WSS_RATE_LIMITING_EDIT; sec_def_id:%s, rule_dicts:%s', sec_def_id, rule_dicts)
         self.server.rate_limiting_manager.set_sec_def_config(sec_def_id, rule_dicts)
 
 # ################################################################################################################################
