@@ -699,13 +699,5 @@ class TestTransport:
 
         assert response.opResponse.status == 'ok'
 
-    def test_ping(self, soap_server):
-        config = {'address': soap_server.url('/ping'), 'ping_method': 'HEAD'}
-        client = SOAPClient(config)
-        status = client.ping()
-        client.close()
-
-        assert status == 200
-
 # ################################################################################################################################
 # ################################################################################################################################

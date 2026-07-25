@@ -12,7 +12,6 @@ from copy import deepcopy
 from http.client import OK
 from io import StringIO
 from logging import DEBUG, getLogger
-from time import sleep
 from traceback import format_exc
 from urllib.parse import quote, urlencode
 
@@ -29,7 +28,7 @@ from requests_ntlm import HttpNtlmAuth
 from requests_toolbelt import MultipartEncoder
 
 # Zato
-from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, HTTP_SOAP, NotGiven, SEC_DEF_TYPE, URL_TYPE, \
+from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, HTTP_SOAP, MISC, NotGiven, SEC_DEF_TYPE, URL_TYPE, \
     Wrapper_Name_Prefix_List
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.exception import BadRequest, Inactive, BackendInvocationError
@@ -41,7 +40,9 @@ from zato.common.marshal_.api import extract_model_class, is_list, Model
 from zato.common.typing_ import cast_
 from zato.common.util.api import get_component_name, utcnow
 from zato.common.util.config import extract_param_placeholders
+from zato.common.util.http_retry import RetryPolicy, send_with_retry
 from zato.common.util.open_ import open_rb
+from zato.common.util.tls_verify import resolve_tls_verify
 from zato.server.connection.http_soap.invocation import build_jsonata_context, build_soap_jsonata_context, \
     evaluate_soap_headers, maybe_run_callback, maybe_run_fault_callback, maybe_run_soap_callback, \
     merge_declarative_request, merge_declarative_soap_request
@@ -90,6 +91,11 @@ SOAP_Envelope_Template = {
 # ################################################################################################################################
 # ################################################################################################################################
 
+# The smallest pool a connection may configure. A pool of zero is not a small pool, it is one that
+# closes every connection the moment it is done with, so a stored zero means "never configured"
+# rather than "keep nothing".
+Minimum_Pool_Size = 1
+
 _API_Key = SEC_DEF_TYPE.APIKEY
 _Basic_Auth = SEC_DEF_TYPE.BASIC_AUTH
 _MTLS = SEC_DEF_TYPE.MTLS
@@ -99,27 +105,11 @@ _SPNEGO = SEC_DEF_TYPE.SPNEGO
 
 _retry = HTTP_SOAP.Retry
 
+# What a retry of an outgoing REST request is called in the logs.
+_rest_retry_label = 'REST out'
+
 # ################################################################################################################################
 # ################################################################################################################################
-
-def _resolve_retry_value(kwargs:'stranydict', config:'stranydict', name:'str', default:'int') -> 'int':
-    """ Returns one retry parameter, with explicit call arguments winning over the connection's
-    own config, which in turn wins over the shared defaults.
-    """
-
-    # Our response to produce
-    out = kwargs.pop(name, None)
-
-    # .. no explicit argument was given, so look the value up in the connection's config,
-    # .. which will not have it at all if the connection was never configured with retries ..
-    if out is None:
-        out = config.get(name)
-
-    # .. with no config value either, use the shared default.
-    if out is None:
-        out = default
-
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -198,18 +188,31 @@ class BaseHTTPSOAPWrapper:
     def __init__(
         self,
         config, # type: stranydict
-        _requests_session=None, # type: SASession | None
         server=None # type: ParallelServer | None
     ) -> 'None':
         self.config = config
-        self.config['timeout'] = float(self.config['timeout']) if self.config['timeout'] else 0
+
+        # A connection with no timeout configured means no timeout at all, which requests spells as
+        # None. A zero handed to requests is not an absent timeout, it is one that expires before
+        # the socket can connect, so every request through such a connection would fail outright.
+        self.config['timeout'] = float(self.config['timeout']) if self.config['timeout'] else None
         self.config_no_sensitive = deepcopy(self.config)
         self.config_no_sensitive['password'] = '***'
-        self.RequestsSession = RequestsSession or _requests_session
         self.server = cast_('ParallelServer', server)
         self.session = RequestsSession()
-        self.https_adapter = HTTPSAdapter()
+
+        # The connection's configured pool size decides how many connections the adapter keeps
+        # alive, which is what that setting has always claimed to do and never did - the adapter
+        # used to be built with no arguments at all, so every connection got the requests default
+        # regardless of what was configured.
+        pool_size = self._get_pool_size()
+
+        self.https_adapter = HTTPSAdapter(pool_connections=pool_size, pool_maxsize=pool_size)
         self.session.mount('https://', self.https_adapter)
+
+        # Plain HTTP needs the same treatment - mounting the sized adapter only under https
+        # would leave every non-TLS connection on the default pool.
+        self.session.mount('http://', HTTPAdapter(pool_connections=pool_size, pool_maxsize=pool_size))
         self._component_name = get_component_name()
         self.default_content_type = self.get_default_content_type()
 
@@ -232,6 +235,23 @@ class BaseHTTPSOAPWrapper:
 
         self.set_address_data()
         self.set_auth()
+
+# ################################################################################################################################
+
+    def _get_pool_size(self) -> 'int':
+        """ Returns how many connections this wrapper's adapters keep pooled.
+
+        A connection created before pool sizing meant anything may carry no value or a zero, and a
+        zero pool is not a smaller pool, it is a pool that discards every connection - so anything
+        below the floor falls back to the shared default rather than being honoured literally.
+        """
+        pool_size = self.config.get('pool_size')
+
+        if not pool_size or pool_size < Minimum_Pool_Size:
+            pool_size = MISC.DEFAULT_HTTP_POOL_SIZE
+
+        out = pool_size
+        return out
 
 # ################################################################################################################################
 
@@ -411,6 +431,34 @@ class BaseHTTPSOAPWrapper:
 
 # ################################################################################################################################
 
+    def _get_retry_policy(self, kwargs:'stranydict') -> 'RetryPolicy':
+        """ Returns the retry policy for one invocation, with an explicit call argument winning
+        over what the connection is configured with.
+
+        The four settings are removed from kwargs whether or not they were given, because whatever
+        is left there is handed straight to requests, which would reject a keyword it does not know.
+        """
+        overrides = {}
+
+        for name in _retry.FieldList:
+            value = kwargs.pop(name, None)
+
+            # An absent override has to stay absent rather than become a None that would shadow
+            # the connection's own value.
+            if value is not None:
+                overrides[name] = value
+
+        if not overrides:
+            return RetryPolicy.from_config(self.config)
+
+        config = dict(self.config)
+        config.update(overrides)
+
+        out = RetryPolicy.from_config(config)
+        return out
+
+# ################################################################################################################################
+
     def invoke_http(
         self,
         cid:'str',
@@ -430,16 +478,9 @@ class BaseHTTPSOAPWrapper:
         params = kwargs.get('params')
         json = kwargs.pop('json', None)
 
-        if ('Zato_Skip_SSL_Verify' in os.environ) or ('ZATO_SKIP_TLS_VERIFY' in os.environ) or ('Zato_Skip_TLS_Verify' in os.environ):
-            tls_verify = False
-        else:
-            tls_verify = self.config.get('validate_tls', True)
-
-        # An mTLS definition may pin the remote end's CA bundle - when it does, and verification
-        # is enabled, the pinned bundle replaces the system trust store.
-        if tls_verify:
-            if ca_certs_path := self.config.get('ca_certs_path'):
-                tls_verify = ca_certs_path
+        # What to verify against - the process-wide skip, the connection's own flag and any pinned
+        # CA bundle all resolve in one place, shared with the declarative SOAP path.
+        tls_verify = resolve_tls_verify(self.config)
 
         # A mutual-TLS endpoint needs our client certificate, whose file is mounted into the
         # container - a single PEM holding both the certificate and its key, or a separate pair.
@@ -536,56 +577,27 @@ class BaseHTTPSOAPWrapper:
             # .. log the information about our request ..
             logger.info(message)
 
-            # .. extract retry parameters ..
-            max_retries = _resolve_retry_value(kwargs, self.config, _retry.Field_Max_Retries, _retry.Default_Max_Retries)
-            retry_sleep_time = _resolve_retry_value(kwargs, self.config, _retry.Field_Sleep_Time, _retry.Default_Sleep_Time)
-            retry_backoff_threshold = _resolve_retry_value(
-                kwargs, self.config, _retry.Field_Backoff_Threshold, _retry.Default_Backoff_Threshold)
-            retry_backoff_multiplier = _resolve_retry_value(
-                kwargs, self.config, _retry.Field_Backoff_Multiplier, _retry.Default_Backoff_Multiplier)
+            # .. an explicit call argument overrides what the connection is configured with,
+            # .. so the four settings are taken out of kwargs before the request sees them ..
+            retry_policy = self._get_retry_policy(kwargs)
 
-            # .. retry loop ..
-            attempt = 0
-            total_sleep_time = 0
-            current_sleep_time = retry_sleep_time
+            def send() -> '_RequestsResponse':
 
-            while True:
-                try:
-                    # .. do send it ..
-                    response = self.session.request(
-                        method, address, data=data, json=json, auth=auth, headers=headers, hooks=hooks,
-                        verify=tls_verify, cert=tls_client_cert, timeout=self.config['timeout'], *args, **kwargs)
+                # .. do send it ..
+                response = self.session.request(
+                    method, address, data=data, json=json, auth=auth, headers=headers, hooks=hooks,
+                    verify=tls_verify, cert=tls_client_cert, timeout=self.config['timeout'], *args, **kwargs)
 
-                    # Update metrics
-                    self._push_metrics(start_time, str(response.status_code))
+                # Update metrics
+                self._push_metrics(start_time, str(response.status_code))
 
-                    # .. log what we received ..
-                    msg = f'REST out ← cid={cid}; {response.status_code} time={response.elapsed}; len={len(response.text)}'
-                    logger.info(msg)
+                # .. log what we received ..
+                msg = f'REST out ← cid={cid}; {response.status_code} time={response.elapsed}; len={len(response.text)}'
+                logger.info(msg)
 
-                    # .. and return it.
-                    return response
+                return response
 
-                except (RequestsTimeout, RequestsConnectionError) as e:
-
-                    # .. check if we should retry ..
-                    can_retry_by_attempt = attempt < max_retries
-                    can_retry_by_time = total_sleep_time < retry_backoff_threshold
-                    can_retry = can_retry_by_attempt and can_retry_by_time
-
-                    if can_retry:
-                        attempt += 1
-                        logger.warning('REST out retry cid=%s; attempt=%s; sleep=%s; error=%s',
-                            cid, attempt, current_sleep_time, e)
-                        sleep(current_sleep_time)
-                        total_sleep_time += current_sleep_time
-                        next_sleep_time = current_sleep_time * retry_backoff_multiplier
-                        current_sleep_time = min(next_sleep_time, _retry.Max_Sleep_Time, retry_backoff_threshold - total_sleep_time)
-                        if current_sleep_time <= 0:
-                            current_sleep_time = 1
-                    else:
-                        # .. no more retries, re-raise ..
-                        raise
+            return send_with_retry(retry_policy, send, cid, _rest_retry_label)
 
         except RequestsTimeout as e:
             self._push_metrics(start_time, 'timeout')
@@ -739,9 +751,8 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         self,
         server, # type: ParallelServer
         config, # type: stranydict
-        requests_module=None # type: any_
     ) -> 'None':
-        super(HTTPSOAPWrapper, self).__init__(config, requests_module, server)
+        super(HTTPSOAPWrapper, self).__init__(config, server)
         self.server = server
 
 # ################################################################################################################################
@@ -841,20 +852,28 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         """
         config:'stranydict' = {
             'address': self.address,
-            'soap_version': self.config.get('soap_version') or '1.1',
+            'soap_version': self.config.get('soap_version') or SOAPVersion.Default,
             'soap_action': self.config.get('soap_action') or '',
             'timeout': self.config.get('timeout'),
             'validate_tls': self.config.get('validate_tls', True),
             'content_type': self.config.get('content_type'),
-            'ping_method': self.config.get('ping_method') or 'HEAD',
             'tls_client_cert': self.config.get('tls_client_cert'),
             'tls_client_key': self.config.get('tls_client_key'),
+
+            # An mTLS definition's pinned CA bundle has to reach the client too - without it the
+            # declarative path verified against the system trust store and the pinning did nothing.
+            'ca_certs_path': self.config.get('ca_certs_path'),
             'use_ws_addressing': self.config.get('use_ws_addressing') or False,
             'use_mtom': self.config.get('use_mtom') or False,
             'wsa_action': self.config.get('wsa_action'),
             'wsa_to': self.config.get('wsa_to'),
             'wsa_reply_to': self.config.get('wsa_reply_to'),
         }
+
+        # The retry settings live in the connection's opaque attributes and the client runs the
+        # loop that reads them, so each one that the connection carries is handed over by name.
+        for name in _retry.FieldList:
+            config[name] = self.config.get(name)
 
         # Declarative WS-Addressing values imply the headers are wanted even if the flag is off
         if config['wsa_action'] or config['wsa_to'] or config['wsa_reply_to']:

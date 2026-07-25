@@ -14,7 +14,8 @@ from json import dumps, loads
 # Zato
 from zato.cli.enmasse.util import as_row_list, assign_security, Invocation_Row_Fields, preprocess_item, \
     security_needs_update, serialize_invocation_rows, sync_invocation_jobs
-from zato.common.api import CONNECTION, HTTP_SOAP_SERIALIZATION_TYPE, URL_TYPE
+from zato.common.api import CONNECTION, MISC, URL_TYPE
+from zato.common.soap.common import SOAPVersion
 from zato.common.odb.model import HTTPSOAP, to_json
 from zato.common.util.sql import set_instance_opaque_attrs
 
@@ -183,19 +184,17 @@ class OutgoingSOAPImporter:
         outgoing.connection = CONNECTION.OUTGOING
         outgoing.transport = URL_TYPE.SOAP
         outgoing.cluster = self.importer.get_cluster(session)
-        outgoing.merge_url_params_req = outgoing_def.get('merge_url_params_req', True)
-        outgoing.has_rbac = outgoing_def.get('has_rbac', False)
-        outgoing.serialization_type = outgoing_def.get('serialization_type', HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id)
         outgoing.is_internal = outgoing_def.get('is_internal', False)
 
         # Required SOAP-specific fields
         outgoing.soap_action = outgoing_def.get('soap_action', '')
-        outgoing.soap_version = outgoing_def.get('soap_version', '1.1')
+        outgoing.soap_version = outgoing_def.get('soap_version', SOAPVersion.Default)
 
-        # Set default values that may not be provided
-        outgoing.ping_method = outgoing_def.get('ping_method', 'GET')
-        outgoing.pool_size = outgoing_def.get('pool_size', 20)
-        outgoing.timeout = outgoing_def.get('timeout', 60)
+        # Set default values that may not be provided. They are the same constants the wrappers
+        # use, so a connection created through enmasse behaves as one created through the dashboard.
+        outgoing.ping_method = outgoing_def.get('ping_method', MISC.DEFAULT_HTTP_PING_METHOD)
+        outgoing.pool_size = outgoing_def.get('pool_size', MISC.DEFAULT_HTTP_POOL_SIZE)
+        outgoing.timeout = outgoing_def.get('timeout', MISC.DEFAULT_HTTP_TIMEOUT)
 
         # Copy other defined attributes
         for key, value in outgoing_def.items():

@@ -25,7 +25,7 @@ from zato.admin.web.views import get_group_list as common_get_group_list, get_ht
         method_allowed, SecurityList
 from zato.admin.web.views.security.tier import get_tier_list
 from zato.common.api import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
-     generic_attrs, Groups, HTTP_SOAP, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
+     generic_attrs, Groups, HTTP_SOAP, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
      SOAP_CHANNEL_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE
 from zato.common.content_type import format_content, get_content_type
 from zato.common.exception import ZatoException
@@ -144,7 +144,6 @@ def _get_edit_create_message(params, prefix='', user_profile=None): # type: igno
         'http_accept': params.get(prefix + 'http_accept'),
         'url_params_pri': params.get(prefix + 'url_params_pri', URL_PARAMS_PRIORITY.DEFAULT),
         'params_pri': params.get(prefix + 'params_pri', PARAMS_PRIORITY.DEFAULT),
-        'serialization_type': params.get(prefix + 'serialization_type', HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id),
         'method': params.get(prefix + 'method'),
         'soap_action': params.get(prefix + 'soap_action', ''),
         'soap_version': params.get(prefix + 'soap_version', None),
@@ -345,7 +344,6 @@ def index(req): # type: ignore
             http_soap.security_id = security_id
             http_soap.security_name = security_name
             http_soap.content_type = item.content_type
-            http_soap.serialization_type = item.serialization_type
             http_soap.timeout = item.timeout
 
             if connection == 'channel':

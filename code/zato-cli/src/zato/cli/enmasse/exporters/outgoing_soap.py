@@ -11,7 +11,7 @@ from json import loads
 
 # Zato
 from zato.cli.enmasse.util import export_invocation_fields, export_retry_fields, Invocation_Fields_SOAP
-from zato.common.api import CONNECTION, URL_TYPE
+from zato.common.api import CONNECTION, MISC, URL_TYPE
 from zato.common.odb.model import to_json
 from zato.common.odb.query import http_soap_list
 
@@ -81,10 +81,12 @@ class OutgoingSOAPExporter:
             if data_format := outgoing_row.get('data_format'):
                 exported_conn['data_format'] = data_format
 
-            if (timeout := outgoing_row.get('timeout')) is not None and timeout != 60:
+            # A setting left at its default is not written out, and the default has to be the same
+            # one the importer applies, otherwise a round trip through enmasse changes the value.
+            if (timeout := outgoing_row.get('timeout')) is not None and timeout != MISC.DEFAULT_HTTP_TIMEOUT:
                 exported_conn['timeout'] = timeout
 
-            if (ping_method := outgoing_row.get('ping_method')) and ping_method != 'GET':
+            if (ping_method := outgoing_row.get('ping_method')) and ping_method != MISC.DEFAULT_HTTP_PING_METHOD:
                 exported_conn['ping_method'] = ping_method
 
             if outgoing_row.get('content_type'):

@@ -137,8 +137,8 @@ def _create_missing_channels(
         'data_encoding': 'utf-8',
     })
 
-    # Column defaults such as merge_url_params_req, url_params_pri, params_pri, serialization_type
-    # and timeout are never re-stated here - the INSERT omits them and the model's own defaults apply.
+    # Column defaults such as merge_url_params_req, url_params_pri, params_pri and timeout are
+    # never re-stated here - the INSERT omits them and the model's own defaults apply.
     mappings = []
 
     for item in to_create:

@@ -62,6 +62,15 @@ _reserved_text_key = 'text'
 _xsi_nil = f'{{{NS.XSI}}}nil'
 _xop_include = f'{{{NS.XOP}}}Include'
 
+# The attribute an element carrying an xop:Include uses to say what media type the referenced part
+# holds. Without it the receiver has only the part's own Content-Type header to go on, and a
+# receiver that reads the envelope alone - which is what schema-driven tooling does - learns nothing.
+_xmime_content_type = f'{{{NS.XMIME}}}contentType'
+
+# What an MTOM part is declared as when the value handed over is bare bytes. Bytes carry no media
+# type of their own, and octet-stream is the one answer that is never wrong about opaque data.
+Default_Part_Content_Type = 'application/octet-stream'
+
 # Maps content ids of MTOM parts to their bytes during parsing.
 bytes_by_content_id = dict[str, bytes]
 
@@ -402,9 +411,13 @@ def _append_child(
 
             part = Part()
             part.content_id = content_id
-            part.content_type = 'application/octet-stream'
+            part.content_type = Default_Part_Content_Type
             part.data = value
             xop_parts.append(part)
+
+            # The element says what the part it points at holds, so a receiver reading the
+            # envelope knows the media type without having to go and look at the part's headers.
+            child.set(_xmime_content_type, Default_Part_Content_Type)
 
             include = etree.SubElement(child, _xop_include)
             include.set('href', f'cid:{content_id}')
@@ -461,6 +474,11 @@ def _element_to_node(
 
         # xsi:nil is a value marker, not data, so it never surfaces as an attribute.
         if name == _xsi_nil:
+            continue
+
+        # xmime:contentType describes the MTOM part the element points at rather than the message,
+        # and the part's bytes are what the caller reads, so it is a marker too.
+        if name == _xmime_content_type:
             continue
 
         out._attributes[_local_name(name)] = value

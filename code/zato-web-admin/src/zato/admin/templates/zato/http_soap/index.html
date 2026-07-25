@@ -153,7 +153,6 @@
             {% if connection == 'outgoing' %}
                 'ping_method',
                 'pool_size',
-                'serialization_type',
                 'content_type',
             {% endif %}
 
@@ -349,7 +348,6 @@
                         {% if connection == 'outgoing' %}
                             <th class='ignore'>&nbsp;</th> {% comment %} ping_method {% endcomment %}
                             <th class='ignore'>&nbsp;</th> {% comment %} pool_size {% endcomment %}
-                            <th class='ignore'>&nbsp;</th> {% comment %} serialization_type {% endcomment %}
                             <th class='ignore'>&nbsp;</th> {% comment %} content_type {% endcomment %}
                         {% endif %}
 
@@ -520,7 +518,6 @@
                         {% if connection == 'outgoing' %}
                             <td class='ignore'>{{ item.ping_method }}</td>
                             <td class='ignore'>{{ item.pool_size }}</td>
-                            <td class='ignore'>{{ item.serialization_type }}</td>
                             <td class='ignore'>{{ item.content_type|default:"" }}</td>
                         {% endif %}
 
@@ -966,7 +963,6 @@
                     <input type="hidden" name="transport" value="{{ transport }}" />
 
                     {{ create_form.data_encoding }}
-                    {{ create_form.serialization_type }}
                     {% if transport == 'soap' %}
                     <input type="hidden" name="pool_size" value="20" />
                     <input type="hidden" name="content_type" value="" />
@@ -1319,7 +1315,6 @@
                     <input type="hidden" name="transport" value="{{ transport }}" />
 
                     {{ edit_form.data_encoding }}
-                    {{ edit_form.serialization_type }}
                     {% if transport == 'soap' %}
                     <input type="hidden" name="edit-pool_size" value="20" />
                     <input type="hidden" name="edit-content_type" value="" />

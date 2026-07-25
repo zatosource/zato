@@ -13,7 +13,7 @@ from traceback import format_exc
 
 # Zato
 from zato.common.api import AS2, AS4, CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
-     Groups, HTTP_SOAP, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, query_parameters, SCHEDULER, SEC_DEF_TYPE, \
+     Groups, HTTP_SOAP, MISC, PARAMS_PRIORITY, query_parameters, SCHEDULER, SEC_DEF_TYPE, \
      SchedulerLink, URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
 from zato.common.broker_message import CHANNEL, OUTGOING, SECURITY
 from zato.common.const import SECRETS
@@ -516,7 +516,7 @@ class _BaseGet(AdminService):
     output = 'id', 'name', 'is_active', 'is_internal', 'url_path', \
         '-service_id', '-service_name', '-security_id', '-security_name', '-sec_type', \
         '-method', '-soap_action', '-soap_version', '-data_format', '-host', '-ping_method', '-pool_size', \
-        '-merge_url_params_req', '-url_params_pri', '-params_pri', '-serialization_type', '-timeout', \
+        '-merge_url_params_req', '-url_params_pri', '-params_pri', '-timeout', \
         '-content_type', \
         Boolean('-match_slash'), '-http_accept', \
         '-should_parse_on_input', '-should_validate', '-should_return_errors', \
@@ -598,7 +598,7 @@ class GetList(_BaseGet):
     output = 'id', 'name', 'is_active', 'is_internal', 'url_path', \
         '-service_id', '-service_name', '-security_id', '-security_name', '-sec_type', \
         '-method', '-soap_action', '-soap_version', '-data_format', '-host', '-ping_method', '-pool_size', \
-        '-merge_url_params_req', '-url_params_pri', '-params_pri', '-serialization_type', '-timeout', \
+        '-merge_url_params_req', '-url_params_pri', '-params_pri', '-timeout', \
         '-content_type', \
         Boolean('-match_slash'), '-http_accept', \
         '-should_parse_on_input', '-should_validate', '-should_return_errors', \
@@ -899,7 +899,7 @@ class Create(_CreateEdit):
     input = 'name', 'url_path', 'connection', \
         '-service', '-service_id', AsIs('-security_id'), '-method', '-soap_action', '-soap_version', '-data_format', \
         '-host', '-ping_method', '-pool_size', Boolean('-merge_url_params_req'), '-url_params_pri', '-params_pri', \
-        '-serialization_type', '-timeout', '-content_type', \
+        '-timeout', '-content_type', \
         Boolean('-match_slash'), '-http_accept', \
         '-should_parse_on_input', '-should_validate', '-should_return_errors', '-data_encoding', \
         '-is_active', '-transport', '-is_internal', '-cluster_id', \
@@ -1041,7 +1041,6 @@ class Create(_CreateEdit):
                 item.merge_url_params_req = input.merge_url_params_req
                 item.url_params_pri = input.get('url_params_pri') or URL_PARAMS_PRIORITY.DEFAULT
                 item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
-                item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
                 item.timeout = input.timeout
                 item.content_type = input.content_type
                 item.is_wrapper = bool(input.is_wrapper)
@@ -1117,7 +1116,7 @@ class Edit(_CreateEdit):
     input = 'id', 'name', 'url_path', 'connection', \
         '-service', '-service_id', AsIs('-security_id'), '-method', '-soap_action', '-soap_version', \
         '-data_format', '-host', '-ping_method', '-pool_size', Boolean('-merge_url_params_req'), '-url_params_pri', \
-        '-params_pri', '-serialization_type', '-timeout', '-content_type', \
+        '-params_pri', '-timeout', '-content_type', \
         Boolean('-match_slash'), '-http_accept', \
         '-should_parse_on_input', '-should_validate', '-should_return_errors', '-data_encoding', \
         '-cluster_id', '-is_active', '-transport', \
@@ -1305,7 +1304,6 @@ class Edit(_CreateEdit):
                 item.merge_url_params_req = input.merge_url_params_req
                 item.url_params_pri = input.get('url_params_pri') or URL_PARAMS_PRIORITY.DEFAULT
                 item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
-                item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
                 item.timeout = input.get('timeout')
                 item.content_type = input.content_type
                 item.is_wrapper = bool(input.is_wrapper)
@@ -1649,7 +1647,6 @@ class InvokeChannel(AdminService):
             'soap_version': None,
             'ping_method': 'HEAD',
             'pool_size': 1,
-            'serialization_type': 'json',
             'timeout': 90,
             'content_type': None,
             'validate_tls': False,

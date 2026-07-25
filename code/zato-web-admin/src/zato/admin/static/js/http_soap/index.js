@@ -10,13 +10,12 @@ $.fn.zato.http_soap.needs_random_prefix = false;
 
 $.fn.zato.data_table.HTTPSOAP = new Class({
     toString: function() {
-        var s = '<HTTPSOAP id:{0} name:{1} is_active:{2} merge_url_params_req:{3} data_format:{4} serialization_type:{5}>';
+        var s = '<HTTPSOAP id:{0} name:{1} is_active:{2} merge_url_params_req:{3} data_format:{4}>';
         return String.format(s, this.id ? this.id : '(none)',
                                 this.name ? this.name : '(none)',
                                 this.is_active ? this.is_active : '(none)',
                                 this.merge_url_params_req ? this.merge_url_params_req : '(none)',
-                                this.data_format ? this.data_format : '(none)',
-                                this.serialization_type ? this.serialization_type : '(none)'
+                                this.data_format ? this.data_format : '(none)'
                                 );
     }
 });
@@ -108,12 +107,6 @@ $(document).ready(function() {
 
     $.each(['', 'edit-'], function(ignored, suffix) {
 
-        var elem = $(String.format('#id_{0}serialization_type', suffix));
-        elem.ready(function() {
-            $.fn.zato.http_soap.data_table.toggle_validate_tls(suffix, elem.val() == 'suds');
-            elem.change($.fn.zato.http_soap.data_table.on_serialization_change);
-        });
-
         var service_elem = $(String.format('#id_{0}service', suffix));
         service_elem.change(function() {
             $.fn.zato.http_soap.toggle_gateway_service_list(suffix, this.value);
@@ -126,9 +119,6 @@ $(document).ready(function() {
 
 $.fn.zato.data_table.after_populate = function() {
     $.each(['', 'edit-'], function(ignored, suffix) {
-        var elem = $(String.format('#id_{0}serialization_type', suffix));
-        $.fn.zato.http_soap.data_table.toggle_validate_tls(suffix, elem.val() == 'suds');
-
         var service_elem = $(String.format('#id_{0}service', suffix));
         $.fn.zato.http_soap.toggle_gateway_service_list(suffix, service_elem.val());
     });
@@ -596,7 +586,6 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
 
     var data_encoding = '';
 
-    var serialization_type = item.serialization_type ? item.serialization_type : 'string';
     var has_security = item.security && item.security != 'ZATO_NONE';
     var security_name = has_security ? item.security_select : '<span class="form_hint">---</span>';
 
@@ -720,7 +709,6 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     if(is_outgoing) {
         row += String.format("<td class='ignore'>{0}</td>", item.ping_method);
         row += String.format("<td class='ignore'>{0}</td>", item.pool_size);
-        row += String.format("<td class='ignore'>{0}</td>", serialization_type);
         row += String.format("<td class='ignore'>{0}</td>", item.content_type);
     }
 
@@ -866,21 +854,6 @@ $.fn.zato.http_soap.set_gateway_url_path = function(suffix, service_name) {
         }
     }
 };
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.http_soap.data_table.toggle_validate_tls = function(suffix, is_suds) {
-    $(String.format('#id_{0}validate_tls', suffix)).prop('disabled', is_suds);
-}
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.http_soap.data_table.on_serialization_change = function() {
-
-    var is_edit = this.id.indexOf('edit') > 1;
-    var suffix = is_edit ? 'edit-' : '';
-    $.fn.zato.http_soap.data_table.toggle_validate_tls(suffix, this.value == 'suds');
-}
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

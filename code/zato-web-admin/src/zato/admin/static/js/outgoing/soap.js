@@ -475,7 +475,6 @@ $.fn.zato.outgoing.soap.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.timeout);
 
     row += String.format("<td class='ignore'>{0}</td>", item.content_type ? item.content_type : '');
-    row += String.format("<td class='ignore'>{0}</td>", item.serialization_type);
 
     let to_django_bool = function(value) {
         return (value === true || value == 'on' || value == 'True') ? 'True' : 'False';

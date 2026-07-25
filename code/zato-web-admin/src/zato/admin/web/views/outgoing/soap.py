@@ -98,7 +98,7 @@ class Index(_Index):
     input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active', 'is_internal'
     output_optional = ('host', 'url_path', 'soap_action', 'soap_version', 'security_id', 'security_name', 'sec_type', \
-        'sec_type_name', 'validate_tls', 'ping_method', 'timeout', 'content_type', 'serialization_type', \
+        'sec_type_name', 'validate_tls', 'ping_method', 'timeout', 'content_type', \
         'use_ws_addressing', 'use_mtom', 'body_credentials', 'tls_client_cert', 'tls_client_key', \
         'is_audit_log_active') + _invocation_field_names + tuple(_retry_field_defaults)
     output_repeated = True
@@ -167,7 +167,7 @@ class _CreateEdit(CreateEdit):
 
     input_required = 'name', 'host'
     input_optional = ('is_active', 'is_audit_log_active', 'url_path', 'soap_action', 'soap_version', 'security_id', \
-        'validate_tls', 'ping_method', 'timeout', 'content_type', 'serialization_type', \
+        'validate_tls', 'ping_method', 'timeout', 'content_type', \
         'use_ws_addressing', 'use_mtom', 'body_credentials', 'tls_client_cert', 'tls_client_key') + \
         _invocation_field_names + tuple(_retry_field_defaults) + ('callback_service', 'callback_topic', 'callback_rest') + \
         ('health_check_callback_service', 'health_check_callback_topic', 'health_check_callback_rest')

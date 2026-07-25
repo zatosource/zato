@@ -1,9 +1,9 @@
 'use strict';
 
 // The core of the shared namespace: config, escaping, SVG icons,
-// anchored popovers and tooltips. The rest of the UI kernel - the
-// floating panel, the shell and the context menu - augments this
-// namespace from its own files.
+// anchored popovers, tooltips and the in-flight guard around a button.
+// The rest of the UI kernel - the floating panel, the shell and the
+// context menu - augments this namespace from its own files.
 
 (function() {
 
@@ -92,6 +92,30 @@ var shared = {
 
         instance.show();
         setTimeout(function() { instance.hide(); }, shared.config.popoverMilliseconds);
+    },
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // One request at a time per button. The button is disabled for as long as
+    // its request is in flight, so a double click on Save cannot post the same
+    // thing twice, and the caller's own callbacks release it again. A click
+    // arriving while the button is still disabled answers null, which the
+    // caller reads as: this button is busy, do nothing. A caller whose request
+    // can end in a way of its own releases the button through release itself.
+    inFlight: function(button, onDone, onError) {
+        if (button.disabled) { return null; }
+
+        button.disabled = true;
+
+        var release = function() { button.disabled = false; };
+
+        // Whatever a caller's own callbacks take is passed straight through,
+        // some of them answer with more than one value
+        return {
+            done: function() { release(); onDone.apply(null, arguments); },
+            error: function() { release(); onError.apply(null, arguments); },
+            release: release,
+        };
     },
 };
 
