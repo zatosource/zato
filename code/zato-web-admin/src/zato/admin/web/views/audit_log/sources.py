@@ -71,6 +71,11 @@ _as2_resubmit = {
     AuditEvent.Message_Received: {'label': 'Reprocess', 'service': 'zato.audit-log.as2.reprocess'},
 }
 
+_as4_resubmit = {
+    AuditEvent.Message_Sent:     {'label': 'Resend',    'service': 'zato.audit-log.as4.resend'},
+    AuditEvent.Message_Received: {'label': 'Reprocess', 'service': 'zato.audit-log.as4.reprocess'},
+}
+
 _hl7_resubmit = {
     AuditEvent.Message_Sent:     {'label': 'Resend',    'service': 'zato.audit-log.hl7.resend'},
     AuditEvent.Message_Received: {'label': 'Reprocess', 'service': 'zato.audit-log.hl7.reprocess'},
@@ -83,6 +88,7 @@ _fhir_resubmit = {
 # The sources whose pages carry resubmit actions
 _source_resubmit = {
     'as2': _as2_resubmit,
+    'as4': _as4_resubmit,
     'hl7': _hl7_resubmit,
     'fhir': _fhir_resubmit,
 }

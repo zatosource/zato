@@ -73,6 +73,31 @@ class Limits:
 # ################################################################################################################################
 # ################################################################################################################################
 
+# The separator between a message partition channel and a sub-channel of it, per ebMS 3.0 - a
+# sub-channel is named by extending the name of the channel it belongs to.
+Sub_Channel_Separator = '/'
+
+# ################################################################################################################################
+
+def serves_channel(served:'str', requested:'str') -> 'bool':
+    """ Tells whether an endpoint serving one message partition channel serves the one a pull request
+    asks about - the channel itself, or any sub-channel of it, which is named by extending its name.
+    """
+    if not served:
+        out = False
+
+    elif requested == served:
+        out = True
+
+    else:
+        prefix = served + Sub_Channel_Separator
+        out = requested.startswith(prefix)
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class CompressionType:
     """ Payload part property values for the AS4 compression feature.
     """

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 # stdlib
 from base64 import b64decode, b64encode
+from http.client import OK
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
@@ -191,6 +192,7 @@ def record_message_sent(
     original_sender:'str' = '',
     final_recipient:'str' = '',
     cid:'str' = '',
+    correl_id:'str' = '',
     ) -> 'None':
     """ Records that a user message was pushed to the partner, with every payload stored alongside
     so a later resend or resubmit can send all of them again and with the request bytes kept as the
@@ -199,7 +201,14 @@ def record_message_sent(
     The four-corner endpoints travel with the event because a repeat delivery of a message that was
     addressed through discovery has to be addressed the same way again, and the recipient it was
     addressed to is not in the payload the store hands back.
+
+    An exchange is correlated by its conversation, which is what groups the messages of one business
+    exchange. A resubmit gives the correlation of its own instead, the CID of the message it was
+    made from, which is what links the two events together.
     """
+    if not correl_id:
+        correl_id = result.conversation_id
+
     if result.is_ok:
         outcome = AuditOutcome.OK
     else:
@@ -222,11 +231,61 @@ def record_message_sent(
     values = {
         'cid': cid,
         'msg_id': result.message_id,
-        'correl_id': result.conversation_id,
+        'correl_id': correl_id,
         'outcome': outcome,
         'size': _payload_size(payloads),
         'data': data,
         'attrs': {'service': service, 'action': action, 'conversation_id': result.conversation_id},
+    }
+
+    _ = audit_log.insert(AuditSource.AS4, AuditEvent.Message_Sent, party_pair(from_party, to_party), **values)
+
+# ################################################################################################################################
+
+def record_message_handed_over(
+    audit_log:'AuditLog',
+    from_party:'str',
+    to_party:'str',
+    *,
+    message_id:'str',
+    conversation_id:'str',
+    service:'str',
+    action:'str',
+    payloads:'part_list',
+    raw_message:'bytes' = b'',
+    cid:'str' = '',
+    ) -> 'None':
+    """ Records that a user message was handed over in answer to a pull request. The evidence is the
+    same a push leaves, because the message did go out and a receipt for it is what closes the
+    exchange - the difference is only that the partner asked for it rather than being sent it.
+
+    The event says so, which is what keeps the reception awareness retries away from it - an
+    unanswered pull message goes back on its channel to be asked for again rather than being pushed
+    in a direction this exchange does not have.
+    """
+    details = {
+        'payload': _first_payload_text(payloads),
+        'payloads': encode_payloads(payloads),
+        'conversation_id': conversation_id,
+        'service': service,
+        'action': action,
+        'original_sender': '',
+        'final_recipient': '',
+        'errors': [],
+        'http_status': OK,
+        'raw_message': encode_wire_bytes(raw_message),
+        'is_pull': True,
+    }
+    data = dumps(details)
+
+    values = {
+        'cid': cid,
+        'msg_id': message_id,
+        'correl_id': conversation_id,
+        'outcome': AuditOutcome.OK,
+        'size': _payload_size(payloads),
+        'data': data,
+        'attrs': {'service': service, 'action': action, 'conversation_id': conversation_id},
     }
 
     _ = audit_log.insert(AuditSource.AS4, AuditEvent.Message_Sent, party_pair(from_party, to_party), **values)
@@ -317,10 +376,17 @@ def record_message_received(
     error:'str' = '',
     outcome:'str' = AuditOutcome.OK,
     cid:'str' = '',
+    correl_id:'str' = '',
     ) -> 'None':
     """ Records that a user message arrived from the partner, with every payload stored losslessly
     so a later reprocess can re-publish all of them, and the wire bytes kept as delivery evidence.
+
+    A delivery is correlated by its conversation, and a reprocess of one gives the correlation of
+    its own instead, the CID of the delivery it was made from.
     """
+    if not correl_id:
+        correl_id = user_message.conversation_id
+
     details = {
         'payload': _first_payload_text(payloads),
         'payloads': encode_payloads(payloads),
@@ -341,7 +407,7 @@ def record_message_received(
     values = {
         'cid': cid,
         'msg_id': user_message.message_id,
-        'correl_id': user_message.conversation_id,
+        'correl_id': correl_id,
         'outcome': outcome,
         'size': _payload_size(payloads),
         'data': data,
@@ -421,6 +487,7 @@ def record_send_result(
     original_sender:'str' = '',
     final_recipient:'str' = '',
     cid:'str' = '',
+    correl_id:'str' = '',
     ) -> 'None':
     """ Records everything one push produced - the message-sent event with the request bytes and
     every payload, plus the receipt-received event when a receipt rode back on the response.
@@ -429,7 +496,8 @@ def record_send_result(
     is recorded by the channel it later arrives on.
     """
     record_message_sent(audit_log, from_party, to_party, result, payloads=payloads, service=service,
-        action=action, original_sender=original_sender, final_recipient=final_recipient, cid=cid)
+        action=action, original_sender=original_sender, final_recipient=final_recipient, cid=cid,
+        correl_id=correl_id)
 
     receipt = result.receipt
 

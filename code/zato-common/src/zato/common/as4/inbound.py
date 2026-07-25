@@ -15,7 +15,7 @@ from http.client import OK
 from lxml import etree
 
 # Zato
-from zato.common.as4.common import AS4ProtocolException, AS4SecurityException, EbMSError, Limits, Severity
+from zato.common.as4.common import AS4ProtocolException, AS4SecurityException, EbMSError, Limits, serves_channel, Severity
 from zato.common.as4.ebms import build_envelope, build_error, build_receipt, parse_messaging
 from zato.common.as4.mime_ import parse_multipart, restore_payloads
 from zato.common.as4.security.sign import sign_envelope
@@ -57,6 +57,22 @@ _soap_content_type = 'application/soap+xml; charset=UTF-8'
 # ################################################################################################################################
 
 @dataclass(init=False)
+class PullServed:
+    """ The message one pull request is answered with - what goes on the response of the request
+    that asked for it, built by whoever holds the messages of the channel it asked about.
+    """
+    body:         bytes = b''
+    content_type: str = _soap_content_type
+    message_id:   str = ''
+
+    # The payloads as they were submitted for pulling, which is what the evidence of the hand-over
+    # is written from.
+    payloads: 'part_list'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
 class InboundResult:
     """ What the transport should send back and what the application receives.
     """
@@ -75,6 +91,11 @@ class InboundResult:
 
     # Signals delivered to us - asynchronous receipts or errors from a previous exchange.
     signals: 'signal_details_list'
+
+    # For a pull request - the message partition channel it asked about and the message that was
+    # handed over on the response, if the channel had one waiting.
+    pull_mpc: str = ''
+    pulled: 'PullServed | None' = None
 
     # Whether the message was recognized as a duplicate - the receipt is still returned
     # but the payloads must not be processed a second time.
@@ -120,12 +141,13 @@ def build_error_response(
     detail:'str',
     keystore:'Keystore | None',
     pmode:'PMode | None',
+    severity:'str'=Severity.Failure,
     ) -> 'bytes':
     """ Builds the ebMS error signal that goes back on the HTTP response,
     signing it when the P-Mode calls for signed signals and signing is possible.
     """
     envelope = build_envelope()
-    _ = build_error(envelope, ref_to_message_id, error_code, error_code, detail, Severity.Failure)
+    _ = build_error(envelope, ref_to_message_id, error_code, error_code, detail, severity)
 
     if pmode:
         if keystore:
@@ -197,9 +219,6 @@ def _handle_signals(envelope:'any_', messaging:'any_', keystore:'Keystore', out:
     """ Takes in the signals of a message that carries no user message - receipts and errors that
     arrive on their own, delivered asynchronously after an earlier exchange of ours.
     """
-    for signal in messaging.signals:
-        if signal.pull_mpc:
-            raise AS4ProtocolException(EbMSError.Feature_Not_Supported, 'This endpoint does not serve pull requests')
 
     # A signal says an earlier message of ours was delivered or was refused, so it is required to be
     # signed by the party it claims to come from, exactly as a user message is.
@@ -207,6 +226,76 @@ def _handle_signals(envelope:'any_', messaging:'any_', keystore:'Keystore', out:
 
     for signal in messaging.signals:
         out.signals.append(signal)
+
+# ################################################################################################################################
+
+def _get_pull_request(messaging:'any_') -> 'any_':
+    """ Returns the signal asking for a message of one partition channel, or None for a request that
+    asks for nothing - a receipt or an error signal delivered on its own.
+    """
+    for signal in messaging.signals:
+        if signal.pull_mpc:
+            out = signal
+            return out
+
+    return None
+
+# ################################################################################################################################
+
+def _match_pull_pmode(pmodes:'pmode_list', mpc:'str') -> 'PMode':
+    """ Finds the P-Mode that governs one message partition channel. A pull request for a channel
+    that no P-Mode of this endpoint covers is a request for a channel this endpoint does not have,
+    which is as far as it gets - the messages of a channel are only handed over under the terms
+    agreed for it.
+    """
+    for pmode in pmodes:
+        if serves_channel(pmode.mpc, mpc):
+            out = pmode
+            break
+    else:
+        raise AS4ProtocolException(
+            EbMSError.Value_Not_Recognized, f'No P-Mode is configured for message partition channel `{mpc}`')
+
+    return out
+
+# ################################################################################################################################
+
+def _handle_pull_request(
+    envelope:'any_',
+    signal:'any_',
+    pmode:'PMode',
+    keystore:'Keystore',
+    serve_pull:'callnone',
+    out:'InboundResult',
+    ) -> 'None':
+    """ Answers one pull request with the message that was waiting on the channel it asked about,
+    or with the empty channel warning when nothing was.
+
+    A pull request names no party of its own, so its signature is what says who is asking and the
+    keystore is what says whether that party is who it claims to be.
+    """
+    mpc = signal.pull_mpc
+    out.pull_mpc = mpc
+
+    # The request is authenticated before anything is looked up, let alone handed over.
+    _ = verify_envelope(envelope, [], keystore)
+
+    if serve_pull is None:
+        raise AS4ProtocolException(EbMSError.Feature_Not_Supported, 'This endpoint does not serve pull requests')
+
+    served = serve_pull(mpc, pmode)
+
+    # A channel with nothing waiting on it is answered with the warning ebMS 3.0 defines for it,
+    # which is what tells the partner to come back later rather than that something went wrong.
+    if served is None:
+        detail = f'No message is available on `{mpc}`'
+        out.body = build_error_response(signal.message_id, EbMSError.Empty_Message_Partition, detail,
+            keystore, pmode, Severity.Warning)
+        return
+
+    out.pulled = served
+    out.content_type = served.content_type
+    out.body = served.body
 
 # ################################################################################################################################
 
@@ -219,6 +308,7 @@ def handle(
     keystore:'Keystore',
     is_duplicate:'callnone'=None,
     validate:'callnone'=None,
+    serve_pull:'callnone'=None,
     ) -> 'InboundResult':
     """ The transport-neutral inbound pipeline. Takes the raw HTTP body and content type
     of an incoming AS4 request and returns what to send back plus the delivered payloads.
@@ -230,6 +320,10 @@ def handle(
     The validate callable, when given, receives the user message and the restored payloads
     once their signature is verified - it raises AS4ProtocolException to reject the message,
     which turns into a signed ebMS error signal on the response.
+
+    The serve_pull callable, when given, receives a message partition channel and the P-Mode that
+    governs it, and returns the message waiting on that channel, or None when none is - which is
+    what makes this endpoint a responder to pull requests rather than one that refuses them.
     """
 
     # Our response to produce
@@ -255,9 +349,19 @@ def handle(
         messaging = parse_messaging(envelope)
 
         # Signals without a user message are receipts or errors delivered to us asynchronously -
-        # they are surfaced to the caller and acknowledged with an empty response.
+        # they are surfaced to the caller and acknowledged with an empty response. One of them asks
+        # for a message rather than reporting on one, and that one is answered here and now.
         if not messaging.user_messages:
-            _handle_signals(envelope, messaging, keystore, out)
+
+            pull_request = _get_pull_request(messaging)
+
+            if pull_request:
+                ref_to_message_id = pull_request.message_id
+                matched_pmode = _match_pull_pmode(pmodes, pull_request.pull_mpc)
+                _handle_pull_request(envelope, pull_request, matched_pmode, keystore, serve_pull, out)
+            else:
+                _handle_signals(envelope, messaging, keystore, out)
+
             return out
 
         user_message = messaging.user_messages[0]

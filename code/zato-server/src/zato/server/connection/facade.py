@@ -474,6 +474,15 @@ class AS4Invoker:
 
 # ################################################################################################################################
 
+    def resubmit(self, candidate:'ResendCandidate') -> 'SendResult':
+        """ Delivers the payloads of a stored message as a message of its own, with an eb:MessageId
+        of its own - the operator resend, which the caller records itself.
+        """
+        out = self.conn.resubmit(self.cid, candidate)
+        return out
+
+# ################################################################################################################################
+
     def pull(self, mpc:'strnone'=None) -> 'PullResult':
         """ Sends one pull request to the connection's configured endpoint -
         the generic One-Way/Pull exchange - and returns whatever came back.

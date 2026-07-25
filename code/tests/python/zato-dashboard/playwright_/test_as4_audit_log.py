@@ -15,12 +15,13 @@ import pytest
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.playwright_pubsub import close_dialog_via_jquery, open_create_dialog
-from as4_channel import create_as4_channel, delete_as4_channel, edit_as4_channel, open_as4_channel_page
+from as4_channel import edit_as4_channel, open_as4_channel_page
+from as4_exchange import delete_exchange, new_exchange, send_with_retry, wait_for_invoker_service, \
+    Event_Message_Received, Event_Message_Sent, Event_Receipt_Received, Event_Receipt_Sent, Events_Per_Exchange
 from as4_keys import new_test_parties
 from as4_outconn import create_as4_outconn, delete_as4_outconn, edit_as4_outconn, open_as4_outconn_page, \
     open_edit_dialog, wait_for_as4_outconn_row
 from audit_toggle import assert_checkbox_exists, get_audit_row_count, get_checkbox_state, wait_for_table
-from soap_outconn import invoke_service_in_ide
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,20 +42,6 @@ _Audit_Log_Url_Prefix = '/zato/audit-log/'
 # The section title for the AS4 source, compared lowercase because the heading is styled with CSS
 _AS4_Title = 'as4 audit log'
 
-# The pre-deployed fixture services this suite drives and routes to
-_Invoker_Service  = 'test.as4.invoke'
-_Receiver_Service = 'test.as4.receiver'
-
-# What the events of one exchange are called
-_Event_Message_Sent     = 'message-sent'
-_Event_Receipt_Received = 'receipt-received'
-_Event_Message_Received = 'message-received'
-_Event_Receipt_Sent     = 'receipt-sent'
-
-# One complete exchange records four events - message-sent and receipt-received on the sending
-# side, message-received and receipt-sent on the receiving side
-_Events_Per_Exchange = 4
-
 # Column indexes: Time, CID, Event, Partner, Message id, Conversation id, Outcome, Size, Data preview
 _Column_Time            = 0
 _Column_CID             = 1
@@ -67,12 +54,6 @@ _Column_Outcome         = 6
 # What an event that went through says
 _Outcome_Ok = 'ok'
 
-# How long to keep retrying an invocation while a UI change propagates to the server
-_Propagation_Timeout = 60
-
-# How long to sleep between the attempts above
-_Propagation_Poll_Interval = 1.0
-
 # How long an edit needs before the channel runtime and the outgoing wrapper are rebuilt
 _Rebuild_Delay = 5.0
 
@@ -80,136 +61,6 @@ _Rebuild_Delay = 5.0
 _AS4_Log_Patterns = ('AS4 request rejected',)
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def _open_invoker_in_ide(page:'Page', base_url:'str') -> 'None':
-    """ Opens the pre-deployed AS4 invoker service in the IDE and waits until the Invoke button is usable.
-    """
-
-    _ = page.goto(f'{base_url}/zato/service/ide/service/{_Invoker_Service}/?cluster=1')
-    _ = page.wait_for_selector('#invoke-service:not([disabled])', state='visible', timeout=15000)
-
-# ################################################################################################################################
-
-def _wait_for_invoker_service(page:'Page', base_url:'str') -> 'None':
-    """ Opens the invoker service in the IDE and keeps clicking Invoke with a readiness
-    probe until the service responds, confirming it deployed during server boot.
-    """
-
-    _open_invoker_in_ide(page, base_url)
-
-    deadline = time.monotonic() + _Propagation_Timeout
-    last_error = None
-
-    while time.monotonic() < deadline:
-        try:
-            response = invoke_service_in_ide(page, {'mode': 'ping'})
-        except Exception as probe_error:
-            last_error = probe_error
-            time.sleep(_Propagation_Poll_Interval)
-        else:
-            if response.get('is_ready'):
-                return
-            time.sleep(_Propagation_Poll_Interval)
-
-    raise Exception(f'Service `{_Invoker_Service}` did not deploy within {_Propagation_Timeout}s, last: {last_error!r}')
-
-# ################################################################################################################################
-
-def _send_with_retry(page:'Page', base_url:'str', connection_name:'str', payload:'str') -> 'anydict':
-    """ Sends one AS4 message through the pre-deployed service, driven from the IDE
-    in the browser, retrying while the pair configured a moment ago propagates to the server.
-    """
-
-    _open_invoker_in_ide(page, base_url)
-
-    request = {
-        'mode': 'send',
-        'connection': connection_name,
-        'payload': payload,
-    }
-
-    deadline = time.monotonic() + _Propagation_Timeout
-    last_error = None
-
-    while time.monotonic() < deadline:
-        try:
-            out = invoke_service_in_ide(page, request)
-        except Exception as invoke_error:
-            last_error = invoke_error
-            time.sleep(_Propagation_Poll_Interval)
-        else:
-            # The service reports errors as a reply field, e.g. while the connection
-            # or the channel it points back at is still propagating to the server.
-            if error := out.get('error'):
-                last_error = error
-                time.sleep(_Propagation_Poll_Interval)
-                continue
-
-            return out
-
-    raise Exception(f'Could not send over `{connection_name}` within {_Propagation_Timeout}s, last error: {last_error}')
-
-# ################################################################################################################################
-
-def _new_exchange(
-    page:'Page',
-    base_url:'str',
-    server_port:'int',
-    name:'str',
-    from_party:'str',
-    to_party:'str',
-    ) -> 'anydict':
-    """ Creates one loopback pair through the Dashboard - a channel and an outgoing connection
-    pointed back at it - and returns the ids of both, so the exchange can be driven and taken down.
-    """
-
-    url_path = '/' + name
-    sender, receiver = new_test_parties()
-
-    channel_id = create_as4_channel(page, base_url, name, url_path, {
-        'as4_profile': 'edelivery1',
-        'as4_from_party': from_party,
-        'as4_to_party': to_party,
-        'as4_service': 'urn:test:service',
-        'as4_action': 'SubmitDocument',
-        'as4_signing_key': receiver.key,
-        'as4_signing_cert_chain': receiver.certificate,
-        'as4_decryption_key': receiver.key,
-        'as4_peer_signing_cert': sender.certificate,
-        'service': _Receiver_Service,
-    })
-
-    outconn_id = create_as4_outconn(page, base_url, name, f'http://127.0.0.1:{server_port}', {
-        'as4_profile': 'edelivery1',
-        'as4_from_party': from_party,
-        'as4_to_party': to_party,
-        'as4_service': 'urn:test:service',
-        'as4_action': 'SubmitDocument',
-        'url_path': url_path,
-        'as4_signing_key': sender.key,
-        'as4_signing_cert_chain': sender.certificate,
-        'as4_peer_signing_cert': receiver.certificate,
-        'as4_peer_encryption_cert': receiver.certificate,
-    })
-
-    out = {
-        'channel_id': channel_id,
-        'outconn_id': outconn_id,
-    }
-
-    return out
-
-# ################################################################################################################################
-
-def _delete_exchange(page:'Page', exchange:'anydict') -> 'None':
-    """ Takes down both sides of one loopback pair - both helpers find their own page first,
-    so this works no matter where the browser was left.
-    """
-
-    delete_as4_outconn(page, exchange['outconn_id'])
-    delete_as4_channel(page, exchange['channel_id'])
-
 # ################################################################################################################################
 
 def _get_rows(page:'Page') -> 'anylist':
@@ -265,7 +116,7 @@ class TestAS4AuditLog:
         base_url = zato_dashboard['dashboard_url']
         server_port = zato_dashboard['server_port']
 
-        _wait_for_invoker_service(page, base_url)
+        wait_for_invoker_service(page, base_url)
 
         # The parties are unique per run so only this test's events show up.
         suffix = CryptoManager.generate_hex_string()
@@ -274,19 +125,19 @@ class TestAS4AuditLog:
         pair = f'{from_party}:{to_party}'
 
         name = _Test_Name_Prefix + 'columns'
-        exchange = _new_exchange(page, base_url, server_port, name, from_party, to_party)
+        exchange = new_exchange(page, base_url, server_port, name, from_party, to_party)
 
         try:
             payload = '<Document xmlns="urn:test"><Value>' + CryptoManager.generate_hex_string() + '</Value></Document>'
-            result = _send_with_retry(page, base_url, name, payload)
+            result = send_with_retry(page, base_url, name, payload)
             assert result['is_ok'], f'Expected a verified receipt, got: {result}'
 
             # The page pre-filtered to this party pair ..
             row_count = get_audit_row_count(page, base_url, _Audit_Source, pair)
 
             # .. shows all four events of the exchange, both halves of both sides ..
-            assert row_count == _Events_Per_Exchange, \
-                f'Expected {_Events_Per_Exchange} audit log rows, got {row_count}'
+            assert row_count == Events_Per_Exchange, \
+                f'Expected {Events_Per_Exchange} audit log rows, got {row_count}'
 
             # .. under a title naming the source, compared case-insensitively because of CSS styling ..
             title_text = page.inner_text('#detail-section-title')
@@ -310,10 +161,10 @@ class TestAS4AuditLog:
             events = _get_events_by_type(page)
 
             expected_events = {
-                _Event_Message_Sent,
-                _Event_Receipt_Received,
-                _Event_Message_Received,
-                _Event_Receipt_Sent,
+                Event_Message_Sent,
+                Event_Receipt_Received,
+                Event_Message_Received,
+                Event_Receipt_Sent,
             }
 
             assert set(events) == expected_events, f'Expected the four events of one exchange, got: {sorted(events)}'
@@ -338,15 +189,15 @@ class TestAS4AuditLog:
                     f'Expected a locale-formatted time on {event_type}, got: "{cells[_Column_Time]}"'
 
             # .. and the user message events carry the conversation their exchange belongs to.
-            sent_cells = events[_Event_Message_Sent]
-            received_cells = events[_Event_Message_Received]
+            sent_cells = events[Event_Message_Sent]
+            received_cells = events[Event_Message_Received]
 
             assert sent_cells[_Column_Conversation_ID] != '', 'Expected a conversation id on the sent message'
             assert sent_cells[_Column_Conversation_ID] == received_cells[_Column_Conversation_ID], \
                 'Expected both sides of the exchange to record the same conversation id'
 
         finally:
-            _delete_exchange(page, exchange)
+            delete_exchange(page, exchange)
 
 # ################################################################################################################################
 
@@ -357,7 +208,7 @@ class TestAS4AuditLog:
         base_url = zato_dashboard['dashboard_url']
         server_port = zato_dashboard['server_port']
 
-        _wait_for_invoker_service(page, base_url)
+        wait_for_invoker_service(page, base_url)
 
         suffix = CryptoManager.generate_hex_string()
         from_party = f'party-a-{suffix}'
@@ -365,11 +216,11 @@ class TestAS4AuditLog:
         pair = f'{from_party}:{to_party}'
 
         name = _Test_Name_Prefix + 'link'
-        exchange = _new_exchange(page, base_url, server_port, name, from_party, to_party)
+        exchange = new_exchange(page, base_url, server_port, name, from_party, to_party)
 
         try:
             payload = '<Document xmlns="urn:test"><Value>linked</Value></Document>'
-            result = _send_with_retry(page, base_url, name, payload)
+            result = send_with_retry(page, base_url, name, payload)
             assert result['is_ok'], f'Expected a verified receipt, got: {result}'
 
             # Reload so the row carries the link the server built out of the stored parties ..
@@ -393,14 +244,14 @@ class TestAS4AuditLog:
 
             # .. and the events of the exchange are shown.
             events = _get_events_by_type(page)
-            assert _Event_Message_Sent in events, f'Expected a sent message, got: {sorted(events)}'
+            assert Event_Message_Sent in events, f'Expected a sent message, got: {sorted(events)}'
 
-            cells = events[_Event_Message_Sent]
+            cells = events[Event_Message_Sent]
             assert cells[_Column_Msg_ID] == result['message_id'], \
                 f'Expected message id "{result["message_id"]}", got: "{cells[_Column_Msg_ID]}"'
 
         finally:
-            _delete_exchange(page, exchange)
+            delete_exchange(page, exchange)
 
 # ################################################################################################################################
 
@@ -463,7 +314,7 @@ class TestAS4AuditLog:
         base_url = zato_dashboard['dashboard_url']
         server_port = zato_dashboard['server_port']
 
-        _wait_for_invoker_service(page, base_url)
+        wait_for_invoker_service(page, base_url)
 
         suffix = CryptoManager.generate_hex_string()
         from_party = f'party-a-{suffix}'
@@ -471,7 +322,7 @@ class TestAS4AuditLog:
         pair = f'{from_party}:{to_party}'
 
         name = _Test_Name_Prefix + 'toggle'
-        exchange = _new_exchange(page, base_url, server_port, name, from_party, to_party)
+        exchange = new_exchange(page, base_url, server_port, name, from_party, to_party)
 
         channel_id = exchange['channel_id']
         outconn_id = exchange['outconn_id']
@@ -479,12 +330,12 @@ class TestAS4AuditLog:
         try:
             # One exchange with the toggle on, which is what a new pair starts with ..
             payload = '<Document xmlns="urn:test"><Value>toggle-on</Value></Document>'
-            result = _send_with_retry(page, base_url, name, payload)
+            result = send_with_retry(page, base_url, name, payload)
             assert result['is_ok'], f'Expected a verified receipt with the toggle on, got: {result}'
 
             baseline = get_audit_row_count(page, base_url, _Audit_Source, pair)
-            assert baseline == _Events_Per_Exchange, \
-                f'Expected {_Events_Per_Exchange} audit log rows with the toggle on, got {baseline}'
+            assert baseline == Events_Per_Exchange, \
+                f'Expected {Events_Per_Exchange} audit log rows with the toggle on, got {baseline}'
 
             # .. then turn the toggle off on both sides of the exchange and let the change reach the server ..
             open_as4_outconn_page(page, base_url, query=name)
@@ -496,7 +347,7 @@ class TestAS4AuditLog:
             time.sleep(_Rebuild_Delay)
 
             # .. the message still travels end to end but nothing new is recorded ..
-            result = _send_with_retry(page, base_url, name, payload)
+            result = send_with_retry(page, base_url, name, payload)
             assert result['is_ok'], f'Expected a verified receipt with the toggle off, got: {result}'
 
             row_count = get_audit_row_count(page, base_url, _Audit_Source, pair)
@@ -512,16 +363,16 @@ class TestAS4AuditLog:
 
             time.sleep(_Rebuild_Delay)
 
-            result = _send_with_retry(page, base_url, name, payload)
+            result = send_with_retry(page, base_url, name, payload)
             assert result['is_ok'], f'Expected a verified receipt with the toggle back on, got: {result}'
 
             row_count = get_audit_row_count(page, base_url, _Audit_Source, pair)
-            expected = baseline + _Events_Per_Exchange
+            expected = baseline + Events_Per_Exchange
             assert row_count == expected, \
                 f'Expected {expected} audit log rows after turning the toggle back on, got {row_count}'
 
         finally:
-            _delete_exchange(page, exchange)
+            delete_exchange(page, exchange)
 
 # ################################################################################################################################
 # ################################################################################################################################

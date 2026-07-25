@@ -1,0 +1,139 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# stdlib
+import logging
+from json import loads
+from time import monotonic, sleep
+
+# pytest
+import pytest
+
+# Zato
+from audit_toggle import wait_for_table
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from playwright.sync_api import Page
+    from zato.common.typing_ import any_, anydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = logging.getLogger(__name__)
+
+# The endpoint of the Dashboard view the row action talks to
+_Resubmit_Url_Path = '/zato/audit-log/resubmit/'
+
+# How long to keep retrying while the connections of an exchange propagate to the server
+_Propagation_Timeout = 60
+
+# How long to wait between retries
+_Retry_Sleep = 2
+
+# How long one click may take - a resubmit blocks while the connection pool is still being built
+_Response_Timeout_Ms = 60000
+
+# How long the marker and the table have to appear
+_Selector_Timeout_Ms = 10000
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def row_selector_of_event(event_type:'str') -> 'str':
+    """ Returns the selector of the audit log row showing one event type - the pages these helpers
+    drive are pre-filtered to a single exchange, so one type names one row.
+    """
+    out = f'#audit-log-table-body tr:has(td:text-is("{event_type}"))'
+    return out
+
+# ################################################################################################################################
+
+def get_resubmit_label(page:'Page', row_selector:'str') -> 'str':
+    """ Returns the text of the resubmit action of one row.
+    """
+    out = page.inner_text(row_selector + ' a.audit-log-resubmit-link')
+    return out
+
+# ################################################################################################################################
+
+def _is_resubmit_response(response:'any_') -> 'bool':
+    """ Matches the response of the resubmit view.
+    """
+    out = _Resubmit_Url_Path in response.url
+    return out
+
+# ################################################################################################################################
+
+def click_resubmit(page:'Page', row_selector:'str') -> 'anydict | None':
+    """ Clicks the resubmit action of one row and returns the parsed report, or None if the endpoint
+    did not answer with one.
+    """
+    selector = row_selector + ' a.audit-log-resubmit-link'
+
+    with page.expect_response(_is_resubmit_response, timeout=_Response_Timeout_Ms) as response_info:
+        page.click(selector)
+
+    response = response_info.value
+
+    # A non-2xx response means the invocation itself failed, e.g. the service has not deployed
+    # yet - the retry loop treats it the same as a failed report.
+    if response.status != 200:
+        return None
+
+    out = loads(response.text())
+    return out
+
+# ################################################################################################################################
+
+def resubmit_until(page:'Page', row_selector:'str', is_done_func:'any_') -> 'anydict':
+    """ Clicks the resubmit action of one row until the report satisfies the given condition,
+    retrying while the configuration of the exchange propagates to the server.
+    """
+    deadline = monotonic() + _Propagation_Timeout
+
+    while True:
+        out = click_resubmit(page, row_selector)
+
+        if out is not None:
+            if is_done_func(out):
+                break
+
+        if monotonic() > deadline:
+            pytest.fail(f'Resubmit did not reach the expected outcome in time, the last report was: {out}')
+
+        sleep(_Retry_Sleep)
+
+        # The report handler refreshes the table after each attempt, so wait for it to settle
+        # and close the previous attempt's tooltip before clicking again.
+        wait_for_table(page)
+        page.keyboard.press('Escape')
+
+    return out
+
+# ################################################################################################################################
+
+def wait_for_marker(page:'Page', row_selector:'str') -> 'None':
+    """ Waits until the row of the original event shows the resubmitted marker - the table refreshes
+    itself once the report arrives.
+    """
+    selector = row_selector + ' .audit-log-resubmitted-marker'
+    _ = page.wait_for_selector(selector, state='visible', timeout=_Selector_Timeout_Ms)
+
+# ################################################################################################################################
+
+def is_report_ok(report:'anydict') -> 'bool':
+    """ Tells whether one resubmit went through.
+    """
+    out = report['is_ok']
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################

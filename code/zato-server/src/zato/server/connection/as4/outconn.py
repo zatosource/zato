@@ -437,12 +437,10 @@ class AS4Wrapper:
 
 # ################################################################################################################################
 
-    def resend(self, cid:'str', candidate:'ResendCandidate') -> 'SendResult':
-        """ Delivers one message again under the eb:MessageId of the attempt it repeats, which is
-        what lets the receiving side recognize it as a message it may already hold.
-
-        The repeat is recorded like any other send, so the attempt is counted and the exchange
-        closes as soon as a receipt for it arrives, whichever attempt earned it.
+    def _deliver_candidate(self, cid:'str', candidate:'ResendCandidate', needs_record:'bool') -> 'SendResult':
+        """ Delivers the payloads of one stored message under the addressing the attempt they come
+        from used. An eb:MessageId carried by the candidate makes this a repeat of that attempt,
+        and no id at all makes it a message of its own.
         """
         self._enforce_is_active()
 
@@ -450,16 +448,44 @@ class AS4Wrapper:
         pmode, send_keystore = self._resend_pmode(candidate, keystore)
         parts = self._resend_parts(candidate.documents)
 
-        logger.info('AS4 resend -> %s; name:%s; message id:%s; attempt:%d; cid:%s',
-            pmode.endpoint_url, self.config['name'], candidate.message_id, candidate.attempt_count + 1, cid)
+        # The endpoint is logged as it resolved, which a connection using discovery looks up per delivery.
+        if candidate.message_id:
+            logger.info('AS4 resend -> %s; name:%s; message id:%s; attempt:%d; cid:%s',
+                pmode.endpoint_url, self.config['name'], candidate.message_id, candidate.attempt_count + 1, cid)
+        else:
+            logger.info('AS4 resubmit -> %s; name:%s; cid:%s', pmode.endpoint_url, self.config['name'], cid)
 
         submitted = self._snapshot(parts)
 
         out = outbound_send(pmode, send_keystore, parts, candidate.conversation_id, client=self.session,
             message_id=candidate.message_id)
 
-        self._record_send(cid, pmode, submitted, out)
+        if needs_record:
+            self._record_send(cid, pmode, submitted, out)
 
+        return out
+
+# ################################################################################################################################
+
+    def resend(self, cid:'str', candidate:'ResendCandidate') -> 'SendResult':
+        """ Delivers one message again under the eb:MessageId of the attempt it repeats, which is
+        what lets the receiving side recognize it as a message it may already hold.
+
+        The repeat is recorded like any other send, so the attempt is counted and the exchange
+        closes as soon as a receipt for it arrives, whichever attempt earned it.
+        """
+        out = self._deliver_candidate(cid, candidate, True)
+        return out
+
+# ################################################################################################################################
+
+    def resubmit(self, cid:'str', candidate:'ResendCandidate') -> 'SendResult':
+        """ Delivers the payloads of a stored message as a message of its own, with an eb:MessageId
+        of its own - the operator action, distinct from the repeat delivery that reuses the id of the
+        attempt it repeats. The caller records the attempt, because what makes it readable as a
+        resubmit is the link to the message it was made from, which only the caller knows.
+        """
+        out = self._deliver_candidate(cid, candidate, False)
         return out
 
 # ################################################################################################################################
