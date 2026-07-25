@@ -55,7 +55,6 @@ if 0:
 
 decryption_candidate_list = list['DecryptionCandidate']
 
-recipientmatchnone = optional['RecipientMatch']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -138,7 +137,7 @@ def _match_recipient(der:'bytes', recipient_infos:'DERElement', keystore:'Keysto
     candidates = _decryption_candidates(keystore)
 
     # Our response to produce
-    out:'recipientmatchnone' = None
+    out:'RecipientMatch | None' = None
 
     for recipient in der_children(der, recipient_infos):
         fields = der_children(der, recipient)

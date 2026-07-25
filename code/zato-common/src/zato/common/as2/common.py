@@ -25,11 +25,11 @@ class AS2Error:
 
     # The additional registry modifiers of the AS2 specification modernization draft,
     # recognized on input as known values.
-    Duplicate_Filename            = 'duplicate-filename'
-    Illegal_Filename              = 'illegal-filename'
-    Invalid_Message_ID            = 'invalid-message-id'
-    Unknown_Trading_Relationship  = 'unknown-trading-relationship'
-    Unknown_Trading_Partner       = 'unknown-trading-partner'
+    Duplicate_Filename           = 'duplicate-filename'
+    Illegal_Filename             = 'illegal-filename'
+    Invalid_Message_ID           = 'invalid-message-id'
+    Unknown_Trading_Relationship = 'unknown-trading-relationship'
+    Unknown_Trading_Partner      = 'unknown-trading-partner'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -75,9 +75,9 @@ class MDNMode:
     """ How the receiver is to deliver its MDN - not at all, on the HTTP response,
     or asynchronously to a separate URL.
     """
-    None_ = 'none'
-    Sync  = 'sync'
-    Async = 'async'
+    Not_Requested = 'none'
+    Sync          = 'sync'
+    Async         = 'async'
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -154,8 +154,9 @@ def record_message_received(
         'mic': mic, 'error': error, 'payloads': payloads}
     data = dumps(details)
 
-    audit_log.insert(AuditSource.AS2, AuditEvent.Message_Received, pair, cid=cid, msg_id=message_id,
-        correl_id=correl_id, outcome=outcome, data=data)
+    values = {'cid': cid, 'msg_id': message_id, 'correl_id': correl_id, 'outcome': outcome, 'data': data}
+
+    audit_log.insert(AuditSource.AS2, AuditEvent.Message_Received, pair, **values)
 
 # ################################################################################################################################
 
@@ -219,21 +220,20 @@ def record_send_result(
     if payloads is None:
         payloads = []
 
-    reconciler.record_message_sent(
-        as2_from,
-        as2_to,
-        result.message_id,
-        mic=result.mic,
-        async_mdn_url=async_mdn_url,
-        cid=cid,
-        correl_id=correl_id,
-        payload=payload,
-        filename=filename,
-        raw_mime=raw_mime,
-        payloads=payloads,
-        delivery_kind=delivery_kind,
-        http_status=result.http_status,
-    )
+    values = {
+        'mic': result.mic,
+        'async_mdn_url': async_mdn_url,
+        'cid': cid,
+        'correl_id': correl_id,
+        'payload': payload,
+        'filename': filename,
+        'raw_mime': raw_mime,
+        'payloads': payloads,
+        'delivery_kind': delivery_kind,
+        'http_status': result.http_status,
+    }
+
+    reconciler.record_message_sent(as2_from, as2_to, result.message_id, **values)
 
     # .. and with no synchronous MDN there is nothing more to record -
     # an asynchronous one arrives later through its own channel.
@@ -298,21 +298,19 @@ def record_inbound_result(audit_log:'AuditLog', result:'InboundResult', body:'by
 
     raw_mime = encode_raw_mime(body)
 
-    record_message_received(
-        audit_log,
-        result.as2_from,
-        result.as2_to,
-        result.message_id,
-        payload=payload,
-        filename=filename,
-        content_type=content_type,
-        cid=cid,
-        raw_mime=raw_mime,
-        mic=result.mic,
-        error=error,
-        outcome=outcome,
-        payloads=payloads,
-    )
+    values = {
+        'payload': payload,
+        'filename': filename,
+        'content_type': content_type,
+        'cid': cid,
+        'raw_mime': raw_mime,
+        'mic': result.mic,
+        'error': error,
+        'outcome': outcome,
+        'payloads': payloads,
+    }
+
+    record_message_received(audit_log, result.as2_from, result.as2_to, result.message_id, **values)
 
     # The MDN that went back, when one was produced at all - it rides on the HTTP response
     # for a synchronous receipt and through its own delivery for an asynchronous one.
@@ -331,19 +329,17 @@ def record_inbound_result(audit_log:'AuditLog', result:'InboundResult', body:'by
 
     mdn_raw_mime = encode_raw_mime(mdn_body)
 
-    record_mdn_sent(
-        audit_log,
-        result.as2_from,
-        result.as2_to,
-        result.message_id,
-        disposition=disposition.disposition_type,
-        modifier_kind=disposition.modifier_kind,
-        modifier=disposition.modifier,
-        mic=result.mic,
-        raw_mime=mdn_raw_mime,
-        cid=cid,
-        outcome=outcome,
-    )
+    values = {
+        'disposition': disposition.disposition_type,
+        'modifier_kind': disposition.modifier_kind,
+        'modifier': disposition.modifier,
+        'mic': result.mic,
+        'raw_mime': mdn_raw_mime,
+        'cid': cid,
+        'outcome': outcome,
+    }
+
+    record_mdn_sent(audit_log, result.as2_from, result.as2_to, result.message_id, **values)
 
 # ################################################################################################################################
 # ################################################################################################################################

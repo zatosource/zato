@@ -150,11 +150,14 @@ def count_attempts(reconciler:'MDNReconciler', message_id:'str') -> 'int':
     events is counting the attempts - which is exactly the state a restart must not lose and
     the reason the count is not held in memory anywhere.
     """
-    statement = select(func.count(event_table.c.id)).where(and_(
+    conditions = and_(
         event_table.c.source == AuditSource.AS2,
         event_table.c.event_type == AuditEvent.Message_Sent,
         event_table.c.msg_id == message_id,
-    ))
+    )
+
+    event_count = func.count(event_table.c.id)
+    statement = select(event_count).where(conditions)
 
     with reconciler.engine.connect() as connection:
         result = connection.execute(statement)
@@ -168,13 +171,14 @@ def _get_stored_documents(reconciler:'MDNReconciler', message_id:'str') -> 'anyl
     """ Returns every document of the most recent attempt at one Message-ID, each as a
     (bytes, content type, filename) tuple - what the next attempt delivers again.
     """
-    statement = select(
-        event_table.c.data,
-    ).where(and_(
+    conditions = and_(
         event_table.c.source == AuditSource.AS2,
         event_table.c.event_type == AuditEvent.Message_Sent,
         event_table.c.msg_id == message_id,
-    )).order_by(event_table.c.id.desc())
+    )
+
+    newest_first = event_table.c.id.desc()
+    statement = select(event_table.c.data).where(conditions).order_by(newest_first)
 
     with reconciler.engine.connect() as connection:
         result = connection.execute(statement)
@@ -253,7 +257,7 @@ def collect_candidates(
     configs:'dictlist',
     now:'datetime',
     server_name:'str',
-    limit:'int'=AS2.Resend.Batch_Size,
+    limit:'int' = AS2.Resend.Batch_Size,
     ) -> 'resend_candidate_list':
     """ Returns the messages whose MDN is overdue and which have attempts left, up to one batch.
 

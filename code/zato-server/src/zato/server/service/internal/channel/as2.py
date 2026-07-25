@@ -24,13 +24,52 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anytuple
     any_ = any_
+    anytuple = anytuple
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _new_secret_flag_fields() -> 'anytuple':
+    """ Returns one boolean output field per keystore secret, telling whether one is stored.
+    """
+    fields = []
+
+    for name in AS2.Secret_Fields:
+        field_name = 'has_' + name
+        field = Boolean(field_name)
+
+        fields.append(field)
+
+    out = tuple(fields)
+    return out
+
+# ################################################################################################################################
+
+def _new_optional_keystore_fields() -> 'anytuple':
+    """ Returns every keystore field as an optional input field, because an edit
+    of the keystore may leave any of them out.
+    """
+    fields = []
+
+    for name in AS2.Keystore_Fields:
+        field_name = '-' + name
+        fields.append(field_name)
+
+    out = tuple(fields)
+    return out
+
+# ################################################################################################################################
+
+# Built once, because the service classes read them while they are being defined.
+_secret_flag_fields = _new_secret_flag_fields()
+_optional_keystore_fields = _new_optional_keystore_fields()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -103,13 +142,14 @@ class GetKeystore(_KeystoreService):
 
     name = 'zato.channel.as2.keystore.get'
 
-    output = ('id', 'name', 'as2_signing_cert_chain', 'as2_next_decryption_cert') + \
-        tuple(Boolean('has_' + name) for name in AS2.Secret_Fields)
+    output = ('id', 'name', 'as2_signing_cert_chain', 'as2_next_decryption_cert') + _secret_flag_fields
 
     def handle(self) -> 'None':
 
         # The channel lives in the external AS2/AS4 database when one is configured.
-        with closing(self.server.get_config_session(object_type=URL_TYPE.AS2)) as session:
+        config_session = self.server.get_config_session(object_type=URL_TYPE.AS2)
+
+        with closing(config_session) as session:
 
             item = self._get_as2_channel(session)
             opaque = parse_instance_opaque_attr(item)
@@ -126,7 +166,11 @@ class GetKeystore(_KeystoreService):
 
             # .. and the private keys are reported only as flags saying whether one is stored.
             for name in AS2.Secret_Fields:
-                setattr(self.response.payload, 'has_' + name, bool(opaque.get(name)))
+                flag_name = 'has_' + name
+                secret = opaque.get(name)
+                has_secret = bool(secret)
+
+                setattr(self.response.payload, flag_name, has_secret)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -140,7 +184,7 @@ class EditKeystore(_KeystoreService):
 
     name = 'zato.channel.as2.keystore.edit'
 
-    input = tuple('-' + name for name in AS2.Keystore_Fields)
+    input = _optional_keystore_fields
     output = '-id', '-name'
 
     def handle(self) -> 'None':
@@ -148,7 +192,9 @@ class EditKeystore(_KeystoreService):
         input = self.request.input
 
         # The channel lives in the external AS2/AS4 database when one is configured.
-        with closing(self.server.get_config_session(object_type=URL_TYPE.AS2)) as session:
+        config_session = self.server.get_config_session(object_type=URL_TYPE.AS2)
+
+        with closing(config_session) as session:
 
             item = self._get_as2_channel(session)
             opaque = parse_instance_opaque_attr(item)

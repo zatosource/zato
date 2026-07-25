@@ -69,8 +69,8 @@ def parse_mdn_request(headers:'strstrdict') -> 'MDNRequest':
 
             if name == 'signed-receipt-protocol':
                 if values:
-                    first_value = values[0]
-                    out.signed_receipt_protocol = first_value.lower()
+                    protocol = values[0]
+                    out.signed_receipt_protocol = protocol.lower()
                     out.requests_signed_mdn = True
 
             elif name == 'signed-receipt-micalg':

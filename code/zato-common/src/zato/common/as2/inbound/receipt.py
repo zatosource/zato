@@ -23,13 +23,13 @@ from zato.common.typing_ import cast_
 # ################################################################################################################################
 
 if 0:
-    from zato.common.as2.inbound.common import InboundResult, keystorenone, partnershipnone
+    from zato.common.as2.inbound.common import InboundResult
     from zato.common.as2.mdn import Disposition, MDNRequest
     from zato.common.as2.partnership import Partnership
-    keystorenone = keystorenone
-    partnershipnone = partnershipnone
+    from zato.common.util.xml_.keystore import Keystore
     Disposition = Disposition
     InboundResult = InboundResult
+    Keystore = Keystore
     MDNRequest = MDNRequest
     Partnership = Partnership
 
@@ -48,7 +48,7 @@ _allowed_async_mdn_schemes = ('http', 'https')
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _is_async_mdn_url_allowed(partnership:'partnershipnone', url:'str') -> 'bool':
+def _is_async_mdn_url_allowed(partnership:'Partnership | None', url:'str') -> 'bool':
     """ Tells whether an asynchronous MDN may be delivered to the URL the sender named.
 
     The destination arrives in the sender's Receipt-Delivery-Option header, which means an
@@ -89,8 +89,8 @@ def attach_mdn(
     request:'MDNRequest',
     disposition:'Disposition',
     mic:'str',
-    keystore:'keystorenone',
-    partnership:'partnershipnone' = None,
+    keystore:'Keystore | None',
+    partnership:'Partnership | None' = None,
     ) -> 'None':
     """ Builds the MDN a message calls for and places it on the result - on the HTTP response
     for a synchronous one, as a pending delivery for an asynchronous one. Positive and negative

@@ -55,6 +55,9 @@ logger = getLogger(__name__)
 # that serializes itself, the way X12 and EDIFACT interchange objects do.
 as2_payload:TypeAlias = 'str | send_payload'
 
+# The flat configuration one Dashboard-managed connection is described by.
+as2_config_defaults = dict[str, object]
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -73,7 +76,7 @@ _as2_block_timeout = 30
 
 # Defaults applied by the config manager when the create path does not supply a field,
 # e.g. when an outconn is created directly through zato.generic.connection.create.
-outconn_as2_config_defaults:'dict[str, object]' = {
+outconn_as2_config_defaults:'as2_config_defaults' = {
 
     # The AS2 identities and the partner's EDI addressing.
     'as2_from': '',
@@ -184,10 +187,12 @@ class _AS2Connection:
             self.partnership.http_auth = http_auth
 
         # One HTTP client is shared by all exchanges over this connection.
-        self.http_client = httpx.Client(
-            verify=self.partnership.verify_tls,
-            timeout=self.partnership.http_timeout_seconds,
-        )
+        options = {
+            'verify': self.partnership.verify_tls,
+            'timeout': self.partnership.http_timeout_seconds,
+        }
+
+        self.http_client = httpx.Client(**options)
 
 # ################################################################################################################################
 
@@ -195,11 +200,11 @@ class _AS2Connection:
         self,
         cid:'str',
         payload:'as2_payload',
-        filename:'strnone'=None,
+        filename:'strnone' = None,
         *,
-        needs_audit:'bool'=True,
-        message_id:'strnone'=None,
-        delivery_kind:'str'=DeliveryKind.Original,
+        needs_audit:'bool' = True,
+        message_id:'strnone' = None,
+        delivery_kind:'str' = DeliveryKind.Original,
         ) -> 'SendResult':
         """ Delivers one AS2 message to the partnership's endpoint and reconciles
         the synchronous MDN when one was requested. Every delivery is recorded
@@ -254,18 +259,16 @@ class _AS2Connection:
 
             reconciler = MDNReconciler(self.server_name)
 
-            record_send_result(
-                reconciler,
-                self.partnership.as2_from,
-                self.partnership.as2_to,
-                out,
-                payload=clear_payload,
-                filename=stored_filename,
-                async_mdn_url=self.partnership.async_mdn_url,
-                cid=cid,
-                payloads=payloads,
-                delivery_kind=delivery_kind,
-            )
+            values = {
+                'payload': clear_payload,
+                'filename': stored_filename,
+                'async_mdn_url': self.partnership.async_mdn_url,
+                'cid': cid,
+                'payloads': payloads,
+                'delivery_kind': delivery_kind,
+            }
+
+            record_send_result(reconciler, self.partnership.as2_from, self.partnership.as2_to, out, **values)
 
         # A delivery whose MDN did not reconcile is worth a warning in the log,
         # while the result itself carries everything the caller needs to react.
@@ -343,8 +346,10 @@ class OutconnAS2Wrapper(Wrapper):
         # A genuinely broad boundary - building a connection parses user-pasted PEM material
         # and decrypts keys, and any failure here must not break the connection pool.
         except Exception:
-            logger.warning('Caught an exception while adding an AS2 client (%s); e:`%s`',
-                self.config['name'], format_exc())
+            name = self.config['name']
+            exception_text = format_exc()
+
+            logger.warning('Caught an exception while adding an AS2 client (%s); e:`%s`', name, exception_text)
 
 # ################################################################################################################################
 
@@ -352,11 +357,11 @@ class OutconnAS2Wrapper(Wrapper):
         self,
         cid:'str',
         payload:'as2_payload',
-        filename:'strnone'=None,
+        filename:'strnone' = None,
         *,
-        needs_audit:'bool'=True,
-        message_id:'strnone'=None,
-        delivery_kind:'str'=DeliveryKind.Original,
+        needs_audit:'bool' = True,
+        message_id:'strnone' = None,
+        delivery_kind:'str' = DeliveryKind.Original,
         ) -> 'SendResult':
         """ Delivers one AS2 message through a pooled connection, blocking to cover
         the window while the connection queue is still being built at startup.
