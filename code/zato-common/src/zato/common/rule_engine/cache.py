@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from copy import deepcopy
-from logging import getLogger
 
 # rule-engine
 from rule_engine.ast import ExpressionBase, LogicExpression
@@ -22,13 +21,8 @@ from zato.common.rule_engine.models import MatchResult
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, dict_
+    from zato.common.typing_ import any_, anydict, dict_
     from zato.common.rule_engine.models import Rule
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -238,101 +232,6 @@ class CachedRule:
         except Exception as e:
             # A value that cannot be evaluated is a loud readable error, never a silent non-match.
             raise build_evaluation_error(self.name, e) from e
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def identify_common_expressions(rules:'dict_[str, Rule]') -> 'list[str]':
-    """ Identify common expressions across all rules.
-    """
-    expression_count = {}
-
-    for rule in rules.values():
-        # Extract expressions from the rule
-        expressions = _extract_expressions(rule.when_impl.statement.expression)
-
-        # Count occurrences of each expression
-        for expr in expressions:
-            expr_str = str(expr)
-            expression_count[expr_str] = expression_count.get(expr_str, 0) + 1
-
-    # Return the most common expressions (those that appear in multiple rules)
-    result = []
-
-    # Sort expressions by frequency (most common first)
-    def get_count(item:'any_') -> 'int':
-        """ Get the count from an item tuple.
-        """
-        return item[1]
-
-    sorted_expressions = sorted(expression_count.items(), key=get_count, reverse=True)
-
-    # Add expressions that appear in multiple rules to the result
-    for expr, count in sorted_expressions:
-        if count > 1:
-            result.append(expr)
-
-    return result
-
-def _extract_expressions(expression:'any_') -> 'anylist':
-    """ Extract all subexpressions from an expression tree.
-    """
-    result = [expression]
-
-    # If this is a compound expression, also extract its components
-    if hasattr(expression, 'left') and hasattr(expression, 'right'):
-        result.extend(_extract_expressions(expression.left))
-        result.extend(_extract_expressions(expression.right))
-
-    return result
-
-def precompute_common_expressions(common_expressions:'list[str]', data:'anydict', cache:'dict_[str, any_]') -> 'None':
-    """ Precompute results for common expressions.
-    """
-    # This is a placeholder implementation
-    # In a real implementation, we would need to convert the expression strings
-    # back to expression objects and evaluate them
-
-    # For now, we'll just log that this function was called
-    from logging import getLogger
-    logger = getLogger(__name__)
-    logger.info(f'Precomputing {len(common_expressions)} common expressions')
-
-def _extract_field_names(expression:'any_') -> 'set[str]':
-    """ Extract all field names accessed by an expression.
-    """
-    field_names = set()
-
-    # If this is a field reference, add it
-    if hasattr(expression, 'attribute') and hasattr(expression, 'thing'):
-        if expression.thing == 'self' and isinstance(expression.attribute, str):
-            field_names.add(expression.attribute)
-
-    # If this has left and right components, process them recursively
-    if hasattr(expression, 'left'):
-        field_names.update(_extract_field_names(expression.left))
-
-    if hasattr(expression, 'right'):
-        field_names.update(_extract_field_names(expression.right))
-
-    return field_names
-
-def build_field_index(rules:'dict_[str, Rule]') -> 'dict_[str, set[str]]':
-    """ Build an index of rules by the fields they access.
-    """
-    field_to_rules = {}
-
-    for rule_name, rule in rules.items():
-        # Extract all fields accessed by this rule
-        fields = _extract_field_names(rule.when_impl.statement.expression)
-
-        # Add this rule to the index for each field it accesses
-        for field in fields:
-            if field not in field_to_rules:
-                field_to_rules[field] = set()
-            field_to_rules[field].add(rule_name)
-
-    return field_to_rules
 
 # ################################################################################################################################
 # ################################################################################################################################

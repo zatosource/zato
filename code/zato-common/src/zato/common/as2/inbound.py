@@ -306,6 +306,27 @@ def _attach_mdn(
 
 # ################################################################################################################################
 
+def _enforce_security_policy(partnership:'Partnership', is_signed:'bool', is_encrypted:'bool') -> 'None':
+    """ Rejects a message that arrived with fewer security layers than the partnership requires.
+    Without this check the layers that happened to arrive would be the only ones enforced, so a
+    partnership configured for signing and encryption would accept an unsigned plaintext POST from
+    anyone able to reach the channel URL and guess the AS2-From/AS2-To pair - and that pair is in
+    every message the partner sends, so it is not a secret.
+    """
+    # The partnership's own signing and encryption settings describe the relationship,
+    # not just what we send, so inbound holds the peer to the same terms.
+    if partnership.sign:
+        if not is_signed:
+            raise AS2ProtocolException(
+                AS2Error.Insufficient_Message_Security, 'The partnership requires a signed message')
+
+    if partnership.encrypt:
+        if not is_encrypted:
+            raise AS2ProtocolException(
+                AS2Error.Insufficient_Message_Security, 'The partnership requires an encrypted message')
+
+# ################################################################################################################################
+
 def _process_layers(
     result:'InboundResult',
     part:'SMIMEPart',
@@ -321,6 +342,16 @@ def _process_layers(
     signed_content = b''
     decrypted_content = b''
     compressed_content = b''
+
+    # Which layers actually arrived, tracked apart from the captured bytes above because
+    # a layer wrapping empty content is still a layer that arrived.
+    is_signed = False
+    is_encrypted = False
+
+    # How many layers have been unwrapped so far - each iteration below removes one layer
+    # and may reveal another, so without a ceiling a peer could stack them without limit
+    # and multiply the work of every unwrapping step, all before any trust decision is made.
+    depth = 0
 
     # The partner's rotation list - during an overlap window it holds more than one
     # certificate and a signature from any of them is accepted.

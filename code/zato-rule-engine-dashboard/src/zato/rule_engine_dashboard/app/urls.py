@@ -18,6 +18,12 @@ from zato.rule_engine_dashboard.app.views import auth, decisions, editor, events
 
 urlpatterns = [
 
+    # The root path leads to the rulesets home screen
+    path('', screens.home, name='home'),
+
+    # Static files, served by the application itself
+    path('static/<path:path>', screens.static_file, name='static-file'),
+
     # Sign-in and sign-out
     path('login/', auth.login, name='login'),
     path('login/callback/', auth.login_callback, name='login-callback'),
