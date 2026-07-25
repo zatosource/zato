@@ -18,12 +18,12 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.views import method_allowed
 from zato.common.audit_log.api import Retention_Days
-from zato.common.audit_log.reports import ack_discipline_csv, get_ack_discipline, get_outcomes, get_volume, outcomes_csv, \
-     volume_csv, Default_Range, Range_Day, Range_Hours, Range_Month, Range_Week
+from zato.common.audit_log.reports import ack_discipline_csv, Default_Range, get_ack_discipline, get_outcomes, \
+     get_volume, outcomes_csv, Range_Day, Range_Hours, Range_Month, Range_Week, volume_csv
 from zato.common.defaults import default_cluster_id
 from zato.common.util.api import utcnow
-from zato.x12.control import ControlNumberStore, Kind_Group, Kind_Interchange, Kind_Transaction_Set, Max_Control_Number, \
-     get_control_db_path
+from zato.x12.control import ControlNumberStore, get_control_db_path, Kind_Group, Kind_Interchange, \
+     Kind_Transaction_Set, Max_Control_Number
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -79,7 +79,8 @@ def control_numbers(req:'any_') -> 'TemplateResponse':
     rows:'anylist' = []
 
     # The store lives in a file shared with the servers - the listing is read directly from it.
-    store = ControlNumberStore(get_control_db_path())
+    control_db_path = get_control_db_path()
+    store = ControlNumberStore(control_db_path)
 
     try:
         for item in store.get_sequences():
@@ -129,12 +130,20 @@ def set_next(req:'any_') -> 'JsonResponse':
     is_too_small = next_number < 1
     is_too_big = next_number > Max_Control_Number
 
-    if is_too_small or is_too_big:
+    if is_too_small:
+        is_out_of_range = True
+    else:
+        is_out_of_range = is_too_big
+
+    if is_out_of_range:
         message = f'Next number must be between 1 and {Max_Control_Number}'
-        out = JsonResponse({'is_ok': False, 'message': message}, status=BAD_REQUEST)
+        response_data = {'is_ok': False, 'message': message}
+        out = JsonResponse(response_data, status=BAD_REQUEST)
+
         return out
 
-    store = ControlNumberStore(get_control_db_path())
+    control_db_path = get_control_db_path()
+    store = ControlNumberStore(control_db_path)
 
     try:
         store.set_next(sender, receiver, kind, next_number)
