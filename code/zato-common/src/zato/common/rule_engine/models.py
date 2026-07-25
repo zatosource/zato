@@ -18,11 +18,13 @@ from rule_engine import Rule as RuleImpl
 from zato.common.marshal_.api import Model
 from zato.common.rule_engine.document import compile_when, resolve_actions, resolve_defaults
 from zato.common.rule_engine.errors import build_evaluation_error
+from zato.common.rule_engine.evaluation import evaluate_ruleset, RulesetOutcome
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from zato.common.rule_engine.cache import CachedRule
     from zato.common.typing_ import anydict, dict_, dictlist, strdict
 
 # ################################################################################################################################
@@ -70,7 +72,7 @@ class Rule(Model):
 
 # ################################################################################################################################
 
-    def _apply_defaults(self, data:'anydict') -> 'anydict':
+    def apply_defaults(self, data:'anydict') -> 'anydict':
         """ Returns data with any missing default values filled in, copying only when needed.
         """
 
@@ -99,7 +101,7 @@ class Rule(Model):
     def match(self, data:'anydict') -> 'MatchResult':
 
         # Fill in defaults for any keys the input does not provide ..
-        match_data = self._apply_defaults(data)
+        match_data = self.apply_defaults(data)
 
         # .. evaluate our rule with the appropriate data, turning a missing value or
         # .. a type mismatch into a loud readable error instead of a silent non-match ..
@@ -164,10 +166,16 @@ def rule_from_document(document:'anydict') -> 'Rule | None':
 class Ruleset(Model):
     name: 'str'
     _rules: 'dict_[str, Rule]'
+    _cached_rules: 'dict_[str, CachedRule]'
 
     def __init__(self, name:'str') -> 'None':
         self.name = name
+
+        # Each rule is held in both forms its two doors need - the plain rule that a caller
+        # naming one rule gets back, and the cached one that the ruleset answer evaluates
+        # through, because only that form can share a condition cache across rules.
         self._rules = {}
+        self._cached_rules = {}
 
     def __getitem__(self, name:'str') -> 'Rule':
         return getattr(self, name)
@@ -181,26 +189,26 @@ class Ruleset(Model):
 
 # ################################################################################################################################
 
-    def add_rule(self, rule:'Rule') -> 'None':
+    def add_rule(self, rule:'Rule', cached_rule:'CachedRule') -> 'None':
         self._rules[rule.full_name] = rule
+        self._cached_rules[rule.full_name] = cached_rule
 
 # ################################################################################################################################
 
     def delete_rule(self, full_name:'str') -> 'None':
         _ = self._rules.pop(full_name, None)
+        _ = self._cached_rules.pop(full_name, None)
 
 # ################################################################################################################################
 
-    def match(self, data:'anydict') -> 'MatchResult | None':
+    def match(self, data:'anydict') -> 'RulesetOutcome':
+        """ Returns what this ruleset decides for one input, merging every rule that fires.
 
-        # Go through all the rules we have ..
-        for rule in self._rules.values():
-
-            # .. if we have a match ..
-            if match_result := rule.match(data):
-
-                # .. return it to our caller.
-                return match_result
+        This is the same answer the REST door gives for the same input, from the same core,
+        so a ruleset cannot decide one thing for a service in process and another over HTTP.
+        """
+        out = evaluate_ruleset(self._cached_rules.values(), data)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

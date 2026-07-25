@@ -13,9 +13,9 @@ from http.client import BAD_REQUEST
 from django.http import JsonResponse
 
 # Zato
+from zato.common.rule_engine.scenarios import promote_actual, run_test_set, validate_test_set
 from zato.common.rule_engine.simulation import champion_challenger, simulate, validate_kpis
 from zato.common.rule_engine.sql.constants import Definition_Type_Test_Set, Event_Type_Test_Run
-from zato.common.rule_engine.testing import promote_actual, run_test_set, validate_test_set
 from zato.rule_engine_dashboard.app.storage import get_backend
 from zato.rule_engine_dashboard.app.views.api import definition_row, json_api, read_int, read_json, required, \
     ruleset_documents, serialize_all

@@ -62,6 +62,23 @@ def _get_table() -> 'anydict':
     return out
 
 # ################################################################################################################################
+
+def _get_table_with_override() -> 'anydict':
+    """ The same table with column 1 declared as overriding column 0.
+
+    Column 0 also gains a target no other column assigns, so whether it fired is visible
+    in the outcome and not only in the trace.
+    """
+    out = _get_table()
+    out['actions'].append({'target': 'fee'})
+
+    columns = out['columns']
+    columns[0]['actions']['fee'] = '15.0'
+    columns[1]['overrides'] = [0]
+
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestCompileTable(unittest.TestCase):
@@ -247,6 +264,82 @@ class TestCompiledTableRuns(unittest.TestCase):
         result = manager['Loan_approval_column_0'].match({})
         self.assertTrue(result)
         self.assertEqual(result.then['rate'], 4.5)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestDeclaredOverrides(unittest.TestCase):
+    """ Tests that a declared override decides what fires, not only what the conflict report says.
+    """
+
+    def setUp(self) -> 'None':
+        self.table = _get_table_with_override()
+        self.documents = compile_table(self.table)
+
+        manager = RulesManager()
+        _ = manager.load_parsed_rules(self.documents, 'Loan_approval')
+
+        self.ruleset = manager['Loan_approval']
+
+# ################################################################################################################################
+
+    def test_overridden_column_carries_the_guard(self) -> 'None':
+        """ The overridden column carries the overriding column's own conditions as one guard.
+        """
+        document = self.documents['Loan_approval_column_0']
+        guards = document['unless']
+
+        self.assertEqual(len(guards), 1)
+
+        guard = guards[0]
+        self.assertEqual(len(guard), 2)
+
+        # The guard is the overriding column's cells, without the filter that already gates column 0.
+        self.assertEqual(guard[0]['subject'], 'credit_score')
+        self.assertEqual(guard[1]['subject'], 'category')
+
+# ################################################################################################################################
+
+    def test_overriding_column_carries_no_guard(self) -> 'None':
+        """ A column no other column overrides compiles without any guard at all.
+        """
+        document = self.documents['Loan_approval_column_1']
+        self.assertNotIn('unless', document)
+
+# ################################################################################################################################
+
+    def test_overridden_column_stays_silent_while_the_override_matches(self) -> 'None':
+        """ A top customer fires the overriding column alone - the overridden one contributes nothing.
+        """
+        data = {'amount': 1000, 'credit_score': 720, 'category': 'Gold'}
+        outcome = self.ruleset.match(data)
+
+        fired = []
+        for entry in outcome.fired:
+            fired.append(entry['rule'])
+
+        self.assertListEqual(fired, ['Loan_approval_column_1'])
+
+        # The fee only column 0 assigns is absent, which is what an override has to mean.
+        self.assertNotIn('fee', outcome.then)
+        self.assertEqual(outcome.then['rate'], 2.9)
+
+# ################################################################################################################################
+
+    def test_overridden_column_fires_when_the_override_does_not_match(self) -> 'None':
+        """ Input the overriding column does not match leaves the overridden one firing as before.
+        """
+        data = {'amount': 1000, 'credit_score': 600, 'category': 'Standard'}
+        outcome = self.ruleset.match(data)
+
+        fired = []
+        for entry in outcome.fired:
+            fired.append(entry['rule'])
+
+        self.assertListEqual(fired, ['Loan_approval_column_0'])
+
+        self.assertEqual(outcome.then['fee'], 15.0)
+        self.assertEqual(outcome.then['rate'], 4.5)
 
 # ################################################################################################################################
 # ################################################################################################################################

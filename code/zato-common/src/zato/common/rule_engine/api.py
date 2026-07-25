@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato - import all components and re-export them
 from zato.common.rule_engine.models import Ruleset, MatchResult, Rule, rule_from_document
 from zato.common.rule_engine.cache import CachedRule
+from zato.common.rule_engine.evaluation import first_matching_rule
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -81,38 +82,41 @@ class RulesManager:
         else:
             raise AttributeError(f'No such rule, ruleset or attribute -> {name}')
 
-    def match(self, data:'strdict', rules:'any_') -> 'MatchResult | None':
-        """ Match data against rules with condition caching.
-        """
-        # Create a cache for this matching cycle
-        condition_cache = {}  # type: dict_[str, any_]
+    def match_first(self, data:'strdict', rules:'any_') -> 'MatchResult | None':
+        """ Returns the first of the named rules that matches, with condition caching.
 
+        This is the explicit-list question, not the ruleset answer - a caller who wants what a
+        whole ruleset decides asks `Ruleset.match`, which merges every rule that fires instead.
+        """
         # Track performance
         start_time = time()
 
         # Determine which rules to check
         rule_names = [rules] if isinstance(rules, str) else rules
 
-        # Check each rule
+        cached_rules = []
         for rule_name in rule_names:
             cached_rule = self.cached_rules.get(rule_name)
-            if cached_rule:
-                result = cached_rule.match(data, condition_cache)
-                if result:
-                    # Update performance stats
-                    self._update_stats(condition_cache, cached_rule, start_time)
-                    return result
-            else:
-                # Fall back to original rule if cached version not available
-                rule = self[rule_name]
-                if result := rule.match(data):
-                    return result
 
-        # No match found
-        self._update_stats(condition_cache, None, start_time)
-        return None
+            # Every loaded rule has its cached form, so a name without one is the name of no rule,
+            # and saying so is more useful than quietly checking one rule fewer.
+            if cached_rule is None:
+                raise AttributeError(f'No such rule -> {rule_name}')
 
-    def _update_stats(self, condition_cache:'dict_[str, any_]', cached_rule:'CachedRule | None'=None, start_time:'float'=0) -> 'None':
+            cached_rules.append(cached_rule)
+
+        out = first_matching_rule(cached_rules, data)
+
+        # The statistics follow the rule that answered, and there is none when nothing matched.
+        if out:
+            matched_rule = self.cached_rules[out.full_name]
+        else:
+            matched_rule = None
+
+        self._update_stats(matched_rule, start_time)
+        return out
+
+    def _update_stats(self, cached_rule:'CachedRule | None', start_time:'float') -> 'None':
         """ Update performance statistics.
         """
         self.performance_stats['total_evaluations'] += 1
@@ -190,11 +194,12 @@ class RulesManager:
             # .. we can now add it to the global dict ..
             self._all_rules[rule.full_name] = rule
 
-            # .. add it to the ruleset as well ..
-            ruleset.add_rule(rule)
-
             # Create a cached version of the rule
-            self.cached_rules[rule.full_name] = CachedRule(rule)
+            cached_rule = CachedRule(rule)
+            self.cached_rules[rule.full_name] = cached_rule
+
+            # .. add both forms to the ruleset as well ..
+            ruleset.add_rule(rule, cached_rule)
 
             # .. append it for later use ..
             out.append(rule.full_name)

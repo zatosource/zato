@@ -13,10 +13,11 @@ import json
 from django.http import JsonResponse
 
 # Zato
+from zato.common.rule_engine.evaluation import evaluate_input
+from zato.common.rule_engine.loading import load_documents
 from zato.common.rule_engine.render import render_documents
 from zato.common.rule_engine.sql.constants import Documents_Key
 from zato.common.rule_engine.sql.data import DecisionFilter
-from zato.common.rule_engine.testing import evaluate_input, load_documents
 from zato.rule_engine_dashboard.app.storage import get_backend
 from zato.rule_engine_dashboard.app.views.api import BadRequestError, decision_row, json_api, read_int, read_json, \
     read_time, required, ruleset_documents, serialize_all, version_row

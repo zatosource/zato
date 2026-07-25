@@ -84,7 +84,7 @@ class TestNoSilentNulls(unittest.TestCase):
         """ The cached evaluation path raises the same readable error as the plain one.
         """
         with self.assertRaises(RuleEvaluationError) as ctx:
-            _ = self.manager.match({'channel': 'email'}, ['nulls_Score_check'])
+            _ = self.manager.match_first({'channel': 'email'}, ['nulls_Score_check'])
 
         self.assertEqual(ctx.exception.rule_name, 'nulls_Score_check')
         self.assertIn("the input has no value for 'credit_score'", str(ctx.exception))

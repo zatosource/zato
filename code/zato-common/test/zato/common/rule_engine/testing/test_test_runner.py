@@ -12,7 +12,7 @@ import unittest
 # Zato
 from zato.common.rule_engine.parser import parse_data_details
 from zato.common.rule_engine.table_compile import compile_table
-from zato.common.rule_engine.testing import DiffStatus, ScenarioStatus, promote_actual, run_test_set, validate_test_set
+from zato.common.rule_engine.scenarios import DiffStatus, ScenarioStatus, promote_actual, run_test_set, validate_test_set
 from zato.common.rule_engine.vocabulary import ErrorCode
 
 # ################################################################################################################################

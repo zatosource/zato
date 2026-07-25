@@ -14,13 +14,13 @@ from zato.common.rule_engine.ingestion import DecisionRecorder, Outcome
 from zato.common.rule_engine.parser import parse_data_details
 from zato.common.rule_engine.sql import CapturePolicy, RuleDefinitionRecord, RuleSQLBackend
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Documents_Key
-from zato.common.rule_engine.testing import load_documents
+from zato.common.rule_engine.loading import load_documents
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.rule_engine.testing import LoadedRules
+    from zato.common.rule_engine.loading import LoadedRules
     from zato.common.typing_ import anydict
 
 # ################################################################################################################################
