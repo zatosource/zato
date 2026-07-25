@@ -42,12 +42,10 @@ _uuid_size_bits = 128
 # taken from a message.
 QName_Cache_Size = 4096
 
-# The one hardened parser every XML parse in the SOAP family goes through. Each setting closes
-# a specific attack: resolve_entities stops XXE and billion-laughs expansion, no_network stops
-# the parser reaching out to fetch anything a document names, load_dtd stops an inline or
-# external DTD from being processed at all, and huge_tree keeps libxml2's depth and size guards
-# in place. Callers must not build their own parser - a parse that skips these settings is a
-# file-read and denial-of-service hole on any path that sees untrusted input.
+# The one parser every XML parse in the SOAP family goes through. Entity references are not
+# substituted, nothing a document names is fetched, no DTD is processed whether inline or external,
+# and libxml2's own depth, size and amplification limits stay in place. Callers must not build their
+# own parser.
 #
 # An lxml parser instance is not thread-safe. Zato runs one OS thread per worker and everything
 # above it is greenlets, which are cooperatively scheduled and therefore never re-enter a parse,
@@ -61,16 +59,8 @@ def parse_xml(data:'strbytes') -> 'any_':
     """ Parses untrusted XML and returns its root element. Every parse in the SOAP family goes
     through here rather than calling lxml directly.
 
-    Two things happen, and both have to. The parse itself uses the hardened parser above, which is
-    what stops an entity from reading a file or reaching the network and what lets libxml2's
-    amplification guard refuse an entity-expansion bomb. Then the document is refused outright if it
-    carries a document type declaration at all.
-
-    The second check is not redundant. Leaving entity references unresolved defeats the attack but
-    still accepts the document, and a DTD in a message is worth nothing to a receiver even when it is
-    harmless - both SOAP 1.1 and SOAP 1.2 forbid one outright. Refusing it closes the whole class at
-    the door instead of relying on each individual expansion being declined, and it is the answer the
-    specification asks for anyway.
+    The parse uses the shared parser above, and the document is then refused if it carries a document
+    type declaration. Both SOAP 1.1 and SOAP 1.2 forbid one in a message.
     """
     try:
         out = etree.fromstring(data, xml_parser)

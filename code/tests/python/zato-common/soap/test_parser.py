@@ -23,25 +23,23 @@ from zato.common.util.xml_.wssec import add_saml_token
 # ################################################################################################################################
 # ################################################################################################################################
 
-# What an attacker is trying to read out of the process. A real payload names a file such as
-# /etc/passwd, however a test that asserts on that is asserting on the host it happens to run on,
-# so the test writes its own file and looks for its own marker.
-_secret_marker = 'ZATO-XXE-TEST-SECRET'
+# The contents of the file the documents below name in an entity declaration. The test writes its own
+# file rather than naming one belonging to the host it happens to run on.
+_external_file_marker = 'zato-external-file-contents'
 
-# An address nothing listens on. A parse that reaches out to it either blocks or fails, and both
-# say the parser tried, which is what the test is checking it does not do.
-_unreachable_url = 'http://127.0.0.1:1/attacker-controlled.dtd'
+# An address nothing listens on. A parse that reached out to it would block or raise a connection
+# error rather than the exception these tests assert on.
+_unreachable_url = 'http://127.0.0.1:1/declared-external.dtd'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @pytest.fixture(scope='module')
-def secret_file():
-    """ A file on disk with a known marker in it, standing in for whatever an external entity
-    would otherwise read out of the filesystem.
+def external_file():
+    """ A file on disk with a known marker in it, named by the entity declarations below.
     """
     with NamedTemporaryFile('w', suffix='.txt', delete=False) as f:
-        _ = f.write(_secret_marker)
+        _ = f.write(_external_file_marker)
         path = f.name
 
     yield path
@@ -64,30 +62,29 @@ def _envelope_with_doctype(doctype:'str', body:'str'='<op/>') -> 'bytes':
 
 # ################################################################################################################################
 
-def _billion_laughs() -> 'bytes':
-    """ The classic entity-expansion bomb - nine levels of tenfold expansion, so one reference
-    to the outermost entity expands to a billion copies of a three-character string.
+def _nested_entity_expansion() -> 'bytes':
+    """ Nine levels of tenfold entity expansion - one reference to the outermost entity names a
+    billion copies of a three-character string.
     """
-    entities = ['<!ENTITY lol "lol">']
+    entities = ['<!ENTITY level "abc">']
 
     for level in range(1, 10):
-        inner = 'lol' if level == 1 else f'lol{level - 1}'
+        inner = 'level' if level == 1 else f'level{level - 1}'
         references = f'&{inner};' * 10
-        entities.append(f'<!ENTITY lol{level} "{references}">')
+        entities.append(f'<!ENTITY level{level} "{references}">')
 
     declarations = '\n '.join(entities)
-    doctype = f'<!DOCTYPE lolz [\n {declarations}\n]>'
+    doctype = f'<!DOCTYPE root [\n {declarations}\n]>'
 
-    out = _envelope_with_doctype(doctype, '<op><data>&lol9;</data></op>')
+    out = _envelope_with_doctype(doctype, '<op><data>&level9;</data></op>')
     return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class TestDocumentTypeDeclarations:
-    """ Both SOAP 1.1 and SOAP 1.2 forbid a document type declaration in a message, and refusing
-    one at the parse is what closes the whole entity-attack class rather than declining each
-    expansion individually.
+    """ Both SOAP 1.1 and SOAP 1.2 forbid a document type declaration in a message, so parse_xml
+    refuses one whatever it declares.
     """
 
     def test_internal_dtd_is_refused(self):
@@ -122,36 +119,32 @@ class TestDocumentTypeDeclarations:
 # ################################################################################################################################
 
 class TestExternalEntities:
-    """ An external entity is the way a message reads a file off the receiver's disk or makes the
-    receiver issue a request on the attacker's behalf.
+    """ Entity declarations naming a file or a URL, in the forms the parse rules cover.
     """
 
-    def test_a_file_entity_cannot_read_the_filesystem(self, secret_file):
-        doctype = f'<!DOCTYPE root [ <!ENTITY xxe SYSTEM "file://{secret_file}"> ]>'
-        data = _envelope_with_doctype(doctype, '<op><data>&xxe;</data></op>')
+    def test_a_file_entity_does_not_read_the_filesystem(self, external_file):
+        doctype = f'<!DOCTYPE root [ <!ENTITY declared SYSTEM "file://{external_file}"> ]>'
+        data = _envelope_with_doctype(doctype, '<op><data>&declared;</data></op>')
 
         with pytest.raises(XMLException):
             _ = parse_xml(data)
 
-        # Belt and braces - the document is refused, so nothing was read, but a future change that
-        # relaxed the doctype rule must still not resolve the entity.
-        assert _secret_marker not in data.decode('utf8')
+        # The marker is in the file the declaration names, never in the document itself.
+        assert _external_file_marker not in data.decode('utf8')
 
-    def test_an_http_entity_cannot_reach_the_network(self):
-        doctype = f'<!DOCTYPE root [ <!ENTITY xxe SYSTEM "{_unreachable_url}"> ]>'
-        data = _envelope_with_doctype(doctype, '<op><data>&xxe;</data></op>')
+    def test_an_http_entity_does_not_reach_the_network(self):
+        doctype = f'<!DOCTYPE root [ <!ENTITY declared SYSTEM "{_unreachable_url}"> ]>'
+        data = _envelope_with_doctype(doctype, '<op><data>&declared;</data></op>')
 
-        # Were the parser to fetch this, the call would either hang or raise a connection error
-        # rather than the exception the declaration itself earns.
         with pytest.raises(XMLException) as e:
             _ = parse_xml(data)
 
         assert 'Document type declarations are not allowed' in str(e.value)
 
     def test_a_parameter_entity_is_refused(self):
-        # Parameter entities are how a payload smuggles a fetch past a filter that only looks for
-        # general entity references in content.
-        doctype = f'<!DOCTYPE root [ <!ENTITY % pe SYSTEM "{_unreachable_url}"> %pe; ]>'
+        # A parameter entity is declared and referenced inside the DTD itself rather than in content,
+        # which is a separate case from the general entities above.
+        doctype = f'<!DOCTYPE root [ <!ENTITY % declared SYSTEM "{_unreachable_url}"> %declared; ]>'
         data = _envelope_with_doctype(doctype)
 
         with pytest.raises(XMLException):
@@ -161,23 +154,22 @@ class TestExternalEntities:
 # ################################################################################################################################
 
 class TestEntityExpansion:
-    """ An expansion bomb needs no external reference at all - it is a few hundred bytes on the wire
-    that costs gigabytes of memory to expand.
+    """ Entities declared and referenced entirely within the document, naming no external resource.
     """
 
-    def test_billion_laughs_is_refused(self):
-        data = _billion_laughs()
+    def test_nested_expansion_is_refused(self):
+        data = _nested_entity_expansion()
 
         # Small enough that a body-size cap would let it through, which is the point of it.
-        assert len(data) < 1024
+        assert len(data) < 2048
 
         with pytest.raises(XMLException):
             _ = parse_xml(data)
 
-    def test_the_bomb_is_refused_without_the_doctype_rule_helping(self):
-        # The doctype rule runs after the parse, so the parse itself has to survive the expansion -
-        # this asserts the amplification guard is what stops it, not the check that follows.
-        data = _billion_laughs()
+    def test_nested_expansion_is_refused_by_the_parse_itself(self):
+        # The doctype rule runs after the parse, so the message states that the parse itself declined
+        # the expansion rather than the check that follows it.
+        data = _nested_entity_expansion()
 
         with pytest.raises(XMLException) as e:
             _ = parse_xml(data)
@@ -188,30 +180,29 @@ class TestEntityExpansion:
 # ################################################################################################################################
 
 class TestEveryParsePath:
-    """ The hardening is worth only as much as the number of parse paths that use it, so each entry
-    point that takes bytes off the wire is checked separately. A path that built its own parser
-    would pass every test above and still be a hole.
+    """ Every entry point that takes XML as bytes, each checked separately, so that they are all
+    confirmed to go through parse_xml rather than a parser of their own.
     """
 
-    def test_parse_envelope(self, secret_file):
-        doctype = f'<!DOCTYPE root [ <!ENTITY xxe SYSTEM "file://{secret_file}"> ]>'
-        data = _envelope_with_doctype(doctype, '<op><data>&xxe;</data></op>')
+    def test_parse_envelope(self, external_file):
+        doctype = f'<!DOCTYPE root [ <!ENTITY declared SYSTEM "file://{external_file}"> ]>'
+        data = _envelope_with_doctype(doctype, '<op><data>&declared;</data></op>')
 
         with pytest.raises(XMLException):
             _ = parse_envelope(data)
 
-    def test_parse_message(self, secret_file):
-        doctype = f'<!DOCTYPE root [ <!ENTITY xxe SYSTEM "file://{secret_file}"> ]>'
-        data = f'<?xml version="1.0"?>\n{doctype}\n<op><data>&xxe;</data></op>'.encode('utf8')
+    def test_parse_message(self, external_file):
+        doctype = f'<!DOCTYPE root [ <!ENTITY declared SYSTEM "file://{external_file}"> ]>'
+        data = f'<?xml version="1.0"?>\n{doctype}\n<op><data>&declared;</data></op>'.encode('utf8')
 
         with pytest.raises(XMLException):
             _ = parse_xml_message(data)
 
     def test_saml_assertion_bytes(self):
-        # An assertion may arrive as bytes issued by an external identity provider, which makes it
-        # untrusted input of exactly the same kind as an envelope.
+        # An assertion arrives as bytes issued by an external identity provider, so it is parsed
+        # the same way an envelope is.
         envelope = parse_envelope(_envelope_with_doctype(''))
-        doctype = f'<!DOCTYPE root [ <!ENTITY xxe SYSTEM "{_unreachable_url}"> ]>'
+        doctype = f'<!DOCTYPE root [ <!ENTITY declared SYSTEM "{_unreachable_url}"> ]>'
         assertion = _envelope_with_doctype(doctype)
 
         with pytest.raises(XMLException):
@@ -219,14 +210,14 @@ class TestEveryParsePath:
 
     def test_saml_token_bytes(self):
         envelope = parse_envelope(_envelope_with_doctype(''))
-        doctype = f'<!DOCTYPE root [ <!ENTITY xxe SYSTEM "{_unreachable_url}"> ]>'
+        doctype = f'<!DOCTYPE root [ <!ENTITY declared SYSTEM "{_unreachable_url}"> ]>'
         assertion = _envelope_with_doctype(doctype)
 
         with pytest.raises(XMLException):
             _ = add_saml_token(envelope, assertion)
 
-    def test_the_bomb_reaches_every_path(self):
-        data = _billion_laughs()
+    def test_nested_expansion_reaches_every_path(self):
+        data = _nested_entity_expansion()
 
         with pytest.raises(XMLException):
             _ = parse_envelope(data)

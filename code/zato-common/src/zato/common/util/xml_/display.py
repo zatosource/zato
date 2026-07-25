@@ -14,6 +14,9 @@ from __future__ import annotations
 # lxml
 from lxml import etree
 
+# Zato
+from zato.common.util.xml_.core import xml_parser
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -26,19 +29,14 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Reject external entities, network access and DTDs so parsing untrusted XML cannot trigger XXE or entity expansion.
-_xml_parser = etree.XMLParser(resolve_entities=False, no_network=True, load_dtd=False)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 def _parse(data:'str') -> 'any_':
-    """ Parses XML into its root element - anything that does not parse becomes None.
+    """ Parses XML into its root element - anything that does not parse becomes None. The shared
+    parser is used, as everywhere else.
     """
     data_bytes = data.encode('utf-8')
 
     try:
-        out = etree.fromstring(data_bytes, _xml_parser)
+        out = etree.fromstring(data_bytes, xml_parser)
     except Exception:
         return None
 

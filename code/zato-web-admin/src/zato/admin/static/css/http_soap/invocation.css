@@ -95,20 +95,18 @@ a.request-param-remove:active {
     justify-content:center;
     width:22px;
     height:22px;
-    /* The lowercase x has its ink between the baseline and the x-height, and the
-       baseline sits low in the em box, so the glyph lands about 1px below the
-       geometric center, the bottom padding corrects that optically */
-    padding:0 0 2px 0;
+    /* The badge used to hold a lowercase x, whose ink sits between the baseline and the
+       x-height while the baseline itself sits low in the em box, so it landed about 1px
+       below the geometric center and a bottom padding corrected that optically. The icon
+       it holds now is an SVG that centers on its own */
     box-sizing:border-box;
     background:#dddddd;
     background-image:linear-gradient(#ffffff, #dddddd);
     border:1px solid;
     border-color:#dddddd #bbbbbb #999999;
     border-radius:4px;
+    /* The icon strokes are drawn in currentColor */
     color:#333333 !important;
-    font:bold 12px/1 "Helvetica Neue", Arial, "Liberation Sans", FreeSans, sans-serif;
-    text-decoration:none;
-    text-shadow:white 0 1px 1px;
     cursor:pointer;
 }
 
