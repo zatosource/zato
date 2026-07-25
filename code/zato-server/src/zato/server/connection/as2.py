@@ -51,7 +51,7 @@ class AS2ChannelRuntime:
     """ The runtime representation of one AS2 channel - its keystore, duplicate store,
     asynchronous MDN queue and routing target, built from the channel's configuration.
     The partnerships come from the Dashboard-managed AS2 connections and are rebuilt
-    on each request, so an edit takes effect immediately.
+    whenever one of those connections changes, so an edit takes effect immediately.
     """
 
     def __init__(self, server:'ParallelServer', config:'stranydict') -> 'None':
@@ -70,6 +70,12 @@ class AS2ChannelRuntime:
 
         # So is the queue asynchronous MDNs are persisted in.
         self._async_mdn_queue:'AsyncMDNQueue | None' = None
+
+        # The partnerships built out of the AS2 outgoing connections, kept alongside the generation
+        # of the configuration they were built from. Building one costs an X.509 parse per
+        # configured certificate, which is not something to spend per arriving message.
+        self._partnerships:'partnership_list' = []
+        self._partnerships_generation = -1
 
         # For how many days an already-processed message and its stored MDN are remembered.
         # The opaque column genuinely stores a null when the channel was saved without one.
@@ -119,19 +125,33 @@ class AS2ChannelRuntime:
 # ################################################################################################################################
 
     def _get_partnerships(self) -> 'partnership_list':
-        """ Returns the partnerships of all the AS2 connections defined in this cluster.
-        They are rebuilt on each request from the live configuration - the per-type dict
-        that create, edit and delete events keep current - which is how a Dashboard
-        change takes effect without a channel restart.
+        """ Returns the partnerships of all the AS2 connections defined in this cluster, built out
+        of the live configuration - the per-type dict that create, edit and delete events keep
+        current - and reused until one of those events says the configuration moved on, which
+        is how a Dashboard change takes effect without a channel restart.
         """
+        config_manager = self.server.config_manager
 
-        # The flat configuration dicts of all the AS2 connections
-        configs:'dictlist' = []
+        with self._lock:
 
-        for config in self.server.config_manager.outconn_as2.values():
-            configs.append(config)
+            generation = config_manager.as2_config_generation
 
-        out = build_partnerships(configs)
+            if generation != self._partnerships_generation:
+
+                # The flat configuration dicts of all the AS2 connections
+                configs:'dictlist' = []
+
+                for config in config_manager.outconn_as2.values():
+                    configs.append(config)
+
+                self._partnerships = build_partnerships(configs)
+
+                # The generation is recorded after the build, so that a build that raised
+                # is attempted again rather than remembered as done.
+                self._partnerships_generation = generation
+
+            out = self._partnerships
+
         return out
 
 # ################################################################################################################################

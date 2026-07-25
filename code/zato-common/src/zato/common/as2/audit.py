@@ -249,8 +249,10 @@ def record_send_result(
 
     mdn_raw_mime = encode_raw_mime(result.response_body)
 
+    # The reason goes in alongside the receipt, because a receipt that arrived and still left the
+    # message unacknowledged does not say from its own fields alone which check it failed.
     mdn_details = {'disposition': mdn.disposition, 'modifier_kind': mdn.modifier_kind, 'modifier': mdn.modifier,
-        'mic': mdn.mic, 'raw_mime': mdn_raw_mime}
+        'mic': mdn.mic, 'mdn_error': result.mdn_error, 'raw_mime': mdn_raw_mime}
     mdn_data = dumps(mdn_details)
 
     reconciler.record_mdn_received(result.message_id, outcome=outcome, cid=cid, data=mdn_data)

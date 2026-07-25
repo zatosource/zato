@@ -272,7 +272,20 @@ $.fn.zato.outgoing.as2.send_test_config = {
     signed_label: 'signature verified',
     unsigned_label: 'unsigned',
     mic_matched_label: 'MIC matched',
-    mic_mismatch_label: 'MIC mismatch'
+    mic_mismatch_label: 'MIC mismatch',
+
+    // What each reason for an unacknowledged delivery reads as. The message left and the partner
+    // answered, so saying only that the test failed would hide which of these happened.
+    mdn_error_labels: {
+        'no-content-type': 'The response carried no content type, so there is no receipt in it',
+        'unparseable-mdn': 'The response body is not a receipt this implementation can read or verify',
+        'message-id-mismatch': 'The receipt answers a different message than the one that was sent',
+        'not-processed': 'The receipt says the partner did not process the message',
+        'error-modifier': 'The receipt reports a processing error on the partner side',
+        'failure-modifier': 'The receipt reports the message itself was refused',
+        'mic-mismatch': 'The receipt reports a different digest than the one computed at send time',
+        'mic-algorithm-mismatch': 'The receipt reports its digest under a different algorithm than the one used'
+    }
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -285,12 +298,23 @@ $.fn.zato.outgoing.as2.build_send_test_label = function(report) {
         return config.error_label;
     }
 
-    // .. one that came back without an MDN is reported by its transport outcome ..
+    // .. one that came back without an MDN is reported by whichever of the two happened, the
+    // response having nothing readable in it or nothing having been requested ..
     if(!report.has_mdn) {
+        if(report.mdn_error) {
+            return config.mdn_error_labels[report.mdn_error];
+        }
+
         return config.no_mdn_label + ' (HTTP ' + report.http_status + ')';
     }
 
-    // .. and an MDN is reported by its disposition, signature and MIC comparison.
+    // .. an MDN that arrived and still left the message unacknowledged is reported by the reason,
+    // because its disposition alone does not say which check the receipt failed ..
+    if(report.mdn_error) {
+        return config.mdn_error_labels[report.mdn_error];
+    }
+
+    // .. and an acknowledged one is reported by its disposition, signature and MIC comparison.
     var parts = [report.disposition];
 
     parts.push(report.mdn_signed ? config.signed_label : config.unsigned_label);

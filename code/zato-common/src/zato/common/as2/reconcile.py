@@ -24,8 +24,8 @@ from sqlalchemy import and_, exists, select
 from zato.common.as2.audit import encode_raw_mime
 from zato.common.as2.common import AS2Exception, DeliveryKind, is_digest_equal
 from zato.common.as2.mdn import DispositionType, ModifierKind, normalize_message_id, parse_mdn
-from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource, event_table
-from zato.common.json_internal import dumps, loads
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource, event_attr_table, event_table
+from zato.common.json_internal import dumps
 from zato.common.typing_ import optional
 
 # ################################################################################################################################
@@ -34,14 +34,17 @@ from zato.common.typing_ import optional
 if 0:
     from datetime import datetime
     from zato.common.as2.mdn import MDNDetails
-    from zato.common.typing_ import anydict, anylistnone
+    from zato.common.typing_ import any_, anydict, anylist, anylistnone, strstrdict
     from zato.common.util.xml_.keystore import certificate_list, Keystore
+    any_ = any_
     anydict = anydict
+    anylist = anylist
     anylistnone = anylistnone
     certificate_list = certificate_list
     datetime = datetime
     Keystore = Keystore
     MDNDetails = MDNDetails
+    strstrdict = strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -64,6 +67,36 @@ pendingmdnnone      = optional['PendingMDN']
 
 # The server name reconciliation events are recorded under when none is given.
 Default_Server_Name = 'as2-reconciler'
+
+# How many open messages one call to outstanding may return. The alerting job and the automatic
+# resend both run on it, and a partner outage over a weekend would otherwise have them read every
+# unanswered message at once - a bounded batch keeps a long outage from turning either job into
+# a memory event, with the next run picking up where this one stopped.
+Max_Outstanding = 5_000
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ReconcileAttr:
+    """ The searchable attributes a message-sent event carries. They are what reconciliation reads,
+    which is why they are columns of their own rather than fields inside the event data - the data
+    of a message-sent event also holds every document that went out, and reading a digest is not
+    a reason to pull a whole interchange out of the database.
+    """
+    MIC           = 'mic'
+    Async_MDN_URL = 'async_mdn_url'
+    Delivery_Kind = 'delivery_kind'
+    HTTP_Status   = 'http_status'
+
+# ################################################################################################################################
+
+# Everything one open message is described by, in the order the two queries fill it in.
+_reconcile_attr_names = (
+    ReconcileAttr.MIC,
+    ReconcileAttr.Async_MDN_URL,
+    ReconcileAttr.Delivery_Kind,
+    ReconcileAttr.HTTP_Status,
+)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -99,31 +132,47 @@ class PendingMDN:
 
 # ################################################################################################################################
 
-def _new_pending(object_name:'str', msg_id:'str', event_time_iso:'str', cid:'str', data:'str') -> 'PendingMDN':
-    """ Turns one message-sent event into the pending message it describes. Events recorded before
-    the delivery kind and the HTTP status were stored carry neither, which reads as an original
-    attempt whose transport outcome is not known.
+def _new_pending(object_name:'str', msg_id:'str', event_time_iso:'str', cid:'str', attrs:'strstrdict') -> 'PendingMDN':
+    """ Turns one message-sent event and its attributes into the pending message they describe.
+    An attribute an older event was recorded without reads as its own default - no digest to
+    reconcile against, no asynchronous destination, and an original attempt whose transport
+    outcome is not known.
     """
     as2_from, as2_to = object_name.split(':', 1)
-    details = loads(data)
 
     out = PendingMDN()
 
     out.as2_from = as2_from
     out.as2_to = as2_to
     out.message_id = msg_id
-    out.mic = details['mic']
-    out.async_mdn_url = details['async_mdn_url']
     out.sent_time_iso = event_time_iso
     out.cid = cid
 
-    if delivery_kind := details.get('delivery_kind'):
+    out.mic = attrs[ReconcileAttr.MIC]
+    out.async_mdn_url = attrs[ReconcileAttr.Async_MDN_URL]
+
+    delivery_kind = attrs[ReconcileAttr.Delivery_Kind]
+
+    if delivery_kind:
         out.delivery_kind = delivery_kind
     else:
         out.delivery_kind = DeliveryKind.Original
 
-    if http_status := details.get('http_status'):
-        out.http_status = http_status
+    if http_status := attrs[ReconcileAttr.HTTP_Status]:
+        out.http_status = int(http_status)
+
+    return out
+
+# ################################################################################################################################
+
+def _new_empty_attrs() -> 'strstrdict':
+    """ The attribute set of one event before the database has said anything about it, so that
+    an event recorded without an attribute reads the same as one whose attribute is empty.
+    """
+    out:'strstrdict' = {}
+
+    for name in _reconcile_attr_names:
+        out[name] = ''
 
     return out
 
@@ -201,8 +250,18 @@ class MDNReconciler:
             'raw_mime': raw_mime, 'payloads': payloads, 'delivery_kind': delivery_kind, 'http_status': http_status}
         data = dumps(details)
 
-        self.audit_log.insert(
-            AuditSource.AS2, AuditEvent.Message_Sent, pair, cid=cid, msg_id=message_id, correl_id=correl_id, data=data)
+        # What reconciliation needs goes in as attributes as well as into the data, so that
+        # matching a receipt never reads the documents the data carries alongside it.
+        attrs = {
+            ReconcileAttr.MIC: mic,
+            ReconcileAttr.Async_MDN_URL: async_mdn_url,
+            ReconcileAttr.Delivery_Kind: delivery_kind,
+            ReconcileAttr.HTTP_Status: http_status,
+        }
+
+        values = {'cid': cid, 'msg_id': message_id, 'correl_id': correl_id, 'data': data, 'attrs': attrs}
+
+        self.audit_log.insert(AuditSource.AS2, AuditEvent.Message_Sent, pair, **values)
 
 # ################################################################################################################################
 
@@ -219,8 +278,29 @@ class MDNReconciler:
         """
         message_id = normalize_message_id(message_id)
 
-        # The pair of the original message names the event when one is known.
-        if pending := self.match(message_id):
+        # The sent message this receipt answers names the event by its identity pair.
+        pending = self.match(message_id)
+
+        self.record_mdn_received_for(message_id, pending, outcome=outcome, cid=cid, data=data)
+
+# ################################################################################################################################
+
+    def record_mdn_received_for(
+        self,
+        message_id:'str',
+        pending:'pendingmdnnone',
+        outcome:'str' = AuditOutcome.OK,
+        cid:'str' = '',
+        data:'str' = '',
+        ) -> 'None':
+        """ Records the arrival of an MDN whose sent message the caller has already resolved,
+        because the alternative is running the same match query a second time for every
+        receipt that arrives.
+        """
+        message_id = normalize_message_id(message_id)
+
+        # A receipt answering nothing this side sent carries no identity pair at all.
+        if pending:
             pair = _pair_key(pending.as2_from, pending.as2_to)
         else:
             pair = ''
@@ -230,13 +310,10 @@ class MDNReconciler:
 
 # ################################################################################################################################
 
-    def match(self, message_id:'str') -> 'pendingmdnnone':
-        """ Returns the sent message the given Message-ID belongs to, provided its MDN
-        has not arrived yet, or None for an unknown or already-reconciled one.
+    def _no_mdn_arrived(self) -> 'any_':
+        """ The condition selecting a message-sent event no MDN has answered yet - an MDN matches
+        on the same Message-ID, whichever attempt at the message earned it.
         """
-        message_id = normalize_message_id(message_id)
-
-        # An already-arrived MDN matches on the same Message-ID.
         mdn = event_table.alias('mdn')
 
         mdn_conditions = and_(
@@ -247,38 +324,90 @@ class MDNReconciler:
         mdn_select = select(mdn.c.id).where(mdn_conditions)
         mdn_exists = exists(mdn_select)
 
-        statement = select(
-            event_table.c.object_name,
-            event_table.c.msg_id,
-            event_table.c.event_time_iso,
-            event_table.c.cid,
-            event_table.c.data,
-        ).where(and_(
-            event_table.c.source == AuditSource.AS2,
-            event_table.c.event_type == AuditEvent.Message_Sent,
-            event_table.c.msg_id == message_id,
-            ~mdn_exists,
-        )).order_by(event_table.c.id)
-
-        with self.engine.connect() as connection:
-            result = connection.execute(statement)
-            row = result.first()
-
-        # An unknown or already-reconciled Message-ID matches nothing ..
-        if row is None:
-            return None
-
-        # .. a pending one comes back with everything recorded at send time.
-        object_name, msg_id, event_time_iso, cid, data = row
-
-        out = _new_pending(object_name, msg_id, event_time_iso, cid, data)
+        out = ~mdn_exists
         return out
 
 # ################################################################################################################################
 
-    def outstanding(self, older_than:'datetime') -> 'pending_mdn_list':
+    def _read_attrs(self, connection:'any_', event_ids:'anylist') -> 'anydict':
+        """ Reads the reconciliation attributes of the given events, one query for all of them,
+        with every event described whether the database had anything to say about it or not.
+        """
+        out:'anydict' = {}
+
+        for event_id in event_ids:
+            out[event_id] = _new_empty_attrs()
+
+        if not event_ids:
+            return out
+
+        is_wanted_event = event_attr_table.c.event_id.in_(event_ids)
+        is_wanted_attr = event_attr_table.c.name.in_(_reconcile_attr_names)
+        conditions = and_(is_wanted_event, is_wanted_attr)
+
+        statement = select(
+            event_attr_table.c.event_id,
+            event_attr_table.c.name,
+            event_attr_table.c.value,
+        ).where(conditions)
+
+        result = connection.execute(statement)
+
+        for event_id, name, value in result:
+            event_attrs = out[event_id]
+            event_attrs[name] = value
+
+        return out
+
+# ################################################################################################################################
+
+    def match(self, message_id:'str') -> 'pendingmdnnone':
+        """ Returns the sent message the given Message-ID belongs to, provided its MDN
+        has not arrived yet, or None for an unknown or already-reconciled one.
+        """
+        message_id = normalize_message_id(message_id)
+        no_mdn_arrived = self._no_mdn_arrived()
+
+        conditions = and_(
+            event_table.c.source == AuditSource.AS2,
+            event_table.c.event_type == AuditEvent.Message_Sent,
+            event_table.c.msg_id == message_id,
+            no_mdn_arrived,
+        )
+
+        statement = select(
+            event_table.c.id,
+            event_table.c.object_name,
+            event_table.c.msg_id,
+            event_table.c.event_time_iso,
+            event_table.c.cid,
+        ).where(conditions).order_by(event_table.c.id)
+
+        with self.engine.connect() as connection:
+
+            result = connection.execute(statement)
+            row = result.first()
+
+            # An unknown or already-reconciled Message-ID matches nothing ..
+            if row is None:
+                return None
+
+            # .. and a pending one has what it was sent with in its attributes.
+            event_id, object_name, msg_id, event_time_iso, cid = row
+            attrs_by_event_id = self._read_attrs(connection, [event_id])
+
+        attrs = attrs_by_event_id[event_id]
+
+        out = _new_pending(object_name, msg_id, event_time_iso, cid, attrs)
+        return out
+
+# ################################################################################################################################
+
+    def outstanding(self, older_than:'datetime', limit:'int' = Max_Outstanding) -> 'pending_mdn_list':
         """ Returns every message sent before the given moment whose MDN has not arrived -
-        what the alerting job and the automatic resend both run on.
+        what the alerting job and the automatic resend both run on - up to the given limit,
+        oldest first, so a long partner outage is worked through over several runs rather
+        than read into memory in one.
 
         One message is one entry no matter how many attempts it took, and the entry describes the
         most recent attempt. Every attempt records its own message-sent event under the same
@@ -286,48 +415,52 @@ class MDNReconciler:
         mean one alert per attempt and, worse, one further resend per attempt.
         """
         cutoff_iso = older_than.isoformat()
+        no_mdn_arrived = self._no_mdn_arrived()
 
-        # An MDN matches on the same Message-ID.
-        mdn = event_table.alias('mdn')
-
-        mdn_conditions = and_(
-            mdn.c.source == AuditSource.AS2,
-            mdn.c.event_type == AuditEvent.MDN_Received,
-            mdn.c.msg_id == event_table.c.msg_id,
+        conditions = and_(
+            event_table.c.source == AuditSource.AS2,
+            event_table.c.event_type == AuditEvent.Message_Sent,
+            event_table.c.event_time_iso < cutoff_iso,
+            no_mdn_arrived,
         )
-        mdn_select = select(mdn.c.id).where(mdn_conditions)
-        mdn_exists = exists(mdn_select)
 
         statement = select(
+            event_table.c.id,
             event_table.c.object_name,
             event_table.c.msg_id,
             event_table.c.event_time_iso,
             event_table.c.cid,
-            event_table.c.data,
-        ).where(and_(
-            event_table.c.source == AuditSource.AS2,
-            event_table.c.event_type == AuditEvent.Message_Sent,
-            event_table.c.event_time_iso < cutoff_iso,
-            ~mdn_exists,
-        )).order_by(event_table.c.id)
+        ).where(conditions).order_by(event_table.c.id).limit(limit)
 
         with self.engine.connect() as connection:
+
             result = connection.execute(statement)
             rows = result.fetchall()
+
+            event_ids:'anylist' = []
+
+            for row in rows:
+                event_ids.append(row[0])
+
+            attrs_by_event_id = self._read_attrs(connection, event_ids)
 
         # The rows arrive oldest first, so each attempt overwrites the earlier one under the same
         # Message-ID and what remains per key is the most recent attempt, in the order the messages
         # were first sent.
         latest_by_message_id:'anydict' = {}
 
-        for object_name, msg_id, event_time_iso, cid, data in rows:
-            latest_by_message_id[msg_id] = (object_name, msg_id, event_time_iso, cid, data)
+        for row in rows:
+            msg_id = row[2]
+            latest_by_message_id[msg_id] = row
 
         # Our response to produce
         out:'pending_mdn_list' = []
 
-        for object_name, msg_id, event_time_iso, cid, data in latest_by_message_id.values():
-            item = _new_pending(object_name, msg_id, event_time_iso, cid, data)
+        for row in latest_by_message_id.values():
+            event_id, object_name, msg_id, event_time_iso, cid = row
+            attrs = attrs_by_event_id[event_id]
+
+            item = _new_pending(object_name, msg_id, event_time_iso, cid, attrs)
             out.append(item)
 
         return out
@@ -406,7 +539,7 @@ def process_incoming_mdn(
 
     if not pending:
         logger.info('Incoming MDN matched no pending message, original id:`%s`, cid:`%s`', mdn.original_message_id, cid)
-        reconciler.record_mdn_received(message_id, cid=cid, data=mdn_data)
+        reconciler.record_mdn_received_for(message_id, None, cid=cid, data=mdn_data)
         return out
 
     out.is_matched = True
@@ -420,7 +553,7 @@ def process_incoming_mdn(
     else:
         outcome = AuditOutcome.Error
 
-    reconciler.record_mdn_received(message_id, outcome=outcome, cid=cid, data=mdn_data)
+    reconciler.record_mdn_received_for(message_id, pending, outcome=outcome, cid=cid, data=mdn_data)
 
     return out
 

@@ -9,11 +9,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from datetime import timedelta
+from http.client import BAD_GATEWAY, OK
+
+# SQLAlchemy
+from sqlalchemy import and_, select
 
 # Zato
-from zato.common.as2.common import AS2Error
+from zato.common.as2.common import AS2Error, DeliveryKind
 from zato.common.as2.mdn import build_mdn, MDNRequest, MDNSigningConfig, new_error_disposition, new_processed_disposition
-from zato.common.as2.reconcile import MDNReconciler, process_incoming_mdn
+from zato.common.as2.reconcile import MDNReconciler, process_incoming_mdn, ReconcileAttr
+from zato.common.audit_log.api import AuditEvent, AuditSource, event_attr_table, event_table
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
 from zato.common.util.api import utcnow
 
@@ -21,9 +26,20 @@ from zato.common.util.api import utcnow
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, strstrdict
     from .conftest import TestParties
+    any_ = any_
+    strstrdict = strstrdict
     TestParties = TestParties
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Where a partner would send an asynchronous receipt back to.
+_async_mdn_url = 'https://zatoretail.example.com/zato/as2/mdn'
+
+# The digest of one sent message, in the form it is stored in.
+_mic = 'QUFB, sha-256'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,6 +60,35 @@ def _make_reconciler(tmp_path:'os.PathLike') -> 'MDNReconciler':
 def _cleanup_env() -> 'None':
     del os.environ[AuditLogCtx.Env_Type]
     del os.environ[AuditLogCtx.Env_Name]
+
+# ################################################################################################################################
+
+def _read_attrs(reconciler:'MDNReconciler', message_id:'str') -> 'strstrdict':
+    """ Returns the stored attributes of the message-sent event of the given Message-ID.
+    """
+    joined = event_attr_table.join(event_table, event_attr_table.c.event_id == event_table.c.id)
+
+    conditions = and_(
+        event_table.c.source == AuditSource.AS2,
+        event_table.c.event_type == AuditEvent.Message_Sent,
+        event_table.c.msg_id == message_id,
+    )
+
+    statement = select(
+        event_attr_table.c.name,
+        event_attr_table.c.value,
+    ).select_from(joined).where(conditions)
+
+    with reconciler.engine.connect() as connection:
+        result = connection.execute(statement)
+        rows = result.fetchall()
+
+    out:'strstrdict' = {}
+
+    for name, value in rows:
+        out[name] = value
+
+    return out
 
 # ################################################################################################################################
 
@@ -166,6 +211,99 @@ class TestOutstanding:
             cutoff = utcnow() - timedelta(hours=1)
 
             assert reconciler.outstanding(cutoff) == []
+
+        finally:
+            _cleanup_env()
+
+# ################################################################################################################################
+
+    def test_a_long_outage_comes_back_in_bounded_batches(self, tmp_path:'os.PathLike') -> 'None':
+        try:
+            reconciler = _make_reconciler(tmp_path)
+
+            for idx in range(5):
+                reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', f'<order-{idx}@zato>')
+
+            cutoff = utcnow() + timedelta(seconds=1)
+
+            # A partner that has been down for a weekend leaves more open messages than one run
+            # of the alerting or resend job may read, so only the oldest batch comes back.
+            outstanding = reconciler.outstanding(cutoff, limit=2)
+
+            assert len(outstanding) == 2
+            assert outstanding[0].message_id == 'order-0@zato'
+            assert outstanding[1].message_id == 'order-1@zato'
+
+        finally:
+            _cleanup_env()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestReconciliationAttributes:
+
+    def test_what_reconciliation_reads_is_stored_beside_the_documents(self, tmp_path:'os.PathLike') -> 'None':
+        try:
+            reconciler = _make_reconciler(tmp_path)
+
+            # The documents that went out are large, and the digest reconciliation compares against
+            # is small - the small part is an attribute of its own so that matching a receipt
+            # never reads the interchange it belongs to.
+            payload = 'ISA*00*' + 'X' * 100_000
+
+            values = {'mic': _mic, 'async_mdn_url': _async_mdn_url, 'payload': payload,
+                'delivery_kind': DeliveryKind.Resend, 'http_status': OK}
+
+            reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<abc@zato>', **values)
+
+            attrs = _read_attrs(reconciler, 'abc@zato')
+
+            assert attrs[ReconcileAttr.MIC] == _mic
+            assert attrs[ReconcileAttr.Async_MDN_URL] == _async_mdn_url
+            assert attrs[ReconcileAttr.Delivery_Kind] == DeliveryKind.Resend
+            assert attrs[ReconcileAttr.HTTP_Status] == str(OK)
+
+        finally:
+            _cleanup_env()
+
+# ################################################################################################################################
+
+    def test_the_open_message_describes_the_attempt_it_belongs_to(self, tmp_path:'os.PathLike') -> 'None':
+        try:
+            reconciler = _make_reconciler(tmp_path)
+
+            values = {'mic': _mic, 'delivery_kind': DeliveryKind.Resend, 'http_status': BAD_GATEWAY}
+
+            reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<abc@zato>', **values)
+
+            pending = reconciler.match('abc@zato')
+
+            assert pending is not None
+            assert pending.mic == _mic
+            assert pending.delivery_kind == DeliveryKind.Resend
+            assert pending.http_status == BAD_GATEWAY
+
+        finally:
+            _cleanup_env()
+
+# ################################################################################################################################
+
+    def test_a_message_recorded_without_them_reads_as_an_original_attempt(self, tmp_path:'os.PathLike') -> 'None':
+        try:
+            reconciler = _make_reconciler(tmp_path)
+
+            # This is what an event from before the attributes existed looks like - there is nothing
+            # to reconcile a digest against and the transport outcome is not known.
+            reconciler.audit_log.insert(
+                AuditSource.AS2, AuditEvent.Message_Sent, 'ZatoRetail:PartnerCorp', msg_id='abc@zato')
+
+            pending = reconciler.match('abc@zato')
+
+            assert pending is not None
+            assert pending.mic == ''
+            assert pending.async_mdn_url == ''
+            assert pending.delivery_kind == DeliveryKind.Original
+            assert pending.http_status == 0
 
         finally:
             _cleanup_env()

@@ -178,31 +178,34 @@ def _get_ship_notice_window_hours(config:'anydict') -> 'int':
 
 # ################################################################################################################################
 
-def _find_config_by_as2_pair(configs:'dictlist', as2_from:'str', as2_to:'str') -> 'anydictnone':
-    """ Returns the connection whose AS2 identities form the given pair, or None.
+def _index_configs_by_as2_pair(configs:'dictlist') -> 'anydict':
+    """ Indexes the connections by the AS2 identity pair they exchange messages under.
+    Built once per sweep, because the alternative is walking every partner
+    for every open message the sweep looks at.
     """
+    out:'anydict' = {}
+
     for config in configs:
-        if config['as2_from'] == as2_from:
-            if config['as2_to'] == as2_to:
-                out = config
-                break
-    else:
-        out = None
+        as2_from = config['as2_from']
+        as2_to = config['as2_to']
+        pair = f'{as2_from}:{as2_to}'
+
+        out[pair] = config
 
     return out
 
 # ################################################################################################################################
 
-def _find_config_by_isa_id(configs:'dictlist', isa_id:'str') -> 'anydictnone':
-    """ Returns the connection whose partner EDI identifier matches, or None -
-    the identifier is how X12 reconciliation pairs map back to partners.
+def _index_configs_by_isa_id(configs:'dictlist') -> 'anydict':
+    """ Indexes the connections by their partner's EDI identifier, which is how X12
+    reconciliation pairs map back to partners. Built once per sweep, for the same
+    reason the AS2 pair index is.
     """
+    out:'anydict' = {}
+
     for config in configs:
-        if config['isa_id'] == isa_id:
-            out = config
-            break
-    else:
-        out = None
+        isa_id = config['isa_id']
+        out[isa_id] = config
 
     return out
 
@@ -217,10 +220,12 @@ def _collect_overdue_mdns(configs:'dictlist', now:'datetime', server_name:'str')
     out:'finding_list' = []
 
     reconciler = MDNReconciler(server_name)
+    configs_by_pair = _index_configs_by_as2_pair(configs)
 
     for pending in reconciler.outstanding(now):
 
-        config = _find_config_by_as2_pair(configs, pending.as2_from, pending.as2_to)
+        pair = f'{pending.as2_from}:{pending.as2_to}'
+        config = configs_by_pair.get(pair)
 
         # The partner said not to alert about it.
         if _is_opted_out(config):
@@ -234,7 +239,6 @@ def _collect_overdue_mdns(configs:'dictlist', now:'datetime', server_name:'str')
         if now < overdue_from:
             continue
 
-        pair = f'{pending.as2_from}:{pending.as2_to}'
         message = f'MDN overdue from `{pair}` for message `{pending.message_id}`, sent {pending.sent_time_iso}'
         link = f'/zato/audit-log/?source=as2&object_name={pair}&status=outstanding&cluster={default_cluster_id}'
 
@@ -254,10 +258,11 @@ def _collect_overdue_acks(configs:'dictlist', now:'datetime', server_name:'str')
     out:'finding_list' = []
 
     reconciler = Reconciler(server_name)
+    configs_by_isa_id = _index_configs_by_isa_id(configs)
 
     for pending in reconciler.outstanding(now):
 
-        config = _find_config_by_isa_id(configs, pending.receiver)
+        config = configs_by_isa_id.get(pending.receiver)
 
         # The partner said not to alert about it.
         if _is_opted_out(config):
@@ -368,9 +373,10 @@ def _load_x12_events(event_type:'str', server_name:'str') -> 'dictlist':
         else:
             details = {}
 
-        if document_type := details.get('document_type'):
-            pass
-        else:
+        document_type = details.get('document_type')
+
+        # An event recorded before document types were extracted names none.
+        if document_type is None:
             document_type = ''
 
         item = {
@@ -382,6 +388,57 @@ def _load_x12_events(event_type:'str', server_name:'str') -> 'dictlist':
         }
 
         out.append(item)
+
+    return out
+
+# ################################################################################################################################
+
+def _index_documents_by_partner(events:'dictlist', document_type:'str', partner_key:'str') -> 'anydict':
+    """ Groups the events of one document type by the partner named under the given key,
+    so one partner's documents are reachable without walking everyone else's.
+    """
+    out:'anydict' = {}
+
+    for event in events:
+
+        if event['document_type'] != document_type:
+            continue
+
+        partner = event[partner_key]
+
+        # The first document of a partner starts that partner's list off.
+        if partner not in out:
+            out[partner] = []
+
+        out[partner].append(event)
+
+    return out
+
+# ################################################################################################################################
+
+def _index_latest_time_by_partner(events:'dictlist', document_type:'str', partner_key:'str') -> 'anydict':
+    """ Returns the most recent moment one document type went to or came from each partner.
+    A single moment is all the timing guard needs - the question it asks is whether any
+    document of the type is newer than an order, which the newest one answers for all of them.
+    """
+    out:'anydict' = {}
+
+    for event in events:
+
+        if event['document_type'] != document_type:
+            continue
+
+        partner = event[partner_key]
+        event_time = datetime.fromisoformat(event['event_time_iso'])
+
+        # A partner not seen yet is described by this event alone ..
+        if partner not in out:
+            out[partner] = event_time
+            continue
+
+        # .. and a later one replaces what the partner was described by so far.
+        if event_time > out[partner]:
+            out[partner] = event_time
 
     return out
 
@@ -413,9 +470,13 @@ def _collect_missing_ship_notices(configs:'dictlist', now:'datetime', server_nam
     if not guarded_configs:
         return out
 
-    # Everything received and sent, read once for all the partners.
+    # Everything received and sent, read once for all the partners, then indexed by the partner
+    # it belongs to - the guard is otherwise every partner times every order times every notice.
     received = _load_x12_events(AuditEvent.Interchange_Received, server_name)
     sent = _load_x12_events(AuditEvent.Interchange_Sent, server_name)
+
+    orders_by_sender = _index_documents_by_partner(received, _document_type_order, 'sender')
+    latest_notice_by_receiver = _index_latest_time_by_partner(sent, _document_type_ship_notice, 'receiver')
 
     for config in guarded_configs:
 
@@ -423,16 +484,19 @@ def _collect_missing_ship_notices(configs:'dictlist', now:'datetime', server_nam
         window_hours = _get_ship_notice_window_hours(config)
         window = timedelta(hours=window_hours)
 
-        for order in received:
+        orders = orders_by_sender.get(isa_id)
 
-            # Only this partner's orders are of interest here ..
-            if order['document_type'] != _document_type_order:
-                continue
+        # This partner has sent us no orders at all.
+        if orders is None:
+            continue
 
-            if order['sender'] != isa_id:
-                continue
+        # The most recent ship notice that went back to this partner - any order placed before it
+        # is answered, because a notice only ever answers orders that came before it.
+        latest_notice_time = latest_notice_by_receiver.get(isa_id)
 
-            # .. an order still inside its window raises nothing yet ..
+        for order in orders:
+
+            # An order still inside its window raises nothing yet ..
             order_time = datetime.fromisoformat(order['event_time_iso'])
             deadline = order_time + window
 
@@ -440,30 +504,21 @@ def _collect_missing_ship_notices(configs:'dictlist', now:'datetime', server_nam
                 continue
 
             # .. and a ship notice sent back to the partner after the order answers it.
-            for notice in sent:
-
-                if notice['document_type'] != _document_type_ship_notice:
+            if latest_notice_time is not None:
+                if latest_notice_time >= order_time:
                     continue
 
-                if notice['receiver'] != isa_id:
-                    continue
+            pair = f'{order["sender"]}:{order["receiver"]}'
+            name = config['name']
+            control_number = order['control_number']
+            hour_suffix = 'hour' if window_hours == 1 else 'hours'
 
-                notice_time = datetime.fromisoformat(notice['event_time_iso'])
+            message = f'No ship notice sent to `{name}` within {window_hours} {hour_suffix}'
+            message += f' of order `{control_number}`, received {order["event_time_iso"]}'
+            link = f'/zato/audit-log/?source=x12&object_name={pair}&cluster={default_cluster_id}'
 
-                if notice_time >= order_time:
-                    break
-            else:
-                pair = f'{order["sender"]}:{order["receiver"]}'
-                name = config['name']
-                control_number = order['control_number']
-                hour_suffix = 'hour' if window_hours == 1 else 'hours'
-
-                message = f'No ship notice sent to `{name}` within {window_hours} {hour_suffix}'
-                message += f' of order `{control_number}`, received {order["event_time_iso"]}'
-                link = f'/zato/audit-log/?source=x12&object_name={pair}&cluster={default_cluster_id}'
-
-                finding = _new_finding(Kind_Ship_Notice_Missing, AuditSource.X12, pair, message, link)
-                out.append(finding)
+            finding = _new_finding(Kind_Ship_Notice_Missing, AuditSource.X12, pair, message, link)
+            out.append(finding)
 
     return out
 

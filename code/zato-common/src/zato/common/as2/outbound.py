@@ -17,7 +17,7 @@ import httpx
 from typing_extensions import TypeAlias
 
 # Zato
-from zato.common.as2.common import AS2Exception, Default, is_digest_equal, MDNMode, TransferMode
+from zato.common.as2.common import AS2Exception, Default, is_digest_equal, MDNMode, SendError, TransferMode
 from zato.common.as2.mdn import describe_disposition, DispositionType, ModifierKind, new_message_id, normalize_message_id, \
     parse_mdn
 from zato.common.as2.partnership import active_verification_certificates, quote_as2_identifier, select_encryption_certificate
@@ -96,6 +96,12 @@ class SendResult:
     # The raw HTTP response, kept for audit purposes.
     http_status: int = 0
     response_body: bytes = b''
+
+    # Why a delivery that left successfully is still unacknowledged - one of the SendError
+    # reasons when a synchronous MDN was requested and did not confirm the message,
+    # empty when the message is acknowledged or when there is nothing to reconcile. This is
+    # separate from a transport-level exception, which never gets this far.
+    mdn_error: str = ''
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -396,14 +402,20 @@ def _reconcile_sync_mdn(
     or Received-Content-MIC mismatch is a delivery failure. A non-empty accepted_certificates list
     is the trust decision for the MDN's signer - during a rotation window it holds both
     the partner's old and new certificate.
+
+    Every way out of here that leaves the message unacknowledged names itself in result.mdn_error,
+    because they look identical to an operator otherwise - the delivery left, the partner
+    answered, and the message is still not delivered.
     """
     if not (content_type := response.headers.get('content-type')):
+        result.mdn_error = SendError.No_Content_Type
         return
 
     # A body that does not parse and verify as an MDN counts as no MDN received ..
     try:
         mdn = parse_mdn(response.content, content_type, keystore, accepted_certificates)
     except AS2Exception:
+        result.mdn_error = SendError.Unparseable_MDN
         return
 
     result.mdn = mdn
@@ -413,16 +425,23 @@ def _reconcile_sync_mdn(
     sent_id = normalize_message_id(result.message_id)
 
     if answered_id != sent_id:
+        result.mdn_error = SendError.Message_ID_Mismatch
         return
 
-    # .. its disposition must report clean processing - a warning still counts as processed ..
-    if mdn.disposition != DispositionType.Processed:
-        return
-
-    if mdn.modifier_kind == ModifierKind.Error:
-        return
-
+    # .. a receipt refusing the message itself says so with a Failure modifier, which is the
+    # partner rejecting what was asked of them rather than failing at it ..
     if mdn.modifier_kind == ModifierKind.Failure:
+        result.mdn_error = SendError.Failure_Modifier
+        return
+
+    # .. an error modifier is the partner failing to process content they accepted ..
+    if mdn.modifier_kind == ModifierKind.Error:
+        result.mdn_error = SendError.Error_Modifier
+        return
+
+    # .. the disposition must report processing at all - a warning still counts as processed ..
+    if mdn.disposition != DispositionType.Processed:
+        result.mdn_error = SendError.Not_Processed
         return
 
     # .. and the Received-Content-MIC must match what was computed at send time.
@@ -430,9 +449,11 @@ def _reconcile_sync_mdn(
         sent_digest, _, sent_algorithm = result.mic.partition(', ')
 
         if not is_digest_equal(mdn.mic, sent_digest):
+            result.mdn_error = SendError.MIC_Mismatch
             return
 
         if mdn.mic_algorithm != sent_algorithm:
+            result.mdn_error = SendError.MIC_Algorithm_Mismatch
             return
 
     result.is_ok = True
@@ -495,6 +516,11 @@ def new_send_report() -> 'stranydict':
         'mdn_signed': False,
         'disposition': '',
         'mic_matched': None,
+
+        # Why the receipt did not acknowledge the message, one of the SendError reasons.
+        'mdn_error': '',
+
+        # Why the message never left at all, the description of the exception raised.
         'error': '',
     }
 
@@ -514,6 +540,7 @@ def describe_send_result(result:'SendResult') -> 'stranydict':
     out['is_ok'] = result.is_ok
     out['message_id'] = result.message_id
     out['http_status'] = result.http_status
+    out['mdn_error'] = result.mdn_error
 
     mdn = result.mdn
 
