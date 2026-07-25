@@ -24,8 +24,7 @@ from zato.admin.web.views import get_group_list as common_get_group_list, get_ht
     get_js_dt_format, get_security_id_from_select, get_security_groups_from_checkbox_list, id_only_service, \
         method_allowed, SecurityList
 from zato.admin.web.views.security.tier import get_tier_list
-from zato.common.api import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
-     generic_attrs, Groups, HTTP_SOAP, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
+from zato.common.api import generic_attrs, Groups, HTTP_SOAP, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
      SOAP_CHANNEL_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE
 from zato.common.content_type import format_content, get_content_type
 from zato.common.exception import ZatoException
@@ -434,8 +433,8 @@ def index(req): # type: ignore
         'connection_label_plural':CONNECTION_PLURAL[connection],
         'transport_label':TRANSPORT[transport],
         'colspan': colspan,
-        'default_http_ping_method':DEFAULT_HTTP_PING_METHOD,
-        'default_http_pool_size':DEFAULT_HTTP_POOL_SIZE,
+        'default_http_ping_method':MISC.DEFAULT_HTTP_PING_METHOD,
+        'default_http_pool_size':MISC.DEFAULT_HTTP_POOL_SIZE,
         'default_http_timeout':MISC.DEFAULT_HTTP_TIMEOUT,
         'paginate':True,
         'show_search_form':True,

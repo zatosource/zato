@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 
 # cryptography
@@ -21,7 +22,7 @@ from zato.common.soap.common import as_soap_security_exception, NS, SOAPSecurity
 from zato.common.soap.envelope import get_security_header
 from zato.common.soap.security.replay import replay_cache
 from zato.common.util.xml_.constants import Algorithm, Transform
-from zato.common.util.xml_.core import element_text, from_timestamp, new_id, qname, to_timestamp, xml_parser, XMLException, \
+from zato.common.util.xml_.core import element_text, from_timestamp, new_id, parse_xml, qname, to_timestamp, XMLException, \
     XMLSecurityException
 from zato.common.util.xml_.token import parse_x509v3
 from zato.common.util.xml_.wssec import compute_signature_value, validate_certificate_chain, verify_signature_value
@@ -130,8 +131,12 @@ def add_attribute(assertion:'any_', name:'str', value:'str') -> 'None':
 def _assertion_without_signature(assertion:'any_') -> 'any_':
     """ Returns a copy of an assertion with its ds:Signature child removed - the shape
     the enveloped-signature transform digests, both when signing and when verifying.
+
+    The copy is made in memory rather than by serializing and parsing again. The tree is already
+    parsed, so a round trip through the parser would buy nothing and cost a full serialize and parse
+    on every signature operation.
     """
-    out = etree.fromstring(etree.tostring(assertion), xml_parser)
+    out = deepcopy(assertion)
 
     signature = out.find(qname(NS.DS, 'Signature'))
     if signature is not None:
@@ -404,7 +409,7 @@ def add_assertion(envelope:'any_', assertion:'any_') -> 'None':
     may also be raw bytes, e.g. one issued and signed by an external identity provider.
     """
     if isinstance(assertion, bytes):
-        assertion = etree.fromstring(assertion, xml_parser)
+        assertion = parse_xml(assertion)
 
     security = get_security_header(envelope)
     security.append(assertion)

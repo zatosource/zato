@@ -62,6 +62,10 @@ _Server_Wait_Timeout  = 60
 _Quickstart_Timeout   = 120
 _Ping_Poll_Interval   = 0.5
 
+# How many days of audit events the server under test keeps process-wide - short enough for
+# the retention test to observe a sweep, with the B2B evidence sources keeping their own default.
+_Process_Retention_Days = 1
+
 # Everything the atexit cleanup below may still need to tear down.
 _cleanup_refs:'anydict' = {
     'server_process': None,
@@ -254,6 +258,16 @@ def zato_dashboard() -> 'any_':
     server_env['Zato_Broker_HTTP_Port'] = str(broker_port)
     _ = server_env.pop('COVERAGE_PROCESS_START', None)
 
+    # The audit log, the AS2 duplicate store and the asynchronous MDN queue all share one database.
+    # Pointing it inside the temporary directory keeps this suite out of the developer's own
+    # environment and gives the tests a database of their own to read the evidence back from.
+    audit_db_path = os.path.join(temporary_dir, 'audit.db')
+    server_env['Zato_Audit_Log_DB_Name'] = audit_db_path
+
+    # A process-wide window this short is what the retention test needs - the B2B sources
+    # keep their own multi-year default, which is the behavior under test.
+    server_env['Zato_Audit_Log_Retention_Days'] = str(_Process_Retention_Days)
+
     server_process = subprocess.Popen(
         [_Zato_Bin, 'start', server_dir, '--fg'],
         env=server_env,
@@ -318,6 +332,7 @@ def zato_dashboard() -> 'any_':
         'server_dir': server_dir,
         'dashboard_dir': dashboard_dir,
         'temporary_dir': temporary_dir,
+        'audit_db_path': audit_db_path,
         'server_process': server_process,
         'dashboard_process': dashboard_process,
     }

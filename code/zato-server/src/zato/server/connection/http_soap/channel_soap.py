@@ -10,9 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from dataclasses import dataclass
 from logging import getLogger
 
-# lxml
-from lxml.etree import XMLSyntaxError
-
 # Zato
 from zato.common.exception import ClientHTTPError
 from zato.common.marshal_.api import ModelValidationError
@@ -26,7 +23,7 @@ from zato.common.soap.message import parse, SOAPMessage
 from zato.common.soap.mtom import build_mtom, parse_message, to_bytes_map
 from zato.common.soap.security.saml import get_assertion
 from zato.common.soap.security.wss import Mode
-from zato.common.util.xml_.core import qname
+from zato.common.util.xml_.core import qname, XMLException
 from zato.common.util.xml_.mime_ import parse_header_parameters
 from zato.server.connection.http_soap import BadRequest
 
@@ -227,7 +224,7 @@ def parse_soap_request(
     try:
         envelope_bytes, parts = parse_message(body, content_type)
         element = parse_envelope(envelope_bytes)
-    except (SOAPException, XMLSyntaxError) as e:
+    except (SOAPException, XMLException) as e:
         logger.warning('Could not parse SOAP request -> cid:`%s` -> %s', cid, e)
         raise BadRequest(cid, _invalid_request_reason, needs_msg=True)
 

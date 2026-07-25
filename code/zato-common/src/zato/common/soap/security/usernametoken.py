@@ -60,6 +60,23 @@ Nonce_Cache_Prefix = 'wsse-nonce:'
 def _compute_digest(nonce:'bytes', created:'str', password:'str') -> 'str':
     """ Computes the password digest from the UsernameToken profile -
     Base64(SHA-1(nonce + created + password)).
+
+    Two properties of this construction are worth being explicit about, because both are the
+    profile's and neither is a choice made here.
+
+    SHA-1 is mandatory. The profile names it, so a token computed with anything else is a token no
+    conforming receiver will accept, and interoperability is the entire reason for using the digest
+    form. It is not a signature and nothing is authenticated by its collision resistance - the nonce
+    and the creation time are what keep a captured token from being replayed - but a deployment
+    choosing the digest form should know that it is committing to SHA-1 and not to something current.
+
+    Verifying a digest requires the receiver to hold the password in a recoverable form. The digest
+    is computed over the password itself, so checking one means computing the same digest, which
+    means having the plaintext - a channel configured for digest cannot store a hash of the password
+    the way a password store otherwise would. The digest form protects the password in transit, on a
+    hop that would otherwise carry it in clear, and it does so at the cost of how the password can
+    be kept at rest. Where that trade is the wrong way round, the text form under TLS keeps the
+    password out of the receiver's own storage instead.
     """
     digest = sha1(nonce + created.encode('utf-8') + password.encode('utf-8')).digest()
 

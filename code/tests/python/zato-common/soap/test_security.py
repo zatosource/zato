@@ -6,6 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from copy import deepcopy
+
 # lxml
 from lxml import etree
 
@@ -19,8 +22,11 @@ from zato.common.soap.message import SOAPMessage
 from zato.common.soap.security.saml import add_assertion, add_attribute, get_assertion, new_assertion
 from zato.common.soap.security.usernametoken import add_username_token, verify_username_token
 from zato.common.soap.security.x509 import decrypt_body, encrypt_body, sign, verify
+from zato.common.util.xml_.constants import Algorithm
 from zato.common.util.xml_.core import qname
 from zato.common.util.xml_.keystore import new_keystore
+from zato.common.util.xml_.wssec import compute_signature_value
+from zato.common.util.xml_.xmlsec import encode_base64
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,6 +36,35 @@ def _reparse(envelope):
     """
     out = etree.fromstring(to_bytes(envelope))
     return out
+
+# ################################################################################################################################
+
+def _drop_reference(envelope, element_id):
+    """ Removes one ds:Reference from an envelope's SignedInfo, narrowing what the signature says
+    it covers.
+    """
+    signed_info = envelope.find(f'.//{qname(NS.DS, "SignedInfo")}')
+
+    for reference in signed_info.findall(qname(NS.DS, 'Reference')):
+        if reference.get('URI') == f'#{element_id}':
+            signed_info.remove(reference)
+
+# ################################################################################################################################
+
+def _resign(envelope, keystore):
+    """ Recomputes an envelope's signature value over its SignedInfo as it now stands.
+
+    This is what a sender holding a trusted key does when it chooses to cover less than it should,
+    so a test using it produces a message that is genuinely and correctly signed - which is the only
+    way to show that a coverage rule, rather than a broken signature value, is what refuses it.
+    """
+    signature = envelope.find(f'.//{qname(NS.DS, "Signature")}')
+    signed_info = signature.find(qname(NS.DS, 'SignedInfo'))
+
+    signature_bytes = compute_signature_value(signed_info, keystore, Algorithm.RSA_SHA256)
+
+    signature_value = signature.find(qname(NS.DS, 'SignatureValue'))
+    signature_value.text = encode_base64(signature_bytes)
 
 # ################################################################################################################################
 
@@ -186,6 +221,166 @@ class TestX509:
         assert timestamp is not None
         assert timestamp.find(qname(NS.WSU, 'Created')) is not None
         assert timestamp.find(qname(NS.WSU, 'Expires')) is not None
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestSignatureWrapping:
+    """ XML Signature Wrapping - the attack that makes a signature verify against one element while
+    the receiver processes another.
+
+    Every case here produces a message whose signature is mathematically valid over content the
+    sender really did sign. What makes them attacks is that the element the receiver would go on to
+    process is a different one, so a verifier that reports only pass or fail is not enough - it has
+    to say what it verified, and the caller has to check that against what it uses.
+    """
+
+    def test_a_relocated_signed_body_is_refused(self, parties):
+        # The classic form. The signed body is moved somewhere the receiver does not read from and an
+        # attacker-authored body takes its place, keeping the original's id so the reference still
+        # resolves to genuinely signed content.
+        envelope = _sample_envelope()
+        _ = sign(envelope, parties.sender)
+
+        wire = _reparse(envelope)
+        body = get_body(wire)
+        signed_id = body.get(qname(NS.WSU, 'Id'))
+
+        # The signed body is parked inside the security header, where a naive receiver never looks ..
+        signed_copy = deepcopy(body)
+        security = wire.find(f'.//{qname(NS.WSSE, "Security")}')
+        security.append(signed_copy)
+
+        # .. and what remains in the body's place is the attacker's content under the same id.
+        for child in list(body):
+            body.remove(child)
+
+        forged = etree.SubElement(body, '{urn:example:invoicing}SubmitInvoice')
+        invoice_number = etree.SubElement(forged, '{urn:example:invoicing}InvoiceNumber')
+        invoice_number.text = 'INV-2026-9999'
+
+        # Two elements now claim the same id, which is what the index refuses - a reference that
+        # resolves to either of two elements resolves to neither.
+        assert signed_copy.get(qname(NS.WSU, 'Id')) == signed_id
+
+        with pytest.raises(SOAPSecurityException) as e:
+            _ = verify(wire, parties.receiver)
+
+        assert 'is carried by 2 elements' in str(e.value)
+
+    def test_a_duplicate_id_is_refused_on_its_own(self, parties):
+        # No relocation at all, just a second element carrying the same id as the signed body. The
+        # ambiguity is the vulnerability - which of the two a reference points at is then a matter
+        # of which one the resolver happens to find first.
+        envelope = _sample_envelope()
+        _ = sign(envelope, parties.sender)
+
+        wire = _reparse(envelope)
+        body = get_body(wire)
+        signed_id = body.get(qname(NS.WSU, 'Id'))
+
+        security = wire.find(f'.//{qname(NS.WSSE, "Security")}')
+        decoy = etree.SubElement(security, '{urn:example:invoicing}Decoy')
+        decoy.set(qname(NS.WSU, 'Id'), signed_id)
+
+        with pytest.raises(SOAPSecurityException) as e:
+            _ = verify(wire, parties.receiver)
+
+        assert 'is carried by 2 elements' in str(e.value)
+
+    def test_the_verified_body_is_the_processed_body(self, parties):
+        # The property the whole defence rests on. What comes back names the element that was
+        # verified, so a caller can hold it against the body it is about to process rather than
+        # trusting that a pass means the right thing was covered.
+        envelope = _sample_envelope()
+        _ = sign(envelope, parties.sender)
+
+        wire = _reparse(envelope)
+        verified = verify(wire, parties.receiver)
+
+        # Identity, not equality - an element that merely looks like the body is not the body.
+        assert verified.body is get_body(wire)
+        assert any(element is get_body(wire) for element in verified.elements)
+
+    def test_a_second_signature_is_refused(self, parties):
+        # With two signatures there is no way to report which of them covered a given element, so a
+        # receiver would have to guess, and an attacker gets to choose what the second one covers.
+        envelope = _sample_envelope()
+        _ = sign(envelope, parties.sender)
+
+        wire = _reparse(envelope)
+        security = wire.find(f'.//{qname(NS.WSSE, "Security")}')
+        signature = security.find(qname(NS.DS, 'Signature'))
+        security.append(deepcopy(signature))
+
+        with pytest.raises(SOAPSecurityException) as e:
+            _ = verify(wire, parties.receiver)
+
+        assert '2 signatures' in str(e.value)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestSignatureCoverage:
+    """ What a signature has to cover before the message it protects is worth acting on.
+
+    A sender's own SignedInfo says what it signed, so leaving that choice entirely to the sender
+    means a signature over nothing much verifies perfectly well while the parts that matter travel
+    unprotected. Each case here narrows the reference set and then re-signs with the sender's real
+    key, so the message is genuinely signed by a certificate the receiver trusts and the only thing
+    wrong with it is what it leaves out.
+    """
+
+    def test_a_signature_that_omits_the_body_is_refused(self, parties):
+        envelope = _sample_envelope()
+        _ = sign(envelope, parties.sender)
+
+        wire = _reparse(envelope)
+        body_id = get_body(wire).get(qname(NS.WSU, 'Id'))
+
+        _drop_reference(wire, body_id)
+        _resign(wire, parties.sender)
+
+        with pytest.raises(SOAPSecurityException) as e:
+            _ = verify(wire, parties.receiver)
+
+        assert 'does not cover the SOAP body' in str(e.value)
+
+    def test_a_signature_that_omits_the_timestamp_is_refused(self, parties):
+        # An uncovered timestamp says whatever the sender wants it to say, so a message whose
+        # validity window is not signed has no validity window at all and could be replayed
+        # indefinitely.
+        envelope = _sample_envelope()
+        _ = sign(envelope, parties.sender)
+
+        wire = _reparse(envelope)
+        timestamp = wire.find(f'.//{qname(NS.WSU, "Timestamp")}')
+        timestamp_id = timestamp.get(qname(NS.WSU, 'Id'))
+
+        _drop_reference(wire, timestamp_id)
+        _resign(wire, parties.sender)
+
+        with pytest.raises(SOAPSecurityException) as e:
+            _ = verify(wire, parties.receiver)
+
+        assert 'does not cover a Timestamp' in str(e.value)
+
+    def test_narrowing_the_reference_set_without_resigning_is_refused(self, parties):
+        # Without the sender's key an attacker can still delete a reference, and then the signature
+        # value no longer matches the SignedInfo it covers. This is the case the coverage check is
+        # not needed for, and it is here to show the two defences are independent.
+        envelope = _sample_envelope()
+        _ = sign(envelope, parties.sender)
+
+        wire = _reparse(envelope)
+        body_id = get_body(wire).get(qname(NS.WSU, 'Id'))
+
+        _drop_reference(wire, body_id)
+
+        with pytest.raises(SOAPSecurityException) as e:
+            _ = verify(wire, parties.receiver)
+
+        assert 'Signature value does not verify' in str(e.value)
 
 # ################################################################################################################################
 # ################################################################################################################################

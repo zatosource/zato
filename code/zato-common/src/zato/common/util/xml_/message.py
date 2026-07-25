@@ -39,7 +39,7 @@ from lxml import etree
 # Zato
 from zato.common.util.message import Message
 from zato.common.util.xml_.constants import NS
-from zato.common.util.xml_.core import xml_parser, XMLException
+from zato.common.util.xml_.core import parse_xml, XMLException
 from zato.common.util.xml_.mime_ import new_content_id, Part
 
 # ################################################################################################################################
@@ -442,7 +442,7 @@ def parse(
     parameter selects the node type, so parsing can produce any XMLMessage subclass.
     """
     if isinstance(source, bytes):
-        element = etree.fromstring(source, xml_parser)
+        element = parse_xml(source)
     else:
         element = source
 

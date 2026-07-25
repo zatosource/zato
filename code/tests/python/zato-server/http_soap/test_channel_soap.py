@@ -26,7 +26,7 @@ from zato.common.soap.mtom import build_mtom, parse_message, to_bytes_map
 from zato.common.soap.security.saml import add_assertion, new_assertion
 from zato.common.soap.security.wss import Mode
 from zato.common.util.xml_.core import qname
-from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler
+from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler, SOAP_Max_Body_Size
 from zato.server.connection.http_soap.channel_soap import build_soap_fault_response, build_soap_response, \
     parse_soap_request, resolve_soap_payload
 
@@ -686,6 +686,88 @@ class DispatchErrorSOAPTestCase(unittest.TestCase):
 
         self.assertIn(b'soap:Client', result)
         self.assertEqual(wsgi_environ['zato.http.response.headers']['Content-Type'], Content_Type[SOAPVersion.V11])
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# ##############################################################################################################################
+# ##############################################################################################################################
+
+class BodySizeTestCase(unittest.TestCase):
+    """ Tests for the cap on how large a SOAP request body may be.
+
+    Parsing untrusted XML costs time and memory in proportion to the input, so the size is checked
+    before the parser sees the bytes - an unauthenticated caller must not be able to make a worker
+    allocate whatever it likes.
+    """
+
+# ################################################################################################################################
+
+    def _check(self, payload:'bytes', channel_item:'anydict') -> 'None':
+        dispatcher = RequestDispatcher(
+            server=MagicMock(),
+            url_data=MagicMock(),
+            request_handler=MagicMock(),
+            return_tracebacks=True,
+            default_error_message='Internal error',
+            http_methods_allowed=['GET', 'POST'],
+        )
+
+        dispatcher._check_soap_body_size(_test_cid, channel_item, payload)
+
+# ################################################################################################################################
+
+    def test_a_body_within_the_default_limit_is_accepted(self) -> 'None':
+        payload = b'x' * 1024
+
+        # No exception is the assertion here.
+        self._check(payload, _make_channel_item())
+
+# ################################################################################################################################
+
+    def test_a_body_over_the_default_limit_is_refused(self) -> 'None':
+        payload = b'x' * (SOAP_Max_Body_Size + 1)
+
+        with self.assertRaises(BadRequest):
+            self._check(payload, _make_channel_item())
+
+# ################################################################################################################################
+
+    def test_a_channel_may_set_its_own_limit(self) -> 'None':
+        # A channel that genuinely exchanges larger messages raises the cap through its own
+        # opaque attribute, so what the default refuses this channel accepts.
+        payload = b'x' * (SOAP_Max_Body_Size + 1)
+        channel_item = _make_channel_item({'max_body_size': SOAP_Max_Body_Size * 2})
+
+        self._check(payload, channel_item)
+
+# ################################################################################################################################
+
+    def test_a_channel_may_lower_its_limit(self) -> 'None':
+        payload = b'x' * 2048
+        channel_item = _make_channel_item({'max_body_size': 1024})
+
+        with self.assertRaises(BadRequest):
+            self._check(payload, channel_item)
+
+# ################################################################################################################################
+
+    def test_the_limit_is_not_disclosed_to_the_caller(self) -> 'None':
+        # The caller is not authenticated at this point, so what it is told is that the message is
+        # too large and nothing about how large is too large.
+        payload = b'x' * (SOAP_Max_Body_Size + 1)
+
+        with self.assertRaises(BadRequest) as ctx:
+            self._check(payload, _make_channel_item())
+
+        self.assertNotIn(str(SOAP_Max_Body_Size), ctx.exception.msg)
+
+# ################################################################################################################################
+
+    def test_a_body_exactly_at_the_limit_is_accepted(self) -> 'None':
+        payload = b'x' * SOAP_Max_Body_Size
+
+        self._check(payload, _make_channel_item())
 
 # ################################################################################################################################
 # ################################################################################################################################

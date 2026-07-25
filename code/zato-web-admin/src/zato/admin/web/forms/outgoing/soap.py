@@ -12,7 +12,7 @@ from django import forms
 # Zato
 from zato.admin.web.forms import add_health_check_fields, add_security_select, add_services
 from zato.admin.web.forms.http_soap import callback_type_choices, response_map_mode_choices, scheduler_run_unit_choices
-from zato.common.api import DEFAULT_HTTP_PING_METHOD, HTTP_SOAP, MISC, SOAP_VERSIONS
+from zato.common.api import HTTP_SOAP, MISC, SOAP_VERSIONS
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,7 +53,7 @@ class CreateForm(forms.Form):
     body_credentials = forms.CharField(required=False, widget=forms.HiddenInput())
 
     # More
-    ping_method = forms.CharField(initial=DEFAULT_HTTP_PING_METHOD, widget=forms.TextInput(attrs={'style':'width:20%'}))
+    ping_method = forms.CharField(initial=MISC.DEFAULT_HTTP_PING_METHOD, widget=forms.TextInput(attrs={'style':'width:20%'}))
     content_type = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:40%'}))
 
     # Retry config - how many times to retry a failed invocation and how long to sleep between attempts

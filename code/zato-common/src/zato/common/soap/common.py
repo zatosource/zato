@@ -103,6 +103,11 @@ Version_By_Media_Type = {
     'application/soap+xml':   SOAPVersion.V12,
 }
 
+# The media types a SOAP response may arrive as - the two envelope types plus the multipart wrapper
+# an MTOM or SwA response uses. Anything else is not a SOAP message, however the response is
+# labelled, and a body of that kind is not worth handing to an XML parser.
+SOAP_Media_Types = set(Version_By_Media_Type) | {'multipart/related'}
+
 # The Content-Type parameter SOAP 1.2 carries its action in. 1.1 uses a header of its own instead.
 Action_Parameter = 'action'
 

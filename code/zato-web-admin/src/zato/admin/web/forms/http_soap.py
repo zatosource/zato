@@ -12,7 +12,7 @@ from django import forms
 # Zato
 from zato.admin.web.forms import add_health_check_fields, add_security_select, add_services, \
     SearchForm as _ChooseClusterForm, DataFormatForm
-from zato.common.api import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP, MISC, PARAMS_PRIORITY, IO, SOAP_VERSIONS, URL_PARAMS_PRIORITY
+from zato.common.api import HTTP_SOAP, MISC, PARAMS_PRIORITY, IO, SOAP_VERSIONS, URL_PARAMS_PRIORITY
 
 # ################################################################################################################################
 
@@ -167,8 +167,8 @@ class CreateForm(DataFormatForm):
         for value, label in validate_tls_choices:
             self.fields['validate_tls'].choices.append([value, label])
 
-        self.fields['ping_method'].initial = DEFAULT_HTTP_PING_METHOD
-        self.fields['pool_size'].initial = DEFAULT_HTTP_POOL_SIZE
+        self.fields['ping_method'].initial = MISC.DEFAULT_HTTP_PING_METHOD
+        self.fields['pool_size'].initial = MISC.DEFAULT_HTTP_POOL_SIZE
 
         self.fields['scheduler_run_unit'].choices = []
         for value, label in scheduler_run_unit_choices:

@@ -25,7 +25,7 @@ from zato.common.soap.common import as_soap_security_exception, NS, SOAPSecurity
 from zato.common.soap.envelope import get_body, get_security_header
 from zato.common.typing_ import cast_
 from zato.common.util.xml_.constants import Algorithm, TokenType
-from zato.common.util.xml_.core import element_text, from_timestamp, new_id, qname, to_timestamp, xml_parser, XMLException, \
+from zato.common.util.xml_.core import element_text, from_timestamp, new_id, parse_xml, qname, to_timestamp, XMLException, \
     XMLSecurityException
 from zato.common.util.xml_.wssec import add_binary_security_token, add_element_reference, add_key_info_token_reference, \
     build_id_index, compute_signature_value, extract_signer_chain, recover_content_key, validate_certificate_chain, \
@@ -417,7 +417,7 @@ def decrypt_body(envelope:'any_', keystore:'Keystore') -> 'None':
     # The plaintext is a sequence of sibling elements, so it needs a wrapper to parse. Decrypting
     # proves the sender held the content key, not that the plaintext is safe, so this parse is
     # hardened like any other - an attacker who can encrypt can otherwise plant an XXE payload.
-    wrapper = etree.fromstring(b'<wrapper>' + plaintext + b'</wrapper>', xml_parser)
+    wrapper = parse_xml(b'<wrapper>' + plaintext + b'</wrapper>')
 
     for child in wrapper:
         body.append(child)
