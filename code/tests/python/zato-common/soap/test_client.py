@@ -783,6 +783,71 @@ class TestEbXML:
         assert received_part.data == original
         _ = verify_payload(signature, received_part, receiver_keystore)
 
+    def test_reply_payloads_reach_the_caller(self, soap_server):
+        """ An ebXML reply keeps its business document in a payload part, the body carrying only a
+        Manifest that points at it, so a caller that is handed the header alone is handed nothing of
+        what it asked for. The parts used to be parsed and then dropped, which silently lost the
+        answer to every exchange that was not a bare acknowledgment.
+        """
+        first_payload = b'<Melding>first reply document</Melding>'
+        second_payload = b'<Melding>second reply document</Melding>'
+
+        soap_server.configure('/ebxml-reply-parts', ebxml=True, ebxml_respond_parts=[first_payload, second_payload])
+
+        config = {
+            'address': soap_server.url('/ebxml-reply-parts'),
+            'soap_version': SOAPVersion.V11,
+        }
+        info = EbXMLInfo()
+        info.from_party = 'urn:sender'
+        info.to_party = 'urn:receiver'
+        info.cpa_id = 'cpa-1'
+        info.conversation_id = 'conv-1'
+        info.service = 'urn:helse:svc'
+        info.action = 'Query'
+
+        part = Part()
+        part.content_id = new_content_id()
+        part.data = b'<Sporring>what I asked for</Sporring>'
+
+        client = SOAPClient(config)
+        reply = client.invoke_ebxml(info, [part])
+        client.close()
+
+        assert reply.action == 'Acknowledgment'
+        assert len(reply.attachments) == 2
+        assert reply.attachments[0].data == first_payload
+        assert reply.attachments[1].data == second_payload
+
+    def test_a_bare_acknowledgment_has_no_attachments(self, soap_server):
+        """ A reply that carries no payloads leaves the attachments empty rather than absent, so a
+        caller can loop over them without first asking whether there are any.
+        """
+        soap_server.configure('/ebxml-bare-ack', ebxml=True)
+
+        config = {
+            'address': soap_server.url('/ebxml-bare-ack'),
+            'soap_version': SOAPVersion.V11,
+        }
+        info = EbXMLInfo()
+        info.from_party = 'urn:sender'
+        info.to_party = 'urn:receiver'
+        info.cpa_id = 'cpa-1'
+        info.conversation_id = 'conv-1'
+        info.service = 'urn:helse:svc'
+        info.action = 'Send'
+
+        part = Part()
+        part.content_id = new_content_id()
+        part.data = b'<Melding>a document to file</Melding>'
+
+        client = SOAPClient(config)
+        reply = client.invoke_ebxml(info, [part])
+        client.close()
+
+        assert reply.action == 'Acknowledgment'
+        assert reply.attachments == []
+
 # ################################################################################################################################
 
 def _make_receiver_keystore(parties):

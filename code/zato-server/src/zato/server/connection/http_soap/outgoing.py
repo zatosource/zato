@@ -976,7 +976,8 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
     def invoke_ebxml(self, cid:'str', info:'any_', parts:'any_', sign:'bool'=False, encrypt:'bool'=False) -> 'any_':
         """ Sends an ebXML Message Service message over this connection - payloads travel
-        as MIME parts, each optionally signed and encrypted for the recipient.
+        as MIME parts, each optionally signed and encrypted for the recipient. Returns the
+        reply's EbXMLInfo, whose attachments are the reply's own payload parts.
         """
         self._enforce_is_active()
 

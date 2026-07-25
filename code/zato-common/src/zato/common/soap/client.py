@@ -580,7 +580,12 @@ class SOAPClient:
         ) -> 'any_':
         """ Sends an ebXML Message Service message - the envelope carries the message header
         and a manifest, the payloads travel as MIME parts, each optionally signed and encrypted
-        for the recipient. Returns the parsed EbXMLInfo of the reply.
+        for the recipient.
+
+        Returns the reply's EbXMLInfo, whose attachments are the reply's own payload parts. A reply
+        that is signed or encrypted for us is left as it arrived - verify_payload and decrypt_payload
+        take a part and the keystore, and only the caller knows which of the reply's parts it expects
+        to be protected and by whose key.
         """
         keystore = self._ebxml_keystore()
 
@@ -605,12 +610,19 @@ class SOAPClient:
 
         response = self._audited_post(cid, f'{info.action} {self.address}', body, content_type, envelope)
 
-        response_envelope_bytes, _ = parse_message(response.content, response.headers.get('Content-Type', ''))
+        response_envelope_bytes, response_parts = parse_message(response.content, response.headers.get('Content-Type', ''))
         response_envelope = parse_envelope(response_envelope_bytes)
 
         raise_for_fault(response_envelope)
 
         out = parse_message_header(response_envelope)
+
+        # The reply's payloads travel as MIME parts, the body carrying only a Manifest pointing at
+        # them, so a caller that never sees the parts never sees the reply's business document -
+        # they used to be parsed here and then dropped on the floor. Anything but a bare
+        # acknowledgement was silently lost, which is every query-style exchange.
+        out.attachments = response_parts
+
         return out
 
 # ################################################################################################################################
