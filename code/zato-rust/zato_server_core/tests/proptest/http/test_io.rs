@@ -8,34 +8,43 @@ proptest! {
     #[test]
     fn parse_content_length_never_exceeds_max(input in proptest::collection::vec(any::<u8>(), 0..256)) {
         let result = parse_content_length(&input, DEFAULT_MAX_MSG_SIZE);
-        prop_assert!(result <= DEFAULT_MAX_MSG_SIZE);
+        if let Some(parsed) = result {
+            prop_assert!(parsed <= DEFAULT_MAX_MSG_SIZE);
+        }
     }
 
     #[test]
     fn parse_content_length_valid_digits(num in 0usize..=DEFAULT_MAX_MSG_SIZE) {
         let text = num.to_string();
         let result = parse_content_length(text.as_bytes(), DEFAULT_MAX_MSG_SIZE);
-        prop_assert_eq!(result, num);
+        prop_assert_eq!(result, Some(num));
     }
 
     #[test]
-    fn parse_content_length_overflow_clamps(text in "[0-9]{20,40}") {
+    fn parse_content_length_overflow_rejected(text in "[0-9]{20,40}") {
         let result = parse_content_length(text.as_bytes(), DEFAULT_MAX_MSG_SIZE);
-        prop_assert!(result <= DEFAULT_MAX_MSG_SIZE);
+        prop_assert_eq!(result, None);
+    }
+
+    #[test]
+    fn parse_content_length_above_cap_rejected(over in 1usize..=1024) {
+        let text = (DEFAULT_MAX_MSG_SIZE + over).to_string();
+        let result = parse_content_length(text.as_bytes(), DEFAULT_MAX_MSG_SIZE);
+        prop_assert_eq!(result, None);
     }
 
     #[test]
     fn parse_content_length_ignores_whitespace(num in 0usize..=999_999, spaces in " {0,5}") {
         let text = format!("{spaces}{num}");
         let result = parse_content_length(text.as_bytes(), DEFAULT_MAX_MSG_SIZE);
-        prop_assert_eq!(result, num);
+        prop_assert_eq!(result, Some(num));
     }
 
     #[test]
     fn parse_content_length_stops_at_non_digit(num in 0usize..=999_999, suffix in "[a-z]{1,5}") {
         let text = format!("{num}{suffix}");
         let result = parse_content_length(text.as_bytes(), DEFAULT_MAX_MSG_SIZE);
-        prop_assert_eq!(result, num);
+        prop_assert_eq!(result, Some(num));
     }
 
     #[test]

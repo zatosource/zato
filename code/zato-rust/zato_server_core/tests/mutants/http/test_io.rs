@@ -4,34 +4,43 @@ const DEFAULT_MAX_MSG_SIZE: usize = 8 * 1024 * 1024;
 
 #[test]
 fn parse_content_length_zero() {
-    assert_eq!(parse_content_length(b"0", DEFAULT_MAX_MSG_SIZE), 0);
+    assert_eq!(parse_content_length(b"0", DEFAULT_MAX_MSG_SIZE), Some(0));
 }
 
 #[test]
 fn parse_content_length_exact_max() {
     let text = DEFAULT_MAX_MSG_SIZE.to_string();
-    assert_eq!(parse_content_length(text.as_bytes(), DEFAULT_MAX_MSG_SIZE), DEFAULT_MAX_MSG_SIZE);
+    assert_eq!(
+        parse_content_length(text.as_bytes(), DEFAULT_MAX_MSG_SIZE),
+        Some(DEFAULT_MAX_MSG_SIZE)
+    );
 }
 
 #[test]
-fn parse_content_length_above_max_clamps() {
+fn parse_content_length_above_max_rejected() {
     let text = (DEFAULT_MAX_MSG_SIZE + 1).to_string();
-    assert_eq!(parse_content_length(text.as_bytes(), DEFAULT_MAX_MSG_SIZE), DEFAULT_MAX_MSG_SIZE);
+    assert_eq!(parse_content_length(text.as_bytes(), DEFAULT_MAX_MSG_SIZE), None);
+}
+
+#[test]
+fn parse_content_length_overflow_rejected() {
+    let text = "9".repeat(40);
+    assert_eq!(parse_content_length(text.as_bytes(), DEFAULT_MAX_MSG_SIZE), None);
 }
 
 #[test]
 fn parse_content_length_empty() {
-    assert_eq!(parse_content_length(b"", DEFAULT_MAX_MSG_SIZE), 0);
+    assert_eq!(parse_content_length(b"", DEFAULT_MAX_MSG_SIZE), Some(0));
 }
 
 #[test]
 fn parse_content_length_non_digit() {
-    assert_eq!(parse_content_length(b"abc", DEFAULT_MAX_MSG_SIZE), 0);
+    assert_eq!(parse_content_length(b"abc", DEFAULT_MAX_MSG_SIZE), Some(0));
 }
 
 #[test]
 fn parse_content_length_leading_spaces() {
-    assert_eq!(parse_content_length(b"  42", DEFAULT_MAX_MSG_SIZE), 42);
+    assert_eq!(parse_content_length(b"  42", DEFAULT_MAX_MSG_SIZE), Some(42));
 }
 
 #[test]

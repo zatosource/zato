@@ -74,25 +74,37 @@ pub(super) fn fd_write_all(py: Python<'_>, fd: i32, data: &[u8], gev: &GeventLoo
     Ok(())
 }
 
+/// The decimal base ASCII digits are accumulated in.
+const DECIMAL_BASE: usize = 10;
+
 /// Hand-rolled ASCII decimal parser for Content-Length header values.
-/// Returns `max_msg_size` on overflow to trigger the request-too-large path.
+///
+/// Returns `None` when the declared length overflows or exceeds `max_msg_size`. Clamping to the
+/// cap instead would leave the caller reading fewer body bytes than the client announced, and the
+/// remainder would then be parsed as the next request on the same connection.
 #[inline]
 #[expect(clippy::as_conversions, reason = "ASCII digit subtraction yields 0..=9, always fits in usize")]
-pub fn parse_content_length(raw: &[u8], max_msg_size: usize) -> usize {
+pub fn parse_content_length(raw: &[u8], max_msg_size: usize) -> Option<usize> {
     let mut result: usize = 0;
     for &byte in raw {
         match byte {
             b'0'..=b'9' => {
-                result = match result.checked_mul(10).and_then(|val| val.checked_add((byte - b'0') as usize)) {
-                    Some(val) if val <= max_msg_size => val,
-                    _ => return max_msg_size,
-                };
+                let digit = (byte - b'0') as usize;
+                let scaled = result.checked_mul(DECIMAL_BASE)?;
+                let accumulated = scaled.checked_add(digit)?;
+
+                // A value past the cap can never become acceptable again, so stop here
+                if accumulated > max_msg_size {
+                    return None;
+                }
+
+                result = accumulated;
             }
             b' ' | b'\t' => {}
             _ => break,
         }
     }
-    result
+    Some(result)
 }
 
 /// Case-insensitive HTTP header value comparison.

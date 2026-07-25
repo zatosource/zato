@@ -9,15 +9,21 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import re
-import signal
 import socket
-import subprocess
 from logging import getLogger
+
+# Zato
+from zato.common.haproxy.config import find_haproxy_config, reload_haproxy
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+__all__ = ('find_haproxy_config', 'reload_haproxy', 'resolve_internal_port', 'update_mllp_backend_port')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -32,23 +38,6 @@ _Env_Port_Name = 'Zato_HL7_MLLP_Port'
 _MLLP_Backend_Server_Pattern = re.compile(r'(\s+server\s+mllp1\s+127\.0\.0\.1:)\d+')
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def find_haproxy_config(server_base_directory:'str') -> 'str':
-    """ Resolves the path to haproxy.cfg from the server's base directory.
-    The server sits in e.g. /opt/zato/env/qs-1/server1 and haproxy.cfg
-    is one level up at /opt/zato/env/qs-1/haproxy.cfg.
-    """
-
-    # Go up one level from the server directory to the environment root ..
-    environment_directory = os.path.join(server_base_directory, '..')
-    environment_directory = os.path.abspath(environment_directory)
-
-    # .. and build the path to haproxy.cfg.
-    out = os.path.join(environment_directory, 'haproxy.cfg')
-
-    return out
-
 # ################################################################################################################################
 
 def update_mllp_backend_port(config_path:'str', internal_port:'int') -> 'None':
@@ -68,51 +57,6 @@ def update_mllp_backend_port(config_path:'str', internal_port:'int') -> 'None':
         _ = config_file.write(updated_content)
 
     logger.info('Updated mllp_backend port to %d in %s', internal_port, config_path)
-
-# ################################################################################################################################
-
-def reload_haproxy(config_path:'str') -> 'bool':
-    """ Sends SIGHUP to the HAProxy master process for a graceful configuration reload.
-    HAProxy must run in master-worker mode (the -W flag) - only the master process
-    reloads the configuration on SIGHUP, a standalone process merely dumps its state.
-    Returns True if the signal was sent successfully.
-    """
-
-    # Find the HAProxy master process running with our configuration file - matching
-    # on the full path makes sure we do not signal an unrelated HAProxy instance,
-    # and the -o flag returns the oldest matching process, which is the master
-    # because workers are forked from it after startup ..
-    result = subprocess.run(
-        ['pgrep', '-o', '-f', f'haproxy.*{config_path}'],
-        capture_output=True,
-        text=True,
-    )
-
-    if result.returncode != 0:
-        logger.warning('Could not find a running HAProxy process to reload')
-        return False
-
-    pid = result.stdout.strip()
-
-    if not pid:
-        logger.warning('pgrep returned empty output when looking for HAProxy')
-        return False
-
-    pid = int(pid)
-
-    # .. and send SIGHUP to the master so it re-reads the configuration and replaces its workers.
-    try:
-        os.kill(pid, signal.SIGHUP)
-        logger.info('Sent SIGHUP to HAProxy master process %d', pid)
-        out = True
-    except ProcessLookupError:
-        logger.warning('HAProxy process %d no longer exists', pid)
-        out = False
-    except PermissionError:
-        logger.warning('No permission to signal HAProxy process %d', pid)
-        out = False
-
-    return out
 
 # ################################################################################################################################
 
