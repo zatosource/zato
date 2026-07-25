@@ -204,7 +204,6 @@ for code, response in HTTP_RESPONSES.items():
 
 class ModuleCtx:
     Channel = CHANNEL.HTTP_SOAP
-    No_URL_Match = (None, False)
     Exception_Separator = '*' * 80
     IO_JSON = IO.FORMAT.JSON
     IO_FORM_DATA = IO.FORMAT.FORM_DATA
@@ -266,7 +265,12 @@ class _RequestMeta(NamedTuple):
 # ################################################################################################################################
 
 class _URLMatchResult(NamedTuple):
-    url_match: 'str'
+
+    # The path parameters the matched channel's pattern yielded, empty for a static path and None
+    # when nothing matched at all. This used to be declared as a string, which it never is - it is
+    # what goes on to become the channel's path parameters.
+    url_match: 'stranydict | None'
+
     channel_item: 'anydict'
     channel_name: 'str'
     payload: 'bytes'
@@ -426,7 +430,7 @@ class RequestDispatcher:
         self,
         cid:'str',
         meta:'_RequestMeta',
-        url_match:'str',
+        url_match:'stranydict',
         channel_item:'anydict',
         wsgi_environ:'stranydict',
         payload:'bytes',
@@ -488,7 +492,7 @@ class RequestDispatcher:
         self,
         cid:'str',
         meta:'_RequestMeta',
-        url_match:'str',
+        url_match:'stranydict',
         channel_item:'anydict',
         wsgi_environ:'stranydict',
         payload:'bytes',
@@ -574,7 +578,7 @@ class RequestDispatcher:
         self,
         cid:'str',
         meta:'_RequestMeta',
-        url_match:'str',
+        url_match:'stranydict',
         channel_item:'anydict',
         wsgi_environ:'stranydict',
         payload:'bytes',
@@ -947,7 +951,6 @@ class RequestDispatcher:
         """
         url_match, channel_item = self.url_data.match(meta.path_info, meta.http_method, meta.http_accept)
 
-        url_match = cast_('str', url_match)
         channel_item = cast_('anydict', channel_item)
 
         # .. the item itself may be None in case it is a 404 ..
@@ -1067,8 +1070,11 @@ class RequestDispatcher:
                     if channel_item['is_audit_log_active']:
                         needs_audit = True
 
-        # .. we have a match and we can possibly handle the incoming request ..
-        if url_match not in ModuleCtx.No_URL_Match:
+        # .. we have a match and we can possibly handle the incoming request. A static path matches
+        # .. with no parameters at all, so the test is against None rather than against emptiness -
+        # .. this used to read as "not in (None, False)", where the False stood for a return value
+        # .. the dispatcher has no way of producing.
+        if url_match is not None:
 
             now_us = current_time_us()
 
@@ -1587,35 +1593,58 @@ class RequestHandler:
 
                 response.payload = dumps(payload)
         else:
-            if not isinstance(response.payload, str):
-                if isinstance(response.payload, dict) and data_format in ModuleCtx.Dict_Like:
-                    response.payload = dumps(response.payload)
+            # Read once here - the vivified-model check above may have replaced it already.
+            payload = response.payload
+
+            if not isinstance(payload, str):
+
+                # A dict behind a channel whose data format is dict-like is serialised as it is.
+                if isinstance(payload, dict) and data_format in ModuleCtx.Dict_Like:
+                    response.payload = dumps(payload)
+
+                elif payload:
+                    response.payload = self._serialize_payload(payload)
+
+                # Nothing to say is said as nothing rather than as the word null.
                 else:
-                    if response.payload:
-                        if isinstance(response.payload, Model):
-                            value = response.payload.to_json()
-                        else:
-                            if hasattr(response.payload, 'getvalue'):
-                                value = response.payload.getvalue()
-                                if isinstance(value, (dict, list)):
-                                    value = dumps(value)
-                            else:
-                                # Check if it's a list of models ..
-                                is_model_list = isinstance(response.payload, list) and isinstance(response.payload[0], Model)
+                    response.payload = ''
 
-                                # .. if it is one, we need to turn each of the models into a dict ..
-                                if is_model_list:
-                                    value = []
-                                    for item in response.payload:
-                                        value.append(item.to_dict())
-                                    value = dumps(value)
+# ################################################################################################################################
 
-                                # .. it's not a list of models.
-                                else:
-                                    value = dumps(response.payload)
-                    else:
-                        value = ''
-                    response.payload = value
+    def _serialize_payload(self, payload:'any_') -> 'any_':
+        """ Turns what a service assigned to its response into what goes on the wire.
+
+        What a service assigns is up to the service, so each kind it may be is recognised in turn
+        rather than one being assumed. This used to be a five-level nested if inside set_payload,
+        which is what made the one duck-typed test in it read as a defensive check.
+        """
+        # A model renders itself, since only it knows the fields it was declared with ..
+        if isinstance(payload, Model):
+            out = payload.to_json()
+
+        # .. a SimpleIO payload is recognised by rendering itself rather than by its class, there
+        # .. being several unrelated ones, and what it renders to may still need serialising ..
+        elif hasattr(payload, 'getvalue'):
+            out = payload.getvalue()
+
+            if isinstance(out, (dict, list)):
+                out = dumps(out)
+
+        # .. a list of models is turned into dicts element by element, json knowing nothing
+        # .. about a model ..
+        elif isinstance(payload, list) and isinstance(payload[0], Model):
+            rows = []
+
+            for item in payload:
+                rows.append(item.to_dict())
+
+            out = dumps(rows)
+
+        # .. and anything else is left to json.
+        else:
+            out = dumps(payload)
+
+        return out
 
 # ################################################################################################################################
 
