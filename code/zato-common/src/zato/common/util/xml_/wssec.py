@@ -78,9 +78,8 @@ Accepted_Transforms = {
     Transform.Enveloped,
 }
 
-# The smallest RSA modulus accepted when verifying a signature. 1024-bit RSA is within reach of
-# a well-funded attacker, so a signature that verifies under a key that small is not evidence
-# of anything - the algorithm identifier says nothing about key size, so it is checked separately.
+# The smallest RSA modulus accepted when verifying a signature. The algorithm identifier says nothing
+# about key size, so the size is checked separately.
 Minimum_RSA_Key_Size_Bits = 2048
 
 # ################################################################################################################################
@@ -254,11 +253,8 @@ def build_id_index(root:'any_') -> 'anydict':
 # ################################################################################################################################
 
 def resolve_reference_id(id_index:'anydict', element_id:'str') -> 'any_':
-    """ Returns the one element a signature reference names. Two elements carrying the same
-    id is the XML signature wrapping attack - the attacker leaves the signed copy somewhere
-    the verifier will find it and puts the payload it wants processed where the application
-    will find it. Resolving to the first match in document order is what makes that work,
-    so an ambiguous id is refused outright rather than resolved.
+    """ Returns the one element a signature reference names. An id carried by more than one element
+    is refused rather than resolved to the first match in document order.
     """
     if element_id not in id_index:
         raise XMLSecurityException(f'Signed element `{element_id}` is missing')
@@ -574,11 +570,9 @@ def validate_certificate_chain(chain:'certificate_list', keystore:'Keystore') ->
     now = datetime.now(timezone.utc)
     leaf = chain[0]
 
-    # Trust has to come from something the operator configured. The signer's certificate arrives
-    # inside the message being verified, so with neither anchors nor a pinned certificate there is
-    # nothing to check it against and any self-signed certificate an attacker generates would be
-    # accepted. Returning without validating here is the difference between a signature that
-    # proves who sent the message and one that proves only that somebody signed something.
+    # Trust comes from what the operator configured - either anchors or a pinned certificate. With
+    # neither, the certificate that arrives inside the message has nothing to be checked against, so
+    # the configuration is incomplete and verification cannot proceed.
     if not keystore.trust_anchors:
 
         pinned = keystore.peer_signing_certificate

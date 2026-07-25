@@ -216,7 +216,8 @@ $.fn.zato.http_soap.add_param_row = function(action, kind, key, value, mode) {
     value_cell.append(value_input);
 
     var remove_cell = $('<td class="request-param-remove-cell"></td>');
-    var remove_link = $('<a href="javascript:void(0)" class="request-param-remove" title="Remove" aria-label="Remove">x</a>');
+    var remove_link = $('<a href="javascript:void(0)" class="request-param-remove" title="Remove" aria-label="Remove"></a>');
+    remove_link.append($.fn.zato.new_remove_icon());
     remove_cell.append(remove_link);
 
     row.append(jsonata_cell);

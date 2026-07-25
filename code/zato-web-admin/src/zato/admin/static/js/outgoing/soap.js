@@ -22,9 +22,6 @@
         textMode: 'text',
         jsonataMode: 'jsonata',
 
-        removeIconSize: 14,
-        svgNamespace: 'http://www.w3.org/2000/svg',
-
         // The tab the create and edit dialogs open on.
         defaultTab: 'main',
 
@@ -72,38 +69,6 @@
         }
 
         return '';
-    }
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    // Builds the icon the remove badge carries. It is an SVG rather than a lowercase x, which is a
-    // letter standing in for a pictogram - the stylesheet even carried a bottom padding to correct
-    // for where that letter's ink sits inside its em box.
-    function newRemoveIcon() {
-
-        var icon = document.createElementNS(config.svgNamespace, 'svg');
-        icon.setAttribute('width', config.removeIconSize);
-        icon.setAttribute('height', config.removeIconSize);
-        icon.setAttribute('viewBox', '0 0 24 24');
-        icon.setAttribute('fill', 'none');
-        icon.setAttribute('stroke', 'currentColor');
-        icon.setAttribute('stroke-width', '2.5');
-        icon.setAttribute('stroke-linecap', 'round');
-        icon.setAttribute('stroke-linejoin', 'round');
-
-        // The link around it already names itself to a screen reader.
-        icon.setAttribute('aria-hidden', 'true');
-
-        var firstStroke = document.createElementNS(config.svgNamespace, 'path');
-        firstStroke.setAttribute('d', 'M18 6 6 18');
-
-        var secondStroke = document.createElementNS(config.svgNamespace, 'path');
-        secondStroke.setAttribute('d', 'm6 6 12 12');
-
-        icon.appendChild(firstStroke);
-        icon.appendChild(secondStroke);
-
-        return icon;
     }
 
     // ////////////////////////////////////////////////////////////////////////
@@ -164,7 +129,7 @@
 
         var removeCell = $('<td class="request-param-remove-cell"></td>');
         var removeLink = $('<a href="javascript:void(0)" class="request-param-remove" title="Remove" aria-label="Remove"></a>');
-        removeLink.append(newRemoveIcon());
+        removeLink.append($.fn.zato.new_remove_icon());
         removeCell.append(removeLink);
 
         row.append(jsonataCell);

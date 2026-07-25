@@ -10,3 +10,26 @@
     white-space: nowrap;
     padding-right: 14px;
 }
+
+/* ------------------------------------------------------------ */
+/* Outgoing SOAP - body-credential mapping rows                 */
+/* ------------------------------------------------------------ */
+
+/* Each row is an element name, an optional position and a remove link. The row is built in
+   JavaScript, which used to carry its own inline widths and put non-breaking spaces between
+   the three of them - both of those belong here. */
+
+.body-credential-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.body-credential-row input.body-credential-name {
+    width: 40%;
+}
+
+.body-credential-row input.body-credential-position {
+    width: 15%;
+}
