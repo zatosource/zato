@@ -212,3 +212,57 @@ class APIKeyRateLimitingClearCounters(_RateLimitingClearCountersBase):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class MTLSRateLimitingGet(_RateLimitingGetBase):
+    name = 'zato.security.mtls.rate-limiting.get'
+
+# ################################################################################################################################
+
+class MTLSRateLimitingSave(_RateLimitingSaveBase):
+    name = 'zato.security.mtls.rate-limiting.save'
+    _broker_message_type = SECURITY.MTLS_RATE_LIMITING_EDIT
+
+# ################################################################################################################################
+
+class MTLSRateLimitingClearCounters(_RateLimitingClearCountersBase):
+    name = 'zato.security.mtls.rate-limiting.clear-counters'
+    _key_prefix_template = 'mtls{}:'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class OAuthRateLimitingGet(_RateLimitingGetBase):
+    name = 'zato.security.oauth.rate-limiting.get'
+
+# ################################################################################################################################
+
+class OAuthRateLimitingSave(_RateLimitingSaveBase):
+    name = 'zato.security.oauth.rate-limiting.save'
+    _broker_message_type = SECURITY.OAUTH_RATE_LIMITING_EDIT
+
+# ################################################################################################################################
+
+class OAuthRateLimitingClearCounters(_RateLimitingClearCountersBase):
+    name = 'zato.security.oauth.rate-limiting.clear-counters'
+    _key_prefix_template = 'bearer{}:'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class WSSRateLimitingGet(_RateLimitingGetBase):
+    name = 'zato.security.wss.rate-limiting.get'
+
+# ################################################################################################################################
+
+class WSSRateLimitingSave(_RateLimitingSaveBase):
+    name = 'zato.security.wss.rate-limiting.save'
+    _broker_message_type = SECURITY.WSS_RATE_LIMITING_EDIT
+
+# ################################################################################################################################
+
+class WSSRateLimitingClearCounters(_RateLimitingClearCountersBase):
+    name = 'zato.security.wss.rate-limiting.clear-counters'
+    _key_prefix_template = 'wss{}:'
+
+# ################################################################################################################################
+# ################################################################################################################################

@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 from logging import getLogger
 from base64 import b64decode
 
@@ -18,7 +17,6 @@ from six import PY2
 # Zato
 from zato.common.api import AUTH_RESULT
 from zato.common.crypto.api import is_string_equal
-from zato.common.util.api import as_bool
 from zato.server.connection.http_soap import Forbidden
 
 logger = getLogger('zato')
@@ -58,11 +56,6 @@ try:
     from yaml import CDumper as Dumper
 except ImportError:                      # pragma: no cover
     from yaml import Dumper              # pragma: no cover
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-_needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -128,7 +121,16 @@ Auth_WSSE_Validation_Error = '0003.0002'
 
 Auth_Basic_No_Auth = 'No_Auth_Provided'
 Auth_Basic_Invalid_Prefix = 'Invalid_Auth_Prefix'
+Auth_Basic_Invalid_Base64 = 'Invalid_Auth_Base64'
+Auth_Basic_Invalid_Encoding = 'Invalid_Auth_Encoding'
+Auth_Basic_No_Separator = 'No_Username_Password_Separator'
 Auth_Basic_Username_Or_Password_Mismatch = 'Invalid_Username_Or_Password'
+
+Auth_Basic_Separator = ':'
+Auth_Basic_Encoding = 'utf8'
+
+# Fields of a security definition that never leave the definition itself
+Sec_Def_Secret_Fields = ('password', 'static_token')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -154,35 +156,52 @@ def on_wsse_pwd(wsse, url_config, data, needs_auth_info=True):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def extract_basic_auth(cid:'str', auth:'str', *, raise_on_error:'bool'=False) -> 'str':
+def _on_basic_auth_error(cid:'str', code:'str', raise_on_error:'bool') -> 'tuple':
+    """ Reports a header that could not be turned into credentials.
+    """
+    logger.warning('Basic Auth -> %s -> %s', code, cid)
 
+    if raise_on_error:
+        raise Forbidden(cid)
+    else:
+        return None, code
+
+# ################################################################################################################################
+
+def extract_basic_auth(cid:'str', auth:'str', *, raise_on_error:'bool'=False) -> 'tuple':
+    """ Turns an Authorization header into a username and password, or reports why it could not be done.
+    """
     if not auth:
-        if raise_on_error:
-            logger.warn(f'Basic Auth -> {Auth_Basic_No_Auth} -> {cid}')
-            raise Forbidden(cid)
-        else:
-            return None, Auth_Basic_No_Auth
+        return _on_basic_auth_error(cid, Auth_Basic_No_Auth, raise_on_error)
 
     prefix = 'Basic '
     if not auth.startswith(prefix):
-        if raise_on_error:
-            logger.warn(f'Basic Auth -> {Auth_Basic_Invalid_Prefix} -> {cid}')
-            raise Forbidden(cid)
-        else:
-            return None, Auth_Basic_Invalid_Prefix
+        return _on_basic_auth_error(cid, Auth_Basic_Invalid_Prefix, raise_on_error)
 
-    _, auth = auth.split(prefix)
-    auth = auth.strip()
-    auth = b64decode(auth)
-    auth = auth if isinstance(auth, unicode) else auth.decode('utf8')
-    username, password = auth.split(':', 1)
+    encoded = auth[len(prefix):].strip()
+
+    try:
+        decoded = b64decode(encoded)
+    except ValueError:
+        return _on_basic_auth_error(cid, Auth_Basic_Invalid_Base64, raise_on_error)
+
+    if not isinstance(decoded, unicode):
+        try:
+            decoded = decoded.decode(Auth_Basic_Encoding)
+        except UnicodeDecodeError:
+            return _on_basic_auth_error(cid, Auth_Basic_Invalid_Encoding, raise_on_error)
+
+    if Auth_Basic_Separator not in decoded:
+        return _on_basic_auth_error(cid, Auth_Basic_No_Separator, raise_on_error)
+
+    username, password = decoded.split(Auth_Basic_Separator, 1)
 
     return username, password
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def check_basic_auth(cid, auth, expected_username, expected_password, _needs_details=_needs_details):
+def check_basic_auth(cid, auth, expected_username, expected_password):
     """ A low-level call for checking HTTP Basic Auth credentials.
     """
     result = extract_basic_auth(cid, auth, raise_on_error=False)
@@ -192,16 +211,10 @@ def check_basic_auth(cid, auth, expected_username, expected_password, _needs_det
     else:
         return result[1]
 
-    if _needs_details:
-        logger.info('*' * 60)
+    is_username_equal = is_string_equal(username, expected_username)
+    is_password_equal = is_string_equal(password, expected_password)
 
-        logger.info('Username received: `%s`', username)
-        logger.info('Username expected: `%s`', expected_username)
-
-        logger.info('Password received: `%s`', password)
-        logger.info('Password expected: `%s`', expected_password)
-
-    if is_string_equal(username, expected_username) and is_string_equal(password, expected_password):
+    if is_username_equal and is_password_equal:
         return True
     else:
         return Auth_Basic_Username_Or_Password_Mismatch
@@ -230,11 +243,15 @@ def on_basic_auth(cid, env, url_config, needs_auth_info=True):
 # ################################################################################################################################
 
 def enrich_with_sec_data(data_dict, sec_def, sec_def_type):
+
+    # What the caller had to know to get here is not something the service is handed
+    impl = {key:value for key, value in sec_def.items() if key not in Sec_Def_Secret_Fields}
+
     data_dict['zato.sec_def'] = {}
     data_dict['zato.sec_def']['id'] = sec_def['id']
     data_dict['zato.sec_def']['name'] = sec_def['name']
     data_dict['zato.sec_def']['username'] = sec_def.get('username')
-    data_dict['zato.sec_def']['impl'] = sec_def
+    data_dict['zato.sec_def']['impl'] = impl
     data_dict['zato.sec_def']['type'] = sec_def_type
 
 # ################################################################################################################################

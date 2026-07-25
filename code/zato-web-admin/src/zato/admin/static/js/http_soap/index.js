@@ -47,13 +47,7 @@ $(document).ready(function() {
     // in ensure_channel_is_unique, so the url_path check mirrors the create service exactly.
     var _get_url_path_check_context = function(suffix) {
         return function() {
-
-            // The soap_action field exists only on SOAP pages.
-            var soap_action_elem = $('#id_' + suffix + 'soap_action');
-            var soap_action = soap_action_elem.length ? soap_action_elem.val() : '';
-
             return {
-                'soap_action': soap_action,
                 'method': $('#id_' + suffix + 'method').val(),
                 'http_accept': $('#id_' + suffix + 'http_accept').val()
             };

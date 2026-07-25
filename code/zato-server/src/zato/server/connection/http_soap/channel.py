@@ -33,10 +33,11 @@ from zato.common.rate_limiting.common import current_time_us
 from zato.common.soap.common import SOAP_Action_Header, SOAPVersion
 from zato.common.soap.message import SOAPMessage
 from zato.common.typing_ import cast_
-from zato.common.util.api import as_bool, utcnow
+from zato.common.util.api import utcnow
 from zato.common.util.auth import enrich_with_sec_data, extract_basic_auth
 from zato.common.util.http_ import get_form_data as util_get_form_data, QueryDict
 from zato.common.util.logging_ import current_cid, current_service_name
+from zato.common.util.url_dispatcher import normalize_path_info
 from zato.server.reqresp.payload import IOPayload
 from zato.server.connection.as2 import AS2ChannelRuntime
 from zato.server.connection.as4 import AS4ChannelRuntime
@@ -71,10 +72,6 @@ if 0:
 logger = logging.getLogger('zato_rest')
 _logger_is_enabled_for = logger.isEnabledFor
 _logging_info = logging.INFO
-# ################################################################################################################################
-
-_needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
-
 # ################################################################################################################################
 
 accept_any_http = HTTP_SOAP.ACCEPT.ANY
@@ -117,15 +114,27 @@ _utcnow=utcnow
 
 _basic_auth = SEC_DEF_TYPE.BASIC_AUTH
 
+# The counter key prefix per definition type - every type a channel can authenticate against
+# has one, because a rate limit the dashboard accepts is a rate limit that gets enforced.
 _sec_def_key_prefix_map = {
     SEC_DEF_TYPE.BASIC_AUTH: 'basic{}:',
     SEC_DEF_TYPE.APIKEY:     'apikey{}:',
+    SEC_DEF_TYPE.MTLS:       'mtls{}:',
+    SEC_DEF_TYPE.OAUTH:      'bearer{}:',
+    SEC_DEF_TYPE.WSS:        'wss{}:',
 }
 
 # Quota introspection headers - set only for limits coming from security definitions,
 # channel-level limits are infrastructure protection and stay silent.
 _header_rate_limit_limit     = 'X-RateLimit-Limit'
 _header_rate_limit_remaining = 'X-RateLimit-Remaining'
+
+# Where the dashboard reads an internal error's own message from.
+_header_zato_message = 'X-Zato-Message'
+
+# A header value is a single line, so these are what it cannot contain and what stands in for them.
+_header_line_breaks = ('\r', '\n')
+_header_line_break_replacement = ' '
 
 # The largest SOAP request body accepted before parsing begins. Parsing untrusted XML costs time
 # and memory proportional to the input, so an unbounded body is a way to exhaust a worker without
@@ -214,6 +223,22 @@ class ModuleCtx:
 
 response_404     = 'URL not found (CID:{})'
 response_404_log = 'URL not found `%s` (Method:%s; Accept:%s; CID:%s)'
+
+response_405     = 'Method not allowed (CID:{})'
+response_405_log = 'Method not allowed `%s` (Method:%s; Allow:%s; CID:%s)'
+
+# The header a 405 names the methods of the channels at that path in.
+_header_allow = 'Allow'
+
+# ################################################################################################################################
+
+def _as_single_line(value:'str') -> 'str':
+    """ Returns the input as a value fit for an HTTP header, which is a single line.
+    """
+    for item in _header_line_breaks:
+        value = value.replace(item, _header_line_break_replacement)
+
+    return value
 
 # ################################################################################################################################
 
@@ -320,10 +345,15 @@ class RequestDispatcher:
         http_accept = wsgi_environ.get('HTTP_ACCEPT') or accept_any_http
         http_accept = http_accept.replace('*', accept_any_internal).replace('/', 'HTTP_SEP')
 
+        # Everything downstream works with the path in its canonical form, and the URI
+        # exactly as it arrived stays available under RAW_URI.
+        path_info = normalize_path_info(wsgi_environ['PATH_INFO'])
+        wsgi_environ['PATH_INFO'] = path_info
+
         out = _RequestMeta(
             http_method=http_method,
             http_accept=http_accept,
-            path_info=wsgi_environ['PATH_INFO'],
+            path_info=path_info,
             wsgi_raw_uri=wsgi_environ['RAW_URI'],
             wsgi_remote_port=wsgi_environ['REMOTE_PORT'],
         )
@@ -381,7 +411,6 @@ class RequestDispatcher:
         payload:'bytes',
         post_data:'anydict',
         config_manager:'ConfigManager',
-        _needs_details:'bool'=_needs_details,
     ) -> 'None':
         """ Validates credentials via sec_def and security groups.
         Both check_security and check_security_via_groups may raise exceptions.
@@ -390,20 +419,9 @@ class RequestDispatcher:
         sec = self.url_data.url_sec[match_target]
 
         security_groups_ctx = channel_item.get('security_groups_ctx')
+        has_sec_def = sec.sec_def != ZATO_NONE
 
-        if sec.sec_def != ZATO_NONE:
-
-            if _needs_details:
-                logger.info('*' * 60)
-
-                logger.info('Channel item: `%s`', channel_item)
-                logger.info('Path info: `%s`', meta.path_info)
-
-                logger.info('Payload: `%s`', payload)
-                logger.info('POST data: `%s`', post_data)
-
-                for key, value in sorted(wsgi_environ.items()):
-                    logger.info('WSGI key=`%s` value=`%s`', key, value)
+        if has_sec_def:
 
             # .. this will raise an exception if the sec_def check fails ..
             _ = self.url_data.check_security(
@@ -423,6 +441,13 @@ class RequestDispatcher:
 
                 # .. this will raise an exception if the group check fails ..
                 self.check_security_via_groups(cid, channel_item['name'], security_groups_ctx, wsgi_environ)
+
+            # .. a channel protected by groups alone, whose groups have no members, has no credentials
+            # .. to check the caller against, so no caller passes ..
+            elif not has_sec_def:
+                logger.warning('Channel `%s` is protected by security groups that have no members, cid:`%s`',
+                    channel_item['name'], cid)
+                raise Unauthorized(cid, '401 Unauthorized', None)
 
 # ################################################################################################################################
 
@@ -593,6 +618,18 @@ class RequestDispatcher:
             logger.warning('url_data:`%s` is not active, raising NotFound', url_match)
             raise NotFound(cid, 'Channel inactive')
 
+        # The channel's own limit is keyed by address alone, so it applies before any credential
+        # is looked at - which is what bounds how many attempts a caller gets at guessing one.
+        channel_id = channel_item['id']
+        channel_rate_limit_result = self.server.rate_limiting_manager.check(
+            channel_id, remote_addr, now_us, f'rest{channel_id}:')
+
+        if channel_rate_limit_result:
+            if not channel_rate_limit_result.is_allowed:
+                out = self._handle_rate_limit_result(
+                    cid, channel_rate_limit_result, wsgi_environ, remote_addr, channel_item)
+                return out
+
         post_data = self._extract_post_data(channel_item, wsgi_environ)
 
         is_soap = channel_item['transport'] == _transport_soap
@@ -625,7 +662,8 @@ class RequestDispatcher:
             resolve_soap_payload(cid, soap_context, wsgi_environ)
             wsgi_environ['zato.request.payload'] = soap_context.payload
 
-        # .. now that auth succeeded, check sec_def rate limiting first ..
+        # .. a definition's own limit needs to know which definition authenticated the caller,
+        # .. so this one can only run once authentication has succeeded ..
         sec_def_rate_limit_result = self._check_sec_def_rate_limiting(wsgi_environ, remote_addr, now_us)
 
         if sec_def_rate_limit_result:
@@ -638,18 +676,6 @@ class RequestDispatcher:
             response_headers = wsgi_environ['zato.http.response.headers']
             response_headers[_header_rate_limit_limit] = str(sec_def_rate_limit_result.limit)
             response_headers[_header_rate_limit_remaining] = str(sec_def_rate_limit_result.remaining)
-
-        # .. then check channel rate limiting ..
-        channel_id = channel_item['id']
-        rate_limit_key_prefix = f'rest{channel_id}:'
-        channel_rate_limit_result = self.server.rate_limiting_manager.check(
-            channel_id, remote_addr, now_us, rate_limit_key_prefix)
-
-        if channel_rate_limit_result:
-            if not channel_rate_limit_result.is_allowed:
-                out = self._handle_rate_limit_result(
-                    cid, channel_rate_limit_result, wsgi_environ, remote_addr, channel_item)
-                return out
 
         # .. AS4 channels run the AS4 inbound pipeline instead of invoking a service directly -
         # the pipeline itself routes accepted payloads to the channel's topic or service ..
@@ -813,7 +839,7 @@ class RequestDispatcher:
             status = _status_internal_server_error
 
             if channel_item['name'] == _default_admin_channel:
-                headers['X-Zato-Message'] = str(e.args)
+                headers[_header_zato_message] = _as_single_line(str(e.args))
 
                 # The full traceback goes to the server log through _log_dispatch_error -
                 # callers, the dashboard included, get the actual error message alone.
@@ -1124,20 +1150,40 @@ class RequestDispatcher:
                 if zato_response_headers_container:
                     wsgi_environ['zato.http.response.headers'].update(zato_response_headers_container)
 
-        # This is 404, no such URL path.
+        # No channel matched, which is either a path no channel is at or a method none of the
+        # channels at that path accepts.
         else:
 
-            # Indicate HTTP 404
-            wsgi_environ['zato.http.response.status'] = _status_not_found
+            allow_methods = self.url_data.get_allow_methods(meta.path_info, meta.http_method, meta.http_accept)
 
-            # This is returned to the caller - note that it does not echo back the URL requested ..
-            response = response_404.format(cid)
+            # A path that channels do sit at, reached with a method none of them accepts ..
+            if allow_methods:
 
-            # .. this goes to logs and it includes the URL sent by the client.
-            logger.warning(response_404_log, meta.path_info, meta.http_method, meta.http_accept, cid)
+                allow_header = ', '.join(sorted(allow_methods))
 
-            # This is the payload for the caller
-            return response
+                wsgi_environ['zato.http.response.status'] = _status_method_not_allowed
+                wsgi_environ['zato.http.response.headers'][_header_allow] = allow_header
+
+                response = response_405.format(cid)
+
+                logger.warning(response_405_log, meta.path_info, meta.http_method, allow_header, cid)
+
+                return response
+
+            # .. otherwise, there is no such path at all.
+            else:
+
+                # Indicate HTTP 404
+                wsgi_environ['zato.http.response.status'] = _status_not_found
+
+                # This is returned to the caller - note that it does not echo back the URL requested ..
+                response = response_404.format(cid)
+
+                # .. this goes to logs and it includes the URL sent by the client.
+                logger.warning(response_404_log, meta.path_info, meta.http_method, meta.http_accept, cid)
+
+                # This is the payload for the caller
+                return response
 
 # ################################################################################################################################
 
@@ -1264,14 +1310,8 @@ class RequestDispatcher:
         sec_def_type = sec_def_info['type']
         sec_def_id = sec_def_info['id']
 
-        # .. look up the key prefix template for this sec_def type ..
-        prefix_template = _sec_def_key_prefix_map.get(sec_def_type)
-
-        if not prefix_template:
-            return None
-
         # .. build the key prefix ..
-        key_prefix = prefix_template.format(sec_def_id)
+        key_prefix = _sec_def_key_prefix_map[sec_def_type].format(sec_def_id)
 
         # .. and check rate limiting.
         out = self.server.rate_limiting_manager.check_sec_def(sec_def_id, remote_addr, now_us, key_prefix)

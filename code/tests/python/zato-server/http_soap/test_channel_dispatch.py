@@ -22,7 +22,7 @@ from zato.common.exception import BackendInvocationError, BadRequest, Forbidden,
     MethodNotAllowed, NotFound, ServiceMissingException, TooManyRequests, Unauthorized
 from zato.common.marshal_.api import ElementMissing
 from zato.common.util.logging_ import current_cid, current_service_name
-from zato.server.connection.http_soap.channel import RequestDispatcher, response_404, status_response
+from zato.server.connection.http_soap.channel import RequestDispatcher, response_404, response_405, status_response
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -225,10 +225,11 @@ class DispatchURLMatchTestCase(unittest.TestCase):
 # ################################################################################################################################
 
     def test_no_url_match_returns_404(self) -> 'None':
-        """ When url_data.match returns (None, False), dispatch returns 404.
+        """ When url_data.match returns (None, False) and no channel is at that path, dispatch returns 404.
         """
         ctx = _make_dispatcher()
         ctx.mock_url_data.match.return_value = (None, False)
+        ctx.mock_url_data.get_allow_methods.return_value = set()
         wsgi_environ = _make_wsgi_environ()
 
         result = _dispatch(ctx, wsgi_environ)
@@ -236,6 +237,24 @@ class DispatchURLMatchTestCase(unittest.TestCase):
         expected_response = response_404.format(_test_cid)
         self.assertEqual(result, expected_response)
         self.assertIn('404', wsgi_environ['zato.http.response.status'])
+
+# ################################################################################################################################
+
+    def test_no_url_match_with_other_methods_at_that_path_returns_405(self) -> 'None':
+        """ A path channels do sit at, reached with a method none of them accepts, is a 405
+        that names the methods they do accept.
+        """
+        ctx = _make_dispatcher()
+        ctx.mock_url_data.match.return_value = (None, False)
+        ctx.mock_url_data.get_allow_methods.return_value = {'POST', 'PATCH'}
+        wsgi_environ = _make_wsgi_environ()
+
+        result = _dispatch(ctx, wsgi_environ)
+
+        expected_response = response_405.format(_test_cid)
+        self.assertEqual(result, expected_response)
+        self.assertIn('405', wsgi_environ['zato.http.response.status'])
+        self.assertEqual(wsgi_environ['zato.http.response.headers']['Allow'], 'PATCH, POST')
 
 # ################################################################################################################################
 

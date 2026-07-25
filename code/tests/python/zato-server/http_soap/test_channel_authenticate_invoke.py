@@ -362,7 +362,8 @@ class CheckSecurityTestCase(unittest.TestCase):
         groups_ctx = MagicMock()
         groups_ctx.has_members.return_value = False
 
-        ctx = _make_dispatcher()
+        sec = _make_sec('basic_auth')
+        ctx = _make_dispatcher(sec=sec)
         mock_groups_check = MagicMock()
         ctx.dispatcher.check_security_via_groups = mock_groups_check # type: ignore
         channel_item = _make_channel_item({'security_groups_ctx': groups_ctx})
@@ -418,22 +419,41 @@ class CheckSecurityTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
-    @patch('zato.server.connection.http_soap.channel.logger')
-    def test_needs_details_logs_debug_info(self, mock_logger:'MagicMock') -> 'None':
-        """ When _needs_details is True, debug info is logged.
+    def test_empty_security_groups_only_protection_rejects(self) -> 'None':
+        """ A channel whose only protection is a group with no members rejects the request.
         """
+        groups_ctx = MagicMock()
+        groups_ctx.has_members.return_value = False
+
+        ctx = _make_dispatcher()
+        channel_item = _make_channel_item({'security_groups_ctx': groups_ctx})
+        meta = _make_meta()
+        wsgi_environ = _make_wsgi_environ()
+        worker_store = MagicMock()
+
+        with self.assertRaises(Unauthorized):
+            ctx.dispatcher._check_security(
+                _test_cid, meta, channel_item, wsgi_environ, b'payload', {}, worker_store)
+
+# ################################################################################################################################
+
+    def test_empty_security_groups_with_sec_def_does_not_reject(self) -> 'None':
+        """ A channel with a security definition of its own is not rejected by an empty group.
+        """
+        groups_ctx = MagicMock()
+        groups_ctx.has_members.return_value = False
+
         sec = _make_sec('basic_auth')
         ctx = _make_dispatcher(sec=sec)
-        channel_item = _make_channel_item()
+        channel_item = _make_channel_item({'security_groups_ctx': groups_ctx})
         meta = _make_meta()
         wsgi_environ = _make_wsgi_environ()
         worker_store = MagicMock()
 
         ctx.dispatcher._check_security(
-            _test_cid, meta, channel_item, wsgi_environ, b'payload', {}, worker_store,
-            _needs_details=True)
+            _test_cid, meta, channel_item, wsgi_environ, b'payload', {}, worker_store)
 
-        self.assertTrue(mock_logger.info.called)
+        ctx.mock_check_security.assert_called_once()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1299,72 +1319,30 @@ class ExtractPostDataMutantKillTestCase(unittest.TestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class CheckSecurityNeedsDetailsTestCase(unittest.TestCase):
-    """ Tests targeting the _needs_details logging branch in _check_security.
+class CheckSecurityNoDumpsTestCase(unittest.TestCase):
+    """ Tests that authentication leaves no request details in the log.
     """
 
 # ################################################################################################################################
 
     @patch('zato.server.connection.http_soap.channel.logger')
-    def test_needs_details_true_logs_exact_separator(self, mock_logger:'MagicMock') -> 'None':
-        """ When _needs_details is True, exactly '*' * 60 is logged (not 59 or 61).
+    def test_no_payload_or_environ_logged(self, mock_logger:'MagicMock') -> 'None':
+        """ Neither the payload nor the WSGI environment is logged during authentication.
         """
         sec = _make_sec('basic_auth')
         ctx = _make_dispatcher(sec=sec)
         channel_item = _make_channel_item()
         meta = _make_meta()
-        wsgi_environ = _make_wsgi_environ()
+        wsgi_environ = _make_wsgi_environ({'HTTP_AUTHORIZATION': 'Basic secret-material'})
         worker_store = MagicMock()
 
         ctx.dispatcher._check_security(
-            _test_cid, meta, channel_item, wsgi_environ, b'payload', {}, worker_store,
-            _needs_details=True)
+            _test_cid, meta, channel_item, wsgi_environ, b'payload', {}, worker_store)
 
-        first_info_call = mock_logger.info.call_args_list[0]
-        self.assertEqual(first_info_call[0][0], '*' * 60)
+        logged = [str(item) for item in mock_logger.info.call_args_list]
 
-# ################################################################################################################################
-
-    @patch('zato.server.connection.http_soap.channel.logger')
-    def test_needs_details_true_logs_sorted_environ(self, mock_logger:'MagicMock') -> 'None':
-        """ When _needs_details is True, sorted wsgi_environ items are logged.
-        """
-        sec = _make_sec('basic_auth')
-        ctx = _make_dispatcher(sec=sec)
-        channel_item = _make_channel_item()
-        meta = _make_meta()
-        wsgi_environ = _make_wsgi_environ({'AAA_KEY': 'aaa_val', 'ZZZ_KEY': 'zzz_val'})
-        worker_store = MagicMock()
-
-        ctx.dispatcher._check_security(
-            _test_cid, meta, channel_item, wsgi_environ, b'payload', {}, worker_store,
-            _needs_details=True)
-
-        logged_values = [str(c) for c in mock_logger.info.call_args_list]
-        aaa_idx = next(i for i, c in enumerate(logged_values) if 'AAA_KEY' in c)
-        zzz_idx = next(i for i, c in enumerate(logged_values) if 'ZZZ_KEY' in c)
-        self.assertLess(aaa_idx, zzz_idx)
-
-# ################################################################################################################################
-
-    @patch('zato.server.connection.http_soap.channel.logger')
-    def test_needs_details_false_no_separator(self, mock_logger:'MagicMock') -> 'None':
-        """ When _needs_details is False, no separator is logged.
-        """
-        sec = _make_sec('basic_auth')
-        ctx = _make_dispatcher(sec=sec)
-        channel_item = _make_channel_item()
-        meta = _make_meta()
-        wsgi_environ = _make_wsgi_environ()
-        worker_store = MagicMock()
-
-        ctx.dispatcher._check_security(
-            _test_cid, meta, channel_item, wsgi_environ, b'payload', {}, worker_store,
-            _needs_details=False)
-
-        logged_calls = [str(c) for c in mock_logger.info.call_args_list]
-        separator_found = any('*' * 60 in c for c in logged_calls)
-        self.assertFalse(separator_found)
+        self.assertFalse(any('secret-material' in item for item in logged))
+        self.assertFalse(any('payload' in item for item in logged))
 
 # ################################################################################################################################
 # ################################################################################################################################

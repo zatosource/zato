@@ -26,7 +26,7 @@ from zato.common.rate_limiting.cidr import SlottedCIDRRule
 from zato.common.odb.query import http_soap, http_soap_list
 from zato.common.typing_ import cast_
 from zato.common.util.api import as_bool, utcnow
-from zato.common.util.channel import find_channel_collision
+from zato.common.util.channel import find_channel_collision, validate_channel_url_path
 from zato.common.util.imap_scheduler import interval_from_unit
 from zato.common.util.rest_invocation import parse_param_rows, update_linked_job_fields, validate_jsonata, validate_xpath
 from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque, get_security_by_id, parse_instance_opaque_attr, \
@@ -87,6 +87,10 @@ _row_fields = (
 
 # Transports that support the declarative invocation profile
 _declarative_transports = (URL_TYPE.PLAIN_HTTP, URL_TYPE.SOAP)
+
+# Security types that only outgoing connections use - there is no inbound verification for them,
+# so a channel that named one would accept every caller.
+_outgoing_only_sec_types = (SEC_DEF_TYPE.NTLM, SEC_DEF_TYPE.SPNEGO)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -510,6 +514,11 @@ class _HTTPSOAPService:
                        SEC_DEF_TYPE.MTLS, SEC_DEF_TYPE.SPNEGO):
                     raise Exception('Unsupported sec_type `{}`'.format(sec_def.sec_type))
 
+            elif connection == CONNECTION.CHANNEL:
+
+                if sec_def.sec_type in _outgoing_only_sec_types:
+                    raise Exception('Sec_type `{}` cannot be used with channels'.format(sec_def.sec_type))
+
             info['security_id'] = security_id
             info['security_name'] = sec_def.name
             info['sec_type'] = sec_def.sec_type
@@ -717,17 +726,16 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
 
 # ################################################################################################################################
 
-    def _raise_error(self, name, url_path, http_accept, http_method, soap_action, source):
-        msg = 'Such a channel already exists ({}); url_path:`{}`, http_accept:`{}`, http_method:`{}`, soap_action:`{}` (src:{})'
-        raise Exception(msg.format(name, url_path, http_accept, http_method, soap_action, source))
+    def _raise_error(self, name, url_path, http_accept, http_method, source):
+        msg = 'Such a channel already exists ({}); url_path:`{}`, http_accept:`{}`, http_method:`{}` (src:{})'
+        raise Exception(msg.format(name, url_path, http_accept, http_method, source))
 
 # ################################################################################################################################
 
-    def ensure_channel_is_unique(self, session, url_path, http_accept, http_method, soap_action, cluster_id):
+    def ensure_channel_is_unique(self, session, url_path, http_accept, http_method, cluster_id, skip_id):
         existing_ones = session.query(HTTPSOAP).\
             filter(HTTPSOAP.cluster_id==cluster_id).\
             filter(HTTPSOAP.url_path==url_path).\
-            filter(HTTPSOAP.soap_action==soap_action).\
             filter(HTTPSOAP.connection==CONNECTION.CHANNEL).\
             all()
 
@@ -739,17 +747,17 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
         for item in existing_ones:
             opaque = parse_instance_opaque_attr(item)
             existing_items.append({
+                'id': item.id,
                 'name': item.name,
                 'url_path': item.url_path,
                 'method': item.method,
-                'soap_action': item.soap_action,
                 'http_accept': opaque.get('http_accept'),
             })
 
-        colliding_name = find_channel_collision(url_path, http_accept, http_method, soap_action, existing_items)
+        colliding_name = find_channel_collision(url_path, http_accept, http_method, existing_items, skip_id)
 
         if colliding_name:
-            self._raise_error(colliding_name, url_path, http_accept, http_method, soap_action, 'chk1')
+            self._raise_error(colliding_name, url_path, http_accept, http_method, 'chk1')
 
 # ################################################################################################################################
 
@@ -846,6 +854,16 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
             if value := input.get(name):
                 if not value.startswith(SECRETS.PREFIX):
                     input[name] = self.server.encrypt(value)
+
+# ################################################################################################################################
+
+    def _encrypt_own_password(self, input):
+        """ Encrypts the object's own password unless it is encrypted already. This is the password
+        that a channel or connection carries itself, not the one of a security definition it points to.
+        """
+        if password := input.get('password'):
+            if not password.startswith(SECRETS.PREFIX):
+                input['password'] = self.server.encrypt(password)
 
 # ################################################################################################################################
 
@@ -964,6 +982,9 @@ class Create(_CreateEdit):
         # AS2 private keys are stored encrypted too
         self._encrypt_as2_secrets(input)
 
+        # .. and so is the object's own password
+        self._encrypt_own_password(input)
+
         # The numeric AS2 fields arrive as strings from Dashboard forms
         self._normalize_as2_fields(input)
 
@@ -1021,8 +1042,9 @@ class Create(_CreateEdit):
 
             # Make sure this combination of channel parameters does not exist already
             if input.connection == CONNECTION.CHANNEL:
+                validate_channel_url_path(input.url_path)
                 self.ensure_channel_is_unique(session,
-                    input.url_path, input.http_accept, input.method, input.soap_action, input.cluster_id)
+                    input.url_path, input.http_accept, input.method, input.cluster_id, None)
 
             try:
 
@@ -1174,6 +1196,9 @@ class Edit(_CreateEdit):
         # AS2 private keys are stored encrypted too
         self._encrypt_as2_secrets(input)
 
+        # .. and so is the object's own password
+        self._encrypt_own_password(input)
+
         # The numeric AS2 fields arrive as strings from Dashboard forms
         self._normalize_as2_fields(input)
 
@@ -1210,10 +1235,14 @@ class Edit(_CreateEdit):
         # under their local ids, without the offset they are known under everywhere else.
         is_ext = needs_ext_db(input.transport)
 
+        # Dashboard forms send the id as a string, whereas the collision check below compares it
+        # against database ids, so it is an int from here on
+        input_id = int(input.id)
+
         if is_ext:
-            local_id = to_local_id(int(input.id))
+            local_id = to_local_id(input_id)
         else:
-            local_id = input.id
+            local_id = input_id
 
         with closing(self.server.get_config_session(object_type=input.transport)) as session:
 
@@ -1244,6 +1273,13 @@ class Edit(_CreateEdit):
             # Will raise exception if the security type doesn't match connection
             # type and transport
             sec_info = self._get_security_info(session, input, is_ext)
+
+            # An edit can move a channel onto another channel's URL path, so it is checked
+            # the same way a create is, with this channel itself left out of the comparison
+            if input.connection == CONNECTION.CHANNEL:
+                validate_channel_url_path(input.url_path)
+                self.ensure_channel_is_unique(session,
+                    input.url_path, input.http_accept, input.method, input.cluster_id, local_id)
 
             try:
                 item = session.query(HTTPSOAP).filter_by(id=local_id).one()
@@ -1540,20 +1576,6 @@ class Ping(AdminService):
         self.response.payload.info = info
         self.response.payload.is_success = is_success
 
-# ################################################################################################################################
-
-class GetURLSecurity(AdminService):
-    """ Returns a JSON document describing the security configuration of all Zato channels.
-    """
-    def handle(self):
-        response = {}
-        response['url_sec'] = sorted(self.server.config_manager.request_handler.security.url_sec.items())
-        response['plain_http_handler.http_soap'] = sorted(self.server.config_manager.request_handler.plain_http_handler.http_soap.items())
-        response['soap_handler.http_soap'] = sorted(self.server.config_manager.request_handler.soap_handler.http_soap.items())
-        self.response.payload = dumps(response, sort_keys=True, indent=4)
-        self.response.content_type = 'application/json'
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 # How the dashboard's invoke feature reaches a channel - a plain-HTTP hop over the loopback

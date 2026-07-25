@@ -24,7 +24,7 @@ from zato.common.util.config import resolve_name
 from zato.common.util.sql import elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target
 from zato.server.config import ConfigDict
-from zato.server.connection.http_soap.url_dispatcher import Matcher
+from zato.server.connection.http_soap.url_dispatcher import Matcher, resolve_match_slash
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -83,9 +83,12 @@ class ConfigLoader:
         query = self.odb.get_wss_list(cluster_id, True)
         self.config.wss = ConfigDict.from_query('wss', query, decrypt_func=self.decrypt)
 
-        # Load rate limiting for security definitions
+        # Load rate limiting for security definitions - for every type a channel authenticates against
         self._load_sec_def_rate_limiting(self.config.basic_auth)
         self._load_sec_def_rate_limiting(self.config.apikey)
+        self._load_sec_def_rate_limiting(self.config.mtls)
+        self._load_sec_def_rate_limiting(self.config.oauth)
+        self._load_sec_def_rate_limiting(self.config.wss)
 
         # Resolve quota tier references - definitions and groups pointing to tiers
         # receive the tier's rules under their own ids.
@@ -246,25 +249,31 @@ class ConfigLoader:
 
         for item in channel_items:
 
-            hs_item = {}
-            for key in item.keys():
-                hs_item[key] = getattr(item, key)
+            # The runtime hands this very object to services and to the dispatcher, both of which
+            # reach into it by attribute as well as by key, and it is built once per channel here
+            # rather than copied per request.
+            channel = Bunch()
 
-            hs_item['name'] = resolve_name(hs_item['name'])
+            for key in item.keys():
+                channel[key] = getattr(item, key)
+
+            channel['name'] = resolve_name(channel['name'])
 
             # Dispatcher-handled channels, such as AS2 ones, have no service of their own,
             # so the outer-joined column comes back as NULL - the runtime spells that as an empty string.
-            if hs_item['service_name'] is None:
-                hs_item['service_name'] = ''
+            if channel['service_name'] is None:
+                channel['service_name'] = ''
 
-            hs_item['match_target'] = get_match_target(hs_item, http_methods_allowed_re=self.http_methods_allowed_re)
-            hs_item['match_target_compiled'] = Matcher(hs_item['match_target'], hs_item.get('match_slash', ''))
+            channel['match_target'] = get_match_target(channel, http_methods_allowed_re=self.http_methods_allowed_re)
 
-            gateway_service_list = hs_item.get('gateway_service_list') or ''
+            match_slash = resolve_match_slash(channel.get('match_slash'))
+            channel['match_target_compiled'] = Matcher(channel['match_target'], match_slash)
+
+            gateway_service_list = channel.get('gateway_service_list') or ''
             allowed = set(line.strip() for line in gateway_service_list.splitlines() if line.strip())
-            self.gateway_services_allowed[hs_item['id']] = allowed
+            self.gateway_services_allowed[channel['id']] = allowed
 
-            http_soap.append(hs_item)
+            http_soap.append(channel)
 
         self.config.http_soap = http_soap
 

@@ -380,8 +380,9 @@ class DispatchNoMatchTestCase(unittest.TestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class DispatchSecDefBeforeChannelTestCase(unittest.TestCase):
-    """ Verifies that sec_def rate limiting is checked before channel rate limiting.
+class DispatchChannelBeforeAuthTestCase(unittest.TestCase):
+    """ Verifies that channel rate limiting is checked before authentication, and that
+    sec_def rate limiting follows it because it needs to know which definition authenticated.
     """
 
     @patch('zato.server.connection.http_soap.channel.os.close')
@@ -389,9 +390,9 @@ class DispatchSecDefBeforeChannelTestCase(unittest.TestCase):
     @patch.object(RequestDispatcher, '_check_security')
     @patch.object(RequestDispatcher, '_match_url')
     @patch.object(RequestDispatcher, '_extract_request_meta')
-    def test_sec_def_denied_skips_channel_check(self, mock_extract_meta, mock_match_url, mock_check_security,
+    def test_channel_denied_skips_authentication(self, mock_extract_meta, mock_match_url, mock_check_security,
             mock_fromfd, mock_os_close):
-        """ When the sec_def check returns disallowed, the channel check must not be called.
+        """ When the channel check returns disallowed, credentials are never looked at.
         """
         dispatcher = _make_dispatcher()
 
@@ -402,8 +403,8 @@ class DispatchSecDefBeforeChannelTestCase(unittest.TestCase):
 
         mock_match_url.return_value = _make_url_match_result()
 
-        # Sec def disallows the request
-        dispatcher.server.rate_limiting_manager.check_sec_def.return_value = _make_check_result(
+        # The channel disallows the request
+        dispatcher.server.rate_limiting_manager.check.return_value = _make_check_result(
             is_allowed=False, is_disallowed=True)
 
         mock_socket = MagicMock()
@@ -411,25 +412,25 @@ class DispatchSecDefBeforeChannelTestCase(unittest.TestCase):
 
         wsgi_environ = _make_wsgi_environ()
         wsgi_environ['zato.socket_fd'] = test_socket_fd
-        wsgi_environ['zato.sec_def'] = {'type': 'basic_auth', 'id': 99}
 
         config_manager = MagicMock()
 
         result = dispatcher.dispatch('cid123', '2025-01-01', wsgi_environ, config_manager, 'test-agent', '10.0.0.1')
 
-        # The request was dropped by the sec_def check
+        # The request was dropped by the channel check
         self.assertEqual(result, b'')
 
-        # The channel check must not have been called
-        dispatcher.server.rate_limiting_manager.check.assert_not_called()
+        # Neither authentication nor the definition's own check happened
+        mock_check_security.assert_not_called()
+        dispatcher.server.rate_limiting_manager.check_sec_def.assert_not_called()
 
     @patch('zato.server.connection.http_soap.channel._datetime_utcnow')
     @patch.object(RequestDispatcher, '_check_security')
     @patch.object(RequestDispatcher, '_match_url')
     @patch.object(RequestDispatcher, '_extract_request_meta')
-    def test_sec_def_allowed_then_channel_denied(self, mock_extract_meta, mock_match_url,
+    def test_channel_denied_returns_429_before_authentication(self, mock_extract_meta, mock_match_url,
             mock_check_security, mock_utcnow):
-        """ When the sec_def check allows but the channel check denies, 429 is returned.
+        """ A channel limit reached returns 429 without any credential being checked.
         """
         mock_utcnow.return_value = datetime(2025, 6, 15, 12, 0, 0, tzinfo=timezone.utc)
         dispatcher = _make_dispatcher()
@@ -441,11 +442,42 @@ class DispatchSecDefBeforeChannelTestCase(unittest.TestCase):
 
         mock_match_url.return_value = _make_url_match_result()
 
-        # Sec def allows
-        dispatcher.server.rate_limiting_manager.check_sec_def.return_value = _make_check_result(is_allowed=True)
-
-        # Channel denies
         dispatcher.server.rate_limiting_manager.check.return_value = _make_check_result(
+            is_allowed=False, retry_after_us=1_000_000)
+
+        wsgi_environ = _make_wsgi_environ()
+        config_manager = MagicMock()
+
+        result = dispatcher.dispatch('cid123', '2025-01-01', wsgi_environ, config_manager, 'test-agent', '10.0.0.1')
+
+        self.assertEqual(wsgi_environ['zato.http.response.status'], '429 Too Many Requests')
+        self.assertIn('Too many requests', result)
+
+        dispatcher.server.rate_limiting_manager.check.assert_called_once()
+        mock_check_security.assert_not_called()
+        dispatcher.server.rate_limiting_manager.check_sec_def.assert_not_called()
+
+    @patch('zato.server.connection.http_soap.channel._datetime_utcnow')
+    @patch.object(RequestDispatcher, '_check_security')
+    @patch.object(RequestDispatcher, '_match_url')
+    @patch.object(RequestDispatcher, '_extract_request_meta')
+    def test_channel_allowed_then_sec_def_denied(self, mock_extract_meta, mock_match_url,
+            mock_check_security, mock_utcnow):
+        """ When the channel check allows but the definition's own check denies, 429 is returned.
+        """
+        mock_utcnow.return_value = datetime(2025, 6, 15, 12, 0, 0, tzinfo=timezone.utc)
+        dispatcher = _make_dispatcher()
+
+        meta = MagicMock()
+        meta.http_method = 'GET'
+        meta.path_info = '/test/path'
+        mock_extract_meta.return_value = meta
+
+        mock_match_url.return_value = _make_url_match_result()
+
+        dispatcher.server.rate_limiting_manager.check.return_value = _make_check_result(is_allowed=True)
+
+        dispatcher.server.rate_limiting_manager.check_sec_def.return_value = _make_check_result(
             is_allowed=False, retry_after_us=1_000_000)
 
         wsgi_environ = _make_wsgi_environ()
@@ -458,8 +490,8 @@ class DispatchSecDefBeforeChannelTestCase(unittest.TestCase):
         self.assertIn('Too many requests', result)
 
         # Both checks were called
-        dispatcher.server.rate_limiting_manager.check_sec_def.assert_called_once()
         dispatcher.server.rate_limiting_manager.check.assert_called_once()
+        dispatcher.server.rate_limiting_manager.check_sec_def.assert_called_once()
 
     @patch.object(RequestDispatcher, '_format_response', return_value='OK')
     @patch.object(RequestDispatcher, '_invoke_service')

@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from logging import getLogger
-from uuid import uuid4
 
 # gevent
 from gevent.lock import RLock
@@ -490,6 +489,18 @@ class SecurityGroupsCtx(BearerTokenCtx):
 
 # ################################################################################################################################
 
+    def _has_secret(self, sec_def:'anydict') -> 'bool':
+        """ Whether a Basic Auth or API key definition carries the secret it authenticates with.
+        """
+        if not sec_def['password']:
+            logger.warning('Security definition `%s` (%s) has no password, leaving it out of the group',
+                sec_def['name'], sec_def['id'])
+            return False
+
+        return True
+
+# ################################################################################################################################
+
     def _get_sec_def_type_by_id(self, security_id:'int') -> 'str':
         sec_def = self._get_sec_def_by_id(security_id)
         sec_def_type = sec_def['sec_type']
@@ -515,11 +526,13 @@ class SecurityGroupsCtx(BearerTokenCtx):
 
             # If we are here, we know we have everything to populate all the runtime containers
             if sec_def_type == Sec_Def_Type.BASIC_AUTH:
-                self._on_basic_auth_created(group_id, security_id, sec_def['username'], sec_def['password'])
+                if self._has_secret(sec_def):
+                    self._on_basic_auth_created(group_id, security_id, sec_def['username'], sec_def['password'])
             elif sec_def_type == Sec_Def_Type.OAUTH:
                 self._on_bearer_token_created(group_id, security_id, sec_def)
             else:
-                self._on_apikey_created(group_id, security_id, sec_def['header'], sec_def['password'])
+                if self._has_secret(sec_def):
+                    self._on_apikey_created(group_id, security_id, sec_def['header'], sec_def['password'])
 
 # ################################################################################################################################
 
@@ -579,12 +592,8 @@ class SecurityGroupsCtx(BearerTokenCtx):
                 sec_def = self.server.config_manager.basic_auth_get_by_id(member.security_id)
 
                 # .. populate the correct container ..
-                self.on_basic_auth_created(
-                    group_id,
-                    sec_def['id'],
-                    sec_def['username'],
-                    sec_def.get('password') or 'Zato-Not-Provided-Basic-Auth-' + uuid4().hex,
-                )
+                if self._has_secret(sec_def):
+                    self.on_basic_auth_created(group_id, sec_def['id'], sec_def['username'], sec_def['password'])
 
             elif member.sec_type == Sec_Def_Type.APIKEY:
 
@@ -592,12 +601,8 @@ class SecurityGroupsCtx(BearerTokenCtx):
                 sec_def = self.server.config_manager.apikey_get_by_id(member.security_id)
 
                 # .. populate the correct container ..
-                self.on_apikey_created(
-                    group_id,
-                    sec_def['id'],
-                    sec_def['header'],
-                    sec_def.get('password') or 'Zato-Not-Provided-API-Key-' + uuid4().hex,
-                )
+                if self._has_secret(sec_def):
+                    self.on_apikey_created(group_id, sec_def['id'], sec_def['header'], sec_def['password'])
 
             elif member.sec_type == Sec_Def_Type.OAUTH:
 
