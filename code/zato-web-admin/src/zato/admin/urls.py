@@ -41,6 +41,7 @@ from zato.admin.web.views.outgoing.hl7 import mllp as out_hl7_mllp
 from zato.admin.web.views.channel import ibm_mq as channel_ibm_mq
 from zato.admin.web.views.channel import kafka as channel_kafka
 from zato.admin.web.views.gateway import mcp as gateway_mcp
+from zato.admin.web.views.gateway import rule_engine as gateway_rule_engine
 from zato.admin.web.views.outgoing import graphql as out_graphql
 from zato.admin.web.views.outgoing import grpc as out_grpc
 from zato.admin.web.views.outgoing import ibm_mq as out_ibm_mq
@@ -601,6 +602,19 @@ urlpatterns += [
 
     url(r'^zato/gateway/mcp/export/(?P<id>.*)/$',
         login_required(gateway_mcp.export), name='gateway-mcp-export'),
+
+    # .. Rule engine API
+
+    url(r'^zato/rule-engine/api/$',
+        login_required(gateway_rule_engine.Index()), name=gateway_rule_engine.Index.url_name),
+    url(r'^zato/rule-engine/api/create/$',
+        login_required(gateway_rule_engine.Create()), name=gateway_rule_engine.Create.url_name),
+    url(r'^zato/rule-engine/api/edit/$',
+        login_required(gateway_rule_engine.Edit()), name=gateway_rule_engine.Edit.url_name),
+    url(r'^zato/rule-engine/api/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(gateway_rule_engine.Delete()), name=gateway_rule_engine.Delete.url_name),
+    url(r'^zato/rule-engine/api/get-security-list/$',
+        login_required(gateway_rule_engine.get_security_list), name='rule-engine-api-get-security-list'),
     ]
 
 # ################################################################################################################################

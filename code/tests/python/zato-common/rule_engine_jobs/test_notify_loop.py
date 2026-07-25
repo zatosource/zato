@@ -17,9 +17,9 @@ from zato.common.rule_engine.notify.loop import run_once
 from zato.common.rule_engine.sql.constants import Event_Type_Advisory_Run
 
 # Test helpers
-from chat_simulators import find_free_port, SlackTestHandler, start_slack_server, start_teams_server, \
-    TeamsGraphTestHandler
+from chat_simulators import find_free_port, SlackTestHandler, start_slack_server
 from jobs_test_data import add_version, Author, create_ruleset, create_suite, Rules_Text_Lower_Bar
+from teams_simulator import start_teams_server, TeamsGraphTestHandler
 
 # ################################################################################################################################
 # ################################################################################################################################

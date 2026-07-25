@@ -439,43 +439,6 @@ var tableModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The server parses every cell and answers with structural errors
-    // shaped like the rule parser's
-    check: function(onDone) {
-        var self = this;
-
-        data.post(this.config.urls.validate, {table: this.table}, function(payload) {
-            self.serverErrors = payload.errors;
-            onDone();
-        }, data.reportError);
-    },
-
-    // The checks, expand and compress endpoints answer a structurally
-    // broken table with the validation findings, so the validation runs
-    // first and its findings land in the problems panel instead
-    withValidTable: function(onValid, onError) {
-        var self = this;
-
-        this.check(function() {
-            if (self.serverErrors.length > 0) {
-                onError(self.config.structuralProblemsMessage);
-                return;
-            }
-            onValid();
-        });
-    },
-
-    // The four integrity checks in one server answer
-    runChecks: function(onDone, onError) {
-        var self = this;
-
-        this.withValidTable(function() {
-            data.post(self.config.urls.checks, {table: self.table}, onDone, onError);
-        }, onError);
-    },
-
-// ////////////////////////////////////////////////////////////////////////
-
     save: function(onDone, onError) {
         var self = this;
 

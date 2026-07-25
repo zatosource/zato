@@ -14,6 +14,7 @@ import os
 import gunicorn.app.base
 
 # Zato
+from zato.common.typing_ import cast_
 from zato.rule_engine_dashboard.app.bootstrap import bootstrap
 
 # ################################################################################################################################
@@ -53,8 +54,12 @@ class DashboardServer(gunicorn.app.base.BaseApplication):
         super().__init__()
 
     def load_config(self) -> 'None':
+
+        # The base class only fills the configuration in during __init__, so it is always present here.
+        config = cast_('any_', self.cfg)
+
         for key, value in self.options.items():
-            self.cfg.set(key.lower(), value) # type: ignore[union-attr]
+            config.set(key.lower(), value)
 
     def load(self) -> 'any_':
         return self.application

@@ -18,8 +18,8 @@
 .log-card-number{font-size:16px;font-weight:700;color:var(--text);font-family:var(--mono)}
 .log-card-label{font-size:10.5px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:0.06em}
 
-.log-alert{display:flex;align-items:center;gap:6px;padding:6px 12px;border:1px dashed var(--red);border-radius:7px;color:var(--red);font-size:11.5px;font-weight:600;cursor:pointer}
-.log-alert:hover{background:var(--panel)}
+.log-card-readout{cursor:default}
+.log-card-readout:hover{background:var(--panel)}
 
 /* ------------------------------------------------------------ */
 /* Decision log - split layout, list and one decision's story    */
@@ -64,23 +64,11 @@
 
 .log-value-readonly{cursor:default}
 .log-value-readonly:hover{background:var(--input-background)}
-.log-set-by{float:right;margin-left:14px;font-family:var(--font);font-size:10.5px;color:var(--text5);font-style:italic}
 
-/* ------------------------------------------------------------ */
-/* Decision log - the table as it ran, matched cells in place    */
-/* ------------------------------------------------------------ */
+/* The rules exactly as the deciding version knew them */
+.log-rules-snapshot{font-family:var(--mono);font-size:12px;color:var(--text3);line-height:1.6;background:var(--panel-raised);border-radius:5px;padding:7px 10px;max-width:860px}
 
-.log-mini-grid th{text-align:center;min-width:74px}
-.log-mini-grid th:first-child{text-align:left}
-.log-mini-cell{background:var(--input-background);padding:5px 9px;font-family:var(--mono);font-size:11.5px;color:var(--text3);text-align:center}
-/* Matched means "this column ran", a neutral accent, never the green of
-   an approval: a declining rule matches too */
-.log-matched{background:var(--blue-tint-16);color:var(--text);font-weight:600}
-.log-matched-head{box-shadow:inset 0 -2px 0 var(--blue)}
-.log-input-echo{float:right;margin-left:14px;font-family:var(--mono);font-size:11px;color:var(--blue)}
-.log-action-label{font-style:italic}
-
-/* The draft replay, differences called out in place */
+/* The replay against the newest version, differences called out in place */
 .log-replay-differs{box-shadow:inset 0 0 0 2px var(--amber)}
 
 /* ------------------------------------------------------------ */
@@ -102,11 +90,11 @@
 .log-cell-copy:hover{color:var(--blue);background:var(--panel)}
 
 /* ------------------------------------------------------------ */
-/* Decision log - the capture and retention panel                */
+/* Decision log - the capture and rule-count panels              */
 /* ------------------------------------------------------------ */
 
 .log-capture-panel{position:fixed;z-index:1300;background:var(--panel);border:1px solid var(--blue);border-radius:8px;box-shadow:0 6px 24px var(--shadow-strong);width:360px;padding:8px 0}
+.log-capture-title{padding:4px 14px 6px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em}
 .log-capture-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:5px 14px;font-size:12px;color:var(--text3)}
 .log-capture-row b{color:var(--text2);font-size:11.5px}
-.log-capture-row select{background:var(--input-background);border:none;box-shadow:inset 0 0 0 1px var(--border);border-radius:4px;color:var(--text2);font-size:11.5px;font-family:var(--font);padding:3px 6px;outline:none;cursor:pointer}
 .log-capture-hint{padding:7px 14px 4px;font-size:11px;color:var(--text5);font-style:italic;line-height:1.45}

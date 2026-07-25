@@ -2,8 +2,8 @@
 
 // The problems feed for the decision table: the server's structural
 // errors, the on-demand conflict, subsumption and unreachable findings,
-// and the completeness proposals. Split out of table-model.js to keep
-// both files readable. Augments the tableModel namespace, no DOM access here.
+// the completeness proposals, and the calls that run those checks on
+// the server. Augments the tableModel namespace, no DOM access here.
 
 (function() {
 
@@ -116,6 +116,43 @@ tableModel.buildProblems = function() {
     });
 
     return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The server parses every cell and answers with structural errors
+// shaped like the rule parser's
+tableModel.check = function(onDone) {
+    var self = this;
+
+    data.post(this.config.urls.validate, {table: this.table}, function(payload) {
+        self.serverErrors = payload.errors;
+        onDone();
+    }, data.reportError);
+};
+
+// The checks, expand and compress endpoints answer a structurally
+// broken table with the validation findings, so the validation runs
+// first and its findings land in the problems panel instead
+tableModel.withValidTable = function(onValid, onError) {
+    var self = this;
+
+    this.check(function() {
+        if (self.serverErrors.length > 0) {
+            onError(self.config.structuralProblemsMessage);
+            return;
+        }
+        onValid();
+    });
+};
+
+// The four integrity checks in one server answer
+tableModel.runChecks = function(onDone, onError) {
+    var self = this;
+
+    this.withValidTable(function() {
+        data.post(self.config.urls.checks, {table: self.table}, onDone, onError);
+    }, onError);
 };
 
 })();

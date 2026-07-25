@@ -16,7 +16,7 @@ from zato.common.rule_engine.ingestion import Outcome
 from zato.common.rule_engine.invocation import InvocationStatus, is_ruleset_allowed, Message_Unknown_Ruleset, \
     parse_ruleset_path
 from zato.common.rule_engine.sql.errors import DecisionBufferFullError
-from zato.server.rule_engine_api import get_invoker
+from zato.server.rule_engine_api import get_backend, get_invoker
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -224,6 +224,24 @@ class RuleEngineAPIInvoke(AdminService):
 
         # .. and turn the outcome into the response.
         self._set_result(result)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class RuleEngineAPIGetRulesetList(AdminService):
+    """ Returns the names of every published ruleset - the catalog that the grants
+    of Rule engine API objects are checked against, e.g. by the dashboard's own screen.
+    """
+
+    name = 'zato.rule-engine.api.get-ruleset-list'
+
+    def handle(self) -> 'None':
+        backend = get_backend()
+        published = backend.definitions.list_published_rulesets()
+        names = [definition.name for definition in published]
+
+        self.response.data_format = _content_type_json
+        self.response.payload = dumps({'rulesets': names})
 
 # ################################################################################################################################
 # ################################################################################################################################

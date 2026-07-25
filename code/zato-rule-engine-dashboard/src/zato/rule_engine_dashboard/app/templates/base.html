@@ -29,6 +29,8 @@
       href="{% url 'decision-log' %}">Decision log</a>
     <a class="navigation-item{% if request.resolver_match.url_name == 'vocabulary' %} active{% endif %}"
       href="{% url 'vocabulary' %}">Vocabulary</a>
+    <a class="navigation-item{% if request.resolver_match.url_name == 'notifications' %} active{% endif %}"
+      href="{% url 'notifications' %}">Notifications</a>
   </div>
   <div class="navigation-bottom">
     {% if request.user.is_superuser %}

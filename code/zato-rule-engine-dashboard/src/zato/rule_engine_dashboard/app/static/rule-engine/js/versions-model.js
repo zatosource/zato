@@ -159,13 +159,6 @@ var versionsModel = {
         return out;
     },
 
-    versionByNumber: function(number) {
-        var out = this.versions.filter(function(version) { return version.number === number; })[0];
-        return out;
-    },
-
-// ////////////////////////////////////////////////////////////////////////
-
     // One comparison: the structural diff, the approval state of the
     // newer side and, when scenarios exist, the outcome replay - the
     // viewed marks reset because the changes are new ones
