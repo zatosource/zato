@@ -57,8 +57,10 @@ if 0:
     from zato.server.service import Service
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.config_manager import ConfigManager
+    from zato.server.connection.http_soap.channel_soap import SOAPRequestContext
     from zato.server.connection.http_soap.url_data import URLData
     ConfigDispatcher = ConfigDispatcher
+    SOAPRequestContext = SOAPRequestContext
     ParallelServer = ParallelServer
     Service = Service
     SlottedCheckResult = SlottedCheckResult
@@ -221,7 +223,7 @@ def client_json_error(cid:'str', details:'any_') -> 'str':
     # This may be a tuple of arguments to an exception object
     if isinstance(details, tuple):
         exc_details = []
-        for item in details: # type: ignore
+        for item in details:
             if isinstance(item, bytes):
                 item = item.decode('utf8')
             exc_details.append(item)
@@ -381,7 +383,7 @@ class RequestDispatcher:
         Both check_security and check_security_via_groups may raise exceptions.
         """
         match_target = channel_item['match_target']
-        sec = self.url_data.url_sec[match_target] # type: ignore
+        sec = self.url_data.url_sec[match_target]
 
         security_groups_ctx = channel_item.get('security_groups_ctx')
 
@@ -436,7 +438,7 @@ class RequestDispatcher:
         """
         if channel_item['merge_url_params_req']:
             channel_params = self.request_handler.create_channel_params(
-                url_match, # type: ignore
+                url_match,
                 channel_item,
                 wsgi_environ,
                 payload,
@@ -529,12 +531,41 @@ class RequestDispatcher:
         to authenticate at all, which only WS-Security does - its credentials are in the message.
         """
         match_target = channel_item['match_target']
-        sec = self.url_data.url_sec[match_target] # type: ignore
+        sec = self.url_data.url_sec[match_target]
 
         if sec.sec_def == ZATO_NONE:
             return False
 
         out = sec.sec_def['sec_type'] == SEC_DEF_TYPE.WSS
+        return out
+
+# ################################################################################################################################
+
+    def _parse_soap_envelope(
+        self,
+        cid:'str',
+        payload:'bytes',
+        channel_item:'anydict',
+        wsgi_environ:'stranydict',
+    ) -> 'SOAPRequestContext':
+        """ Parses a SOAP channel's envelope and records it for the rest of the request to read.
+
+        This is called from either side of the security check - before it when the credentials are
+        in the envelope, after it otherwise - so it reads the transport details itself rather than
+        having them passed in. They used to be read in the first branch and read again in the
+        second, which left the names bound only on the path that happened to run first.
+        """
+        content_type = wsgi_environ.get('CONTENT_TYPE')
+
+        if content_type is None:
+            content_type = ''
+
+        # SOAP 1.1 declares the action in a header of its own, which WSGI spells with a prefix.
+        soap_action_header = wsgi_environ.get(_wsgi_soap_action_header)
+
+        out = parse_soap_request(cid, payload, content_type, channel_item, soap_action_header)
+        wsgi_environ['zato.request.soap'] = out
+
         return out
 
 # ################################################################################################################################
@@ -570,31 +601,20 @@ class RequestDispatcher:
 
             self._check_soap_body_size(cid, channel_item, payload)
 
-            content_type = wsgi_environ.get('CONTENT_TYPE')
-            if content_type is None:
-                content_type = ''
-
-            # SOAP 1.1 declares the action in a header of its own, which WSGI spells with a prefix.
-            soap_action_header = wsgi_environ.get(_wsgi_soap_action_header)
-
             # WS-Security is the one definition type whose credentials are inside the envelope, so
             # it is the only one that needs the parse to happen before authentication. Everything
             # else authenticates from headers alone, and for those the parse waits until the caller
             # has proven who it is - which keeps the XML parser out of reach of anonymous callers.
-            needs_parse_before_auth = self._needs_soap_parse_before_auth(channel_item)
-
-            if needs_parse_before_auth:
-                soap_context = parse_soap_request(cid, payload, content_type, channel_item, soap_action_header)
-                wsgi_environ['zato.request.soap'] = soap_context
+            if self._needs_soap_parse_before_auth(channel_item):
+                soap_context = self._parse_soap_envelope(cid, payload, channel_item, wsgi_environ)
 
         # .. this will raise an exception if credentials are invalid ..
         self._check_security(cid, meta, channel_item, wsgi_environ, payload, post_data, config_manager)
 
-        # .. an authenticated caller's envelope is parsed now ..
-        if is_soap:
-            if not needs_parse_before_auth:
-                soap_context = parse_soap_request(cid, payload, content_type, channel_item, soap_action_header)
-                wsgi_environ['zato.request.soap'] = soap_context
+        # .. an authenticated caller's envelope is parsed now, which is every SOAP channel whose
+        # .. envelope was not needed to authenticate in the first place ..
+        if is_soap and (soap_context is None):
+            soap_context = self._parse_soap_envelope(cid, payload, channel_item, wsgi_environ)
 
         # .. with security enforced, the operation element becomes the service's payload ..
         if soap_context:
@@ -925,7 +945,7 @@ class RequestDispatcher:
     def _match_url(self, meta:'_RequestMeta', wsgi_environ:'stranydict') -> '_URLMatchResult':
         """ Matches the request URL, reads the raw payload and stores preliminary data in wsgi_environ.
         """
-        url_match, channel_item = self.url_data.match(meta.path_info, meta.http_method, meta.http_accept) # type: ignore
+        url_match, channel_item = self.url_data.match(meta.path_info, meta.http_method, meta.http_accept)
 
         url_match = cast_('str', url_match)
         channel_item = cast_('anydict', channel_item)
@@ -1048,7 +1068,7 @@ class RequestDispatcher:
                         needs_audit = True
 
         # .. we have a match and we can possibly handle the incoming request ..
-        if url_match not in ModuleCtx.No_URL_Match: # type: ignore
+        if url_match not in ModuleCtx.No_URL_Match:
 
             now_us = current_time_us()
 
@@ -1576,7 +1596,7 @@ class RequestHandler:
                             value = response.payload.to_json()
                         else:
                             if hasattr(response.payload, 'getvalue'):
-                                value = response.payload.getvalue() # type: ignore
+                                value = response.payload.getvalue()
                                 if isinstance(value, (dict, list)):
                                     value = dumps(value)
                             else:

@@ -39,7 +39,7 @@ from zato.common.util.xml_.keystore import new_keystore
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, anytuple, stranydict, strdictnone, strlist, strnone
+    from zato.common.typing_ import any_, anydict, anylist, anytuple, callnone, stranydict, strdictnone, strlist, strnone
     from zato.common.util.xml_.keystore import Keystore
     from zato.common.util.xml_.mime_ import part_list
     any_ = any_
@@ -147,13 +147,21 @@ class SOAPClient:
         self.security         = config.get('security')
         self.use_ws_addressing = config.get('use_ws_addressing', False)
         self.use_mtom          = config.get('use_mtom', False)
-        self.body_credentials  = config.get('body_credentials')
+        # A connection that configures no body credentials carries an empty mapping rather than an
+        # unset one. The two mean the same thing to every reader here, all of which test the mapping
+        # for being empty before going near what is in it.
+        body_credentials = config.get('body_credentials')
+
+        if body_credentials is None:
+            body_credentials = {}
+
+        self.body_credentials:'stranydict' = body_credentials
 
         self.session = requests.Session()
 
         # An owning connection wrapper may plug the client into the audit log here -
         # standalone clients, e.g. in tests, run without one.
-        self.audit_callback = None
+        self.audit_callback:'callnone' = None
 
 # ################################################################################################################################
 
@@ -237,8 +245,9 @@ class SOAPClient:
             # that was meant to lead the message ends up trailing it, in a place the receiving
             # endpoint does not look, and the request fails authentication for no visible reason.
             if position < Minimum_Credential_Position:
-                raise SOAPException(f'Body credential position must be at least '
-                    f'{Minimum_Credential_Position}, not `{position}` -> `{row["name"]}`')
+                name = row['name']
+                raise SOAPException(
+                    f'Body credential position must be at least {Minimum_Credential_Position}, not `{position}` -> `{name}`')
 
             positioned_rows.append(row)
 
@@ -457,10 +466,10 @@ class SOAPClient:
         # the opening of it is what identifies the intermediary that produced it.
         excerpt = response.text[:Error_Body_Excerpt_Size]
 
+        status_code = response.status_code
+
         raise SOAPException(
-            f'HTTP {response.status_code} from `{self.address}` with non-SOAP content type '
-            f'`{media_type}`: {excerpt}'
-        )
+            f'HTTP {status_code} from `{self.address}` with non-SOAP content type `{media_type}`: {excerpt}')
 
 # ################################################################################################################################
 
