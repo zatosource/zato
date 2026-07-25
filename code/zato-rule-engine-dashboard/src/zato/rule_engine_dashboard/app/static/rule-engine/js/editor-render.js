@@ -337,7 +337,7 @@ var editorView = {
                 self.problems = built.problems.concat(editorModel.serverProblems());
                 self.renderProblems();
                 editorLive.update();
-            });
+            }, data.reportError);
         }, editorModel.config.checkDelayMilliseconds);
     },
 

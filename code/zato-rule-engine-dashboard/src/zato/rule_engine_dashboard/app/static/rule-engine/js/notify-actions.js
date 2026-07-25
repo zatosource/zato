@@ -58,9 +58,12 @@ notifyView.addDestination = function(anchor) {
         return;
     }
 
-    notifyModel.addDestination(this.addKind, target, function() {
+    var handlers = shared.inFlight(anchor, function() {
         self.render();
     }, function(message) { shared.popover(anchor, message, 'red'); });
+    if (handlers === null) { return; }
+
+    notifyModel.addDestination(this.addKind, target, handlers.done, handlers.error);
 };
 
 notifyView.deleteDestination = function(destinationId) {
@@ -80,11 +83,14 @@ notifyView.saveCredentials = function(anchor, kind) {
         values[field.name] = document.getElementById('notify-field-' + kind + '-' + field.name).value.trim();
     });
 
-    notifyModel.saveCredentials(kind, values, function() {
+    var handlers = shared.inFlight(anchor, function() {
         self.render();
         shared.popover(document.getElementById('notify-credentials-pane'),
             notifyModel.config.kindLabels[kind] + ' credentials stored, encrypted at rest.', 'green');
     }, function(message) { shared.popover(anchor, message, 'red'); });
+    if (handlers === null) { return; }
+
+    notifyModel.saveCredentials(kind, values, handlers.done, handlers.error);
 };
 
 notifyView.sendTest = function(anchor, kind) {
@@ -95,9 +101,12 @@ notifyView.sendTest = function(anchor, kind) {
         return;
     }
 
-    notifyModel.sendTest(kind, target, function() {
+    var handlers = shared.inFlight(anchor, function() {
         shared.popover(anchor, 'Delivered to ' + target + ' - the credentials work.', 'green');
     }, function(message) { shared.popover(anchor, message, 'red'); });
+    if (handlers === null) { return; }
+
+    notifyModel.sendTest(kind, target, handlers.done, handlers.error);
 };
 
 // ////////////////////////////////////////////////////////////////////////

@@ -426,15 +426,19 @@ tableView.save = function(button) {
 
     var self = this;
 
+    var handlers = shared.inFlight(button, function(payload) {
+        self.renderSubtitle();
+        shared.popover(button, 'Saved as version ' + payload.version + '.', 'green');
+    }, function(message) {
+        shared.popover(button, message, 'red');
+    });
+    if (handlers === null) { return; }
+
     // Only a table whose cells all parse gets stored
     tableModel.withValidTable(function() {
-        tableModel.save(function(payload) {
-            self.renderSubtitle();
-            shared.popover(button, 'Saved as version ' + payload.version + '.', 'green');
-        }, function(message) {
-            shared.popover(button, message, 'red');
-        });
+        tableModel.save(handlers.done, handlers.error);
     }, function(message) {
+        handlers.release();
         self.reportCheckFailure(button, message);
     });
 };

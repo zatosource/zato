@@ -107,19 +107,19 @@ rulesetsView.openPublishPanel = function(id, anchor) {
         '<div class="test-trace-title">Publish ' + shared.escape(ruleset.name) + '</div>' +
         '<div class="floating-panel-hint">' + firstLine + '</div>' +
         '<div class="floating-panel-actions">' +
-        '<button class="button-primary button-mini" onclick="rulesetsView.confirmPublish(' + id + ', ' + draft + ')">' +
+        '<button class="button-primary button-mini" onclick="rulesetsView.confirmPublish(' + id + ', ' + draft + ', this)">' +
             'Publish v' + draft + '</button>' +
         '</div>' +
         '<div class="floating-panel-hint">A snapshot is taken first, so whatever is live now can come back ' +
         'as-is with one click on the versions screen.</div>');
 };
 
-rulesetsView.confirmPublish = function(id, version) {
+rulesetsView.confirmPublish = function(id, version, button) {
     var self = this;
     var ruleset = rulesetsModel.byId(id);
     var previous = ruleset.live_version;
 
-    rulesetsModel.publish(id, version, function(report) {
+    var handlers = shared.inFlight(button, function(report) {
 
         // The list reflects the new live version without a round trip
         ruleset.live_version = report.version;
@@ -148,6 +148,9 @@ rulesetsView.confirmPublish = function(id, version) {
         shared.closePanel();
         shared.popover(document.querySelector('.rulesets-row[data-id="' + id + '"] .rulesets-publish'), message, 'red');
     });
+    if (handlers === null) { return; }
+
+    rulesetsModel.publish(id, version, handlers.done, handlers.error);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -189,13 +192,18 @@ rulesetsView.confirmSaveView = function(anchor) {
         return;
     }
 
-    rulesetsModel.saveView(name, this.view, this.query.trim(), function() {
+    var handlers = shared.inFlight(anchor, function() {
         shared.closePanel();
         self.renderSavedViews();
         shared.initTips();
         shared.popover(document.querySelector('.rulesets-saved-chip[data-saved-view="' + name + '"]'),
             'Saved. The chip brings the search and the filter back together.', 'green');
+    }, function(message) {
+        shared.popover(anchor, message, 'red');
     });
+    if (handlers === null) { return; }
+
+    rulesetsModel.saveView(name, this.view, this.query.trim(), handlers.done, handlers.error);
 };
 
 rulesetsView.applySavedView = function(chip, name) {

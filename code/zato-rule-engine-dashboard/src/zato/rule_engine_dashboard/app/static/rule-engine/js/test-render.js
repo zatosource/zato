@@ -84,7 +84,7 @@ var testView = {
             self.checkTimer = null;
             testModel.check(function() {
                 self.renderProblems();
-            });
+            }, data.reportError);
         }, testModel.config.checkDelayMilliseconds);
     },
 

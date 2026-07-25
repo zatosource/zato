@@ -116,7 +116,7 @@ list.addEventListener('drop', function(event) {
                 'Moved to ' + targetEntityName + '. The path is now ' + newPath +
                 ', every referencing ruleset was updated together, the API contract regenerated.', 'green');
         }
-    });
+    }, data.reportError);
 });
 
 // ////////////////////////////////////////////////////////////////////////

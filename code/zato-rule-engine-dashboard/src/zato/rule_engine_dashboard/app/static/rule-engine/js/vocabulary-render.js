@@ -176,14 +176,14 @@ var vocabularyView = {
         }
 
         var deprecateButton = attribute.status === 'deprecated'
-            ? '<button class="button-mini" onclick="vocabularyView.restore()" ' +
+            ? '<button class="button-mini" onclick="vocabularyView.restore(this)" ' +
               'data-tippy-content="Back into every picker.">Restore</button>'
-            : '<button class="button-mini" onclick="vocabularyView.deprecate()" ' +
+            : '<button class="button-mini" onclick="vocabularyView.deprecate(this)" ' +
               'data-tippy-content="Existing rules keep running, the term leaves every picker and the API contract. The safe way to retire a term, deleting is only for unused ones.">Deprecate</button>';
 
         // Delete is gated by the where-used index, never a landmine
         var deleteButton = usage.canDelete
-            ? '<button class="button-mini vocabulary-delete-enabled" onclick="vocabularyView.deleteTerm()" ' +
+            ? '<button class="button-mini vocabulary-delete-enabled" onclick="vocabularyView.deleteTerm(this)" ' +
               'data-tippy-content="Nothing uses this term, deleting is safe.">Delete</button>'
             : '<button class="button-mini vocabulary-delete-blocked" onclick="vocabularyView.explainBlockedDelete(this)" ' +
               'data-tippy-content="Blocked: ' + usage.count + ' places listed here still use this term. Deprecate instead, or clear them first.">Delete</button>';

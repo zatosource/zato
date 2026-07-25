@@ -210,11 +210,11 @@ var rulesetsModel = {
         return this.views;
     },
 
-    saveView: function(name, view, query, onDone) {
+    saveView: function(name, view, query, onDone, onError) {
         var self = this;
         data.post(this.config.urls.viewSave, {name: name, payload: {view: view, query: query}}, function() {
             self.loadViews(onDone);
-        }, data.reportError);
+        }, onError);
     },
 
     deleteView: function(name, onDone) {

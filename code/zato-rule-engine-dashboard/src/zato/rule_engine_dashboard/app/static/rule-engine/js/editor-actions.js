@@ -410,14 +410,17 @@ editorView.openTests = function() {
 // Save waits for the pending server check, then stores the whole ruleset
 // with the edited rule swapped in, as a new optimistic version
 editorView.save = function(button) {
-    editorModel.check(function() {
-        editorModel.save(function(payload) {
-            editorView.renderSubtitle();
-            shared.popover(button, 'Saved as version ' + payload.version + '.', 'green');
-        }, function(message) {
-            shared.popover(button, message, 'red');
-        });
+    var handlers = shared.inFlight(button, function(payload) {
+        editorView.renderSubtitle();
+        shared.popover(button, 'Saved as version ' + payload.version + '.', 'green');
+    }, function(message) {
+        shared.popover(button, message, 'red');
     });
+    if (handlers === null) { return; }
+
+    editorModel.check(function() {
+        editorModel.save(handlers.done, handlers.error);
+    }, handlers.error);
 };
 
 // ////////////////////////////////////////////////////////////////////////

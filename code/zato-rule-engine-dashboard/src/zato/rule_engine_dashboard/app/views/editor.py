@@ -6,10 +6,14 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from http.client import BAD_REQUEST
+
 # Django
 from django.http import JsonResponse
 
 # Zato
+from zato.common.rule_engine.document_checks import validate_definition_document
 from zato.common.rule_engine.parser import parse_data_details
 from zato.common.rule_engine.render import render_documents
 from zato.common.rule_engine.scenarios import run_test_set
@@ -108,6 +112,9 @@ def editor_completion(req:'any_', definition_id:'int') -> 'any_':
 @json_api
 def editor_save(req:'any_') -> 'any_':
     """ Saves one document - a new definition with its first version or a new optimistic version of an existing one.
+
+    Whatever the screen sends is validated here against the checks its own type declares, so a
+    document only ever reaches the store in a shape the engine can run, whoever posted it.
     """
     body = read_json(req)
     document = required(body, 'document')
@@ -116,8 +123,23 @@ def editor_save(req:'any_') -> 'any_':
     backend = get_backend()
     actor = req.user.username
 
+    # An existing definition keeps the type it was created with, a new one declares it ..
+    definition_id = body.get('definition_id')
+
+    if definition_id:
+        object_type = backend.definitions.get(definition_id).object_type
+    else:
+        object_type = required(body, 'object_type')
+
+    # .. and the document has to pass that type's own validation before anything is stored.
+    errors = validate_definition_document(object_type, document)
+
+    if errors:
+        out = JsonResponse({'errors': errors}, status=BAD_REQUEST)
+        return out
+
     # An existing definition gains a new optimistic version ..
-    if definition_id := body.get('definition_id'):
+    if definition_id:
         expected_current_version = required(body, 'expected_current_version')
         record = backend.versions.create(
             definition_id=definition_id,
@@ -131,7 +153,6 @@ def editor_save(req:'any_') -> 'any_':
     # .. while a new one comes into being together with its first version.
     else:
         name = required(body, 'name')
-        object_type = required(body, 'object_type')
         created = backend.definitions.create(
             name=name,
             object_type=object_type,

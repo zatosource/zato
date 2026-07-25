@@ -99,7 +99,7 @@ vocabularyView.commitField = function(cell, field, value) {
         self.renderDetail();
         shared.initTips();
         shared.popover(document.querySelector('[data-field="' + field + '"]'), message, 'green');
-    });
+    }, data.reportError);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -139,7 +139,7 @@ vocabularyView.confirmRename = function(anchor) {
 
     var path = this.selectedPath;
 
-    vocabularyModel.rename(path, newName, function(report) {
+    var handlers = shared.inFlight(anchor, function(report) {
         self.selectedPath = path.split('.')[0] + '.' + newName;
         self.usage = null;
         shared.closePanel();
@@ -149,40 +149,62 @@ vocabularyView.confirmRename = function(anchor) {
         shared.popover(document.querySelector('.vocabulary-detail-name'),
             'Renamed together across ' + report.definitions.length +
             ' rulesets, the API contract regenerated, nothing left behind to break.', 'green');
+    }, function(message) {
+        shared.popover(anchor, message, 'red');
     });
+    if (handlers === null) { return; }
+
+    vocabularyModel.rename(path, newName, handlers.done, handlers.error);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-vocabularyView.deprecate = function() {
+vocabularyView.deprecate = function(button) {
     var self = this;
-    vocabularyModel.deprecate(this.selectedPath, function() {
+
+    var handlers = shared.inFlight(button, function() {
         self.render();
         shared.popover(document.querySelector('.vocabulary-detail-name'),
             'Deprecated. Existing rules keep running, every picker and the API contract hide it from now on.', 'green');
+    }, function(message) {
+        shared.popover(button, message, 'red');
     });
+    if (handlers === null) { return; }
+
+    vocabularyModel.deprecate(this.selectedPath, handlers.done, handlers.error);
 };
 
-vocabularyView.restore = function() {
+vocabularyView.restore = function(button) {
     var self = this;
-    vocabularyModel.restore(this.selectedPath, function() {
+
+    var handlers = shared.inFlight(button, function() {
         self.render();
         shared.popover(document.querySelector('.vocabulary-detail-name'), 'Restored into every picker.', 'green');
+    }, function(message) {
+        shared.popover(button, message, 'red');
     });
+    if (handlers === null) { return; }
+
+    vocabularyModel.restore(this.selectedPath, handlers.done, handlers.error);
 };
 
-vocabularyView.deleteTerm = function() {
+vocabularyView.deleteTerm = function(button) {
     var self = this;
     var path = this.selectedPath;
 
-    vocabularyModel.deleteTerm(path, function() {
+    var handlers = shared.inFlight(button, function() {
         var paths = vocabularyModel.allPaths();
         self.selectedPath = null;
         self.usage = null;
         if (paths.length > 0) { self.select(paths[0]); }
         self.render();
         shared.popover(document.getElementById('vocabulary-tree-list'), 'Deleted ' + path + ', nothing was using it.', 'green');
+    }, function(message) {
+        shared.popover(button, message, 'red');
     });
+    if (handlers === null) { return; }
+
+    vocabularyModel.deleteTerm(path, handlers.done, handlers.error);
 };
 
 vocabularyView.explainBlockedDelete = function(anchor) {
@@ -243,13 +265,18 @@ vocabularyView.confirmAddTerm = function(anchor) {
         return;
     }
 
-    vocabularyModel.addTerm(entityName, name, type, function(path) {
+    var handlers = shared.inFlight(anchor, function(path) {
         shared.closePanel();
         self.selectedPath = null;
         self.select(path);
         shared.popover(document.querySelector('.vocabulary-detail-name'),
             'Added. The phrase and the defaults below are all editable in place.', 'green');
+    }, function(message) {
+        shared.popover(anchor, message, 'red');
     });
+    if (handlers === null) { return; }
+
+    vocabularyModel.addTerm(entityName, name, type, handlers.done, handlers.error);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -274,13 +301,17 @@ vocabularyView.openPayloadPanel = function(button) {
 vocabularyView.previewPayload = function(button) {
     var self = this;
 
-    vocabularyModel.inferFromPayload(document.getElementById('vocabulary-payload-text').value, function(terms) {
+    var handlers = shared.inFlight(button, function(terms) {
         self.previewedTerms = terms;
         document.getElementById('vocabulary-payload-preview').innerHTML =
             self.previewListHtml(terms, 'vocabularyView.addPayloadTerms(this)');
     }, function(message) {
         shared.popover(button, message, 'red');
     });
+    if (handlers === null) { return; }
+
+    vocabularyModel.inferFromPayload(document.getElementById('vocabulary-payload-text').value,
+        handlers.done, handlers.error);
 };
 
 // The shared preview list of the payload and rules panels: known terms
@@ -306,10 +337,10 @@ vocabularyView.previewListHtml = function(terms, addCall) {
     return html;
 };
 
-vocabularyView.addPayloadTerms = function() {
+vocabularyView.addPayloadTerms = function(button) {
     var self = this;
 
-    vocabularyModel.addTerms(this.previewedTerms, 'Add terms from an example payload', function(added, firstPath) {
+    var handlers = shared.inFlight(button, function(added, firstPath) {
         shared.closePanel();
         if (firstPath !== null) {
             self.selectedPath = null;
@@ -317,7 +348,12 @@ vocabularyView.addPayloadTerms = function() {
         }
         shared.popover(document.getElementById('vocabulary-tree-list'), 'Added ' + added +
             ' terms. Mark choices and ranges here whenever, rules can use the terms right now.', 'green');
+    }, function(message) {
+        shared.popover(button, message, 'red');
     });
+    if (handlers === null) { return; }
+
+    vocabularyModel.addTerms(this.previewedTerms, 'Add terms from an example payload', handlers.done, handlers.error);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -342,7 +378,7 @@ vocabularyView.openRulesPanel = function(button) {
 vocabularyView.previewRules = function(button) {
     var self = this;
 
-    vocabularyModel.inferFromRules(document.getElementById('vocabulary-rules-text').value, function(proposals, errors) {
+    var handlers = shared.inFlight(button, function(proposals, errors) {
         if (errors.length > 0) {
             shared.popover(button, 'The rules do not parse: ' + errors[0].message, 'red');
             return;
@@ -359,12 +395,16 @@ vocabularyView.previewRules = function(button) {
     }, function(message) {
         shared.popover(button, message, 'red');
     });
+    if (handlers === null) { return; }
+
+    vocabularyModel.inferFromRules(document.getElementById('vocabulary-rules-text').value,
+        handlers.done, handlers.error);
 };
 
-vocabularyView.addRuleTerms = function() {
+vocabularyView.addRuleTerms = function(button) {
     var self = this;
 
-    vocabularyModel.addTerms(this.previewedProposals, 'Add terms proposed from typed rules', function(added, firstPath) {
+    var handlers = shared.inFlight(button, function(added, firstPath) {
         shared.closePanel();
         if (firstPath !== null) {
             self.selectedPath = null;
@@ -372,7 +412,12 @@ vocabularyView.addRuleTerms = function() {
         }
         shared.popover(document.getElementById('vocabulary-tree-list'), 'Added ' + added +
             ' proposed terms, their types came from how the rules use them.', 'green');
+    }, function(message) {
+        shared.popover(button, message, 'red');
     });
+    if (handlers === null) { return; }
+
+    vocabularyModel.addTerms(this.previewedProposals, 'Add terms proposed from typed rules', handlers.done, handlers.error);
 };
 
 // ////////////////////////////////////////////////////////////////////////

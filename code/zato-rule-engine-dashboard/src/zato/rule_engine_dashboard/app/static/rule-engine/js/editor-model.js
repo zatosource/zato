@@ -321,7 +321,7 @@ var editorModel = {
 
     // The server parses the text form and checks its semantics against the
     // vocabulary - the canonical documents come back alongside the errors
-    check: function(onDone) {
+    check: function(onDone, onError) {
         var self = this;
 
         if (!this.ruleIsRunnable()) {
@@ -338,7 +338,7 @@ var editorModel = {
             self.serverDocuments = payload.documents;
             self.serverErrors = payload.errors;
             onDone();
-        }, data.reportError);
+        }, onError);
     },
 
 // ////////////////////////////////////////////////////////////////////////

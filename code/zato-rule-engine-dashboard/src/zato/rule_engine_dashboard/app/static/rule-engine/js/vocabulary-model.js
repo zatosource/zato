@@ -120,7 +120,7 @@ var vocabularyModel = {
 
     // Every document change is stored as a new optimistic version, a
     // brand-new vocabulary comes into being with its first one
-    saveDocument: function(comment, onDone) {
+    saveDocument: function(comment, onDone, onError) {
         var self = this;
 
         // A vocabulary born on this screen starts under the default name
@@ -142,7 +142,7 @@ var vocabularyModel = {
             self.definitionId = payload.definition_id;
             self.currentVersion = payload.version;
             onDone();
-        }, data.reportError);
+        }, onError);
     },
 
 // ////////////////////////////////////////////////////////////////////////
@@ -150,15 +150,15 @@ var vocabularyModel = {
     // A rename lands everywhere at once, that is the whole point: the
     // referencing rulesets are rewritten together with the vocabulary,
     // so where-used reads the same after as before
-    renamePreview: function(path, newPath, onDone) {
-        data.post(this.config.urls.rename, {old_term: path, new_term: newPath, dry_run: true}, onDone, data.reportError);
+    renamePreview: function(path, newPath, onDone, onError) {
+        data.post(this.config.urls.rename, {old_term: path, new_term: newPath, dry_run: true}, onDone, onError);
     },
 
-    renameApply: function(path, newPath, onDone) {
-        data.post(this.config.urls.rename, {old_term: path, new_term: newPath, dry_run: false}, onDone, data.reportError);
+    renameApply: function(path, newPath, onDone, onError) {
+        data.post(this.config.urls.rename, {old_term: path, new_term: newPath, dry_run: false}, onDone, onError);
     },
 
-    rename: function(path, newName, onDone) {
+    rename: function(path, newName, onDone, onError) {
         var self = this;
         var attribute = vocabulary.attribute(path);
         var newPath = path.split('.')[0] + '.' + newName;
@@ -167,15 +167,15 @@ var vocabularyModel = {
             attribute.name = newName;
             self.saveDocument('Rename term ' + path + ' to ' + newPath, function() {
                 onDone(report);
-            });
-        });
+            }, onError);
+        }, onError);
     },
 
 // ////////////////////////////////////////////////////////////////////////
 
     // A drag in the tree: reorder within an entity, or move to another
     // entity, which is a path change and propagates like a rename does
-    moveTerm: function(path, targetEntityName, targetIndex, onDone) {
+    moveTerm: function(path, targetEntityName, targetIndex, onDone, onError) {
         var self = this;
         var sourceEntityName = path.split('.')[0];
         var attributeName = path.split('.')[1];
@@ -199,31 +199,31 @@ var vocabularyModel = {
         // Crossing entities changes the path, which is a rename for every
         // referencing ruleset
         if (newPath === path) {
-            this.saveDocument(comment, function() { onDone(newPath); });
+            this.saveDocument(comment, function() { onDone(newPath); }, onError);
         } else {
             this.renameApply(path, newPath, function() {
-                self.saveDocument(comment, function() { onDone(newPath); });
-            });
+                self.saveDocument(comment, function() { onDone(newPath); }, onError);
+            }, onError);
         }
     },
 
 // ////////////////////////////////////////////////////////////////////////
 
-    deprecate: function(path, onDone) {
+    deprecate: function(path, onDone, onError) {
         var attribute = vocabulary.attribute(path);
         attribute.status = 'deprecated';
-        this.saveDocument('Deprecate term ' + path, onDone);
+        this.saveDocument('Deprecate term ' + path, onDone, onError);
     },
 
-    restore: function(path, onDone) {
+    restore: function(path, onDone, onError) {
         var attribute = vocabulary.attribute(path);
         attribute.status = '';
-        this.saveDocument('Restore term ' + path, onDone);
+        this.saveDocument('Restore term ' + path, onDone, onError);
     },
 
     // Deleting is only ever possible when nothing uses the term, the
     // where-used index is the gate
-    deleteTerm: function(path, onDone) {
+    deleteTerm: function(path, onDone, onError) {
         var entityName = path.split('.')[0];
         var attributeName = path.split('.')[1];
         var entity = vocabulary.entities.filter(function(candidate) { return candidate.name === entityName; })[0];
@@ -232,7 +232,7 @@ var vocabularyModel = {
         // An entity without a single attribute left disappears with it
         vocabulary.entities = vocabulary.entities.filter(function(candidate) { return candidate.attributes.length > 0; });
 
-        this.saveDocument('Delete term ' + path, onDone);
+        this.saveDocument('Delete term ' + path, onDone, onError);
     },
 
 // ////////////////////////////////////////////////////////////////////////
@@ -292,7 +292,7 @@ var vocabularyModel = {
 
     // A term added by hand: the phrase and the type-specific defaults are
     // filled in and curated in place afterwards
-    addTerm: function(entityName, name, type, onDone) {
+    addTerm: function(entityName, name, type, onDone, onError) {
         var entity = vocabulary.entities.filter(function(candidate) { return candidate.name === entityName; })[0];
         if (entity === undefined) {
             entity = {name: entityName, attributes: []};
@@ -307,12 +307,12 @@ var vocabularyModel = {
         entity.attributes.push(attribute);
 
         var path = entityName + '.' + name;
-        this.saveDocument('Add term ' + path, function() { onDone(path); });
+        this.saveDocument('Add term ' + path, function() { onDone(path); }, onError);
     },
 
     // Terms from a payload preview or from infer proposals, known ones
     // are skipped
-    addTerms: function(terms, comment, onDone) {
+    addTerms: function(terms, comment, onDone, onError) {
         var added = 0;
         var firstPath = null;
 
@@ -331,7 +331,7 @@ var vocabularyModel = {
             if (firstPath === null) { firstPath = term.entity + '.' + term.name; }
         });
 
-        this.saveDocument(comment, function() { onDone(added, firstPath); });
+        this.saveDocument(comment, function() { onDone(added, firstPath); }, onError);
     },
 };
 
