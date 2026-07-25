@@ -362,6 +362,48 @@ class TestShipNoticeGuard:
 
 # ################################################################################################################################
 
+    def test_a_notice_sent_before_the_order_does_not_answer_it(self) -> 'None':
+
+        reconciler = Reconciler(_server_name)
+
+        # The notice went out first, so it answers whatever came before it, not this order.
+        reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000043', document_type='856')
+        reconciler.record_interchange_received(_partner_isa_id, _our_isa_id, '000000042', document_type='850')
+
+        config = _new_config(ship_notice_window_hours=4)
+
+        now = utcnow() + timedelta(hours=5)
+        findings = collect_findings([config], now, server_name=_server_name)
+        findings = _findings_of_kind(findings, Kind_Ship_Notice_Missing)
+
+        assert len(findings) == 1
+        assert '42' in findings[0].message
+
+# ################################################################################################################################
+
+    def test_a_notice_to_one_partner_does_not_answer_another_ones_order(self) -> 'None':
+
+        reconciler = Reconciler(_server_name)
+        other_isa_id = 'PARTNERCORPEU'
+
+        # Both partners ordered and only one of them got a ship notice back.
+        reconciler.record_interchange_received(_partner_isa_id, _our_isa_id, '000000042', document_type='850')
+        reconciler.record_interchange_received(other_isa_id, _our_isa_id, '000000044', document_type='850')
+        reconciler.record_interchange_sent(_our_isa_id, other_isa_id, '000000045', document_type='856')
+
+        first = _new_config(ship_notice_window_hours=4)
+        second = _new_config(name='PartnerCorp EU AS2', as2_to='PartnerCorpEU', isa_id=other_isa_id,
+            ship_notice_window_hours=4)
+
+        now = utcnow() + timedelta(hours=5)
+        findings = collect_findings([first, second], now, server_name=_server_name)
+        findings = _findings_of_kind(findings, Kind_Ship_Notice_Missing)
+
+        assert len(findings) == 1
+        assert findings[0].partner == f'{_partner_isa_id}:{_our_isa_id}'
+
+# ################################################################################################################################
+
     def test_an_order_inside_the_window_raises_nothing(self) -> 'None':
 
         reconciler = Reconciler(_server_name)

@@ -74,6 +74,7 @@ class TestNewSendReport:
             'mdn_signed': False,
             'disposition': '',
             'mic_matched': None,
+            'mdn_error': '',
             'error': '',
         }
 

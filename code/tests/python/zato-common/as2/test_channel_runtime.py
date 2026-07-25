@@ -15,12 +15,14 @@ from http.client import OK
 from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
 
 # Zato
-from zato.common.typing_ import cast_
 from zato.common.api import AS2
-from zato.common.as2.common import AS2Error
+from zato.common.as2.async_mdn import AsyncMDNQueue
+from zato.common.as2.common import AS2Error, MDNMode
 from zato.common.as2.outbound import build_message
 from zato.common.as2.partnership import new_partnership
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
+from zato.common.typing_ import cast_
+from zato.common.util.api import utcnow
 from zato.common.util.xml_.keystore import new_keystore
 from zato.server.connection.as2 import AS2ChannelRuntime
 
@@ -39,6 +41,10 @@ if 0:
 
 _sender_identifier   = 'ZatoRetail'
 _receiver_identifier = 'PartnerCorp'
+
+# Where the sending side asks its receipts to be delivered - the same host the partnership
+# already names, which is what the inbound pipeline checks the destination against.
+_async_mdn_url = 'https://zatoretail.example.com/zato/as2/mdn'
 
 _payload = (
     b'ISA*00*          *00*          *ZZ*ZATORETAIL     *ZZ*PARTNERCORP    '
@@ -67,6 +73,10 @@ class _FakeConfigManager:
 
         # The live per-type dict of AS2 outgoing connection configs, keyed by name
         self.outconn_as2 = {}
+
+        # How many times those configs changed - the real one bumps this from the create,
+        # edit and delete events, and a channel rebuilds its partnerships when it moves.
+        self.as2_config_generation = 0
 
 # ################################################################################################################################
 
@@ -254,6 +264,23 @@ def _build_wire_message(parties:'TestParties', message_id:'any_'=None, sender_ke
 
 # ################################################################################################################################
 
+def _build_async_wire_message(parties:'TestParties') -> 'any_':
+    """ Builds one real AS2 message asking for its receipt to be delivered asynchronously,
+    to a URL on the same host the partnership already names.
+    """
+    partnership = new_partnership()
+    partnership.as2_from = _sender_identifier
+    partnership.as2_to = _receiver_identifier
+    partnership.mdn_mode = MDNMode.Async
+    partnership.async_mdn_url = _async_mdn_url
+
+    body, headers, message_id, mic = build_message(partnership, parties.sender, _payload)
+
+    out = body, headers, message_id, mic
+    return out
+
+# ################################################################################################################################
+
 def _rotated_sender_keystore(parties:'TestParties', rotated:'any_') -> 'any_':
     """ The sending side's keystore after it rotated its signing pair -
     encryption still targets the receiver's current certificate.
@@ -398,9 +425,11 @@ class TestRouting:
             topic, _ = server.pubsub_backend.published[0]
             assert topic == AS2.Default.Inbound_Topic
 
-            # An edit of the Dashboard-managed connection reroutes the very next message.
+            # An edit of the Dashboard-managed connection reroutes the very next message - the edit
+            # event replaces the config and moves the generation on, exactly as the real one does.
             server.config_manager.outconn_as2['PartnerCorp AS2'] = \
                 _partnership_config(inbound_topic='orders.after-the-edit')
+            server.config_manager.as2_config_generation += 1
 
             body, headers, _, _ = _build_wire_message(parties)
             result = runtime.handle('cid-2', body, headers)
@@ -408,6 +437,30 @@ class TestRouting:
             assert not result.is_error
             topic, _ = server.pubsub_backend.published[1]
             assert topic == 'orders.after-the-edit'
+
+        finally:
+            _cleanup_env()
+
+# ################################################################################################################################
+
+    def test_partnerships_are_not_rebuilt_per_message(self, parties:'TestParties', tmp_path:'os.PathLike') -> 'None':
+        try:
+            _, runtime = _make_runtime(tmp_path, parties)
+
+            body, headers, _, _ = _build_wire_message(parties)
+            _ = runtime.handle('cid-1', body, headers)
+
+            first = runtime._get_partnerships()
+
+            body, headers, _, _ = _build_wire_message(parties)
+            _ = runtime.handle('cid-2', body, headers)
+
+            second = runtime._get_partnerships()
+
+            # Building a partnership parses an X.509 certificate per configured partner, so the
+            # same objects have to come back until the configuration says otherwise - a new list
+            # each time would mean that parse ran again for a message that changed nothing.
+            assert second is first
 
         finally:
             _cleanup_env()
@@ -632,12 +685,86 @@ class TestRejections:
             # because a failed delivery never counted as processed.
             config = _partnership_config()
             server.config_manager.outconn_as2['PartnerCorp AS2'] = config
+            server.config_manager.as2_config_generation += 1
 
             second = runtime.handle('cid-2', body, headers)
 
             assert not second.is_duplicate
             assert not second.is_error
             assert len(server.pubsub_backend.published) == 1
+
+        finally:
+            _cleanup_env()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestAsyncMDNQueueing:
+    """ A receipt the sender asked to have delivered to a separate URL is persisted before the
+    inbound POST is answered. Handing it straight to a greenlet loses it if the process stops
+    between accepting the message and delivering the receipt, and the sender is then waiting
+    for a receipt nobody will ever send.
+    """
+
+    def test_an_async_receipt_is_persisted_before_the_post_is_answered(
+        self,
+        parties:'TestParties',
+        tmp_path:'os.PathLike',
+    ) -> 'None':
+        try:
+            _, runtime = _make_runtime(tmp_path, parties)
+
+            body, headers, _, _ = _build_async_wire_message(parties)
+            result = runtime.handle('cid-1', body, headers)
+
+            assert not result.is_error
+
+            # The receipt did not ride on the response, it is in the queue instead.
+            assert result.pending_async_mdn is not None
+
+            queue = AsyncMDNQueue()
+            now = utcnow()
+            due = queue.due(now)
+
+            due_count = len(due)
+            assert due_count == 1
+
+            item = due[0]
+
+            assert item.url == _async_mdn_url
+            assert item.message_id == result.message_id
+            assert item.as2_from == _sender_identifier
+            assert item.as2_to == _receiver_identifier
+            assert item.channel_name == AS2.Default.Channel_Name
+
+            # The receipt bytes are the ones the peer is owed, which cannot be rebuilt later.
+            assert item.body == result.pending_async_mdn.body
+
+        finally:
+            _cleanup_env()
+
+# ################################################################################################################################
+
+    def test_a_replay_does_not_queue_a_second_receipt(self, parties:'TestParties', tmp_path:'os.PathLike') -> 'None':
+        try:
+            _, runtime = _make_runtime(tmp_path, parties)
+
+            body, headers, _, _ = _build_async_wire_message(parties)
+
+            first = runtime.handle('cid-1', body, headers)
+            second = runtime.handle('cid-2', body, headers)
+
+            assert not first.is_duplicate
+            assert second.is_duplicate
+
+            # The receipt of the first delivery is the one the peer is owed, so the replay
+            # must not put a second one in the queue.
+            queue = AsyncMDNQueue()
+            now = utcnow()
+            due = queue.due(now)
+
+            due_count = len(due)
+            assert due_count == 1
 
         finally:
             _cleanup_env()

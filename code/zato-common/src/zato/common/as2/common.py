@@ -113,6 +113,27 @@ class DeliveryKind:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class SendError:
+    """ Why a delivery that left successfully still counts as not delivered. Every one of these
+    is a synchronous MDN that arrived, or failed to arrive, in a way that leaves the message
+    unacknowledged, which is what an operator needs told apart from a plain transport failure.
+
+    Each reason names what the receiving side did, so the reading is the same every time: the peer
+    answered without a receipt, answered with something that is not a receipt, answered about
+    a different message, or answered about this message with a refusal.
+    """
+    No_Content_Type        = 'no-content-type'
+    Unparseable_MDN        = 'unparseable-mdn'
+    Message_ID_Mismatch    = 'message-id-mismatch'
+    Not_Processed          = 'not-processed'
+    Error_Modifier         = 'error-modifier'
+    Failure_Modifier       = 'failure-modifier'
+    MIC_Mismatch           = 'mic-mismatch'
+    MIC_Algorithm_Mismatch = 'mic-algorithm-mismatch'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Default:
     """ Default algorithm and configuration choices for outgoing messages.
     """

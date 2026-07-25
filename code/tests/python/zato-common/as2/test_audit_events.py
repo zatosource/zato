@@ -388,6 +388,10 @@ class _FakeConfigManager:
         # The live per-type dict of AS2 outgoing connection configs, keyed by name
         self.outconn_as2 = {}
 
+        # How many times those configs changed - the real one bumps this from the create,
+        # edit and delete events, and a channel rebuilds its partnerships when it moves.
+        self.as2_config_generation = 0
+
 # ################################################################################################################################
 
 class _FakePubSub:
