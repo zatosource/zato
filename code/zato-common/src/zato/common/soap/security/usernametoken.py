@@ -9,13 +9,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from base64 import b64encode
 from hashlib import sha1
-from os import urandom
 
 # lxml
 from lxml import etree
 
 # Zato
-from zato.common.crypto.api import is_string_equal
+from zato.common.crypto.api import CryptoManager, is_string_equal
 from zato.common.soap.common import NS, SOAPSecurityException
 from zato.common.soap.envelope import get_security_header
 from zato.common.util.xml_.core import qname, utc_timestamp
@@ -37,8 +36,8 @@ _password_digest = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-user
 
 _nonce_encoding = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary'
 
-# How many random bytes go into a nonce.
-_nonce_size_bytes = 16
+# How much randomness goes into a nonce.
+_nonce_size_bits = 128
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -69,7 +68,7 @@ def add_username_token(envelope:'any_', username:'str', password:'str', use_dige
     password_element = etree.SubElement(token, qname(NS.WSSE, 'Password'))
 
     if use_digest:
-        nonce = urandom(_nonce_size_bytes)
+        nonce = bytes.fromhex(CryptoManager.generate_hex_string(_nonce_size_bits))
         created = utc_timestamp()
 
         password_element.set('Type', _password_digest)

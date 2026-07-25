@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from logging import getLogger
+from operator import itemgetter
 
 # lxml
 from lxml import etree
@@ -50,7 +51,14 @@ logger = getLogger('zato')
 
 # The SOAPAction is carried differently by each SOAP version - a header in 1.1,
 # a Content-Type parameter in 1.2.
-_soap_action_header = 'SOAPAction'
+SOAP_Action_Header = 'SOAPAction'
+
+# What body credentials look like when a connection enables them without spelling out
+# a mapping of its own - one element per credential, each named after what it carries.
+Default_Body_Credential_Mappings = [
+    {'name': 'username', 'source': 'username'},
+    {'name': 'password', 'source': 'password'},
+]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -134,20 +142,27 @@ class SOAPClient:
         if operation.tag.startswith('{'):
             namespace = operation.tag[1:].partition('}')[0]
 
-        mappings = self.body_credentials.get('mappings') or [
-            {'name': 'username', 'source': 'username'},
-            {'name': 'password', 'source': 'password'},
-        ]
+        mappings = self.body_credentials.get('mappings')
+        if not mappings:
+            mappings = Default_Body_Credential_Mappings
 
         # Rows without a position prepend in mapping order, positioned rows slot in afterwards.
-        default_rows = [row for row in mappings if not row.get('position')]
-        positioned_rows = [row for row in mappings if row.get('position')]
+        default_rows = []
+        positioned_rows = []
+
+        for row in mappings:
+            if row.get('position'):
+                positioned_rows.append(row)
+            else:
+                default_rows.append(row)
 
         for offset, row in enumerate(default_rows):
             element = self._new_credential_element(row, namespace)
             operation.insert(offset, element)
 
-        for row in sorted(positioned_rows, key=lambda row: row['position']):
+        positioned_rows.sort(key=itemgetter('position'))
+
+        for row in positioned_rows:
             element = self._new_credential_element(row, namespace)
             operation.insert(row['position'] - 1, element)
 
@@ -254,7 +269,7 @@ class SOAPClient:
 
         # SOAP 1.1 carries the action in its own header, always quoted.
         if self.soap_version == SOAPVersion.V11:
-            headers[_soap_action_header] = f'"{self.soap_action}"'
+            headers[SOAP_Action_Header] = f'"{self.soap_action}"'
 
         return headers
 

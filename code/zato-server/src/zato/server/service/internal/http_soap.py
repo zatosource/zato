@@ -1038,7 +1038,7 @@ class Create(_CreateEdit):
                 item.service = service
                 item.ping_method = input.ping_method
                 item.pool_size = input.get('pool_size') or DEFAULT_HTTP_POOL_SIZE
-                item.merge_url_params_req = input.get('merge_url_params_req') or True
+                item.merge_url_params_req = input.merge_url_params_req
                 item.url_params_pri = input.get('url_params_pri') or URL_PARAMS_PRIORITY.DEFAULT
                 item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
@@ -1302,7 +1302,7 @@ class Edit(_CreateEdit):
                 item.service = service
                 item.ping_method = input.ping_method
                 item.pool_size = input.get('pool_size') or DEFAULT_HTTP_POOL_SIZE
-                item.merge_url_params_req = input.get('merge_url_params_req') or False
+                item.merge_url_params_req = input.merge_url_params_req
                 item.url_params_pri = input.get('url_params_pri') or URL_PARAMS_PRIORITY.DEFAULT
                 item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id

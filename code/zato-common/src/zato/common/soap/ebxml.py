@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from dataclasses import dataclass
 from os import urandom
-from uuid import uuid4
 
 # cryptography
 from cryptography.hazmat.primitives.asymmetric.padding import MGF1, OAEP
@@ -21,11 +20,12 @@ from cryptography.hazmat.primitives.serialization import Encoding
 from lxml import etree
 
 # Zato
+from zato.common.crypto.api import CryptoManager
 from zato.common.soap.common import NS, SOAPException, SOAPSecurityException, SOAPVersion
 from zato.common.soap.envelope import build_envelope, get_body, get_header, set_must_understand
 from zato.common.typing_ import cast_
 from zato.common.util.xml_.constants import Algorithm, Transform
-from zato.common.util.xml_.core import qname, utc_timestamp, XMLSecurityException
+from zato.common.util.xml_.core import Id_Size_Bits, new_id, qname, utc_timestamp, XMLSecurityException
 from zato.common.util.xml_.mime_ import part_list
 from zato.common.util.xml_.token import parse_x509v3
 from zato.common.util.xml_.wssec import compute_signature_value, recover_content_key, validate_certificate_chain, \
@@ -105,7 +105,7 @@ class EbXMLInfo:
 def new_message_id(suffix:'str'='zato') -> 'str':
     """ Returns a fresh eb:MessageId, unique per RFC 2822 msg-id conventions.
     """
-    out = f'{uuid4()}@{suffix}'
+    out = f'{CryptoManager.generate_hex_string(Id_Size_Bits)}@{suffix}'
     return out
 
 # ################################################################################################################################
@@ -337,6 +337,8 @@ def encrypt_payload(part:'Part', keystore:'Keystore') -> 'any_':
     for the recipient's RSA certificate with RSA-OAEP. Returns the xenc:EncryptedKey element
     that carries the wrapped key and points back at the part.
     """
+    # Raw key material stays on urandom rather than going through CryptoManager - these are
+    # cipher inputs of an exact byte length, not identifiers.
     content_key = urandom(_content_key_size_bytes)
     nonce = urandom(_gcm_nonce_size_bytes)
 
@@ -344,7 +346,7 @@ def encrypt_payload(part:'Part', keystore:'Keystore') -> 'any_':
     part.data = nonce + AESGCM(content_key).encrypt(nonce, part.data, None)
 
     encrypted_key = etree.Element(qname(NS.XENC, 'EncryptedKey'), nsmap=_xenc_nsmap)
-    encrypted_key.set('Id', f'EK-{uuid4().hex}')
+    encrypted_key.set('Id', new_id('EK-'))
 
     encryption_method = etree.SubElement(encrypted_key, qname(NS.XENC, 'EncryptionMethod'))
     encryption_method.set('Algorithm', Algorithm.RSA_OAEP)

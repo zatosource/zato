@@ -7,12 +7,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from copy import deepcopy
 from datetime import datetime, timezone
 from io import BytesIO
-from uuid import uuid4
 
 # cryptography
 from cryptography.exceptions import InvalidSignature
+from cryptography.x509 import BasicConstraints, ExtensionNotFound, KeyUsage
 from cryptography.hazmat.primitives.asymmetric.padding import MGF1, OAEP, PKCS1v15
 from cryptography.hazmat.primitives.hashes import SHA256
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
@@ -23,9 +24,10 @@ from cryptography.hazmat.primitives.serialization import Encoding, load_der_publ
 from lxml import etree
 
 # Zato
+from zato.common.crypto.api import is_string_equal
 from zato.common.typing_ import cast_
 from zato.common.util.xml_.constants import Algorithm, NS, TokenType, Transform
-from zato.common.util.xml_.core import qname, XMLSecurityException, XMLSecurityUnsupportedAlgorithm
+from zato.common.util.xml_.core import new_id, qname, xml_parser, XMLSecurityException, XMLSecurityUnsupportedAlgorithm
 from zato.common.util.xml_.keystore import certificate_list
 from zato.common.util.xml_.mime_ import part_list
 from zato.common.util.xml_.token import build_pkipath, parse_pkipath, parse_x509v3
@@ -39,9 +41,10 @@ if 0:
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
     from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey, RSAPublicKey
     from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey
-    from zato.common.typing_ import any_, bytesnone
+    from zato.common.typing_ import any_, anydict, bytesnone
     from zato.common.util.xml_.keystore import Keystore
     any_ = any_
+    anydict = anydict
     bytesnone = bytesnone
     Ed25519PrivateKey = Ed25519PrivateKey
     Ed25519PublicKey = Ed25519PublicKey
@@ -58,6 +61,28 @@ _wsu_id = f'{{{NS.WSU}}}Id'
 # AES key sizes used by the key derivation and recovery helpers.
 _content_key_size_bytes = 16
 
+# The digest algorithms a ds:Reference may declare. The digest is recomputed with SHA-256, so
+# this list says which identifiers actually mean SHA-256 - anything else has to be refused
+# rather than silently verified against an algorithm the sender did not use.
+Accepted_Digest_Methods = {
+    Algorithm.SHA256,
+}
+
+# The transforms a ds:Reference may declare. Exclusive canonicalization and the enveloped-signature
+# transform are applied when verifying element references, the two SwA transforms when verifying
+# attachment references. A transform outside this set is refused rather than ignored.
+Accepted_Transforms = {
+    Algorithm.C14N_Exclusive,
+    Transform.Attachment_Ciphertext,
+    Transform.Attachment_Content,
+    Transform.Enveloped,
+}
+
+# The smallest RSA modulus accepted when verifying a signature. 1024-bit RSA is within reach of
+# a well-funded attacker, so a signature that verifies under a key that small is not evidence
+# of anything - the algorithm identifier says nothing about key size, so it is checked separately.
+Minimum_RSA_Key_Size_Bits = 2048
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -65,7 +90,7 @@ def add_binary_security_token(security:'any_', keystore:'Keystore', token_type:'
     """ Adds the BinarySecurityToken carrying our signing certificate (or the whole chain
     for PKIPath) and returns its wsu:Id for the signature to reference.
     """
-    token_id = f'X509-{uuid4().hex}'
+    token_id = new_id('X509-')
 
     # A PKIPath token carries the entire chain, the X509v3 one just the leaf certificate.
     if token_type == TokenType.PKIPath:
@@ -165,7 +190,7 @@ def add_saml_token(security:'any_', assertion:'any_') -> 'str':
         raise XMLSecurityException('No SAML assertion to add as a token')
 
     if isinstance(assertion, bytes):
-        assertion = etree.fromstring(assertion)
+        assertion = etree.fromstring(assertion, xml_parser)
 
     assertion_id = assertion.get('ID')
 
@@ -196,8 +221,62 @@ def add_key_info_saml_reference(signature:'any_', assertion_id:'str') -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def build_id_index(root:'any_') -> 'anydict':
+    """ Walks a document once and returns every id it carries, as wsu:Id or as a plain Id,
+    mapped to the list of elements carrying it. One walk replaces the per-reference walk
+    a signature with several references would otherwise cost, and keeping the full list
+    rather than the first match is what lets a caller reject an ambiguous id.
+    """
+    out = {}
+
+    for element in root.iter():
+
+        # An element may carry the same value under both attribute names, which is not
+        # a duplicate, so the two are collapsed before being recorded.
+        element_ids = set()
+
+        wsu_id = element.get(_wsu_id)
+        if wsu_id is not None:
+            element_ids.add(wsu_id)
+
+        plain_id = element.get('Id')
+        if plain_id is not None:
+            element_ids.add(plain_id)
+
+        for element_id in element_ids:
+            if element_id in out:
+                out[element_id].append(element)
+            else:
+                out[element_id] = [element]
+
+    return out
+
+# ################################################################################################################################
+
+def resolve_reference_id(id_index:'anydict', element_id:'str') -> 'any_':
+    """ Returns the one element a signature reference names. Two elements carrying the same
+    id is the XML signature wrapping attack - the attacker leaves the signed copy somewhere
+    the verifier will find it and puts the payload it wants processed where the application
+    will find it. Resolving to the first match in document order is what makes that work,
+    so an ambiguous id is refused outright rather than resolved.
+    """
+    if element_id not in id_index:
+        raise XMLSecurityException(f'Signed element `{element_id}` is missing')
+
+    matches = id_index[element_id]
+
+    if len(matches) > 1:
+        raise XMLSecurityException(f'Id `{element_id}` is carried by {len(matches)} elements')
+
+    out = matches[0]
+    return out
+
+# ################################################################################################################################
+
 def find_by_any_id(root:'any_', element_id:'str') -> 'any_':
     """ Returns the element carrying the given id either as wsu:Id or as a plain Id attribute.
+    Callers verifying a signature must use build_id_index and resolve_reference_id instead,
+    which reject an ambiguous id rather than returning the first match.
     """
     out = find_by_wsu_id(root, element_id)
 
@@ -246,18 +325,62 @@ def find_part(parts:'part_list', content_id:'str') -> 'any_':
 
 # ################################################################################################################################
 
-def verify_one_reference(reference:'any_', envelope:'any_', parts:'part_list') -> 'None':
+def _check_digest_method(reference:'any_', uri:'str') -> 'None':
+    """ Rejects a ds:DigestMethod this implementation does not recompute. The digest is always
+    recomputed with SHA-256, so accepting a reference that declares anything else would mean
+    verifying against an algorithm the sender did not use.
+    """
+    digest_method = reference.find(qname(NS.DS, 'DigestMethod'))
+
+    if digest_method is None:
+        raise XMLSecurityException(f'Reference `{uri}` has no DigestMethod')
+
+    algorithm = digest_method.get('Algorithm')
+
+    if algorithm not in Accepted_Digest_Methods:
+        raise XMLSecurityUnsupportedAlgorithm(f'Unsupported digest algorithm `{algorithm}` on reference `{uri}`')
+
+# ################################################################################################################################
+
+def _check_transforms(transforms:'any_', uri:'str') -> 'None':
+    """ Rejects a ds:Transform this implementation does not apply. An unrecognised transform was
+    previously ignored, which meant the digest was recomputed over a different shape from the one
+    the sender hashed - either the reference then fails for the wrong reason or, where the
+    transform is a no-op on this document, it passes while the declared processing never happened.
+    """
+    if transforms is None:
+        return
+
+    for transform in transforms.findall(qname(NS.DS, 'Transform')):
+        algorithm = transform.get('Algorithm')
+
+        if algorithm not in Accepted_Transforms:
+            raise XMLSecurityUnsupportedAlgorithm(f'Unsupported transform `{algorithm}` on reference `{uri}`')
+
+# ################################################################################################################################
+
+def verify_one_reference(reference:'any_', envelope:'any_', parts:'part_list', id_index:'anydict') -> 'any_':
     """ Recomputes the digest of one ds:Reference and compares it with the declared value.
+    Returns the element the reference covers, or None for an attachment reference, so the
+    caller can check that what it goes on to process is what was actually verified.
     """
     uri = reference.get('URI') or ''
 
     digest_value_element = reference.find(qname(NS.DS, 'DigestValue'))
+
+    if digest_value_element is None:
+        raise XMLSecurityException(f'Reference `{uri}` has no DigestValue')
+
     expected_digest = ''.join((digest_value_element.text or '').split())
+
+    _check_digest_method(reference, uri)
 
     transform = None
     transforms = reference.find(qname(NS.DS, 'Transforms'))
     if transforms is not None:
         transform = transforms.find(qname(NS.DS, 'Transform'))
+
+    _check_transforms(transforms, uri)
 
     # An attachment reference hashes the raw bytes of the MIME part ..
     if uri.startswith('cid:'):
@@ -268,14 +391,18 @@ def verify_one_reference(reference:'any_', envelope:'any_', parts:'part_list') -
             raise XMLSecurityException(f'Signed part `{content_id}` is missing')
 
         actual_digest = digest_bytes(part.data)
+        out = None
 
     # .. an element reference canonicalizes the element and hashes that.
     else:
         element_id = uri[1:]
-        element = find_by_any_id(envelope, element_id)
 
-        if element is None:
-            raise XMLSecurityException(f'Signed element `{element_id}` is missing')
+        # This raises when the id names no element or more than one.
+        element = resolve_reference_id(id_index, element_id)
+
+        # What the caller processes is the element as it stands in the document, so that is what
+        # is reported back even when the digest was taken over a pruned copy of it.
+        out = element
 
         # The enveloped-signature transform means the digest was computed
         # with the ds:Signature element itself removed from the picture.
@@ -285,8 +412,10 @@ def verify_one_reference(reference:'any_', envelope:'any_', parts:'part_list') -
         canonical = canonicalize_for_reference(element, transform)
         actual_digest = digest_bytes(canonical)
 
-    if actual_digest != expected_digest:
+    if not is_string_equal(actual_digest, expected_digest):
         raise XMLSecurityException(f'Digest mismatch for reference `{uri}`')
+
+    return out
 
 # ################################################################################################################################
 
@@ -308,8 +437,10 @@ def _without_signature(element:'any_') -> 'any_':
     """ Returns a copy of an element with its immediate ds:Signature child removed,
     which is how the enveloped-signature transform is applied.
     """
-    # Serializing and reparsing gives a copy that is safe to prune.
-    out = etree.fromstring(etree.tostring(element))
+    # deepcopy gives a detached copy that is safe to prune, without the serialize-and-reparse
+    # round trip this used to do once per reference - that cost a full parse per reference and
+    # was one more place where untrusted XML met a parser.
+    out = deepcopy(element)
 
     signature = out.find(qname(NS.DS, 'Signature'))
     if signature is not None:
@@ -394,20 +525,76 @@ def _extract_saml_signer_chain(security:'any_', assertion_id:'str') -> 'certific
 
 # ################################################################################################################################
 
+def _check_validity_period(certificate:'any_', now:'datetime') -> 'None':
+    """ Rejects a certificate outside its validity period.
+    """
+    if now < certificate.not_valid_before_utc:
+        raise XMLSecurityException(f'Certificate `{certificate.subject}` is not yet valid')
+
+    if now > certificate.not_valid_after_utc:
+        raise XMLSecurityException(f'Certificate `{certificate.subject}` has expired')
+
+# ################################################################################################################################
+
+def _check_is_certificate_authority(certificate:'any_') -> 'None':
+    """ Rejects an issuer that is not marked as a certificate authority. Without this check any
+    leaf certificate issued by a trusted CA can be used to issue further certificates, so a
+    holder of one ordinary certificate could mint a chain for any identity it likes.
+    """
+    try:
+        basic_constraints = certificate.extensions.get_extension_for_class(BasicConstraints)
+    except ExtensionNotFound:
+        raise XMLSecurityException(f'Issuer `{certificate.subject}` carries no basicConstraints extension')
+
+    if not basic_constraints.value.ca:
+        raise XMLSecurityException(f'Issuer `{certificate.subject}` is not a certificate authority')
+
+# ################################################################################################################################
+
+def _check_key_usage(certificate:'any_', usage_name:'str') -> 'None':
+    """ Rejects a certificate whose keyUsage extension excludes the use it is being put to.
+    A certificate with the extension absent is unconstrained, which is what the specification
+    says, so only an extension that is present and says no is a failure.
+    """
+    try:
+        key_usage = certificate.extensions.get_extension_for_class(KeyUsage)
+    except ExtensionNotFound:
+        return
+
+    if not getattr(key_usage.value, usage_name):
+        raise XMLSecurityException(f'Certificate `{certificate.subject}` is not permitted to {usage_name.replace("_", " ")}')
+
+# ################################################################################################################################
+
 def validate_certificate_chain(chain:'certificate_list', keystore:'Keystore') -> 'None':
     """ Establishes trust in the signer's certificate. With trust anchors configured,
     the chain must lead from the leaf to one of them with valid signatures and periods.
-    Without anchors, the leaf must equal the pinned peer certificate, when one is pinned.
+    Without anchors, the leaf must equal the pinned peer certificate.
     """
-    # Pinned-certificate mode - the exact certificate must have been configured beforehand.
-    if not keystore.trust_anchors:
-        if pinned := keystore.peer_signing_certificate:
-            leaf = chain[0]
-            if leaf != pinned:
-                raise XMLSecurityException('Signer certificate does not match the pinned one')
-        return
-
     now = datetime.now(timezone.utc)
+    leaf = chain[0]
+
+    # Trust has to come from something the operator configured. The signer's certificate arrives
+    # inside the message being verified, so with neither anchors nor a pinned certificate there is
+    # nothing to check it against and any self-signed certificate an attacker generates would be
+    # accepted. Returning without validating here is the difference between a signature that
+    # proves who sent the message and one that proves only that somebody signed something.
+    if not keystore.trust_anchors:
+
+        pinned = keystore.peer_signing_certificate
+
+        if not pinned:
+            raise XMLSecurityException('No trust anchors and no pinned peer certificate are configured')
+
+        if leaf != pinned:
+            raise XMLSecurityException('Signer certificate does not match the pinned one')
+
+        # A pinned certificate still expires - the anchor-walking branch below checks this for
+        # every certificate it sees and the pinned branch has to do the same.
+        _check_validity_period(leaf, now)
+        _check_key_usage(leaf, 'digital_signature')
+
+        return
 
     # Walk from the leaf upwards - each certificate must be within its validity period
     # and signed either by the next chain element or directly by a trust anchor.
@@ -415,20 +602,21 @@ def validate_certificate_chain(chain:'certificate_list', keystore:'Keystore') ->
     for anchor in keystore.trust_anchors:
         anchors_by_subject[anchor.subject.rfc4514_string()] = anchor
 
-    current = chain[0]
+    _check_key_usage(leaf, 'digital_signature')
+
+    current = leaf
     remaining = chain[1:]
 
     while True:
-        if now < current.not_valid_before_utc:
-            raise XMLSecurityException(f'Certificate `{current.subject}` is not yet valid')
-
-        if now > current.not_valid_after_utc:
-            raise XMLSecurityException(f'Certificate `{current.subject}` has expired')
+        _check_validity_period(current, now)
 
         issuer_name = current.issuer.rfc4514_string()
 
         # The current certificate chains directly to a trust anchor - verify and we are done.
         if anchor := anchors_by_subject.get(issuer_name):
+            _check_validity_period(anchor, now)
+            _check_is_certificate_authority(anchor)
+            _check_key_usage(anchor, 'key_cert_sign')
             current.verify_directly_issued_by(anchor)
             break
 
@@ -438,6 +626,10 @@ def validate_certificate_chain(chain:'certificate_list', keystore:'Keystore') ->
 
         issuer = remaining[0]
         remaining = remaining[1:]
+
+        _check_is_certificate_authority(issuer)
+        _check_key_usage(issuer, 'key_cert_sign')
+
         current.verify_directly_issued_by(issuer)
         current = issuer
 
@@ -467,6 +659,13 @@ def verify_signature_value(signature:'any_', chain:'certificate_list') -> 'None'
             ed25519_key.verify(signature_bytes, canonical)
         elif algorithm == Algorithm.RSA_SHA256:
             rsa_key = cast_('RSAPublicKey', public_key)
+
+            # A signature under a key small enough to factor verifies just as cleanly as one
+            # under a strong key, so the size is checked before the signature is believed.
+            if rsa_key.key_size < Minimum_RSA_Key_Size_Bits:
+                raise XMLSecurityException(
+                    f'RSA key of {rsa_key.key_size} bits is below the minimum of {Minimum_RSA_Key_Size_Bits}')
+
             rsa_key.verify(signature_bytes, canonical, PKCS1v15(), SHA256())
         else:
             raise XMLSecurityUnsupportedAlgorithm(f'Unsupported signature algorithm `{algorithm}`')
@@ -502,7 +701,14 @@ def recover_content_key(encrypted_key:'any_', keystore:'Keystore', hkdf_info:'by
         oaep_padding = OAEP(mgf=MGF1(SHA256()), algorithm=SHA256(), label=None)
         rsa_key = cast_('RSAPrivateKey', keystore.decryption_key)
 
-        out = rsa_key.decrypt(wrapped_key, oaep_padding)
+        # Every failure reason collapses into the same message. A padding failure that reads
+        # differently from a length failure is what a Bleichenbacher-style oracle needs, so the
+        # AES-GCM path already does this and the RSA path has to match it.
+        try:
+            out = rsa_key.decrypt(wrapped_key, oaep_padding)
+        except Exception:
+            raise XMLSecurityException('Could not recover the content key')
+
         return out
 
     # AES key wrap after X25519 agreement - rebuild the shared secret

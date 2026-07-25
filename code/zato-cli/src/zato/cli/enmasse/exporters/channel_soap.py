@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from contextlib import closing
 
 # SQLAlchemy
 from sqlalchemy import and_, select
@@ -49,24 +48,23 @@ class ChannelSOAPExporter:
         # Clear existing mapping
         self.group_id_to_name = {}
 
-        # Use a direct SQLAlchemy query to get all groups
-        with closing(session) as session:
-            # Build a query for all groups
-            query = select([
-                GenericObject.id,
-                GenericObject.name
-            ]).where(and_(
-                GenericObject.type_ == Groups.Type.Group_Parent,
-                GenericObject.subtype == Groups.Type.API_Clients,
-                GenericObject.cluster_id == cluster_id,
-            ))
+        # The session belongs to the caller, which goes on to list the channels with it,
+        # so this method must not close it.
+        query = select([
+            GenericObject.id,
+            GenericObject.name
+        ]).where(and_(
+            GenericObject.type_ == Groups.Type.Group_Parent,
+            GenericObject.subtype == Groups.Type.API_Clients,
+            GenericObject.cluster_id == cluster_id,
+        ))
 
-            # Execute the query and get results
-            groups = session.execute(query).fetchall()
+        # Execute the query and get results
+        groups = session.execute(query).fetchall()
 
-            # Build ID to name mapping
-            for group in groups:
-                self.group_id_to_name[group['id']] = group['name']
+        # Build ID to name mapping
+        for group in groups:
+            self.group_id_to_name[group.id] = group.name
 
         logger.info('Loaded %d security groups', len(self.group_id_to_name))
 
