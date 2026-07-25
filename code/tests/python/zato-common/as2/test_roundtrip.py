@@ -19,9 +19,9 @@ import pytest
 # Zato
 from .wire import do_send, new_exchange, Payload as _payload, Receiver_Identifier as _receiver_identifier, \
     Sender_Endpoint_URL as _sender_endpoint_url, Sender_Identifier as _sender_identifier, set_security
-from zato.common.as2 import inbound
 from zato.common.as2.common import AS2Error, Default, DigestAlgorithm, EncryptionAlgorithm, MDNMode, TransferMode
 from zato.common.as2.inbound import handle
+from zato.common.as2.inbound import layers as inbound_layers, payloads as inbound_payloads, pipeline as inbound_pipeline
 from zato.common.as2.mdn import build_mdn, MDNRequest, new_processed_disposition, normalize_message_id, parse_mdn
 from zato.common.as2.outbound import build_message, PayloadItem
 from zato.common.as2.partnership import CertificateEntry, HTTPAuth
@@ -790,7 +790,7 @@ class TestPeerSuppliedFilename:
         assert result.is_ok
 
         received = exchange.results[0]
-        assert len(received.payloads[0].filename) == inbound._max_filename_length
+        assert len(received.payloads[0].filename) == inbound_payloads._max_filename_length
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -933,7 +933,7 @@ class TestInboundBounds:
         exchange = new_exchange(parties)
 
         # A ceiling low enough to cross without building a genuinely huge request.
-        monkeypatch.setattr(inbound, '_max_inbound_bytes', 16)
+        monkeypatch.setattr(inbound_pipeline, 'Max_Inbound_Bytes', 16)
 
         result = do_send(exchange)
 
@@ -962,7 +962,7 @@ class TestInboundBounds:
 
         # Signing plus encryption is two layers, so a ceiling of one is crossed by the
         # ordinary message the sender builds, exercising the same guard a stacked one would.
-        monkeypatch.setattr(inbound, '_max_layer_depth', 1)
+        monkeypatch.setattr(inbound_layers, 'Max_Layer_Depth', 1)
 
         result = do_send(exchange)
 
