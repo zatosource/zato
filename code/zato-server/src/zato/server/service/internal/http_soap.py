@@ -117,8 +117,8 @@ for _as2_field_name in AS2.Common_Fields + AS2.Channel_Fields:
 
 _as2_input = tuple(_as2_fields)
 
-# The private key fields of AS2 and AS4 objects - they are stored encrypted
-# and they are never returned to any caller.
+# The secret fields of AS2 and AS4 objects, i.e. their private keys and passwords - they are
+# stored encrypted and they are never returned to any caller.
 _pem_secret_fields = AS2.Secret_Fields + AS4.Secret_Fields
 
 # ################################################################################################################################
@@ -584,7 +584,7 @@ class Get(_BaseGet):
             item = http_soap(session, cluster_id, local_id, self.request.input.name)
             out = cast_('anydict', get_dict_with_opaque(item))
 
-        # Private keys never leave the server, not even encrypted.
+        # Secrets never leave the server, not even encrypted.
         for name in _pem_secret_fields:
             _ = out.pop(name, None)
 
@@ -671,7 +671,7 @@ class GetList(_BaseGet):
             if should_ignore_wrapper and item.get('is_wrapper'):
                 continue
 
-            # .. private keys never leave the server, not even encrypted ..
+            # .. secrets never leave the server, not even encrypted ..
             for name in _pem_secret_fields:
                 _ = item.pop(name, None)
 
@@ -824,7 +824,7 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
 # ################################################################################################################################
 
     def _encrypt_as4_secrets(self, input):
-        """ Encrypts the AS4 private keys unless they are encrypted already.
+        """ Encrypts the AS4 private keys and password unless they are encrypted already.
         """
         if input.transport != URL_TYPE.AS4:
             return
@@ -1267,10 +1267,10 @@ class Edit(_CreateEdit):
                 if response_cache := opaque.get('response_cache'):
                     input.response_cache = response_cache
 
-                # Private keys are never returned to the Dashboard, so an edit form cannot send them back.
+                # Secrets are never returned to the Dashboard, so an edit form cannot send them back.
                 for name in _pem_secret_fields:
 
-                    # A key given on input is a new one and is stored as given ..
+                    # A secret given on input is a new one and is stored as given ..
                     if input.get(name):
                         continue
 
@@ -1280,7 +1280,7 @@ class Edit(_CreateEdit):
                         if not input.get('as2_next_decryption_cert'):
                             continue
 
-                    # .. and any other empty key on input means the stored one is kept.
+                    # .. and any other empty secret on input means the stored one is kept.
                     if stored_value := opaque.get(name):
                         input[name] = stored_value
 

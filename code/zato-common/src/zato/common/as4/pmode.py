@@ -59,6 +59,13 @@ class SecurityConfig:
     # Whether receipts must be signed and carry non-repudiation information.
     sign_receipts: bool = True
 
+    # PMode[1].Security.UsernameToken.* - the credentials some networks require next to the
+    # signature, e.g. to authorize a pull request. With no username configured no token is added
+    # to what goes out and none is expected of what comes in. The password travels in the text form
+    # of the UsernameToken profile, on a TLS connection.
+    username_token_username: str = ''
+    username_token_password: str = ''
+
     # Whether the eb:From PartyId of an incoming message is required to be the common name of the
     # certificate that signed it. Networks that issue one certificate per party identifier say yes.
     party_id_is_certificate_cn: bool = False

@@ -7,8 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
+from zato.common.api import AS4
 from zato.common.as4.common import AS4Exception
 from zato.common.as4.profiles import new_edelivery1_pmode, new_edelivery2_pmode, new_ics2_pmode, new_peppol_pmode
+from zato.common.util.xml_.constants import TokenType
 from zato.common.util.xml_.keystore import load_certificates_pem, load_private_key_pem, new_keystore
 
 # ################################################################################################################################
@@ -35,6 +37,14 @@ profile_presets = {
     'edelivery2': new_edelivery2_pmode,
     'peppol':     new_peppol_pmode,
     'ics2':       new_ics2_pmode,
+}
+
+# Maps the token type a connection selects in the Dashboard to the WS-Security profile identifier
+# that goes on the wire for it.
+token_types = {
+    AS4.TokenType.X509v3:  TokenType.X509v3,
+    AS4.TokenType.PKIPath: TokenType.PKIPath,
+    AS4.TokenType.SAML20:  TokenType.SAML20,
 }
 
 # ################################################################################################################################
@@ -84,6 +94,11 @@ def build_keystore(config:'stranydict', decrypt_func:'callable_') -> 'Keystore':
         value = value.encode('utf8')
         out.trust_anchors = load_certificates_pem(value)
 
+    # The assertion a security token service issued, for the exchanges whose token is one of those
+    # rather than a certificate travelling as a binary token.
+    if value := get_text_field(config, 'as4_saml_assertion'):
+        out.saml_assertion = value.encode('utf8')
+
     return out
 
 # ################################################################################################################################
@@ -121,6 +136,17 @@ def build_pmode(config:'stranydict') -> 'PMode':
 
     if value := config['as4_to_party']:
         out.responder.party_id = value
+
+    # How the signing certificate travels, when the exchange uses something else than what the
+    # profile preset prescribes - the whole chain, or a SAML assertion in place of a certificate.
+    if value := get_text_field(config, 'as4_token_type'):
+        out.security.token_type = token_types[value]
+
+        # A signature keyed by an assertion has nothing to key it with unless one was configured,
+        # and the first message that cannot be built is a late place to find that out.
+        if value == AS4.TokenType.SAML20:
+            if not get_text_field(config, 'as4_saml_assertion'):
+                raise AS4Exception('Token type SAML needs a SAML assertion to be configured too')
 
     return out
 
@@ -181,6 +207,23 @@ def apply_reception_awareness(pmode:'PMode', config:'stranydict') -> 'None':
     # A single permitted attempt is how a connection says its messages go out once and are not
     # repeated, so there is no separate switch for it to contradict.
     awareness.retry = awareness.retry_max_attempts > 1
+
+# ################################################################################################################################
+
+def apply_credentials(pmode:'PMode', config:'stranydict', decrypt_func:'callable_') -> 'None':
+    """ Overlays on one P-Mode the credentials an exchange carries next to its signature, for the
+    networks that ask for them. The password is stored encrypted, so it is decrypted here, at the
+    same point the private keys of a keystore are.
+    """
+    username = get_text_field(config, 'as4_username')
+
+    if not username:
+        return
+
+    pmode.security.username_token_username = username
+
+    if value := get_text_field(config, 'as4_password'):
+        pmode.security.username_token_password = decrypt_func(value)
 
 # ################################################################################################################################
 

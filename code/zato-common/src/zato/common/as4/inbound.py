@@ -18,6 +18,7 @@ from lxml import etree
 from zato.common.as4.common import AS4ProtocolException, AS4SecurityException, EbMSError, Limits, serves_channel, Severity
 from zato.common.as4.ebms import build_envelope, build_error, build_receipt, parse_messaging
 from zato.common.as4.mime_ import parse_multipart, restore_payloads
+from zato.common.as4.security.credentials import require_credentials
 from zato.common.as4.security.sign import sign_envelope
 from zato.common.as4.security.verify import decrypt_parts, verify_envelope
 from zato.common.util.xml_.core import from_timestamp, parse_xml, XMLException, XMLSecurityException
@@ -289,6 +290,9 @@ def _handle_pull_request(
     # The messages of a channel are handed over only under the terms agreed for it.
     pmode = _match_pull_pmode(pmodes, mpc)
 
+    # A channel that asks for credentials on top of the signature asks for them here.
+    require_credentials(envelope, pmode.security)
+
     served = serve_pull(mpc, pmode)
 
     # A channel with nothing waiting on it is answered with the warning ebMS 3.0 defines for it,
@@ -383,6 +387,7 @@ def handle(
         # .. hold the message to the P-Mode's own policy, which the message itself cannot state ..
         _require_encryption(pmode, parts, decrypted_content_ids)
         _require_party_binding(pmode, user_message, verify_result.signer_certificate)
+        require_credentials(envelope, pmode.security)
 
         # .. the timestamp is only worth checking once it is known to be the signed one ..
         _require_fresh_timestamp(user_message)

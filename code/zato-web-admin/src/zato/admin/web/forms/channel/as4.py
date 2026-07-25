@@ -11,7 +11,7 @@ from django import forms
 
 # Zato
 from zato.admin.web.forms import add_security_select
-from zato.admin.web.forms.outgoing.as4 import profile_choices
+from zato.admin.web.forms.outgoing.as4 import profile_choices, token_type_choices
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,10 +44,16 @@ class CreateForm(forms.Form):
     as4_mpc = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
     as4_extra_pmodes = forms.CharField(required=False, widget=forms.Textarea(attrs={'style':'width:100%', 'rows':4}))
 
-    # Security - everything is pasted PEM, the private keys are encrypted at rest
+    # Security - the certificates and keys are pasted PEM, the private keys and the password
+    # are encrypted at rest
+    as4_token_type = forms.ChoiceField(required=False, widget=forms.Select())
+    as4_username = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+    as4_password = forms.CharField(required=False, widget=forms.PasswordInput(attrs={'style':'width:100%'},
+        render_value=True))
     as4_signing_key = forms.CharField(required=False, widget=forms.Textarea(attrs=_pem_attrs))
     as4_signing_cert_chain = forms.CharField(required=False, widget=forms.Textarea(attrs=_pem_attrs))
     as4_decryption_key = forms.CharField(required=False, widget=forms.Textarea(attrs=_pem_attrs))
+    as4_saml_assertion = forms.CharField(required=False, widget=forms.Textarea(attrs=_pem_attrs))
     as4_peer_signing_cert = forms.CharField(required=False, widget=forms.Textarea(attrs=_pem_attrs))
     as4_peer_encryption_cert = forms.CharField(required=False, widget=forms.Textarea(attrs=_pem_attrs))
     as4_trust_anchors = forms.CharField(required=False, widget=forms.Textarea(attrs=_pem_attrs))
@@ -71,6 +77,10 @@ class CreateForm(forms.Form):
         self.fields['as4_profile'].choices = []
         for value, label in profile_choices:
             self.fields['as4_profile'].choices.append([value, label])
+
+        self.fields['as4_token_type'].choices = []
+        for value, label in token_type_choices:
+            self.fields['as4_token_type'].choices.append([value, label])
 
         add_security_select(self, security_list, field_name='security_id')
 

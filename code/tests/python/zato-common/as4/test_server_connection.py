@@ -739,6 +739,15 @@ class TestRoutingFailures:
         assert second.payloads[0].data == Payload
         assert len(attempts) == 1
 
+        # The retry reached the routing target that was down for the first attempt, so the payload
+        # of a message whose first delivery failed is delivered rather than suppressed as a replay.
+        assert len(channel.server.invoked) == 1
+
+        service_name, message = channel.server.invoked[0]
+
+        assert service_name == 'my.service'
+        assert message['data'] == Payload.decode('utf8')
+
 # ################################################################################################################################
 # ################################################################################################################################
 

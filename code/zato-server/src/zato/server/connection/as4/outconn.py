@@ -21,7 +21,7 @@ import httpx
 from zato.common.api import AS4
 from zato.common.as4.audit import record_pull_result, record_send_result
 from zato.common.as4.common import AS4Exception, Default
-from zato.common.as4.config import apply_reception_awareness, build_keystore, build_pmode
+from zato.common.as4.config import apply_credentials, apply_reception_awareness, build_keystore, build_pmode
 from zato.common.as4.discovery import lookup_endpoint, SML_Domain_Production
 from zato.common.as4.mpc import queue_message
 from zato.common.as4.outbound import new_part, pull as outbound_pull, send as outbound_send
@@ -132,6 +132,7 @@ class AS4Wrapper:
                 pmode.http_timeout_seconds = self.config['timeout']
                 pmode.verify_tls = self.config['validate_tls']
                 apply_reception_awareness(pmode, self.config)
+                apply_credentials(pmode, self.config, self.server.decrypt)
                 self._pmode = pmode
 
             out = self._pmode

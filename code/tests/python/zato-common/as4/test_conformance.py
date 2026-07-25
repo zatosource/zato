@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
+from http.client import OK
 
 # httpx
 import httpx
@@ -412,7 +413,7 @@ class TestInboundPolicy:
 
             body = _serialize(receipt_envelope)
 
-            out = httpx.Response(200, content=body, headers={'Content-Type': 'application/soap+xml; charset=UTF-8'})
+            out = httpx.Response(OK, content=body, headers={'Content-Type': 'application/soap+xml; charset=UTF-8'})
             return out
 
         client = httpx.Client(transport=httpx.MockTransport(responder))
@@ -421,6 +422,150 @@ class TestInboundPolicy:
             _ = send(pmode, rsa_parties.sender, [new_part(Payload)], client=client)
 
         assert 'does not account for' in str(raised.value)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestForgedSignals:
+    """ A signal is a statement about a message of ours, so who made it is the whole of its value -
+    one that nobody we exchange messages with signed says nothing about anything.
+    """
+
+    def test_a_signal_signed_by_another_party_is_refused(self, rsa_parties:'TestParties') -> 'None':
+        pmode = _make_peppol_pmode(rsa_parties)
+
+        # A receipt for a message of ours, signed with a key that is not the peer's - which is what
+        # anyone fabricating one has, because the peer's private key is the one thing they do not.
+        envelope = build_envelope()
+        _ = build_receipt(envelope, 'earlier-message@test', [])
+        _ = sign_envelope(envelope, [], rsa_parties.receiver, pmode.security)
+
+        body = _serialize(envelope)
+
+        result = handle(body, 'application/soap+xml', [pmode], rsa_parties.receiver)
+
+        assert result.is_error
+        assert result.error_code == EbMSError.Failed_Authentication
+        assert result.signals == []
+
+# ################################################################################################################################
+
+    def test_the_same_signal_signed_by_the_peer_is_accepted(self, rsa_parties:'TestParties') -> 'None':
+
+        # The counterpart to the test above - the same receipt from the party we exchange messages
+        # with goes through, so what the test above asserts on is the signer and not the receipt.
+        pmode = _make_peppol_pmode(rsa_parties)
+
+        envelope = build_envelope()
+        _ = build_receipt(envelope, 'earlier-message@test', [])
+        _ = sign_envelope(envelope, [], rsa_parties.sender, pmode.security)
+
+        body = _serialize(envelope)
+
+        result = handle(body, 'application/soap+xml', [pmode], rsa_parties.receiver)
+
+        assert not result.is_error
+        assert result.signals[0].ref_to_message_id == 'earlier-message@test'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestFabricatedReceipts:
+    """ What a receipt has to account for before the message it answers counts as acknowledged -
+    the whole point of a receipt is that it is evidence, and evidence that proves nothing is worse
+    than none at all because the sender would stop retrying on the strength of it.
+    """
+
+    def _send_against(self, pmode:'any_', rsa_parties:'TestParties', responder:'any_') -> 'any_':
+        """ Pushes one message to a responder that answers however the caller says.
+        """
+        client = httpx.Client(transport=httpx.MockTransport(responder))
+
+        out = send(pmode, rsa_parties.sender, [new_part(Payload)], client=client)
+        return out
+
+# ################################################################################################################################
+
+    def _receipt_response(
+        self,
+        request:'any_',
+        parties:'TestParties',
+        signing_keystore:'any_',
+        pmode:'any_',
+        reference_count:'int',
+        ) -> 'any_':
+        """ Answers a push with a receipt signed by the given keystore, accounting for as many of
+        the references the message was signed over as the caller says. The message itself is read
+        the way the receiving side reads it, whoever ends up signing the answer.
+        """
+        envelope_bytes, parts = parse_multipart(request.content, request.headers['content-type'])
+        envelope = parse_xml(envelope_bytes)
+        messaging = parse_messaging(envelope)
+
+        verify_result = verify_envelope(envelope, parts, parties.receiver)
+        references = verify_result.signed_references[:reference_count]
+
+        receipt_envelope = build_envelope()
+        _ = build_receipt(receipt_envelope, messaging.user_messages[0].message_id, references)
+        _ = sign_envelope(receipt_envelope, [], signing_keystore, pmode.security)
+
+        body = _serialize(receipt_envelope)
+
+        out = httpx.Response(OK, content=body, headers={'Content-Type': 'application/soap+xml; charset=UTF-8'})
+        return out
+
+# ################################################################################################################################
+
+    def test_a_receipt_that_echoes_nothing_is_refused(self, rsa_parties:'TestParties') -> 'None':
+        pmode = _make_peppol_pmode(rsa_parties)
+        pmode.endpoint_url = 'https://as4.invalid/msh'
+
+        def responder(request:'any_') -> 'any_':
+
+            # A receipt in every respect except that it accounts for nothing that was sent.
+            out = self._receipt_response(request, rsa_parties, rsa_parties.receiver, pmode, 0)
+            return out
+
+        with pytest.raises(AS4Exception) as raised:
+            _ = self._send_against(pmode, rsa_parties, responder)
+
+        assert 'does not account for' in str(raised.value)
+
+# ################################################################################################################################
+
+    def test_a_receipt_signed_by_another_party_is_refused(self, rsa_parties:'TestParties') -> 'None':
+        pmode = _make_peppol_pmode(rsa_parties)
+        pmode.endpoint_url = 'https://as4.invalid/msh'
+
+        def responder(request:'any_') -> 'any_':
+
+            # Everything the sender asked for is echoed back, by a party whose key the sender
+            # has no reason to accept anything from.
+            out = self._receipt_response(request, rsa_parties, rsa_parties.sender, pmode, 3)
+            return out
+
+        with pytest.raises(AS4Exception) as raised:
+            _ = self._send_against(pmode, rsa_parties, responder)
+
+        assert EbMSError.Failed_Authentication in str(raised.value)
+
+# ################################################################################################################################
+
+    def test_a_receipt_accounting_for_everything_is_accepted(self, rsa_parties:'TestParties') -> 'None':
+
+        # The counterpart to the two tests above - the same construction, by the right party and
+        # accounting for everything, is what an acknowledged message looks like.
+        pmode = _make_peppol_pmode(rsa_parties)
+        pmode.endpoint_url = 'https://as4.invalid/msh'
+
+        def responder(request:'any_') -> 'any_':
+            out = self._receipt_response(request, rsa_parties, rsa_parties.receiver, pmode, 3)
+            return out
+
+        result = self._send_against(pmode, rsa_parties, responder)
+
+        assert result.is_ok
+        assert result.receipt is not None
 
 # ################################################################################################################################
 # ################################################################################################################################

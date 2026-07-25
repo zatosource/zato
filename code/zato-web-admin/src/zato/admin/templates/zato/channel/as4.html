@@ -35,10 +35,12 @@
             '_service',
             '_security',
             'as4_cert_expiry',
+            '_audit_log',
             '_edit',
             '_delete',
             'id',
             'is_active',
+            'is_audit_log_active',
             'security_id',
             'service',
             'as4_from_party',
@@ -50,9 +52,13 @@
             'as4_original_sender',
             'as4_final_recipient',
             'as4_extra_pmodes',
+            'as4_token_type',
+            'as4_username',
+            'as4_password',
             'as4_signing_key',
             'as4_signing_cert_chain',
             'as4_decryption_key',
+            'as4_saml_assertion',
             'as4_peer_signing_cert',
             'as4_peer_encryption_cert',
             'as4_trust_anchors',
@@ -111,18 +117,24 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
-
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -190,11 +202,16 @@
                         <td class='ignore'>{{ item.as4_final_recipient|default:'' }}</td>
                         <td class='ignore'>{{ item.as4_extra_pmodes|default:'' }}</td>
 
-                        {% comment %} Private keys never appear in the page - the backend keeps
-                        the stored ones when their edit form fields are left empty. {% endcomment %}
+                        <td class='ignore'>{{ item.as4_token_type|default:'' }}</td>
+                        <td class='ignore'>{{ item.as4_username|default:'' }}</td>
+
+                        {% comment %} Private keys and the password never appear in the page - the
+                        backend keeps the stored ones when their edit form fields are left empty. {% endcomment %}
+                        <td class='ignore'></td>
                         <td class='ignore'></td>
                         <td class='ignore'>{{ item.as4_signing_cert_chain|default:'' }}</td>
                         <td class='ignore'></td>
+                        <td class='ignore'>{{ item.as4_saml_assertion|default:'' }}</td>
                         <td class='ignore'>{{ item.as4_peer_signing_cert|default:'' }}</td>
                         <td class='ignore'>{{ item.as4_peer_encryption_cert|default:'' }}</td>
                         <td class='ignore'>{{ item.as4_trust_anchors|default:'' }}</td>
@@ -206,7 +223,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='33'>No results</td>
+                        <td colspan='38'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -288,7 +305,19 @@
                     <div class="dashboard-tab-panel" id="channel-as4-create-tab-panel-security" role="tabpanel" hidden>
                         <table class="form-data">
                             <tr>
-                                <td style="width:16%;vertical-align:top"><label for="id_as4_signing_key">Signing key</label></td>
+                                <td style="width:16%"><label for="id_as4_token_type">Token type</label></td>
+                                <td>{{ create_form.as4_token_type }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_as4_username">Username</label></td>
+                                <td>{{ create_form.as4_username }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_as4_password">Password</label></td>
+                                <td>{{ create_form.as4_password }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_as4_signing_key">Signing key</label></td>
                                 <td>{{ create_form.as4_signing_key }}</td>
                             </tr>
                             <tr>
@@ -298,6 +327,10 @@
                             <tr>
                                 <td style="vertical-align:top"><label for="id_as4_decryption_key">Decryption key</label></td>
                                 <td>{{ create_form.as4_decryption_key }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_as4_saml_assertion">SAML assertion</label></td>
+                                <td>{{ create_form.as4_saml_assertion }}</td>
                             </tr>
                             <tr>
                                 <td style="vertical-align:top"><label for="id_as4_peer_signing_cert">Peer signing certificate</label></td>
@@ -432,7 +465,19 @@
                     <div class="dashboard-tab-panel" id="channel-as4-edit-tab-panel-security" role="tabpanel" hidden>
                         <table class="form-data">
                             <tr>
-                                <td style="width:16%;vertical-align:top"><label for="id_edit-as4_signing_key">Signing key</label></td>
+                                <td style="width:16%"><label for="id_edit-as4_token_type">Token type</label></td>
+                                <td>{{ edit_form.as4_token_type }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-as4_username">Username</label></td>
+                                <td>{{ edit_form.as4_username }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-as4_password">Password</label></td>
+                                <td>{{ edit_form.as4_password }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_edit-as4_signing_key">Signing key</label></td>
                                 <td>{{ edit_form.as4_signing_key }}</td>
                             </tr>
                             <tr>
@@ -442,6 +487,10 @@
                             <tr>
                                 <td style="vertical-align:top"><label for="id_edit-as4_decryption_key">Decryption key</label></td>
                                 <td>{{ edit_form.as4_decryption_key }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top"><label for="id_edit-as4_saml_assertion">SAML assertion</label></td>
+                                <td>{{ edit_form.as4_saml_assertion }}</td>
                             </tr>
                             <tr>
                                 <td style="vertical-align:top"><label for="id_edit-as4_peer_signing_cert">Peer signing certificate</label></td>

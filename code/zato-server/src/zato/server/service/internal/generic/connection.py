@@ -183,6 +183,7 @@ skip_simple_type = {
     'as4_signing_key',
     'as4_signing_cert_chain',
     'as4_decryption_key',
+    'as4_saml_assertion',
     'as4_peer_signing_cert',
     'as4_peer_encryption_cert',
     'as4_trust_anchors',
