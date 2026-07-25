@@ -20,6 +20,7 @@ from requests import Response as _RequestsResponse
 from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectionError as RequestsConnectionError, Timeout as RequestsTimeout
 from requests.sessions import Session as RequestsSession
+from requests.utils import super_len
 
 # requests-ntlm
 from requests_ntlm import HttpNtlmAuth
@@ -28,8 +29,8 @@ from requests_ntlm import HttpNtlmAuth
 from requests_toolbelt import MultipartEncoder
 
 # Zato
-from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, HTTP_SOAP, MISC, NotGiven, SEC_DEF_TYPE, URL_TYPE, \
-    Wrapper_Name_Prefix_List
+from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, EnvVariable, HTTP_SOAP, MISC, NotGiven, SEC_DEF_TYPE, \
+    URL_TYPE, Wrapper_Name_Prefix_List
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.exception import BadRequest, Inactive, BackendInvocationError
 from zato.common.json_ import dumps, loads
@@ -115,6 +116,38 @@ Default_Content_Type = 'text/plain'
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+def _get_body_length(data:'any_') -> 'int':
+    """ Returns how long a request body is, for the log message that describes the request.
+
+    Strings and bytes answer directly. Everything else - a multipart encoder, a file object,
+    a stream - is measured by the same function that requests itself uses to decide what
+    Content-Length to send, and it answers zero for a body whose size cannot be known in
+    advance. A multipart encoder in particular publishes its length as a property rather than
+    through __len__, so len() applied to one raises rather than returning anything.
+    """
+    if isinstance(data, (str, bytes)):
+        out = len(data)
+    else:
+        out = super_len(data)
+
+    return out
+
+# ################################################################################################################################
+
+def _needs_serialization(data:'any_') -> 'bool':
+    """ Says whether a request body still has to be serialized on its way out.
+
+    A string is sent exactly as it stands, and so is a multipart encoder, which is an already
+    encoded body that carries its own content type. Anything else - a dict, a list, a model -
+    is serialized according to the connection's data format.
+    """
+    if isinstance(data, (str, MultipartEncoder)):
+        out = False
+    else:
+        out = True
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -342,6 +375,11 @@ class BaseHTTPSOAPWrapper:
         self.requests_auth = None
         self.username = None
 
+        # The headers that the security definition contributes are built from scratch on each call -
+        # a definition edited to use a different header name would otherwise keep sending
+        # the previous name alongside the new one for as long as the connection lived.
+        base_headers:'strstrdict' = {}
+
         # The SOAP client is built lazily and dropped here so security changes take effect on the next call.
         self._soap_client:'SOAPClient | None' = None
 
@@ -357,7 +395,7 @@ class BaseHTTPSOAPWrapper:
             password = self.config['password']
             if isinstance(password, str) and password.startswith('Missing_'):
                 password = ''
-            self.base_headers[username] = password
+            base_headers[username] = password
 
         # #######################################
         #
@@ -414,6 +452,10 @@ class BaseHTTPSOAPWrapper:
             _requests_auth = SPNEGOAuth(principal, keytab_path, target_spn, bool(needs_delegation))
             self.requests_auth = _requests_auth
             self.username = principal
+
+        # Whatever the definition contributed replaces the previous set in one assignment,
+        # so a request being built elsewhere sees either all of the old headers or all of the new ones.
+        self.base_headers = base_headers
 
 # ################################################################################################################################
 
@@ -483,7 +525,7 @@ class BaseHTTPSOAPWrapper:
         cid:'str',
         method:'str',
         address:'str',
-        data:'str',
+        data:'any_',
         headers:'strstrdict',
         hooks:'any_',
         *args:'any_',
@@ -585,9 +627,12 @@ class BaseHTTPSOAPWrapper:
                 # .. we have no token to report about.
                 token_is_cache_hit = None
 
-            # .. basic details about what we are sending what we are sending ..
-            message = f'REST out -> cid={cid}; {method} {address}; name:{self.config["name"]}; params={params}; len={len(data)}' + \
-                  f'; sec={sec_def_name} ({_sec_type})'
+            # .. how much we are about to send ..
+            data_length = _get_body_length(data)
+
+            # .. basic details about what we are sending ..
+            message = f'REST out -> cid={cid}; {method} {address}; name:{self.config["name"]}; params={params}' + \
+                  f'; len={data_length}; sec={sec_def_name} ({_sec_type})'
 
             # .. optionally, log details of the Bearer token ..
             if is_bearer_token:
@@ -709,6 +754,11 @@ class BaseHTTPSOAPWrapper:
 # ################################################################################################################################
 
     def _create_headers(self, cid:'str', user_headers:'strstrdict', now:'str'='') -> 'strstrdict':
+
+        # The content type is taken out of the user headers below, so the work is done on a copy -
+        # a caller that reuses one dict across calls would otherwise lose it after the first one.
+        user_headers = dict(user_headers)
+
         headers = dict(self.base_headers)
         headers.update({
             'X-Zato-CID': cid,
@@ -799,10 +849,14 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             )
             raise BadRequest(cid, msg, needs_msg=True)
 
+        # Path parameters are taken out of a copy of what the caller gave us and whatever is left
+        # of that copy becomes the query string, so the caller's own dict is never written into.
+        qs_params = dict(params)
+
         path_params = {}
         try:
             for name in self.path_params:
-                value = params.pop(name)
+                value = qs_params.pop(name)
 
                 # Encode so a value cannot inject extra path segments into the address,
                 # keeping percent signs intact so values that arrive already
@@ -811,7 +865,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
             address = self.address.format(**path_params)
 
-            out = address, dict(params)
+            out = address, qs_params
             return out
         except(KeyError, ValueError):
             msg = 'Could not build URL path template `{}`, missing parameters: {}'.format(
@@ -1024,9 +1078,8 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         # .. otherwise, our input data may need to be serialized ..
         if needs_serialize_based_on_content_type:
 
-            # .. but we never serialize string objects,
-            # .. assuming they already represent what ought to be sent as-is ..
-            needs_request_serialize = not isinstance(data, str)
+            # .. we never serialize what already represents what ought to be sent as-is ..
+            needs_request_serialize = _needs_serialization(data)
 
             # .. if we are here, we know check further if serialization is required ..
             if needs_request_serialize:

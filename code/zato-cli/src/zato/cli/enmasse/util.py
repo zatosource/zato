@@ -14,7 +14,7 @@ from json import dumps as json_dumps, loads as json_loads
 
 # Zato
 from zato.cli.enmasse.config import ModuleCtx
-from zato.common.api import HTTP_SOAP, SCHEDULER, SchedulerLink, URL_TYPE
+from zato.common.api import EnvVariable, HTTP_SOAP, SCHEDULER, SchedulerLink, URL_TYPE
 from zato.common.odb.model import Job
 from zato.common.util.api import asbool
 from zato.common.util.imap_scheduler import interval_from_unit
@@ -440,7 +440,7 @@ def get_value_from_environment(value:'any_') -> 'str':
         if value.endswith('}'):
             env_key = value[2:-1]
             logger.info('Resolving ${%s} from environment, present=%s', env_key, env_key in os.environ)
-            default = f'Missing_{env_key}_{uuid.uuid4().hex[:12]}'
+            default = f'{EnvVariable.Missing_Value_Prefix}{env_key}_{uuid.uuid4().hex[:12]}'
             value = os.environ.get(env_key, default)
 
             try:
@@ -457,7 +457,7 @@ def get_value_from_environment(value:'any_') -> 'str':
         return value
 
     env_key = value.replace(prefix, '')
-    default = f'Missing_{env_key}_{uuid.uuid4().hex[:12]}'
+    default = f'{EnvVariable.Missing_Value_Prefix}{env_key}_{uuid.uuid4().hex[:12]}'
 
     value = os.environ.get(env_key, default)
 

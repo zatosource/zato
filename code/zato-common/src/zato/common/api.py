@@ -146,6 +146,11 @@ class EnvVariable:
     Key_Missing_Suffix = '_Missing'
     Log_Env_Details = 'Zato_Log_Env_Details'
 
+    # What stands in for a value whose environment variable was not set when a configuration
+    # was imported. The rest of the placeholder names that variable and adds a unique suffix,
+    # so a value that begins with this is a value that was never provided.
+    Missing_Value_Prefix = 'Missing_'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
