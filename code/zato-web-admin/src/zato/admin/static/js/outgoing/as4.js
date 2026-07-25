@@ -91,9 +91,13 @@ $.fn.zato.outgoing.as4.field_descriptions = {
     'id_as4_missing_receipt_after': 'How long an exchange is given before its receipt<br>counts as missing - past this point the retries<br>stop and the exchange is reported instead.',
 
     // Security tab
+    'id_as4_token_type': 'How your signing certificate travels in outgoing<br>messages - a single certificate, the whole chain,<br>or a SAML assertion. Empty means<br>what the profile prescribes.',
+    'id_as4_username': 'The username outgoing messages carry in a<br>WS-Security UsernameToken, which is how some<br>networks authorize pull requests.<br>Leave empty to send no token.',
+    'id_as4_password': 'The password that goes with the username above.<br>It travels in clear text inside the token, so the<br>connection has to be TLS. Stored encrypted.<br>Leave empty to keep the stored password.',
     'id_as4_signing_key': 'Your private key in PEM, pasted as text.<br>It signs every outgoing message and is<br>stored encrypted, never in plain text.<br>Leave empty to keep the stored key.',
     'id_as4_signing_cert_chain': 'The certificate chain matching the signing key,<br>in PEM - your access point certificate first,<br>then any intermediates.',
     'id_as4_decryption_key': 'The private key that decrypts messages<br>encrypted to you. Often the same<br>as the signing key. Stored encrypted.<br>Leave empty to keep the stored key.',
+    'id_as4_saml_assertion': 'A SAML 2.0 assertion in XML, issued by a security<br>token service, that travels in place of a certificate<br>when the token type above is SAML.',
     'id_as4_peer_signing_cert': 'The certificate the peer signs with, in PEM.<br>Used to verify receipts and incoming messages.<br>With discovery it comes from the SMP.',
     'id_as4_peer_encryption_cert': 'The certificate outgoing messages are<br>encrypted to, in PEM. With discovery<br>it comes from the SMP.',
     'id_as4_trust_anchors': 'CA certificates in PEM that peer certificates<br>must chain up to, e.g. the Peppol root CA.<br>An alternative to pinning one peer certificate.',
@@ -183,11 +187,16 @@ $.fn.zato.outgoing.as4.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.as4_final_recipient ? item.as4_final_recipient : '');
     row += String.format("<td class='ignore'>{0}</td>", item.as4_extra_pmodes ? item.as4_extra_pmodes : '');
 
-    // Private keys never appear in the page - the backend keeps the stored ones
+    row += String.format("<td class='ignore'>{0}</td>", item.as4_token_type ? item.as4_token_type : '');
+    row += String.format("<td class='ignore'>{0}</td>", item.as4_username ? item.as4_username : '');
+
+    // Private keys and the password never appear in the page - the backend keeps the stored ones
     // when their edit form fields are left empty.
+    row += "<td class='ignore'></td>";
     row += "<td class='ignore'></td>";
     row += String.format("<td class='ignore'>{0}</td>", item.as4_signing_cert_chain ? item.as4_signing_cert_chain : '');
     row += "<td class='ignore'></td>";
+    row += String.format("<td class='ignore'>{0}</td>", item.as4_saml_assertion ? item.as4_saml_assertion : '');
     row += String.format("<td class='ignore'>{0}</td>", item.as4_peer_signing_cert ? item.as4_peer_signing_cert : '');
     row += String.format("<td class='ignore'>{0}</td>", item.as4_peer_encryption_cert ? item.as4_peer_encryption_cert : '');
     row += String.format("<td class='ignore'>{0}</td>", item.as4_trust_anchors ? item.as4_trust_anchors : '');

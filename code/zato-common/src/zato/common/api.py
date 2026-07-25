@@ -242,11 +242,19 @@ class AS4:
         # is renewed yearly on most networks, so the window is what turns that into a task in time.
         Cert_Warning_Days = 30
 
+    class TokenType:
+        """ How the signing certificate travels inside a message, as the Dashboard names the choices.
+        An empty value leaves the profile preset's own choice in place.
+        """
+        X509v3   = 'x509v3'
+        PKIPath  = 'pkipath'
+        SAML20   = 'saml20'
+
     # The AS4 configuration fields shared by channels and outgoing connections.
     Common_Fields = ('as4_profile', 'as4_from_party', 'as4_to_party', 'as4_service', 'as4_action', 'as4_agreement',
-        'as4_mpc', 'as4_original_sender', 'as4_final_recipient', 'as4_extra_pmodes', 'as4_signing_key',
-        'as4_signing_cert_chain', 'as4_decryption_key', 'as4_peer_signing_cert', 'as4_peer_encryption_cert',
-        'as4_trust_anchors')
+        'as4_mpc', 'as4_original_sender', 'as4_final_recipient', 'as4_extra_pmodes', 'as4_token_type',
+        'as4_username', 'as4_password', 'as4_signing_key', 'as4_signing_cert_chain', 'as4_decryption_key',
+        'as4_saml_assertion', 'as4_peer_signing_cert', 'as4_peer_encryption_cert', 'as4_trust_anchors')
 
     # The fields that only outgoing AS4 connections use - the reception awareness parameters
     # among them, because repeating a delivery is something only the sending side does.
@@ -260,8 +268,8 @@ class AS4:
     # The fields that only AS4 channels use.
     Channel_Fields = ('as4_serviced_participants', 'as4_inbound_topic')
 
-    # The fields that hold private keys - they are encrypted at rest.
-    Secret_Fields = ('as4_signing_key', 'as4_decryption_key')
+    # The fields that hold secrets - they are encrypted at rest.
+    Secret_Fields = ('as4_signing_key', 'as4_decryption_key', 'as4_password')
 
 # ################################################################################################################################
 # ################################################################################################################################

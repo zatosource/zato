@@ -33,6 +33,13 @@ profile_choices = [
     (AS4.Profile.ICS2,       'ICS2'),
 ]
 
+token_type_choices = [
+    ('',                    'Profile default'),
+    (AS4.TokenType.X509v3,  'X.509 certificate'),
+    (AS4.TokenType.PKIPath, 'X.509 certificate chain'),
+    (AS4.TokenType.SAML20,  'SAML 2.0 assertion'),
+]
+
 _pem_attrs = {'style':'width:100%', 'rows':4, 'class':'pem-input'}
 
 # ################################################################################################################################
@@ -60,10 +67,16 @@ class CreateForm(forms.Form):
     timeout = forms.CharField(initial=MISC.DEFAULT_HTTP_TIMEOUT, widget=forms.TextInput(attrs={'style':'width:10%'}))
     validate_tls = forms.ChoiceField(widget=forms.Select())
 
-    # Security - everything is pasted PEM, the private keys are encrypted at rest
+    # Security - the certificates and keys are pasted PEM, the private keys and the password
+    # are encrypted at rest
+    as4_token_type = forms.ChoiceField(required=False, widget=forms.Select())
+    as4_username = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
+    as4_password = forms.CharField(required=False, widget=forms.PasswordInput(attrs={'style':'width:100%'},
+        render_value=True))
     as4_signing_key = forms.CharField(required=False, widget=forms.Textarea(attrs=_pem_attrs))
     as4_signing_cert_chain = forms.CharField(required=False, widget=forms.Textarea(attrs=_pem_attrs))
     as4_decryption_key = forms.CharField(required=False, widget=forms.Textarea(attrs=_pem_attrs))
+    as4_saml_assertion = forms.CharField(required=False, widget=forms.Textarea(attrs=_pem_attrs))
     as4_peer_signing_cert = forms.CharField(required=False, widget=forms.Textarea(attrs=_pem_attrs))
     as4_peer_encryption_cert = forms.CharField(required=False, widget=forms.Textarea(attrs=_pem_attrs))
     as4_trust_anchors = forms.CharField(required=False, widget=forms.Textarea(attrs=_pem_attrs))
@@ -89,6 +102,10 @@ class CreateForm(forms.Form):
         self.fields['validate_tls'].choices = []
         for value, label in _validate_tls_choices:
             self.fields['validate_tls'].choices.append([value, label])
+
+        self.fields['as4_token_type'].choices = []
+        for value, label in token_type_choices:
+            self.fields['as4_token_type'].choices.append([value, label])
 
 # ################################################################################################################################
 # ################################################################################################################################

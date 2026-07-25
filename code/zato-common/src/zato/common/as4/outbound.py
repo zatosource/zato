@@ -20,6 +20,7 @@ from zato.common.as4.common import AS4Exception, EbMSError, NS, Severity
 from zato.common.as4.ebms import build_envelope, build_pull_request, build_receipt, build_user_message, new_message_id, \
     parse_messaging
 from zato.common.as4.mime_ import build_multipart, compress_part, parse_multipart, restore_payloads
+from zato.common.as4.security.credentials import add_credentials
 from zato.common.as4.security.encrypt import encrypt_parts
 from zato.common.as4.security.sign import sign_envelope
 from zato.common.as4.security.verify import decrypt_parts, verify_envelope
@@ -208,6 +209,9 @@ def build_push_message(
     envelope = build_envelope()
     _ = build_user_message(envelope, pmode, parts, message_id, conversation_id)
 
+    # .. the credentials the P-Mode names go in the security header first, ahead of the signature ..
+    add_credentials(envelope, pmode.security)
+
     # .. the whole of it is signed ..
     signature = sign_envelope(envelope, parts, keystore, pmode.security)
     sent_digests = _collect_sent_digests(signature)
@@ -337,6 +341,8 @@ def _send_pull_receipt(
     envelope = build_envelope()
     _ = build_receipt(envelope, pulled_message_id, signed_references)
 
+    add_credentials(envelope, pmode.security)
+
     if pmode.security.sign_receipts:
         _ = sign_envelope(envelope, [], keystore, pmode.security)
 
@@ -400,9 +406,13 @@ def pull(
     if not mpc:
         mpc = pmode.mpc
 
-    # A pull request is a signed signal without payloads ..
+    # A pull request is a signed signal without payloads, and on the networks that ask for
+    # credentials to authorize one, it carries them ..
     envelope = build_envelope()
     _ = build_pull_request(envelope, mpc)
+
+    add_credentials(envelope, pmode.security)
+
     _ = sign_envelope(envelope, [], keystore, pmode.security)
 
     serialized = _serialize(envelope)

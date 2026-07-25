@@ -60,6 +60,10 @@ class Default:
 class Limits:
     """ What one incoming message is allowed to be and to cost. These are the ceilings that apply
     before a P-Mode has even been matched, so they are fixed rather than per exchange.
+
+    They are also the supported maximum, because one message is carried whole - the splitting and
+    joining feature of the AS4 large message profile is not implemented. A payload larger than this
+    is not an AS4 exchange, it is a reference to somewhere its recipient can fetch it from.
     """
     # How many MIME parts one message may carry. The AS4 profiles in use send one payload per
     # message, so this leaves room for the multi-payload case without leaving it open.

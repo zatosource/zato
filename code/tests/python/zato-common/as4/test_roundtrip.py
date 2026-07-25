@@ -12,12 +12,12 @@ from lxml import etree
 # Zato
 from zato.common.as4.common import EbMSError, NS
 from zato.common.as4.ebms import build_envelope, build_pull_request, build_receipt, parse_messaging
-from zato.common.util.xml_.core import qname
 from zato.common.as4.inbound import handle
 from zato.common.as4.outbound import build_push_message, new_part
 from zato.common.as4.profiles import new_edelivery1_pmode, new_edelivery2_pmode, new_peppol_pmode
 from zato.common.as4.security.sign import sign_envelope
 from zato.common.as4.security.verify import verify_envelope
+from zato.common.util.xml_.core import qname
 
 from .conftest import set_party_ids
 

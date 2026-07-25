@@ -16,7 +16,7 @@ from threading import RLock
 from zato.common.api import AS4
 from zato.common.as4.audit import record_inbound_result, record_message_handed_over
 from zato.common.as4.common import AS4ProtocolException, EbMSError, Peppol_Not_Serviced
-from zato.common.as4.config import build_keystore, build_pmodes, get_text_field
+from zato.common.as4.config import apply_credentials, build_keystore, build_pmodes, get_text_field
 from zato.common.as4.inbound import handle as inbound_handle, PullServed
 from zato.common.as4.mpc import build_response, claim_next, complete
 from zato.common.as4.reconcile import ReceiptReconciler
@@ -129,7 +129,14 @@ class AS4ChannelRuntime:
         """
         with self._lock:
             if self._pmodes is None:
-                self._pmodes = build_pmodes(self.config)
+                pmodes = build_pmodes(self.config)
+
+                # Every P-Mode of one channel asks for the same credentials, because they are what
+                # the partner on the other end of it was given.
+                for pmode in pmodes:
+                    apply_credentials(pmode, self.config, self.server.decrypt)
+
+                self._pmodes = pmodes
 
             out = self._pmodes
 
