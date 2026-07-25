@@ -97,7 +97,7 @@ $.fn.zato.security.wss.field_descriptions = {
     'id_username': 'The username the definition operates with.<br>With username tokens it goes into the message,<br>with other modes it identifies the definition.',
 
     // Username token tab
-    'id_use_digest': 'When on, the password goes out in digest form<br>with a nonce and a timestamp instead of clear text.',
+    'id_use_digest': 'When on, the password goes out in digest form<br>with a nonce and a timestamp instead of clear text.<br>The profile mandates SHA-1 for the digest,<br>and verifying one requires the password to be<br>recoverable here, not stored as a hash.',
 
     // SAML tab
     'id_issuer': 'The entity that vouches for the assertion,<br>e.g. the URI of your organization or gateway.',

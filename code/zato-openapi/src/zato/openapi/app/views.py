@@ -8,11 +8,9 @@ This file is a proprietary product, not an open-source one.
 
 # stdlib
 import logging
-import os
 from http.client import BAD_GATEWAY, INTERNAL_SERVER_ERROR, NOT_FOUND, UNAUTHORIZED
 
 # Django
-from django.conf import settings
 from django.http import FileResponse, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
@@ -23,12 +21,12 @@ import yaml
 # Zato
 from zato.common.api import OpenAPI_Console_Auth
 from zato.common.typing_ import cast_
+from zato.common.webapp.auth.session_tokens import Session_Credentials_Key, Session_Entra_Key, decrypt_credentials, \
+    decrypt_entra_identity, encrypt_credentials, encrypt_entra_identity
 from zato.openapi.console.branding import Branding_Files, get_branding_context, get_branding_file_path
 from zato.openapi.console.client import OpenAPIConsoleClient
 from zato.openapi.console.entra_auth import AuthType, complete_auth_code_flow, EntraAuthError, get_authorize_url, \
     is_entra_enabled
-from zato.common.webapp.auth.session_tokens import Session_Credentials_Key, Session_Entra_Key, decrypt_credentials, \
-    decrypt_entra_identity, encrypt_credentials, encrypt_entra_identity
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -318,23 +316,6 @@ def branding_view(req, file_name):
         return HttpResponse('No such file', status=NOT_FOUND)
 
     content_type = Branding_Files[file_name]
-
-    out = FileResponse(open(full_path, 'rb'), content_type=content_type)
-
-    return out
-
-# ################################################################################################################################
-
-def static_view(req, file_path):
-    """ Serves the console's own static files with explicit content types.
-    """
-    full_path = os.path.join(settings.STATICFILES_DIRS[0], file_path)
-
-    if not os.path.exists(full_path):
-        return HttpResponse('No such file', status=NOT_FOUND)
-
-    extension = os.path.splitext(file_path)[1]
-    content_type = settings.MIMETYPES[extension]
 
     out = FileResponse(open(full_path, 'rb'), content_type=content_type)
 

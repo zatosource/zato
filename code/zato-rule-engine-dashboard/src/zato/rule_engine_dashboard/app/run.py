@@ -8,26 +8,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-import os
 
-# gunicorn
-import gunicorn.app.base
+# Django
+from django.core.wsgi import get_wsgi_application
 
 # Zato
-from zato.common.typing_ import cast_
+from zato.common.webapp.server import serve
 from zato.rule_engine_dashboard.app.bootstrap import bootstrap
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-if 0:
-    from zato.common.typing_ import any_, anydict
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,30 +31,8 @@ Env_Port = 'Zato_Rule_Engine_Dashboard_Port'
 Default_Host = '0.0.0.0'
 Default_Port = '8092'
 
-# How many worker processes answer requests
-_worker_count = 3
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class DashboardServer(gunicorn.app.base.BaseApplication):
-    """ The gunicorn application serving the rule engine dashboard.
-    """
-    def __init__(self, app:'any_', options:'anydict') -> 'None':
-        self.options = options
-        self.application = app
-        super().__init__()
-
-    def load_config(self) -> 'None':
-
-        # The base class only fills the configuration in during __init__, so it is always present here.
-        config = cast_('any_', self.cfg)
-
-        for key, value in self.options.items():
-            config.set(key.lower(), value)
-
-    def load(self) -> 'any_':
-        return self.application
+# The name the startup line reports
+_app_name = 'the rule engine dashboard'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,37 +43,11 @@ def main() -> 'None':
     # Django, its tables, the root account and the rule engine's storage all come up first ..
     bootstrap()
 
-    # .. the WSGI application can only be built once Django is configured ..
-
-    # Django
-    from django.core.wsgi import get_wsgi_application
-
+    # .. the WSGI application can only be built once Django is configured, which bootstrap did ..
     application = get_wsgi_application()
 
-    if host := os.environ.get(Env_Host):
-        pass
-    else:
-        host = Default_Host
-
-    if port := os.environ.get(Env_Port):
-        pass
-    else:
-        port = Default_Port
-
-    # .. the application is preloaded in the master process so that all workers
-    # .. share the same session signing key ..
-    options = {
-        'bind': f'{host}:{port}',
-        'workers': _worker_count,
-        'preload_app': True,
-        'accesslog': '-',
-        'errorlog': '-',
-        'loglevel': 'info',
-    }
-
-    # .. and the server takes over from here.
-    logger.info('Starting the rule engine dashboard on %s', options['bind'])
-    DashboardServer(application, options).run()
+    # .. and the shared server takes over from here.
+    serve(application, _app_name, Env_Host, Env_Port, Default_Host, Default_Port)
 
 # ################################################################################################################################
 # ################################################################################################################################

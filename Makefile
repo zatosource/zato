@@ -727,10 +727,11 @@ test-x12: ## X12 tests - fully offline, no external services needed.
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_x12 -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-soap: ## SOAP messaging tests - fully offline, no external services needed.
+test-soap: ## SOAP messaging and channel tests - fully offline, no external services needed.
 	$(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/soap/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_soap -W ignore::DeprecationWarning \
+		$(CURDIR)/code/tests/python/zato-server/http_soap/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_soap \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-llm: ## LLM connection tests against a local provider simulator and a test-managed Redis - fully offline.

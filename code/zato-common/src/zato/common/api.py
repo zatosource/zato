@@ -80,15 +80,6 @@ ZATO_DEFAULT = 'ZATO_DEFAULT'
 Zato_None = ZATO_NONE
 Zato_No_Security = 'zato-no-security'
 
-# Default HTTP method outgoing connections use to ping resources
-# TODO: Move it to MISC
-DEFAULT_HTTP_PING_METHOD = 'HEAD'
-
-# Default size of an outgoing HTTP connection's pool (plain, SOAP, any).
-# This is a per-outconn setting
-# TODO: Move it to MISC
-DEFAULT_HTTP_POOL_SIZE = 20
-
 # Used when there's a need for encrypting/decrypting a well-known data.
 # TODO: Move it to MISC
 ZATO_CRYPTO_WELL_KNOWN_DATA = 'ZATO'
@@ -675,6 +666,14 @@ class BROKER:
 class MISC:
     DEFAULT_HTTP_METHOD = ''
     DEFAULT_HTTP_TIMEOUT = 10
+
+    # The HTTP method an outgoing connection pings a resource with.
+    DEFAULT_HTTP_PING_METHOD = 'HEAD'
+
+    # How many connections an outgoing HTTP connection keeps pooled - a per-connection setting that
+    # applies to plain HTTP and to SOAP alike.
+    DEFAULT_HTTP_POOL_SIZE = 20
+
     OAUTH_SIG_METHODS = ['HMAC-SHA1', 'PLAINTEXT']
     PIDFILE = 'pidfile'
     SEPARATOR = ':::'

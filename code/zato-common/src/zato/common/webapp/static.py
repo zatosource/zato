@@ -3,40 +3,29 @@
 """
 Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 
-This file is a proprietary product, not an open-source one.
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Zato
-from zato.common.webapp.settings import build_settings
+# Django
+from django.contrib.staticfiles.views import serve as serve_static_file
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-globals().update(build_settings(
-    root_urlconf='zato.openapi.app.urls',
-    cookie_name='zato-openapi-console',
-    extra_apps=['zato.openapi.app'],
-    extra_middleware=[],
-))
+if 0:
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-WSGI_APPLICATION = 'zato.openapi.app.wsgi.application'
+def static_file(req:'any_', path:'str') -> 'any_':
+    """ Serves one static file of a standalone Zato web application.
 
-# The console's own templates are found by the app-directories loader, under app/templates
-TEMPLATES = [
-    {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-            ],
-        },
-    },
-]
+    These applications run without a separate web server in front of them, so the staticfiles
+    finders answer directly and settle the content type, which is what insecure=True means here.
+    """
+    out = serve_static_file(req, path, insecure=True)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
