@@ -7,6 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from email.utils import parsedate_to_datetime
+from http.client import TOO_MANY_REQUESTS
 from logging import getLogger
 from time import sleep
 
@@ -15,6 +17,7 @@ from requests.exceptions import ConnectionError as RequestsConnectionError, Time
 
 # Zato
 from zato.common.api import HTTP_SOAP
+from zato.common.util.time_ import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,16 +39,19 @@ _retry = HTTP_SOAP.Retry
 # which would turn the loop into a tight one against an endpoint that is already unwell.
 Minimum_Sleep_Time = 1
 
+# The header an endpoint answers a rate-limited request with to say how long to wait
+# before making the next one.
+Retry_After_Header = 'Retry-After'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 class RetryPolicy:
-    """ How many times a transport failure is retried and how long to wait between attempts.
+    """ How many times a failed attempt is retried and how long to wait between attempts.
 
     The four settings live in a connection's opaque attributes and are shown by the dashboard for
     both outgoing REST and outgoing SOAP. Keeping them in one object is what lets the REST and the
-    declarative SOAP path share the same loop - the SOAP path used to show the four fields and then
-    send through a code path that had no retries in it at all.
+    declarative SOAP path share one loop.
     """
     __slots__ = 'max_retries', 'sleep_time', 'backoff_threshold', 'backoff_multiplier'
 
@@ -91,46 +97,117 @@ def _resolve(config:'stranydict', name:'str', default:'int') -> 'int':
 
 # ################################################################################################################################
 
-def send_with_retry(policy:'RetryPolicy', send:'callable_', cid:'str', label:'str') -> 'any_':
-    """ Runs send, retrying it on a transport-level failure for as long as the policy allows.
+def get_retry_after(response:'any_') -> 'int':
+    """ Returns how many seconds an endpoint asked us to wait before the next attempt,
+    or zero when it did not say. The header carries either a number of seconds or a date.
+    """
+    value = response.headers.get(Retry_After_Header)
 
-    Only timeouts and connection errors are retried. A response that arrived, whatever its status
-    code, is the endpoint's answer and belongs to the caller, and an application-level failure is
-    not something a second identical request would resolve.
+    if not value:
+        return 0
+
+    value = value.strip()
+
+    # A plain number is a number of seconds to wait ..
+    if value.isdigit():
+        out = int(value)
+        return out
+
+    # .. anything else is a date to wait until, and an endpoint that spells it in a way
+    # .. the standard does not describe is treated as one that said nothing ..
+    try:
+        when = parsedate_to_datetime(value)
+    except ValueError:
+        logger.info('Ignoring unparseable %s header -> `%s`', Retry_After_Header, value)
+        return 0
+
+    # .. a date that has already passed means there is nothing left to wait for.
+    seconds = int((when - utcnow()).total_seconds())
+
+    if seconds < 0:
+        seconds = 0
+
+    out = seconds
+    return out
+
+# ################################################################################################################################
+
+def send_with_retry(policy:'RetryPolicy', send:'callable_', cid:'str', label:'str') -> 'any_':
+    """ Runs send, retrying it for as long as the policy allows.
+
+    Timeouts and connection errors are retried, and so is a response that says the request was made
+    too soon rather than that it was wrong - such an endpoint may say how long to wait, and that
+    instruction is followed in place of the policy's own schedule. Any other response is the
+    endpoint's answer and belongs to the caller, an application-level failure not being something
+    a second identical request would resolve.
     """
     attempt = 0
     total_sleep_time = 0
     current_sleep_time = policy.sleep_time
 
     while True:
+
+        # What the attempt produced - a response, or the error that stopped one from arriving
+        response = None
+        error = None
+
         try:
-            return send()
-
+            response = send()
         except (RequestsTimeout, RequestsConnectionError) as e:
+            error = e
 
-            # Both the attempt count and the total time spent sleeping are caps, so a policy with a
-            # generous retry count still gives up once it has waited as long as it is allowed to.
-            can_retry_by_attempt = attempt < policy.max_retries
-            can_retry_by_time = total_sleep_time < policy.backoff_threshold
+        # An answer other than a rate-limited one goes straight back to the caller ..
+        if response is not None:
+            if response.status_code != TOO_MANY_REQUESTS:
+                return response
 
-            if not (can_retry_by_attempt and can_retry_by_time):
-                raise
+        # .. otherwise both the attempt count and the total time spent sleeping are caps, so a policy
+        # .. with a generous retry count still gives up once it has waited as long as it is allowed to ..
+        needs_retry = False
 
-            attempt += 1
-            logger.warning('%s retry cid=%s; attempt=%s; sleep=%s; error=%s',
-                label, cid, attempt, current_sleep_time, e)
+        if attempt < policy.max_retries:
+            if total_sleep_time < policy.backoff_threshold:
+                needs_retry = True
 
-            sleep(current_sleep_time)
-            total_sleep_time += current_sleep_time
+        # .. with nothing left to try, a failure to send is raised and a rate-limited response
+        # .. is returned, that being the endpoint's own answer ..
+        if not needs_retry:
+            if error:
+                raise error
+            return response
 
-            # The next sleep grows by the multiplier but is held under both the per-sleep ceiling
-            # and whatever is left of the total budget, so the loop cannot overshoot the threshold.
-            next_sleep_time = current_sleep_time * policy.backoff_multiplier
-            remaining = policy.backoff_threshold - total_sleep_time
-            current_sleep_time = min(next_sleep_time, _retry.Max_Sleep_Time, remaining)
+        # .. an endpoint that said how long to wait is waited for that long instead of for what the
+        # .. policy's schedule says, unless the wait it asked for does not fit in the total budget,
+        # .. in which case there is no point in retrying at all ..
+        if response is not None:
+            retry_after = get_retry_after(response)
+            if retry_after:
+                remaining_budget = policy.backoff_threshold - total_sleep_time
+                if retry_after > remaining_budget:
+                    return response
+                current_sleep_time = retry_after
 
-            if current_sleep_time <= 0:
-                current_sleep_time = Minimum_Sleep_Time
+        attempt += 1
+
+        if error:
+            reason = error
+        else:
+            reason = f'HTTP {TOO_MANY_REQUESTS}'
+
+        logger.warning('%s retry cid=%s; attempt=%s; sleep=%s; reason=%s',
+            label, cid, attempt, current_sleep_time, reason)
+
+        sleep(current_sleep_time)
+        total_sleep_time += current_sleep_time
+
+        # The next sleep grows by the multiplier but is held under both the per-sleep ceiling
+        # and whatever is left of the total budget, so the loop cannot overshoot the threshold.
+        next_sleep_time = current_sleep_time * policy.backoff_multiplier
+        remaining = policy.backoff_threshold - total_sleep_time
+        current_sleep_time = min(next_sleep_time, _retry.Max_Sleep_Time, remaining)
+
+        if current_sleep_time <= 0:
+            current_sleep_time = Minimum_Sleep_Time
 
 # ################################################################################################################################
 # ################################################################################################################################

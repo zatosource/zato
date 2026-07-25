@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from http.client import TOO_MANY_REQUESTS
 from typing import NamedTuple
 from unittest import main, TestCase
 from unittest.mock import patch
@@ -29,8 +30,9 @@ from zato.server.service import RESTAdapter
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, stranydict
+    from zato.common.typing_ import any_, anylist, stranydict, strstrdict
     anylist = anylist
+    strstrdict = strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,10 +54,15 @@ _sleep_target = 'zato.common.util.http_retry.sleep'
 class _FakeResponse:
     """ Stands in for a requests response - carries only what invoke_http reads.
     """
-    def __init__(self, status_code:'int') -> 'None':
+    def __init__(self, status_code:'int', headers:'strstrdict | None'=None) -> 'None':
         self.status_code = status_code
         self.elapsed = 0
         self.text = 'Test response'
+
+        if headers is None:
+            headers = {}
+
+        self.headers = headers
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -105,6 +112,10 @@ def _get_wrapper(config_extra:'stranydict | None', results:'anylist') -> '_Wrapp
         'transport': URL_TYPE.PLAIN_HTTP,
         'address_host': 'https://example.com',
         'address_url_path': '/api',
+        'pool_size': 1,
+        'validate_tls': True,
+        'tls_client_cert': None,
+        'tls_client_key': None,
     }
 
     if config_extra:
@@ -367,6 +378,104 @@ class RetryLoopTestCase(TestCase):
         self.assertIs(out, response)
         self.assertEqual(len(ctx.session.calls), 1)
         mock_sleep.assert_not_called()
+
+# ################################################################################################################################
+
+    def test_rate_limited_responses_are_retried(self) -> 'None':
+
+        # A rate-limited response says the request was made too soon rather than that it was wrong,
+        # so it is retried and the response that follows it is the one the caller gets.
+        rate_limited = _FakeResponse(TOO_MANY_REQUESTS)
+        response = _FakeResponse(200)
+
+        config_extra = {
+            'max_retries': 5,
+            'retry_sleep_time': 1,
+        }
+
+        ctx = _get_wrapper(config_extra, [rate_limited, response])
+
+        with patch(_sleep_target) as mock_sleep:
+            out = self._invoke(ctx.wrapper)
+
+        self.assertIs(out, response)
+        self.assertEqual(len(ctx.session.calls), 2)
+        mock_sleep.assert_called_once_with(1)
+
+# ################################################################################################################################
+
+    def test_rate_limited_response_is_returned_once_retries_run_out(self) -> 'None':
+
+        # With no retries configured, a rate-limited response is the endpoint's answer like any other
+        rate_limited = _FakeResponse(TOO_MANY_REQUESTS)
+
+        ctx = _get_wrapper(None, [rate_limited])
+
+        with patch(_sleep_target) as mock_sleep:
+            out = self._invoke(ctx.wrapper)
+
+        self.assertIs(out, rate_limited)
+        self.assertEqual(len(ctx.session.calls), 1)
+        mock_sleep.assert_not_called()
+
+# ################################################################################################################################
+
+    def test_retry_after_wins_over_the_policy_schedule(self) -> 'None':
+
+        # The endpoint asks for a longer wait than the policy would have slept for, and that
+        # is what is waited for.
+        rate_limited = _FakeResponse(TOO_MANY_REQUESTS, {'Retry-After': '5'})
+        response = _FakeResponse(200)
+
+        config_extra = {
+            'max_retries': 5,
+            'retry_sleep_time': 1,
+            'retry_backoff_threshold': 60,
+        }
+
+        ctx = _get_wrapper(config_extra, [rate_limited, response])
+
+        with patch(_sleep_target) as mock_sleep:
+            out = self._invoke(ctx.wrapper)
+
+        self.assertIs(out, response)
+        mock_sleep.assert_called_once_with(5)
+
+# ################################################################################################################################
+
+    def test_retry_after_beyond_the_budget_ends_the_retries(self) -> 'None':
+
+        # A wait longer than the whole budget cannot be honoured, so the response is returned
+        # instead of being retried at a time the endpoint did not agree to.
+        rate_limited = _FakeResponse(TOO_MANY_REQUESTS, {'Retry-After': '600'})
+
+        config_extra = {
+            'max_retries': 5,
+            'retry_sleep_time': 1,
+            'retry_backoff_threshold': 60,
+        }
+
+        ctx = _get_wrapper(config_extra, [rate_limited])
+
+        with patch(_sleep_target) as mock_sleep:
+            out = self._invoke(ctx.wrapper)
+
+        self.assertIs(out, rate_limited)
+        self.assertEqual(len(ctx.session.calls), 1)
+        mock_sleep.assert_not_called()
+
+# ################################################################################################################################
+
+    def test_redirects_are_not_followed(self) -> 'None':
+
+        # Every request goes to the address it was configured with and to no other
+        ctx = _get_wrapper(None, [_FakeResponse(200)])
+
+        _ = self._invoke(ctx.wrapper)
+
+        _, _, kwargs = ctx.session.calls[0]
+
+        self.assertFalse(kwargs['allow_redirects'])
 
 # ################################################################################################################################
 

@@ -1556,9 +1556,8 @@ class GetURLSecurity(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How the dashboard's invoke feature reaches a channel - over the loopback address, on the port the
-# server handling the invocation is itself listening on. It is a plain-HTTP hop that never leaves the
-# host, which is why there is nothing here for TLS verification to do.
+# How the dashboard's invoke feature reaches a channel - a plain-HTTP hop over the loopback
+# address, on the port the server handling the invocation is itself listening on.
 _Invoke_Scheme = 'http://'
 _Invoke_Host = '127.0.0.1'
 
@@ -1648,9 +1647,8 @@ class InvokeChannel(AdminService):
         if password is None:
             password = ''
 
-        # A stored secret is decrypted here, and decrypt returns anything that is not encrypted as
-        # it stands, so there is nothing to guard against. Swallowing a decryption failure would
-        # send the ciphertext as the password and turn a key problem into an authentication one.
+        # A stored secret is decrypted here, and decrypt returns anything that is not
+        # encrypted as it stands.
         if password:
             password = self.server.decrypt(password)
 
@@ -1689,9 +1687,8 @@ class InvokeChannel(AdminService):
     def _build_temp_wrapper(self, channel_config, sec_config, url_path):
         from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
 
-        # The channel is invoked over the loopback address on the port this very server is listening
-        # on, which the server always knows - a fallback port here would send the request to
-        # whatever else happened to be listening there.
+        # The channel is invoked over the loopback address on the port this very server
+        # is listening on, which the server always knows.
         port = self.server.port
         method = self.request.input.get('request_method', '') or _Invoke_Default_Method
 
@@ -1713,6 +1710,12 @@ class InvokeChannel(AdminService):
             'pool_size': _Invoke_Pool_Size,
             'timeout': _Invoke_Timeout,
             'content_type': None,
+
+            # The hop is a plain-HTTP one, so there is no certificate material in play
+            'validate_tls': True,
+            'tls_client_cert': None,
+            'tls_client_key': None,
+
             'security_name': None,
             'security_id': None,
             'sec_type': sec_config.get('sec_type'),

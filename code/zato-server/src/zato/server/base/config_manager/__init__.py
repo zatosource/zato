@@ -702,6 +702,20 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
+    def _close_wrapper_session(self, config_data:'bunch_') -> 'None':
+        """ Closes the session of the wrapper a connection currently has, if it has one at all -
+        a connection being set up for the first time has no wrapper yet.
+        """
+        if 'conn' not in config_data:
+            return
+
+        try:
+            config_data.conn.session.close()
+        except Exception:
+            logger.warning('Could not close session of `%s`, e:`%s`', config_data.config['name'], format_exc())
+
+# ################################################################################################################################
+
     def get_outconn_http_config_dicts(self) -> 'any_':
 
         out:'any_' = []
@@ -750,6 +764,12 @@ class ConfigManager(_ConfigManagerBase):
         for config_dict, config_data in config_dicts:
 
             wrapper = self._http_soap_wrapper_from_config(config_data.config, has_sec_config=has_sec_config)
+
+            # Each new wrapper opens a session of its own, so the one it replaces has to give up its
+            # sockets - this method also runs when security definitions change at runtime, which is
+            # when the connection already had a session and a pool of live connections behind it.
+            self._close_wrapper_session(config_data)
+
             config_data.conn = wrapper
 
             # To make the API consistent with that of SQL connection pools
@@ -949,11 +969,14 @@ class ConfigManager(_ConfigManagerBase):
             wrapper.set_auth()
 
     def _visit_wrapper_delete(self, wrapper:'HTTPSOAPWrapper', msg:'bunch_') -> 'None':
-        """ Deletes a wrapper.
+        """ Deletes a wrapper whose security definition is being deleted.
         """
-        config_dict = getattr(self.config_store, 'out_' + wrapper.config['transport'])
         if wrapper.config['security_name'] == msg['name']:
-            del config_dict[wrapper.config['name']]
+
+            # This goes through the same path a connection deleted on its own goes through, so the
+            # wrapper's session is closed rather than only its configuration being dropped.
+            self._delete_config_close_wrapper_http_soap(
+                wrapper.config['name'], wrapper.config['transport'], logger.warning)
 
     def _visit_wrapper_change_password(self, wrapper:'HTTPSOAPWrapper', msg:'bunch_', *, check_name:'bool'=True) -> 'None':
         """ Changes a wrapper's password.
