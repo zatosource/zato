@@ -11,6 +11,7 @@ import os
 from logging import getLogger
 
 # Zato
+from zato.common.haproxy.config import apply_trust_from_env, Env_Trust_Forwarded_Headers, find_haproxy_config
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -138,6 +139,10 @@ class Save(AdminService):
 
         submitted_keys = set()
 
+        # Some variables are read outside this process, so what they were before the save
+        # is what decides whether anything else has to be told about the change
+        previous_trust_value = os.environ.get(Env_Trust_Forwarded_Headers)
+
         for key, value, raw_line, error in parsed:
             if error:
                 continue
@@ -154,10 +159,22 @@ class Save(AdminService):
 
         logger.info('save: set %d, deleted %d environment variables', set_count, delete_count)
 
+        if os.environ.get(Env_Trust_Forwarded_Headers) != previous_trust_value:
+            self._update_haproxy_forwarded_headers()
+
         self.response.payload = {
             'success': True,
             'message': '{} set, {} deleted'.format(set_count, delete_count),
         }
+
+# ################################################################################################################################
+
+    def _update_haproxy_forwarded_headers(self) -> 'None':
+        """ Rewrites the generated blocks in haproxy.cfg and reloads HAProxy, so that a change to
+        Zato_Trust_Forwarded_Headers takes effect without a restart.
+        """
+        config_path = find_haproxy_config(self.server.base_dir)
+        apply_trust_from_env(config_path)
 
 # ################################################################################################################################
 # ################################################################################################################################

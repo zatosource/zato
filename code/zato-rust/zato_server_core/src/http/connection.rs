@@ -31,6 +31,21 @@ pub(super) struct ConnectionCtx<'conn> {
 /// HTTP chunked transfer terminator sent after the last iterator chunk.
 const CHUNKED_TERMINATOR: &[u8] = b"0\r\n\r\n";
 
+/// Rejection reason for a request carrying more than one `Content-Length`.
+const ERR_DUPLICATE_CONTENT_LENGTH: &str = "duplicate Content-Length";
+
+/// Rejection reason for a request carrying more than one `Authorization`.
+const ERR_DUPLICATE_AUTHORIZATION: &str = "duplicate Authorization";
+
+/// Rejection reason for a `Content-Length` that overflows or exceeds the configured cap.
+const ERR_CONTENT_LENGTH_TOO_LARGE: &str = "Content-Length too large";
+
+/// Rejection reason for a request whose headers and body together exceed the configured cap.
+const ERR_REQUEST_TOO_LARGE: &str = "request too large";
+
+/// Rejection reason for `Transfer-Encoding`, which is not decoded.
+const ERR_TRANSFER_ENCODING: &str = "Transfer-Encoding is not supported";
+
 /// Writes an HTTP chunked frame for a single data chunk.
 ///
 /// Format: `{hex_length}\r\n{data}\r\n`
@@ -143,10 +158,37 @@ pub(super) fn handle_connection(py: Python<'_>, ctx: &ConnectionCtx<'_>) -> PyRe
 
                     let mut content_len: usize = 0;
                     let mut keep_alive_flag = ver >= 1;
+
+                    // Both headers are rejected when repeated, so each one is tracked as it is seen
+                    let mut has_content_length = false;
+                    let mut has_authorization = false;
+
                     for header in req.headers.iter() {
                         set_header(py, &dict, header.name, header.value)?;
+
                         if header.name.eq_ignore_ascii_case("content-length") {
-                            content_len = parse_content_length(header.value, ctx.max_msg_size);
+                            // Two lengths leave the body boundary ambiguous, and a front proxy
+                            // resolving the ambiguity differently would disagree about where
+                            // this request ends and the next one begins
+                            if has_content_length {
+                                return Err(pyo3::exceptions::PyValueError::new_err(ERR_DUPLICATE_CONTENT_LENGTH));
+                            }
+                            has_content_length = true;
+
+                            let Some(parsed_len) = parse_content_length(header.value, ctx.max_msg_size) else {
+                                return Err(pyo3::exceptions::PyValueError::new_err(ERR_CONTENT_LENGTH_TOO_LARGE));
+                            };
+                            content_len = parsed_len;
+                        } else if header.name.eq_ignore_ascii_case("transfer-encoding") {
+                            // Chunked bodies are not decoded here, and treating one as a zero-length
+                            // body would leave the chunks in the buffer for the next parse
+                            return Err(pyo3::exceptions::PyValueError::new_err(ERR_TRANSFER_ENCODING));
+                        } else if header.name.eq_ignore_ascii_case("authorization") {
+                            // Two credentials leave it open which one authenticated the request
+                            if has_authorization {
+                                return Err(pyo3::exceptions::PyValueError::new_err(ERR_DUPLICATE_AUTHORIZATION));
+                            }
+                            has_authorization = true;
                         } else if header.name.eq_ignore_ascii_case("connection") {
                             keep_alive_flag = header_value_eq(header.value, b"keep-alive");
                         }
@@ -155,7 +197,7 @@ pub(super) fn handle_connection(py: Python<'_>, ctx: &ConnectionCtx<'_>) -> PyRe
                 }
                 Ok(httparse::Status::Partial) => {
                     if buf.len() >= ctx.max_msg_size {
-                        return Err(pyo3::exceptions::PyValueError::new_err("request too large"));
+                        return Err(pyo3::exceptions::PyValueError::new_err(ERR_REQUEST_TOO_LARGE));
                     }
                     let bytes_read = fd_read(py, ctx.fd, &mut buf, &gev)?;
                     if bytes_read == 0 {
@@ -169,6 +211,13 @@ pub(super) fn handle_connection(py: Python<'_>, ctx: &ConnectionCtx<'_>) -> PyRe
         };
 
         let end = header_len + content_length;
+
+        // The parse loop caps the headers alone, so this is the first point at which the size of
+        // the whole message is known
+        if end > ctx.max_msg_size {
+            return Err(pyo3::exceptions::PyValueError::new_err(ERR_REQUEST_TOO_LARGE));
+        }
+
         while buf.len() < end {
             let bytes_read = fd_read(py, ctx.fd, &mut buf, &gev)?;
             if bytes_read == 0 {
@@ -223,10 +272,8 @@ pub(super) fn handle_connection(py: Python<'_>, ctx: &ConnectionCtx<'_>) -> PyRe
             return Ok(());
         }
 
-        if end < buf.len() {
-            buf.drain(..end);
-        } else {
-            buf.clear();
-        }
+        // Anything past this request's own body is discarded rather than carried into the next
+        // parse, so bytes that were part of a body can never be read back as a request line
+        buf.clear();
     }
 }
