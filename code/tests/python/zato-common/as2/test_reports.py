@@ -13,8 +13,8 @@ from datetime import timedelta
 from zato.common.as2.audit import record_message_received
 from zato.common.as2.reconcile import MDNReconciler
 from zato.common.audit_log.api import AuditLog, AuditOutcome, AuditSource
-from zato.common.audit_log.reports import ack_discipline_csv, get_ack_discipline, get_outcomes, get_volume, outcomes_csv, \
-    volume_csv, Range_Day, Range_Week
+from zato.common.audit_log.reports import ack_discipline_csv, get_ack_discipline, get_outcomes, get_volume, \
+    outcomes_csv, Range_Day, Range_Week, volume_csv
 from zato.common.json_internal import dumps
 from zato.common.util.api import utcnow
 from zato.edi.reconcile import Reconciler
@@ -94,7 +94,8 @@ class TestVolume:
         reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000002', document_type='850')
         reconciler.record_interchange_received(_partner_isa_id, _our_isa_id, '000000101', document_type='810')
 
-        rows = get_volume(utcnow(), Range_Week)
+        now = utcnow()
+        rows = get_volume(now, Range_Week)
 
         assert len(rows) == 3
 
@@ -155,7 +156,8 @@ class TestVolume:
         reconciler.record_interchange_sent(_our_isa_id, 'OTHERPARTNER', '000000002', document_type='850')
 
         # The filter matches anywhere inside the identity pair.
-        rows = get_volume(utcnow(), Range_Week, partner=_partner_isa_id)
+        now = utcnow()
+        rows = get_volume(now, Range_Week, partner=_partner_isa_id)
 
         assert len(rows) == 1
         assert rows[0].partner == _x12_pair
@@ -180,7 +182,8 @@ class TestVolume:
         reconciler = Reconciler(_server_name)
         reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001', document_type='850')
 
-        rows = get_volume(utcnow(), Range_Week)
+        now = utcnow()
+        rows = get_volume(now, Range_Week)
 
         link = rows[0].link
 
@@ -198,13 +201,16 @@ class TestOutcomes:
 
         # One exchange completed cleanly ..
         reconciler.record_message_sent(_as2_from, _as2_to, 'msg-1@zato', mic='abc, sha-256')
-        reconciler.record_mdn_received('msg-1@zato', data=_mdn_data(''))
+        data = _mdn_data('')
+        reconciler.record_mdn_received('msg-1@zato', data=data)
 
         # .. and another one came back with an integrity failure.
         reconciler.record_message_sent(_as2_from, _as2_to, 'msg-2@zato', mic='abc, sha-256')
-        reconciler.record_mdn_received('msg-2@zato', outcome=AuditOutcome.Error, data=_mdn_data('integrity-check-failed'))
+        data = _mdn_data('integrity-check-failed')
+        reconciler.record_mdn_received('msg-2@zato', outcome=AuditOutcome.Error, data=data)
 
-        rows = get_outcomes(utcnow(), Range_Week)
+        now = utcnow()
+        rows = get_outcomes(now, Range_Week)
 
         assert len(rows) == 1
 
@@ -225,10 +231,15 @@ class TestOutcomes:
 
         # One message arrived cleanly and another could not be decrypted.
         record_message_received(audit_log, _as2_from, _as2_to, 'msg-1@zato', payload='Inbound test payload')
-        record_message_received(audit_log, _as2_from, _as2_to, 'msg-2@zato',
-            error='decryption-failed', outcome=AuditOutcome.Error)
+        received_options = {
+            'error': 'decryption-failed',
+            'outcome': AuditOutcome.Error,
+        }
 
-        rows = get_outcomes(utcnow(), Range_Week)
+        record_message_received(audit_log, _as2_from, _as2_to, 'msg-2@zato', **received_options)
+
+        now = utcnow()
+        rows = get_outcomes(now, Range_Week)
 
         assert len(rows) == 1
 
@@ -249,10 +260,17 @@ class TestOutcomes:
         reconciler.record_ack_received(_our_isa_id, _partner_isa_id, '000000001')
 
         reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000002', document_type='810')
-        reconciler.record_ack_received(_our_isa_id, _partner_isa_id, '000000002', outcome=AuditOutcome.Error,
-            data=dumps({'modifier': 'transaction-set-rejected'}))
+        ack_data = dumps({'modifier': 'transaction-set-rejected'})
 
-        rows = get_outcomes(utcnow(), Range_Week)
+        ack_options = {
+            'outcome': AuditOutcome.Error,
+            'data': ack_data,
+        }
+
+        reconciler.record_ack_received(_our_isa_id, _partner_isa_id, '000000002', **ack_options)
+
+        now = utcnow()
+        rows = get_outcomes(now, Range_Week)
 
         assert len(rows) == 2
 
@@ -277,9 +295,11 @@ class TestOutcomes:
         reconciler = MDNReconciler(_server_name)
 
         reconciler.record_message_sent(_as2_from, _as2_to, 'msg-1@zato', mic='abc, sha-256')
-        reconciler.record_mdn_received('msg-1@zato', outcome=AuditOutcome.Error, data=_mdn_data(''))
+        data = _mdn_data('')
+        reconciler.record_mdn_received('msg-1@zato', outcome=AuditOutcome.Error, data=data)
 
-        rows = get_outcomes(utcnow(), Range_Week)
+        now = utcnow()
+        rows = get_outcomes(now, Range_Week)
 
         assert len(rows) == 1
         assert rows[0].failure_breakdown == 'unspecified: 1'
@@ -304,7 +324,8 @@ class TestAckDiscipline:
         reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000003', document_type='850')
         reconciler.record_ack_received(_our_isa_id, _partner_isa_id, '000000003', outcome=AuditOutcome.Error)
 
-        rows = get_ack_discipline(utcnow(), Range_Week)
+        now = utcnow()
+        rows = get_ack_discipline(now, Range_Week)
 
         assert len(rows) == 1
 
@@ -326,7 +347,8 @@ class TestAckDiscipline:
         reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001', document_type='850')
         reconciler.record_interchange_sent(_our_isa_id, 'OTHERPARTNER', '000000002', document_type='850')
 
-        rows = get_ack_discipline(utcnow(), Range_Week)
+        now = utcnow()
+        rows = get_ack_discipline(now, Range_Week)
 
         assert len(rows) == 2
 
@@ -341,7 +363,8 @@ class TestAckDiscipline:
         reconciler = Reconciler(_server_name)
         reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001', document_type='850')
 
-        rows = get_ack_discipline(utcnow(), Range_Week)
+        now = utcnow()
+        rows = get_ack_discipline(now, Range_Week)
 
         row = rows[0]
 
@@ -362,10 +385,12 @@ class TestCSVExport:
         reconciler = Reconciler(_server_name)
         reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001', document_type='850')
 
-        rows = get_volume(utcnow(), Range_Week)
+        now = utcnow()
+        rows = get_volume(now, Range_Week)
         content = volume_csv(rows)
 
-        lines = content.strip().splitlines()
+        stripped = content.strip()
+        lines = stripped.splitlines()
 
         assert lines[0] == 'period,source,partner,document_type,sent,received'
         assert len(lines) == 2
@@ -379,12 +404,15 @@ class TestCSVExport:
         reconciler = MDNReconciler(_server_name)
 
         reconciler.record_message_sent(_as2_from, _as2_to, 'msg-1@zato', mic='abc, sha-256')
-        reconciler.record_mdn_received('msg-1@zato', outcome=AuditOutcome.Error, data=_mdn_data('integrity-check-failed'))
+        data = _mdn_data('integrity-check-failed')
+        reconciler.record_mdn_received('msg-1@zato', outcome=AuditOutcome.Error, data=data)
 
-        rows = get_outcomes(utcnow(), Range_Week)
+        now = utcnow()
+        rows = get_outcomes(now, Range_Week)
         content = outcomes_csv(rows)
 
-        lines = content.strip().splitlines()
+        stripped = content.strip()
+        lines = stripped.splitlines()
 
         assert lines[0] == 'source,partner,document_type,delivered,failed,failure_breakdown'
         assert len(lines) == 2
@@ -400,10 +428,12 @@ class TestCSVExport:
         reconciler.record_interchange_sent(_our_isa_id, _partner_isa_id, '000000001', document_type='850')
         reconciler.record_ack_received(_our_isa_id, _partner_isa_id, '000000001')
 
-        rows = get_ack_discipline(utcnow(), Range_Week)
+        now = utcnow()
+        rows = get_ack_discipline(now, Range_Week)
         content = ack_discipline_csv(rows)
 
-        lines = content.strip().splitlines()
+        stripped = content.strip()
+        lines = stripped.splitlines()
 
         assert lines[0] == 'partner,acknowledged,average_seconds,max_seconds,outstanding,rejected'
         assert len(lines) == 2

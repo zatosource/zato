@@ -16,7 +16,8 @@ from sqlalchemy import and_, select
 
 # Zato
 from zato.common.as2.common import AS2Error, DeliveryKind
-from zato.common.as2.mdn import build_mdn, MDNRequest, MDNSigningConfig, new_error_disposition, new_processed_disposition
+from zato.common.as2.mdn import build_mdn, MDNRequest, MDNSigningConfig, new_error_disposition, \
+    new_processed_disposition
 from zato.common.as2.reconcile import MDNReconciler, process_incoming_mdn, ReconcileAttr
 from zato.common.audit_log.api import AuditEvent, AuditSource, event_attr_table, event_table
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
@@ -47,7 +48,8 @@ _mic = 'QUFB, sha-256'
 def _make_reconciler(tmp_path:'os.PathLike') -> 'MDNReconciler':
     """ Points the audit database at a per-test SQLite file and builds a reconciler on it.
     """
-    database_path = os.path.join(str(tmp_path), 'audit.db')
+    tmp_dir = str(tmp_path)
+    database_path = os.path.join(tmp_dir, 'audit.db')
 
     os.environ[AuditLogCtx.Env_Type] = AuditLogCtx.Type_SQLite
     os.environ[AuditLogCtx.Env_Name] = database_path
@@ -92,7 +94,12 @@ def _read_attrs(reconciler:'MDNReconciler', message_id:'str') -> 'strstrdict':
 
 # ################################################################################################################################
 
-def _build_mdn_bytes(message_id:'any_', disposition:'any_' = None, mic:'any_' = '', signing_keystore:'any_' = None) -> 'any_':
+def _build_mdn_bytes(
+    message_id:'any_',
+    disposition:'any_' = None,
+    mic:'any_' = '',
+    signing_keystore:'any_' = None,
+    ) -> 'any_':
     """ Builds one real MDN answering the given Message-ID, returning its body and content type.
     """
     request = MDNRequest()
@@ -129,12 +136,13 @@ class TestMatching:
         try:
             reconciler = _make_reconciler(tmp_path)
 
-            reconciler.record_message_sent(
-                'ZatoRetail', 'PartnerCorp', '<abc@zato>',
-                mic='QUFB, sha-256',
-                async_mdn_url='https://zatoretail.example.com/zato/as2/mdn',
-                cid='cid-1',
-            )
+            sent_options = {
+                'mic': 'QUFB, sha-256',
+                'async_mdn_url': 'https://zatoretail.example.com/zato/as2/mdn',
+                'cid': 'cid-1',
+            }
+
+            reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<abc@zato>', **sent_options)
 
             # Everything recorded at send time comes back - the angle brackets are normalized away.
             pending = reconciler.match('abc@zato')
@@ -424,7 +432,12 @@ class TestProcessIncomingMDN:
 
 # ################################################################################################################################
 
-    def test_accepted_certificates_admit_a_rotated_signer(self, tmp_path:'os.PathLike', parties:'TestParties', make_rotated_pair:'any_') -> 'None':
+    def test_accepted_certificates_admit_a_rotated_signer(
+        self,
+        tmp_path:'os.PathLike',
+        parties:'TestParties',
+        make_rotated_pair:'any_',
+        ) -> 'None':
         try:
             reconciler = _make_reconciler(tmp_path)
             reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<abc@zato>')
@@ -436,7 +449,9 @@ class TestProcessIncomingMDN:
             rotated = make_rotated_pair('as2-receiver-rotation')
             accepted = [rotated.certificate, parties.receiver.signing_certificate]
 
-            result = process_incoming_mdn(body, content_type, reconciler, parties.sender, accepted_certificates=accepted)
+            mdn_options = {'accepted_certificates': accepted}
+
+            result = process_incoming_mdn(body, content_type, reconciler, parties.sender, **mdn_options)
 
             assert result.is_parsed
             assert result.is_matched
@@ -447,7 +462,12 @@ class TestProcessIncomingMDN:
 
 # ################################################################################################################################
 
-    def test_accepted_certificates_reject_an_unlisted_signer(self, tmp_path:'os.PathLike', parties:'TestParties', make_rotated_pair:'any_') -> 'None':
+    def test_accepted_certificates_reject_an_unlisted_signer(
+        self,
+        tmp_path:'os.PathLike',
+        parties:'TestParties',
+        make_rotated_pair:'any_',
+        ) -> 'None':
         try:
             reconciler = _make_reconciler(tmp_path)
             reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<abc@zato>')
@@ -459,7 +479,9 @@ class TestProcessIncomingMDN:
             rotated = make_rotated_pair('as2-receiver-rotation')
             accepted = [rotated.certificate]
 
-            result = process_incoming_mdn(body, content_type, reconciler, parties.sender, accepted_certificates=accepted)
+            mdn_options = {'accepted_certificates': accepted}
+
+            result = process_incoming_mdn(body, content_type, reconciler, parties.sender, **mdn_options)
 
             assert not result.is_parsed
             assert not result.is_matched

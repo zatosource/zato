@@ -26,7 +26,8 @@ from zato.edi.reconcile import Reconciler
 def _use_tmp_audit_db(tmp_path:'os.PathLike') -> 'None':
     """ Points the audit database at a per-test SQLite file.
     """
-    database_path = os.path.join(str(tmp_path), 'audit.db')
+    tmp_dir = str(tmp_path)
+    database_path = os.path.join(tmp_dir, 'audit.db')
 
     os.environ[AuditLogCtx.Env_Type] = AuditLogCtx.Type_SQLite
     os.environ[AuditLogCtx.Env_Name] = database_path
@@ -49,6 +50,7 @@ def _run_outstanding_query(
     without their closing event, oldest first - returning (object_name, msg_id) pairs.
     """
     conditions = outstanding_conditions(source, open_event, close_event, needs_object_name_match)
+    oldest_first = event_table.c.id.asc()
 
     statement = select(
         event_table.c.object_name,
@@ -56,7 +58,7 @@ def _run_outstanding_query(
     ).where(
         event_table.c.source == source,
         *conditions,
-    ).order_by(event_table.c.id.asc())
+    ).order_by(oldest_first)
 
     engine = get_audit_engine()
 

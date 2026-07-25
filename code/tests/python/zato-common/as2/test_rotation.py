@@ -41,7 +41,11 @@ def _certificate_to_pem(certificate:'any_') -> 'any_':
 
 # ################################################################################################################################
 
-def _rotation_config(current_certificate:'any_' = '', next_certificate:'any_' = '', next_certificate_from:'any_' = '') -> 'any_':
+def _rotation_config(
+    current_certificate:'any_' = '',
+    next_certificate:'any_' = '',
+    next_certificate_from:'any_' = '',
+    ) -> 'any_':
     """ The certificate rotation fields of one Dashboard-managed AS2 connection.
     """
     out = {
@@ -112,7 +116,13 @@ class TestCompleteRotation:
         current_pem = _certificate_to_pem(make_rotated_pair('partnercorp-current').certificate)
         next_pem = _certificate_to_pem(make_rotated_pair('partnercorp-next').certificate)
 
-        config = _rotation_config(current_certificate=current_pem, next_certificate=next_pem, next_certificate_from=_date_past_grace)
+        rotation_options = {
+            'current_certificate': current_pem,
+            'next_certificate': next_pem,
+            'next_certificate_from': _date_past_grace,
+        }
+
+        config = _rotation_config(**rotation_options)
 
         complete_rotation(config)
 
@@ -132,7 +142,13 @@ class TestCompleteRotation:
         second_pem = _certificate_to_pem(make_rotated_pair('partnercorp-next-issuer').certificate)
         next_pem = first_pem + second_pem
 
-        config = _rotation_config(current_certificate=current_pem, next_certificate=next_pem, next_certificate_from=_date_past_grace)
+        rotation_options = {
+            'current_certificate': current_pem,
+            'next_certificate': next_pem,
+            'next_certificate_from': _date_past_grace,
+        }
+
+        config = _rotation_config(**rotation_options)
 
         complete_rotation(config)
 

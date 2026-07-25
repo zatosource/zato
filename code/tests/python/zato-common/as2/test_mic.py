@@ -197,7 +197,12 @@ class TestMICAlgorithmNames:
 
 # ################################################################################################################################
 
-    def test_output_always_uses_the_rfc_5751_spelling(self, algorithm:'any_', digest_function:'any_', expected_name:'any_') -> 'None':
+    def test_output_always_uses_the_rfc_5751_spelling(
+        self,
+        algorithm:'any_',
+        digest_function:'any_',
+        expected_name:'any_',
+        ) -> 'None':
         part = new_part(_text_payload, 'text/plain', '7bit')
 
         expected = _expected_mic(_text_payload, digest_function, expected_name)
