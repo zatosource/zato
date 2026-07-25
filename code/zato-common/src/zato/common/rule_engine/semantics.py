@@ -338,17 +338,20 @@ def validate_document(document:'anydict', vocabulary:'anydict') -> 'dictlist':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def validate_data(data:'anydict', vocabulary:'anydict') -> 'dictlist':
-    """ Validates input data against a vocabulary, returning a list of structured errors.
+def validate_data(data:'anydict', attribute_index:'anydict') -> 'dictlist':
+    """ Validates input data against a vocabulary's attribute index, returning a list of structured errors.
 
     Keys are the vocabulary's own dotted paths. Unknown fields and values of the wrong shape
     are reported in domain terms - this is the same validation path the editor and the REST
     boundary share, never a bare 400.
+
+    The index comes from build_attribute_index and is what keeps this linear in the number of
+    fields sent rather than in the size of the vocabulary times that.
     """
     errors = []
 
     for path, value in data.items():
-        attribute = get_attribute(vocabulary, path)
+        attribute = attribute_index.get(path)
 
         # A field the vocabulary does not know is reported by name ..
         if attribute is None:

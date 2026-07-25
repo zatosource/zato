@@ -16,8 +16,8 @@ from zato.common.rule_engine.outcome_diff import outcome_diff
 from zato.common.rule_engine.render import render_documents
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Documents_Key, Event_Type_Review_Commented
 from zato.rule_engine_dashboard.app.storage import get_backend, get_manager
-from zato.rule_engine_dashboard.app.views.api import definition_row, event_row, json_api, read_int, read_int_required, \
-    read_json, required, ruleset_documents, serialize_all, version_row
+from zato.rule_engine_dashboard.app.views.api import definition_row, event_row, json_api, json_api_admin, read_int, \
+    read_int_required, read_json, required, ruleset_documents, serialize_all, version_row
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -209,9 +209,11 @@ def approval_approve(req:'any_', definition_id:'int', version:'int') -> 'any_':
 
 # ################################################################################################################################
 
-@json_api
+@json_api_admin
 def approval_set_gate(req:'any_', definition_id:'int') -> 'any_':
     """ Turns the publish approval gate on or off, the change itself recorded as a logged event.
+
+    Admins alone, because switching the gate off is what decides whether anyone needs approval at all.
     """
     body = read_json(req)
     enabled = required(body, 'enabled')
@@ -226,9 +228,11 @@ def approval_set_gate(req:'any_', definition_id:'int') -> 'any_':
 
 # ################################################################################################################################
 
-@json_api
+@json_api_admin
 def approval_set_self_approval(req:'any_', definition_id:'int') -> 'any_':
     """ Allows or forbids authors approving their own versions, the change itself recorded as a logged event.
+
+    Admins alone, because allowing self-approval lets one person both write and approve a version.
     """
     body = read_json(req)
     allowed = required(body, 'allowed')

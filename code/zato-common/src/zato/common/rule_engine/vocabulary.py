@@ -207,6 +207,21 @@ def get_attribute(vocabulary:'anydict', path:'str') -> 'anydict | None':
 
 # ################################################################################################################################
 
+def build_attribute_index(vocabulary:'anydict') -> 'anydict':
+    """ Builds the full dotted path to attribute mapping of one vocabulary.
+
+    Anything looking a term up more than once per pass builds this first and reads it instead
+    of walking the vocabulary per lookup, which is what the REST boundary does for every
+    field of every request.
+    """
+    out = {}
+    for path, attribute in iter_attributes(vocabulary):
+        out[path] = attribute
+
+    return out
+
+# ################################################################################################################################
+
 def picker_paths(vocabulary:'anydict') -> 'strlist':
     """ Returns the paths every picker offers - deprecated terms keep old rules running but never appear again.
     """

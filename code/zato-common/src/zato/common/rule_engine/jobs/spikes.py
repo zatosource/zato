@@ -19,7 +19,6 @@ from zato.common.alerting.model import new_finding, new_rule
 from zato.common.alerting.store import raise_alert
 from zato.common.audit_log.api import get_audit_engine
 from zato.common.rule_engine.jobs.common import build_backend, configure_job
-from zato.common.rule_engine.sql import DecisionFilter
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Event_Type_Decisions_Spiked, \
     Hour_Bucket_Format, System_Actor
 from zato.common.rule_engine.sql.time_ import utc_now
@@ -30,7 +29,7 @@ from zato.common.rule_engine.sql.time_ import utc_now
 if 0:
     from datetime import datetime
 
-    from zato.common.rule_engine.sql import RuleSQLBackend
+    from zato.common.rule_engine.sql import BucketSplit, RuleSQLBackend
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -69,28 +68,14 @@ Max_Rulesets = 10_000
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _spike_counts(backend:'RuleSQLBackend', ruleset_id:'int', now:'datetime') -> 'count_pair':
+def _spike_counts(split:'BucketSplit') -> 'count_pair':
     """ Returns the current hour's decision count and the typical hourly count of the trailing window.
     """
-    # One indexed group-by covers the trailing window plus the current hour ..
-    start_time = now - timedelta(hours=Spike_Window_Hours + 1)
-    filters = DecisionFilter(ruleset_id=ruleset_id, start_time=start_time)
-    points = backend.reporting.hourly_counts(filters)
+    current_count = split.bucket_count
 
-    # .. split the buckets into the current hour and its history ..
-    current_bucket = now.strftime(Hour_Bucket_Format)
-    current_count = 0
-    history_total = 0
-
-    for point in points:
-        if point.key == current_bucket:
-            current_count = point.item_count
-        else:
-            history_total += point.item_count
-
-    # .. silent hours have no bucket rows at all, so the typical rate
-    # .. divides by the full window and not just by the buckets returned.
-    typical_count = history_total // Spike_Window_Hours
+    # Silent hours have no rows at all, so the typical rate divides by the full window
+    # and not just by the hours that actually saw a decision.
+    typical_count = split.other_count // Spike_Window_Hours
 
     return current_count, typical_count
 
@@ -108,11 +93,22 @@ def run_spike_sweep(backend:'RuleSQLBackend', now:'datetime | None' = None) -> '
     # The deduplicating alert store remembers spikes across sweeps ..
     audit_engine = get_audit_engine()
 
+    # .. one grouped scan covers the trailing window plus the current hour for every ruleset at once,
+    # .. because a query per ruleset would put the sweep's cost on the number of rulesets ..
+    current_bucket = now.strftime(Hour_Bucket_Format)
+    start_time = now - timedelta(hours=Spike_Window_Hours + 1)
+    splits = backend.reporting.bucket_counts_by_ruleset(start_time=start_time, bucket=current_bucket)
+
     # .. and every active ruleset is examined the same way.
     definitions = backend.definitions.list(object_type=Definition_Type_Ruleset, limit=Max_Rulesets)
 
     for definition in definitions:
-        current_count, typical_count = _spike_counts(backend, definition.id, now)
+
+        # A ruleset that decided nothing inside the window has no row in the scan at all.
+        if definition.id not in splits:
+            continue
+
+        current_count, typical_count = _spike_counts(splits[definition.id])
 
         # Quiet hours never spike, no matter how quiet the history was ..
         if current_count < Spike_Minimum_Count:

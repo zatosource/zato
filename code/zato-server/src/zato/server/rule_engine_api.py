@@ -23,8 +23,10 @@ from redis import Redis
 from zato.common.rule_engine.changes import ModuleCtx as ChangesCtx
 from zato.common.rule_engine.invocation import RulesetInvoker
 from zato.common.rule_engine.sql import RuleSQLBackend
-from zato.common.rule_engine.sql.constants import Default_DB_URL, Env_DB_URL
+from zato.common.rule_engine.sql.constants import Default_DB_URL, Env_DB_URL, Env_Success_Capture_Percent
 from zato.common.rule_engine.sql.database import create_database_engine
+from zato.common.rule_engine.sql.decisions import CapturePolicy
+from zato.common.rule_engine.sql.errors import InvalidStoreInputError
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -93,6 +95,28 @@ def get_backend() -> 'RuleSQLBackend':
 
 # ################################################################################################################################
 
+def _build_capture_policy() -> 'CapturePolicy':
+    """ Builds the capture policy this process writes decisions under.
+    """
+    # Only a deployment that set the variable departs from full capture, and an unusable
+    # value is refused at startup rather than quietly logging less than the operator asked for.
+    configured = os.environ.get(Env_Success_Capture_Percent)
+
+    if configured is None:
+        out = CapturePolicy()
+        return out
+
+    try:
+        success_percent = int(configured)
+    except ValueError:
+        message = f'{Env_Success_Capture_Percent} has to be a whole percentage, got {configured!r}'
+        raise InvalidStoreInputError(message) from None
+
+    out = CapturePolicy(success_percent=success_percent)
+    return out
+
+# ################################################################################################################################
+
 def get_invoker() -> 'RulesetInvoker':
     """ Returns the process-wide invoker, building it on the first request.
     """
@@ -103,7 +127,8 @@ def get_invoker() -> 'RulesetInvoker':
             backend = get_backend()
 
             # The writer accepts decisions without blocking the requests that produce them.
-            writer = backend.decision_writer()
+            capture_policy = _build_capture_policy()
+            writer = backend.decision_writer(capture_policy=capture_policy)
             writer.start()
 
             _invoker = RulesetInvoker(backend, writer)

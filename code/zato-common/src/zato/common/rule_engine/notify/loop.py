@@ -23,6 +23,7 @@ from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Event
 
 if 0:
     from zato.common.rule_engine.sql import RuleSQLBackend
+    from zato.common.rule_engine.sql.data import RuleNotifyDestinationRecord
     from zato.common.typing_ import anydict
 
 # ################################################################################################################################
@@ -59,11 +60,16 @@ def _run_advisory_pass(backend:'RuleSQLBackend') -> 'int':
     """
     out = 0
 
-    # Read the feed strictly past where the previous pass ended ..
+    # Note how far the feed reaches before reading it, because the filtered page below reveals
+    # only the matching events and would otherwise leave the cursor behind the rest ..
+    ceiling = backend.events.newest_id()
+
+    # .. read the feed strictly past where the previous pass ended ..
     cursor = backend.notifications.get_job_cursor(Job_Cursor_Advisory)
     events = backend.events.list_since(
         since_id=cursor,
         event_types=[Event_Type_Version_Created],
+        max_id=ceiling,
         limit=Batch_Size,
     )
 
@@ -88,7 +94,74 @@ def _run_advisory_pass(backend:'RuleSQLBackend') -> 'int':
         # .. every processed event moves the cursor, so a crash never repeats completed runs.
         backend.notifications.set_job_cursor(Job_Cursor_Advisory, event.id)
 
+    # A page shorter than the batch size means no other event up to the ceiling matches,
+    # so one write clears the whole unmatched tail instead of rereading it next pass.
+    event_count = len(events)
+    is_feed_drained = event_count < Batch_Size
+
+    if is_feed_drained:
+        if ceiling > cursor:
+            backend.notifications.set_job_cursor(Job_Cursor_Advisory, ceiling)
+
     return out
+
+# ################################################################################################################################
+
+def _deliver_to_destination(
+    backend:'RuleSQLBackend',
+    clients:'anydict',
+    result:'NotifyRunResult',
+    destination:'RuleNotifyDestinationRecord',
+    ceiling:'int',
+    ) -> 'None':
+    """ Delivers one destination's slice of the feed, moving its cursor as far as the pass got.
+    """
+
+    # Read this destination's slice of the feed strictly past its cursor ..
+    events = backend.events.list_since(
+        since_id=destination.cursor_id,
+        definition_id=destination.definition_id,
+        event_types=Notified_Event_Types,
+        max_id=ceiling,
+        limit=Batch_Size,
+    )
+
+    for event in events:
+
+        # .. events below the notification threshold, like passing advisory runs,
+        # .. move the cursor without producing a message ..
+        if not should_notify(event):
+            backend.notifications.advance_cursor(destination.id, event.id)
+            continue
+
+        # .. build and deliver the message, recording either outcome on the destination ..
+        try:
+            text = build_message(backend, event)
+            send_message(clients, destination.kind, destination.target, text)
+
+        # .. a failure leaves the cursor in place so the next pass retries the same event,
+        # .. which also rules out skipping ahead, and the error becomes visible in the dashboard.
+        except Exception as e:
+            logger.warning('Delivery to %s `%s` failed for event %s -> %s',
+                destination.kind, destination.target, event.id, e)
+            backend.notifications.mark_failed(destination.id, str(e))
+            result.delivery_failures += 1
+            return
+
+        # .. a success moves the cursor past the delivered event.
+        else:
+            backend.notifications.mark_delivered(destination.id, event.id)
+            result.messages_sent += 1
+
+    # A page shorter than the batch size means this destination has seen everything addressed
+    # to it up to the ceiling, so one write carries its cursor over every event that belongs
+    # to another ruleset rather than rescanning that tail on every pass.
+    event_count = len(events)
+    is_feed_drained = event_count < Batch_Size
+
+    if is_feed_drained:
+        if ceiling > destination.cursor_id:
+            backend.notifications.advance_cursor(destination.id, ceiling)
 
 # ################################################################################################################################
 
@@ -97,42 +170,11 @@ def _run_delivery_pass(backend:'RuleSQLBackend', clients:'anydict', result:'Noti
     """
     destinations = backend.notifications.list_destinations()
 
+    # Every destination in this pass shares one ceiling, read before any of them advances.
+    ceiling = backend.events.newest_id()
+
     for destination in destinations:
-
-        # Read this destination's slice of the feed strictly past its cursor ..
-        events = backend.events.list_since(
-            since_id=destination.cursor_id,
-            definition_id=destination.definition_id,
-            event_types=Notified_Event_Types,
-            limit=Batch_Size,
-        )
-
-        for event in events:
-
-            # .. events below the notification threshold, like passing advisory runs,
-            # .. move the cursor without producing a message ..
-            if not should_notify(event):
-                backend.notifications.advance_cursor(destination.id, event.id)
-                continue
-
-            # .. build and deliver the message, recording either outcome on the destination ..
-            try:
-                text = build_message(backend, event)
-                send_message(clients, destination.kind, destination.target, text)
-
-            # .. a failure leaves the cursor in place so the next pass retries,
-            # .. and the error becomes visible in the dashboard.
-            except Exception as e:
-                logger.warning('Delivery to %s `%s` failed for event %s -> %s',
-                    destination.kind, destination.target, event.id, e)
-                backend.notifications.mark_failed(destination.id, str(e))
-                result.delivery_failures += 1
-                break
-
-            # .. a success moves the cursor past the delivered event.
-            else:
-                backend.notifications.mark_delivered(destination.id, event.id)
-                result.messages_sent += 1
+        _deliver_to_destination(backend, clients, result, destination, ceiling)
 
 # ################################################################################################################################
 # ################################################################################################################################

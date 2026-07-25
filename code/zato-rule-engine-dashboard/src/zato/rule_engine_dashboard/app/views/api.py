@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import json
 from datetime import datetime
 from functools import wraps
-from http.client import BAD_REQUEST, CONFLICT, NOT_FOUND
+from http.client import BAD_REQUEST, CONFLICT, FORBIDDEN, NOT_FOUND
 
 # Django
 from django.http import JsonResponse
@@ -34,6 +34,11 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+Admins_Only_Message = 'This action is reserved for admins'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class BadRequestError(Exception):
     """ A request whose parameters cannot be used - always reported with a readable message.
     """
@@ -49,12 +54,18 @@ def _error(message:'str', status:'int') -> 'JsonResponse':
 
 # ################################################################################################################################
 
-def json_api(view:'any_') -> 'any_':
-    """ Signed-in JSON endpoints - boundary and store errors become readable JSON responses with matching statuses.
+def _json_api(view:'any_', needs_admin:'bool') -> 'any_':
+    """ The shared body of the JSON endpoint decorators - boundary and store errors become
+    readable JSON responses with matching statuses.
     """
     @wraps(view)
     @signed_in_required
     def wrapper(req:'any_', *args:'any_', **kwargs:'any_') -> 'any_':
+
+        # An endpoint reserved for admins answers everyone else in JSON, the way its callers parse.
+        if needs_admin and not req.user.is_superuser:
+            out = _error(Admins_Only_Message, FORBIDDEN)
+            return out
 
         try:
             out = view(req, *args, **kwargs)
@@ -71,6 +82,22 @@ def json_api(view:'any_') -> 'any_':
         return out
 
     return wrapper
+
+# ################################################################################################################################
+
+def json_api(view:'any_') -> 'any_':
+    """ Signed-in JSON endpoints.
+    """
+    out = _json_api(view, False)
+    return out
+
+# ################################################################################################################################
+
+def json_api_admin(view:'any_') -> 'any_':
+    """ JSON endpoints reserved for admins - the policy switches that decide what everyone else may do.
+    """
+    out = _json_api(view, True)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

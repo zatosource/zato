@@ -9,6 +9,12 @@
 
 var data = {
 
+    config: {
+        unreachableMessage: 'The application is unreachable, the request never completed',
+        notJsonMessage: 'The application answered with something other than JSON, ' +
+            'the session may have expired - reloading the page signs you back in',
+    },
+
     // Every signed-in page carries a CSRF input in the sign-out form
     csrfToken: function() {
         return document.querySelector('[name=csrfmiddlewaretoken]').value;
@@ -17,9 +23,16 @@ var data = {
 // ////////////////////////////////////////////////////////////////////////
 
     handle: function(response, onDone, onError) {
+        var self = this;
         response.json().then(function(payload) {
             if (response.ok) { onDone(payload); return; }
             onError(payload.error);
+        }, function() {
+
+            // A body that will not parse is never a decoded error message. An HTML error
+            // page or a redirect to the sign-in screen arrives here, and the caller is
+            // told so rather than left waiting for a callback that never comes.
+            onError(self.config.notJsonMessage);
         });
     },
 
@@ -27,6 +40,8 @@ var data = {
         var self = this;
         fetch(url, {credentials: 'same-origin'}).then(function(response) {
             self.handle(response, onDone, onError);
+        }, function() {
+            onError(self.config.unreachableMessage);
         });
     },
 
@@ -39,6 +54,8 @@ var data = {
             body: JSON.stringify(body),
         }).then(function(response) {
             self.handle(response, onDone, onError);
+        }, function() {
+            onError(self.config.unreachableMessage);
         });
     },
 

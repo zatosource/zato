@@ -102,5 +102,10 @@ Job_Cursor_Advisory = 'advisory-runs'
 Env_DB_URL     = 'Zato_Rule_Engine_Dashboard_DB_URL'
 Default_DB_URL = 'sqlite:///zato-rule-engine-dashboard.db'
 
+# What percentage of successful decisions keep their full story. Errors always keep theirs, so
+# lowering this trades the stories of routine successes for write volume and disk. Deployments
+# logging enough decisions for that to matter set this rather than editing the default.
+Env_Success_Capture_Percent = 'Zato_Rule_Engine_Success_Capture_Percent'
+
 # ################################################################################################################################
 # ################################################################################################################################

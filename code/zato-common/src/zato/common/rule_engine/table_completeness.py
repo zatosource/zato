@@ -27,6 +27,11 @@ if 0:
 # A set member renders as a bare word when it looks like one, else it is quoted.
 _bare_word_pattern = re.compile(r'^[A-Za-z_]\w*$')
 
+# The most combinations the completeness sweep will enumerate. The cross product multiplies out
+# per condition row, so a table with many rows of many values reaches numbers no author would wait
+# for and no answer would be readable at. Past this the check reports its own breadth instead.
+Max_Combinations = 100_000
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -189,13 +194,30 @@ def check_completeness(table:'anydict') -> 'anydict':
     complement of what they leave out. Each missing combination comes back both as
     the plain cells mapping and as a proposed new column with those cells and
     deliberately empty actions - choosing the actions is the author's job.
+
+    The product grows multiplicatively with the number of condition rows, so a table past
+    Max_Combinations comes back saying so instead of running a sweep nobody waits for.
     """
 
     # Our response to produce
-    out = {'missing': [], 'proposed': []}
+    out:'anydict' = {'missing': [], 'proposed': [], 'too_large': False, 'combinations': 0}
 
     alternatives_by_letter = _row_alternatives(table)
     if not alternatives_by_letter:
+        return out
+
+    # The number of combinations is known before any of them is built, and an author-supplied
+    # table can ask for more than there is any point in enumerating ..
+    combination_count = 1
+    for alternatives in alternatives_by_letter.values():
+        combination_count *= len(alternatives)
+
+    out['combinations'] = combination_count
+
+    # .. so past the ceiling the answer is that the table is too broad to sweep exhaustively,
+    # which is a finding in itself rather than an error.
+    if combination_count > Max_Combinations:
+        out['too_large'] = True
         return out
 
     columns = rule_columns(table)

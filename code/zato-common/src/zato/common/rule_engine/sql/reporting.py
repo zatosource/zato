@@ -6,11 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from dataclasses import dataclass
-
 # SQLAlchemy
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 
 # Zato
 from zato.common.defaults import default_cluster_id
@@ -18,13 +15,15 @@ from zato.common.typing_ import cast_
 
 # Local
 from .constants import Event_Type_Rule_Fired_Daily
-from .data import any_, count_point_list, decision_record_list, CountPoint, DecisionFilter, rule_fire_point_list, \
+from .data import count_point_list, decision_record_list, CountPoint, DecisionFilter, rule_fire_point_list, \
     RuleFirePoint, strlist, strset
 from .database import SessionFactory
 from .decisions import normalize_utc
 from .document import deserialize_document, deserialize_string_list
 from .errors import InvalidStoreInputError
 from .records import decision_record
+from .reporting_common import add_count, apply_filters, bucket_split_dict, BucketSplit, count_points, \
+    count_total_dict, DecisionAggregates, ForensicResult, In_Named_Bucket, Outside_Named_Bucket
 from .schema import rule_decision_table, rule_event_table
 
 # ################################################################################################################################
@@ -34,74 +33,6 @@ if 0:
     from datetime import datetime
 
     datetime = datetime
-
-@dataclass(init=False)
-class ForensicResult:
-    """ Decisions whose retained stories name one rule, plus the number of headers whose stories were not captured.
-    """
-
-    decisions:              'decision_record_list'
-    scanned_count:          'int'
-    headers_without_payload:'int'
-
-    def __init__(
-        self,
-        *,
-        decisions:'decision_record_list',
-        scanned_count:'int',
-        headers_without_payload:'int',
-        ) -> 'None':
-
-        self.decisions               = decisions
-        self.scanned_count           = scanned_count
-        self.headers_without_payload = headers_without_payload
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _apply_filters(query:'any_', filters:'DecisionFilter') -> 'any_':
-    """ Adds promoted-column filters to a decision query.
-    """
-    # Every query stays inside the one Zato cluster ..
-    cluster_condition = rule_decision_table.c.cluster_id == default_cluster_id
-    query = query.where(cluster_condition)
-
-    # .. then each supplied promoted-column filter narrows the same SQL statement.
-    if filters.ruleset_id is not None:
-        ruleset_condition = rule_decision_table.c.ruleset_id == filters.ruleset_id
-        query = query.where(ruleset_condition)
-
-    if filters.start_time is not None:
-        start_time = normalize_utc(filters.start_time)
-        start_condition = rule_decision_table.c.occurred_at >= start_time
-        query = query.where(start_condition)
-
-    if filters.end_time is not None:
-        end_time = normalize_utc(filters.end_time)
-        end_condition = rule_decision_table.c.occurred_at < end_time
-        query = query.where(end_condition)
-
-    if filters.business_key is not None:
-        business_condition = rule_decision_table.c.business_key == filters.business_key
-        query = query.where(business_condition)
-
-    if filters.outcome is not None:
-        outcome_condition = rule_decision_table.c.outcome == filters.outcome
-        query = query.where(outcome_condition)
-
-    if filters.rules_version is not None:
-        version_condition = rule_decision_table.c.rules_version == filters.rules_version
-        query = query.where(version_condition)
-
-    if filters.is_error is not None:
-        error_condition = rule_decision_table.c.is_error == filters.is_error
-        query = query.where(error_condition)
-
-    if filters.before_id is not None:
-        id_condition = rule_decision_table.c.id < filters.before_id
-        query = query.where(id_condition)
-
-    return query
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -124,7 +55,7 @@ class RuleReporting:
 
         # .. apply only promoted-column filters ..
         query = select(rule_decision_table)
-        query = _apply_filters(query, filters)
+        query = apply_filters(query, filters)
         decision_id_descending = rule_decision_table.c.id.desc()
         query = query.order_by(decision_id_descending)
         query = query.limit(limit)
@@ -153,7 +84,7 @@ class RuleReporting:
         # Build a portable grouped count over the promoted outcome ..
         decision_count = func.count(rule_decision_table.c.id)
         query = select(rule_decision_table.c.outcome, decision_count)
-        query = _apply_filters(query, filters)
+        query = apply_filters(query, filters)
         query = query.group_by(rule_decision_table.c.outcome)
         query = query.order_by(rule_decision_table.c.outcome)
         session = self._session_factory()
@@ -181,7 +112,7 @@ class RuleReporting:
         # Build a portable grouped count over the promoted rules version ..
         decision_count = func.count(rule_decision_table.c.id)
         query = select(rule_decision_table.c.rules_version, decision_count)
-        query = _apply_filters(query, filters)
+        query = apply_filters(query, filters)
         query = query.group_by(rule_decision_table.c.rules_version)
         query = query.order_by(rule_decision_table.c.rules_version)
         session = self._session_factory()
@@ -209,7 +140,7 @@ class RuleReporting:
         # Group on the write-time bucket rather than a database-specific date function ..
         decision_count = func.count(rule_decision_table.c.id)
         query = select(rule_decision_table.c.time_bucket, decision_count)
-        query = _apply_filters(query, filters)
+        query = apply_filters(query, filters)
         query = query.group_by(rule_decision_table.c.time_bucket)
         query = query.order_by(rule_decision_table.c.time_bucket)
         session = self._session_factory()
@@ -231,13 +162,136 @@ class RuleReporting:
 
 # ################################################################################################################################
 
+    def aggregates(self, filters:'DecisionFilter') -> 'DecisionAggregates':
+        """ Every chart aggregate of one selection in one scan, rolled up by key afterwards.
+
+        Outcome, version and hourly counts all summarise the same rows, so they come from one
+        grouped query rather than one scan each, and the average duration is the weighted mean
+        of the same groups - the database sees the selection once per request.
+        """
+        # Group on all three reporting keys at once, carrying enough to average durations ..
+        decision_count = func.count(rule_decision_table.c.id)
+        duration_total = func.sum(rule_decision_table.c.duration_ms)
+        duration_count = func.count(rule_decision_table.c.duration_ms)
+
+        query = select(
+            rule_decision_table.c.outcome,
+            rule_decision_table.c.rules_version,
+            rule_decision_table.c.time_bucket,
+            decision_count,
+            duration_total,
+            duration_count,
+        )
+        query = apply_filters(query, filters)
+        query = query.group_by(
+            rule_decision_table.c.outcome,
+            rule_decision_table.c.rules_version,
+            rule_decision_table.c.time_bucket,
+        )
+        session = self._session_factory()
+
+        # .. one row per key combination, which each reporting key then sums over ..
+        outcome_totals:'count_total_dict' = {}
+        version_totals:'count_total_dict' = {}
+        hourly_totals:'count_total_dict' = {}
+
+        # .. a decision with no recorded duration is left out of the average, the way SQL AVG does ..
+        duration_sum = 0.0
+        durations_seen = 0
+
+        try:
+            for row in session.execute(query):
+                outcome = row[0]
+                rules_version = row[1]
+                time_bucket = row[2]
+                item_count = row[3]
+                group_duration_total = row[4]
+                group_duration_count = row[5]
+
+                add_count(outcome_totals, outcome, item_count)
+                add_count(version_totals, rules_version, item_count)
+                add_count(hourly_totals, time_bucket, item_count)
+
+                # .. a group whose every decision lacks a duration sums to NULL, not to zero.
+                if group_duration_total is not None:
+                    duration_sum += float(group_duration_total)
+                    durations_seen += group_duration_count
+
+        # .. and release the read-only session.
+        finally:
+            session.close()
+
+        has_durations = durations_seen > 0
+
+        if has_durations:
+            average_duration_ms = duration_sum / durations_seen
+        else:
+            average_duration_ms = 0.0
+
+        out = DecisionAggregates(
+            outcomes=count_points(outcome_totals),
+            versions=count_points(version_totals),
+            hourly=count_points(hourly_totals),
+            average_duration_ms=average_duration_ms,
+        )
+        return out
+
+# ################################################################################################################################
+
+    def bucket_counts_by_ruleset(self, *, start_time:'datetime', bucket:'str') -> 'bucket_split_dict':
+        """ Per ruleset, how many decisions landed in one hour bucket and how many elsewhere in a window.
+
+        The spike sweep needs both numbers for every ruleset, and asking per ruleset would run one
+        query per ruleset - one grouped scan answers for all of them.
+        """
+        # Split each ruleset's window into the named bucket and everything else ..
+        bucket_condition = rule_decision_table.c.time_bucket == bucket
+        is_bucket = case((bucket_condition, In_Named_Bucket), else_=Outside_Named_Bucket)
+        decision_count = func.count(rule_decision_table.c.id)
+
+        query = select(rule_decision_table.c.ruleset_id, is_bucket, decision_count)
+        cluster_condition = rule_decision_table.c.cluster_id == default_cluster_id
+        window_condition = rule_decision_table.c.occurred_at >= normalize_utc(start_time)
+        query = query.where(cluster_condition)
+        query = query.where(window_condition)
+        query = query.group_by(rule_decision_table.c.ruleset_id, is_bucket)
+        session = self._session_factory()
+
+        # Our response to produce
+        out:'bucket_split_dict' = {}
+
+        # .. each ruleset contributes at most one row per side of the split ..
+        try:
+            for row in session.execute(query):
+                ruleset_id = row[0]
+                is_named_bucket = row[1]
+                item_count = row[2]
+
+                if ruleset_id not in out:
+                    out[ruleset_id] = BucketSplit()
+
+                split = out[ruleset_id]
+
+                if is_named_bucket == In_Named_Bucket:
+                    split.bucket_count = item_count
+                else:
+                    split.other_count = item_count
+
+        # .. and release the read-only session.
+        finally:
+            session.close()
+
+        return out
+
+# ################################################################################################################################
+
     def average_duration_ms(self, filters:'DecisionFilter') -> 'float':
         """ Returns the average duration over the selected promoted decision headers.
         """
         # Average the promoted duration after applying the same drill-down filters ..
         average_duration = func.avg(rule_decision_table.c.duration_ms)
         query = select(average_duration)
-        query = _apply_filters(query, filters)
+        query = apply_filters(query, filters)
         session = self._session_factory()
 
         # .. map an empty selection to its natural reporting value ..

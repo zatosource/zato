@@ -18,7 +18,7 @@ from .database import SessionFactory
 from .errors import InvalidStoreInputError
 from .records import event_record
 from .schema import rule_event_table
-from .store_common import add_event, get_definition, require_text
+from .store_common import add_event, get_definition, newest_event_id, require_text
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -122,15 +122,38 @@ class EventStore:
 
 # ################################################################################################################################
 
+    def newest_id(self) -> 'int':
+        """ Returns the newest event id in the feed, 0 when the feed is empty.
+
+        A consumer reads this before its own filtered page so it knows how far the feed reached
+        at that moment, which is what lets it move its cursor past events its filters exclude.
+        """
+        session = self._session_factory()
+
+        try:
+            out = newest_event_id(session)
+
+        # .. and release the read-only session.
+        finally:
+            session.close()
+
+        return out
+
+# ################################################################################################################################
+
     def list_since(
         self,
         *,
         since_id:'int',
         definition_id:'int | None' = None,
         event_types:'strlist | None' = None,
+        max_id:'int | None' = None,
         limit:'int' = 100,
         ) -> 'event_record_list':
         """ Returns events newer than a cursor, oldest first, for forward-reading consumers.
+
+        A max_id closes the window at the top, so a caller that read the feed's newest id first
+        knows a short page means it has seen everything its filters match up to that point.
         """
         # Validate pagination before constructing the query ..
         if limit < 1:
@@ -144,6 +167,11 @@ class EventStore:
         # .. everything a consumer reads lies strictly past its cursor ..
         cursor_condition = rule_event_table.c.id > since_id
         query = query.where(cursor_condition)
+
+        # .. and below the ceiling it read beforehand, when it named one ..
+        if max_id is not None:
+            ceiling_condition = rule_event_table.c.id <= max_id
+            query = query.where(ceiling_condition)
 
         # .. add the optional parent and event-type filters ..
         if definition_id is not None:

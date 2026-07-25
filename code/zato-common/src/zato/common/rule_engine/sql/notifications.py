@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # SQLAlchemy
-from sqlalchemy import delete, func, insert, select, update
+from sqlalchemy import delete, insert, select, update
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.exc import IntegrityError
 
@@ -22,17 +22,9 @@ from .data import anydict, chat_config_record_list, destination_record_list, Rul
 from .database import SessionFactory
 from .errors import InvalidStoreInputError, RecordNotFoundError
 from .records import chat_config_record, destination_record, job_cursor_record
-from .schema import rule_chat_config_table, rule_event_table, rule_job_cursor_table, rule_notify_destination_table
-from .store_common import get_definition, require_text
+from .schema import rule_chat_config_table, rule_job_cursor_table, rule_notify_destination_table
+from .store_common import get_definition, newest_event_id, require_text
 from .time_ import utc_now
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if 0:
-    from sqlalchemy.orm import Session
-
-    Session = Session
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -185,7 +177,7 @@ class NotificationStore:
 
                 # .. new destinations only hear about changes made after they were added,
                 # .. so the cursor starts at the newest event already in the feed ..
-                cursor_id = _newest_event_id(session)
+                cursor_id = newest_event_id(session)
 
                 # .. and insert the destination row.
                 values = {
@@ -437,26 +429,6 @@ class NotificationStore:
         # Release the transactional session in every case.
         finally:
             session.close()
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _newest_event_id(session:'Session') -> 'int':
-    """ Returns the newest event id in the caller's transaction, 0 for an empty feed.
-    """
-    query = select(func.max(rule_event_table.c.id))
-    cluster_condition = rule_event_table.c.cluster_id == default_cluster_id
-    query = query.where(cluster_condition)
-    result = session.execute(query)
-    newest_id = result.scalar()
-
-    # An empty feed has no maximum id.
-    if newest_id is None:
-        out = 0
-    else:
-        out = newest_id
-
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -301,6 +301,13 @@ def test_promoted_reporting_drill_down_and_forensics(backend:'RuleSQLBackend') -
     average_duration = backend.reporting.average_duration_ms(filters)
     assert average_duration == 7.0
 
+    # .. the one-scan aggregate the decision log reads answers exactly the same numbers ..
+    aggregates = backend.reporting.aggregates(filters)
+    assert aggregates.outcomes == expected_outcomes
+    assert aggregates.hourly == expected_hours
+    assert aggregates.versions == version_counts
+    assert aggregates.average_duration_ms == average_duration
+
     # .. drill one business-key aggregate down to its exact decision ..
     business_filters = DecisionFilter(ruleset_id=ruleset_id, business_key='application-1003')
     matching_decisions = backend.reporting.list_decisions(business_filters)

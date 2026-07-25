@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # SQLAlchemy
-from sqlalchemy import insert, select
+from sqlalchemy import func, insert, select
 
 # Zato
 from zato.common.defaults import default_cluster_id
@@ -67,6 +67,25 @@ def payload_text(payload:'anydict | None') -> 'str | None':
     # .. while every supplied payload receives the same canonical encoding as rule documents.
     else:
         out = serialize_document(payload)
+
+    return out
+
+# ################################################################################################################################
+
+def newest_event_id(session:'Session') -> 'int':
+    """ Returns the newest event id in the caller's transaction, 0 for an empty feed.
+    """
+    query = select(func.max(rule_event_table.c.id))
+    cluster_condition = rule_event_table.c.cluster_id == default_cluster_id
+    query = query.where(cluster_condition)
+    result = session.execute(query)
+    newest_id = result.scalar()
+
+    # An empty feed has no maximum id.
+    if newest_id is None:
+        out = 0
+    else:
+        out = newest_id
 
     return out
 

@@ -244,6 +244,33 @@ def test_passing_advisory_run_stays_quiet(backend:'any_', slack_address:'any_') 
 
 # ################################################################################################################################
 
+def test_cursor_clears_events_of_other_rulesets(backend:'any_', slack_address:'any_') -> 'None':
+    """ A quiet ruleset's destination moves past a busy neighbour's events instead of rescanning them.
+    """
+    quiet = create_ruleset(backend)
+    busy = create_ruleset(backend, name='Mortgages')
+
+    _ = backend.notifications.add_destination(
+        definition_id=quiet.id,
+        kind='slack',
+        target=_channel,
+        actor=_actor,
+    )
+
+    # The neighbour fills the feed tail with events the destination will never be sent ..
+    for _index in range(3):
+        _ = add_version(backend, busy, Rules_Text_Lower_Bar)
+        busy = backend.definitions.get(busy.id)
+
+    result = run_once(backend)
+    assert result.messages_sent == 0
+
+    # .. yet the cursor already sits at the end of the feed, so the next pass reads nothing.
+    updated = backend.notifications.list_destinations(definition_id=quiet.id)[0]
+    assert updated.cursor_id == backend.events.newest_id()
+
+# ################################################################################################################################
+
 def test_publication_is_delivered_to_teams(backend:'any_', teams_address:'any_') -> 'None':
     """ A published version reaches a Teams channel addressed as 'Team name/Channel name'.
     """

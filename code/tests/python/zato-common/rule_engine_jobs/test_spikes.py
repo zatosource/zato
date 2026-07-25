@@ -68,6 +68,37 @@ def test_a_spike_appends_one_event(backend:'any_') -> 'None':
 
 # ################################################################################################################################
 
+def test_one_sweep_keeps_rulesets_apart(backend:'any_') -> 'None':
+    """ The sweep's single grouped scan keeps each ruleset's counts to itself.
+    """
+    spiking = create_ruleset(backend)
+    steady = create_ruleset(backend, name='Mortgages')
+    now = utc_now()
+    history_time = now - timedelta(hours=3)
+
+    # One ruleset jumps from a typical 10 an hour to 600 ..
+    seed_decisions(backend, spiking.id, occurred_at=history_time, count=240, decision_id_prefix='spiking-history')
+    seed_decisions(backend, spiking.id, occurred_at=now, count=600, decision_id_prefix='spiking-current')
+
+    # .. while its neighbour has been doing 600 an hour all along.
+    seed_decisions(backend, steady.id, occurred_at=history_time, count=14400, decision_id_prefix='steady-history')
+    seed_decisions(backend, steady.id, occurred_at=now, count=600, decision_id_prefix='steady-current')
+
+    spike_count = run_spike_sweep(backend, now)
+    assert spike_count == 1
+
+    spiking_events = _spike_events(backend, spiking.id)
+    assert len(spiking_events) == 1
+
+    payload = json.loads(spiking_events[0].payload)
+    assert payload['count'] == 600
+    assert payload['typical'] == 10
+
+    steady_events = _spike_events(backend, steady.id)
+    assert steady_events == []
+
+# ################################################################################################################################
+
 def test_a_continuing_spike_is_deduplicated(backend:'any_') -> 'None':
     """ The same spike observed by a later sweep produces no second event.
     """

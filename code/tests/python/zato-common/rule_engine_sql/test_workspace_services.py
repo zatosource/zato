@@ -170,6 +170,52 @@ def test_follow_store_and_feed(backend:'RuleSQLBackend') -> 'None':
 
 # ################################################################################################################################
 
+def test_feed_honours_each_follow_clock(backend:'RuleSQLBackend') -> 'None':
+    """ One page of the feed spans every follow, each contributing only what its own clock left out.
+    """
+    first = _create_ruleset(backend)
+    second = _create_ruleset(backend, name='Mortgages')
+
+    # An actor who follows nothing has no feed at all ..
+    assert backend.follows.feed(_actor) == []
+
+    _ = backend.follows.follow(actor=_actor, definition_id=first.id)
+    _ = backend.follows.follow(actor=_actor, definition_id=second.id)
+
+    # .. one event on each followed definition ..
+    for definition in [first, second]:
+        _ = backend.events.append(
+            definition_id=definition.id,
+            version=1,
+            event_type='review.commented',
+            actor=_author,
+            payload={'comment': 'Looks good'},
+        )
+
+    # .. reaches the actor in one page, newest first ..
+    feed = backend.follows.feed(_actor)
+    definition_ids = []
+
+    for event in feed:
+        if event.event_type == 'review.commented':
+            definition_ids.append(event.definition_id)
+
+    assert definition_ids == [second.id, first.id]
+
+    # .. and marking only one of them seen leaves the other's event in place.
+    backend.follows.mark_seen(actor=_actor, definition_id=second.id)
+
+    remaining = backend.follows.feed(_actor)
+    remaining_ids = set()
+
+    for event in remaining:
+        remaining_ids.add(event.definition_id)
+
+    assert second.id not in remaining_ids
+    assert first.id in remaining_ids
+
+# ################################################################################################################################
+
 def test_saved_views_are_per_actor_and_replaceable(backend:'RuleSQLBackend') -> 'None':
     """ Saved views store named filter payloads that saving again replaces.
     """

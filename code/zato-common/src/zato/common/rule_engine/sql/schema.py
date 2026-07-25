@@ -145,6 +145,11 @@ rule_event_table = Table(
 
 _ = Index('re_feed', rule_event_table.c.cluster_id, rule_event_table.c.created_at, rule_event_table.c.id)
 _ = Index('re_parent', rule_event_table.c.definition_id, rule_event_table.c.created_at, rule_event_table.c.id)
+
+# The notify loop reads one destination's slice of the feed by id, not by time, so it needs the id
+# next to the parent - re_parent above sorts by created_at first and cannot serve that scan.
+_ = Index('re_cursor', rule_event_table.c.definition_id, rule_event_table.c.id)
+
 _ = Index(
     're_rollup',
     rule_event_table.c.definition_id,
