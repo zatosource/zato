@@ -12,7 +12,6 @@ from datetime import datetime, timezone
 
 # Zato
 from zato.common.as2.common import Default, MDNMode, TransferMode
-from zato.common.typing_ import optional
 from zato.common.util.xml_.keystore import is_certificate_time_valid
 
 # ################################################################################################################################
@@ -31,9 +30,8 @@ if 0:
 # ################################################################################################################################
 
 #  Type aliases
-certificatenone = optional['Certificate']
-httpauthnone    = optional['HTTPAuth']
-partnershipnone = optional['Partnership']
+certificate_entry_list = list['CertificateEntry']
+partnership_list       = list['Partnership']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -67,16 +65,11 @@ class CertificateEntry:
     so a partner's certificates form a list - the Dashboard merely presents the common case
     as one active certificate plus one next-certificate with its activation date.
     """
-    certificate: 'certificatenone' = None
+    certificate: 'Certificate | None' = None
 
     # The window this entry is accepted in - either end left empty means unbounded on that side.
     valid_from:  'dtnone' = None
     valid_until: 'dtnone' = None
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-certificate_entry_list = list[CertificateEntry]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -143,7 +136,7 @@ class Partnership:
     preserve_filename: bool = False
 
     # Optional HTTP basic authentication for outgoing requests.
-    http_auth: 'httpauthnone' = None
+    http_auth: 'HTTPAuth | None' = None
 
     # HTTP behavior for outbound requests.
     http_timeout_seconds: int = Default.HTTP_Timeout_Seconds
@@ -182,11 +175,6 @@ class Partnership:
     # log stored. Duplicate detection keeps working either way - it has its own table and replay
     # protection is not something a logging preference gets to switch off.
     is_audit_log_active: bool = True
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-partnership_list = list[Partnership]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -247,7 +235,7 @@ def unquote_as2_identifier(value:'str') -> 'str':
 
 # ################################################################################################################################
 
-def match_partnership(partnerships:'partnership_list', as2_from:'str', as2_to:'str') -> 'partnershipnone':
+def match_partnership(partnerships:'partnership_list', as2_from:'str', as2_to:'str') -> 'Partnership | None':
     """ Finds the partnership an incoming message belongs to. The message's AS2-From is the partner
     and its AS2-To is us, so the fields compare crosswise against the outbound-oriented partnership.
     """
@@ -263,7 +251,7 @@ def match_partnership(partnerships:'partnership_list', as2_from:'str', as2_to:'s
 
 # ################################################################################################################################
 
-def is_certificate_entry_active(entry:'CertificateEntry', now:'dtnone'=None) -> 'bool':
+def is_certificate_entry_active(entry:'CertificateEntry', now:'dtnone' = None) -> 'bool':
     """ Tells whether a certificate entry is in service at the given moment - both its configured
     rotation window and the certificate's own notBefore and notAfter dates have to cover it.
     An empty end of the configured window means unbounded on that side.
@@ -298,7 +286,7 @@ def is_certificate_entry_active(entry:'CertificateEntry', now:'dtnone'=None) -> 
 
 # ################################################################################################################################
 
-def active_verification_certificates(partnership:'Partnership', now:'dtnone'=None) -> 'certificate_list':
+def active_verification_certificates(partnership:'Partnership', now:'dtnone' = None) -> 'certificate_list':
     """ Returns every partner certificate an inbound signature may currently verify against -
     during a rotation window that is more than one, because the old and the new certificate
     are both live until the migration completes.
@@ -318,7 +306,7 @@ def active_verification_certificates(partnership:'Partnership', now:'dtnone'=Non
 
 # ################################################################################################################################
 
-def select_encryption_certificate(partnership:'Partnership', now:'dtnone'=None) -> 'certificatenone':
+def select_encryption_certificate(partnership:'Partnership', now:'dtnone' = None) -> 'Certificate | None':
     """ Returns the partner certificate outgoing encryption is to use right now. Among the currently
     valid entries the most recently activated one wins, so a next-certificate whose activation date
     has passed supersedes the one it replaces, while entries without an activation date
@@ -328,7 +316,7 @@ def select_encryption_certificate(partnership:'Partnership', now:'dtnone'=None) 
         now = datetime.now(timezone.utc)
 
     # Our response to produce
-    out:'certificatenone' = None
+    out:'Certificate | None' = None
 
     # The activation moment the current best candidate came in with.
     best_activated:'dtnone' = None

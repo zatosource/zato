@@ -7,8 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.api import AS2, GENERIC
 from zato.cli.enmasse.importers.generic import GenericConnectionImporter
+from zato.common.api import AS2, GENERIC
 
 # ################################################################################################################################
 # ################################################################################################################################

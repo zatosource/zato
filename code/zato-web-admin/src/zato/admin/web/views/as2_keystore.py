@@ -65,7 +65,8 @@ def get_expiry_info(cert_chain:'str') -> 'anydict':
         return out
 
     try:
-        certificates = load_certificates_pem(cert_chain.encode('utf8'))
+        cert_chain_bytes = cert_chain.encode('utf8')
+        certificates = load_certificates_pem(cert_chain_bytes)
 
     # The chain is user-pasted text - anything that is not PEM is simply not displayed.
     except ValueError:
@@ -138,9 +139,12 @@ def save(req:'any_') -> 'JsonResponse':
 
         # The traceback goes to the log, where an administrator can read it, rather than to the
         # browser - it names internal paths and configuration that the page has no use for.
-        logger.error('Keystore could not be saved, e:`%s`', format_exc())
+        exception_text = format_exc()
+        logger.error('Keystore could not be saved, e:`%s`', exception_text)
 
-        out = JsonResponse({'is_ok': False, 'message': _save_error_message}, status=INTERNAL_SERVER_ERROR)
+        response_data = {'is_ok': False, 'message': _save_error_message}
+        out = JsonResponse(response_data, status=INTERNAL_SERVER_ERROR)
+
         return out
 
     if not response.ok:

@@ -15,7 +15,6 @@ from http.client import OK
 
 # Zato
 from zato.common.as2.common import Default
-from zato.common.typing_ import optional
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,12 +36,7 @@ if 0:
 # ################################################################################################################################
 
 #  Type aliases
-certificatenone     = optional['Certificate']
-dispositionnone     = optional['Disposition']
-keystorenone        = optional['Keystore']
-partnershipnone     = optional['Partnership']
-payload_list        = list['InboundPayload']
-pendingasyncmdnnone = optional['PendingAsyncMDN']
+payload_list = list['InboundPayload']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -127,7 +121,7 @@ class InboundResult:
     ediint_features: str = ''
 
     # The partnership the message matched.
-    partnership: 'partnershipnone' = None
+    partnership: 'Partnership | None' = None
 
     # The MIC computed over the received content, in its wire form.
     mic: str = ''
@@ -136,7 +130,7 @@ class InboundResult:
     payloads: 'payload_list'
 
     # The certificate that signed the message, when it arrived signed.
-    signer_certificate: 'certificatenone' = None
+    signer_certificate: 'Certificate | None' = None
 
     # Whether the message was recognized as a replay - the stored MDN is re-transmitted
     # as it is and the payloads are not delivered a second time.
@@ -148,10 +142,10 @@ class InboundResult:
 
     # The disposition the MDN was built with - clean processing or the matching error,
     # kept on the result so the caller can record it as delivery evidence.
-    disposition: 'dispositionnone' = None
+    disposition: 'Disposition | None' = None
 
     # The MDN to deliver asynchronously, when the sender asked for one.
-    pending_async_mdn: 'pendingasyncmdnnone' = None
+    pending_async_mdn: 'PendingAsyncMDN | None' = None
 
 # ################################################################################################################################
 # ################################################################################################################################

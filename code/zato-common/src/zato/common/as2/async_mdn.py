@@ -81,16 +81,20 @@ metadata = MetaData()
 
 # Row identifiers are 64-bit, except under SQLite where the autoincrement
 # primary key must be a plain INTEGER to become an alias of the built-in rowid.
-_id_column_type = BigInteger().with_variant(Integer(), 'sqlite')
+_sqlite_id_column_type = Integer()
+_id_column_type = BigInteger().with_variant(_sqlite_id_column_type, 'sqlite')
 
-async_mdn_table = Table('as2_async_mdn', metadata,
+_short_column = String(_short_column_len)
+_url_column = String(_url_column_len)
+
+_async_mdn_columns = [
     Column('id', _id_column_type, primary_key=True, autoincrement=True),
-    Column('as2_from', String(_short_column_len)),
-    Column('as2_to', String(_short_column_len)),
-    Column('message_id', String(_short_column_len)),
-    Column('channel_name', String(_short_column_len)),
-    Column('cid', String(_short_column_len)),
-    Column('url', String(_url_column_len)),
+    Column('as2_from', _short_column),
+    Column('as2_to', _short_column),
+    Column('message_id', _short_column),
+    Column('channel_name', _short_column),
+    Column('cid', _short_column),
+    Column('url', _url_column),
     Column('body', LargeBinary),
     Column('headers', Text),
 
@@ -102,8 +106,8 @@ async_mdn_table = Table('as2_async_mdn', metadata,
     # How many attempts were already made and when the next one is due, which is what
     # turns the table into a queue.
     Column('attempt_count', Integer),
-    Column('next_attempt_iso', String(_short_column_len)),
-    Column('created_iso', String(_short_column_len)),
+    Column('next_attempt_iso', _short_column),
+    Column('created_iso', _short_column),
 
     UniqueConstraint('as2_from', 'as2_to', 'message_id', name='uq_as2_async_mdn_message'),
 
@@ -111,7 +115,9 @@ async_mdn_table = Table('as2_async_mdn', metadata,
     # would otherwise read the whole table on every run.
     Index('idx_as2_async_mdn_next_attempt', 'next_attempt_iso'),
     Index('idx_as2_async_mdn_created', 'created_iso'),
-)
+]
+
+async_mdn_table = Table('as2_async_mdn', metadata, *_async_mdn_columns)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -163,7 +169,7 @@ class AsyncMDNQueue:
     """ The persisted queue of asynchronous MDNs awaiting delivery.
     """
 
-    def __init__(self, engine:'Engine | None'=None) -> 'None':
+    def __init__(self, engine:'Engine | None' = None) -> 'None':
 
         # The queue shares the audit log's database unless the caller brought its own engine.
         if engine is None:
@@ -186,7 +192,7 @@ class AsyncMDNQueue:
         pending:'PendingAsyncMDN',
         channel_name:'str',
         cid:'str',
-        now:'datetime | None'=None,
+        now:'datetime | None' = None,
         ) -> 'int':
         """ Persists one receipt as due immediately, returning the row id it can be completed by.
 
@@ -206,22 +212,24 @@ class AsyncMDNQueue:
         else:
             verify_tls = 0
 
+        values = {
+            'as2_from': as2_from,
+            'as2_to': as2_to,
+            'message_id': message_id,
+            'channel_name': channel_name,
+            'cid': cid,
+            'url': pending.url,
+            'body': pending.body,
+            'headers': headers_json,
+            'verify_tls': verify_tls,
+            'timeout_seconds': pending.timeout_seconds,
+            'attempt_count': 0,
+            'next_attempt_iso': now_iso,
+            'created_iso': now_iso,
+        }
+
         insert = async_mdn_table.insert()
-        insert_statement = insert.values(
-            as2_from=as2_from,
-            as2_to=as2_to,
-            message_id=message_id,
-            channel_name=channel_name,
-            cid=cid,
-            url=pending.url,
-            body=pending.body,
-            headers=headers_json,
-            verify_tls=verify_tls,
-            timeout_seconds=pending.timeout_seconds,
-            attempt_count=0,
-            next_attempt_iso=now_iso,
-            created_iso=now_iso,
-        )
+        insert_statement = insert.values(**values)
 
         # A constraint violation means this message's receipt is already in the queue.
         try:
@@ -239,7 +247,8 @@ class AsyncMDNQueue:
     def get(self, row_id:'int') -> 'QueuedAsyncMDN | None':
         """ Returns one queued receipt by its row id, or None when it was already delivered.
         """
-        statement = self._new_select().where(async_mdn_table.c.id == row_id)
+        base_select = self._new_select()
+        statement = base_select.where(async_mdn_table.c.id == row_id)
 
         with self.engine.connect() as connection:
             result = connection.execute(statement)
@@ -253,7 +262,7 @@ class AsyncMDNQueue:
 
 # ################################################################################################################################
 
-    def due(self, now:'datetime', limit:'int'=AS2.Async_MDN.Batch_Size) -> 'queued_async_mdn_list':
+    def due(self, now:'datetime', limit:'int' = AS2.Async_MDN.Batch_Size) -> 'queued_async_mdn_list':
         """ Returns the receipts whose next attempt is due, oldest first, up to one batch.
 
         The batch is what keeps a long outage from turning the drain into a run over the whole
@@ -261,9 +270,10 @@ class AsyncMDNQueue:
         """
         now_iso = now.isoformat()
 
-        statement = self._new_select().where(
-            async_mdn_table.c.next_attempt_iso <= now_iso,
-        ).order_by(async_mdn_table.c.next_attempt_iso).limit(limit)
+        base_select = self._new_select()
+        is_due = async_mdn_table.c.next_attempt_iso <= now_iso
+
+        statement = base_select.where(is_due).order_by(async_mdn_table.c.next_attempt_iso).limit(limit)
 
         with self.engine.connect() as connection:
             result = connection.execute(statement)
@@ -295,13 +305,15 @@ class AsyncMDNQueue:
     def reschedule(self, row_id:'int', attempt_count:'int', now:'datetime') -> 'datetime':
         """ Records one failed attempt and returns when the next one is due.
         """
-        next_attempt = now + get_retry_delay(attempt_count)
+        retry_delay = get_retry_delay(attempt_count)
+        next_attempt = now + retry_delay
+        next_attempt_iso = next_attempt.isoformat()
+
+        values = {'attempt_count': attempt_count, 'next_attempt_iso': next_attempt_iso}
 
         update = async_mdn_table.update()
-        update_statement = update.where(async_mdn_table.c.id == row_id).values(
-            attempt_count=attempt_count,
-            next_attempt_iso=next_attempt.isoformat(),
-        )
+        update_by_id = update.where(async_mdn_table.c.id == row_id)
+        update_statement = update_by_id.values(**values)
 
         with self.engine.begin() as connection:
             _ = connection.execute(update_statement)
@@ -327,7 +339,12 @@ class AsyncMDNQueue:
         out = result.rowcount
 
         if out:
-            suffix = 'receipt' if out == 1 else 'receipts'
+
+            if out == 1:
+                suffix = 'receipt'
+            else:
+                suffix = 'receipts'
+
             logger.warning('AS2 async MDN queue dropped %d undelivered %s older than %s', out, suffix, cutoff_iso)
 
         return out
@@ -387,13 +404,14 @@ def post_async_mdn(item:'QueuedAsyncMDN') -> 'int':
     with. The timeout is what keeps a destination that accepts the connection and then says
     nothing from holding the caller for as long as it likes.
     """
-    response = httpx.post(
-        item.url,
-        content=item.body,
-        headers=item.headers,
-        timeout=item.timeout_seconds,
-        verify=item.verify_tls,
-    )
+    options = {
+        'content': item.body,
+        'headers': item.headers,
+        'timeout': item.timeout_seconds,
+        'verify': item.verify_tls,
+    }
+
+    response = httpx.post(item.url, **options)
 
     out = response.status_code
     return out
@@ -438,15 +456,22 @@ def deliver(queue:'AsyncMDNQueue', item:'QueuedAsyncMDN', post:'callable_', now:
     # An attempt past the ceiling is given up on, loudly - the receipt is gone and the audit log
     # is where the operator sees that the peer never got it.
     if attempt_count >= AS2.Async_MDN.Max_Attempts:
-        logger.error('AS2 async MDN for message `%s` given up on after %d attempts to `%s`; cid:%s',
-            item.message_id, attempt_count, item.url, item.cid)
+
+        if attempt_count == 1:
+            attempt_suffix = 'attempt'
+        else:
+            attempt_suffix = 'attempts'
+
+        logger.error('AS2 async MDN for message `%s` given up on after %d %s to `%s`; cid:%s',
+            item.message_id, attempt_count, attempt_suffix, item.url, item.cid)
         queue.complete(item.id)
         return False
 
     next_attempt = queue.reschedule(item.id, attempt_count, now)
+    next_attempt_iso = next_attempt.isoformat()
 
     logger.info('AS2 async MDN for message `%s` rescheduled to %s after attempt %d; cid:%s',
-        item.message_id, next_attempt.isoformat(), attempt_count, item.cid)
+        item.message_id, next_attempt_iso, attempt_count, item.cid)
 
     return False
 

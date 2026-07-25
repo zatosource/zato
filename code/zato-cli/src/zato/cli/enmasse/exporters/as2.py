@@ -87,10 +87,13 @@ class AS2Exporter:
 
         if not db_as2:
             logger.info('No outgoing AS2 connection definitions found in DB')
+
             return out
 
         as2_connections = to_json(db_as2, return_as_dict=True)
-        logger.debug('Processing %d outgoing AS2 connection definitions', len(as2_connections))
+        as2_connection_count = len(as2_connections)
+
+        logger.debug('Processing %d outgoing AS2 connection definitions', as2_connection_count)
 
         for row in as2_connections:
 
@@ -130,7 +133,8 @@ class AS2Exporter:
 
             out.append(item)
 
-        logger.info('Successfully prepared %d outgoing AS2 connection definitions for export', len(out))
+        prepared_count = len(out)
+        logger.info('Successfully prepared %d outgoing AS2 connection definitions for export', prepared_count)
 
         return out
 

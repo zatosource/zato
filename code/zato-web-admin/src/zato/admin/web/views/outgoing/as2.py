@@ -135,7 +135,8 @@ class _CreateEdit(CreateEdit):
 
         # Checkboxes arrive as 'on' or not at all - the backend expects real booleans ..
         for name in _as2_bool_field_names:
-            input_dict[name] = bool(input_dict.get(name))
+            value = input_dict.get(name)
+            input_dict[name] = bool(value)
 
         # .. numeric fields arrive as strings, with an empty input meaning zero,
         # which keeps the partnership's own default in place ..

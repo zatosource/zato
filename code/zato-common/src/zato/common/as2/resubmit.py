@@ -173,17 +173,15 @@ def resend(event:'StoredEvent', send:'callable_', reconciler:'MDNReconciler', ci
     # above are what a further resubmit works from.
     first_text = first_data.decode('utf8', 'replace')
 
-    record_send_result(
-        reconciler,
-        as2_from,
-        as2_to,
-        out,
-        payload=first_text,
-        filename=first_filename,
-        cid=cid,
-        correl_id=event.cid,
-        payloads=payloads,
-    )
+    values = {
+        'payload': first_text,
+        'filename': first_filename,
+        'cid': cid,
+        'correl_id': event.cid,
+        'payloads': payloads,
+    }
+
+    record_send_result(reconciler, as2_from, as2_to, out, **values)
 
     return out
 
@@ -279,18 +277,16 @@ def reprocess(
     first_text = first_data.decode('utf8', 'replace')
 
     # The new attempt becomes its own event, linked to the original by its CID.
-    record_message_received(
-        audit_log,
-        as2_from,
-        as2_to,
-        event.msg_id,
-        payload=first_text,
-        filename=first_filename,
-        content_type=first_content_type,
-        cid=cid,
-        correl_id=event.cid,
-        payloads=payloads,
-    )
+    values = {
+        'payload': first_text,
+        'filename': first_filename,
+        'content_type': first_content_type,
+        'cid': cid,
+        'correl_id': event.cid,
+        'payloads': payloads,
+    }
+
+    record_message_received(audit_log, as2_from, as2_to, event.msg_id, **values)
 
     return out
 

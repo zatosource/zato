@@ -376,7 +376,7 @@ class TestMDNModes:
 
     def test_no_mdn_requested(self, parties:'TestParties') -> 'None':
         exchange = new_exchange(parties)
-        exchange.sender_partnership.mdn_mode = MDNMode.None_
+        exchange.sender_partnership.mdn_mode = MDNMode.Not_Requested
 
         result = do_send(exchange)
 

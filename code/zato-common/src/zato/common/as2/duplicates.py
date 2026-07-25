@@ -58,23 +58,28 @@ metadata = MetaData()
 
 # Row identifiers are 64-bit, except under SQLite where the autoincrement
 # primary key must be a plain INTEGER to become an alias of the built-in rowid.
-_id_column_type = BigInteger().with_variant(Integer(), 'sqlite')
+_sqlite_id_column_type = Integer()
+_id_column_type = BigInteger().with_variant(_sqlite_id_column_type, 'sqlite')
 
-duplicate_table = Table('as2_duplicate', metadata,
+_short_column = String(_short_column_len)
+
+_duplicate_columns = [
     Column('id', _id_column_type, primary_key=True, autoincrement=True),
-    Column('as2_from', String(_short_column_len)),
-    Column('as2_to', String(_short_column_len)),
-    Column('message_id', String(_short_column_len)),
+    Column('as2_from', _short_column),
+    Column('as2_to', _short_column),
+    Column('message_id', _short_column),
     Column('status_code', Integer),
     Column('body', LargeBinary),
     Column('headers', Text),
-    Column('created_iso', String(_short_column_len)),
+    Column('created_iso', _short_column),
     UniqueConstraint('as2_from', 'as2_to', 'message_id', name='uq_as2_duplicate_message'),
 
     # Retention deletes on the creation time, which without this index means reading
     # the whole table on every run.
     Index('idx_as2_duplicate_created', 'created_iso'),
-)
+]
+
+duplicate_table = Table('as2_duplicate', metadata, *_duplicate_columns)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -86,7 +91,11 @@ class DuplicateStore:
     and the angle brackets are already stripped by the inbound pipeline.
     """
 
-    def __init__(self, window_days:'int'=AS2.Default.Duplicate_Window_Days, engine:'Engine | None'=None) -> 'None':
+    def __init__(
+        self,
+        window_days:'int' = AS2.Default.Duplicate_Window_Days,
+        engine:'Engine | None' = None,
+        ) -> 'None':
 
         self.window_days = window_days
 
@@ -113,15 +122,17 @@ class DuplicateStore:
         """ Returns the stored MDN of an earlier delivery of the same message, or None
         when the message was never seen - the is_duplicate callable of the inbound pipeline.
         """
+        conditions = and_(
+            duplicate_table.c.as2_from == as2_from,
+            duplicate_table.c.as2_to == as2_to,
+            duplicate_table.c.message_id == message_id,
+        )
+
         statement = select(
             duplicate_table.c.status_code,
             duplicate_table.c.body,
             duplicate_table.c.headers,
-        ).where(and_(
-            duplicate_table.c.as2_from == as2_from,
-            duplicate_table.c.as2_to == as2_to,
-            duplicate_table.c.message_id == message_id,
-        ))
+        ).where(conditions)
 
         with self.engine.connect() as connection:
             result = connection.execute(statement)
@@ -166,16 +177,18 @@ class DuplicateStore:
         created_iso = now.isoformat()
         headers_json = dumps(headers)
 
+        values = {
+            'as2_from': as2_from,
+            'as2_to': as2_to,
+            'message_id': message_id,
+            'status_code': status_code,
+            'body': body,
+            'headers': headers_json,
+            'created_iso': created_iso,
+        }
+
         insert = duplicate_table.insert()
-        insert_statement = insert.values(
-            as2_from=as2_from,
-            as2_to=as2_to,
-            message_id=message_id,
-            status_code=status_code,
-            body=body,
-            headers=headers_json,
-            created_iso=created_iso,
-        )
+        insert_statement = insert.values(**values)
 
         # A constraint violation means somebody else already claimed this very triple.
         try:
@@ -211,9 +224,17 @@ class DuplicateStore:
         with self.engine.begin() as connection:
             result = connection.execute(delete_statement)
 
-        if result.rowcount:
-            suffix = 'row' if result.rowcount == 1 else 'rows'
-            logger.info('AS2 duplicate store retention deleted %d %s older than %s', result.rowcount, suffix, cutoff_iso)
+        deleted_count = result.rowcount
+
+        if deleted_count:
+
+            if deleted_count == 1:
+                suffix = 'row'
+            else:
+                suffix = 'rows'
+
+            logger.info(
+                'AS2 duplicate store retention deleted %d %s older than %s', deleted_count, suffix, cutoff_iso)
 
 # ################################################################################################################################
 # ################################################################################################################################

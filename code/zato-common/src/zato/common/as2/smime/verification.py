@@ -54,8 +54,6 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-certificatelistnone = optional['certificate_list']
-derelementnone      = optional['DERElement']
 
 # How many parts a multipart/signed body splits into at its boundary - the preamble,
 # the signed entity, the signature and the epilogue after the closing delimiter.
@@ -119,7 +117,7 @@ def _split_signed(body:'bytes', boundary:'str') -> 'anytuple':
 
 # ################################################################################################################################
 
-def _read_attribute(der:'bytes', signed_attributes:'DERElement', type_oid:'bytes') -> 'derelementnone':
+def _read_attribute(der:'bytes', signed_attributes:'DERElement', type_oid:'bytes') -> 'DERElement | None':
     """ Finds the first value of the given attribute among the signed attributes, when it is present.
     """
     for attribute in der_children(der, signed_attributes):
@@ -200,7 +198,7 @@ def _find_signer_certificate(
     serial_number:'int',
     attached:'certificate_list',
     keystore:'Keystore',
-    accepted_certificates:'certificatelistnone',
+    accepted_certificates:'certificate_list | None',
     ) -> 'Certificate':
     """ Finds the certificate a signer identifier names, among the ones attached to the signature
     and the configured trust material.
@@ -235,7 +233,7 @@ def _check_signer_is_trusted(
     signer_certificate:'Certificate',
     attached:'certificate_list',
     keystore:'Keystore',
-    accepted_certificates:'certificatelistnone',
+    accepted_certificates:'certificate_list | None',
     ) -> 'None':
     """ Decides whether a cryptographically valid signature came from a signer we trust.
     """
@@ -268,7 +266,7 @@ def _verify_signed_data(
     content:'bytes',
     der:'bytes',
     keystore:'Keystore',
-    accepted_certificates:'certificatelistnone' = None,
+    accepted_certificates:'certificate_list | None' = None,
     ) -> 'anytuple':
     """ Walks a CMS SignedData structure per RFC 5652: extracts the signer's certificate
     and signed attributes, checks the content digest and verifies the signature value.
@@ -372,7 +370,7 @@ def _verify_signed_data(
 def verify(
     part:'SMIMEPart',
     keystore:'Keystore',
-    accepted_certificates:'certificatelistnone' = None,
+    accepted_certificates:'certificate_list | None' = None,
     ) -> 'VerifyResult':
     """ Verifies a detached multipart/signed entity and returns what was signed, by whom
     and with which digest algorithm. Raises AS2SecurityException with integrity-check-failed

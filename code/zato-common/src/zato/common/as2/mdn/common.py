@@ -15,7 +15,6 @@ from dataclasses import dataclass
 # Zato
 from zato.common.as2.common import Default
 from zato.common.crypto.api import CryptoManager
-from zato.common.typing_ import optional
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -23,20 +22,10 @@ from zato.common.typing_ import optional
 if 0:
     from cryptography.x509 import Certificate
     from zato.common.typing_ import strlist
-    from zato.common.util.xml_.keystore import certificate_list, Keystore
-    certificate_list = certificate_list
+    from zato.common.util.xml_.keystore import Keystore
     Certificate = Certificate
     Keystore = Keystore
     strlist = strlist
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-#  Type aliases
-certificatenone     = optional['Certificate']
-certificatelistnone = optional['certificate_list']
-keystorenone        = optional['Keystore']
-signingconfignone   = optional['MDNSigningConfig']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -158,7 +147,7 @@ class MDNDetails:
 
     # Whether the MDN arrived signed and, if so, who signed it.
     is_signed: bool = False
-    signer_certificate: 'certificatenone' = None
+    signer_certificate: 'Certificate | None' = None
 
     # The human-readable first part of the report.
     text: str = ''
@@ -188,16 +177,6 @@ def normalize_message_id(value:'str') -> 'str':
     if out.endswith('>'):
         out = out[:-1]
 
-    return out
-
-# ################################################################################################################################
-
-def new_boundary() -> 'str':
-    """ Returns a fresh MIME boundary.
-    """
-    suffix = CryptoManager.generate_hex_string()
-
-    out = f'=-zato-{suffix}'
     return out
 
 # ################################################################################################################################
