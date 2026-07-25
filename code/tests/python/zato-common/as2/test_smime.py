@@ -17,10 +17,11 @@ from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption,
 import pytest
 
 # Zato
-from zato.common.as2 import smime
 from zato.common.as2.common import AS2Error, AS2MalformedCMSException, AS2ProtocolException, AS2SecurityException, \
     EncryptionAlgorithm
-from zato.common.as2.smime import compress, decompress, decrypt, encrypt, new_part, serialize_part, sign, verify
+from zato.common.as2.smime import compress, compression, decompress, decrypt, encrypt, new_part, serialize_part, \
+    sign, verify
+from zato.common.as2.smime.der import Max_BER_Depth, to_definite_der
 from zato.common.util.xml_.keystore import DecryptionEntry, new_keystore
 
 # ################################################################################################################################
@@ -561,8 +562,8 @@ class TestDecompressionBounds:
 
         # A ceiling low enough to cross without building a genuinely huge input, so the test
         # exercises the same code path a real bomb would take.
-        monkeypatch.setattr(smime, '_max_decompressed_bytes', 1024)
-        monkeypatch.setattr(smime, '_decompression_chunk_size', 256)
+        monkeypatch.setattr(compression, 'Max_Decompressed_Bytes', 1024)
+        monkeypatch.setattr(compression, '_decompression_chunk_size', 256)
 
         # A megabyte of zero bytes compresses to about a kilobyte, which is the shape
         # of the attack - a small request expanding without limit on the receiving side.
@@ -581,7 +582,7 @@ class TestDecompressionBounds:
 
         # The chunk size is deliberately smaller than the content, so the inflate loop
         # runs several rounds and its chunk-joining is exercised.
-        monkeypatch.setattr(smime, '_decompression_chunk_size', 64)
+        monkeypatch.setattr(compression, '_decompression_chunk_size', 64)
 
         payload = _edi_payload * 100
         part = new_part(payload, _edi_content_type)
@@ -704,10 +705,10 @@ class TestBERNestingBounds:
         return out
 
     def test_deeply_nested_ber_is_rejected_before_the_stack_runs_out(self) -> 'None':
-        der = self._nested_indefinite_der(smime._max_ber_depth + 10)
+        der = self._nested_indefinite_der(Max_BER_Depth + 10)
 
         with pytest.raises(AS2MalformedCMSException) as exception_info:
-            _ = smime._to_definite_der(der)
+            _ = to_definite_der(der)
 
         assert 'deeper than the maximum' in str(exception_info.value)
 
@@ -716,7 +717,7 @@ class TestBERNestingBounds:
     def test_nesting_within_the_limit_is_normalized(self) -> 'None':
         der = self._nested_indefinite_der(4)
 
-        normalized = smime._to_definite_der(der)
+        normalized = to_definite_der(der)
 
         # The indefinite-length markers and their end-of-contents octets are gone.
         assert b'\x30\x80' not in normalized
@@ -725,7 +726,7 @@ class TestBERNestingBounds:
 # ################################################################################################################################
 
     def test_a_deeply_nested_entity_yields_a_clean_protocol_error(self) -> 'None':
-        der = self._nested_indefinite_der(smime._max_ber_depth + 10)
+        der = self._nested_indefinite_der(Max_BER_Depth + 10)
 
         # The pipeline reaches the normalizer through decompress and decrypt alike,
         # and the answer is a disposition modifier rather than an unhandled error.
