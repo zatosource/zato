@@ -1430,6 +1430,47 @@ $.fn.zato.to_bool = function(item) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+$.fn.zato.new_remove_icon_config = {
+    size: 14,
+    namespace: 'http://www.w3.org/2000/svg',
+    stroke_width: '2.5'
+};
+
+// Builds the icon a remove badge carries. Callers used to write a lowercase x, which is a letter
+// standing in for a pictogram - the stylesheet even carried a bottom padding to correct for where
+// that letter's ink sits inside its em box. The icon is lucide's own x, built as elements rather
+// than fetched, so a screen that has no lucide script of its own still gets it.
+$.fn.zato.new_remove_icon = function() {
+
+    var config = $.fn.zato.new_remove_icon_config;
+
+    var icon = document.createElementNS(config.namespace, 'svg');
+    icon.setAttribute('width', config.size);
+    icon.setAttribute('height', config.size);
+    icon.setAttribute('viewBox', '0 0 24 24');
+    icon.setAttribute('fill', 'none');
+    icon.setAttribute('stroke', 'currentColor');
+    icon.setAttribute('stroke-width', config.stroke_width);
+    icon.setAttribute('stroke-linecap', 'round');
+    icon.setAttribute('stroke-linejoin', 'round');
+
+    // The link around it already names itself to a screen reader.
+    icon.setAttribute('aria-hidden', 'true');
+
+    var first_stroke = document.createElementNS(config.namespace, 'path');
+    first_stroke.setAttribute('d', 'M18 6 6 18');
+
+    var second_stroke = document.createElementNS(config.namespace, 'path');
+    second_stroke.setAttribute('d', 'm6 6 12 12');
+
+    icon.appendChild(first_stroke);
+    icon.appendChild(second_stroke);
+
+    return icon;
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.like_bool = function(item) {
     var s = new String(item).toLowerCase();
     if (s == "true" || s == "on" || s == "false") {

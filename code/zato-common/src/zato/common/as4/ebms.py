@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from lxml import etree
 
 # Zato
-from zato.common.as4.common import Default, NS, Severity
+from zato.common.as4.common import AS4ProtocolException, Default, EbMSError, Severity, NS
 from zato.common.crypto.api import CryptoManager
 from zato.common.util.xml_.core import element_attribute, element_text, qname, utc_timestamp
 from zato.common.util.xml_.mime_ import part_list
@@ -456,6 +456,19 @@ class MessagingDetails:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _require(parent:'any_', element_name:'str', description:'str') -> 'any_':
+    """ Returns a child element that the ebMS 3.0 schema makes mandatory, or raises EBMS:0009,
+    which is the error code the specification assigns to a malformed header.
+    """
+    out = parent.find(element_name)
+
+    if out is None:
+        raise AS4ProtocolException(EbMSError.Invalid_Header, f'Message has no {description}')
+
+    return out
+
+# ################################################################################################################################
+
 def _text_of(parent:'any_', tag:'str') -> 'str':
     """ Returns the text of a child element in the ebMS namespace, or an empty string if absent.
     """
@@ -483,31 +496,31 @@ def _parse_user_message(user_message:'any_') -> 'UserMessageDetails':
     if mpc := user_message.get('mpc'):
         out.mpc = mpc
 
-    message_information = user_message.find(_message_information_name)
+    message_information = _require(user_message, _message_information_name, 'eb:MessageInfo')
     out.message_id = _text_of(message_information, 'MessageId')
     out.timestamp = _text_of(message_information, 'Timestamp')
 
-    party_information = user_message.find(_party_information_name)
+    party_information = _require(user_message, _party_information_name, 'eb:PartyInfo')
 
-    from_element = party_information.find(_from_name)
-    from_party_id = from_element.find(_party_id_name)
+    from_element = _require(party_information, _from_name, 'eb:From')
+    from_party_id = _require(from_element, _party_id_name, 'eb:From/eb:PartyId')
     out.from_party = element_text(from_party_id)
     out.from_party_type = from_party_id.get('type')
     out.from_role = _text_of(from_element, 'Role')
 
-    to_element = party_information.find(_to_name)
-    to_party_id = to_element.find(_party_id_name)
+    to_element = _require(party_information, _to_name, 'eb:To')
+    to_party_id = _require(to_element, _party_id_name, 'eb:To/eb:PartyId')
     out.to_party = element_text(to_party_id)
     out.to_party_type = to_party_id.get('type')
     out.to_role = _text_of(to_element, 'Role')
 
-    collaboration_information = user_message.find(_collaboration_information_name)
+    collaboration_information = _require(user_message, _collaboration_information_name, 'eb:CollaborationInfo')
 
     agreement_ref = collaboration_information.find(_agreement_ref_name)
     if agreement_ref is not None:
         out.agreement = agreement_ref.text
 
-    service = collaboration_information.find(_service_name)
+    service = _require(collaboration_information, _service_name, 'eb:Service')
     out.service = element_text(service)
     out.service_type = service.get('type')
     out.action = _text_of(collaboration_information, 'Action')
@@ -566,7 +579,7 @@ def _parse_signal(signal:'any_') -> 'SignalDetails':
     out.receipt_references = []
     out.errors = []
 
-    message_information = signal.find(_message_information_name)
+    message_information = _require(signal, _message_information_name, 'eb:MessageInfo')
     out.message_id = _text_of(message_information, 'MessageId')
     out.timestamp = _text_of(message_information, 'Timestamp')
 
@@ -612,6 +625,25 @@ def _parse_signal(signal:'any_') -> 'SignalDetails':
 
 # ################################################################################################################################
 
+def find_messaging(envelope:'any_') -> 'any_':
+    """ Returns the eb:Messaging header block of an envelope. Every caller that needs it comes here,
+    so that they all resolve to the same element and can compare it for identity.
+    """
+    header = _require(envelope, _header_name, 'SOAP Header')
+
+    out = _require(header, _messaging_name, 'eb:Messaging header block')
+    return out
+
+# ################################################################################################################################
+
+def find_body(envelope:'any_') -> 'any_':
+    """ Returns the SOAP Body of an envelope. The one place that locates it, as with find_messaging.
+    """
+    out = _require(envelope, _body_name, 'SOAP Body')
+    return out
+
+# ################################################################################################################################
+
 def parse_messaging(envelope:'any_') -> 'MessagingDetails':
     """ Parses the eb:Messaging block of an incoming envelope into plain dataclasses.
     """
@@ -621,10 +653,16 @@ def parse_messaging(envelope:'any_') -> 'MessagingDetails':
     out.user_messages = []
     out.signals = []
 
-    header = envelope.find(_header_name)
-    messaging = header.find(_messaging_name)
+    messaging = find_messaging(envelope)
 
     user_messages = messaging.findall(_user_message_name)
+
+    # The AS4 profile allows exactly one user message per header block.
+    user_message_count = len(user_messages)
+
+    if user_message_count > 1:
+        raise AS4ProtocolException(
+            EbMSError.Value_Not_Recognized, f'Message carries {user_message_count} eb:UserMessage elements, expected one')
 
     for user_message in user_messages:
         parsed_user_message = _parse_user_message(user_message)

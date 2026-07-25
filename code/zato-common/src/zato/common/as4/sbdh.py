@@ -14,7 +14,7 @@ from lxml import etree
 
 # Zato
 from zato.common.as4.common import AS4ProtocolException, EbMSError, NS
-from zato.common.util.xml_.core import element_attribute, element_text, qname, utc_timestamp
+from zato.common.util.xml_.core import element_attribute, element_text, parse_xml, qname, utc_timestamp, XMLException
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -166,8 +166,8 @@ def parse_sbdh(data:'bytes') -> 'sbdh_parse_result':
     a StandardBusinessDocument. Returns the header details and the document element.
     """
     try:
-        root = etree.fromstring(data)
-    except etree.XMLSyntaxError as e:
+        root = parse_xml(data)
+    except XMLException as e:
         raise AS4ProtocolException(EbMSError.Value_Not_Recognized, f'Could not parse the SBDH document -> {e}')
 
     header_name = qname(NS.SBDH, 'StandardBusinessDocumentHeader')
