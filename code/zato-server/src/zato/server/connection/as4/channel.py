@@ -8,15 +8,19 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from copy import deepcopy
+from functools import partial
 from threading import RLock
 
 # Zato
 from zato.common.api import AS4
-from zato.common.as4.audit import record_inbound_result
+from zato.common.as4.audit import record_inbound_result, record_message_handed_over
 from zato.common.as4.common import AS4ProtocolException, EbMSError, Peppol_Not_Serviced
-from zato.common.as4.config import build_keystore, build_pmodes
-from zato.common.as4.inbound import handle as inbound_handle
+from zato.common.as4.config import build_keystore, build_pmodes, get_text_field
+from zato.common.as4.inbound import handle as inbound_handle, PullServed
+from zato.common.as4.mpc import build_response, claim_next, complete
 from zato.common.as4.reconcile import ReceiptReconciler
+from zato.common.as4.resubmit import Target_Service, Target_Topic
 from zato.common.as4.sbdh import parse_sbdh
 from zato.common.audit_log.api import AuditLog
 from zato.server.connection.as4.routing import build_routed_message, build_routed_signal
@@ -27,11 +31,16 @@ from zato.server.connection.as4.routing import build_routed_message, build_route
 if 0:
     from zato.common.as4.ebms import UserMessageDetails
     from zato.common.as4.inbound import InboundResult, pmode_list
-    from zato.common.typing_ import anylist, stranydict
+    from zato.common.as4.mpc import QueuedMessage
+    from zato.common.as4.pmode import PMode
+    from zato.common.typing_ import anylist, anytuple, stranydict
+    anytuple = anytuple
     from zato.common.util.xml_.keystore import Keystore
     from zato.common.util.xml_.mime_ import part_list
     from zato.server.base.parallel import ParallelServer
     anylist = anylist
+    PMode = PMode
+    QueuedMessage = QueuedMessage
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -91,6 +100,10 @@ class AS4ChannelRuntime:
         # the partner and the responder is this access point.
         self.partner_party = config['as4_from_party']
         self.own_party = config['as4_to_party']
+
+        # A channel with a message partition channel configured answers the partner's pull requests
+        # for it, and for any sub-channel of it. One without it takes deliveries only.
+        self.pull_mpc = get_text_field(config, 'as4_mpc')
 
         # A channel whose audit log was turned off writes no events. The flag lives in an opaque
         # attribute, so a channel saved before it existed carries a null, which means it was
@@ -221,6 +234,50 @@ class AS4ChannelRuntime:
             # reliability lives - redelivery and retries are pub/sub's built-in behavior.
             else:
                 _ = self.server.pubsub_backend.publish(self.inbound_topic, message, cid=cid, correl_id=cid)
+
+# ################################################################################################################################
+
+    def get_target(self) -> 'anytuple':
+        """ Returns what this channel routes accepted payloads to - its service when one is
+        configured, its topic otherwise.
+        """
+        if self.service_name:
+            out = Target_Service, self.service_name
+        else:
+            out = Target_Topic, self.inbound_topic
+
+        return out
+
+# ################################################################################################################################
+
+    def route_again(self, cid:'str', user_message:'UserMessageDetails', payloads:'part_list') -> 'anylist':
+        """ Routes the payloads of a message that was already received once, to the target this
+        channel routes live deliveries to - the reprocess of a delivery whose recipient system was
+        down. Returns every message that was routed, so an operator sees how many went out.
+
+        Duplicate detection has no say here, because the whole point is to deliver again what was
+        already delivered once.
+        """
+        profile = self.config['as4_profile']
+
+        # The identifiers a Peppol payload is routed by are in the payload itself, so they are read
+        # again the way a live delivery reads them.
+        payload_details = self._validate(user_message, payloads)
+
+        # Our response to produce
+        out:'anylist' = []
+
+        for payload, sbdh_details in zip(payloads, payload_details):
+
+            message = build_routed_message(profile, user_message, payload, sbdh_details)
+            out.append(message)
+
+            if self.service_name:
+                _ = self.server.invoke(self.service_name, message)
+            else:
+                _ = self.server.pubsub_backend.publish(self.inbound_topic, message, cid=cid, correl_id=cid)
+
+        return out
 
 # ################################################################################################################################
 

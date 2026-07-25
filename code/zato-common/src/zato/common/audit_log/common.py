@@ -337,6 +337,33 @@ _alert_columns = [
 alert_table = Table('alert', metadata, *_alert_columns)
 
 # ################################################################################################################################
+
+# The AS4 message partition channels - the messages a partner is to pull rather than be sent,
+# each waiting on the channel it was queued on until a pull request asks for it. A row claimed by
+# a pull stays in flight until the receipt for it arrives, and one whose receipt never arrives goes
+# back to waiting, so a pull that was answered but never acknowledged is not a message lost.
+_as4_pull_queue_columns = [
+    Column('id', _id_column_type, primary_key=True, autoincrement=True),
+    Column('mpc', _endpoint_column),
+    Column('from_party', _short_column),
+    Column('to_party', _short_column),
+    Column('message_id', _short_column),
+    Column('conversation_id', _short_column),
+    Column('service', _short_column),
+    Column('action', _short_column),
+    Column('state', _short_column),
+    Column('pull_count', Integer),
+    Column('queued_iso', _short_column),
+    Column('claimed_iso', _short_column),
+    Column('data', Text),
+    Index('idx_as4_pull_queue_mpc_state', 'mpc', 'state', 'id'),
+    Index('idx_as4_pull_queue_message_id', 'message_id', unique=True),
+    Index('idx_as4_pull_queue_state_claimed', 'state', 'claimed_iso'),
+]
+
+as4_pull_queue_table = Table('as4_pull_queue', metadata, *_as4_pull_queue_columns)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 # Markers meaning a failure is transient - resubmitting the message as-is can work

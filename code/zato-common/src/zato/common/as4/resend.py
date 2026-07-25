@@ -195,6 +195,17 @@ def get_stored_details(reconciler:'ReceiptReconciler', message_id:'str') -> 'str
 
 # ################################################################################################################################
 
+def is_pull_message(details:'stranydict') -> 'bool':
+    """ Tells whether one recorded message was handed over on a pull request rather than pushed. The
+    flag is absent from everything recorded by a push, which is what an unset one means here.
+    """
+    value = details.get('is_pull')
+
+    out = value is True
+    return out
+
+# ################################################################################################################################
+
 def _new_candidate(pending:'PendingReceipt', config:'stranydict', details:'stranydict', documents:'anylist',
     attempt_count:'int') -> 'ResendCandidate':
     """ Turns one unanswered message and what it was sent with into the repeat delivery it becomes.
@@ -286,6 +297,13 @@ def collect_candidates(
         # A message whose payloads were not stored - a connection with its audit log turned off
         # records none to work from - has nothing to deliver again.
         details = get_stored_details(reconciler, pending.message_id)
+
+        # A message handed over on a pull goes back on the channel it was queued on for the partner
+        # to ask for again, which the pull store's own requeue does - pushing it would deliver it
+        # in a direction this exchange does not have.
+        if is_pull_message(details):
+            continue
+
         documents = decode_payload_documents(details)
 
         if not documents:

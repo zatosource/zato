@@ -10,15 +10,19 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from traceback import format_exc
 
 # Zato
-from zato.common.api import AS2
+from zato.common.api import AS2, URL_TYPE
 from zato.common.as2.config import build_partnerships
 from zato.common.as2.outbound import describe_send_result, new_send_report
 from zato.common.as2.reconcile import MDNReconciler
 from zato.common.as2.resubmit import find_connection_name, load_event, reprocess, resend
+from zato.common.as4.resubmit import describe_send_result as as4_describe_send_result, \
+    find_connection_name as as4_find_connection_name, load_event as as4_load_event, \
+    new_send_report as as4_new_send_report, reprocess as as4_reprocess, resend as as4_resend
 from zato.common.audit_log.api import AuditLog, AuditSource
 from zato.common.audit_log.resubmit import resend_hop
 from zato.common.hl7.resubmit import reprocess as hl7_reprocess, resend as hl7_resend
 from zato.common.json_internal import dumps, loads
+from zato.server.connection.as4 import AS4ChannelRuntime
 from zato.server.service import Int
 from zato.server.service.internal import AdminService
 
@@ -27,12 +31,21 @@ from zato.server.service.internal import AdminService
 
 if 0:
     from zato.common.as2.outbound import SendResult
-    from zato.common.typing_ import any_, callable_, dictlist, stranydict, strnone
+    from zato.common.as4.ebms import UserMessageDetails
+    from zato.common.as4.outbound import SendResult as AS4SendResult
+    from zato.common.as4.resend import ResendCandidate
+    from zato.common.typing_ import any_, anylist, callable_, dictlist, stranydict, strnone
+    from zato.common.util.xml_.mime_ import part_list
     any_ = any_
+    anylist = anylist
+    AS4SendResult = AS4SendResult
     callable_ = callable_
+    part_list = part_list
+    ResendCandidate = ResendCandidate
     SendResult = SendResult
     stranydict = stranydict
     strnone = strnone
+    UserMessageDetails = UserMessageDetails
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -160,6 +173,177 @@ class ReprocessAS2Message(AdminService):
         report['cid'] = self.cid
 
         self.response.payload.response_data = dumps(report)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ResendAS4Message(AdminService):
+    """ Sends the payloads stored with an outbound AS4 audit event through the partner's outgoing
+    connection again, as a message of its own with a new eb:MessageId - an operator action, distinct
+    from the repeat delivery that reuses the eb:MessageId of the attempt it repeats when a receipt
+    is overdue. The new attempt lands as its own audit event linked to the original one
+    by the correlation id.
+    """
+    name = 'zato.audit-log.as4.resend'
+    input = Int('event_id')
+    output = 'response_data'
+
+    def handle(self) -> 'None':
+
+        event_id = self.request.input.event_id
+
+        # A failed resend comes back as a report too, never as a bare exception,
+        # so the caller always sees the same shape with the details inside.
+        try:
+            event = as4_load_event(event_id)
+
+            # The two eb:PartyId values of the original exchange name the connection
+            # the payloads go back out through.
+            from_party, to_party = event.object_name.split(':', 1)
+
+            configs:'dictlist' = []
+            for config in self._get_outgoing_configs():
+                configs.append(config)
+
+            connection_name = as4_find_connection_name(configs, from_party, to_party)
+
+            # Deliver through the real pipeline - the connection's own recording is not used here
+            # because the resend records the attempt itself, which is how it links it to the original.
+            invoker = self.as4[connection_name]
+
+            def send(candidate:'ResendCandidate') -> 'AS4SendResult':
+                out = invoker.resubmit(candidate)
+                return out
+
+            audit_log = AuditLog(self.server.name)
+
+            result = as4_resend(event, send, audit_log, self.cid)
+            report = as4_describe_send_result(result)
+
+        except Exception:
+            report = as4_new_send_report()
+            report['error'] = format_exc()
+
+        report['action'] = _action_resend
+        report['cid'] = self.cid
+
+        self.response.payload.response_data = dumps(report)
+
+# ################################################################################################################################
+
+    def _get_outgoing_configs(self) -> 'dictlist':
+        """ Returns the configuration of every outgoing AS4 connection - what the pair of a stored
+        message is matched against.
+        """
+
+        # Our response to produce
+        out:'dictlist' = []
+
+        config_store = self.server.config_manager.config_store.out_as4
+
+        for name in list(config_store):
+            item = config_store[name]
+
+            # The store also holds entries that are not connections of their own.
+            if isinstance(item, str):
+                continue
+
+            out.append(item.config)
+
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ReprocessAS4Message(AdminService):
+    """ Routes the payloads stored with an inbound AS4 audit event to the channel's target again -
+    for when the system behind the channel was down and the documents that were already received
+    are to flow once more. The new attempt lands as its own audit event linked to the original one
+    by the correlation id.
+    """
+    name = 'zato.audit-log.as4.reprocess'
+    input = Int('event_id')
+    output = 'response_data'
+
+    def handle(self) -> 'None':
+
+        event_id = self.request.input.event_id
+
+        # A failed reprocess comes back as a report too, never as a bare exception,
+        # so the caller always sees the same shape with the details inside.
+        report:'stranydict' = {
+            'is_ok': False,
+            'target_kind': '',
+            'target_name': '',
+            'message_count': 0,
+            'error': '',
+        }
+
+        try:
+            event = as4_load_event(event_id)
+
+            # The channel the message arrived on is what routes it again, to the target
+            # a live delivery goes to.
+            runtime = self._get_channel_runtime(event.object_name)
+
+            def route(user_message:'UserMessageDetails', payloads:'part_list') -> 'anylist':
+                out = runtime.route_again(self.cid, user_message, payloads)
+                return out
+
+            audit_log = AuditLog(self.server.name)
+
+            result = as4_reprocess(event, route, audit_log, self.cid)
+
+            target_kind, target_name = runtime.get_target()
+
+            report['is_ok'] = True
+            report['target_kind'] = target_kind
+            report['target_name'] = target_name
+
+            # A delivery of several payloads routes one message per payload, so the operator sees
+            # how many actually went out rather than assuming it was one.
+            report['message_count'] = len(result.messages)
+
+        except Exception:
+            report['error'] = format_exc()
+
+        report['action'] = _action_reprocess
+        report['cid'] = self.cid
+
+        self.response.payload.response_data = dumps(report)
+
+# ################################################################################################################################
+
+    def _get_channel_runtime(self, pair:'str') -> 'AS4ChannelRuntime':
+        """ Returns the runtime of the AS4 channel whose two eb:PartyId values form the given pair.
+        The runtime is the one live deliveries use, built on first use the way they build it.
+        """
+        url_data = self.server.config_manager.request_dispatcher.url_data
+
+        for channel_item in url_data.channel_data:
+
+            if channel_item['transport'] != URL_TYPE.AS4:
+                continue
+
+            from_party = channel_item['as4_from_party']
+            to_party = channel_item['as4_to_party']
+
+            if f'{from_party}:{to_party}' != pair:
+                continue
+
+            runtime = channel_item.get('as4_runtime')
+
+            if runtime is None:
+                runtime = AS4ChannelRuntime(self.server, channel_item)
+                channel_item['as4_runtime'] = runtime
+
+            out = runtime
+            break
+
+        else:
+            raise Exception(f'No AS4 channel matches the pair `{pair}`')
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
