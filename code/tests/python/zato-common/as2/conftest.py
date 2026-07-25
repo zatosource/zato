@@ -46,7 +46,8 @@ def audit_db_env(tmp_path:'os.PathLike') -> 'any_':
     audit events - directly or through the live send and receive pipelines - runs
     on its own isolated database instead of the environment-wide default one.
     """
-    database_path = os.path.join(str(tmp_path), 'audit.db')
+    tmp_dir = str(tmp_path)
+    database_path = os.path.join(tmp_dir, 'audit.db')
 
     os.environ[AuditLogCtx.Env_Type] = AuditLogCtx.Type_SQLite
     os.environ[AuditLogCtx.Env_Name] = database_path
@@ -65,7 +66,9 @@ def audit_db_env(tmp_path:'os.PathLike') -> 'any_':
 # ################################################################################################################################
 
 def _make_name(common_name:'any_') -> 'any_':
-    out = Name([NameAttribute(NameOID.COMMON_NAME, common_name)])
+    attribute = NameAttribute(NameOID.COMMON_NAME, common_name)
+
+    out = Name([attribute])
     return out
 
 # ################################################################################################################################
@@ -75,9 +78,9 @@ def make_certificate(
     public_key:'any_',
     signer_name:'any_',
     signer_key:'any_',
-    is_ca:'any_'=False,
-    not_before:'any_'=None,
-    not_after:'any_'=None,
+    is_ca:'any_' = False,
+    not_before:'any_' = None,
+    not_after:'any_' = None,
     ) -> 'any_':
     """ Issues a test certificate, valid around the current moment unless its own dates are given.
     """
@@ -89,16 +92,22 @@ def make_certificate(
     if not_after is None:
         not_after = now + timedelta(days=365)
 
+    subject_name = _make_name(common_name)
+    serial_number = random_serial_number()
+    basic_constraints = BasicConstraints(ca=is_ca, path_length=None)
+
     builder = CertificateBuilder()
-    builder = builder.subject_name(_make_name(common_name))
+    builder = builder.subject_name(subject_name)
     builder = builder.issuer_name(signer_name)
     builder = builder.public_key(public_key)
-    builder = builder.serial_number(random_serial_number())
+    builder = builder.serial_number(serial_number)
     builder = builder.not_valid_before(not_before)
     builder = builder.not_valid_after(not_after)
-    builder = builder.add_extension(BasicConstraints(ca=is_ca, path_length=None), critical=True)
+    builder = builder.add_extension(basic_constraints, critical=True)
 
-    out = builder.sign(signer_key, SHA256())
+    algorithm = SHA256()
+
+    out = builder.sign(signer_key, algorithm)
     return out
 
 # ################################################################################################################################
@@ -123,13 +132,16 @@ def parties() -> 'any_':
     """
     ca_key = generate_private_key(_rsa_public_exponent, _rsa_key_size)
     ca_name = _make_name('as2-test-ca')
-    ca_certificate = make_certificate('as2-test-ca', ca_key.public_key(), ca_name, ca_key, is_ca=True)
+    ca_public_key = ca_key.public_key()
+    ca_certificate = make_certificate('as2-test-ca', ca_public_key, ca_name, ca_key, is_ca=True)
 
     sender_key = generate_private_key(_rsa_public_exponent, _rsa_key_size)
-    sender_certificate = make_certificate('as2-sender', sender_key.public_key(), ca_name, ca_key)
+    sender_public_key = sender_key.public_key()
+    sender_certificate = make_certificate('as2-sender', sender_public_key, ca_name, ca_key)
 
     receiver_key = generate_private_key(_rsa_public_exponent, _rsa_key_size)
-    receiver_certificate = make_certificate('as2-receiver', receiver_key.public_key(), ca_name, ca_key)
+    receiver_public_key = receiver_key.public_key()
+    receiver_certificate = make_certificate('as2-receiver', receiver_public_key, ca_name, ca_key)
 
     sender = new_keystore()
     sender.signing_key = sender_key
@@ -160,8 +172,9 @@ def unrelated_ca_certificate() -> 'any_':
     """
     ca_key = generate_private_key(_rsa_public_exponent, _rsa_key_size)
     ca_name = _make_name('as2-unrelated-ca')
+    ca_public_key = ca_key.public_key()
 
-    out = make_certificate('as2-unrelated-ca', ca_key.public_key(), ca_name, ca_key, is_ca=True)
+    out = make_certificate('as2-unrelated-ca', ca_public_key, ca_name, ca_key, is_ca=True)
     return out
 
 # ################################################################################################################################
@@ -186,7 +199,8 @@ def make_rotated_pair() -> 'any_':
 
         key = generate_private_key(_rsa_public_exponent, _rsa_key_size)
         name = _make_name(common_name)
-        certificate = make_certificate(common_name, key.public_key(), name, key)
+        public_key = key.public_key()
+        certificate = make_certificate(common_name, public_key, name, key)
 
         out = RotatedPair()
         out.key = key
@@ -207,9 +221,10 @@ def make_dated_pair() -> 'any_':
 
         key = generate_private_key(_rsa_public_exponent, _rsa_key_size)
         name = _make_name(common_name)
+        public_key = key.public_key()
 
         certificate = make_certificate(
-            common_name, key.public_key(), name, key, not_before=not_before, not_after=not_after)
+            common_name, public_key, name, key, not_before=not_before, not_after=not_after)
 
         out = RotatedPair()
         out.key = key

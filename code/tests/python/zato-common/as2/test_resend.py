@@ -77,8 +77,8 @@ def _record_sent(
     message_id:'str',
     documents:'anylist',
     *,
-    http_status:'int'=_http_accepted,
-    delivery_kind:'str'=DeliveryKind.Original,
+    http_status:'int' = _http_accepted,
+    delivery_kind:'str' = DeliveryKind.Original,
     ) -> 'None':
     """ Records one delivery attempt the way an outgoing connection does.
     """
@@ -91,17 +91,16 @@ def _record_sent(
     first_data, _, first_filename = documents[0]
     first_text = first_data.decode('utf8', 'replace')
 
-    reconciler.record_message_sent(
-        _as2_from,
-        _as2_to,
-        message_id,
-        mic='abc, sha-256',
-        payload=first_text,
-        filename=first_filename,
-        payloads=payloads,
-        delivery_kind=delivery_kind,
-        http_status=http_status,
-    )
+    sent_options = {
+        'mic': 'abc, sha-256',
+        'payload': first_text,
+        'filename': first_filename,
+        'payloads': payloads,
+        'delivery_kind': delivery_kind,
+        'http_status': http_status,
+    }
+
+    reconciler.record_message_sent(_as2_from, _as2_to, message_id, **sent_options)
 
 # ################################################################################################################################
 
@@ -148,7 +147,8 @@ class TestCountAttempts:
     def test_one_delivery_counts_as_one_attempt(self) -> 'None':
 
         reconciler = MDNReconciler(_server_name)
-        _record_sent(reconciler, 'msg-1@zato', _single_document())
+        documents = _single_document()
+        _record_sent(reconciler, 'msg-1@zato', documents)
 
         assert count_attempts(reconciler, 'msg-1@zato') == 1
 
@@ -158,14 +158,18 @@ class TestCountAttempts:
 
         reconciler = MDNReconciler(_server_name)
 
-        _record_sent(reconciler, 'msg-1@zato', _single_document())
-        _record_sent(reconciler, 'msg-1@zato', _single_document(), delivery_kind=DeliveryKind.Resend)
-        _record_sent(reconciler, 'msg-1@zato', _single_document(), delivery_kind=DeliveryKind.Resend)
+        documents = _single_document()
+        _record_sent(reconciler, 'msg-1@zato', documents)
+        documents = _single_document()
+        _record_sent(reconciler, 'msg-1@zato', documents, delivery_kind=DeliveryKind.Resend)
+        documents = _single_document()
+        _record_sent(reconciler, 'msg-1@zato', documents, delivery_kind=DeliveryKind.Resend)
 
         assert count_attempts(reconciler, 'msg-1@zato') == 3
 
         # Another message's attempts are its own.
-        _record_sent(reconciler, 'msg-2@zato', _single_document())
+        documents = _single_document()
+        _record_sent(reconciler, 'msg-2@zato', documents)
         assert count_attempts(reconciler, 'msg-2@zato') == 1
 
 # ################################################################################################################################
@@ -180,7 +184,8 @@ class TestCollectCandidates:
     def test_an_overdue_message_is_a_candidate(self) -> 'None':
 
         reconciler = MDNReconciler(_server_name)
-        _record_sent(reconciler, 'msg-1@zato', _single_document())
+        documents = _single_document()
+        _record_sent(reconciler, 'msg-1@zato', documents)
 
         now = utcnow() + timedelta(seconds=_past_the_window)
         candidates = collect_candidates([_new_config()], now, _server_name)
@@ -206,7 +211,8 @@ class TestCollectCandidates:
     def test_a_message_inside_its_window_is_left_alone(self) -> 'None':
 
         reconciler = MDNReconciler(_server_name)
-        _record_sent(reconciler, 'msg-1@zato', _single_document())
+        documents = _single_document()
+        _record_sent(reconciler, 'msg-1@zato', documents)
 
         # The window has not passed yet, so the receipt is merely pending.
         now = utcnow() + timedelta(seconds=_overdue_seconds - 100)
@@ -220,7 +226,8 @@ class TestCollectCandidates:
     def test_a_message_whose_receipt_arrived_is_left_alone(self) -> 'None':
 
         reconciler = MDNReconciler(_server_name)
-        _record_sent(reconciler, 'msg-1@zato', _single_document())
+        documents = _single_document()
+        _record_sent(reconciler, 'msg-1@zato', documents)
 
         # The receipt closes the exchange, which takes the message out of the outstanding set
         # and with it out of the resend job's reach.
@@ -240,9 +247,12 @@ class TestCollectCandidates:
 
         # One original delivery plus two resends is three attempts, which is one more
         # than a partner allowing two resends gets.
-        _record_sent(reconciler, 'msg-1@zato', _single_document())
-        _record_sent(reconciler, 'msg-1@zato', _single_document(), delivery_kind=DeliveryKind.Resend)
-        _record_sent(reconciler, 'msg-1@zato', _single_document(), delivery_kind=DeliveryKind.Resend)
+        documents = _single_document()
+        _record_sent(reconciler, 'msg-1@zato', documents)
+        documents = _single_document()
+        _record_sent(reconciler, 'msg-1@zato', documents, delivery_kind=DeliveryKind.Resend)
+        documents = _single_document()
+        _record_sent(reconciler, 'msg-1@zato', documents, delivery_kind=DeliveryKind.Resend)
 
         now = utcnow() + timedelta(seconds=_past_the_window)
 
@@ -267,7 +277,8 @@ class TestCollectCandidates:
     def test_a_message_whose_partner_is_gone_is_left_alone(self) -> 'None':
 
         reconciler = MDNReconciler(_server_name)
-        _record_sent(reconciler, 'msg-1@zato', _single_document())
+        documents = _single_document()
+        _record_sent(reconciler, 'msg-1@zato', documents)
 
         now = utcnow() + timedelta(seconds=_past_the_window)
 
@@ -304,7 +315,8 @@ class TestCollectCandidates:
 
         while message_number < 5:
             message_number += 1
-            _record_sent(reconciler, f'msg-{message_number}@zato', _single_document())
+            documents = _single_document()
+            _record_sent(reconciler, f'msg-{message_number}@zato', documents)
 
         now = utcnow() + timedelta(seconds=_past_the_window)
 
@@ -325,7 +337,8 @@ class TestDeliveryKind:
     def test_an_accepted_delivery_repeats_as_a_resend(self) -> 'None':
 
         reconciler = MDNReconciler(_server_name)
-        _record_sent(reconciler, 'msg-1@zato', _single_document(), http_status=_http_accepted)
+        documents = _single_document()
+        _record_sent(reconciler, 'msg-1@zato', documents, http_status=_http_accepted)
 
         now = utcnow() + timedelta(seconds=_past_the_window)
         candidates = collect_candidates([_new_config()], now, _server_name)
@@ -338,7 +351,8 @@ class TestDeliveryKind:
     def test_a_delivery_that_never_arrived_repeats_as_a_retry(self) -> 'None':
 
         reconciler = MDNReconciler(_server_name)
-        _record_sent(reconciler, 'msg-1@zato', _single_document(), http_status=_http_never_sent)
+        documents = _single_document()
+        _record_sent(reconciler, 'msg-1@zato', documents, http_status=_http_never_sent)
 
         now = utcnow() + timedelta(seconds=_past_the_window)
         candidates = collect_candidates([_new_config()], now, _server_name)
@@ -351,7 +365,8 @@ class TestDeliveryKind:
     def test_a_refused_delivery_repeats_as_a_retry(self) -> 'None':
 
         reconciler = MDNReconciler(_server_name)
-        _record_sent(reconciler, 'msg-1@zato', _single_document(), http_status=500)
+        documents = _single_document()
+        _record_sent(reconciler, 'msg-1@zato', documents, http_status=500)
 
         now = utcnow() + timedelta(seconds=_past_the_window)
         candidates = collect_candidates([_new_config()], now, _server_name)
@@ -367,8 +382,15 @@ class TestDeliveryKind:
 
         # Events already in the database carry neither the kind nor the status, which reads
         # as a transport outcome nobody knows - and a retry is the honest thing to call it.
-        reconciler.record_message_sent(_as2_from, _as2_to, 'msg-1@zato', mic='abc, sha-256',
-            payload=_edi.decode('utf8'), filename='order-850.edi')
+        payload = _edi.decode('utf8')
+
+        sent_options = {
+            'mic': 'abc, sha-256',
+            'payload': payload,
+            'filename': 'order-850.edi',
+        }
+
+        reconciler.record_message_sent(_as2_from, _as2_to, 'msg-1@zato', **sent_options)
 
         now = utcnow() + timedelta(seconds=_past_the_window)
         candidates = collect_candidates([_new_config()], now, _server_name)

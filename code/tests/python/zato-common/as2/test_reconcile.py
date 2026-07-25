@@ -92,7 +92,7 @@ def _read_attrs(reconciler:'MDNReconciler', message_id:'str') -> 'strstrdict':
 
 # ################################################################################################################################
 
-def _build_mdn_bytes(message_id:'any_', disposition:'any_'=None, mic:'any_'='', signing_keystore:'any_'=None) -> 'any_':
+def _build_mdn_bytes(message_id:'any_', disposition:'any_' = None, mic:'any_' = '', signing_keystore:'any_' = None) -> 'any_':
     """ Builds one real MDN answering the given Message-ID, returning its body and content type.
     """
     request = MDNRequest()

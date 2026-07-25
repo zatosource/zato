@@ -42,7 +42,7 @@ def register_body_resolver(source:'str', resolver:'callable_') -> 'None':
 
 # ################################################################################################################################
 
-def resolve_body(engine:'Engine', source:'str', event_id:'int', kind:'str'='') -> 'strnone':
+def resolve_body(engine:'Engine', source:'str', event_id:'int', kind:'str' = '') -> 'strnone':
     """ Returns the body of one event - through the source's own resolver if it registered one,
     out of the shared body table otherwise. An empty kind returns the newest body of any kind.
     """
@@ -59,7 +59,8 @@ def resolve_body(engine:'Engine', source:'str', event_id:'int', kind:'str'='') -
     if kind:
         query = query.where(event_body_table.c.kind == kind)
 
-    query = query.order_by(event_body_table.c.id.desc())
+    newest_first = event_body_table.c.id.desc()
+    query = query.order_by(newest_first)
     query = query.limit(1)
 
     with engine.connect() as connection:

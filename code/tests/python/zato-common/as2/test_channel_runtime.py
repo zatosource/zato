@@ -86,7 +86,7 @@ class _FakePubSub:
 
 # ################################################################################################################################
 
-    def publish(self, topic:'any_', message:'any_', cid:'any_'='', correl_id:'any_'='') -> 'None':
+    def publish(self, topic:'any_', message:'any_', cid:'any_' = '', correl_id:'any_' = '') -> 'None':
         self.published.append((topic, message))
 
 # ################################################################################################################################
@@ -116,11 +116,11 @@ class _FakeServer:
 # ################################################################################################################################
 
 def _partnership_config(
-    inbound_topic:'any_'='',
-    inbound_service:'any_'='',
-    partner_certificate:'any_'='',
-    next_certificate:'any_'='',
-    next_certificate_from:'any_'='',
+    inbound_topic:'any_' = '',
+    inbound_service:'any_' = '',
+    partner_certificate:'any_' = '',
+    next_certificate:'any_' = '',
+    next_certificate_from:'any_' = '',
 ) -> 'any_':
     """ The flat configuration dict of one Dashboard-managed AS2 connection,
     as the receiving side sees the relationship.
@@ -176,7 +176,7 @@ def _partnership_config(
 
 # ################################################################################################################################
 
-def _channel_config(parties:'TestParties', service_name:'any_'=None, inbound_topic:'any_'=None) -> 'any_':
+def _channel_config(parties:'TestParties', service_name:'any_' = None, inbound_topic:'any_' = None) -> 'any_':
     """ The channel item of one AS2 channel, with the receiver's keys pasted in as PEMs.
     """
     receiver_key_pem = _key_to_pem(parties.receiver.signing_key)
@@ -205,14 +205,14 @@ def _channel_config(parties:'TestParties', service_name:'any_'=None, inbound_top
 def _make_runtime(
     tmp_path:'os.PathLike',
     parties:'TestParties',
-    service_name:'any_'=None,
-    channel_topic:'any_'=None,
-    with_partnership:'any_'=True,
-    partner_topic:'any_'='',
-    partner_service:'any_'='',
-    partner_certificate:'any_'='',
-    next_certificate:'any_'='',
-    next_certificate_from:'any_'='',
+    service_name:'any_' = None,
+    channel_topic:'any_' = None,
+    with_partnership:'any_' = True,
+    partner_topic:'any_' = '',
+    partner_service:'any_' = '',
+    partner_certificate:'any_' = '',
+    next_certificate:'any_' = '',
+    next_certificate_from:'any_' = '',
     ) -> 'any_':
     """ Builds a channel runtime on a fake server with a per-test SQLite audit database.
     """
@@ -247,7 +247,7 @@ def _cleanup_env() -> 'None':
 
 # ################################################################################################################################
 
-def _build_wire_message(parties:'TestParties', message_id:'any_'=None, sender_keystore:'any_'=None) -> 'any_':
+def _build_wire_message(parties:'TestParties', message_id:'any_' = None, sender_keystore:'any_' = None) -> 'any_':
     """ Builds one real AS2 message the way the sending side would.
     """
     partnership = new_partnership()

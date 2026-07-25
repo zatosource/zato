@@ -33,10 +33,10 @@ _message_id = '<20260709100000.12345@sender.example.com>'
 # ################################################################################################################################
 
 def _make_request(
-    requests_signed_mdn:'any_'=False,
-    signed_receipt_protocol:'any_'='',
-    mic_algorithms:'any_'=None,
-    async_mdn_url:'any_'='',
+    requests_signed_mdn:'any_' = False,
+    signed_receipt_protocol:'any_' = '',
+    mic_algorithms:'any_' = None,
+    async_mdn_url:'any_' = '',
     ) -> 'any_':
     """ Returns an MDN request the way the inbound pipeline would have parsed it.
     """
