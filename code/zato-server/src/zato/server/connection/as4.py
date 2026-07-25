@@ -18,9 +18,6 @@ from cryptography.x509.oid import NameOID
 # httpx
 import httpx
 
-# lxml
-from lxml import etree
-
 # Zato
 from zato.common.api import AS4
 from zato.common.as4.common import AS4Exception, AS4ProtocolException, Default, EbMSError, Peppol_Not_Serviced
@@ -33,6 +30,7 @@ from zato.common.as4.profiles import Peppol_Participant_ID_Type
 from zato.common.as4.sbdh import build_sbdh, parse_sbdh
 from zato.common.crypto.api import CryptoManager
 from zato.common.typing_ import optional
+from zato.common.util.xml_.core import parse_xml
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -279,7 +277,7 @@ class AS4Wrapper:
             receiver_party_id = receiver_party_id.decode('utf8')
 
         # .. wrap the business document in an SBDH, the way the network requires ..
-        business_document = etree.fromstring(data)
+        business_document = parse_xml(data)
         instance_identifier = CryptoManager.generate_hex_string(_instance_identifier_bits)
 
         sbdh = build_sbdh(

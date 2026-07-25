@@ -20,6 +20,7 @@ from zato.common.as4.mime_ import decompress_part, parse_multipart
 from zato.common.as4.security.sign import sign_envelope
 from zato.common.as4.security.verify import decrypt_parts, verify_envelope
 from zato.common.typing_ import optional
+from zato.common.util.xml_.core import parse_xml, XMLException
 from zato.common.util.xml_.mime_ import part_list
 
 # ################################################################################################################################
@@ -210,8 +211,8 @@ def handle(
         envelope_bytes, parts = parse_multipart(body, content_type)
 
         try:
-            envelope = etree.fromstring(envelope_bytes)
-        except etree.XMLSyntaxError as e:
+            envelope = parse_xml(envelope_bytes)
+        except XMLException as e:
             raise AS4ProtocolException(EbMSError.Invalid_Header, f'Could not parse the SOAP envelope -> {e}')
 
         messaging = parse_messaging(envelope)

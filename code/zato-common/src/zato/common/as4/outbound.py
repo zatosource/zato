@@ -24,7 +24,7 @@ from zato.common.as4.security.encrypt import encrypt_parts
 from zato.common.as4.security.sign import sign_envelope
 from zato.common.as4.security.verify import decrypt_parts, verify_envelope
 from zato.common.typing_ import optional
-from zato.common.util.xml_.core import element_attribute, element_text, qname
+from zato.common.util.xml_.core import element_attribute, element_text, parse_xml, qname
 from zato.common.util.xml_.mime_ import new_content_id, Part, part_list
 
 # ################################################################################################################################
@@ -249,7 +249,7 @@ def send(
     response_content_type = response.headers['content-type']
     response_envelope_bytes, response_parts = parse_multipart(response.content, response_content_type)
 
-    response_envelope = etree.fromstring(response_envelope_bytes)
+    response_envelope = parse_xml(response_envelope_bytes)
     messaging = parse_messaging(response_envelope)
 
     for signal in messaging.signals:
@@ -335,7 +335,7 @@ def pull(
 
     response_content_type = response.headers['content-type']
     response_envelope_bytes, response_parts = parse_multipart(response.content, response_content_type)
-    response_envelope = etree.fromstring(response_envelope_bytes)
+    response_envelope = parse_xml(response_envelope_bytes)
     messaging = parse_messaging(response_envelope)
 
     for signal in messaging.signals:

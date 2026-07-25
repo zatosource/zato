@@ -18,11 +18,9 @@ from dns.resolver import resolve as dns_resolve
 # httpx
 import httpx
 
-# lxml
-from lxml import etree
-
 # Zato
 from zato.common.as4.common import AS4Exception
+from zato.common.util.xml_.core import parse_xml
 from zato.common.util.xml_.xmlsec import decode_base64
 
 # ################################################################################################################################
@@ -143,7 +141,7 @@ def _default_http_get(url:'str') -> 'bytes':
 def _parse_smp_metadata(data:'bytes', transport_profile:'str') -> 'EndpointDetails':
     """ Extracts the endpoint matching a transport profile from SMP service metadata.
     """
-    root = etree.fromstring(data)
+    root = parse_xml(data)
 
     # The metadata may or may not be wrapped in SignedServiceMetadata.
     for endpoint in root.iter(_endpoint_element):

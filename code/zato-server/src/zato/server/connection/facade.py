@@ -162,7 +162,7 @@ class SchedulerFacade:
             response = response['zato_scheduler_job_create_response']
 
         # .. and return its ID to the caller.
-        return response['id'] # type: ignore
+        return response['id']
 
 # ################################################################################################################################
 # ################################################################################################################################
