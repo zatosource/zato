@@ -180,11 +180,17 @@ def build_push_message(
     keystore:'Keystore',
     parts:'part_list',
     conversation_id:'strnone'=None,
+    message_id:'strnone'=None,
     ) -> 'anytuple':
     """ Builds a complete, signed and optionally encrypted AS4 push message.
     Returns the wire body, its content type, the message id and the sent digests.
+
+    A caller that supplies a message id is repeating a delivery that went unacknowledged, and the
+    id it repeats under is the original one - that is what lets the receiving side recognize the
+    message as one it may already have.
     """
-    message_id = new_message_id()
+    if not message_id:
+        message_id = new_message_id()
 
     if not conversation_id:
         conversation_id = message_id
@@ -253,16 +259,20 @@ def send(
     parts:'part_list',
     conversation_id:'strnone'=None,
     client:'httpx.Client | None'=None,
+    message_id:'strnone'=None,
     ) -> 'SendResult':
     """ Pushes one AS4 user message with the given payload parts and verifies
     the synchronous receipt when one comes back.
+
+    A message id given here is the one of an earlier attempt this delivery repeats.
     """
 
     # Our response to produce
     out = SendResult()
     out.errors = []
 
-    body, content_type, message_id, sent_digests = build_push_message(pmode, keystore, parts, conversation_id)
+    body, content_type, message_id, sent_digests = build_push_message(
+        pmode, keystore, parts, conversation_id, message_id)
     out.message_id = message_id
     out.request_body = body
 

@@ -60,6 +60,9 @@
             'as4_trust_anchors',
             'as4_use_discovery',
             'as4_sml_domain',
+            'as4_retry_max_attempts',
+            'as4_retry_interval',
+            'as4_missing_receipt_after',
         ]
     }
     </script>
@@ -136,6 +139,10 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
                 </thead>
 
                 <tbody>
@@ -191,11 +198,15 @@
                         <td class='ignore'>{{ item.as4_use_discovery|default:'False' }}</td>
                         <td class='ignore'>{{ item.as4_sml_domain|default:'' }}</td>
 
+                        <td class='ignore'>{{ item.as4_retry_max_attempts|default:'' }}</td>
+                        <td class='ignore'>{{ item.as4_retry_interval|default:'' }}</td>
+                        <td class='ignore'>{{ item.as4_missing_receipt_after|default:'' }}</td>
+
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='34'>No results</td>
+                        <td colspan='37'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -287,6 +298,18 @@
                             <tr>
                                 <td><label for="id_validate_tls">Validate TLS</label></td>
                                 <td>{{ create_form.validate_tls }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_as4_retry_max_attempts">Max. attempts</label></td>
+                                <td>{{ create_form.as4_retry_max_attempts }} <span class="form_hint">deliveries, empty for the profile's own</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_as4_retry_interval">Retry after</label></td>
+                                <td>{{ create_form.as4_retry_interval }} <span class="form_hint">seconds without a receipt</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_as4_missing_receipt_after">Receipt missing after</label></td>
+                                <td>{{ create_form.as4_missing_receipt_after }} <span class="form_hint">seconds, when the exchange is reported instead</span></td>
                             </tr>
                         </table>
                     </div>
@@ -435,6 +458,18 @@
                             <tr>
                                 <td><label for="id_edit-validate_tls">Validate TLS</label></td>
                                 <td>{{ edit_form.validate_tls }}</td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-as4_retry_max_attempts">Max. attempts</label></td>
+                                <td>{{ edit_form.as4_retry_max_attempts }} <span class="form_hint">deliveries, empty for the profile's own</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-as4_retry_interval">Retry after</label></td>
+                                <td>{{ edit_form.as4_retry_interval }} <span class="form_hint">seconds without a receipt</span></td>
+                            </tr>
+                            <tr>
+                                <td><label for="id_edit-as4_missing_receipt_after">Receipt missing after</label></td>
+                                <td>{{ edit_form.as4_missing_receipt_after }} <span class="form_hint">seconds, when the exchange is reported instead</span></td>
                             </tr>
                         </table>
                     </div>

@@ -544,8 +544,10 @@ class ConfigManager(_ConfigManagerBase):
             'is_audit_log_active':config.get('is_audit_log_active'),
         }
 
+        # The AS4 fields arrive as opaque attributes, which hold only what the connection was saved
+        # with - a connection saved without one of them carries no key for it at all.
         for name in COMMON_AS4.Common_Fields + COMMON_AS4.Outgoing_Fields:
-            wrapper_config[name] = config[name]
+            wrapper_config[name] = config.get(name)
 
         out = AS4Wrapper(self.server, wrapper_config)
         return out

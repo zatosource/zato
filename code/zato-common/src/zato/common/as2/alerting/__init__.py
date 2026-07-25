@@ -19,7 +19,7 @@ findings, spread over one module per guard.
 # Zato
 from zato.common.as2.alerting.certificates import get_cert_days_left
 from zato.common.as2.alerting.common import Default_Server_Name, Finding, finding_list, Kind_Ack_Overdue, \
-    Kind_Cert_Expiry, Kind_MDN_Overdue, Kind_Ship_Notice_Missing, Own_Keystore_Name
+    Kind_Cert_Expiry, Kind_MDN_Overdue, Kind_Receipt_Missing, Kind_Ship_Notice_Missing, Own_Keystore_Name
 from zato.common.as2.alerting.sweep import build_digest, collect_findings, record_alerts
 
 # ################################################################################################################################
@@ -36,6 +36,7 @@ __all__ = (
     'Kind_Ack_Overdue',
     'Kind_Cert_Expiry',
     'Kind_MDN_Overdue',
+    'Kind_Receipt_Missing',
     'Kind_Ship_Notice_Missing',
     'Own_Keystore_Name',
 )

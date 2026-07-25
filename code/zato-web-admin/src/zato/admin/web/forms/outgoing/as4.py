@@ -68,6 +68,12 @@ class CreateForm(forms.Form):
     as4_peer_encryption_cert = forms.CharField(required=False, widget=forms.Textarea(attrs=_pem_attrs))
     as4_trust_anchors = forms.CharField(required=False, widget=forms.Textarea(attrs=_pem_attrs))
 
+    # Reliability - the reception awareness parameters, each empty unless the profile's own
+    # value is to be overridden
+    as4_retry_max_attempts = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:10%'}))
+    as4_retry_interval = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:10%'}))
+    as4_missing_receipt_after = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:10%'}))
+
     # More
     as4_original_sender = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
     as4_final_recipient = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))

@@ -91,14 +91,23 @@ _declarative_transports = (URL_TYPE.PLAIN_HTTP, URL_TYPE.SOAP)
 # ################################################################################################################################
 # ################################################################################################################################
 
-# All the AS4 fields, each optional on input - the boolean one is declared separately below.
+# All the AS4 fields, each optional on input - the boolean and the numeric ones
+# are declared separately below.
 _as4_fields = []
 
 for _as4_field_name in AS4.Common_Fields + AS4.Channel_Fields + ('as4_sml_domain',):
     _as4_fields.append('-' + _as4_field_name)
 
 _as4_fields = tuple(_as4_fields)
-_as4_input = _as4_fields + (Boolean('-as4_use_discovery'),)
+
+# The reception awareness parameters arrive from the Dashboard as text, so they are declared
+# as numbers - a form field left empty arrives as an empty value and stays unset.
+_as4_numeric_fields = []
+
+for _as4_field_name in AS4.Numeric_Fields:
+    _as4_numeric_fields.append(Int('-' + _as4_field_name))
+
+_as4_input = _as4_fields + tuple(_as4_numeric_fields) + (Boolean('-as4_use_discovery'),)
 
 # All the AS2 fields, each optional on input.
 _as2_fields = []

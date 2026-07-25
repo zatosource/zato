@@ -21,7 +21,7 @@ import httpx
 from zato.common.api import AS4
 from zato.common.as4.audit import record_pull_result, record_send_result
 from zato.common.as4.common import AS4Exception, Default
-from zato.common.as4.config import build_keystore, build_pmode
+from zato.common.as4.config import apply_reception_awareness, build_keystore, build_pmode
 from zato.common.as4.discovery import lookup_endpoint, SML_Domain_Production
 from zato.common.as4.outbound import new_part, pull as outbound_pull, send as outbound_send
 from zato.common.as4.presets import get_document_type_preset
@@ -41,16 +41,19 @@ if 0:
     from zato.common.as4.outbound import PullResult, SendResult
     from zato.common.as4.pmode import PMode
     from zato.common.as4.presets import DocumentTypePreset
-    from zato.common.typing_ import anytuple, stranydict, strbytes, strlist, strnone
+    from zato.common.as4.resend import ResendCandidate
+    from zato.common.typing_ import anylist, anytuple, stranydict, strbytes, strlist, strnone
     from zato.common.util.xml_.keystore import Keystore
     from zato.common.util.xml_.mime_ import part_list
     from zato.server.base.parallel import ParallelServer
+    anylist = anylist
     anytuple = anytuple
     strlist = strlist
     Certificate = Certificate
     DocumentTypePreset = DocumentTypePreset
     part_list = part_list
     PullResult = PullResult
+    ResendCandidate = ResendCandidate
     SendResult = SendResult
 
 # ################################################################################################################################
@@ -127,6 +130,7 @@ class AS4Wrapper:
                 pmode.endpoint_url = self.address
                 pmode.http_timeout_seconds = self.config['timeout']
                 pmode.verify_tls = self.config['validate_tls']
+                apply_reception_awareness(pmode, self.config)
                 self._pmode = pmode
 
             out = self._pmode
@@ -196,8 +200,18 @@ class AS4Wrapper:
         if not self.needs_audit:
             return
 
+        # The four-corner properties are genuinely absent from an exchange that is not four-corner.
+        original_sender = pmode.original_sender
+        if original_sender is None:
+            original_sender = ''
+
+        final_recipient = pmode.final_recipient
+        if final_recipient is None:
+            final_recipient = ''
+
         record_send_result(self.audit_log, pmode.initiator.party_id, pmode.responder.party_id, result,
-            payloads=parts, service=pmode.service, action=pmode.action, cid=cid)
+            payloads=parts, service=pmode.service, action=pmode.action, original_sender=original_sender,
+            final_recipient=final_recipient, cid=cid)
 
 # ################################################################################################################################
 
@@ -357,6 +371,94 @@ class AS4Wrapper:
 
         self._record_send(cid, pmode, submitted, out)
         self._check_send_result(cid, out)
+
+        return out
+
+# ################################################################################################################################
+
+    def _resend_parts(self, documents:'anylist') -> 'part_list':
+        """ Rebuilds the payload parts of a repeat delivery out of what the first attempt was
+        recorded with, each part keeping the Content-ID the message referenced it by.
+        """
+
+        # Our response to produce
+        out:'part_list' = []
+
+        for data, content_type, content_id in documents:
+            part = new_part(data, content_type)
+            part.content_id = content_id
+            out.append(part)
+
+        return out
+
+# ################################################################################################################################
+
+    def _resend_pmode(self, candidate:'ResendCandidate', keystore:'Keystore') -> 'anytuple':
+        """ Builds the P-Mode and keystore one repeat delivery goes out under - the business
+        information and the four-corner addressing of the attempt it repeats, and the endpoint that
+        addressing resolves to now, which a connection using discovery looks up all over again
+        because the receiver may have moved access point since.
+        """
+        base_pmode = self._get_pmode()
+
+        pmode = deepcopy(base_pmode)
+        pmode.service = candidate.service
+        pmode.action = candidate.action
+
+        # An exchange that was not four-corner recorded no endpoints, and the P-Mode of one that was
+        # names them the way the first attempt did.
+        if candidate.original_sender:
+            pmode.original_sender = candidate.original_sender
+
+        if candidate.final_recipient:
+            pmode.final_recipient = candidate.final_recipient
+
+        # A connection not using discovery delivers to its configured endpoint, and the peer
+        # certificates it has configured are what the exchange is secured with.
+        needs_discovery = self.config['as4_use_discovery'] and candidate.final_recipient
+
+        if not needs_discovery:
+            out = pmode, keystore
+            return out
+
+        preset = get_document_type_preset(candidate.action)
+        endpoint_url, receiver_certificate = self._discover_receiver(candidate.final_recipient, preset, keystore)
+
+        pmode.endpoint_url = endpoint_url
+        pmode.responder.party_id = certificate_common_name(receiver_certificate)
+
+        # A shallow copy is used because private key objects cannot be deep-copied.
+        send_keystore = copy(keystore)
+        send_keystore.peer_signing_certificate = receiver_certificate
+        send_keystore.peer_encryption_certificate = receiver_certificate
+
+        out = pmode, send_keystore
+        return out
+
+# ################################################################################################################################
+
+    def resend(self, cid:'str', candidate:'ResendCandidate') -> 'SendResult':
+        """ Delivers one message again under the eb:MessageId of the attempt it repeats, which is
+        what lets the receiving side recognize it as a message it may already hold.
+
+        The repeat is recorded like any other send, so the attempt is counted and the exchange
+        closes as soon as a receipt for it arrives, whichever attempt earned it.
+        """
+        self._enforce_is_active()
+
+        keystore = self._get_keystore()
+        pmode, send_keystore = self._resend_pmode(candidate, keystore)
+        parts = self._resend_parts(candidate.documents)
+
+        logger.info('AS4 resend -> %s; name:%s; message id:%s; attempt:%d; cid:%s',
+            pmode.endpoint_url, self.config['name'], candidate.message_id, candidate.attempt_count + 1, cid)
+
+        submitted = self._snapshot(parts)
+
+        out = outbound_send(pmode, send_keystore, parts, candidate.conversation_id, client=self.session,
+            message_id=candidate.message_id)
+
+        self._record_send(cid, pmode, submitted, out)
 
         return out
 

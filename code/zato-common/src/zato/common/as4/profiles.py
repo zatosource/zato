@@ -44,6 +44,12 @@ def new_edelivery1_pmode() -> 'PMode':
     out.security.sign_receipts = True
     out.compress = True
 
+    # The reception awareness feature of the profile - a message that goes unacknowledged is
+    # delivered again and the receiving side is required to eliminate the duplicates.
+    out.reception_awareness.is_enabled = True
+    out.reception_awareness.retry = True
+    out.reception_awareness.duplicate_detection = True
+
     return out
 
 # ################################################################################################################################
@@ -98,6 +104,12 @@ def new_peppol_pmode() -> 'PMode':
     # A Peppol access point's certificate carries its participant identifier as the common name,
     # which is also what it names itself with in eb:From.
     out.security.party_id_is_certificate_cn = True
+
+    # Peppol requires duplicate elimination of every receiving access point, which is what makes
+    # repeating an unacknowledged delivery the correct thing for the sending one to do.
+    out.reception_awareness.is_enabled = True
+    out.reception_awareness.retry = True
+    out.reception_awareness.duplicate_detection = True
 
     return out
 

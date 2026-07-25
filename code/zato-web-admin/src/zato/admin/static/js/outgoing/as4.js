@@ -86,6 +86,9 @@ $.fn.zato.outgoing.as4.field_descriptions = {
     'id_as4_mpc': 'The message partition channel that pull<br>requests read from. Leave empty<br>unless the network assigns you one.',
     'id_timeout': 'How many seconds to wait for a response<br>before the invocation times out.',
     'id_validate_tls': 'Whether the TLS certificate of the remote<br>server must be validated. Turn it off<br>only in test environments.',
+    'id_as4_retry_max_attempts': 'How many times one message is delivered<br>in total while no receipt arrives,<br>the first delivery included.<br>Empty means the profile\'s own value.',
+    'id_as4_retry_interval': 'How long a delivery goes unanswered<br>before it is repeated under the same<br>message id. Empty means the profile\'s own value.',
+    'id_as4_missing_receipt_after': 'How long an exchange is given before its receipt<br>counts as missing - past this point the retries<br>stop and the exchange is reported instead.',
 
     // Security tab
     'id_as4_signing_key': 'Your private key in PEM, pasted as text.<br>It signs every outgoing message and is<br>stored encrypted, never in plain text.<br>Leave empty to keep the stored key.',
@@ -191,6 +194,10 @@ $.fn.zato.outgoing.as4.data_table.new_row = function(item, data, include_tr) {
 
     row += String.format("<td class='ignore'>{0}</td>", to_django_bool(item.as4_use_discovery));
     row += String.format("<td class='ignore'>{0}</td>", item.as4_sml_domain ? item.as4_sml_domain : '');
+
+    row += String.format("<td class='ignore'>{0}</td>", item.as4_retry_max_attempts ? item.as4_retry_max_attempts : '');
+    row += String.format("<td class='ignore'>{0}</td>", item.as4_retry_interval ? item.as4_retry_interval : '');
+    row += String.format("<td class='ignore'>{0}</td>", item.as4_missing_receipt_after ? item.as4_missing_receipt_after : '');
 
     if(include_tr) {
         row += '</tr>';
