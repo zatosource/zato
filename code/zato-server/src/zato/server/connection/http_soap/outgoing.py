@@ -55,7 +55,8 @@ from zato.server.metrics import get_error_source_from_status_class, get_status_c
 if 0:
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.bearer_token import BearerTokenInfoResult
-    from zato.common.typing_ import any_, callnone, dictnone, list_, stranydict, strdictnone, strnone, strstrdict, type_
+    from zato.common.typing_ import any_, callnone, dictnone, list_, stranydict, strbytes, strdictnone, strlist, strnone, \
+        strstrdict, type_
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict
     callnone = callnone
@@ -108,6 +109,10 @@ _retry = HTTP_SOAP.Retry
 # What a retry of an outgoing REST request is called in the logs.
 _rest_retry_label = 'REST out'
 
+# What a connection sends when it has said nothing at all about its content type - neither an explicit
+# one, nor a SOAP version, nor a data format.
+Default_Content_Type = 'text/plain'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -115,7 +120,13 @@ _rest_retry_label = 'REST out'
 # ################################################################################################################################
 
 class Response(_RequestsResponse):
-    data: 'strdictnone'
+
+    # What the raw body turned into, which is genuinely of no one shape - the text as it arrived when
+    # nothing says otherwise, whatever JSON parsed into when the response is JSON, and a model
+    # instance or a list of them when the caller named a model class. This used to be declared as a
+    # dict or nothing, which the very first assignment - the response text - already contradicted.
+    data: 'any_'
+
     zato_method: 'str'
     zato_address: 'str'
     zato_qs_params: 'strdictnone' = None
@@ -168,6 +179,11 @@ class SPNEGOAuth:
         else:
             target_name = None
 
+        # The library's own annotation says this is a string, which it never is - it takes a GSSAPI
+        # name object or nothing at all, and deriving the name from the target host is exactly what
+        # passing nothing means.
+        target_name = cast_('str', target_name)
+
         return HTTPSPNEGOAuth(creds=creds, target_name=target_name, delegate=self.needs_delegation)
 
     def __call__(self, request:'any_') -> 'any_':
@@ -217,8 +233,8 @@ class BaseHTTPSOAPWrapper:
         self.default_content_type = self.get_default_content_type()
 
         self.address = ''
-        self.path_params = []
-        self.base_headers = {}
+        self.path_params:'strlist' = []
+        self.base_headers:'strstrdict' = {}
         self.sec_type = self.config['sec_type']
 
         # Only user-defined outgoing REST and SOAP connections go to the audit log -
@@ -230,8 +246,11 @@ class BaseHTTPSOAPWrapper:
         if self.needs_audit:
             self.needs_audit = self.config['is_audit_log_active']
 
+        # Read through self.server rather than the argument - a connection only audits when it was
+        # given a server, so by this point the two are the same thing and self.server is the one
+        # already narrowed to a ParallelServer.
         if self.needs_audit:
-            self.audit_log = AuditLog(server.name)
+            self.audit_log = AuditLog(self.server.name)
 
         self.set_address_data()
         self.set_auth()
@@ -324,7 +343,7 @@ class BaseHTTPSOAPWrapper:
         self.username = None
 
         # The SOAP client is built lazily and dropped here so security changes take effect on the next call.
-        self._soap_client = None
+        self._soap_client:'SOAPClient | None' = None
 
         # #######################################
         #
@@ -663,25 +682,29 @@ class BaseHTTPSOAPWrapper:
 # ################################################################################################################################
 
     def get_default_content_type(self) -> 'str':
+        """ Returns the content type a request goes out with when its caller does not name one.
+        """
+        # An explicit content type on the connection is the whole answer, whatever else is configured.
+        if content_type := self.config['content_type']:
+            return content_type
 
-        if self.config['content_type']:
-            return self.config['content_type']
+        transport = self.config['transport']
 
         # A SOAP connection's content type is decided by its SOAP version, whatever data format it
         # carries. This used to hang off the data-format branch below, which meant a SOAP connection
         # with a data format set skipped the SOAP case entirely and went out as text/plain.
-        if self.config['transport'] == URL_TYPE.SOAP:
+        if transport == URL_TYPE.SOAP:
             out = SOAP_Content_Type[self.config['soap_version']]
-            return out
 
-        # For requests other than SOAP, set content type only if we know the data format
-        if self.config['data_format']:
+        # A plain HTTP connection that names a data format at all is a JSON one, that being the only
+        # format the outgoing side serialises to.
+        elif transport == URL_TYPE.PLAIN_HTTP and self.config['data_format']:
+            out = CONTENT_TYPE['JSON']
 
-            if self.config['transport'] == URL_TYPE.PLAIN_HTTP:
-                return CONTENT_TYPE.JSON # type: ignore
+        else:
+            out = Default_Content_Type
 
-        # If we are here, assume it is regular text by default
-        return 'text/plain'
+        return out
 
 # ################################################################################################################################
 
@@ -778,7 +801,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         path_params = {}
         try:
-            for name in self.path_params: # type: ignore
+            for name in self.path_params:
                 value = params.pop(name)
 
                 # Encode so a value cannot inject extra path segments into the address,
@@ -814,10 +837,9 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
 # ################################################################################################################################
 
-    def _soap_data(self, data:'str | bytes', headers:'stranydict') -> 'tuple[any_, stranydict]':
+    def _soap_data(self, data:'strbytes', headers:'stranydict') -> 'tuple[strbytes, stranydict]':
         """ Wraps the data in a SOAP-specific messages and adds the headers required.
         """
-        needs_soap_wrapper = False
         soap_version = self.config['soap_version']
 
         # The idea here is that even though there usually won't be the Content-Type
@@ -826,23 +848,21 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         if not headers.get('Content-Type'):
             headers['Content-Type'] = SOAP_Content_Type[soap_version]
 
-        # We do not need an envelope if the data already has one ..
+        # The marker is looked for in the same kind of string the data is, there being no way to
+        # search bytes for text or the other way around.
         if isinstance(data, bytes):
-            if b':Envelope' in data: # type: ignore
-                return data, headers # type: ignore
-            else:
-                needs_soap_wrapper = True
-
+            has_envelope = b':Envelope' in data
         else:
-            if ':Envelope' in data: # type: ignore
-                return data, headers # type: ignore
-            else:
-                needs_soap_wrapper = True
+            has_envelope = ':Envelope' in data
 
-        if needs_soap_wrapper:
-            return SOAP_Envelope_Template[soap_version].format(header='', data=data), headers
+        # Data that arrives with an envelope of its own is left as it is - wrapping it again would
+        # produce a body whose only child is another envelope.
+        if has_envelope:
+            out = data
         else:
-            return data, headers
+            out = SOAP_Envelope_Template[soap_version].format(header='', data=data)
+
+        return out, headers
 
 # ################################################################################################################################
 
@@ -1039,7 +1059,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         # .. if the address is a template, format it with input parameters ..
         if self.path_params:
-            address, qs_params = self.format_address(cid, params) # type: ignore
+            address, qs_params = self.format_address(cid, params)
         else:
             address, qs_params = self.address, dict(params)
 
@@ -1074,7 +1094,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         # .. by default, we have no parsed response at all, ..
         # .. which means that we can assume it will be the same as the raw, text response ..
-        response.data = response.text # type: ignore
+        response.data = response.text
         response.zato_method = method
         response.zato_address = address
         response.zato_qs_params = qs_params
@@ -1083,22 +1103,22 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         _has_data_format_json = self.config['data_format'] == DATA_FORMAT.JSON
 
         # .. check if we perhaps received JSON in the response ..
-        _has_json_content_type = 'application/json' in (response.headers.get('Content-Type') or '') # type: ignore
+        _has_json_content_type = 'application/json' in (response.headers.get('Content-Type') or '')
 
         # .. are we actually handling JSON in this response .. ?
-        _is_json:'bool' = _has_data_format_json or _has_json_content_type # type: ignore
+        _is_json:'bool' = _has_data_format_json or _has_json_content_type
 
         # .. if yes, try to parse the response accordingly ..
         if _is_json:
             try:
-                response.data = loads(response.text or '""') # type: ignore
+                response.data = loads(response.text or '""')
             except ValueError as e:
                 msg = 'Could not parse JSON response `{}`; e:`{}`'.format(response.text, e.args[0])
                 raise BadRequest(cid, msg, needs_msg=True)
 
         # .. if we have a model class on input, deserialize the received response into one ..
         if model:
-            response.data = self.server.marshal_api.from_dict(None, response.data, model) # type: ignore
+            response.data = self.server.marshal_api.from_dict(None, response.data, model)
 
         # .. deliver the response-mapped result to the configured callback in the background,
         # .. a no-op for connections without callback config ..
@@ -1181,7 +1201,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         self,
         *,
         cid,          # type: str
-        data='',      # type: ignore
+        data='',      # type: any_
         model=None,   # type: type_[Model] | None
         callback,     # type: callnone
         params=None,  # type: strdictnone
@@ -1237,34 +1257,41 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                 raise BackendInvocationError(cid, msg, needs_msg=True)
 
             # .. extract the underlying data ..
-            response_data = response.data # type: ignore
+            response_data = response.data
+
+            # What is produced below is a list of models, a single model or the response as it arrived.
+            # The three branches used to each re-annotate data with their own type, which left the
+            # name declared three incompatible ways in one function - the parameter above already
+            # types it, so none of them says anything the others do not contradict.
 
             # .. if we have a model, do make use of it here ..
             if model:
 
                 # .. if this model is actually a list ..
-                if is_list(model, True): # type: ignore
+                if is_list(model, True):
 
                     # .. extract the underlying model ..
-                    model_class:'type_[Model]' = extract_model_class(model) # type: ignore
+                    model_class:'type_[Model]' = extract_model_class(model)
 
                     # .. build a list that we will map the response to ..
-                    data:'list_[Model]' = [] # type: ignore
+                    model_list:'list_[Model]' = []
 
                     # .. go through everything we had in the response ..
-                    for item in response_data: # type: ignore
+                    for item in response_data:
 
                         # .. build an actual model instance ..
                         _item = model_class.from_dict(item)
 
                         # .. and append it to the data that we are producing ..
-                        data.append(_item) # type: ignore
+                        model_list.append(_item)
+
+                    data = model_list
                 else:
-                    data:'Model' = model.from_dict(response_data)
+                    data = model.from_dict(response_data)
 
             # .. if there is no model, use the response as-is ..
             else:
-                data = response_data # type: ignore
+                data = response_data
 
             # .. run our callback, if there is any ..
             if callback:
