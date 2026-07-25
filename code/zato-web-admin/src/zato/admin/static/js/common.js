@@ -108,6 +108,8 @@ $.namespace('zato.form_tabs');
 $.namespace('zato.gateway');
 $.namespace('zato.gateway.mcp');
 $.namespace('zato.gateway.mcp.data_table');
+$.namespace('zato.gateway.rule_engine');
+$.namespace('zato.gateway.rule_engine.data_table');
 $.namespace('zato.groups');
 $.namespace('zato.groups.data_table');
 $.namespace('zato.groups.members');

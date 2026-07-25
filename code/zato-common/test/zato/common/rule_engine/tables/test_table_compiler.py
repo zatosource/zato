@@ -12,7 +12,7 @@ import unittest
 # Zato
 from zato.common.rule_engine.api import RulesManager
 from zato.common.rule_engine.document import Comparator
-from zato.common.rule_engine.table import compile_table
+from zato.common.rule_engine.table_compile import compile_table
 
 # ################################################################################################################################
 # ################################################################################################################################

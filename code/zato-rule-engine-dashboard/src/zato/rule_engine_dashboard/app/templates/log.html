@@ -1,11 +1,68 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block page_title %}Decision log{% endblock %}
-{% block screen_title %}Decision log{% endblock %}
 
-{% block problems %}
-<div class="problems-panel">
-  <div class="problems-head" id="problems-head">Problems</div>
-  <div class="problems-list" id="problems-list"></div>
+{% block styles %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'rule-engine/css/test.css' %}">
+<link rel="stylesheet" href="{% static 'rule-engine/css/log.css' %}">
+{% endblock %}
+
+{% block content %}
+<!-- Main column -->
+<div class="main-column">
+  <div class="main-topbar">
+    <div class="main-topbar-line">
+      <h2>Decision log</h2>
+      <span class="main-subtitle" id="main-subtitle"></span>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <input class="log-search" id="log-search" type="text" placeholder="Business key or decision id..."
+      data-tippy-content="Support staff think in business keys, not ids: keys match loosely, a decision id pastes straight in.">
+    <select class="log-range" id="log-range" onchange="logView.setRange(this)"
+      data-tippy-content="How far back the list reaches.">
+      <option value="1">Today</option>
+      <option value="3">Last 3 days</option>
+      <option value="7" selected>Last 7 days</option>
+    </select>
+    <span class="toolbar-separator"></span>
+    <span class="keyboard-hint"><kbd>/</kbd> jumps to the search box, <kbd>Arrows</kbd> and <kbd>Page</kbd> keys walk the list, right-click a decision for its menu</span>
+    <button class="button-ghost" onclick="window.location.href='/tests/'"
+      data-tippy-content="Opens A/B testing on the tests and simulation screen: two versions over the same scenarios, with every decision that would change.">A/B testing</button>
+    <button class="button-ghost" id="log-rule-counts-button" onclick="logView.openRuleCounts(this)"
+      data-tippy-content="Which rules fire and how often over the selected range, with the live rules that never fired at all.">Rule counts</button>
+    <button class="button-ghost" id="log-capture-button" onclick="logView.openCapturePanel(this)"
+      data-tippy-content="What the log keeps: the searchable header always, the full story per the capture dial.">Capture and retention</button>
+  </div>
+
+  <!-- Every number here is clickable and filters the list below it -->
+  <div class="log-aggregates" id="log-aggregates"></div>
+
+  <!-- The list on the left, one decision's story on the right -->
+  <div class="log-split">
+    <div class="log-list-pane" id="log-list-pane">
+      <div class="log-list-head" id="log-list-head"></div>
+      <div class="log-list" id="log-list"></div>
+    </div>
+    <div class="pane-resizer pane-resizer-vertical" id="log-list-resizer"></div>
+    <div class="log-detail-pane" id="log-detail-pane"></div>
+  </div>
+
+  <div class="problems-panel">
+    <div class="problems-head" id="problems-head">Problems</div>
+    <div class="problems-list" id="problems-list"></div>
+  </div>
 </div>
+{% endblock %}
+
+{% block screen_scripts %}
+<script src="{% static 'rule-engine/js/data.js' %}"></script>
+<script src="{% static 'rule-engine/js/vocabulary.js' %}"></script>
+<script src="{% static 'rule-engine/js/log-model.js' %}"></script>
+<script src="{% static 'rule-engine/js/log-render.js' %}"></script>
+<script src="{% static 'rule-engine/js/log-menu.js' %}"></script>
+<script src="{% static 'rule-engine/js/log-actions.js' %}"></script>
 {% endblock %}

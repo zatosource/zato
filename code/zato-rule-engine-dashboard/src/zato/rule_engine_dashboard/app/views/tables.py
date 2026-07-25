@@ -13,7 +13,8 @@ from http.client import BAD_REQUEST
 from django.http import JsonResponse
 
 # Zato
-from zato.common.rule_engine.table import compile_table, validate_table
+from zato.common.rule_engine.table import validate_table
+from zato.common.rule_engine.table_compile import compile_table
 from zato.common.rule_engine.table_checks import check_conflicts, check_subsumption, check_unreachable
 from zato.common.rule_engine.table_completeness import check_completeness
 from zato.common.rule_engine.table_shape import compress_table, expand_table

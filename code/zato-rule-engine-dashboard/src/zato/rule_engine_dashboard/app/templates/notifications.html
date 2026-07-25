@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block page_title %}Notifications{% endblock %}
+
+{% block styles %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'rule-engine/css/test.css' %}">
+<link rel="stylesheet" href="{% static 'rule-engine/css/log.css' %}">
+<link rel="stylesheet" href="{% static 'rule-engine/css/notify.css' %}">
+{% endblock %}
+
+{% block content %}
+<!-- Main column -->
+<div class="main-column">
+  <div class="main-topbar">
+    <div class="main-topbar-line">
+      <h2>Notifications</h2>
+      <span class="main-subtitle" id="main-subtitle"></span>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <select class="notify-select" id="notify-ruleset" onchange="notifyView.setRuleset(this)"
+      data-tippy-content="Whose destinations the screen shows - notifications attach to rulesets."></select>
+    <span class="toolbar-separator"></span>
+    <span class="keyboard-hint">Destinations hear about publishes, rollbacks, approvals, failing advisory tests and traffic spikes</span>
+    <button class="button-ghost" id="notify-matrix-button" onclick="notifyView.openMatrix(this)"
+      data-tippy-content="The fixed set of events every destination is told about, each with an example message.">Event matrix</button>
+  </div>
+
+  <!-- Destinations on the left, the admin-only credentials cards on the right -->
+  <div class="notify-split">
+    <div class="notify-destinations-pane" id="notify-destinations"></div>
+    {% if request.user.is_superuser %}
+    <div class="notify-credentials-pane" id="notify-credentials-pane"></div>
+    {% endif %}
+  </div>
+
+  <div class="problems-panel">
+    <div class="problems-head" id="problems-head">Problems</div>
+    <div class="problems-list" id="problems-list"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block screen_scripts %}
+<script src="{% static 'rule-engine/js/data.js' %}"></script>
+<script src="{% static 'rule-engine/js/notify-model.js' %}"></script>
+<script src="{% static 'rule-engine/js/notify-render.js' %}"></script>
+<script src="{% static 'rule-engine/js/notify-actions.js' %}"></script>
+{% endblock %}

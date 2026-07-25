@@ -1,0 +1,5 @@
+/* The Rule engine API screen: how the grant entries render in the data table. */
+
+.ruleset-grant{display:inline-block;margin:1px 4px 1px 0;padding:1px 8px;border:1px solid #c8d2dc;border-radius:999px;font-size:0.85em;background:#f4f7fa;color:#33445c}
+.ruleset-grant-unmatched{border-color:#d9534f;background:#fdf3f2;color:#a94442}
+.ruleset-grant-none{font-style:italic;color:#a94442}

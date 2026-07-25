@@ -7,8 +7,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
+import sys
 from pathlib import Path
 from typing import Generator
+
+# The shared test documents live in a local lib directory with flat imports.
+_here = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(_here, 'lib'))
 
 # pytest
 import pytest

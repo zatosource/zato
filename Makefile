@@ -10,7 +10,7 @@
 	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-pubsub-backend test-pubsub-backend-perf test-pubsub-backend-perf-mass test-pubsub-system-perf test-enmasse \
 	test-cli test-mcp _test-mcp test-bearer _test-bearer test-graphql test-grpc test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-llm test-hl7 test-hl7-volume test-ui test-ui-pubsub test-ui-openapi _test-ui test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-audit-log-ui test-alerting test-analytics test-analytics-ui test-demo-seed test-logging test-ibm-mq test-mongodb test-es \
-	test-rule-engine test-rule-engine-perf test-rule-engine-jobs \
+	test-rule-engine test-rule-engine-perf test-rule-engine-jobs test-rule-engine-dashboard-ui test-webapp-ui \
 	rule-engine-notify rule-engine-retention rule-engine-spike-alerts rule-engine-dashboard \
 	test-all test \
 	health-ruff health-clippy \
@@ -941,6 +941,27 @@ test-rule-engine: ## Rule engine tests - grammar, matching, round trip, the SQL 
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rule_views \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
+test-webapp-ui: ## Web application UI kit tests - the theme contract over the generated themes and the converter, fully offline.
+	$(CURDIR)/code/bin/ruff check \
+		$(CURDIR)/code/tests/python/zato-common/webapp_ui/
+	pyright \
+		$(CURDIR)/code/tests/python/zato-common/webapp_ui/
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/webapp_ui/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_webapp_ui \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
+test-rule-engine-dashboard-ui: test-webapp-ui ## Rule engine dashboard UI smokes - every screen in jsdom against live views, scale budgets and the theme contract, fully offline.
+	$(CURDIR)/code/bin/ruff check \
+		$(CURDIR)/code/tests/python/zato-rule-engine-dashboard/ui/
+	pyright \
+		$(CURDIR)/code/tests/python/zato-rule-engine-dashboard/ui/
+	cd $(CURDIR)/code/tests/js/zato-rule-engine-dashboard && npm install --no-audit --no-fund
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-rule-engine-dashboard/ui/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_dashboard_ui \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
 test-rule-engine-jobs: ## Rule engine job tests - credentials, destinations, the notify loop with chat simulators, retention and spike sweeps, fully offline.
 	$(CURDIR)/code/bin/ruff check \
 		$(CURDIR)/code/zato-common/src/zato/common/rule_engine/notify/ \
@@ -1043,7 +1064,7 @@ test-request-response: ## Unified service I/O tests - messages, request.raw, req
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-all: test-server test-rest test-scheduler test-rate-limiting test-pubsub test-enmasse \
-	test-cli test-mcp test-bearer test-graphql test-grpc test-as2 test-as4 test-edifact test-x12 test-llm test-hl7 test-ui test-audit-log test-audit-log-ui test-alerting test-analytics test-demo-seed test-logging test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response test-rule-engine test-rule-engine-jobs ## Everything.
+	test-cli test-mcp test-bearer test-graphql test-grpc test-as2 test-as4 test-edifact test-x12 test-llm test-hl7 test-ui test-audit-log test-audit-log-ui test-alerting test-analytics test-demo-seed test-logging test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response test-rule-engine test-rule-engine-jobs test-rule-engine-dashboard-ui ## Everything.
 
 test: test-all ## Alias for test-all.
 

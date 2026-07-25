@@ -46,6 +46,7 @@ urlpatterns = [
     path('versions/', screens.versions, name='versions'),
     path('decision-log/', screens.decision_log, name='decision-log'),
     path('vocabulary/', screens.vocabulary, name='vocabulary'),
+    path('notifications/', screens.notifications, name='notifications'),
 
     # Rulesets home
     path('rules/rulesets/', rulesets.ruleset_list, name='rules-ruleset-list'),

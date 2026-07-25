@@ -276,6 +276,7 @@ def decision_row(record:'RuleDecisionRecord') -> 'stranydict':
         'rules_version':  record.rules_version,
         'occurred_at':    record.occurred_at.isoformat(),
         'business_key':   record.business_key,
+        'caller':         record.caller,
         'outcome':        record.outcome,
         'is_error':       record.is_error,
         'duration_ms':    record.duration_ms,
