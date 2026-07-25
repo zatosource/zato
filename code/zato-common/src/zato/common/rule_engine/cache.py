@@ -6,9 +6,6 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from copy import deepcopy
-
 # rule-engine
 from rule_engine.ast import ExpressionBase, LogicExpression
 
@@ -89,50 +86,57 @@ class CachedRule:
         # expression tree is immutable for as long as the rule is loaded.
         self._expression_keys = {}  # type: dict_[int, str]
 
-    def match(self, data:'anydict', condition_cache:'dict_[str, any_] | None'=None) -> 'MatchResult':
-        """ Match data against the rule using condition caching.
+    def _has_matched(self, match_data:'anydict', condition_cache:'dict_[str, any_]') -> 'bool':
+        """ Evaluates the rule's when expression through the cache the whole cycle shares.
         """
-        # Reset statistics for this evaluation
+        # The counters describe this one evaluation, so they start it at zero.
         self.cache_hits = 0
         self.cache_misses = 0
 
-        # Apply default values if needed
-        if self.rule.defaults:
-            needs_defaults = False
-            for key in self.rule.defaults:
-                if key not in data:
-                    needs_defaults = True
-                    break
+        out = self._evaluate_with_cache(self.rule.when_impl.statement.expression, match_data, condition_cache)
+        return out
 
-            if needs_defaults:
-                data = deepcopy(data)
-                for key, value in self.rule.defaults.items():
-                    if key not in data:
-                        data[key] = value
-
-        # Evaluate with caching, turning a missing value or a type mismatch
-        # into a loud readable error instead of a silent non-match.
-        if condition_cache is not None:
-            result = self._evaluate_with_cache(self.rule.when_impl.statement.expression, data, condition_cache)
-        else:
-            try:
-                result = self.rule.when_impl.matches(data)
-            except Exception as e:
-                raise build_evaluation_error(self.name, e) from e
+    def match(self, data:'anydict', condition_cache:'dict_[str, any_]') -> 'MatchResult':
+        """ Match data against the rule using condition caching.
+        """
+        match_data = self.rule.apply_defaults(data)
+        has_matched = self._has_matched(match_data, condition_cache)
 
         # Build a match result object
-        match_result = MatchResult(result)
-        match_result.full_name = self.rule.full_name
+        match_result = MatchResult(has_matched)
+        match_result.full_name = self.name
 
         # A match applies the then actions and a non-match still applies the else actions,
         # with an unresolvable reference turned into a loud readable error either way.
         try:
-            if result:
-                match_result.then = resolve_actions(self.rule.then, data)
+            if has_matched:
+                match_result.then = resolve_actions(self.rule.then, match_data)
             else:
-                match_result.else_ = resolve_actions(self.rule.else_, data)
+                match_result.else_ = resolve_actions(self.rule.else_, match_data)
         except Exception as e:
             raise build_evaluation_error(self.name, e) from e
+
+        return match_result
+
+    def match_then(self, data:'anydict', condition_cache:'dict_[str, any_]') -> 'MatchResult':
+        """ Match data against the rule, resolving its then actions and nothing else.
+
+        This is what the merged ruleset answer runs, and it reads only `then` - resolving the
+        else actions of every rule that did not fire would resolve actions no caller looks at.
+        """
+        match_data = self.rule.apply_defaults(data)
+        has_matched = self._has_matched(match_data, condition_cache)
+
+        match_result = MatchResult(has_matched)
+        match_result.full_name = self.name
+
+        # Only a rule that fired has anything to resolve, with an unresolvable reference
+        # turned into a loud readable error.
+        if has_matched:
+            try:
+                match_result.then = resolve_actions(self.rule.then, match_data)
+            except Exception as e:
+                raise build_evaluation_error(self.name, e) from e
 
         return match_result
 

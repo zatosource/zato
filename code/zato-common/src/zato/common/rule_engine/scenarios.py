@@ -8,19 +8,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from copy import deepcopy
-from typing import NamedTuple
 
 # Zato
-from zato.common.rule_engine.api import RulesManager
-from zato.common.rule_engine.errors import RuleEvaluationError
-from zato.common.rule_engine.table import StatementSeverity
+from zato.common.rule_engine.evaluation import evaluate_input
+from zato.common.rule_engine.loading import load_documents
 from zato.common.rule_engine.vocabulary import ErrorCode, new_error
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, dictlist, strlist
+    from zato.common.rule_engine.loading import LoadedRules
+    from zato.common.typing_ import anydict, dictlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,19 +39,6 @@ class DiffStatus:
     Matched   = 'matched'
     Different = 'different'
     Missing   = 'missing'
-
-# ################################################################################################################################
-
-# What a fired rule's trace line says when its document carries no statement.
-Default_Statement_Severity = StatementSeverity.Info
-
-# ################################################################################################################################
-
-class LoadedRules(NamedTuple):
-    """ A manager with one ruleset loaded and the full names of its rules, in rule order.
-    """
-    manager: 'RulesManager'
-    rule_names: 'strlist'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -97,18 +83,6 @@ def validate_test_set(test_set:'anydict') -> 'dictlist':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _statement_of(document:'anydict') -> 'anydict':
-    """ The plain-language statement a fired rule reports - its own, or its docs as the default.
-    """
-    statement = document.get('statement')
-
-    if statement is None:
-        statement = {'text': document['docs'], 'severity': Default_Statement_Severity}
-
-    return statement
-
-# ################################################################################################################################
-
 def _diff_expected(expected:'anydict', actual:'anydict') -> 'dictlist':
     """ Compares every declared expected field against the actual outcome, field by field.
     """
@@ -132,55 +106,6 @@ def _diff_expected(expected:'anydict', actual:'anydict') -> 'dictlist':
 
         out.append(entry)
 
-    return out
-
-# ################################################################################################################################
-
-def load_documents(documents:'anydict') -> 'LoadedRules':
-    """ Loads canonical rule documents into a fresh manager, ready to evaluate inputs.
-    """
-    if not documents:
-        raise Exception('There are no documents to load')
-
-    # Every document of one load belongs to the same ruleset.
-    first = next(iter(documents.values()))
-    ruleset_name = first['ruleset_name']
-
-    manager = RulesManager()
-    rule_names = manager.load_parsed_rules(documents, ruleset_name)
-
-    out = LoadedRules(manager, rule_names)
-    return out
-
-# ################################################################################################################################
-
-def evaluate_input(loaded:'LoadedRules', data:'anydict') -> 'anydict':
-    """ Evaluates one input against every loaded rule, collecting the outcome and the trace.
-
-    The outcome merges the assignments of every rule that fired, in rule order.
-    An input a rule cannot evaluate comes back with a readable error, never silently.
-    """
-    fired = []
-    actual = {}
-    error = ''
-
-    for full_name in loaded.rule_names:
-        rule = loaded.manager[full_name]
-
-        # An input a rule cannot evaluate fails loudly, never silently.
-        try:
-            result = rule.match(data)
-        except RuleEvaluationError as e:
-            error = str(e)
-            break
-
-        # A rule that fired contributes its trace line and its assignments, in rule order.
-        if result:
-            statement = _statement_of(rule.document)
-            fired.append({'rule': full_name, 'statement': statement['text'], 'severity': statement['severity']})
-            actual.update(result.then)
-
-    out = {'actual': actual, 'fired': fired, 'error': error}
     return out
 
 # ################################################################################################################################

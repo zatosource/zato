@@ -25,7 +25,7 @@ from common import build_ssl_context, PerfDatabase, Rollup_Day_Count, Rollup_Rul
 from zato.common.rule_engine.sql.constants import Definition_Type_Sentence_Rule, Event_Type_Rule_Fired_Daily, \
     Event_Type_Version_Created, Event_Type_Version_Published, System_Actor
 from zato.common.rule_engine.sql.document import serialize_document, serialize_string_list
-from zato.common.rule_engine.sql.schema import rule_decision_table
+from zato.common.rule_engine.sql.schema import metadata, rule_decision_table
 from traffic import Author, business_key_for, catalog_for, duration_for, fired_rules_for, outcome_for, story_for, \
     version_for
 
@@ -183,31 +183,48 @@ def _analyze_tables(connection:'any_', cursor:'any_', db_type:'str') -> 'None':
 
 # ################################################################################################################################
 
+def _table_names_children_first() -> 'strlist':
+    """ Every rule-engine table, referencing tables before the ones they reference.
+
+    The names come from the schema itself rather than from a list here, because a table added
+    to the schema later would otherwise leave the reset naming fewer tables than it has to.
+    """
+    out = []
+    for table in reversed(metadata.sorted_tables):
+        out.append(table.name)
+
+    return out
+
+# ################################################################################################################################
+
 def delete_all_rows(database:'PerfDatabase') -> 'None':
-    """ Empties all four rule-engine tables through the native driver. The network databases use TRUNCATE
+    """ Empties every rule-engine table through the native driver. The network databases use TRUNCATE
     because it is instant regardless of the row count, while SQLite's DELETE without a WHERE clause
     is already its fast truncate-optimization path.
     """
     connection = connect_native(database)
     cursor = connection.cursor()
 
+    table_names = _table_names_children_first()
+
     if database.db_type == Type_SQLite:
-        _ = cursor.execute('delete from rule_decision')
-        _ = cursor.execute('delete from rule_event')
-        _ = cursor.execute('delete from rule_version')
-        _ = cursor.execute('delete from rule_definition')
+        for table_name in table_names:
+            _ = cursor.execute(f'delete from {table_name}')
 
     # MySQL cannot TRUNCATE a table referenced by foreign keys, so the checks pause for the reset.
     elif database.db_type == Type_MySQL:
         _ = cursor.execute('set foreign_key_checks = 0')
-        _ = cursor.execute('truncate table rule_decision')
-        _ = cursor.execute('truncate table rule_event')
-        _ = cursor.execute('truncate table rule_version')
-        _ = cursor.execute('truncate table rule_definition')
+
+        for table_name in table_names:
+            _ = cursor.execute(f'truncate table {table_name}')
+
         _ = cursor.execute('set foreign_key_checks = 1')
 
+    # PostgreSQL refuses to truncate a table whose referencing tables are not named in the same
+    # statement, so all of them go into one.
     else:
-        _ = cursor.execute('truncate table rule_decision, rule_event, rule_version, rule_definition restart identity')
+        joined = ', '.join(table_names)
+        _ = cursor.execute(f'truncate table {joined} restart identity')
 
     connection.commit()
     connection.close()

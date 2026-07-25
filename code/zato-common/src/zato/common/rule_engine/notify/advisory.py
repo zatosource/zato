@@ -11,8 +11,8 @@ from logging import getLogger
 
 # Zato
 from zato.common.rule_engine.notify.documents import documents_of_version
+from zato.common.rule_engine.scenarios import run_test_set
 from zato.common.rule_engine.sql.constants import Definition_Type_Test_Set, Event_Type_Advisory_Run, System_Actor
-from zato.common.rule_engine.testing import run_test_set
 
 # ################################################################################################################################
 # ################################################################################################################################

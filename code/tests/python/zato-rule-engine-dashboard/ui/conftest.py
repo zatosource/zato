@@ -69,7 +69,7 @@ from rule_views_test_data import Author, create_ruleset, create_test_set, create
 from zato.common.rule_engine.ingestion import DecisionRecorder
 from zato.common.rule_engine.sql import CapturePolicy
 from zato.common.rule_engine.sql.constants import Definition_Type_Decision_Table, Documents_Key
-from zato.common.rule_engine.testing import load_documents
+from zato.common.rule_engine.loading import load_documents
 
 # ################################################################################################################################
 # ################################################################################################################################

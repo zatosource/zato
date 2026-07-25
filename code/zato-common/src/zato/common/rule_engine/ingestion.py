@@ -11,16 +11,16 @@ from time import monotonic
 from uuid import uuid4
 
 # Zato
+from zato.common.rule_engine.evaluation import evaluate_input
 from zato.common.rule_engine.sql.data import DecisionWrite
 from zato.common.rule_engine.sql.time_ import utc_now
-from zato.common.rule_engine.testing import evaluate_input
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from zato.common.rule_engine.loading import LoadedRules
     from zato.common.rule_engine.sql import DecisionBatchWriter
-    from zato.common.rule_engine.testing import LoadedRules
     from zato.common.typing_ import anydict
 
 # ################################################################################################################################

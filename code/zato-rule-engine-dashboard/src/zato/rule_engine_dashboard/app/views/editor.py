@@ -12,9 +12,9 @@ from django.http import JsonResponse
 # Zato
 from zato.common.rule_engine.parser import parse_data_details
 from zato.common.rule_engine.render import render_documents
+from zato.common.rule_engine.scenarios import run_test_set
 from zato.common.rule_engine.semantics import validate_document
 from zato.common.rule_engine.sql.constants import Documents_Key
-from zato.common.rule_engine.testing import run_test_set
 from zato.common.rule_engine.vocabulary import Comparators_By_Type, iter_attributes, Status_Deprecated
 from zato.rule_engine_dashboard.app.storage import get_backend
 from zato.rule_engine_dashboard.app.views.api import json_api, read_json, required

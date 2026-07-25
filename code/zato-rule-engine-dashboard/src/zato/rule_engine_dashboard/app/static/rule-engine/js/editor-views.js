@@ -79,8 +79,8 @@ editorView.tableViewHtml = function() {
         '<td colspan="' + columnCount + '">' + elseCells + '</td></tr>';
 
     var note = '<div class="editor-view-note">The same stored rule drawn as a grid: each or-group of the ' +
-        'sentence is one numbered column, a column matches when all its cells do, the first matching column ' +
-        'fires the then actions. Every chip stays editable, an edit here is an edit of the sentence.</div>';
+        'sentence is one numbered column, a column matches when all its cells do, and the rule fires its ' +
+        'then actions when any column matches. Every chip stays editable, an edit here is an edit of the sentence.</div>';
 
     var out = note + '<table class="editor-table">' + header + body + '</table>';
     return out;

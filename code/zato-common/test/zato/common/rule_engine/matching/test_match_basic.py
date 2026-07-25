@@ -152,19 +152,19 @@ class TestMatchBasic(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_manager_match_with_rule_list(self) -> 'None':
+    def test_manager_match_first_with_rule_list(self) -> 'None':
         """ The manager returns the first match when given a list of rules.
         """
         rule_names = ['simple_01_Simple_Equality_Test_1', 'simple_02_Simple_Equality_Test_2']
 
         # Both fields are provided because every checked rule needs its own value present.
-        result = self.helper.rules_manager.match({'xyz': 456, 'abc': 0}, rule_names)
+        result = self.helper.rules_manager.match_first({'xyz': 456, 'abc': 0}, rule_names)
         self.assertTrue(result)
 
         if result:
             self.assertEqual(result.full_name, 'simple_02_Simple_Equality_Test_2')
 
-        result = self.helper.rules_manager.match({'xyz': 111, 'abc': 111}, rule_names)
+        result = self.helper.rules_manager.match_first({'xyz': 111, 'abc': 111}, rule_names)
         self.assertIsNone(result)
 
 # ################################################################################################################################

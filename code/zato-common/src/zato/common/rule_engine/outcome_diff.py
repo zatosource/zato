@@ -7,7 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.rule_engine.testing import evaluate_input, load_documents
+from zato.common.rule_engine.evaluation import evaluate_input
+from zato.common.rule_engine.loading import load_documents
 
 # ################################################################################################################################
 # ################################################################################################################################

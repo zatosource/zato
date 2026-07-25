@@ -13,20 +13,19 @@ from typing import NamedTuple
 
 # Zato
 from zato.common.rule_engine.ingestion import DecisionRecorder
-from zato.common.rule_engine.loading import documents_from_version
+from zato.common.rule_engine.loading import documents_from_version, load_documents
 from zato.common.rule_engine.semantics import validate_data
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Definition_Type_Vocabulary
 from zato.common.rule_engine.sql.document import deserialize_document
 from zato.common.rule_engine.sql.errors import RecordNotFoundError
-from zato.common.rule_engine.testing import load_documents
 from zato.common.rule_engine.vocabulary import build_attribute_index
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from zato.common.rule_engine.loading import LoadedRules
     from zato.common.rule_engine.sql import DecisionBatchWriter, RuleDefinitionRecord, RuleSQLBackend
-    from zato.common.rule_engine.testing import LoadedRules
     from zato.common.typing_ import anydict, dictlist, strlist
 
 # ################################################################################################################################

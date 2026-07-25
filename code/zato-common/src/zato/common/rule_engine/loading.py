@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from typing import NamedTuple
 
 # Zato
+from zato.common.rule_engine.api import RulesManager
 from zato.common.rule_engine.sql.constants import Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
 
@@ -17,7 +18,6 @@ from zato.common.rule_engine.sql.document import deserialize_document
 # ################################################################################################################################
 
 if 0:
-    from zato.common.rule_engine.api import RulesManager
     from zato.common.rule_engine.sql import RuleSQLBackend, RuleVersionRecord
     from zato.common.typing_ import anydict, strlist
 
@@ -29,6 +29,33 @@ class LoadedVersion(NamedTuple):
     """
     rule_names: 'strlist'
     version: 'int'
+
+# ################################################################################################################################
+
+class LoadedRules(NamedTuple):
+    """ A manager with one ruleset loaded and the full names of its rules, in rule order.
+    """
+    manager: 'RulesManager'
+    rule_names: 'strlist'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def load_documents(documents:'anydict') -> 'LoadedRules':
+    """ Loads canonical rule documents into a fresh manager, ready to evaluate inputs.
+    """
+    if not documents:
+        raise Exception('There are no documents to load')
+
+    # Every document of one load belongs to the same ruleset.
+    first = next(iter(documents.values()))
+    ruleset_name = first['ruleset_name']
+
+    manager = RulesManager()
+    rule_names = manager.load_parsed_rules(documents, ruleset_name)
+
+    out = LoadedRules(manager, rule_names)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

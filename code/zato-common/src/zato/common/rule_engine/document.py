@@ -335,8 +335,27 @@ def compile_condition(condition:'anydict') -> 'str':
 
 # ################################################################################################################################
 
+def _compile_all_of(conditions:'dictlist') -> 'str':
+    """ Compiles conditions that all have to hold into one parenthesized and-expression.
+    """
+    parts = []
+    for condition in conditions:
+        fragment = compile_condition(condition)
+        parts.append(fragment)
+
+    joined = ' and '.join(parts)
+
+    out = f'({joined})'
+    return out
+
+# ################################################################################################################################
+
 def compile_when(document:'anydict') -> 'str':
     """ Compiles a document's conditions and joiners into the when expression the engine evaluates.
+
+    A document may also carry guards under `unless`, each a set of conditions that must not all
+    hold at once. This is how a decision table encodes a declared override - the overridden
+    column carries the overriding column's conditions and cannot fire while they hold.
     """
     conditions = document['conditions']
     joiners = document['joiners']
@@ -349,8 +368,21 @@ def compile_when(document:'anydict') -> 'str':
         if index < len(joiners):
             parts.append(joiners[index])
 
-    # .. and the expression is their space-joined concatenation.
+    # .. their space-joined concatenation is the expression the document itself states ..
     out = ' '.join(parts)
+
+    # .. and each guard negates one whole condition set on top of it. The stated expression is
+    # parenthesized first, because its own joiners may include or, which binds looser than the and
+    # the guards attach with.
+    guards = document.get('unless')
+
+    if guards:
+        out = f'({out})'
+
+        for guard in guards:
+            guard_expression = _compile_all_of(guard)
+            out = f'{out} and not {guard_expression}'
+
     return out
 
 # ################################################################################################################################
