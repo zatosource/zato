@@ -640,7 +640,6 @@ class ConfigManager(_ConfigManagerBase):
             'soap_version':config.soap_version,
             'ping_method':config.ping_method,
             'pool_size':config.pool_size,
-            'serialization_type':config.serialization_type,
             'timeout':config.timeout,
             'content_type':config.content_type,
             'validate_tls':config.validate_tls,

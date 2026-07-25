@@ -87,7 +87,6 @@ class CreateForm(DataFormatForm):
     merge_url_params_req = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     url_params_pri = forms.ChoiceField(widget=forms.Select())
     params_pri = forms.ChoiceField(widget=forms.Select())
-    serialization_type = forms.CharField(widget=forms.HiddenInput(), initial='string')
     method = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
     soap_action = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     soap_version = forms.ChoiceField(widget=forms.Select())
@@ -159,7 +158,6 @@ class CreateForm(DataFormatForm):
         for value, label in params_priority:
             self.fields['params_pri'].choices.append([value, label])
 
-        self.fields['serialization_type'].initial = 'string'
 
         self.fields['soap_version'].choices = []
         for name in sorted(soap_versions):

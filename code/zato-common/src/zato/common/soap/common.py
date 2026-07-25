@@ -39,6 +39,12 @@ class SOAPVersion:
     V11 = '1.1'
     V12 = '1.2'
 
+    # What a connection that does not say which version it speaks gets. It has to be named in one
+    # place because the two ends of the declarative path used to disagree - the wrapper defaulted a
+    # connection to 1.1 and the client it built defaulted to 1.2, so which version was spoken
+    # depended on which of the two layers happened to answer first.
+    Default = V11
+
 # ################################################################################################################################
 # ################################################################################################################################
 

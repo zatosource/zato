@@ -197,6 +197,16 @@ class CryptoManager:
 # ################################################################################################################################
 
     @staticmethod
+    def generate_bytes(size:'int') -> 'bytes':
+        """ Generates the given number of random bytes, for key material, nonces
+        and initialization vectors, which need an exact size rather than an encoding.
+        """
+        out = os.urandom(size)
+        return out
+
+# ################################################################################################################################
+
+    @staticmethod
     def generate_hex_string(bits:'int'=64) -> 'str':
         """ Generates a random hex string of the given bit size, e.g. 64 bits is 16 hex characters -
         for unique names of resources, correlation values and similar identifiers.

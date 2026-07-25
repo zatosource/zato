@@ -53,7 +53,6 @@
             'ping_method',
             'timeout',
             'content_type',
-            'serialization_type',
             'use_ws_addressing',
             'use_mtom',
             'body_credentials',
@@ -235,7 +234,6 @@
                         <td class='ignore'>{{ item.timeout }}</td>
 
                         <td class='ignore'>{{ item.content_type|default:'' }}</td>
-                        <td class='ignore'>{{ item.serialization_type }}</td>
 
                         <td class='ignore'>{{ item.use_ws_addressing|default:'False' }}</td>
                         <td class='ignore'>{{ item.use_mtom|default:'False' }}</td>
@@ -451,7 +449,6 @@
                         </tr>
                     </table>
 
-                    {{ create_form.serialization_type }}
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 </form>
             </div>
@@ -617,7 +614,6 @@
                         </tr>
                     </table>
 
-                    {{ edit_form.serialization_type }}
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
                 </form>

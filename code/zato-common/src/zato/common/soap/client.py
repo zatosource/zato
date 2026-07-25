@@ -28,6 +28,8 @@ from zato.common.soap.envelope import attach_body, build_envelope, get_header, g
 from zato.common.soap.message import SOAPMessage, to_lexical
 from zato.common.soap.mtom import build_mtom, build_swa, parse_message, to_bytes_map
 from zato.common.soap.security.wss import apply_wss, keystore_from_config
+from zato.common.util.http_retry import RetryPolicy, send_with_retry
+from zato.common.util.tls_verify import resolve_tls_verify
 from zato.common.util.xml_.core import qname
 from zato.common.util.xml_.keystore import new_keystore
 
@@ -57,6 +59,9 @@ logger = getLogger('zato')
 # dashboard shows, so 1 means the operation's first child.
 Minimum_Credential_Position = 1
 
+# What a retry of an outgoing SOAP request is called in the logs.
+_retry_label = 'SOAP out'
+
 # What body credentials look like when a connection enables them without spelling out
 # a mapping of its own - one element per credential, each named after what it carries.
 Default_Body_Credential_Mappings = [
@@ -77,11 +82,14 @@ class SOAPClient:
         self.config = config
 
         self.address      = config['address']
-        self.soap_version = config.get('soap_version', SOAPVersion.V12)
+        self.soap_version = config.get('soap_version', SOAPVersion.Default)
         self.soap_action  = config.get('soap_action', '')
         self.timeout      = float(config.get('timeout') or 0) or None
         self.content_type = config.get('content_type')
-        self.ping_method  = config.get('ping_method', 'HEAD')
+
+        # A transport-level failure is retried per the connection's own configuration - the
+        # dashboard offers the four retry settings for outgoing SOAP as much as it does for REST.
+        self.retry_policy = RetryPolicy.from_config(config)
 
         # WS-Security, WS-Addressing, MTOM and body-credential injection are each optional.
         self.security         = config.get('security')
@@ -101,7 +109,7 @@ class SOAPClient:
         """ Returns what to pass to requests as its TLS verification - True to verify against
         the system trust store, False to skip it, or a path to a CA bundle to verify against.
         """
-        out = self.config.get('validate_tls', True)
+        out = resolve_tls_verify(self.config)
         return out
 
 # ################################################################################################################################
@@ -302,20 +310,23 @@ class SOAPClient:
 
 # ################################################################################################################################
 
-    def _post(self, body:'bytes', content_type:'str') -> 'any_':
-        """ Sends one request and returns the raw requests response.
+    def _post(self, body:'bytes', content_type:'str', cid:'str'='') -> 'any_':
+        """ Sends one request and returns the raw requests response, retrying a transport-level
+        failure for as long as the connection's retry configuration allows.
         """
         headers = self._request_headers(content_type)
 
-        out = self.session.post(
-            self.address,
-            data=body,
-            headers=headers,
-            verify=self._verify(),
-            cert=self._client_cert(),
-            timeout=self.timeout,
-        )
+        def send() -> 'any_':
+            return self.session.post(
+                self.address,
+                data=body,
+                headers=headers,
+                verify=self._verify(),
+                cert=self._client_cert(),
+                timeout=self.timeout,
+            )
 
+        out = send_with_retry(self.retry_policy, send, cid, _retry_label)
         return out
 
 # ################################################################################################################################
@@ -379,7 +390,7 @@ class SOAPClient:
             self.audit_callback(cid, AuditEvent.Request_Sent, endpoint, AuditOutcome.OK, body)
 
         try:
-            out = self._post(body, content_type)
+            out = self._post(body, content_type, cid)
         except Exception as e:
 
             # .. a transport-level failure means no response ever arrived ..
@@ -483,22 +494,6 @@ class SOAPClient:
 
         for signature in signatures:
             security.append(signature)
-
-# ################################################################################################################################
-
-    def ping(self) -> 'int':
-        """ Pings the endpoint with the configured method and returns the HTTP status code.
-        """
-        response = self.session.request(
-            self.ping_method,
-            self.address,
-            verify=self._verify(),
-            cert=self._client_cert(),
-            timeout=self.timeout,
-        )
-
-        out = response.status_code
-        return out
 
 # ################################################################################################################################
 

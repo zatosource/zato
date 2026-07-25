@@ -66,7 +66,6 @@ class CreateForm(forms.Form):
     retry_backoff_multiplier = forms.CharField(
         widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:10%'}), initial=_retry.Default_Backoff_Multiplier)
 
-    serialization_type = forms.CharField(initial='string', widget=forms.HiddenInput())
 
     # Request - what request each invocation builds. The message and SOAP header rows are edited
     # as rows of widgets and serialized by JS to the hidden JSON fields below before the form is submitted.

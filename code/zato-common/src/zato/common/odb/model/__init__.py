@@ -16,8 +16,7 @@ from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Index, Integ
 from sqlalchemy.orm import backref, relationship
 
 # Zato
-from zato.common.api import AMQP, HTTP_SOAP_SERIALIZATION_TYPE, MISC, ODOO, SCHEDULER, PARAMS_PRIORITY, \
-    URL_PARAMS_PRIORITY
+from zato.common.api import AMQP, MISC, ODOO, SCHEDULER, PARAMS_PRIORITY, URL_PARAMS_PRIORITY
 from zato.common.json_internal import json_dumps
 from zato.common.odb.model.base import Base, _JSON
 
@@ -486,7 +485,6 @@ class HTTPSOAP(Base):
 
     ping_method = Column(String(60), nullable=True)
     pool_size = Column(Integer, nullable=True)
-    serialization_type = Column(String(200), nullable=False, default=HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id)
     timeout = Column(Integer(), nullable=False, default=MISC.DEFAULT_HTTP_TIMEOUT)
 
     merge_url_params_req = Column(Boolean, nullable=True, default=True)
@@ -507,7 +505,7 @@ class HTTPSOAP(Base):
 
     def __init__(self, id=None, name=None, is_active=None, is_internal=None, connection=None, transport=None, host=None,
             url_path=None, method=None, soap_action=None, soap_version=None, data_format=None, ping_method=None,
-            pool_size=None, merge_url_params_req=None, url_params_pri=None, params_pri=None, serialization_type=None,
+            pool_size=None, merge_url_params_req=None, url_params_pri=None, params_pri=None,
             timeout=None, service_id=None, service=None, security=None, cluster_id=None,
             cluster=None, service_name=None, security_id=None, security_name=None, content_type=None,
             match_slash=None,
@@ -530,7 +528,6 @@ class HTTPSOAP(Base):
         self.merge_url_params_req = merge_url_params_req
         self.url_params_pri = url_params_pri
         self.params_pri = params_pri
-        self.serialization_type = serialization_type
         self.timeout = timeout
         self.service_id = service_id
         self.service = service
