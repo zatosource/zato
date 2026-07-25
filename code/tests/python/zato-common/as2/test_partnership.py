@@ -51,7 +51,7 @@ def _certificate_to_pem(certificate:'any_') -> 'any_':
 
 # ################################################################################################################################
 
-def _make_entry(certificate:'any_', valid_from:'any_'=None, valid_until:'any_'=None) -> 'any_':
+def _make_entry(certificate:'any_', valid_from:'any_' = None, valid_until:'any_' = None) -> 'any_':
     out = CertificateEntry()
 
     out.certificate = certificate

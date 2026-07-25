@@ -1107,7 +1107,7 @@ class TestInboundSecurityPolicy:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _certificate_entry(certificate:'any_', valid_from:'any_'=None, valid_until:'any_'=None) -> 'any_':
+def _certificate_entry(certificate:'any_', valid_from:'any_' = None, valid_until:'any_' = None) -> 'any_':
     """ Builds one entry of a partner's certificate rotation list.
     """
     out = CertificateEntry()

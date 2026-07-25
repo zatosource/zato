@@ -33,6 +33,12 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+# The list type extraction runs over
+extraction_rule_list = list['ExtractionRule']
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ExtractionType:
     """ How an attribute value is extracted out of a message - a path into JSON, an XPath into XML,
     a header lookup or a regular expression over the raw data.
@@ -51,12 +57,6 @@ class ExtractionRule:
     attr_name:  'str' = ''
     rule_type:  'str' = ''
     expression: 'str' = ''
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# The list type extraction runs over
-extraction_rule_list = list[ExtractionRule]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -86,6 +86,7 @@ def _walk_json_path(parsed:'any_', expression:'str') -> 'anynone':
     for token in expression.split('.'):
 
         match = _json_token_pattern.match(token)
+
         if not match:
             return None
 
@@ -102,12 +103,15 @@ def _walk_json_path(parsed:'any_', expression:'str') -> 'anynone':
 
         # .. and each index must lead into a list that is long enough.
         for index_match in _json_index_pattern.finditer(indexes):
-            index = int(index_match.group(1))
+            index_group = index_match.group(1)
+            index = int(index_group)
 
             if not isinstance(current, list):
                 return None
 
-            if index >= len(current):
+            current_len = len(current)
+
+            if index >= current_len:
                 return None
 
             current = current[index]
@@ -260,9 +264,7 @@ def extract_attrs(
     for rule in rules:
 
         # Unknown rule types are configuration mistakes worth pointing out ..
-        extractor = _extractors.get(rule.rule_type)
-
-        if not extractor:
+        if not (extractor := _extractors.get(rule.rule_type)):
             logger.warning('Unknown extraction rule type `%s` for attribute `%s`', rule.rule_type, rule.attr_name)
             continue
 

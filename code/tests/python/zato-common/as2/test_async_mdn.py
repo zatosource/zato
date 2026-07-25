@@ -33,6 +33,12 @@ _as2_to   = 'ZatoRetail'
 # Where the receipts are addressed to.
 _mdn_url = 'https://partnercorp.example.com/as2/mdn'
 
+# The messages the receipts of these tests answer.
+_orders_id  = '<orders-850@partnercorp>'
+_invoice_id = '<invoice-810@partnercorp>'
+_old_id     = '<old@partnercorp>'
+_new_id     = '<new@partnercorp>'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -57,7 +63,7 @@ class _PostRecorder:
     or raising, so a run of the queue can be driven without a destination.
     """
 
-    def __init__(self, status_code:'int'=200, exception:'Exception | None'=None) -> 'None':
+    def __init__(self, status_code:'int' = 200, exception:'Exception | None' = None) -> 'None':
         self.status_code = status_code
         self.exception = exception
 
@@ -87,7 +93,7 @@ class TestEnqueue:
         queue = AsyncMDNQueue()
         pending = _new_pending()
 
-        row_id = queue.enqueue(_as2_from, _as2_to, '<orders-850@partnercorp>', pending, 'as2-channel', 'cid-1')
+        row_id = queue.enqueue(_as2_from, _as2_to, _orders_id, pending, 'as2-channel', 'cid-1')
 
         assert row_id
 
@@ -118,11 +124,15 @@ class TestEnqueue:
 
         queue = AsyncMDNQueue()
 
-        first_id = queue.enqueue(_as2_from, _as2_to, '<orders-850@partnercorp>', _new_pending(), 'as2-channel', 'cid-1')
+        pending = _new_pending()
+
+        first_id = queue.enqueue(_as2_from, _as2_to, _orders_id, pending, 'as2-channel', 'cid-1')
 
         # The replay of a message whose receipt is still waiting must not queue a second one -
         # the receipt of the first delivery is the one the peer is owed.
-        second_id = queue.enqueue(_as2_from, _as2_to, '<orders-850@partnercorp>', _new_pending(), 'as2-channel', 'cid-2')
+        pending = _new_pending()
+
+        second_id = queue.enqueue(_as2_from, _as2_to, _orders_id, pending, 'as2-channel', 'cid-2')
 
         assert first_id
         assert second_id == 0
@@ -140,7 +150,9 @@ class TestEnqueue:
         queue = AsyncMDNQueue()
         now = utcnow()
 
-        _ = queue.enqueue(_as2_from, _as2_to, '<orders-850@partnercorp>', _new_pending(), 'as2-channel', 'cid-1', now=now)
+        pending = _new_pending()
+
+        _ = queue.enqueue(_as2_from, _as2_to, _orders_id, pending, 'as2-channel', 'cid-1', now=now)
 
         due = queue.due(now)
 
@@ -161,8 +173,9 @@ class TestDelivery:
         queue = AsyncMDNQueue()
         now = utcnow()
 
-        row_id = queue.enqueue(_as2_from, _as2_to, '<orders-850@partnercorp>', _new_pending(), 'as2-channel', 'cid-1',
-            now=now)
+        pending = _new_pending()
+
+        row_id = queue.enqueue(_as2_from, _as2_to, _orders_id, pending, 'as2-channel', 'cid-1', now=now)
 
         item = queue.get(row_id)
         post = _PostRecorder(200)
@@ -179,8 +192,9 @@ class TestDelivery:
         queue = AsyncMDNQueue()
         now = utcnow()
 
-        row_id = queue.enqueue(_as2_from, _as2_to, '<orders-850@partnercorp>', _new_pending(), 'as2-channel', 'cid-1',
-            now=now)
+        pending = _new_pending()
+
+        row_id = queue.enqueue(_as2_from, _as2_to, _orders_id, pending, 'as2-channel', 'cid-1', now=now)
 
         item = queue.get(row_id)
         post = _PostRecorder(500)
@@ -212,11 +226,13 @@ class TestDelivery:
         queue = AsyncMDNQueue()
         now = utcnow()
 
-        row_id = queue.enqueue(_as2_from, _as2_to, '<orders-850@partnercorp>', _new_pending(), 'as2-channel', 'cid-1',
-            now=now)
+        pending = _new_pending()
+
+        row_id = queue.enqueue(_as2_from, _as2_to, _orders_id, pending, 'as2-channel', 'cid-1', now=now)
 
         item = queue.get(row_id)
-        post = _PostRecorder(exception=Exception('Connection refused'))
+        error = Exception('Connection refused')
+        post = _PostRecorder(exception=error)
 
         is_delivered = deliver(queue, item, post, now)
 
@@ -232,8 +248,9 @@ class TestDelivery:
         queue = AsyncMDNQueue()
         now = utcnow()
 
-        row_id = queue.enqueue(_as2_from, _as2_to, '<orders-850@partnercorp>', _new_pending(), 'as2-channel', 'cid-1',
-            now=now)
+        pending = _new_pending()
+
+        row_id = queue.enqueue(_as2_from, _as2_to, _orders_id, pending, 'as2-channel', 'cid-1', now=now)
 
         post = _PostRecorder(503)
 
@@ -265,9 +282,15 @@ class TestDelivery:
         queue = AsyncMDNQueue()
         now = utcnow()
 
-        _ = queue.enqueue(_as2_from, _as2_to, '<orders-850@partnercorp>', _new_pending(), 'as2-channel', 'cid-1', now=now)
-        _ = queue.enqueue(_as2_from, _as2_to, '<invoice-810@partnercorp>', _new_pending(), 'as2-channel', 'cid-2', now=now)
-        _ = queue.enqueue('OtherPartner', _as2_to, '<orders-850@other>', _new_pending(), 'as2-channel', 'cid-3', now=now)
+        pending = _new_pending()
+
+        _ = queue.enqueue(_as2_from, _as2_to, _orders_id, pending, 'as2-channel', 'cid-1', now=now)
+        pending = _new_pending()
+
+        _ = queue.enqueue(_as2_from, _as2_to, _invoice_id, pending, 'as2-channel', 'cid-2', now=now)
+        pending = _new_pending()
+
+        _ = queue.enqueue('OtherPartner', _as2_to, '<orders-850@other>', pending, 'as2-channel', 'cid-3', now=now)
 
         post = _PostRecorder(200)
 
@@ -288,7 +311,9 @@ class TestDelivery:
         queue = AsyncMDNQueue()
         now = utcnow()
 
-        _ = queue.enqueue(_as2_from, _as2_to, '<orders-850@partnercorp>', _new_pending(), 'as2-channel', 'cid-1', now=now)
+        pending = _new_pending()
+
+        _ = queue.enqueue(_as2_from, _as2_to, _orders_id, pending, 'as2-channel', 'cid-1', now=now)
 
         # A fresh queue over the same database is what a restarted server sees.
         restarted = AsyncMDNQueue()
@@ -341,10 +366,13 @@ class TestRetention:
 
         long_ago = now - timedelta(days=AS2.Async_MDN.Retention_Days + 1)
 
-        stale_id = queue.enqueue(_as2_from, _as2_to, '<old@partnercorp>', _new_pending(), 'as2-channel', 'cid-old',
-            now=long_ago)
-        fresh_id = queue.enqueue(_as2_from, _as2_to, '<new@partnercorp>', _new_pending(), 'as2-channel', 'cid-new',
-            now=now)
+        pending = _new_pending()
+
+        stale_id = queue.enqueue(_as2_from, _as2_to, _old_id, pending, 'as2-channel', 'cid-old', now=long_ago)
+
+        pending = _new_pending()
+
+        fresh_id = queue.enqueue(_as2_from, _as2_to, _new_id, pending, 'as2-channel', 'cid-new', now=now)
 
         dropped_count = queue.run_retention(now)
 

@@ -14,6 +14,7 @@ from threading import Lock, Thread
 from time import monotonic, sleep
 
 # gevent
+from gevent import get_hub
 from gevent.monkey import is_module_patched
 
 # ################################################################################################################################
@@ -35,6 +36,12 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+# Type aliases
+pending_event_list = list['PendingEvent']
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # The environment variables configuring the buffered writer
 Env_Flush_Max_Size    = 'Zato_Audit_Log_Flush_Max_Size'
 Env_Flush_Max_Wait_Ms = 'Zato_Audit_Log_Flush_Max_Wait_Ms'
@@ -52,7 +59,8 @@ _min_check_interval_seconds = 0.05
 _max_check_interval_seconds = 1.0
 
 # Per-flush trace diagnostics - opt-in through the environment
-_is_trace_enabled = bool(os.environ.get('Zato_HL7_Trace'))
+_trace_flag = os.environ.get('Zato_HL7_Trace')
+_is_trace_enabled = bool(_trace_flag)
 
 def _trace(message:'str', *args:'object') -> 'None':
     if _is_trace_enabled:
@@ -106,12 +114,6 @@ class PendingEvent:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The list type the buffer holds
-pending_event_list = list[PendingEvent]
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class EventBuffer:
     """ Buffers audit events and writes them out in batches - a flush runs when the buffer
     reaches its maximum size or when its oldest event has waited long enough.
@@ -147,10 +149,12 @@ class EventBuffer:
 
             self._pending.append(event)
 
-            if len(self._pending) == 1:
+            pending_count = len(self._pending)
+
+            if pending_count == 1:
                 self._first_added_at = monotonic()
 
-            if len(self._pending) >= self.max_size:
+            if pending_count >= self.max_size:
                 batch = self._pending
                 self._pending = []
             else:
@@ -164,13 +168,18 @@ class EventBuffer:
         # .. and write outside the lock so producers are never blocked by the database.
         if batch:
 
+            batch_size = len(batch)
+
             # Trace point 7: a full buffer flushes inline in the producer
-            _trace('inline flush of %d events begins', len(batch))
+            _trace('inline flush of %d events begins', batch_size)
             flush_start = monotonic()
 
             self._write_batch_off_loop(batch)
 
-            _trace('inline flush of %d events done %.1fms', len(batch), (monotonic() - flush_start) * 1000)
+            flush_elapsed = monotonic() - flush_start
+            flush_elapsed_ms = flush_elapsed * 1000
+
+            _trace('inline flush of %d events done %.1fms', batch_size, flush_elapsed_ms)
 
 # ################################################################################################################################
 
@@ -180,8 +189,10 @@ class EventBuffer:
         write executed inline would freeze every socket in the process for its whole duration.
         """
         if is_module_patched('threading'):
-            from gevent import get_hub
-            get_hub().threadpool.apply(self.write_batch, (batch,))
+            hub = get_hub()
+            threadpool = hub.threadpool
+
+            _ = threadpool.apply(self.write_batch, (batch,))
         else:
             self.write_batch(batch)
 
@@ -202,7 +213,13 @@ class EventBuffer:
     def _start_flusher(self) -> 'None':
         """ Starts the background thread enforcing the maximum wait time.
         """
-        thread = Thread(target=self._run_flusher, name='audit-log-flusher', daemon=True)
+        thread_options = {
+            'target': self._run_flusher,
+            'name': 'audit-log-flusher',
+            'daemon': True,
+        }
+
+        thread = Thread(**thread_options)
         thread.start()
 
 # ################################################################################################################################
@@ -238,8 +255,10 @@ class EventBuffer:
             # .. and write outside the lock.
             if batch:
 
+                batch_size = len(batch)
+
                 # Trace point 8: the timed flusher writes a batch in the background
-                _trace('timed flush of %d events begins', len(batch))
+                _trace('timed flush of %d events begins', batch_size)
                 flush_start = monotonic()
 
                 try:
@@ -247,7 +266,10 @@ class EventBuffer:
                 except Exception:
                     logger.warning('Audit log flush failed', exc_info=True)
 
-                _trace('timed flush of %d events done %.1fms', len(batch), (monotonic() - flush_start) * 1000)
+                flush_elapsed = monotonic() - flush_start
+                flush_elapsed_ms = flush_elapsed * 1000
+
+                _trace('timed flush of %d events done %.1fms', batch_size, flush_elapsed_ms)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -24,7 +24,7 @@ from sqlalchemy import and_, select
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditSource, event_table, get_audit_engine
-from zato.common.audit_log.reports import get_range_cutoff, Default_Range
+from zato.common.audit_log.reports import Default_Range, get_range_cutoff
 from zato.common.defaults import default_cluster_id
 
 # ################################################################################################################################
@@ -135,7 +135,7 @@ def _load_usage_events(cutoff_iso:'str', channel:'str') -> 'anylist':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_usage(now:'datetime', time_range:'str'=Default_Range, channel:'str'='') -> 'usage_row_list':
+def get_usage(now:'datetime', time_range:'str' = Default_Range, channel:'str' = '') -> 'usage_row_list':
     """ Call counts per channel and caller over the range - one row per channel
     and security definition, with the first and last call times of each pair.
     """

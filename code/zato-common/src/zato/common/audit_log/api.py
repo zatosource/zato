@@ -13,13 +13,14 @@ from logging import getLogger
 from time import monotonic
 
 # Zato
-from zato.common.audit_log.buffer import get_flush_max_size, get_flush_max_wait_ms, Env_Flush_Max_Size, \
-    Env_Flush_Max_Wait_Ms, EventBuffer, PendingEvent
-from zato.common.audit_log.common import audit_db_file_name, derive_classification, event_attr_table, event_body_table, \
-    event_link_table, event_table, get_retention_days, get_source_env_suffix, metadata, Attr_Value_Max_Len, AuditBody, \
-    AuditClassification, AuditEvent, AuditLink, AuditOutcome, AuditSource, Env_Retention_Days, Env_Retention_Days_Prefix
-from zato.common.audit_log.retention import get_content_retention_days, register_prunability, run_retention, \
-    Env_Archive_Dir, Env_Content_Retention_Days, Env_Content_Retention_Days_Prefix
+from zato.common.audit_log.buffer import Env_Flush_Max_Size, Env_Flush_Max_Wait_Ms, EventBuffer, get_flush_max_size, \
+    get_flush_max_wait_ms, PendingEvent
+from zato.common.audit_log.common import Attr_Value_Max_Len, Audit_DB_File_Name, AuditBody, AuditClassification, \
+    AuditEvent, AuditLink, AuditOutcome, AuditSource, derive_classification, Env_Retention_Days, \
+    Env_Retention_Days_Prefix, event_attr_table, event_body_table, event_link_table, event_table, get_retention_days, \
+    get_source_env_suffix, metadata
+from zato.common.audit_log.retention import Env_Archive_Dir, Env_Content_Retention_Days, \
+    Env_Content_Retention_Days_Prefix, get_content_retention_days, register_prunability, run_retention
 from zato.common.db_env import Default_SSL, Default_SSL_Verify, Default_Type, EnvDBConfig, get_env_engine, \
     Type_MySQL, Type_Oracle, Type_PostgreSQL, Type_SQLite
 from zato.common.util.api import utcnow
@@ -49,7 +50,7 @@ if 0:
 
 # The public names of this module - the audit log's one-stop API surface
 __all__ = [
-    'audit_db_file_name', 'derive_classification', 'event_attr_table', 'event_body_table', 'event_link_table',
+    'Audit_DB_File_Name', 'derive_classification', 'event_attr_table', 'event_body_table', 'event_link_table',
     'event_table', 'get_audit_db_path', 'get_audit_engine', 'get_content_retention_days', 'get_retention_days',
     'get_source_env_suffix', 'metadata', 'register_prunability', 'AuditBody', 'AuditClassification', 'AuditEvent',
     'AuditLink', 'AuditLog', 'AuditOutcome', 'AuditSource', 'ModuleCtx', 'Retention_Days',
@@ -111,7 +112,8 @@ _retention_check_interval = 1000
 logger = getLogger(__name__)
 
 # Per-write trace diagnostics - opt-in through the environment
-_is_trace_enabled = bool(os.environ.get('Zato_HL7_Trace'))
+_trace_flag = os.environ.get('Zato_HL7_Trace')
+_is_trace_enabled = bool(_trace_flag)
 
 def _trace(message:'str', *args:'object') -> 'None':
     if _is_trace_enabled:
@@ -130,12 +132,14 @@ Retention_Days = get_retention_days()
 # The pool matters for SQLite too - without it every event opens and closes its own
 # connection, and closing the last WAL connection runs a checkpoint with an fsync,
 # which serializes high-volume producers like pub/sub behind disk flushes.
-_env_config = EnvDBConfig(
-    env_prefix='Zato_Audit_Log_DB_',
-    sqlite_file_name=audit_db_file_name,
-    metadata=metadata,
-    needs_pool=True,
-)
+_env_config_options = {
+    'env_prefix': 'Zato_Audit_Log_DB_',
+    'sqlite_file_name': Audit_DB_File_Name,
+    'metadata': metadata,
+    'needs_pool': True,
+}
+
+_env_config = EnvDBConfig(**_env_config_options)
 
 # ################################################################################################################################
 
@@ -192,7 +196,13 @@ class AuditLog:
         self.flush_max_size = flush_max_size
 
         # .. and the buffer holds events between flushes.
-        self._buffer = EventBuffer(max_size=flush_max_size, max_wait_ms=flush_max_wait_ms, write_batch=self._write_batch)
+        buffer_options = {
+            'max_size': flush_max_size,
+            'max_wait_ms': flush_max_wait_ms,
+            'write_batch': self._write_batch,
+        }
+
+        self._buffer = EventBuffer(**buffer_options)
 
 # ################################################################################################################################
 
@@ -326,8 +336,10 @@ class AuditLog:
                 'link_type': link_type,
             })
 
+        insert_statement = event_link_table.insert()
+
         with self.engine.begin() as connection:
-            _ = connection.execute(event_link_table.insert(), rows)
+            _ = connection.execute(insert_statement, rows)
 
 # ################################################################################################################################
 
@@ -345,7 +357,9 @@ class AuditLog:
         self._cid_sequence.move_to_end(cid)
 
         # .. and forget the least recently used cid once there are too many.
-        if len(self._cid_sequence) > _max_tracked_cids:
+        tracked_count = len(self._cid_sequence)
+
+        if tracked_count > _max_tracked_cids:
             _ = self._cid_sequence.popitem(last=False)
 
         return out
@@ -400,7 +414,9 @@ class AuditLog:
             for pending in batch:
 
                 # The event row itself comes first, so everything else can reference its id ..
-                insert_statement = event_table.insert().values(**pending.values)
+                insert_statement = event_table.insert()
+                insert_statement = insert_statement.values(**pending.values)
+
                 result = connection.execute(insert_statement)
 
                 primary_key = result.inserted_primary_key
@@ -410,7 +426,9 @@ class AuditLog:
                 # .. searchable attributes ..
                 if pending.attrs:
                     attr_rows = self._build_attr_rows(event_id, pending.attrs)
-                    _ = connection.execute(event_attr_table.insert(), attr_rows)
+                    attr_insert = event_attr_table.insert()
+
+                    _ = connection.execute(attr_insert, attr_rows)
 
                 # .. message bodies, stamped with the event's own time so pruning never needs a join ..
                 if pending.bodies:
@@ -425,7 +443,9 @@ class AuditLog:
                             'data': body_data,
                         })
 
-                    _ = connection.execute(event_body_table.insert(), body_rows)
+                    body_insert = event_body_table.insert()
+
+                    _ = connection.execute(body_insert, body_rows)
 
                 # .. and lineage links to parent events.
                 if pending.parents:
@@ -439,12 +459,18 @@ class AuditLog:
                             'link_type': pending.parent_link_type,
                         })
 
-                    _ = connection.execute(event_link_table.insert(), link_rows)
+                    link_insert = event_link_table.insert()
 
-        _trace('db write of %d events done %.1fms', len(batch), (monotonic() - write_start) * 1000)
+                    _ = connection.execute(link_insert, link_rows)
+
+        write_elapsed = monotonic() - write_start
+        write_elapsed_ms = write_elapsed * 1000
+        batch_size = len(batch)
+
+        _trace('db write of %d events done %.1fms', batch_size, write_elapsed_ms)
 
         # Periodically delete rows older than the retention window
-        self._insert_count += len(batch)
+        self._insert_count += batch_size
 
         if self._insert_count >= _retention_check_interval:
             self._insert_count = 0

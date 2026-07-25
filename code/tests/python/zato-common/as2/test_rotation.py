@@ -41,7 +41,7 @@ def _certificate_to_pem(certificate:'any_') -> 'any_':
 
 # ################################################################################################################################
 
-def _rotation_config(current_certificate:'any_'='', next_certificate:'any_'='', next_certificate_from:'any_'='') -> 'any_':
+def _rotation_config(current_certificate:'any_' = '', next_certificate:'any_' = '', next_certificate_from:'any_' = '') -> 'any_':
     """ The certificate rotation fields of one Dashboard-managed AS2 connection.
     """
     out = {

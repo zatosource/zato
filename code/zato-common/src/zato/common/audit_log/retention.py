@@ -16,8 +16,8 @@ from logging import getLogger
 from sqlalchemy import or_, select, update
 
 # Zato
-from zato.common.audit_log.common import event_attr_table, event_body_table, event_link_table, event_table, \
-    get_retention_days, get_source_env_suffix, AuditOutcome
+from zato.common.audit_log.common import AuditOutcome, event_attr_table, event_body_table, event_link_table, \
+    event_table, get_retention_days, get_source_env_suffix
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -65,7 +65,7 @@ _chunk_size = 500
 
 # ################################################################################################################################
 
-def get_content_retention_days(source:'str'='') -> 'int':
+def get_content_retention_days(source:'str' = '') -> 'int':
     """ Returns how many days of message content are kept, for one source or, with no source named,
     process-wide. Zero means content is only pruned together with its event rows.
     """
@@ -151,7 +151,10 @@ class _Archiver:
             for row in rows:
                 line = {'kind': kind}
                 line.update(row)
-                _ = archive_file.write(dumps(line))
+
+                line_json = dumps(line)
+
+                _ = archive_file.write(line_json)
                 _ = archive_file.write('\n')
 
 # ################################################################################################################################
@@ -161,7 +164,8 @@ def _get_sources(engine:'Engine') -> 'strlist':
     """ Returns every source that has events in the log, because each of them is kept
     for its own number of days.
     """
-    query = select(event_table.c.source).distinct()
+    source_query = select(event_table.c.source)
+    query = source_query.distinct()
 
     out:'strlist' = []
 
@@ -194,11 +198,14 @@ def _get_expired_ids(engine:'Engine', source:'str', cutoff_iso:'str') -> 'intlis
 def _archive_events(engine:'Engine', archiver:'_Archiver', ids:'intlist') -> 'None':
     """ Archives full event rows and their bodies before deletion.
     """
+    is_wanted_event = event_table.c.id.in_(ids)
+    is_body_of_event = event_body_table.c.event_id.in_(ids)
+
     event_query = select(event_table)
-    event_query = event_query.where(event_table.c.id.in_(ids))
+    event_query = event_query.where(is_wanted_event)
 
     body_query = select(event_body_table)
-    body_query = body_query.where(event_body_table.c.event_id.in_(ids))
+    body_query = body_query.where(is_body_of_event)
 
     event_rows:'anylist' = []
     body_rows:'anylist' = []
@@ -206,10 +213,12 @@ def _archive_events(engine:'Engine', archiver:'_Archiver', ids:'intlist') -> 'No
     with engine.connect() as connection:
 
         for row in connection.execute(event_query):
-            event_rows.append(dict(row._mapping))
+            event_row = dict(row._mapping)
+            event_rows.append(event_row)
 
         for row in connection.execute(body_query):
-            body_rows.append(dict(row._mapping))
+            body_row = dict(row._mapping)
+            body_rows.append(body_row)
 
     archiver.write_rows('event', event_rows)
     archiver.write_rows('body', body_rows)
@@ -219,16 +228,31 @@ def _archive_events(engine:'Engine', archiver:'_Archiver', ids:'intlist') -> 'No
 def _delete_events(engine:'Engine', ids:'intlist') -> 'None':
     """ Deletes one chunk of events along with their attributes, bodies and lineage links.
     """
-    link_condition = or_(
-        event_link_table.c.child_event_id.in_(ids),
-        event_link_table.c.parent_event_id.in_(ids),
-    )
+    is_child_event = event_link_table.c.child_event_id.in_(ids)
+    is_parent_event = event_link_table.c.parent_event_id.in_(ids)
+    link_condition = or_(is_child_event, is_parent_event)
+
+    is_attr_of_event = event_attr_table.c.event_id.in_(ids)
+    is_body_of_event = event_body_table.c.event_id.in_(ids)
+    is_wanted_event = event_table.c.id.in_(ids)
+
+    delete_attrs = event_attr_table.delete()
+    delete_attrs = delete_attrs.where(is_attr_of_event)
+
+    delete_bodies = event_body_table.delete()
+    delete_bodies = delete_bodies.where(is_body_of_event)
+
+    delete_links = event_link_table.delete()
+    delete_links = delete_links.where(link_condition)
+
+    delete_events = event_table.delete()
+    delete_events = delete_events.where(is_wanted_event)
 
     with engine.begin() as connection:
-        _ = connection.execute(event_attr_table.delete().where(event_attr_table.c.event_id.in_(ids)))
-        _ = connection.execute(event_body_table.delete().where(event_body_table.c.event_id.in_(ids)))
-        _ = connection.execute(event_link_table.delete().where(link_condition))
-        _ = connection.execute(event_table.delete().where(event_table.c.id.in_(ids)))
+        _ = connection.execute(delete_attrs)
+        _ = connection.execute(delete_bodies)
+        _ = connection.execute(delete_links)
+        _ = connection.execute(delete_events)
 
 # ################################################################################################################################
 
@@ -255,7 +279,8 @@ def _run_row_retention(engine:'Engine', archiver:'_Archiver', source:'str', cuto
         # .. and delete them along with everything that references them.
         _delete_events(engine, ids)
 
-        out += len(ids)
+        deleted_count = len(ids)
+        out += deleted_count
 
     return out
 
@@ -269,9 +294,11 @@ def _get_content_candidates(engine:'Engine', source:'str', cutoff_iso:'str', las
     has_body = select(event_body_table.c.id)
     has_body = has_body.where(event_body_table.c.event_id == event_table.c.id)
 
+    has_any_body = has_body.exists()
+
     content_condition = or_(
         event_table.c.data != '',
-        has_body.exists(),
+        has_any_body,
     )
 
     query = select(event_table.c.id, event_table.c.source, event_table.c.outcome, event_table.c.status)
@@ -286,7 +313,8 @@ def _get_content_candidates(engine:'Engine', source:'str', cutoff_iso:'str', las
 
     with engine.connect() as connection:
         for row in connection.execute(query):
-            out.append(dict(row._mapping))
+            candidate = dict(row._mapping)
+            out.append(candidate)
 
     return out
 
@@ -295,12 +323,15 @@ def _get_content_candidates(engine:'Engine', source:'str', cutoff_iso:'str', las
 def _archive_content(engine:'Engine', archiver:'_Archiver', ids:'intlist') -> 'None':
     """ Archives the content of events whose payloads are about to be pruned.
     """
+    is_wanted_event = event_table.c.id.in_(ids)
+    is_body_of_event = event_body_table.c.event_id.in_(ids)
+
     content_query = select(event_table.c.id, event_table.c.data)
-    content_query = content_query.where(event_table.c.id.in_(ids))
+    content_query = content_query.where(is_wanted_event)
     content_query = content_query.where(event_table.c.data != '')
 
     body_query = select(event_body_table)
-    body_query = body_query.where(event_body_table.c.event_id.in_(ids))
+    body_query = body_query.where(is_body_of_event)
 
     content_rows:'anylist' = []
     body_rows:'anylist' = []
@@ -308,10 +339,12 @@ def _archive_content(engine:'Engine', archiver:'_Archiver', ids:'intlist') -> 'N
     with engine.connect() as connection:
 
         for row in connection.execute(content_query):
-            content_rows.append(dict(row._mapping))
+            content_row = dict(row._mapping)
+            content_rows.append(content_row)
 
         for row in connection.execute(body_query):
-            body_rows.append(dict(row._mapping))
+            body_row = dict(row._mapping)
+            body_rows.append(body_row)
 
     archiver.write_rows('content', content_rows)
     archiver.write_rows('body', body_rows)
@@ -322,13 +355,19 @@ def _prune_content(engine:'Engine', ids:'intlist') -> 'None':
     """ Prunes the content of one chunk of events - the data column is emptied
     and their body rows are deleted, while the event rows themselves stay.
     """
+    is_wanted_event = event_table.c.id.in_(ids)
+    is_body_of_event = event_body_table.c.event_id.in_(ids)
+
     prune_statement = update(event_table)
-    prune_statement = prune_statement.where(event_table.c.id.in_(ids))
+    prune_statement = prune_statement.where(is_wanted_event)
     prune_statement = prune_statement.values(data='')
+
+    delete_bodies = event_body_table.delete()
+    delete_bodies = delete_bodies.where(is_body_of_event)
 
     with engine.begin() as connection:
         _ = connection.execute(prune_statement)
-        _ = connection.execute(event_body_table.delete().where(event_body_table.c.event_id.in_(ids)))
+        _ = connection.execute(delete_bodies)
 
 # ################################################################################################################################
 
@@ -371,7 +410,8 @@ def _run_content_retention(engine:'Engine', archiver:'_Archiver', source:'str', 
         # .. and prune it.
         _prune_content(engine, ids)
 
-        out += len(ids)
+        pruned_count = len(ids)
+        out += pruned_count
 
     return out
 

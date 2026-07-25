@@ -18,7 +18,7 @@ from sqlalchemy import BigInteger, Column, Index, Integer, MetaData, Numeric, St
 # ################################################################################################################################
 
 # The name of the SQLite file holding all audit events, shared by all sources
-audit_db_file_name = 'audit.db'
+Audit_DB_File_Name = 'audit.db'
 
 # The environment variable overriding how many days of events are kept
 Env_Retention_Days = 'Zato_Audit_Log_Retention_Days'
@@ -79,7 +79,7 @@ def get_source_env_suffix(source:'str') -> 'str':
 
 # ################################################################################################################################
 
-def get_retention_days(source:'str'='') -> 'int':
+def get_retention_days(source:'str' = '') -> 'int':
     """ Returns how many days of audit events are kept, for one source or, with no source named,
     process-wide - the latter is also the widest window the reports run over.
 
@@ -111,18 +111,18 @@ def get_retention_days(source:'str'='') -> 'int':
 # ################################################################################################################################
 
 class AuditEvent:
-    Published         = 'published'
-    Delivered         = 'delivered'
-    Delivery_Failed   = 'delivery-failed'
-    Expired           = 'expired'
-    Received          = 'received'
-    Request_Received  = 'request-received'
-    Response_Sent     = 'response-sent'
-    Request_Sent      = 'request-sent'
-    Response_Received = 'response-received'
-    Message_Received  = 'message-received'
-    Message_Marked_Seen = 'message-marked-seen'
-    Message_Deleted     = 'message-deleted'
+    Published            = 'published'
+    Delivered            = 'delivered'
+    Delivery_Failed      = 'delivery-failed'
+    Expired              = 'expired'
+    Received             = 'received'
+    Request_Received     = 'request-received'
+    Response_Sent        = 'response-sent'
+    Request_Sent         = 'request-sent'
+    Response_Received    = 'response-received'
+    Message_Received     = 'message-received'
+    Message_Marked_Seen  = 'message-marked-seen'
+    Message_Deleted      = 'message-deleted'
     Interchange_Sent     = 'interchange-sent'
     Interchange_Received = 'interchange-received'
     Ack_Sent             = 'ack-sent'
@@ -188,29 +188,39 @@ metadata = MetaData()
 
 # Event identifiers are 64-bit, except under SQLite where the autoincrement
 # primary key must be a plain INTEGER to become an alias of the built-in rowid.
-_id_column_type = BigInteger().with_variant(Integer(), 'sqlite')
+_big_id_column = BigInteger()
+_sqlite_id_column = Integer()
+_id_column_type = _big_id_column.with_variant(_sqlite_id_column, 'sqlite')
 
-event_table = Table('event', metadata,
+# The column types the tables below are built out of, named once so no table definition
+# needs an inner call of its own.
+_short_column = String(_short_column_len)
+_endpoint_column = String(_endpoint_column_len)
+_attr_number_column = Numeric(20, 6, asdecimal=False)
+
+# ################################################################################################################################
+
+_event_columns = [
     Column('id', _id_column_type, primary_key=True, autoincrement=True),
-    Column('cid', String(_short_column_len)),
+    Column('cid', _short_column),
     Column('cid_sequence', Integer),
-    Column('source', String(_short_column_len)),
-    Column('event_type', String(_short_column_len)),
-    Column('object_name', String(_short_column_len)),
-    Column('msg_id', String(_short_column_len)),
-    Column('correl_id', String(_short_column_len)),
-    Column('ext_client_id', String(_short_column_len)),
-    Column('pub_time_iso', String(_short_column_len)),
-    Column('event_time_iso', String(_short_column_len)),
-    Column('server_name', String(_short_column_len)),
-    Column('endpoint', String(_endpoint_column_len)),
-    Column('sub_key', String(_short_column_len)),
+    Column('source', _short_column),
+    Column('event_type', _short_column),
+    Column('object_name', _short_column),
+    Column('msg_id', _short_column),
+    Column('correl_id', _short_column),
+    Column('ext_client_id', _short_column),
+    Column('pub_time_iso', _short_column),
+    Column('event_time_iso', _short_column),
+    Column('server_name', _short_column),
+    Column('endpoint', _endpoint_column),
+    Column('sub_key', _short_column),
     Column('size', Integer),
     Column('priority', Integer),
-    Column('outcome', String(_short_column_len)),
-    Column('application_outcome', String(_short_column_len)),
-    Column('classification', String(_short_column_len)),
-    Column('status', String(_short_column_len)),
+    Column('outcome', _short_column),
+    Column('application_outcome', _short_column),
+    Column('classification', _short_column),
+    Column('status', _short_column),
     Column('duration_ms', Integer),
     Column('data', Text),
     Index('idx_event_source_object', 'source', 'object_name', 'id'),
@@ -221,94 +231,106 @@ event_table = Table('event', metadata,
     # every message whose receipt has not arrived - and the msg_id index above covers only the
     # lookup of the closing event, leaving the outer half of that question a full scan.
     Index('idx_event_source_type_time', 'source', 'event_type', 'event_time_iso'),
-)
+]
+
+event_table = Table('event', metadata, *_event_columns)
 
 # ################################################################################################################################
 
 # Searchable attributes - any source declares indexed search fields with no schema changes.
 # Values are stored as capped text, and numbers additionally go to a numeric column
 # so aggregation queries can sum and group without casting.
-event_attr_table = Table('event_attr', metadata,
+_event_attr_columns = [
     Column('id', _id_column_type, primary_key=True, autoincrement=True),
     Column('event_id', BigInteger),
-    Column('name', String(_short_column_len)),
-    Column('value', String(_short_column_len)),
-    Column('value_number', Numeric(20, 6, asdecimal=False)),
+    Column('name', _short_column),
+    Column('value', _short_column),
+    Column('value_number', _attr_number_column),
     Index('idx_event_attr_event', 'event_id'),
     Index('idx_event_attr_name_value', 'name', 'value'),
     Index('idx_event_attr_name_number', 'name', 'value_number'),
-)
+]
+
+event_attr_table = Table('event_attr', metadata, *_event_attr_columns)
 
 # ################################################################################################################################
 
 # Message bodies live in their own table referenced from event rows - metadata inserts stay small
 # and pruning content is a bulk delete here rather than column surgery on the event table.
 # The event time is denormalized so pruning never needs a join.
-event_body_table = Table('event_body', metadata,
+_event_body_columns = [
     Column('id', _id_column_type, primary_key=True, autoincrement=True),
     Column('event_id', BigInteger),
-    Column('kind', String(_short_column_len)),
-    Column('event_time_iso', String(_short_column_len)),
+    Column('kind', _short_column),
+    Column('event_time_iso', _short_column),
     Column('data', Text),
     Index('idx_event_body_event', 'event_id'),
     Index('idx_event_body_time', 'event_time_iso'),
-)
+]
+
+event_body_table = Table('event_body', metadata, *_event_body_columns)
 
 # ################################################################################################################################
 
 # Lineage between events - resubmissions, batch membership and aggregation.
 # A link table because one event may have many parents.
-event_link_table = Table('event_link', metadata,
+_event_link_columns = [
     Column('id', _id_column_type, primary_key=True, autoincrement=True),
     Column('child_event_id', BigInteger),
     Column('parent_event_id', BigInteger),
-    Column('link_type', String(_short_column_len)),
+    Column('link_type', _short_column),
     Index('idx_event_link_child', 'child_event_id'),
     Index('idx_event_link_parent', 'parent_event_id'),
-)
+]
+
+event_link_table = Table('event_link', metadata, *_event_link_columns)
 
 # ################################################################################################################################
 
 # The resubmit dedup ledger - every resubmit acquires its key here before dispatch,
 # so a double-click or two overlapping bulk operations cannot double-apply one message.
 # A row acquired but never completed marks an interrupted resubmit, detectable as in-doubt.
-event_dedup_table = Table('event_dedup', metadata,
+_event_dedup_columns = [
     Column('id', _id_column_type, primary_key=True, autoincrement=True),
-    Column('dedup_key', String(_short_column_len)),
-    Column('cid', String(_short_column_len)),
-    Column('action', String(_short_column_len)),
-    Column('created_iso', String(_short_column_len)),
-    Column('outcome', String(_short_column_len)),
-    Column('completed_iso', String(_short_column_len)),
+    Column('dedup_key', _short_column),
+    Column('cid', _short_column),
+    Column('action', _short_column),
+    Column('created_iso', _short_column),
+    Column('outcome', _short_column),
+    Column('completed_iso', _short_column),
     Index('idx_event_dedup_key', 'dedup_key', unique=True),
     Index('idx_event_dedup_outcome', 'outcome'),
-)
+]
+
+event_dedup_table = Table('event_dedup', metadata, *_event_dedup_columns)
 
 # ################################################################################################################################
 
 # Alerts with their dedup count and lifecycle - one row per (rule, object, kind) within
 # the dedup window, repeated findings increment the count instead of adding rows,
 # and acknowledgment is recorded in place, so an alert never exists twice half-resolved.
-alert_table = Table('alert', metadata,
+_alert_columns = [
     Column('id', _id_column_type, primary_key=True, autoincrement=True),
-    Column('rule_name', String(_short_column_len)),
-    Column('source', String(_short_column_len)),
-    Column('object_name', String(_short_column_len)),
-    Column('kind', String(_short_column_len)),
-    Column('severity', String(_short_column_len)),
+    Column('rule_name', _short_column),
+    Column('source', _short_column),
+    Column('object_name', _short_column),
+    Column('kind', _short_column),
+    Column('severity', _short_column),
     Column('message', Text),
-    Column('link', String(_endpoint_column_len)),
+    Column('link', _endpoint_column),
     Column('count', Integer),
-    Column('state', String(_short_column_len)),
-    Column('first_raised_iso', String(_short_column_len)),
-    Column('last_raised_iso', String(_short_column_len)),
-    Column('observed_by', String(_short_column_len)),
-    Column('observed_iso', String(_short_column_len)),
-    Column('resolved_by', String(_short_column_len)),
-    Column('resolved_iso', String(_short_column_len)),
+    Column('state', _short_column),
+    Column('first_raised_iso', _short_column),
+    Column('last_raised_iso', _short_column),
+    Column('observed_by', _short_column),
+    Column('observed_iso', _short_column),
+    Column('resolved_by', _short_column),
+    Column('resolved_iso', _short_column),
     Index('idx_alert_rule_object', 'rule_name', 'object_name', 'kind'),
     Index('idx_alert_state', 'state'),
-)
+]
+
+alert_table = Table('alert', metadata, *_alert_columns)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -327,7 +349,7 @@ _permanent_markers = (
 
 # ################################################################################################################################
 
-def derive_classification(outcome:'str', status:'str'='', application_outcome:'str'='') -> 'str':
+def derive_classification(outcome:'str', status:'str' = '', application_outcome:'str' = '') -> 'str':
     """ Derives the transient-vs-permanent classification of a failure out of its platform
     and application outcomes. Successful events and failures matching no known marker stay unclassified.
     """

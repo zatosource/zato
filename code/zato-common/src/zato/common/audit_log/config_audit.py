@@ -59,13 +59,19 @@ def is_secret_field(name:'str') -> 'bool':
     # .. and the prefix and suffix sets extend it.
     for prefix in secret_fields_prefix:
         if name.startswith(prefix):
-            return True
+            out = True
+            break
+    else:
+        for suffix in secret_fields_suffix:
+            if name.endswith(suffix):
+                out = True
+                break
 
-    for suffix in secret_fields_suffix:
-        if name.endswith(suffix):
-            return True
+        # .. and a name matching nothing is not a secret.
+        else:
+            out = False
 
-    return False
+    return out
 
 # ################################################################################################################################
 
@@ -104,11 +110,12 @@ def build_change_summary(before:'stranydict', after:'stranydict') -> 'stranydict
         in_before = name in before
         in_after  = name in after
 
-        if in_before and in_after:
+        if in_before:
+            if in_after:
 
-            # Unchanged fields stay out of the summary
-            if before[name] == after[name]:
-                continue
+                # Unchanged fields stay out of the summary
+                if before[name] == after[name]:
+                    continue
 
         if in_before:
             summary_before[name] = before[name]
@@ -170,16 +177,17 @@ def record_config_change(
         'object_type': object_type,
     }
 
+    summary_json = dumps(summary)
+
+    insert_options = {
+        'cid': cid,
+        'outcome': AuditOutcome.OK,
+        'data': summary_json,
+        'attrs': attrs,
+    }
+
     # Our response to produce
-    out = audit_log.insert(
-        AuditSource.Config,
-        action,
-        object_name,
-        cid=cid,
-        outcome=AuditOutcome.OK,
-        data=dumps(summary),
-        attrs=attrs,
-    )
+    out = audit_log.insert(AuditSource.Config, action, object_name, **insert_options)
 
     return out
 
@@ -211,16 +219,15 @@ def record_view_event(
         'screen': screen,
     })
 
+    insert_options = {
+        'cid': cid,
+        'outcome': AuditOutcome.OK,
+        'data': data,
+        'attrs': attrs,
+    }
+
     # Our response to produce
-    out = audit_log.insert(
-        AuditSource.Config,
-        AuditEvent.Content_Viewed,
-        screen,
-        cid=cid,
-        outcome=AuditOutcome.OK,
-        data=data,
-        attrs=attrs,
-    )
+    out = audit_log.insert(AuditSource.Config, AuditEvent.Content_Viewed, screen, **insert_options)
 
     return out
 

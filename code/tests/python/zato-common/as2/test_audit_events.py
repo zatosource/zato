@@ -71,7 +71,7 @@ def _certificate_to_pem(certificate:'any_') -> 'any_':
 
 # ################################################################################################################################
 
-def _load_events(event_type:'any_'=None) -> 'any_':
+def _load_events(event_type:'any_' = None) -> 'any_':
     """ Reads all the AS2 audit events back from the per-test database, oldest first.
     """
     statement = select(
@@ -400,7 +400,7 @@ class _FakePubSub:
 
 # ################################################################################################################################
 
-    def publish(self, topic:'any_', message:'any_', cid:'any_'='', correl_id:'any_'='') -> 'None':
+    def publish(self, topic:'any_', message:'any_', cid:'any_' = '', correl_id:'any_' = '') -> 'None':
         self.published.append((topic, message))
 
 # ################################################################################################################################
@@ -508,7 +508,7 @@ def _channel_config(parties:'TestParties') -> 'any_':
 
 # ################################################################################################################################
 
-def _make_runtime(parties:'TestParties', with_partnership:'any_'=True) -> 'any_':
+def _make_runtime(parties:'TestParties', with_partnership:'any_' = True) -> 'any_':
     """ Builds a channel runtime on a fake server.
     """
     server = cast_('ParallelServer', _FakeChannelServer())

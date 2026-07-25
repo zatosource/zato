@@ -43,7 +43,10 @@ def build_dedup_key(action:'str', event_id:'int', payload:'str') -> 'str':
     is a different operation with a key of its own.
     """
     material = f'{action}:{event_id}:{payload}'
-    out = sha256(material.encode('utf8')).hexdigest()
+    material_bytes = material.encode('utf8')
+    digest = sha256(material_bytes)
+
+    out = digest.hexdigest()
 
     return out
 
@@ -53,11 +56,14 @@ def acquire_dedup_key(engine:'Engine', dedup_key:'str', cid:'str', action:'str')
     """ Claims one dedup key before dispatch. Returns False when the key is already claimed,
     which means the same resubmit was applied - or started - before.
     """
+    now = utcnow()
+    now_iso = now.isoformat()
+
     values = {
         'dedup_key': dedup_key,
         'cid': cid,
         'action': action,
-        'created_iso': utcnow().isoformat(),
+        'created_iso': now_iso,
         'outcome': '',
         'completed_iso': '',
     }
@@ -66,13 +72,22 @@ def acquire_dedup_key(engine:'Engine', dedup_key:'str', cid:'str', action:'str')
     # The catch is wide because drivers disagree on the class of a unique violation -
     # pg8000 rewraps its IntegrityError as OperationalError - so what happened
     # is confirmed by looking the key up, not by trusting the exception type.
+    insert_statement = event_dedup_table.insert()
+    insert_statement = insert_statement.values(**values)
+
     try:
         with engine.begin() as connection:
-            _ = connection.execute(event_dedup_table.insert().values(**values))
+            _ = connection.execute(insert_statement)
+
     except DBAPIError:
+
+        # The key was already there, so a duplicate lost the race here ..
         if _key_exists(engine, dedup_key):
             return False
-        raise
+
+        # .. and anything else is a real database error the caller has to see.
+        else:
+            raise
 
     return True
 
@@ -98,7 +113,10 @@ def complete_dedup_key(engine:'Engine', dedup_key:'str', outcome:'str') -> 'None
     """
     statement = update(event_dedup_table)
     statement = statement.where(event_dedup_table.c.dedup_key == dedup_key)
-    statement = statement.values(outcome=outcome, completed_iso=utcnow().isoformat())
+    now = utcnow()
+    now_iso = now.isoformat()
+
+    statement = statement.values(outcome=outcome, completed_iso=now_iso)
 
     with engine.begin() as connection:
         _ = connection.execute(statement)

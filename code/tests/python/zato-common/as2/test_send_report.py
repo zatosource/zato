@@ -22,7 +22,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _make_result(is_ok:'bool'=True, mic:'str'='QUFB, sha-256', mdn:'any_'=None) -> 'SendResult':
+def _make_result(is_ok:'bool' = True, mic:'str' = 'QUFB, sha-256', mdn:'any_' = None) -> 'SendResult':
     """ Builds one delivery result the way a real send produces it.
     """
     out = SendResult()
@@ -37,12 +37,12 @@ def _make_result(is_ok:'bool'=True, mic:'str'='QUFB, sha-256', mdn:'any_'=None) 
 # ################################################################################################################################
 
 def _make_mdn(
-    disposition:'any_'='processed',
-    modifier_kind:'any_'='',
-    modifier:'any_'='',
-    mic:'any_'='QUFB',
-    mic_algorithm:'any_'='sha-256',
-    is_signed:'any_'=True,
+    disposition:'any_' = 'processed',
+    modifier_kind:'any_' = '',
+    modifier:'any_' = '',
+    mic:'any_' = 'QUFB',
+    mic_algorithm:'any_' = 'sha-256',
+    is_signed:'any_' = True,
 ) -> 'any_':
     """ Builds one parsed MDN the way parse_mdn returns it.
     """

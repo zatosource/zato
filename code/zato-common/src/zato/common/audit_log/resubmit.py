@@ -51,10 +51,10 @@ Action_Resend    = 'resend'
 Action_Reprocess = 'reprocess'
 
 # What one row of a bulk operation ended up as.
-Row_Resubmitted     = 'resubmitted'
-Row_Would_Resubmit  = 'would-resubmit'
-Row_Duplicate       = 'duplicate'
-Row_Error           = 'error'
+Row_Resubmitted    = 'resubmitted'
+Row_Would_Resubmit = 'would-resubmit'
+Row_Duplicate      = 'duplicate'
+Row_Error          = 'error'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -231,18 +231,26 @@ def resend_hop(event:'StoredEvent', send:'callable_', audit_log:'AuditLog', cid:
     # .. a failed attempt is recorded too, as its own row with an error outcome,
     # so the per-destination delivery history has no holes - then the caller learns about it.
     except Exception as e:
-        _ = audit_log.insert(
-            event.source, AuditEvent.Request_Sent, event.object_name,
-            outcome=AuditOutcome.Error, status=str(e), **values)
+        error_status = str(e)
+
+        error_options = {
+            'outcome': AuditOutcome.Error,
+            'status': error_status,
+        }
+        error_options.update(values)
+
+        _ = audit_log.insert(event.source, AuditEvent.Request_Sent, event.object_name, **error_options)
+
         raise
 
     # Our response to produce
     out = HopResendResult()
     out.response = response
 
-    out.event_id = audit_log.insert(
-        event.source, AuditEvent.Request_Sent, event.object_name,
-        outcome=AuditOutcome.OK, **values)
+    ok_options = {'outcome': AuditOutcome.OK}
+    ok_options.update(values)
+
+    out.event_id = audit_log.insert(event.source, AuditEvent.Request_Sent, event.object_name, **ok_options)
 
     return out
 
@@ -391,12 +399,16 @@ def bulk_repair(
     else:
         bulk_outcome = AuditOutcome.OK
 
+    rows_json = dumps({'rows': out.rows})
+
+    bulk_options = {
+        'cid': cid,
+        'outcome': bulk_outcome,
+        'data': rows_json,
+    }
+
     out.bulk_event_id = audit_log.insert(
-        repair_filter.source, AuditEvent.Bulk_Repair, repair_filter.object_name,
-        cid=cid,
-        outcome=bulk_outcome,
-        data=dumps({'rows': out.rows}),
-    )
+        repair_filter.source, AuditEvent.Bulk_Repair, repair_filter.object_name, **bulk_options)
 
     return out
 
