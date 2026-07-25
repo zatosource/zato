@@ -17,7 +17,9 @@ from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption,
 import pytest
 
 # Zato
-from zato.common.as2.common import AS2Error, AS2ProtocolException, AS2SecurityException, EncryptionAlgorithm
+from zato.common.as2 import smime
+from zato.common.as2.common import AS2Error, AS2MalformedCMSException, AS2ProtocolException, AS2SecurityException, \
+    EncryptionAlgorithm
 from zato.common.as2.smime import compress, decompress, decrypt, encrypt, new_part, serialize_part, sign, verify
 from zato.common.util.xml_.keystore import DecryptionEntry, new_keystore
 
@@ -370,6 +372,34 @@ class TestEncryptDecrypt:
 
 # ################################################################################################################################
 
+    def test_a_rotation_entry_with_an_expired_certificate_does_not_decrypt(
+        self, parties:'TestParties', make_dated_pair:'any_') -> 'None':
+        part = _edi_part()
+
+        now = datetime.now(timezone.utc)
+        expired = make_dated_pair('as2-receiver-expired', now - timedelta(days=10), now - timedelta(days=1))
+
+        encrypted = encrypt(part, expired.certificate)
+
+        # The configured window is wide open, so the certificate's own expiry is what
+        # takes the entry out of service.
+        keystore = new_keystore()
+        keystore.signing_key = parties.receiver.signing_key
+        keystore.signing_certificate_chain = parties.receiver.signing_certificate_chain
+        keystore.decryption_key = parties.receiver.decryption_key
+
+        entry = DecryptionEntry()
+        entry.key = expired.key
+        entry.certificate = expired.certificate
+        keystore.decryption_entries.append(entry)
+
+        with pytest.raises(AS2SecurityException) as exception_info:
+            _ = decrypt(encrypted, keystore)
+
+        assert exception_info.value.modifier == AS2Error.Decryption_Failed
+
+# ################################################################################################################################
+
     def test_3des_roundtrip(self, parties:'TestParties') -> 'None':
         part = _edi_part()
 
@@ -516,6 +546,194 @@ class TestCompression:
 
         with pytest.raises(AS2ProtocolException) as exception_info:
             _ = decompress(encrypted)
+
+        assert exception_info.value.modifier == AS2Error.Decompression_Failed
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestDecompressionBounds:
+    """ Decompression runs on unauthenticated input, so the expansion is watched as it happens
+    rather than measured once it is over.
+    """
+
+    def test_a_decompression_bomb_is_rejected(self, monkeypatch:'any_') -> 'None':
+
+        # A ceiling low enough to cross without building a genuinely huge input, so the test
+        # exercises the same code path a real bomb would take.
+        monkeypatch.setattr(smime, '_max_decompressed_bytes', 1024)
+        monkeypatch.setattr(smime, '_decompression_chunk_size', 256)
+
+        # A megabyte of zero bytes compresses to about a kilobyte, which is the shape
+        # of the attack - a small request expanding without limit on the receiving side.
+        part = new_part(b'\x00' * (1024 * 1024), _edi_content_type)
+        compressed = compress(part)
+
+        with pytest.raises(AS2ProtocolException) as exception_info:
+            _ = decompress(compressed)
+
+        assert exception_info.value.modifier == AS2Error.Decompression_Failed
+        assert 'larger than the maximum' in exception_info.value.detail
+
+# ################################################################################################################################
+
+    def test_content_under_the_ceiling_still_decompresses(self, monkeypatch:'any_') -> 'None':
+
+        # The chunk size is deliberately smaller than the content, so the inflate loop
+        # runs several rounds and its chunk-joining is exercised.
+        monkeypatch.setattr(smime, '_decompression_chunk_size', 64)
+
+        payload = _edi_payload * 100
+        part = new_part(payload, _edi_content_type)
+
+        decompressed = decompress(compress(part))
+
+        assert decompressed.data == payload
+
+# ################################################################################################################################
+
+    def test_a_truncated_stream_is_rejected(self) -> 'None':
+        part = _edi_part()
+        compressed = compress(part)
+
+        # The zlib stream inside the CMS structure loses its tail, which a chunked
+        # decompressor reports by never reaching the end of the stream.
+        compressed.data = compressed.data[:-8]
+
+        with pytest.raises(AS2ProtocolException) as exception_info:
+            _ = decompress(compressed)
+
+        assert exception_info.value.modifier == AS2Error.Decompression_Failed
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestHeaderValueValidation:
+    """ On an inner entity the header values were parsed out of plaintext the peer controls.
+    Writing a control character back into a header block would produce bytes a downstream parser
+    splits differently, so our idea of what the signature covers would stop matching the partner's.
+    """
+
+    @pytest.mark.parametrize('value', [
+        'application/edi-x12\r\nX-Injected: yes',
+        'application/edi-x12\nX-Injected: yes',
+        'application/edi-x12\rX-Injected: yes',
+        'application/edi-x12\x00',
+        'application/edi-x12\x0b',
+    ])
+    def test_a_control_character_in_the_content_type_is_refused(self, value:'any_') -> 'None':
+        part = new_part(_edi_payload, value)
+
+        with pytest.raises(AS2ProtocolException) as exception_info:
+            _ = serialize_part(part)
+
+        assert exception_info.value.modifier == AS2Error.Unexpected_Processing_Error
+        assert 'Content-Type' in exception_info.value.detail
+
+# ################################################################################################################################
+
+    def test_a_control_character_in_the_disposition_is_refused(self) -> 'None':
+        part = new_part(_edi_payload, _edi_content_type)
+        part.content_disposition = 'attachment; filename="po.edi"\r\nX-Injected: yes'
+
+        with pytest.raises(AS2ProtocolException) as exception_info:
+            _ = serialize_part(part)
+
+        assert 'Content-Disposition' in exception_info.value.detail
+
+# ################################################################################################################################
+
+    def test_a_control_character_in_the_transfer_encoding_is_refused(self) -> 'None':
+        part = new_part(_edi_payload, _edi_content_type)
+        part.content_transfer_encoding = 'binary\r\nX-Injected: yes'
+
+        with pytest.raises(AS2ProtocolException) as exception_info:
+            _ = serialize_part(part)
+
+        assert 'Content-Transfer-Encoding' in exception_info.value.detail
+
+# ################################################################################################################################
+
+    def test_a_non_ascii_character_is_refused(self) -> 'None':
+        part = new_part(_edi_payload, 'application/edi-x12; name="zam\u00f3wienie.edi"')
+
+        with pytest.raises(AS2ProtocolException) as exception_info:
+            _ = serialize_part(part)
+
+        assert 'Non-ASCII' in exception_info.value.detail
+
+# ################################################################################################################################
+
+    def test_ordinary_values_serialize_unchanged(self) -> 'None':
+        part = new_part(_edi_payload, _edi_content_type)
+        part.content_disposition = 'attachment; filename="po-850.edi"'
+
+        serialized = serialize_part(part)
+
+        assert b'Content-Type: application/edi-x12\r\n' in serialized
+        assert b'Content-Disposition: attachment; filename="po-850.edi"\r\n' in serialized
+        assert serialized.endswith(_edi_payload)
+
+# ################################################################################################################################
+
+    def test_a_tab_is_allowed_as_folding_whitespace(self) -> 'None':
+        part = new_part(_edi_payload, 'application/edi-x12;\tname="po.edi"')
+
+        serialized = serialize_part(part)
+
+        assert b'application/edi-x12;\tname="po.edi"' in serialized
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestBERNestingBounds:
+    """ The BER-to-DER re-encoding recurses once per nested element and runs before any trust
+    decision, so a structure nested deeply enough is rejected as malformed instead of
+    exhausting the interpreter stack.
+    """
+
+    def _nested_indefinite_der(self, depth:'int') -> 'bytes':
+        """ Builds a chain of indefinite-length constructed elements nested to the given depth,
+        which is what the recursion walks down.
+        """
+        out = b'\x05\x00'
+
+        for _ in range(depth):
+            out = b'\x30\x80' + out + b'\x00\x00'
+
+        return out
+
+    def test_deeply_nested_ber_is_rejected_before_the_stack_runs_out(self) -> 'None':
+        der = self._nested_indefinite_der(smime._max_ber_depth + 10)
+
+        with pytest.raises(AS2MalformedCMSException) as exception_info:
+            _ = smime._to_definite_der(der)
+
+        assert 'deeper than the maximum' in str(exception_info.value)
+
+# ################################################################################################################################
+
+    def test_nesting_within_the_limit_is_normalized(self) -> 'None':
+        der = self._nested_indefinite_der(4)
+
+        normalized = smime._to_definite_der(der)
+
+        # The indefinite-length markers and their end-of-contents octets are gone.
+        assert b'\x30\x80' not in normalized
+        assert normalized.startswith(b'\x30')
+
+# ################################################################################################################################
+
+    def test_a_deeply_nested_entity_yields_a_clean_protocol_error(self) -> 'None':
+        der = self._nested_indefinite_der(smime._max_ber_depth + 10)
+
+        # The pipeline reaches the normalizer through decompress and decrypt alike,
+        # and the answer is a disposition modifier rather than an unhandled error.
+        part = new_part(der, 'application/pkcs7-mime; smime-type=compressed-data')
+        part.content_transfer_encoding = 'binary'
+
+        with pytest.raises(AS2ProtocolException) as exception_info:
+            _ = decompress(part)
 
         assert exception_info.value.modifier == AS2Error.Decompression_Failed
 

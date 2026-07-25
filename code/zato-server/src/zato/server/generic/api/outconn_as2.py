@@ -21,8 +21,8 @@ from typing_extensions import TypeAlias
 
 # Zato
 from zato.common.api import AS2
-from zato.common.as2.audit import record_send_result
-from zato.common.as2.common import AS2Exception
+from zato.common.as2.audit import encode_payload_document, record_send_result
+from zato.common.as2.common import AS2Exception, DeliveryKind
 from zato.common.as2.config import build_keystore, build_partnership
 from zato.common.as2.outbound import send as outbound_send, send_payload
 from zato.common.as2.partnership import HTTPAuth
@@ -36,8 +36,9 @@ from zato.server.connection.queue import Wrapper
 if 0:
     from zato.common.as2.outbound import SendResult
     from zato.common.ext.bunch import Bunch
-    from zato.common.typing_ import strnone
+    from zato.common.typing_ import anylist, strnone
     from zato.server.base.parallel import ParallelServer
+    anylist = anylist
     ParallelServer = ParallelServer
     send_payload = send_payload
     SendResult = SendResult
@@ -190,11 +191,24 @@ class _AS2Connection:
 
 # ################################################################################################################################
 
-    def send(self, cid:'str', payload:'as2_payload', filename:'strnone'=None, *, needs_audit:'bool'=True) -> 'SendResult':
+    def send(
+        self,
+        cid:'str',
+        payload:'as2_payload',
+        filename:'strnone'=None,
+        *,
+        needs_audit:'bool'=True,
+        message_id:'strnone'=None,
+        delivery_kind:'str'=DeliveryKind.Original,
+        ) -> 'SendResult':
         """ Delivers one AS2 message to the partnership's endpoint and reconciles
         the synchronous MDN when one was requested. Every delivery is recorded
         in the audit log as non-repudiation evidence, unless the caller records
         the attempt itself, the way an operator resend does.
+
+        Passing the Message-ID of an earlier delivery makes this the automatic retry or resend of
+        that message rather than a new one, which is what leaves it to the receiver's duplicate
+        detection to decide whether the document is delivered once or twice.
         """
         # A string payload serializes itself into bytes - X12 and EDIFACT objects arrive this way.
         if isinstance(payload, str):
@@ -206,22 +220,37 @@ class _AS2Connection:
 
         logger.info('AS2 out -> %s; name:%s; cid:%s', self.partnership.endpoint_url, self.name, cid)
 
-        out = outbound_send(self.partnership, self.keystore, payload, filename, client=self.http_client)
+        out = outbound_send(
+            self.partnership, self.keystore, payload, filename, client=self.http_client, message_id=message_id)
 
-        # The delivery and its synchronous MDN, when one arrived, become audit events -
-        # the clear payload is stored only for a single document, which is what
-        # a later resend runs on, while the raw MIME preserves everything either way.
+        # The delivery and its synchronous MDN, when one arrived, become audit events - every
+        # document is stored losslessly, which is what a later resend runs on, with the readable
+        # text of the first one alongside them and the raw MIME preserving the whole exchange.
         if needs_audit:
-
-            if isinstance(payload, bytes):
-                clear_payload = payload.decode('utf8', 'replace')
-            else:
-                clear_payload = ''
 
             if filename is None:
                 stored_filename = ''
             else:
                 stored_filename = filename
+
+            payloads:'anylist' = []
+
+            # A single document carries the partnership's content type, the one it went out with ..
+            if isinstance(payload, bytes):
+                clear_payload = payload.decode('utf8', 'replace')
+
+                document = encode_payload_document(payload, self.partnership.content_type, stored_filename)
+                payloads.append(document)
+
+            # .. while each document of a multi-attachment message carries its own.
+            else:
+                first_item = payload[0]
+                clear_payload = first_item.data.decode('utf8', 'replace')
+                stored_filename = first_item.filename
+
+                for item in payload:
+                    document = encode_payload_document(item.data, item.content_type, item.filename)
+                    payloads.append(document)
 
             reconciler = MDNReconciler(self.server_name)
 
@@ -234,6 +263,8 @@ class _AS2Connection:
                 filename=stored_filename,
                 async_mdn_url=self.partnership.async_mdn_url,
                 cid=cid,
+                payloads=payloads,
+                delivery_kind=delivery_kind,
             )
 
         # A delivery whose MDN did not reconcile is worth a warning in the log,
@@ -317,13 +348,23 @@ class OutconnAS2Wrapper(Wrapper):
 
 # ################################################################################################################################
 
-    def send(self, cid:'str', payload:'as2_payload', filename:'strnone'=None, *, needs_audit:'bool'=True) -> 'SendResult':
+    def send(
+        self,
+        cid:'str',
+        payload:'as2_payload',
+        filename:'strnone'=None,
+        *,
+        needs_audit:'bool'=True,
+        message_id:'strnone'=None,
+        delivery_kind:'str'=DeliveryKind.Original,
+        ) -> 'SendResult':
         """ Delivers one AS2 message through a pooled connection, blocking to cover
         the window while the connection queue is still being built at startup.
         """
         with self.client(should_block=True, block_timeout=_as2_block_timeout) as client:
             client = cast_('_AS2Connection', client)
-            out = client.send(cid, payload, filename, needs_audit=needs_audit)
+            out = client.send(
+                cid, payload, filename, needs_audit=needs_audit, message_id=message_id, delivery_kind=delivery_kind)
 
         return out
 

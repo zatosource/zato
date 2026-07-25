@@ -43,6 +43,9 @@ _expiry_warning_days = 30
 _service_get  = 'zato.channel.as2.keystore.get'
 _service_edit = 'zato.channel.as2.keystore.edit'
 
+# What the page is told when the save fails for a reason only the server log can explain.
+_save_error_message = 'Keystore could not be saved, please consult the server log for details'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -132,11 +135,12 @@ def save(req:'any_') -> 'JsonResponse':
     # A genuinely broad boundary - whatever went wrong with the invocation,
     # the page must get a response it can display.
     except Exception:
-        exception_info = format_exc()
-        msg = f'Keystore could not be saved, e:`{exception_info}`'
-        logger.error(msg)
 
-        out = JsonResponse({'is_ok': False, 'message': msg}, status=INTERNAL_SERVER_ERROR)
+        # The traceback goes to the log, where an administrator can read it, rather than to the
+        # browser - it names internal paths and configuration that the page has no use for.
+        logger.error('Keystore could not be saved, e:`%s`', format_exc())
+
+        out = JsonResponse({'is_ok': False, 'message': _save_error_message}, status=INTERNAL_SERVER_ERROR)
         return out
 
     if not response.ok:

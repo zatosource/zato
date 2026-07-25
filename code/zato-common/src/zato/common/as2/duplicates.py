@@ -9,9 +9,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from datetime import timedelta
 from logging import getLogger
+from threading import Lock
 
 # SQLAlchemy
-from sqlalchemy import and_, BigInteger, Column, Integer, LargeBinary, MetaData, select, String, Table, Text, UniqueConstraint
+from sqlalchemy import and_, BigInteger, Column, Index, Integer, LargeBinary, MetaData, select, String, Table, Text, \
+    UniqueConstraint
 from sqlalchemy.exc import IntegrityError
 
 # Zato
@@ -68,6 +70,10 @@ duplicate_table = Table('as2_duplicate', metadata,
     Column('headers', Text),
     Column('created_iso', String(_short_column_len)),
     UniqueConstraint('as2_from', 'as2_to', 'message_id', name='uq_as2_duplicate_message'),
+
+    # Retention deletes on the creation time, which without this index means reading
+    # the whole table on every run.
+    Index('idx_as2_duplicate_created', 'created_iso'),
 )
 
 # ################################################################################################################################
@@ -95,7 +101,10 @@ class DuplicateStore:
         metadata.create_all(self.engine)
         ensure_column_types(self.engine, duplicate_table)
 
-        # Counts stores so retention can run periodically instead of on every write.
+        # Counts stores so retention can run periodically instead of on every write. Every request
+        # increments it, and under gevent an unsynchronized read-modify-write would lose updates,
+        # which would make retention run at a cadence nobody could predict.
+        self._store_count_lock = Lock()
         self._store_count = 0
 
 # ################################################################################################################################
@@ -134,7 +143,7 @@ class DuplicateStore:
 
 # ################################################################################################################################
 
-    def store(
+    def claim(
         self,
         as2_from:'str',
         as2_to:'str',
@@ -143,9 +152,15 @@ class DuplicateStore:
         body:'bytes',
         headers:'strstrdict',
         ) -> 'bool':
-        """ Remembers one processed message and its MDN response. Returns True when this call
-        was the first to store the triple and False when another server stored it first -
-        the unique constraint is what keeps the detection atomic.
+        """ Claims one message under its identity triple, remembering the MDN response that
+        answered it. Returns True when this call was the first to claim the triple and False when
+        somebody else - another server, or another greenlet in this one - claimed it first.
+
+        The caller delivers the documents only when the claim was won. A read followed by a write
+        would let two concurrent copies of the same message both find no duplicate and both
+        deliver, with only one of them losing the insert afterwards, by which point the customer
+        has the document twice. The unique constraint makes the write atomic, so making the write
+        the claim is what makes the detection atomic.
         """
         now = utcnow()
         created_iso = now.isoformat()
@@ -162,7 +177,7 @@ class DuplicateStore:
             created_iso=created_iso,
         )
 
-        # A constraint violation means another server already stored this very triple.
+        # A constraint violation means somebody else already claimed this very triple.
         try:
             with self.engine.begin() as connection:
                 _ = connection.execute(insert_statement)
@@ -171,9 +186,13 @@ class DuplicateStore:
             out = False
 
         # Periodically delete rows older than the detection window.
-        self._store_count += 1
+        with self._store_count_lock:
+            self._store_count += 1
+            is_retention_due = self._store_count % _retention_check_interval == 0
 
-        if self._store_count % _retention_check_interval == 0:
+        # The retention runs with the lock released, so that a delete over a large table
+        # does not hold up the counter every other request greenlet needs.
+        if is_retention_due:
             self._run_retention(now)
 
         return out

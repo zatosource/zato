@@ -7,9 +7,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 from base64 import b64decode
 from dataclasses import dataclass
 from http.client import ACCEPTED, NO_CONTENT, OK
+from urllib.parse import urlsplit
 
 # Zato
 from zato.common.as2.common import AS2Error, AS2ProtocolException, Default
@@ -18,7 +20,7 @@ from zato.common.as2.mdn import build_mdn, disposition_from_exception, MDNSignin
 from zato.common.as2.partnership import active_verification_certificates, match_partnership, unquote_as2_identifier
 from zato.common.as2.smime import compute_mic, compute_mic_over, decompress, decrypt, select_mic_algorithm, \
     serialize_part, SMIMEPart, verify
-from zato.common.typing_ import optional
+from zato.common.typing_ import cast_, optional
 from zato.common.util.xml_.mime_ import parse_header_parameters, parse_mime_part
 
 # ################################################################################################################################
@@ -38,6 +40,11 @@ if 0:
     strlist = strlist
     strnone = strnone
     strstrdict = strstrdict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -62,6 +69,29 @@ _enveloped_smime_types = ('enveloped-data', 'authenveloped-data')
 
 # The smime-type parameter value of a compressed entity.
 _compressed_smime_type = 'compressed-data'
+
+# How many security layers one message may be wrapped in. Real messages use at most
+# compression, signing and encryption together, so this leaves generous room while still
+# denying a peer the ability to stack layers without limit.
+_max_layer_depth = 8
+
+# How large an incoming request body may be. Processing one message holds the body, its base64
+# form and the decoded payload at once, so peak memory is a multiple of this rather than equal
+# to it, which is why the ceiling sits well below what a single process can hold.
+_max_inbound_bytes = 256 * 1024 * 1024
+
+# The URL schemes an asynchronous MDN may be delivered over - the two AS2 itself travels on,
+# so that a destination naming any other scheme reaches no handler for it.
+_allowed_async_mdn_schemes = ('http', 'https')
+
+# What a peer-supplied filename is reduced to a plain name by - both separators, because the
+# name may have been produced on either kind of system, and the characters that no filesystem
+# accepts anyway.
+_path_separators = ('/', '\\')
+_forbidden_filename_characters = frozenset('\x00\r\n\t')
+
+# How long a filename may be. Filesystems commonly stop at 255 bytes for one name.
+_max_filename_length = 255
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -96,11 +126,18 @@ class StoredMDN:
 
 @dataclass(init=False)
 class PendingAsyncMDN:
-    """ An MDN the caller is to deliver asynchronously to the URL the sender named.
+    """ An MDN the caller is to deliver asynchronously to the URL the sender named -
+    already checked against the partnership, so the caller delivers it as it stands.
     """
     url: str = ''
     body: bytes = b''
     headers: 'strstrdict'
+
+    # How the delivery is to be made, carried here so that the transport does not need
+    # the partnership - an outgoing request with no ceiling on it would hold a worker
+    # for as long as the destination cared to keep the connection open.
+    verify_tls: bool = True
+    timeout_seconds: int = Default.HTTP_Timeout_Seconds
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -167,13 +204,51 @@ def _transfer_decode(data:'bytes', transfer_encoding:'str') -> 'bytes':
 
 # ################################################################################################################################
 
+def _sanitize_filename(filename:'str') -> 'str':
+    """ Reduces a peer-supplied filename to a plain name safe to hand on.
+
+    Nothing in the AS2 code writes a file under this name, but it travels into the routed message
+    and the stored audit data, and a service or a subscriber that does write it would be the one
+    exposed. Sanitizing here means every consumer gets a name that cannot escape a directory,
+    rather than each of them having to remember to check.
+    """
+    out = filename.strip()
+
+    # Any directory part is dropped, both separators, so that neither a path nor a parent
+    # reference survives - and a name that was nothing but a path leaves nothing behind.
+    for separator in _path_separators:
+        _, _, out = out.rpartition(separator)
+
+    # A name made only of dots would still be a parent reference.
+    if out.strip('.') == '':
+        return ''
+
+    # Control characters have no place in a filename and are what turns one into an injection
+    # into whatever format a consumer writes it to.
+    kept:'strlist' = []
+
+    for character in out:
+        if character not in _forbidden_filename_characters:
+            if character.isprintable():
+                kept.append(character)
+
+    out = ''.join(kept)
+
+    # A name longer than a filesystem accepts is truncated rather than refused, since the
+    # document itself is what matters and the name is metadata travelling with it.
+    out = out[:_max_filename_length]
+
+    return out
+
+# ################################################################################################################################
+
 def _read_filename(content_disposition:'str') -> 'str':
     """ Reads the filename out of a Content-Disposition header value, when one travels along.
     """
     parameters = parse_header_parameters(content_disposition)
 
     if filename := parameters.get('filename'):
-        out = filename
+        out = _sanitize_filename(filename)
     else:
         out = ''
 
@@ -260,12 +335,46 @@ def _extract_payloads(part:'SMIMEPart') -> 'payload_list':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _is_async_mdn_url_allowed(partnership:'partnershipnone', url:'str') -> 'bool':
+    """ Tells whether an asynchronous MDN may be delivered to the URL the sender named.
+
+    The destination arrives in the sender's Receipt-Delivery-Option header, which means an
+    unauthenticated caller would otherwise choose where the server makes an outgoing request to -
+    and the header is read on the error paths too, before the message has proven to come from
+    the partner at all. An asynchronous receipt goes back to the party we exchange messages with,
+    so the destination has to sit on the same host as that party's own AS2 endpoint.
+    """
+    # Without a partnership there is nothing to hold the destination against, which is the
+    # unknown-trading-relationship case - a stranger does not get to name a destination.
+    if not partnership:
+        return False
+
+    if not partnership.endpoint_url:
+        return False
+
+    named = urlsplit(url)
+    endpoint = urlsplit(partnership.endpoint_url)
+
+    # Only the two schemes AS2 travels over, so that no other URL handler is ever reached ..
+    if named.scheme not in _allowed_async_mdn_schemes:
+        return False
+
+    # .. and only the partner's own host, port included, since a different port on the same
+    # host is a different service.
+    if named.netloc.lower() != endpoint.netloc.lower():
+        return False
+
+    return True
+
+# ################################################################################################################################
+
 def _attach_mdn(
     result:'InboundResult',
     request:'MDNRequest',
     disposition:'Disposition',
     mic:'str',
     keystore:'keystorenone',
+    partnership:'partnershipnone'=None,
     ) -> 'None':
     """ Builds the MDN a message calls for and places it on the result - on the HTTP response
     for a synchronous one, as a pending delivery for an asynchronous one. Positive and negative
@@ -287,12 +396,29 @@ def _attach_mdn(
 
     body, headers = build_mdn(request, disposition, mic, signing_config)
 
-    # An asynchronous MDN is the caller's to deliver - the inbound POST itself is merely accepted ..
+    # A destination we will not deliver to falls back to the response body. The receipt still
+    # reaches whoever made the request, which is more use to a genuine partner that named a
+    # destination we do not recognize than a refusal would be.
+    is_async = False
+
     if request.async_mdn_url:
+        is_async = _is_async_mdn_url_allowed(partnership, request.async_mdn_url)
+
+        if not is_async:
+            logger.warning(
+                'Refusing to deliver an AS2 async MDN to `%s`, which is not the endpoint of partner `%s`',
+                request.async_mdn_url, result.as2_from)
+
+    # An asynchronous MDN is the caller's to deliver - the inbound POST itself is merely accepted ..
+    if is_async:
+        partnership = cast_('Partnership', partnership)
+
         pending = PendingAsyncMDN()
         pending.url = request.async_mdn_url
         pending.body = body
         pending.headers = headers
+        pending.verify_tls = partnership.verify_tls
+        pending.timeout_seconds = partnership.http_timeout_seconds
 
         result.pending_async_mdn = pending
         result.status_code = ACCEPTED
@@ -358,15 +484,22 @@ def _process_layers(
     accepted_certificates = active_verification_certificates(partnership)
 
     while True:
+
+        # A well-formed message has at most a handful of layers, so crossing the ceiling
+        # means the structure is hostile rather than merely unusual.
+        if depth >= _max_layer_depth:
+            raise AS2ProtocolException(
+                AS2Error.Unexpected_Processing_Error, f'Too many security layers, the maximum is {_max_layer_depth}')
+
         parameters = parse_header_parameters(part.content_type)
         media_type = parameters['']
 
         # An encrypted or compressed entity - both ride in application/pkcs7-mime ..
         if media_type == 'application/pkcs7-mime':
 
-            if smime_type := parameters.get('smime-type'):
-                pass
-            else:
+            smime_type = parameters.get('smime-type')
+
+            if smime_type is None:
                 smime_type = ''
 
             # An absent smime-type parameter means an encrypted entity,
@@ -383,6 +516,7 @@ def _process_layers(
             # .. the encrypted entity is decrypted with our own key ..
             elif is_enveloped:
                 part = decrypt(part, keystore)
+                is_encrypted = True
                 if not decrypted_content:
                     decrypted_content = serialize_part(part, partnership.prevent_canonicalization)
 
@@ -394,6 +528,7 @@ def _process_layers(
         # .. a signed entity is verified and unwrapped ..
         elif media_type == 'multipart/signed':
             verify_result = verify(part, keystore, accepted_certificates)
+            is_signed = True
 
             if not signed_content:
                 signed_content = verify_result.content
@@ -404,6 +539,8 @@ def _process_layers(
         # .. anything else is the payload itself.
         else:
             break
+
+        depth += 1
 
     # The MIC algorithm honors the request's preference list when there is one.
     if mic_request_algorithms:
@@ -427,6 +564,10 @@ def _process_layers(
             is_encrypted=False,
             prevent_canonicalization=partnership.prevent_canonicalization,
         )
+
+    # The MIC is computed before the policy check so that a rejected message still reports
+    # what arrived - the partner needs that value to tell which message we turned down.
+    _enforce_security_policy(partnership, is_signed, is_encrypted)
 
     return part
 
@@ -518,7 +659,15 @@ def handle(
         part.content_disposition = content_disposition
 
     try:
-        # Reverse the security layers and compute the MIC on the way ..
+        # An oversized body is turned down before any of it is unwrapped, stored or routed ..
+        body_size = len(body)
+
+        if body_size > _max_inbound_bytes:
+            raise AS2ProtocolException(
+                AS2Error.Unexpected_Processing_Error,
+                f'Request body of {body_size} bytes is larger than the maximum of {_max_inbound_bytes}')
+
+        # .. reverse the security layers and compute the MIC on the way ..
         part = _process_layers(out, part, partnership, keystore, request.mic_algorithms)
 
         # .. hand the documents over ..
@@ -527,7 +676,7 @@ def handle(
         # .. and answer with the MDN the sender asked for.
         disposition = new_processed_disposition()
         out.disposition = disposition
-        _attach_mdn(out, request, disposition, out.mic, keystore)
+        _attach_mdn(out, request, disposition, out.mic, keystore, partnership)
 
     # Failures still produce an MDN with the matching disposition modifier -
     # signed when a signed receipt was requested, because the partner is identifiable.
@@ -538,7 +687,7 @@ def handle(
 
         disposition = disposition_from_exception(e)
         out.disposition = disposition
-        _attach_mdn(out, request, disposition, out.mic, keystore)
+        _attach_mdn(out, request, disposition, out.mic, keystore, partnership)
 
     return out
 

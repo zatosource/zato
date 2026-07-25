@@ -11,6 +11,7 @@ import zlib
 from base64 import b64decode, b64encode
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from hmac import compare_digest
 from os import urandom
 from typing import NamedTuple
 
@@ -79,6 +80,11 @@ _default_transfer_encoding = '7bit'
 # base64 output is wrapped at this many characters per line (RFC 2045 section 6.8).
 _base64_line_length = 76
 
+# The printable range of ASCII, which is what a MIME header value may be written from -
+# space through tilde, with horizontal tab allowed separately as folding whitespace.
+_first_printable_ascii = 0x20
+_last_printable_ascii = 0x7E
+
 # The nonce and authentication tag sizes for AES-GCM content encryption (RFC 5084 section 3.2).
 _gcm_nonce_size = 12
 _gcm_tag_size = 16
@@ -120,6 +126,19 @@ _tag_constructed_bit = 0x20
 # The BER indefinite-length marker and the end-of-contents octets that conclude such an element.
 _ber_indefinite_length = 0x80
 _ber_end_of_contents = b'\x00\x00'
+
+# How deep a BER structure may nest before it is rejected as malformed. A real CMS structure
+# nests around a dozen levels, so this leaves ample room while staying far below the point
+# where the re-encoding recursion would exhaust the interpreter stack.
+_max_ber_depth = 64
+
+# How many bytes one compressed entity may expand to. Compression ratios above a thousand to one
+# are the signature of a decompression bomb rather than of an EDI document, and the whole point
+# of the ceiling is that the expansion stops before the process runs out of memory.
+_max_decompressed_bytes = 512 * 1024 * 1024
+
+# How many bytes to inflate per step while the ceiling above is being watched.
+_decompression_chunk_size = 256 * 1024
 
 # ASN.1 object identifiers use base-128 arcs with a continuation bit,
 # and the first two arcs share one byte through this multiplier.
@@ -216,10 +235,19 @@ def _element_content(data:'bytes', element:'DERElement') -> 'bytes':
 
 # ################################################################################################################################
 
-def _normalize_ber_element(data:'bytes', offset:'int') -> 'anytuple':
+def _normalize_ber_element(data:'bytes', offset:'int', depth:'int'=0) -> 'anytuple':
     """ Re-encodes one BER element into its definite-length form, returning the re-encoded
     bytes along with the offset just past the element - end-of-contents octets included.
+
+    The depth is carried down because this runs on unauthenticated input, before any trust
+    decision is made - a structure nested deeply enough would otherwise exhaust the Python
+    stack rather than being rejected as malformed.
     """
+    if depth >= _max_ber_depth:
+        raise AS2MalformedCMSException(f'BER nesting is deeper than the maximum of {_max_ber_depth}')
+
+    child_depth = depth + 1
+
     tag = data[offset]
     length = data[offset + 1]
 
@@ -230,7 +258,7 @@ def _normalize_ber_element(data:'bytes', offset:'int') -> 'anytuple':
         child_offset = offset + 2
 
         while data[child_offset:child_offset + 2] != _ber_end_of_contents:
-            child, child_offset = _normalize_ber_element(data, child_offset)
+            child, child_offset = _normalize_ber_element(data, child_offset, child_depth)
             chunks.append(child)
 
         content = b''.join(chunks)
@@ -253,7 +281,7 @@ def _normalize_ber_element(data:'bytes', offset:'int') -> 'anytuple':
     child_offset = element.content_offset
 
     while child_offset < end_offset:
-        child, child_offset = _normalize_ber_element(data, child_offset)
+        child, child_offset = _normalize_ber_element(data, child_offset, child_depth)
         chunks.append(child)
 
     content = b''.join(chunks)
@@ -537,6 +565,32 @@ def _canonicalize_content(part:'SMIMEPart', prevent_canonicalization:'bool') -> 
 
 # ################################################################################################################################
 
+def _validate_header_value(name:'str', value:'str') -> 'None':
+    """ Rejects a header value that cannot be written into a header block as it stands.
+
+    On an inner entity - one that came out of decryption or decompression - these values were
+    parsed from plaintext the peer controls. Writing a control character back into a header block
+    would produce bytes that a downstream parser splits differently from the way this one did,
+    which means our idea of what the signature covers and the MIC digests would stop matching the
+    partner's. Anything outside printable ASCII plus horizontal tab is refused.
+    """
+    for character in value:
+
+        if character == '\t':
+            continue
+
+        code = ord(character)
+
+        if code < _first_printable_ascii:
+            raise AS2ProtocolException(
+                AS2Error.Unexpected_Processing_Error, f'Control character in the {name} header value')
+
+        if code > _last_printable_ascii:
+            raise AS2ProtocolException(
+                AS2Error.Unexpected_Processing_Error, f'Non-ASCII character in the {name} header value')
+
+# ################################################################################################################################
+
 def serialize_part(part:'SMIMEPart', prevent_canonicalization:'bool'=False) -> 'bytes':
     """ Serializes an entity into its wire form - MIME headers, an empty line and the content.
     This is what signatures cover, what gets encrypted and what the MIC digests for signed
@@ -544,10 +598,14 @@ def serialize_part(part:'SMIMEPart', prevent_canonicalization:'bool'=False) -> '
     """
     content = _canonicalize_content(part, prevent_canonicalization)
 
+    _validate_header_value('Content-Type', part.content_type)
+    _validate_header_value('Content-Transfer-Encoding', part.content_transfer_encoding)
+
     headers = f'Content-Type: {part.content_type}\r\nContent-Transfer-Encoding: {part.content_transfer_encoding}\r\n'
 
     # The disposition header rides along only when a filename actually travels with the entity.
     if part.content_disposition:
+        _validate_header_value('Content-Disposition', part.content_disposition)
         headers += f'Content-Disposition: {part.content_disposition}\r\n'
 
     headers += '\r\n'
@@ -1046,7 +1104,9 @@ def _verify_signed_data(
         message_digest = _read_message_digest(der, signed_attributes)
         signing_time = _read_signing_time(der, signed_attributes)
 
-        if message_digest != content_digest:
+        # The attribute is peer-supplied and this comparison decides whether the signature is
+        # honored at all, so it must not reveal how far a guessed digest got before diverging.
+        if not compare_digest(message_digest, content_digest):
             raise AS2SecurityException(
                 AS2Error.Integrity_Check_Failed, 'Content digest does not match the message-digest attribute')
 
@@ -1121,7 +1181,7 @@ def verify(
 
         signer_certificate, digest_name, signing_time = _verify_signed_data(
             content, signature_der, keystore, accepted_certificates)
-    except (AS2MalformedCMSException, IndexError, ValueError) as e:
+    except (AS2MalformedCMSException, IndexError, ValueError, RecursionError) as e:
         raise AS2SecurityException(AS2Error.Integrity_Check_Failed, f'Malformed signature structure ({e})') from None
 
     inner = parse_part(content)
@@ -1597,7 +1657,7 @@ def decrypt(part:'SMIMEPart', keystore:'Keystore') -> 'SMIMEPart':
         else:
             raise AS2SecurityException(AS2Error.Decryption_Failed, 'CMS content type is not an enveloped structure')
 
-    except (AS2MalformedCMSException, IndexError, ValueError) as e:
+    except (AS2MalformedCMSException, IndexError, ValueError, RecursionError) as e:
         raise AS2SecurityException(AS2Error.Decryption_Failed, f'Malformed encrypted structure ({e})') from None
 
     out = parse_part(plaintext)
@@ -1634,6 +1694,47 @@ def compress(part:'SMIMEPart', prevent_canonicalization:'bool'=False) -> 'SMIMEP
 
 # ################################################################################################################################
 
+def _inflate_bounded(compressed:'bytes') -> 'bytes':
+    """ Inflates a zlib stream a chunk at a time, giving up once the output crosses the ceiling.
+    A single decompress call would expand a small hostile input until the process ran out of
+    memory, and this runs on unauthenticated input, so the expansion has to be watched
+    as it happens rather than measured afterwards.
+    """
+    decompressor = zlib.decompressobj()
+    chunks:'byteslist' = []
+    total = 0
+
+    try:
+        # An empty result means the stream is exhausted, which is the normal way out ..
+        while chunk := decompressor.decompress(compressed, _decompression_chunk_size):
+
+            total += len(chunk)
+
+            # .. while crossing the ceiling means the input was built to expand without limit.
+            if total > _max_decompressed_bytes:
+                raise AS2ProtocolException(
+                    AS2Error.Decompression_Failed,
+                    f'Decompressed content is larger than the maximum of {_max_decompressed_bytes} bytes')
+
+            chunks.append(chunk)
+
+            # Whatever the decompressor did not consume is the input of the next round,
+            # and an empty buffer keeps it draining what it already holds.
+            compressed = decompressor.unconsumed_tail
+
+    except zlib.error as e:
+        raise AS2ProtocolException(AS2Error.Decompression_Failed, f'Decompression failed ({e})') from None
+
+    # A chunked decompressor reports a truncated stream by never reaching its end, rather than
+    # by raising the way a single-call decompression would.
+    if not decompressor.eof:
+        raise AS2ProtocolException(AS2Error.Decompression_Failed, 'Compressed stream is incomplete or truncated')
+
+    out = b''.join(chunks)
+    return out
+
+# ################################################################################################################################
+
 def decompress(part:'SMIMEPart') -> 'SMIMEPart':
     """ Unwraps a CMS CompressedData entity back into the MIME entity underneath.
     """
@@ -1666,13 +1767,10 @@ def decompress(part:'SMIMEPart') -> 'SMIMEPart':
         octets = _read_der_element(der, explicit_octets.content_offset)
         compressed = _collect_compressed_content(der, octets)
 
-    except (AS2MalformedCMSException, IndexError, ValueError) as e:
+    except (AS2MalformedCMSException, IndexError, ValueError, RecursionError) as e:
         raise AS2ProtocolException(AS2Error.Decompression_Failed, f'Malformed compressed structure ({e})') from None
 
-    try:
-        plaintext = zlib.decompress(compressed)
-    except zlib.error as e:
-        raise AS2ProtocolException(AS2Error.Decompression_Failed, f'Decompression failed ({e})') from None
+    plaintext = _inflate_bounded(compressed)
 
     out = parse_part(plaintext)
     return out
