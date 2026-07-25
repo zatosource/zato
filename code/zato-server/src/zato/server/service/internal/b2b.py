@@ -61,7 +61,8 @@ class B2BAlerting(AdminService):
         now = utcnow()
 
         # Everything the sweep runs on - the partner configuration and our own signing chain.
-        configs = list(self.server.config_manager.outconn_as2.values())
+        outconn_configs = self.server.config_manager.outconn_as2.values()
+        configs = list(outconn_configs)
 
         keystore = self.invoke(_keystore_service, skip_response_elem=True)
         own_cert_chain = keystore['as2_signing_cert_chain']
@@ -79,7 +80,11 @@ class B2BAlerting(AdminService):
         record_alerts(audit_log, findings, cid=self.cid)
 
         finding_count = len(findings)
-        suffix = 'finding' if finding_count == 1 else 'findings'
+
+        if finding_count == 1:
+            suffix = 'finding'
+        else:
+            suffix = 'findings'
 
         self.logger.info('B2B alerting sweep raised %d %s', finding_count, suffix)
 
@@ -92,7 +97,8 @@ class B2BAlerting(AdminService):
 
         # The email component may be disabled in server.conf.
         if not self.email:
-            self.logger.warning('Could not send the B2B alerting digest; is component_enabled.email set to True in server.conf?')
+            self.logger.warning(
+                'Could not send the B2B alerting digest; is component_enabled.email set to True in server.conf?')
             return
 
         from_ = self._get_extra(AS2.Alerting.Extra_From, context)

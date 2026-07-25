@@ -23,7 +23,7 @@ from sqlalchemy import text as sa_text
 
 # Zato
 from zato.common.analytics.api import analytics_db_file_name, metadata as analytics_metadata
-from zato.common.audit_log.common import audit_db_file_name, metadata as audit_metadata
+from zato.common.audit_log.common import Audit_DB_File_Name, metadata as audit_metadata
 from zato.common.config_db import apply_env_variables, build_env_variables, get_default_env_file_path, \
     persist_env_variables, sql_env_prefix_by_database, sql_field_suffixes
 from zato.common.db_env import build_connect_args_from_values, build_engine_url_from_values, get_env_values, EnvDBConfig
@@ -56,7 +56,7 @@ _redis_service_prefix = 'zato.config-db.redis.'
 _sql_databases = {
     'audit-log': EnvDBConfig(
         env_prefix=sql_env_prefix_by_database['audit-log'],
-        sqlite_file_name=audit_db_file_name,
+        sqlite_file_name=Audit_DB_File_Name,
         metadata=audit_metadata,
     ),
     'analytics': EnvDBConfig(
