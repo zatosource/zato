@@ -57,7 +57,7 @@ def test_stored_mdn_comes_back_byte_for_byte(tmp_path:'os.PathLike') -> 'None':
         body = b'MIME-Version: 1.0\r\n\r\nThis is the stored MDN'
         headers = {'Content-Type': 'multipart/report; report-type=disposition-notification'}
 
-        created = store.store('PartnerCorp', 'ZatoRetail', 'abc@partnercorp', OK, body, headers)
+        created = store.claim('PartnerCorp', 'ZatoRetail', 'abc@partnercorp', OK, body, headers)
         assert created is True
 
         stored = store.get('PartnerCorp', 'ZatoRetail', 'abc@partnercorp')
@@ -72,12 +72,12 @@ def test_stored_mdn_comes_back_byte_for_byte(tmp_path:'os.PathLike') -> 'None':
 
 # ################################################################################################################################
 
-def test_only_the_first_store_wins(tmp_path:'os.PathLike') -> 'None':
+def test_only_the_first_claim_wins(tmp_path:'os.PathLike') -> 'None':
     try:
         store = _make_store(tmp_path)
 
-        first = store.store('PartnerCorp', 'ZatoRetail', 'abc@partnercorp', OK, b'first', {})
-        second = store.store('PartnerCorp', 'ZatoRetail', 'abc@partnercorp', OK, b'second', {})
+        first = store.claim('PartnerCorp', 'ZatoRetail', 'abc@partnercorp', OK, b'first', {})
+        second = store.claim('PartnerCorp', 'ZatoRetail', 'abc@partnercorp', OK, b'second', {})
 
         assert first is True
         assert second is False
@@ -96,7 +96,7 @@ def test_identity_triple_is_the_key(tmp_path:'os.PathLike') -> 'None':
     try:
         store = _make_store(tmp_path)
 
-        _ = store.store('PartnerCorp', 'ZatoRetail', 'abc@partnercorp', OK, b'first', {})
+        _ = store.claim('PartnerCorp', 'ZatoRetail', 'abc@partnercorp', OK, b'first', {})
 
         # The same Message-ID from another pair is a different message.
         assert store.get('OtherCorp', 'ZatoRetail', 'abc@partnercorp') is None
@@ -130,7 +130,7 @@ def test_retention_deletes_entries_outside_the_window(tmp_path:'os.PathLike') ->
         with store.engine.begin() as connection:
             _ = connection.execute(insert_stmt)
 
-        _ = store.store('PartnerCorp', 'ZatoRetail', 'fresh@partnercorp', OK, b'fresh', {})
+        _ = store.claim('PartnerCorp', 'ZatoRetail', 'fresh@partnercorp', OK, b'fresh', {})
 
         store._run_retention(utcnow())
 

@@ -70,18 +70,32 @@ def _make_name(common_name:'any_') -> 'any_':
 
 # ################################################################################################################################
 
-def make_certificate(common_name:'any_', public_key:'any_', signer_name:'any_', signer_key:'any_', is_ca:'any_'=False) -> 'any_':
-    """ Issues a test certificate valid around the current moment.
+def make_certificate(
+    common_name:'any_',
+    public_key:'any_',
+    signer_name:'any_',
+    signer_key:'any_',
+    is_ca:'any_'=False,
+    not_before:'any_'=None,
+    not_after:'any_'=None,
+    ) -> 'any_':
+    """ Issues a test certificate, valid around the current moment unless its own dates are given.
     """
     now = datetime.now(timezone.utc)
+
+    if not_before is None:
+        not_before = now - timedelta(days=1)
+
+    if not_after is None:
+        not_after = now + timedelta(days=365)
 
     builder = CertificateBuilder()
     builder = builder.subject_name(_make_name(common_name))
     builder = builder.issuer_name(signer_name)
     builder = builder.public_key(public_key)
     builder = builder.serial_number(random_serial_number())
-    builder = builder.not_valid_before(now - timedelta(days=1))
-    builder = builder.not_valid_after(now + timedelta(days=365))
+    builder = builder.not_valid_before(not_before)
+    builder = builder.not_valid_after(not_after)
     builder = builder.add_extension(BasicConstraints(ca=is_ca, path_length=None), critical=True)
 
     out = builder.sign(signer_key, SHA256())
@@ -173,6 +187,29 @@ def make_rotated_pair() -> 'any_':
         key = generate_private_key(_rsa_public_exponent, _rsa_key_size)
         name = _make_name(common_name)
         certificate = make_certificate(common_name, key.public_key(), name, key)
+
+        out = RotatedPair()
+        out.key = key
+        out.certificate = certificate
+
+        return out
+
+    return _make
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def make_dated_pair() -> 'any_':
+    """ A factory issuing keys with certificates whose own notBefore and notAfter dates are given -
+    for the checks that an expired or not-yet-valid certificate is out of service.
+    """
+    def _make(common_name:'any_', not_before:'any_', not_after:'any_') -> 'any_':
+
+        key = generate_private_key(_rsa_public_exponent, _rsa_key_size)
+        name = _make_name(common_name)
+
+        certificate = make_certificate(
+            common_name, key.public_key(), name, key, not_before=not_before, not_after=not_after)
 
         out = RotatedPair()
         out.key = key

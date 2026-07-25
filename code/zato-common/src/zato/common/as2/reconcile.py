@@ -22,7 +22,7 @@ from sqlalchemy import and_, exists, select
 
 # Zato
 from zato.common.as2.audit import encode_raw_mime
-from zato.common.as2.common import AS2Exception
+from zato.common.as2.common import AS2Exception, DeliveryKind, is_digest_equal
 from zato.common.as2.mdn import DispositionType, ModifierKind, normalize_message_id, parse_mdn
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource, event_table
 from zato.common.json_internal import dumps, loads
@@ -34,7 +34,10 @@ from zato.common.typing_ import optional
 if 0:
     from datetime import datetime
     from zato.common.as2.mdn import MDNDetails
+    from zato.common.typing_ import anydict, anylistnone
     from zato.common.util.xml_.keystore import certificate_list, Keystore
+    anydict = anydict
+    anylistnone = anylistnone
     certificate_list = certificate_list
     datetime = datetime
     Keystore = Keystore
@@ -89,6 +92,41 @@ class PendingMDN:
     sent_time_iso: str = ''
     cid:           str = ''
 
+    # Which of the reliability taxonomy this attempt was, and what the partner's HTTP layer
+    # answered it with - the automatic resend reads both to decide what to do next.
+    delivery_kind: str = ''
+    http_status:   int = 0
+
+# ################################################################################################################################
+
+def _new_pending(object_name:'str', msg_id:'str', event_time_iso:'str', cid:'str', data:'str') -> 'PendingMDN':
+    """ Turns one message-sent event into the pending message it describes. Events recorded before
+    the delivery kind and the HTTP status were stored carry neither, which reads as an original
+    attempt whose transport outcome is not known.
+    """
+    as2_from, as2_to = object_name.split(':', 1)
+    details = loads(data)
+
+    out = PendingMDN()
+
+    out.as2_from = as2_from
+    out.as2_to = as2_to
+    out.message_id = msg_id
+    out.mic = details['mic']
+    out.async_mdn_url = details['async_mdn_url']
+    out.sent_time_iso = event_time_iso
+    out.cid = cid
+
+    if delivery_kind := details.get('delivery_kind'):
+        out.delivery_kind = delivery_kind
+    else:
+        out.delivery_kind = DeliveryKind.Original
+
+    if http_status := details.get('http_status'):
+        out.http_status = http_status
+
+    return out
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -138,19 +176,29 @@ class MDNReconciler:
         payload:'str' = '',
         filename:'str' = '',
         raw_mime:'str' = '',
+        payloads:'anylistnone' = None,
+        delivery_kind:'str' = DeliveryKind.Original,
+        http_status:'int' = 0,
         ) -> 'None':
         """ Records that a message left for the partner - the send half of the reconciliation pair.
         The MIC computed at send time and the URL an asynchronous MDN is expected on travel
-        in the event data, so the returned MDN can reconcile against them. The clear payload
-        and its filename travel there too, which is what a later resend runs on, and an operator
-        resend of a stored message links back to the original event through the correlation id.
-        The raw MIME body that went over the wire is kept alongside as delivery evidence.
+        in the event data, so the returned MDN can reconcile against them. Every document travels
+        there too, which is what a later resend runs on, and an operator resend of a stored message
+        links back to the original event through the correlation id. The raw MIME body that went
+        over the wire is kept alongside as delivery evidence.
+
+        The delivery kind says which of the reliability taxonomy this attempt was, and the HTTP
+        status is what the automatic resend reads to tell a delivery the partner never accepted
+        from one it accepted and then never answered.
         """
         pair = _pair_key(as2_from, as2_to)
         message_id = normalize_message_id(message_id)
 
+        if payloads is None:
+            payloads = []
+
         details = {'mic': mic, 'async_mdn_url': async_mdn_url, 'payload': payload, 'filename': filename,
-            'raw_mime': raw_mime}
+            'raw_mime': raw_mime, 'payloads': payloads, 'delivery_kind': delivery_kind, 'http_status': http_status}
         data = dumps(details)
 
         self.audit_log.insert(
@@ -222,26 +270,20 @@ class MDNReconciler:
 
         # .. a pending one comes back with everything recorded at send time.
         object_name, msg_id, event_time_iso, cid, data = row
-        as2_from, as2_to = object_name.split(':', 1)
 
-        details = loads(data)
-
-        out = PendingMDN()
-        out.as2_from = as2_from
-        out.as2_to = as2_to
-        out.message_id = msg_id
-        out.mic = details['mic']
-        out.async_mdn_url = details['async_mdn_url']
-        out.sent_time_iso = event_time_iso
-        out.cid = cid
-
+        out = _new_pending(object_name, msg_id, event_time_iso, cid, data)
         return out
 
 # ################################################################################################################################
 
     def outstanding(self, older_than:'datetime') -> 'pending_mdn_list':
         """ Returns every message sent before the given moment whose MDN has not arrived -
-        what an alerting job runs on to detect missing receipts.
+        what the alerting job and the automatic resend both run on.
+
+        One message is one entry no matter how many attempts it took, and the entry describes the
+        most recent attempt. Every attempt records its own message-sent event under the same
+        Message-ID, so a resent message would otherwise come back once per attempt - which would
+        mean one alert per attempt and, worse, one further resend per attempt.
         """
         cutoff_iso = older_than.isoformat()
 
@@ -273,23 +315,19 @@ class MDNReconciler:
             result = connection.execute(statement)
             rows = result.fetchall()
 
+        # The rows arrive oldest first, so each attempt overwrites the earlier one under the same
+        # Message-ID and what remains per key is the most recent attempt, in the order the messages
+        # were first sent.
+        latest_by_message_id:'anydict' = {}
+
+        for object_name, msg_id, event_time_iso, cid, data in rows:
+            latest_by_message_id[msg_id] = (object_name, msg_id, event_time_iso, cid, data)
+
         # Our response to produce
         out:'pending_mdn_list' = []
 
-        for object_name, msg_id, event_time_iso, cid, data in rows:
-            as2_from, as2_to = object_name.split(':', 1)
-
-            details = loads(data)
-
-            item = PendingMDN()
-            item.as2_from = as2_from
-            item.as2_to = as2_to
-            item.message_id = msg_id
-            item.mic = details['mic']
-            item.async_mdn_url = details['async_mdn_url']
-            item.sent_time_iso = event_time_iso
-            item.cid = cid
-
+        for object_name, msg_id, event_time_iso, cid, data in latest_by_message_id.values():
+            item = _new_pending(object_name, msg_id, event_time_iso, cid, data)
             out.append(item)
 
         return out
@@ -316,7 +354,7 @@ def _is_mdn_ok(mdn:'MDNDetails', pending:'PendingMDN') -> 'bool':
     if mdn.mic:
         sent_digest, _, sent_algorithm = pending.mic.partition(', ')
 
-        if mdn.mic != sent_digest:
+        if not is_digest_equal(mdn.mic, sent_digest):
             return False
 
         if mdn.mic_algorithm != sent_algorithm:

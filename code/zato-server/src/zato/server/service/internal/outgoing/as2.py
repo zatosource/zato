@@ -47,9 +47,16 @@ class SendTestMessage(AdminService):
         try:
             result = self.as2[name].send(payload, _test_message_filename)
             report = describe_send_result(result)
-        except Exception:
+
+        except Exception as e:
+
+            # The traceback goes to the log, where an administrator can read it. What the caller
+            # gets is the reason - which is the whole point of a test message during onboarding -
+            # without the internal paths and code that a traceback carries along with it.
+            self.logger.warning('Could not send an AS2 test message through `%s`, e:`%s`', name, format_exc())
+
             report = new_send_report()
-            report['error'] = format_exc()
+            report['error'] = f'{e.__class__.__name__}: {e}'
 
         self.response.payload.response_data = dumps(report)
 

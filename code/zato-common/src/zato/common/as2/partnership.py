@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 # Zato
 from zato.common.as2.common import Default, MDNMode, TransferMode
 from zato.common.typing_ import optional
+from zato.common.util.xml_.keystore import is_certificate_time_valid
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -176,9 +177,10 @@ class Partnership:
     inbound_topic:   str = ''
     inbound_service: str = ''
 
-    # Whether this partnership's exchanges are recorded in the audit log. Turning this off
-    # also disables MDN reconciliation and duplicate detection for the partnership,
-    # because both features read what the audit log stored.
+    # Whether this partnership's exchanges are recorded in the audit log. Turning this off also
+    # disables MDN reconciliation for the partnership, because that feature reads what the audit
+    # log stored. Duplicate detection keeps working either way - it has its own table and replay
+    # protection is not something a logging preference gets to switch off.
     is_audit_log_active: bool = True
 
 # ################################################################################################################################
@@ -262,8 +264,14 @@ def match_partnership(partnerships:'partnership_list', as2_from:'str', as2_to:'s
 # ################################################################################################################################
 
 def is_certificate_entry_active(entry:'CertificateEntry', now:'dtnone'=None) -> 'bool':
-    """ Tells whether a certificate entry's validity window covers the given moment -
-    an empty end of the window means unbounded on that side.
+    """ Tells whether a certificate entry is in service at the given moment - both its configured
+    rotation window and the certificate's own notBefore and notAfter dates have to cover it.
+    An empty end of the configured window means unbounded on that side.
+
+    The certificate's own dates matter because the configured window is an operator's statement
+    about a rotation while the dates are the issuer's statement about the key - without this an
+    expired certificate would keep verifying inbound signatures, with the expiry alerting job
+    warning about it while the pipeline went on accepting it.
     """
     if now is None:
         now = datetime.now(timezone.utc)
@@ -276,9 +284,14 @@ def is_certificate_entry_active(entry:'CertificateEntry', now:'dtnone'=None) -> 
         if now < entry.valid_from:
             out = False
 
-    # .. or it is not active anymore.
+    # .. or it is not active anymore ..
     if entry.valid_until:
         if now > entry.valid_until:
+            out = False
+
+    # .. or the certificate itself is outside its own dates.
+    if entry.certificate:
+        if not is_certificate_time_valid(entry.certificate, now):
             out = False
 
     return out

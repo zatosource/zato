@@ -6,6 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from hmac import compare_digest
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -91,10 +94,18 @@ class TransferMode:
 # ################################################################################################################################
 
 class DeliveryKind:
-    """ The reliability taxonomy of repeated delivery attempts - a retry reuses the same attempt
-    after a transport error, a resend carries the same content and the same Message-ID because
-    no MDN arrived, and a resubmit is an operator action with a new Message-ID.
+    """ The reliability taxonomy every recorded delivery attempt says which of it was - the first
+    attempt at a document, a retry of an attempt that never reached the partner, a resend of one
+    that reached it without a receipt coming back, or an operator resubmit.
+
+    A retry and a resend both carry the same content under the same Message-ID, which is what
+    makes the receiver's duplicate detection the thing that decides whether the document is
+    delivered once or twice. They are told apart by what the original attempt achieved: a retry
+    follows an attempt with no successful HTTP exchange behind it, a resend follows one the
+    partner accepted and then never answered with an MDN. A resubmit is the operator action
+    that deliberately delivers the content again as a new message.
     """
+    Original = 'original'
     Retry    = 'retry'
     Resend   = 'resend'
     Resubmit = 'resubmit'
@@ -127,6 +138,12 @@ class Default:
 
     # What every outgoing message advertises in its EDIINT-Features header - real capabilities
     # only, informational per its RFC, and inbound values never drive behavior.
+    #
+    # multiple-attachments is the multipart/related payload of outbound.py, which inbound.py
+    # unwraps document by document. AS2-Reliability is the pair that makes a lost receipt
+    # recoverable: the same-Message-ID resend of resend.py on our side, and the replay detection
+    # of duplicates.py on the receiving side, which is what keeps a partner's own resend from
+    # delivering a document twice.
     EDIINT_Features = 'multiple-attachments, AS2-Reliability'
 
     # How many days after a next certificate's activation date its rotation is completed
@@ -168,6 +185,26 @@ class AS2MalformedCMSException(AS2Exception):
     into the disposition matching their context - integrity-check-failed for signatures,
     decryption-failed for envelopes, decompression-failed for compressed entities.
     """
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def is_digest_equal(left:'str', right:'str') -> 'bool':
+    """ Compares two digests in their base64 wire form without leaking where they first differ.
+
+    One side of every such comparison is supplied by a remote party - the Received-Content-MIC of
+    an incoming MDN against the value computed at send time, or the message-digest attribute of a
+    signature against the digest of the content it covers. A plain string comparison returns as
+    soon as it finds a difference, which tells a peer prepared to measure how much of a guessed
+    digest was right, so the comparison runs in constant time instead.
+    """
+    # The values travel as base64 text, while a constant-time comparison needs bytes -
+    # a peer is free to send anything at all in that header, encoding included.
+    left_bytes = left.encode('utf8', 'replace')
+    right_bytes = right.encode('utf8', 'replace')
+
+    out = compare_digest(left_bytes, right_bytes)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

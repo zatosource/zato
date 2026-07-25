@@ -34,8 +34,11 @@ if 0:
 _sender_identifier   = 'ZatoRetail'
 _receiver_identifier = 'PartnerCorp'
 
-# A fixed moment all the window checks run against, so the tests never depend on the clock.
-_now = datetime(2026, 7, 10, 12, 0, 0, tzinfo=timezone.utc)
+# The moment all the window checks run against. The entries carry certificates issued by the
+# fixtures relative to the current time, and an entry is in service only when the certificate's
+# own dates cover the moment too, so the reference moment has to be the current one rather than
+# a date typed out here.
+_now = datetime.now(timezone.utc)
 
 _one_day = timedelta(days=1)
 
@@ -283,6 +286,68 @@ class TestVerificationCertificates:
         accepted = active_verification_certificates(partnership, _now)
 
         assert accepted == [current_certificate]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestCertificateOwnDates:
+    """ The configured rotation window is an operator's statement about a migration while the
+    certificate's own dates are the issuer's statement about the key - an entry is in service
+    only when both cover the moment.
+    """
+
+    def test_an_expired_certificate_is_not_active(self, make_dated_pair:'any_') -> 'None':
+        pair = make_dated_pair('as2-expired', _now - (10 * _one_day), _now - _one_day)
+
+        # The configured window says nothing, so the certificate's own dates decide.
+        entry = _make_entry(pair.certificate)
+
+        assert not is_certificate_entry_active(entry, _now)
+
+# ################################################################################################################################
+
+    def test_a_not_yet_valid_certificate_is_not_active(self, make_dated_pair:'any_') -> 'None':
+        pair = make_dated_pair('as2-future', _now + _one_day, _now + (10 * _one_day))
+
+        entry = _make_entry(pair.certificate)
+
+        assert not is_certificate_entry_active(entry, _now)
+
+# ################################################################################################################################
+
+    def test_an_open_configured_window_does_not_revive_an_expired_certificate(
+        self, make_dated_pair:'any_') -> 'None':
+        pair = make_dated_pair('as2-expired-open-window', _now - (10 * _one_day), _now - _one_day)
+
+        # A configuration that forgot to retire the entry leaves the window wide open,
+        # which is exactly the case the certificate's own dates have to catch.
+        entry = _make_entry(pair.certificate, valid_from=_now - (20 * _one_day), valid_until=_now + (20 * _one_day))
+
+        assert not is_certificate_entry_active(entry, _now)
+
+# ################################################################################################################################
+
+    def test_an_expired_certificate_does_not_verify_inbound_signatures(self, make_dated_pair:'any_') -> 'None':
+        expired = make_dated_pair('as2-expired-signer', _now - (10 * _one_day), _now - _one_day)
+        current = make_dated_pair('as2-current-signer', _now - _one_day, _now + (10 * _one_day))
+
+        partnership = new_partnership()
+        partnership.verification_certificates.append(_make_entry(expired.certificate))
+        partnership.verification_certificates.append(_make_entry(current.certificate))
+
+        accepted = active_verification_certificates(partnership, _now)
+
+        assert accepted == [current.certificate]
+
+# ################################################################################################################################
+
+    def test_an_expired_certificate_is_not_selected_for_encryption(self, make_dated_pair:'any_') -> 'None':
+        expired = make_dated_pair('as2-expired-recipient', _now - (10 * _one_day), _now - _one_day)
+
+        partnership = new_partnership()
+        partnership.encryption_certificates.append(_make_entry(expired.certificate))
+
+        assert select_encryption_certificate(partnership, _now) is None
 
 # ################################################################################################################################
 # ################################################################################################################################

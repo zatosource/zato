@@ -17,7 +17,7 @@ import httpx
 from typing_extensions import TypeAlias
 
 # Zato
-from zato.common.as2.common import AS2Exception, Default, MDNMode, TransferMode
+from zato.common.as2.common import AS2Exception, Default, is_digest_equal, MDNMode, TransferMode
 from zato.common.as2.mdn import describe_disposition, DispositionType, ModifierKind, new_message_id, normalize_message_id, \
     parse_mdn
 from zato.common.as2.partnership import active_verification_certificates, quote_as2_identifier, select_encryption_certificate
@@ -429,7 +429,7 @@ def _reconcile_sync_mdn(
     if mdn.mic:
         sent_digest, _, sent_algorithm = result.mic.partition(', ')
 
-        if mdn.mic != sent_digest:
+        if not is_digest_equal(mdn.mic, sent_digest):
             return
 
         if mdn.mic_algorithm != sent_algorithm:
@@ -530,7 +530,7 @@ def describe_send_result(result:'SendResult') -> 'stranydict':
     if mdn.mic:
         sent_digest, _, sent_algorithm = result.mic.partition(', ')
 
-        if mdn.mic != sent_digest:
+        if not is_digest_equal(mdn.mic, sent_digest):
             out['mic_matched'] = False
         elif mdn.mic_algorithm != sent_algorithm:
             out['mic_matched'] = False

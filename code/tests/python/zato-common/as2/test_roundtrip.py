@@ -18,6 +18,7 @@ import httpx
 import pytest
 
 # Zato
+from zato.common.as2 import inbound
 from zato.common.as2.common import AS2Error, Default, DigestAlgorithm, EncryptionAlgorithm, MDNMode, TransferMode
 from zato.common.as2.inbound import handle, StoredMDN
 from zato.common.as2.mdn import build_mdn, MDNRequest, new_processed_disposition, normalize_message_id, parse_mdn
@@ -36,7 +37,10 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+# Where each side's AS2 endpoint lives - the sending side delivers to the partner's endpoint,
+# and the receiving side's own partnership names the sender's, which is where it delivers to.
 _endpoint_url = 'https://partnercorp.example.com/as2'
+_sender_endpoint_url = 'https://zatoretail.example.com/as2'
 
 _sender_identifier   = 'ZatoRetail'
 _receiver_identifier = 'PartnerCorp'
@@ -64,12 +68,14 @@ def _make_sender_partnership() -> 'any_':
 # ################################################################################################################################
 
 def _make_receiver_partnership() -> 'any_':
-    """ The same relationship as the partner's, receiving side sees it - the identities swap places.
+    """ The same relationship as the partner's, receiving side sees it - the identities swap places
+    and the endpoint is the sender's own, which is where this side delivers messages to.
     """
     out = new_partnership()
 
     out.as2_from = _receiver_identifier
     out.as2_to = _sender_identifier
+    out.endpoint_url = _sender_endpoint_url
 
     return out
 
@@ -147,6 +153,20 @@ def _new_exchange(parties:'TestParties') -> 'any_':
     out.client = httpx.Client(transport=transport)
 
     return out
+
+# ################################################################################################################################
+
+def _set_security(exchange:'any_', sign:'any_', encrypt:'any_') -> 'None':
+    """ Agrees the signing and encryption terms on both sides of the exchange. Two partners
+    configure one relationship, so the receiver enforces the same terms the sender applies -
+    setting them on the sending side alone would have the receiver reject the message.
+    """
+    exchange.sender_partnership.sign = sign
+    exchange.sender_partnership.encrypt = encrypt
+
+    for partnership in exchange.receiver_partnerships:
+        partnership.sign = sign
+        partnership.encrypt = encrypt
 
 # ################################################################################################################################
 
@@ -229,7 +249,7 @@ class TestRoundtrip:
 
     def test_signed_only(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
-        exchange.sender_partnership.encrypt = False
+        _set_security(exchange, True, False)
 
         result = _send(exchange)
 
@@ -241,7 +261,7 @@ class TestRoundtrip:
 
     def test_encrypted_only(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
-        exchange.sender_partnership.sign = False
+        _set_security(exchange, False, True)
 
         result = _send(exchange)
 
@@ -253,8 +273,7 @@ class TestRoundtrip:
 
     def test_plain(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
-        exchange.sender_partnership.sign = False
-        exchange.sender_partnership.encrypt = False
+        _set_security(exchange, False, False)
 
         result = _send(exchange)
 
@@ -320,8 +339,7 @@ class TestWireShape:
 
     def test_compression_on_the_wire(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
-        exchange.sender_partnership.sign = False
-        exchange.sender_partnership.encrypt = False
+        _set_security(exchange, False, False)
         exchange.sender_partnership.compress = True
 
         result = _send(exchange)
@@ -604,6 +622,146 @@ class TestMDNModes:
         assert normalize_message_id(mdn.original_message_id) != normalize_message_id(unknown_id)
 
 # ################################################################################################################################
+
+    def test_the_async_destination_carries_the_partnerships_transport_settings(
+        self, parties:'TestParties') -> 'None':
+        exchange = _new_exchange(parties)
+        exchange.sender_partnership.mdn_mode = MDNMode.Async
+        exchange.sender_partnership.async_mdn_url = 'https://zatoretail.example.com/zato/as2/mdn'
+
+        receiver_partnership = exchange.receiver_partnerships[0]
+        receiver_partnership.verify_tls = False
+        receiver_partnership.http_timeout_seconds = 17
+
+        _ = _send(exchange)
+
+        # The transport settings travel with the pending delivery, so the caller making the
+        # outgoing request does not have to reach back for the partnership.
+        pending = exchange.results[0].pending_async_mdn
+
+        assert pending.verify_tls is False
+        assert pending.timeout_seconds == 17
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestAsyncMDNDestination:
+    """ The asynchronous MDN destination arrives in the sender's own Receipt-Delivery-Option
+    header, so an unchecked one would let a caller choose where the server makes an outgoing
+    request to - and the header is read on the error paths too, before the message has proven
+    to come from the partner at all.
+    """
+
+    def _send_with_destination(self, exchange:'any_', destination:'any_') -> 'any_':
+        exchange.sender_partnership.mdn_mode = MDNMode.Async
+        exchange.sender_partnership.async_mdn_url = destination
+
+        out = _send(exchange)
+        return out
+
+    def test_the_partners_own_endpoint_host_is_accepted(self, parties:'TestParties') -> 'None':
+        exchange = _new_exchange(parties)
+
+        _ = self._send_with_destination(exchange, 'https://zatoretail.example.com/zato/as2/mdn')
+
+        pending = exchange.results[0].pending_async_mdn
+
+        assert pending
+        assert pending.url == 'https://zatoretail.example.com/zato/as2/mdn'
+
+# ################################################################################################################################
+
+    def test_another_host_is_refused_and_the_mdn_rides_on_the_response(self, parties:'TestParties') -> 'None':
+        exchange = _new_exchange(parties)
+
+        _ = self._send_with_destination(exchange, 'https://attacker.example.net/collect')
+
+        inbound = exchange.results[0]
+
+        # No outgoing request was prepared at all, and the receipt came back on the response
+        # instead, which still gets it to whoever made the request.
+        assert inbound.pending_async_mdn is None
+        assert inbound.status_code == OK
+        assert inbound.body
+
+        # The receipt on the response is a real MDN for the message that arrived.
+        mdn = parse_mdn(inbound.body, inbound.content_type, exchange.sender_keystore)
+
+        assert mdn.disposition == 'processed'
+        assert normalize_message_id(mdn.original_message_id) == inbound.message_id
+
+# ################################################################################################################################
+
+    def test_another_port_on_the_same_host_is_refused(self, parties:'TestParties') -> 'None':
+        exchange = _new_exchange(parties)
+
+        # A different port is a different service, so the host matching alone is not enough.
+        _ = self._send_with_destination(exchange, 'https://zatoretail.example.com:9443/collect')
+
+        assert exchange.results[0].pending_async_mdn is None
+
+# ################################################################################################################################
+
+    @pytest.mark.parametrize('destination', [
+        'file:///etc/passwd',
+        'gopher://zatoretail.example.com/1',
+        'ftp://zatoretail.example.com/receipts',
+    ])
+    def test_only_http_and_https_are_accepted(self, parties:'TestParties', destination:'any_') -> 'None':
+        exchange = _new_exchange(parties)
+
+        _ = self._send_with_destination(exchange, destination)
+
+        assert exchange.results[0].pending_async_mdn is None
+
+# ################################################################################################################################
+
+    def test_an_unknown_partner_may_not_name_a_destination(self, parties:'TestParties') -> 'None':
+        exchange = _new_exchange(parties)
+
+        # No partnership matched, so there is nothing to hold the destination against and the
+        # caller is a stranger - this is the path an unauthenticated request takes.
+        exchange.receiver_partnerships.clear()
+
+        _ = self._send_with_destination(exchange, 'https://attacker.example.net/collect')
+
+        inbound = exchange.results[0]
+
+        assert inbound.partnership is None
+        assert inbound.pending_async_mdn is None
+        assert inbound.error_modifier == AS2Error.Unknown_Trading_Relationship
+
+# ################################################################################################################################
+
+    def test_a_rejected_message_may_not_name_a_destination_either(self, parties:'TestParties') -> 'None':
+        exchange = _new_exchange(parties)
+
+        # The message fails the partnership's security policy, which is an error path that
+        # still builds an MDN - and it must not become an outgoing request of the peer's choosing.
+        exchange.sender_partnership.sign = False
+        exchange.sender_partnership.encrypt = False
+
+        _ = self._send_with_destination(exchange, 'https://attacker.example.net/collect')
+
+        inbound = exchange.results[0]
+
+        assert inbound.is_error
+        assert inbound.pending_async_mdn is None
+
+# ################################################################################################################################
+
+    def test_a_partnership_without_an_endpoint_accepts_no_destination(self, parties:'TestParties') -> 'None':
+        exchange = _new_exchange(parties)
+
+        # A receive-only partnership names no endpoint, so no host can be established
+        # as the partner's own.
+        exchange.receiver_partnerships[0].endpoint_url = ''
+
+        _ = self._send_with_destination(exchange, 'https://zatoretail.example.com/zato/as2/mdn')
+
+        assert exchange.results[0].pending_async_mdn is None
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestMDNReconciliation:
@@ -843,13 +1001,56 @@ class TestMultipleAttachments:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class TestPeerSuppliedFilename:
+    """ The filename arrives from the peer and travels into the routed message and the stored
+    audit data. Nothing here writes a file under it, but a service or subscriber that does would
+    be the one exposed, so it is reduced to a plain name at this boundary instead.
+    """
+
+    @pytest.mark.parametrize('sent,expected', [
+        ('../../../etc/passwd', 'passwd'),
+        ('..\\..\\windows\\system32\\config', 'config'),
+        ('/absolute/path/po-850.edi', 'po-850.edi'),
+        ('subdir/po-850.edi', 'po-850.edi'),
+        ('..', ''),
+        ('...', ''),
+        ('/', ''),
+        ('po-850.edi', 'po-850.edi'),
+    ])
+    def test_the_name_is_reduced_to_a_plain_one(self, parties:'TestParties', sent:'any_', expected:'any_') -> 'None':
+        exchange = _new_exchange(parties)
+        exchange.sender_partnership.preserve_filename = True
+
+        result = _send(exchange, filename=sent)
+
+        assert result.is_ok
+
+        inbound = exchange.results[0]
+        assert inbound.payloads[0].filename == expected
+
+# ################################################################################################################################
+
+    def test_a_name_longer_than_a_filesystem_accepts_is_truncated(self, parties:'TestParties') -> 'None':
+        exchange = _new_exchange(parties)
+        exchange.sender_partnership.preserve_filename = True
+
+        result = _send(exchange, filename='a' * 400)
+
+        assert result.is_ok
+
+        received = exchange.results[0]
+        assert len(received.payloads[0].filename) == inbound._max_filename_length
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class TestErrorDispositions:
     """ Failures still produce an MDN with the matching disposition modifier.
     """
 
     def test_tampered_content_yields_integrity_check_failed(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
-        exchange.sender_partnership.encrypt = False
+        _set_security(exchange, True, False)
 
         def _tampering_handler(request:'httpx.Request') -> 'any_':
             body = request.read()
@@ -903,7 +1104,7 @@ class TestErrorDispositions:
 
     def test_error_mdn_is_signed_when_a_signed_receipt_was_requested(self, parties:'TestParties') -> 'None':
         exchange = _new_exchange(parties)
-        exchange.sender_partnership.encrypt = False
+        _set_security(exchange, True, False)
 
         def _tampering_handler(request:'httpx.Request') -> 'any_':
             body = request.read()
@@ -968,6 +1169,189 @@ class TestErrorDispositions:
         assert mdn.disposition == 'failed'
         assert mdn.modifier_kind == 'failure'
         assert mdn.modifier == 'unsupported MIC-algorithms'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestInboundBounds:
+    """ Every unbounded quantity on the pre-authentication path has a ceiling, because all of it
+    runs before the message is known to come from the partner at all.
+    """
+
+    def test_an_oversized_body_is_turned_down(self, parties:'TestParties', monkeypatch:'any_') -> 'None':
+        exchange = _new_exchange(parties)
+
+        # A ceiling low enough to cross without building a genuinely huge request.
+        monkeypatch.setattr(inbound, '_max_inbound_bytes', 16)
+
+        result = _send(exchange)
+
+        assert not result.is_ok
+
+        inbound_result = exchange.results[0]
+
+        assert inbound_result.is_error
+        assert inbound_result.error_modifier == AS2Error.Unexpected_Processing_Error
+        assert len(inbound_result.payloads) == 0
+
+# ################################################################################################################################
+
+    def test_a_body_within_the_ceiling_is_accepted(self, parties:'TestParties') -> 'None':
+        exchange = _new_exchange(parties)
+
+        result = _send(exchange)
+
+        assert result.is_ok
+        assert exchange.results[0].payloads[0].data == _payload
+
+# ################################################################################################################################
+
+    def test_stacked_layers_are_turned_down(self, parties:'TestParties', monkeypatch:'any_') -> 'None':
+        exchange = _new_exchange(parties)
+
+        # Signing plus encryption is two layers, so a ceiling of one is crossed by the
+        # ordinary message the sender builds, exercising the same guard a stacked one would.
+        monkeypatch.setattr(inbound, '_max_layer_depth', 1)
+
+        result = _send(exchange)
+
+        assert not result.is_ok
+
+        inbound_result = exchange.results[0]
+
+        assert inbound_result.is_error
+        assert inbound_result.error_modifier == AS2Error.Unexpected_Processing_Error
+        assert len(inbound_result.payloads) == 0
+
+# ################################################################################################################################
+
+    def test_the_ordinary_layer_count_stays_within_the_ceiling(self, parties:'TestParties') -> 'None':
+        exchange = _new_exchange(parties)
+
+        # Compression, signing and encryption together - the deepest shape real messages use.
+        exchange.sender_partnership.compress = True
+
+        result = _send(exchange)
+
+        assert result.is_ok
+        assert exchange.results[0].payloads[0].data == _payload
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestInboundSecurityPolicy:
+    """ The partnership's own signing and encryption terms are enforced on what arrives,
+    not merely on what we send - otherwise the identity pair, which travels in the clear
+    in every message, would be the only thing standing between a stranger and a delivered document.
+    """
+
+    def test_unsigned_message_is_rejected_when_the_partnership_requires_signing(
+        self, parties:'TestParties') -> 'None':
+        exchange = _new_exchange(parties)
+
+        # The sender drops signing while the receiving side still requires it.
+        exchange.sender_partnership.sign = False
+
+        result = _send(exchange)
+
+        assert not result.is_ok
+        assert result.mdn
+        assert result.mdn.modifier == AS2Error.Insufficient_Message_Security
+
+        # Nothing was handed over to the application.
+        inbound = exchange.results[0]
+
+        assert inbound.is_error
+        assert inbound.error_modifier == AS2Error.Insufficient_Message_Security
+        assert len(inbound.payloads) == 0
+
+# ################################################################################################################################
+
+    def test_unencrypted_message_is_rejected_when_the_partnership_requires_encryption(
+        self, parties:'TestParties') -> 'None':
+        exchange = _new_exchange(parties)
+
+        exchange.sender_partnership.encrypt = False
+
+        result = _send(exchange)
+
+        assert not result.is_ok
+        assert result.mdn
+        assert result.mdn.modifier == AS2Error.Insufficient_Message_Security
+
+        inbound = exchange.results[0]
+
+        assert inbound.is_error
+        assert inbound.error_modifier == AS2Error.Insufficient_Message_Security
+        assert len(inbound.payloads) == 0
+
+# ################################################################################################################################
+
+    def test_plaintext_post_is_rejected_when_the_partnership_requires_both(self, parties:'TestParties') -> 'None':
+        exchange = _new_exchange(parties)
+
+        # The bare payload with only the AS2 identity headers, which is what an attacker
+        # who merely read one of the partner's messages is able to construct.
+        exchange.sender_partnership.sign = False
+        exchange.sender_partnership.encrypt = False
+
+        result = _send(exchange)
+
+        assert not result.is_ok
+        assert exchange.bodies[0] == _payload
+
+        inbound = exchange.results[0]
+
+        assert inbound.is_error
+        assert inbound.error_modifier == AS2Error.Insufficient_Message_Security
+        assert len(inbound.payloads) == 0
+
+# ################################################################################################################################
+
+    def test_the_error_mdn_still_reports_the_received_content_mic(self, parties:'TestParties') -> 'None':
+        exchange = _new_exchange(parties)
+
+        exchange.sender_partnership.sign = False
+        exchange.sender_partnership.encrypt = False
+
+        _ = _send(exchange)
+
+        # The MIC is computed before the policy check, so the partner can tell
+        # which message we turned down.
+        inbound = exchange.results[0]
+        assert inbound.mic
+
+# ################################################################################################################################
+
+    def test_a_partnership_requiring_nothing_accepts_a_plaintext_post(self, parties:'TestParties') -> 'None':
+        exchange = _new_exchange(parties)
+        _set_security(exchange, False, False)
+
+        result = _send(exchange)
+
+        assert result.is_ok
+
+        inbound = exchange.results[0]
+        assert not inbound.is_error
+        assert inbound.payloads[0].data == _payload
+
+# ################################################################################################################################
+
+    def test_more_security_than_required_is_accepted(self, parties:'TestParties') -> 'None':
+        exchange = _new_exchange(parties)
+
+        # The receiving side asks for signing alone while the sender also encrypts -
+        # the requirement is a floor, not an exact match.
+        for partnership in exchange.receiver_partnerships:
+            partnership.encrypt = False
+
+        result = _send(exchange)
+
+        assert result.is_ok
+
+        inbound = exchange.results[0]
+        assert not inbound.is_error
+        assert inbound.payloads[0].data == _payload
 
 # ################################################################################################################################
 # ################################################################################################################################
