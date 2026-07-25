@@ -69,8 +69,18 @@ class Generic(ConfigManagerImpl):
     logger: 'Logger'
     generic_conn_api: 'stranydict'
     sdk_connector_types: 'stranydict'
+    as2_config_generation: 'int'
     _generic_conn_handler: 'stranydict'
     _get_generic_impl_func: 'callable_'
+
+# ################################################################################################################################
+
+    def _note_as2_config_change(self, type_:'str') -> 'None':
+        """ Records that the AS2 outgoing connections changed, which is what tells an AS2 channel
+        its partnerships have to be built again rather than reused.
+        """
+        if type_ == COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_AS2:
+            self.as2_config_generation += 1
 
 # ################################################################################################################################
 
@@ -134,9 +144,12 @@ class Generic(ConfigManagerImpl):
             else:
                 conn.delete()
 
-            # .. and delete the connection from the configuration object.
+            # .. delete the connection from the configuration object ..
             conn_name = conn_dict['name']
             _ = conn_value.pop(conn_name, None)
+
+            # .. and note the change for whoever caches anything built out of these configs.
+            self._note_as2_config_change(conn_dict['type_'])
 
 # ################################################################################################################################
 
@@ -195,6 +208,10 @@ class Generic(ConfigManagerImpl):
         conn_wrapper = wrapper(item_dict, self.server)
         config_attr[msg_name].conn = conn_wrapper
         config_attr[msg_name].conn.build_wrapper()
+
+        # An AS2 channel builds its partnerships out of these configs, so it needs to know
+        # that the ones it built earlier no longer describe the connections.
+        self._note_as2_config_change(item.type_)
 
 # ################################################################################################################################
 

@@ -17,7 +17,7 @@ from sqlalchemy import or_, select, update
 
 # Zato
 from zato.common.audit_log.common import event_attr_table, event_body_table, event_link_table, event_table, \
-    get_retention_days, AuditOutcome
+    get_retention_days, get_source_env_suffix, AuditOutcome
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -25,7 +25,7 @@ from zato.common.audit_log.common import event_attr_table, event_body_table, eve
 if 0:
     from datetime import datetime
     from sqlalchemy.engine import Engine
-    from zato.common.typing_ import any_, anylist, callable_, intlist, strcalldict
+    from zato.common.typing_ import any_, anylist, callable_, intlist, strcalldict, strlist
 
     # Dummy assignments to satisfy type checkers
     Engine = Engine
@@ -35,6 +35,7 @@ if 0:
     datetime = datetime
     intlist = intlist
     strcalldict = strcalldict
+    strlist = strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,6 +50,10 @@ logger = getLogger(__name__)
 # when and with what outcome, long after its payload is gone.
 Env_Content_Retention_Days = 'Zato_Audit_Log_Content_Retention_Days'
 
+# What one source's own content retention variable is prefixed with, completed the same way
+# the row retention one is, e.g. Zato_Audit_Log_Content_Retention_Days_AS2.
+Env_Content_Retention_Days_Prefix = 'Zato_Audit_Log_Content_Retention_Days_'
+
 # The environment variable pointing at a directory to archive rows into before they are deleted
 Env_Archive_Dir = 'Zato_Audit_Log_Archive_Dir'
 
@@ -60,15 +65,24 @@ _chunk_size = 500
 
 # ################################################################################################################################
 
-def get_content_retention_days() -> 'int':
-    """ Returns how many days of message content are kept. Zero means content is only pruned
-    together with its event rows.
+def get_content_retention_days(source:'str'='') -> 'int':
+    """ Returns how many days of message content are kept, for one source or, with no source named,
+    process-wide. Zero means content is only pruned together with its event rows.
     """
+    if source:
+
+        suffix = get_source_env_suffix(source)
+        env_name = f'{Env_Content_Retention_Days_Prefix}{suffix}'
+
+        if value := os.environ.get(env_name, ''):
+            out = int(value)
+            return out
+
     if value := os.environ.get(Env_Content_Retention_Days, ''):
         out = int(value)
-    else:
-        out = _default_content_retention_days
+        return out
 
+    out = _default_content_retention_days
     return out
 
 # ################################################################################################################################
@@ -143,10 +157,27 @@ class _Archiver:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_expired_ids(engine:'Engine', cutoff_iso:'str') -> 'intlist':
-    """ Returns up to one chunk of ids of events older than the cutoff.
+def _get_sources(engine:'Engine') -> 'strlist':
+    """ Returns every source that has events in the log, because each of them is kept
+    for its own number of days.
+    """
+    query = select(event_table.c.source).distinct()
+
+    out:'strlist' = []
+
+    with engine.connect() as connection:
+        for row in connection.execute(query):
+            out.append(row[0])
+
+    return out
+
+# ################################################################################################################################
+
+def _get_expired_ids(engine:'Engine', source:'str', cutoff_iso:'str') -> 'intlist':
+    """ Returns up to one chunk of ids of one source's events older than the cutoff.
     """
     query = select(event_table.c.id)
+    query = query.where(event_table.c.source == source)
     query = query.where(event_table.c.event_time_iso < cutoff_iso)
     query = query.limit(_chunk_size)
 
@@ -201,9 +232,9 @@ def _delete_events(engine:'Engine', ids:'intlist') -> 'None':
 
 # ################################################################################################################################
 
-def _run_row_retention(engine:'Engine', archiver:'_Archiver', cutoff_iso:'str') -> 'int':
-    """ Deletes events older than the row-retention cutoff, chunk by chunk, archiving them first
-    when an archive directory is configured.
+def _run_row_retention(engine:'Engine', archiver:'_Archiver', source:'str', cutoff_iso:'str') -> 'int':
+    """ Deletes one source's events older than its row-retention cutoff, chunk by chunk,
+    archiving them first when an archive directory is configured.
     """
 
     # Our count of deleted events
@@ -212,7 +243,7 @@ def _run_row_retention(engine:'Engine', archiver:'_Archiver', cutoff_iso:'str') 
     while True:
 
         # Take one chunk of expired events ..
-        ids = _get_expired_ids(engine, cutoff_iso)
+        ids = _get_expired_ids(engine, source, cutoff_iso)
 
         if not ids:
             break
@@ -231,9 +262,9 @@ def _run_row_retention(engine:'Engine', archiver:'_Archiver', cutoff_iso:'str') 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_content_candidates(engine:'Engine', cutoff_iso:'str', last_id:'int') -> 'anylist':
-    """ Returns up to one chunk of events older than the content cutoff that still carry content -
-    a non-empty data column or rows in the body table.
+def _get_content_candidates(engine:'Engine', source:'str', cutoff_iso:'str', last_id:'int') -> 'anylist':
+    """ Returns up to one chunk of one source's events older than the content cutoff that still
+    carry content - a non-empty data column or rows in the body table.
     """
     has_body = select(event_body_table.c.id)
     has_body = has_body.where(event_body_table.c.event_id == event_table.c.id)
@@ -244,6 +275,7 @@ def _get_content_candidates(engine:'Engine', cutoff_iso:'str', last_id:'int') ->
     )
 
     query = select(event_table.c.id, event_table.c.source, event_table.c.outcome, event_table.c.status)
+    query = query.where(event_table.c.source == source)
     query = query.where(event_table.c.event_time_iso < cutoff_iso)
     query = query.where(event_table.c.id > last_id)
     query = query.where(content_condition)
@@ -300,10 +332,10 @@ def _prune_content(engine:'Engine', ids:'intlist') -> 'None':
 
 # ################################################################################################################################
 
-def _run_content_retention(engine:'Engine', archiver:'_Archiver', cutoff_iso:'str') -> 'int':
-    """ Prunes the content of events older than the content cutoff, keeping their metadata rows.
-    Each source's prunability predicate decides what is safe - unacknowledged or failed messages
-    keep their content regardless of age.
+def _run_content_retention(engine:'Engine', archiver:'_Archiver', source:'str', cutoff_iso:'str') -> 'int':
+    """ Prunes the content of one source's events older than its content cutoff, keeping their
+    metadata rows. The source's prunability predicate decides what is safe - unacknowledged
+    or failed messages keep their content regardless of age.
     """
 
     # Our count of pruned events
@@ -314,7 +346,7 @@ def _run_content_retention(engine:'Engine', archiver:'_Archiver', cutoff_iso:'st
     while True:
 
         # Take one chunk of events that still carry content ..
-        candidates = _get_content_candidates(engine, cutoff_iso, last_id)
+        candidates = _get_content_candidates(engine, source, cutoff_iso, last_id)
 
         if not candidates:
             break
@@ -346,14 +378,12 @@ def _run_content_retention(engine:'Engine', archiver:'_Archiver', cutoff_iso:'st
 # ################################################################################################################################
 # ################################################################################################################################
 
-def run_retention(engine:'Engine', now:'datetime') -> 'None':
-    """ Enforces both retention tiers - content is pruned early while event rows,
+def _run_source_retention(engine:'Engine', archiver:'_Archiver', source:'str', now:'datetime') -> 'None':
+    """ Enforces both retention tiers for one source - content is pruned early while event rows,
     attributes and lineage survive until the row cutoff, so the audit trail outlives the payloads.
     """
-    archiver = _Archiver(now)
-
-    retention_days = get_retention_days()
-    content_retention_days = get_content_retention_days()
+    retention_days = get_retention_days(source)
+    content_retention_days = get_content_retention_days(source)
 
     # Content retention only makes sense when it is shorter than row retention ..
     if content_retention_days:
@@ -362,22 +392,36 @@ def run_retention(engine:'Engine', now:'datetime') -> 'None':
             content_cutoff = now - timedelta(days=content_retention_days)
             content_cutoff_iso = content_cutoff.isoformat()
 
-            pruned_count = _run_content_retention(engine, archiver, content_cutoff_iso)
+            pruned_count = _run_content_retention(engine, archiver, source, content_cutoff_iso)
 
             if pruned_count:
                 suffix = 'event' if pruned_count == 1 else 'events'
-                logger.info('Audit log retention pruned content of %d %s older than %s',
-                    pruned_count, suffix, content_cutoff_iso)
+                logger.info('Audit log retention pruned content of %d %s %s older than %s',
+                    pruned_count, source, suffix, content_cutoff_iso)
 
     # .. and rows older than the row cutoff are deleted outright.
     row_cutoff = now - timedelta(days=retention_days)
     row_cutoff_iso = row_cutoff.isoformat()
 
-    deleted_count = _run_row_retention(engine, archiver, row_cutoff_iso)
+    deleted_count = _run_row_retention(engine, archiver, source, row_cutoff_iso)
 
     if deleted_count:
         suffix = 'event' if deleted_count == 1 else 'events'
-        logger.info('Audit log retention deleted %d %s older than %s', deleted_count, suffix, row_cutoff_iso)
+        logger.info('Audit log retention deleted %d %s %s older than %s',
+            deleted_count, source, suffix, row_cutoff_iso)
+
+# ################################################################################################################################
+
+def run_retention(engine:'Engine', now:'datetime') -> 'None':
+    """ Enforces retention source by source, because each source is kept for its own number of days -
+    the B2B evidence of what a partner sent and signed for is not deleted on the schedule
+    that suits diagnostic events.
+    """
+    archiver = _Archiver(now)
+    sources = _get_sources(engine)
+
+    for source in sources:
+        _run_source_retention(engine, archiver, source, now)
 
 # ################################################################################################################################
 # ################################################################################################################################

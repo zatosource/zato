@@ -20,9 +20,9 @@ from cryptography.hazmat.primitives.serialization import Encoding
 from lxml import etree
 
 # Zato
-from zato.common.crypto.api import CryptoManager
-from zato.common.soap.common import NS, SOAPException, SOAPSecurityException, SOAPVersion
-from zato.common.soap.envelope import build_envelope, get_body, get_header, set_must_understand
+from zato.common.crypto.api import CryptoManager, is_string_equal
+from zato.common.soap.common import as_soap_security_exception, NS, SOAPException, SOAPSecurityException, SOAPVersion
+from zato.common.soap.envelope import build_envelope, find_header, get_body, get_header, set_must_understand
 from zato.common.typing_ import cast_
 from zato.common.util.xml_.constants import Algorithm, Transform
 from zato.common.util.xml_.core import Id_Size_Bits, new_id, qname, utc_timestamp, XMLSecurityException
@@ -199,7 +199,11 @@ def _find_text(parent:'any_', tag:'str') -> 'str':
 def parse_message_header(envelope:'any_') -> 'EbXMLInfo':
     """ Reads the ebMS 2.0 MessageHeader of an incoming message.
     """
-    header = get_header(envelope)
+    header = find_header(envelope)
+
+    if header is None:
+        raise SOAPException('Message has no ebMS 2.0 MessageHeader')
+
     message_header = header.find(qname(NS.EBXML2, 'MessageHeader'))
 
     if message_header is None:
@@ -319,13 +323,13 @@ def verify_payload(signature:'any_', part:'Part', keystore:'Keystore') -> 'any_'
         digest_value_element = reference.find(qname(NS.DS, 'DigestValue'))
         expected_digest = ''.join((digest_value_element.text or '').split())
 
-        if digest_bytes(part.data) != expected_digest:
+        if not is_string_equal(digest_bytes(part.data), expected_digest):
             raise XMLSecurityException('Payload digest mismatch')
 
         verify_signature_value(signature, chain)
 
     except XMLSecurityException as e:
-        raise SOAPSecurityException(e.args[0])
+        raise as_soap_security_exception(e) from e
 
     out = chain[0]
     return out
@@ -388,7 +392,7 @@ def decrypt_payload(encrypted_key:'any_', part:'Part', keystore:'Keystore') -> '
     try:
         content_key = recover_content_key(encrypted_key, keystore)
     except XMLSecurityException as e:
-        raise SOAPSecurityException(e.args[0])
+        raise as_soap_security_exception(e) from e
 
     # Per XML Encryption 1.1 the GCM nonce is prefixed to the ciphertext.
     nonce = part.data[:_gcm_nonce_size_bytes]

@@ -74,14 +74,14 @@ class TestUsernameToken:
         wire = to_bytes(envelope)
         assert b'MYPASS' not in wire
 
-        verify_username_token(_reparse(envelope), 'MYUSER', 'MYPASS')
+        verify_username_token(_reparse(envelope), 'MYUSER', 'MYPASS', use_digest=True)
 
     def test_digest_wrong_password(self):
         envelope = _sample_envelope()
         _ = add_username_token(envelope, 'MYUSER', 'MYPASS', use_digest=True)
 
         with pytest.raises(SOAPSecurityException):
-            verify_username_token(_reparse(envelope), 'MYUSER', 'WRONG')
+            verify_username_token(_reparse(envelope), 'MYUSER', 'WRONG', use_digest=True)
 
     def test_missing_token(self):
         envelope = _sample_envelope()
@@ -101,7 +101,7 @@ class TestUsernameToken:
         _ = add_username_token(envelope, 'WRONGUSER', 'MYPASS', use_digest=True)
 
         with pytest.raises(SOAPSecurityException):
-            verify_username_token(_reparse(envelope), 'MYUSER', 'MYPASS')
+            verify_username_token(_reparse(envelope), 'MYUSER', 'MYPASS', use_digest=True)
 
     def test_wrong_username_and_wrong_password_same_message(self):
         envelope_wrong_username = _sample_envelope()
@@ -131,9 +131,9 @@ class TestX509:
         envelope = _sample_envelope()
         _ = sign(envelope, parties.sender)
 
-        signer = verify(_reparse(envelope), parties.receiver)
+        verified = verify(_reparse(envelope), parties.receiver)
 
-        assert signer == parties.sender.signing_certificate
+        assert verified.certificate == parties.sender.signing_certificate
 
     def test_tampered_body_is_detected(self, parties):
         envelope = _sample_envelope()
@@ -167,8 +167,8 @@ class TestX509:
         verifier = new_keystore()
         verifier.trust_anchors = [parties.ca_certificate]
 
-        signer = verify(_reparse(envelope), verifier)
-        assert signer == parties.sender.signing_certificate
+        verified = verify(_reparse(envelope), verifier)
+        assert verified.certificate == parties.sender.signing_certificate
 
     def test_unsigned_message_is_rejected(self, parties):
         envelope = _sample_envelope()

@@ -29,6 +29,7 @@ from requests import \
 
 # Zato
 from zato.common.api import AS4, SCHEDULER
+from zato.common.as2.common import DeliveryKind as AS2DeliveryKind
 from zato.common.json_internal import dumps
 from zato.common.typing_ import cast_
 from zato.server.connection.sftp import SFTPConnection
@@ -553,11 +554,21 @@ class AS2Invoker:
 
 # ################################################################################################################################
 
-    def send(self, payload:'as2_payload', filename:'strnone'=None, *, needs_audit:'bool'=True) -> 'AS2SendResult':
+    def send(
+        self,
+        payload:'as2_payload',
+        filename:'strnone'=None,
+        *,
+        needs_audit:'bool'=True,
+        message_id:'strnone'=None,
+        delivery_kind:'str'=AS2DeliveryKind.Original,
+        ) -> 'AS2SendResult':
         """ Sends one AS2 message to the connection's configured endpoint,
-        reconciling the synchronous MDN when one was requested.
+        reconciling the synchronous MDN when one was requested. Passing the Message-ID of an
+        earlier delivery makes this the automatic retry or resend of that message.
         """
-        out = self.conn.send(self.cid, payload, filename, needs_audit=needs_audit)
+        out = self.conn.send(
+            self.cid, payload, filename, needs_audit=needs_audit, message_id=message_id, delivery_kind=delivery_kind)
         return out
 
 # ################################################################################################################################

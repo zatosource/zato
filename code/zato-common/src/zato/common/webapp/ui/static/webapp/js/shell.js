@@ -7,7 +7,16 @@
 
 (function() {
 
+// The shell is built once per page. Both the base template and a screen's
+// own script may ask for it, and a second build would append a second
+// resize handle, a second chevron and a second collapse listener, which
+// would toggle the problems panel twice per click and so never at all.
+var shellReady = false;
+
 shared.initShell = function() {
+
+    if (shellReady) { return; }
+    shellReady = true;
 
     // A page without the navigation pane, the sign-in screen among
     // them, has no collapse button to draw

@@ -23,8 +23,17 @@ audit_db_file_name = 'audit.db'
 # The environment variable overriding how many days of events are kept
 Env_Retention_Days = 'Zato_Audit_Log_Retention_Days'
 
+# What one source's own retention variable is prefixed with - the source name in upper case
+# with dashes turned into underscores completes it, e.g. Zato_Audit_Log_Retention_Days_AS2.
+Env_Retention_Days_Prefix = 'Zato_Audit_Log_Retention_Days_'
+
 # How many days of events are kept when the environment does not say otherwise
 _default_retention_days = 30
+
+# How many days the B2B sources are kept for. What a partner sent and what it signed for is the
+# evidence a trade dispute is settled with, and disputes surface years after the exchange,
+# so the sources that carry non-repudiation evidence outlive the debug events by default.
+_default_evidence_retention_days = 7 * 365
 
 # Maximum length of short string columns
 _short_column_len = 255
@@ -35,20 +44,6 @@ _endpoint_column_len = 500
 # Attribute values are capped so they always fit an indexable column
 Attr_Value_Max_Len = _short_column_len
 
-# ################################################################################################################################
-
-def get_retention_days() -> 'int':
-    """ Returns how many days of audit events are kept - also the widest window
-    the reports run over. Configurable through an environment variable.
-    """
-    if value := os.environ.get(Env_Retention_Days, ''):
-        out = int(value)
-    else:
-        out = _default_retention_days
-
-    return out
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 class AuditSource:
@@ -64,6 +59,54 @@ class AuditSource:
     HL7           = 'hl7'
     FHIR          = 'fhir'
     Config        = 'config'
+
+# ################################################################################################################################
+
+# The sources whose events are evidence rather than diagnostics, with how long each is kept for.
+_source_retention_days = {
+    AuditSource.AS2: _default_evidence_retention_days,
+    AuditSource.X12: _default_evidence_retention_days,
+}
+
+# ################################################################################################################################
+
+def get_source_env_suffix(source:'str') -> 'str':
+    """ Turns one source name into the tail of its own environment variable - the name in upper case
+    with the dashes that read well in a source name turned into the underscores a variable needs.
+    """
+    out = source.replace('-', '_').upper()
+    return out
+
+# ################################################################################################################################
+
+def get_retention_days(source:'str'='') -> 'int':
+    """ Returns how many days of audit events are kept, for one source or, with no source named,
+    process-wide - the latter is also the widest window the reports run over.
+
+    A source's own environment variable comes first, then the source's own default, and only then
+    the process-wide setting. The order is deliberate: an operator shortening retention across the
+    board is asking for less diagnostic history, not for the evidence of what a partner signed for
+    to be deleted, and that decision has to be made for the source it concerns by name.
+    """
+    if source:
+
+        suffix = get_source_env_suffix(source)
+        env_name = f'{Env_Retention_Days_Prefix}{suffix}'
+
+        if value := os.environ.get(env_name, ''):
+            out = int(value)
+            return out
+
+        if source in _source_retention_days:
+            out = _source_retention_days[source]
+            return out
+
+    if value := os.environ.get(Env_Retention_Days, ''):
+        out = int(value)
+        return out
+
+    out = _default_retention_days
+    return out
 
 # ################################################################################################################################
 
@@ -173,6 +216,11 @@ event_table = Table('event', metadata,
     Index('idx_event_source_object', 'source', 'object_name', 'id'),
     Index('idx_event_cid', 'cid', 'id'),
     Index('idx_event_msg_id', 'msg_id', 'id'),
+
+    # The reconciliation queries ask for the open events of one source before a moment in time -
+    # every message whose receipt has not arrived - and the msg_id index above covers only the
+    # lookup of the closing event, leaving the outer half of that question a full scan.
+    Index('idx_event_source_type_time', 'source', 'event_type', 'event_time_iso'),
 )
 
 # ################################################################################################################################

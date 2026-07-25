@@ -22,8 +22,9 @@ from zato.common.bearer_token_verifier import BearerTokenVerifier, build_verify_
 from zato.common.broker_message import code_to_name, SECURITY
 from zato.common.crypto.api import is_string_equal
 from zato.common.dispatch import dispatcher
+from zato.common.soap.common import SOAPSecurityException
 from zato.common.soap.envelope import parse_envelope
-from zato.common.soap.security.wss import enforce_wss
+from zato.common.soap.security.wss import enforce_wss, invalidate_keystores
 from zato.common.util.api import update_apikey_username_to_channel, wait_for_dict_key
 from zato.common.util.auth import enrich_with_sec_data, on_basic_auth
 from zato.common.util.url_dispatcher import get_match_target
@@ -264,15 +265,22 @@ class URLData(PyURLData):
     def _handle_security_wss(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None, enforce_auth=True):
         """ Enforces the channel's WS-Security definition on the incoming SOAP envelope.
         """
+        soap_context = wsgi_environ.get('zato.request.soap')
+
         try:
             # A SOAP channel has already parsed the envelope, so enforcement runs against
             # that shared element - what it decrypts in place is what the service reads.
-            if soap_context := wsgi_environ.get('zato.request.soap'):
+            if soap_context:
                 envelope = soap_context.element
             else:
                 envelope = parse_envelope(body)
-            enforce_wss(envelope, sec_def)
-        except Exception:
+
+            verified = enforce_wss(envelope, sec_def)
+
+        # Only a security failure is a credential failure. Catching everything here turned a bug
+        # anywhere in the verification path into a 401, which hid it and told the caller its
+        # credentials were wrong when they were not.
+        except SOAPSecurityException:
             if enforce_auth:
                 msg = '401 Unauthorized path_info:`{}`, cid:`{}`, e:`{}`'.format(path_info, cid, format_exc())
                 error_msg = '401 Unauthorized'
@@ -280,6 +288,12 @@ class URLData(PyURLData):
                 raise Unauthorized(cid, error_msg, None)
             else:
                 return False
+
+        # What the signature covered is recorded on the request context, and the payload resolution
+        # checks the body it reads against it - that is what ties the verified message to the
+        # processed one rather than leaving the two to be located independently.
+        if soap_context:
+            soap_context.verified_signature = verified
 
         return True
 
@@ -631,6 +645,10 @@ class URLData(PyURLData):
             self._update_wss(msg.name, msg)
             self._update_url_sec(msg, SEC_DEF_TYPE.WSS)
 
+            # The keystore built from the old configuration is no longer what this definition
+            # says, and the files it points at may have been replaced without their paths changing.
+            invalidate_keystores(msg.id)
+
     def on_config_event_SECURITY_WSS_DELETE(self, msg, *args):
         """ Deletes a WS-Security definition.
         """
@@ -638,6 +656,8 @@ class URLData(PyURLData):
             self._delete_channel_data('wss', msg.name)
             del self.wss_config[msg.name]
             self._update_url_sec(msg, SEC_DEF_TYPE.WSS, True)
+
+            invalidate_keystores(msg.id)
 
     def on_config_event_SECURITY_WSS_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of a WS-Security definition.

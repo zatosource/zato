@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import datetime, timezone
+from functools import lru_cache
 from uuid import UUID
 
 # lxml
@@ -34,6 +35,12 @@ Id_Size_Bits = 128
 # so a random version 4 UUID carries 122 bits of randomness.
 _uuid_size_bits = 128
 
+# How many qualified names are kept. The namespaces and local names come from the specifications
+# this implementation speaks, not from message content, so the real number of distinct pairs is in
+# the low hundreds - this is a ceiling that also bounds the cache should a caller ever pass a name
+# taken from a message.
+QName_Cache_Size = 4096
+
 # The one hardened parser every XML parse in the SOAP family goes through. Each setting closes
 # a specific attack: resolve_entities stops XXE and billion-laughs expansion, no_network stops
 # the parser reaching out to fetch anything a document names, load_dtd stops an inline or
@@ -49,8 +56,14 @@ xml_parser = etree.XMLParser(resolve_entities=False, no_network=True, load_dtd=F
 # ################################################################################################################################
 # ################################################################################################################################
 
+@lru_cache(maxsize=QName_Cache_Size)
 def qname(namespace:'str', tag:'str') -> 'str':
     """ Returns the fully-qualified lxml tag name for a namespace and local name.
+
+    The result is cached because this is called several times per element on every message and the
+    arguments are a small fixed set of namespaces and local names drawn from the specifications this
+    implementation speaks - so the cache holds every combination that will ever be asked for after
+    the first few messages, and each later call is a dict lookup instead of building a string.
     """
     out = f'{{{namespace}}}{tag}'
     return out

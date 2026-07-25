@@ -228,6 +228,11 @@ class ConfigManager(_ConfigManagerBase):
         # Generic connections - AS2 outconns
         self.outconn_as2 = {}
 
+        # How many times the AS2 outgoing connections changed. An AS2 channel turns these configs
+        # into partnerships, which means parsing an X.509 certificate per configured partner, and
+        # it needs to do that again only when one of them is created, edited or deleted.
+        self.as2_config_generation = 0
+
         # Generic connections - GraphQL outconns
         self.outconn_graphql = {}
 

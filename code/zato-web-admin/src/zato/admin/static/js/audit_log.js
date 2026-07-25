@@ -26,6 +26,7 @@ $.fn.zato.audit_log.config = {
     resubmitErrorLabel: 'Resubmit failed',
     resentLabel: 'Resent',
     reprocessedLabel: 'Reprocessed to',
+    reprocessedDocumentsLabel: 'documents',
     resubmittedMarkerLabel: 'resubmitted',
 
     // The per-source column list and resubmit labels, assigned in init
@@ -271,9 +272,16 @@ $.fn.zato.audit_log.buildResubmitLabel = function(report) {
         return config.resubmitErrorLabel;
     }
 
-    // .. a reprocess is reported by where the payload went ..
+    // .. a reprocess is reported by where the payload went, with the document count
+    // added when the delivery carried attachments next to the EDI document ..
     if (report.action === 'reprocess') {
-        return config.reprocessedLabel + ' ' + report.target_kind + ' ' + report.target_name;
+        var label = config.reprocessedLabel + ' ' + report.target_kind + ' ' + report.target_name;
+
+        if (report.message_count > 1) {
+            label = label + ' (' + report.message_count + ' ' + config.reprocessedDocumentsLabel + ')';
+        }
+
+        return label;
     }
 
     // .. and a resend by the CID its new attempt travels under.

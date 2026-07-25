@@ -35,7 +35,8 @@ from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditS
 from zato.common.exception import BadRequest, Inactive, BackendInvocationError
 from zato.common.json_ import dumps, loads
 from zato.common.soap.client import SOAPClient
-from zato.common.soap.common import Content_Type as SOAP_Content_Type, Envelope_NS, SOAPFault, SOAPVersion
+from zato.common.soap.common import Content_Type as SOAP_Content_Type, Envelope_NS, SOAP_Action_Header, SOAPFault, \
+    SOAPVersion
 from zato.common.marshal_.api import extract_model_class, is_list, Model
 from zato.common.typing_ import cast_
 from zato.common.util.api import get_component_name, utcnow
@@ -654,25 +655,18 @@ class BaseHTTPSOAPWrapper:
         if self.config['content_type']:
             return self.config['content_type']
 
+        # A SOAP connection's content type is decided by its SOAP version, whatever data format it
+        # carries. This used to hang off the data-format branch below, which meant a SOAP connection
+        # with a data format set skipped the SOAP case entirely and went out as text/plain.
+        if self.config['transport'] == URL_TYPE.SOAP:
+            out = SOAP_Content_Type[self.config['soap_version']]
+            return out
+
         # For requests other than SOAP, set content type only if we know the data format
         if self.config['data_format']:
 
-            # Not SOAP
             if self.config['transport'] == URL_TYPE.PLAIN_HTTP:
-
-                # JSON
                 return CONTENT_TYPE.JSON # type: ignore
-
-        # SOAP
-        elif self.config['transport'] == URL_TYPE.SOAP:
-
-            # SOAP 1.1
-            if self.config['soap_version'] == '1.1':
-                return CONTENT_TYPE.SOAP11 # type: ignore
-
-            # SOAP 1.2
-            else:
-                return CONTENT_TYPE.SOAP12 # type: ignore
 
         # If we are here, assume it is regular text by default
         return 'text/plain'
@@ -688,7 +682,7 @@ class BaseHTTPSOAPWrapper:
         })
 
         if self.config.get('transport') == URL_TYPE.SOAP:
-            headers['SOAPAction'] = self.config.get('soap_action')
+            self._add_soap_action(headers)
 
         content_type = user_headers.pop('Content-Type', self.default_content_type)
         if content_type:
@@ -697,6 +691,28 @@ class BaseHTTPSOAPWrapper:
         headers.update(user_headers)
 
         return headers
+
+# ################################################################################################################################
+
+    def _add_soap_action(self, headers:'strstrdict') -> 'None':
+        """ Adds the SOAPAction header a SOAP 1.1 request carries.
+
+        Only 1.1 has this header - 1.2 replaced it with a Content-Type parameter, and sending it to
+        a 1.2 endpoint anyway is at best ignored and at worst a routing decision made on a header
+        that version does not define. The value is quoted because SOAP 1.1 defines it as a quoted
+        string, and an unquoted one is what a strict peer rejects.
+        """
+        if self.config['soap_version'] != SOAPVersion.V11:
+            return
+
+        soap_action = self.config.get('soap_action')
+
+        # A connection with no action configured sends no header rather than the string `None`,
+        # which is what an unchecked assignment used to put on the wire.
+        if not soap_action:
+            return
+
+        headers[SOAP_Action_Header] = f'"{soap_action}"'
 
 # ################################################################################################################################
 
