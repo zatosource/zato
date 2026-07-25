@@ -23,24 +23,6 @@ class NS(CommonNS):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class MEP:
-    """ Message exchange pattern identifiers from ebMS 3.0.
-    """
-    One_Way = 'http://docs.oasis-open.org/ebxml-msg/ebms/v3.0/ns/core/200704/oneWay'
-    Two_Way = 'http://docs.oasis-open.org/ebxml-msg/ebms/v3.0/ns/core/200704/twoWay'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class MEPBinding:
-    """ Message exchange pattern binding identifiers from ebMS 3.0.
-    """
-    Push = 'http://docs.oasis-open.org/ebxml-msg/ebms/v3.0/ns/core/200704/push'
-    Pull = 'http://docs.oasis-open.org/ebxml-msg/ebms/v3.0/ns/core/200704/pull'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class Default:
     """ Values that ebMS 3.0 and the eDelivery profile define as defaults.
     """
@@ -53,6 +35,28 @@ class Default:
 
     # HTTP timeout for outbound AS4 requests.
     HTTP_Timeout_Seconds = 120
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Limits:
+    """ What one incoming message is allowed to be and to cost. These are the ceilings that apply
+    before a P-Mode has even been matched, so they are fixed rather than per exchange.
+    """
+    # How many MIME parts one message may carry. The AS4 profiles in use send one payload per
+    # message, so this leaves room for the multi-payload case without leaving it open.
+    Max_Part_Count = 16
+
+    # How large one MIME part may be on the wire.
+    Max_Part_Size_Bytes = 64 * 1024 * 1024
+
+    # How large one part may be once decompressed. Decompression stops at this point rather than
+    # running to completion and finding out afterwards.
+    Max_Decompressed_Size_Bytes = 256 * 1024 * 1024
+
+    # How far from the current time the eb:Timestamp of an incoming message may be, in either
+    # direction. The allowance either way covers clock drift between the two parties.
+    Timestamp_Window_Seconds = 300
 
 # ################################################################################################################################
 # ################################################################################################################################

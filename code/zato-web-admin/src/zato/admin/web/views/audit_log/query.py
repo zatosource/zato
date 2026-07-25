@@ -10,12 +10,12 @@ what a page of rows is enriched with before it reaches the browser.
 """
 
 # SQLAlchemy
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, or_, select
 
 # Zato
 from zato.admin.web.views.audit_log.columns import _data_preview_len, _search_columns, _source_attr_columns, \
     _source_body_preview, _status_outstanding
-from zato.admin.web.views.audit_log.sources import _source_outstanding, _source_resubmit
+from zato.admin.web.views.audit_log.sources import _source_outstanding
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_table
 from zato.common.audit_log.query import outstanding_conditions
 

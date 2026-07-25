@@ -539,6 +539,9 @@ class ConfigManager(_ConfigManagerBase):
             'address_url_path':config['url_path'],
             'timeout':timeout,
             'validate_tls':validate_tls,
+
+            # Whether this connection's exchanges go to the audit log - it arrives as an opaque attribute
+            'is_audit_log_active':config.get('is_audit_log_active'),
         }
 
         for name in COMMON_AS4.Common_Fields + COMMON_AS4.Outgoing_Fields:

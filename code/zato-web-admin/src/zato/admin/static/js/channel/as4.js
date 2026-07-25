@@ -69,6 +69,7 @@ $.fn.zato.channel.as4.field_descriptions = {
     // Main tab
     'id_name': 'A unique name for this channel.<br>Used to identify it in logs and the dashboard.',
     'id_is_active': 'Whether this channel accepts messages.<br>Requests to inactive channels are rejected.',
+    'id_is_audit_log_active': 'Whether the exchanges of this channel<br>are recorded in the audit log - the messages,<br>the receipts and the bytes of each.',
     'id_url_path': 'The URL path this channel listens on,<br>e.g. /as4 or /peppol - the address<br>counterparties send their messages to.',
     'id_security_id': 'Optional HTTP-level security on top of AS4\'s<br>own message-level security. Counterparties<br>authenticate cryptographically, so this<br>is usually left as no security.',
     'id_as4_profile': 'The AS4 profile of the network this channel<br>serves - it selects the correct signature,<br>encryption and packaging checks.',
@@ -112,6 +113,17 @@ $.fn.zato.channel.as4.edit = function(id) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.channel.as4.audit_log_object_name = function(item) {
+
+    // Either party may be absent on an item saved without it.
+    let from_party = item.as4_from_party ? item.as4_from_party.trim() : '';
+    let to_party = item.as4_to_party ? item.as4_to_party.trim() : '';
+
+    return from_party + ':' + to_party;
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.channel.as4.data_table.new_row = function(item, data, include_tr) {
     let row = '';
 
@@ -120,6 +132,10 @@ $.fn.zato.channel.as4.data_table.new_row = function(item, data, include_tr) {
     }
 
     let is_active = item.is_active == true;
+
+    let to_django_bool = function(value) {
+        return (value === true || value == 'on' || value == 'True') ? 'True' : 'False';
+    };
 
     let security_name = '<span class="form_hint">---</span>';
     if(item.security_id && item.security_id != 'ZATO_NONE') {
@@ -142,11 +158,16 @@ $.fn.zato.channel.as4.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', security_name);
     row += "<td><span class='form_hint'>---</span></td>";
 
+    // The audit log of this channel's exchanges is filed under its party pair.
+    let audit_object_name = encodeURIComponent($.fn.zato.channel.as4.audit_log_object_name(item));
+    row += String.format('<td><a href="/zato/audit-log/?source=as4&object_name={0}&cluster=1">Audit log</a></td>', audit_object_name);
+
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.as4.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.as4.delete_('{0}');\">Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
 
     row += String.format("<td class='ignore'>{0}</td>", item.is_active);
+    row += String.format("<td class='ignore'>{0}</td>", to_django_bool(item.is_audit_log_active));
     row += String.format("<td class='ignore'>{0}</td>", item.security_id);
     row += String.format("<td class='ignore'>{0}</td>", item.service ? item.service : '');
 

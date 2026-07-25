@@ -130,6 +130,9 @@ class TestEnmasseChannelAS4Exporter(TestCase):
         self.assertNotIn('service', channel)
         self.assertNotIn('security', channel)
 
+        # The audit log of this channel was never turned off, so the flag stays out of the export
+        self.assertNotIn('is_audit_log_active', channel)
+
 # ################################################################################################################################
 
     def test_channel_as4_export_service_and_security(self) -> 'None':
@@ -163,6 +166,9 @@ class TestEnmasseChannelAS4Exporter(TestCase):
         # Fields the channel never had are absent from its export
         self.assertNotIn('as4_serviced_participants', channel)
         self.assertNotIn('as4_signing_key', channel)
+
+        # This is the channel whose audit log the template turns off
+        self.assertFalse(channel['is_audit_log_active'])
 
 # ################################################################################################################################
 

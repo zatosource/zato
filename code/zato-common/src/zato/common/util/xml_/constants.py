@@ -35,6 +35,7 @@ class Algorithm:
     """ Algorithm identifiers from XML Signature, XML Encryption and their 1.1 revisions.
     """
     C14N_Exclusive  = 'http://www.w3.org/2001/10/xml-exc-c14n#'
+    C14N            = 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315'
     RSA_SHA256      = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256'
     Ed25519         = 'http://www.w3.org/2021/04/xmldsig-more#eddsa-ed25519'
     SHA256          = 'http://www.w3.org/2001/04/xmlenc#sha256'
@@ -72,6 +73,12 @@ class TokenType:
     # and SAML_ID says a KeyIdentifier carries the assertion's ID.
     SAML20  = 'http://docs.oasis-open.org/wss/oasis-wss-saml-token-profile-1.1#SAMLV2.0'
     SAML_ID = 'http://docs.oasis-open.org/wss/oasis-wss-saml-token-profile-1.1#SAMLID'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The fully qualified name of the wsu:Id attribute that signature references point at.
+WSU_ID = f'{{{NS.WSU}}}Id'
 
 # ################################################################################################################################
 # ################################################################################################################################

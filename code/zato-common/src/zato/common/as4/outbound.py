@@ -19,11 +19,10 @@ from lxml import etree
 from zato.common.as4.common import AS4Exception, NS
 from zato.common.as4.ebms import build_envelope, build_pull_request, build_receipt, build_user_message, new_message_id, \
     parse_messaging
-from zato.common.as4.mime_ import build_multipart, compress_part, decompress_part, parse_multipart
+from zato.common.as4.mime_ import build_multipart, compress_part, parse_multipart, restore_payloads
 from zato.common.as4.security.encrypt import encrypt_parts
 from zato.common.as4.security.sign import sign_envelope
 from zato.common.as4.security.verify import decrypt_parts, verify_envelope
-from zato.common.typing_ import optional
 from zato.common.util.xml_.core import element_attribute, element_text, parse_xml, qname
 from zato.common.util.xml_.mime_ import new_content_id, Part, part_list
 
@@ -47,9 +46,6 @@ if 0:
 # ################################################################################################################################
 
 #  Type aliases
-clientnone             = optional[httpx.Client]
-signaldetailsnone      = optional['SignalDetails']
-usermessagedetailsnone = optional['UserMessageDetails']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,15 +56,18 @@ class SendResult:
     """
     is_ok: bool = False
     message_id: str = ''
+    conversation_id: str = ''
     http_status: int = 0
 
     # The receipt signal parsed from the response, when one arrived synchronously.
-    receipt: 'signaldetailsnone' = None
+    receipt: 'SignalDetails | None' = None
 
     # Any error signals the responder returned instead of, or next to, a receipt.
     errors: 'error_details_list'
 
-    # The raw response body, kept for audit purposes.
+    # The bytes that went out and the bytes that came back, which is the evidence
+    # an exchange is later reconstructed from.
+    request_body: bytes = b''
     response_body: bytes = b''
 
 # ################################################################################################################################
@@ -82,12 +81,15 @@ class PullResult:
     has_message: bool = False
     http_status: int = 0
 
-    user_message: 'usermessagedetailsnone' = None
+    user_message: 'UserMessageDetails | None' = None
     payloads: 'part_list'
     errors: 'error_details_list'
 
-    # Whether the receipt for the pulled message was delivered back successfully.
+    # Whether the receipt for the pulled message was delivered back successfully,
+    # along with the bytes of the message that was pulled and of the receipt sent for it.
     receipt_sent: bool = False
+    response_body: bytes = b''
+    receipt_body: bytes = b''
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -139,10 +141,14 @@ def _collect_sent_digests(signature:'any_') -> 'strstrdict':
 # ################################################################################################################################
 
 def _check_receipt_digests(receipt:'SignalDetails', sent_digests:'strstrdict') -> 'None':
-    """ Compares the digests echoed in a receipt's non-repudiation information
-    with what was actually sent - a mismatch means the responder received something else.
+    """ Compares the digests echoed in a receipt's non-repudiation information with what was sent.
+    Every reference that was sent has to come back with the digest it was sent with, and nothing
+    else may come back - a receipt is proof of what the responder received, so it counts only when
+    it accounts for the whole message.
     """
     digest_value_name = qname(NS.DS, 'DigestValue')
+
+    echoed_uris = set()
 
     for reference in receipt.receipt_references:
         uri = element_attribute(reference, 'URI')
@@ -153,9 +159,19 @@ def _check_receipt_digests(receipt:'SignalDetails', sent_digests:'strstrdict') -
         digest_parts = digest_text.split()
         echoed = ''.join(digest_parts)
 
-        if sent := sent_digests.get(uri):
-            if echoed != sent:
-                raise AS4Exception(f'Receipt digest mismatch for `{uri}` - sent `{sent}`, receipt has `{echoed}`')
+        sent = sent_digests.get(uri)
+
+        if sent is None:
+            raise AS4Exception(f'Receipt echoes `{uri}`, which was not sent')
+
+        if echoed != sent:
+            raise AS4Exception(f'Receipt digest mismatch for `{uri}` - sent `{sent}`, receipt has `{echoed}`')
+
+        echoed_uris.add(uri)
+
+    for uri in sent_digests:
+        if uri not in echoed_uris:
+            raise AS4Exception(f'Receipt does not account for `{uri}`')
 
 # ################################################################################################################################
 
@@ -203,7 +219,7 @@ def _post(
     pmode:'PMode',
     body:'bytes',
     content_type:'str',
-    client:'clientnone',
+    client:'httpx.Client | None',
     ) -> 'httpx.Response':
     """ Delivers one AS4 request over HTTP, with a per-call client unless one was supplied.
     """
@@ -219,12 +235,24 @@ def _post(
 
 # ################################################################################################################################
 
+def _response_content_type(response:'httpx.Response') -> 'str':
+    """ Returns the content type a remote MSH gave its response, which is needed to take the response apart.
+    """
+    out = response.headers.get('content-type')
+
+    if out is None:
+        raise AS4Exception(f'Response from `{response.url}` has no Content-Type header')
+
+    return out
+
+# ################################################################################################################################
+
 def send(
     pmode:'PMode',
     keystore:'Keystore',
     parts:'part_list',
     conversation_id:'strnone'=None,
-    client:'clientnone'=None,
+    client:'httpx.Client | None'=None,
     ) -> 'SendResult':
     """ Pushes one AS4 user message with the given payload parts and verifies
     the synchronous receipt when one comes back.
@@ -236,6 +264,12 @@ def send(
 
     body, content_type, message_id, sent_digests = build_push_message(pmode, keystore, parts, conversation_id)
     out.message_id = message_id
+    out.request_body = body
+
+    if conversation_id:
+        out.conversation_id = conversation_id
+    else:
+        out.conversation_id = message_id
 
     response = _post(pmode, body, content_type, client)
     out.http_status = response.status_code
@@ -246,7 +280,7 @@ def send(
         out.is_ok = response.is_success
         return out
 
-    response_content_type = response.headers['content-type']
+    response_content_type = _response_content_type(response)
     response_envelope_bytes, response_parts = parse_multipart(response.content, response_content_type)
 
     response_envelope = parse_xml(response_envelope_bytes)
@@ -254,9 +288,11 @@ def send(
 
     for signal in messaging.signals:
 
-        # A receipt for our message proves delivery - but only if it echoes our digests.
+        # A receipt is what makes delivery non-repudiable, so it counts only once its signature is
+        # verified and it echoes the digests of everything that was sent.
         if signal.is_receipt:
             if signal.ref_to_message_id == message_id:
+                _ = verify_envelope(response_envelope, [], keystore)
                 _check_receipt_digests(signal, sent_digests)
                 out.receipt = signal
 
@@ -278,10 +314,11 @@ def _send_pull_receipt(
     keystore:'Keystore',
     pulled_message_id:'str',
     signed_references:'any_',
-    client:'clientnone',
-    ) -> 'bool':
+    client:'httpx.Client | None',
+    ) -> 'anytuple':
     """ Acknowledges a pulled user message - per the pull pattern, signals for pulled
     messages are posted asynchronously to the same URL the message was pulled from.
+    Returns whether the acknowledgement was accepted and the bytes it was sent as.
     """
     envelope = build_envelope()
     _ = build_receipt(envelope, pulled_message_id, signed_references)
@@ -294,7 +331,7 @@ def _send_pull_receipt(
 
     response = _post(pmode, body, content_type, client)
 
-    out = response.is_success
+    out = (response.is_success, body)
     return out
 
 # ################################################################################################################################
@@ -303,7 +340,7 @@ def pull(
     pmode:'PMode',
     keystore:'Keystore',
     mpc:'strnone'=None,
-    client:'clientnone'=None,
+    client:'httpx.Client | None'=None,
     ) -> 'PullResult':
     """ Sends a pull request for the given message partition channel and processes
     whatever user message the responder returns: decrypt, verify, decompress, acknowledge.
@@ -328,12 +365,13 @@ def pull(
     # .. the response carries either a user message or an error signal such as an empty channel warning.
     response = _post(pmode, body, content_type, client)
     out.http_status = response.status_code
+    out.response_body = response.content
 
     if not response.content:
         out.is_ok = response.is_success
         return out
 
-    response_content_type = response.headers['content-type']
+    response_content_type = _response_content_type(response)
     response_envelope_bytes, response_parts = parse_multipart(response.content, response_content_type)
     response_envelope = parse_xml(response_envelope_bytes)
     messaging = parse_messaging(response_envelope)
@@ -353,28 +391,16 @@ def pull(
 
     # The pulled message is processed exactly like a pushed one -
     # decrypt first, verify the plaintext signature, then decompress.
-    decrypt_parts(response_envelope, response_parts, keystore)
+    _ = decrypt_parts(response_envelope, response_parts, keystore)
     verify_result = verify_envelope(response_envelope, response_parts, keystore)
 
-    for part_details in user_message.part_details:
-        content_id = part_details.href[4:]
+    out.payloads = restore_payloads(user_message, response_parts)
 
-        for part in response_parts:
-            if part.content_id == content_id:
+    receipt_sent, receipt_body = _send_pull_receipt(
+        pmode, keystore, user_message.message_id, verify_result.signed_references, client)
 
-                if compression_type := part_details.properties.get('CompressionType'):
-                    part.compressed = True
-                    part.content_type = compression_type
-
-                    if mime_type := part_details.properties.get('MimeType'):
-                        part.mime_type = mime_type
-
-                    decompress_part(part)
-
-                out.payloads.append(part)
-                break
-
-    out.receipt_sent = _send_pull_receipt(pmode, keystore, user_message.message_id, verify_result.signed_references, client)
+    out.receipt_sent = receipt_sent
+    out.receipt_body = receipt_body
     out.is_ok = not out.errors
 
     return out

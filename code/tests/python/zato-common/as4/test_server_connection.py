@@ -15,19 +15,61 @@ from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption,
 # httpx
 import httpx
 
+# lxml
+from lxml import etree
+
 # pytest
 import pytest
 
 # Zato
-import zato.server.connection.as4 as server_as4
+import zato.server.connection.as4.channel as server_channel
+import zato.server.connection.as4.outconn as server_as4
+import zato.server.connection.as4.routing as server_routing
 from zato.common.typing_ import cast_
 from zato.common.api import AS4
 from zato.common.as4.common import AS4Exception, Peppol_Not_Serviced
 from zato.common.as4.discovery import lookup_endpoint
+from zato.common.as4.ebms import build_envelope, build_receipt
 from zato.common.as4.outbound import build_push_message, new_part
 from zato.common.as4.presets import get_document_type_preset
 from zato.common.as4.profiles import new_edelivery1_pmode
+from zato.common.as4.sbdh import parse_sbdh
+from zato.common.as4.security.sign import sign_envelope
+from zato.common.util.xml_.token import certificate_common_name
 from zato.server.connection.as4 import AS4ChannelRuntime, AS4Wrapper
+
+from .conftest import set_party_ids, sign_smp_metadata
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _service_and_action(profile:'any_') -> 'any_':
+    """ The service and action one exchange runs under. Under Peppol these are the process identifier
+    and the document type identifier of the document being exchanged, so a channel serving Peppol
+    declares those rather than names of its own.
+    """
+    if profile == AS4.Profile.Peppol:
+        preset = get_document_type_preset(Document_Type_Name)
+        out = (preset.process_id, preset.document_type)
+    else:
+        out = ('urn:test:service', 'SubmitInvoice')
+
+    return out
+
+# ################################################################################################################################
+
+def _party_ids(parties:'TestParties', profile:'any_') -> 'any_':
+    """ The identifiers the two parties name themselves with. Peppol binds a party identifier to the
+    common name of that party's certificate, so under that profile the names come from the certificates.
+    """
+    if profile == AS4.Profile.Peppol:
+        sender_id = certificate_common_name(parties.sender.signing_certificate_chain[0])
+        receiver_id = certificate_common_name(parties.receiver.signing_certificate_chain[0])
+        out = (sender_id, receiver_id)
+    else:
+        out = ('party-a', 'party-b')
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -90,6 +132,22 @@ class _FakeCache:
 
 # ################################################################################################################################
 
+    def set_if_absent(self, key:'any_', value:'any_', expiry:'any_'=None) -> 'any_':
+        _ = expiry
+
+        if key in self.data:
+            return False
+
+        self.data[key] = value
+        return True
+
+# ################################################################################################################################
+
+    def delete(self, key:'any_') -> 'None':
+        _ = self.data.pop(key, None)
+
+# ################################################################################################################################
+
 class _FakePubSub:
     """ Records everything published to it.
     """
@@ -116,6 +174,7 @@ class _FakeServer:
     """
 
     def __init__(self) -> 'None':
+        self.name = 'test-as4-server'
         self.config_manager = _FakeConfigManager()
         self.pubsub_backend = _FakePubSub()
         self.invoked = []
@@ -133,7 +192,7 @@ class _FakeServer:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _keystore_config(own:'any_', peer:'any_') -> 'any_':
+def _keystore_config(own:'any_', peer:'any_', trust_anchors:'any_'='') -> 'any_':
     """ The pasted-PEM keystore fields of one party, trusting the other one.
     """
     out = {
@@ -142,15 +201,24 @@ def _keystore_config(own:'any_', peer:'any_') -> 'any_':
         'as4_decryption_key': _key_pem(own.decryption_key),
         'as4_peer_signing_cert': _cert_pem(peer.signing_certificate_chain[0]),
         'as4_peer_encryption_cert': _cert_pem(peer.signing_certificate_chain[0]),
-        'as4_trust_anchors': '',
+        'as4_trust_anchors': trust_anchors,
     }
     return out
 
 # ################################################################################################################################
 
-def _outgoing_config(parties:'TestParties', profile:'any_') -> 'any_':
+def _outgoing_config(
+    parties:'TestParties',
+    profile:'any_',
+    trust_anchors:'any_'='',
+    use_discovery:'any_'=False,
+    is_audit_log_active:'any_'=False,
+    ) -> 'any_':
     """ The configuration of one outgoing AS4 connection, the way the wrapper receives it.
     """
+    from_party, to_party = _party_ids(parties, profile)
+    service, action = _service_and_action(profile)
+
     out = {
         'name': 'Test Outgoing',
         'is_active': True,
@@ -159,31 +227,42 @@ def _outgoing_config(parties:'TestParties', profile:'any_') -> 'any_':
         'timeout': 10,
         'validate_tls': True,
         'as4_profile': profile,
-        'as4_from_party': 'party-a',
-        'as4_to_party': 'party-b',
-        'as4_service': 'urn:test:service',
-        'as4_action': 'SubmitInvoice',
+        'as4_from_party': from_party,
+        'as4_to_party': to_party,
+        'as4_service': service,
+        'as4_action': action,
         'as4_agreement': '',
         'as4_mpc': '',
         'as4_original_sender': Serviced_Participant,
         'as4_final_recipient': '',
+        'as4_use_discovery': use_discovery,
         'as4_sml_domain': 'acc.edelivery.tech.ec.europa.eu',
+        'is_audit_log_active': is_audit_log_active,
     }
-    out.update(_keystore_config(parties.sender, parties.receiver))
+    out.update(_keystore_config(parties.sender, parties.receiver, trust_anchors))
     return out
 
 # ################################################################################################################################
 
-def _channel_config(parties:'TestParties', profile:'any_', serviced_participants:'any_'='', service_name:'any_'='') -> 'any_':
+def _channel_config(
+    parties:'TestParties',
+    profile:'any_',
+    serviced_participants:'any_'='',
+    service_name:'any_'='',
+    is_audit_log_active:'any_'=False,
+    ) -> 'any_':
     """ The configuration of one AS4 channel, the way the runtime receives it.
     """
+    from_party, to_party = _party_ids(parties, profile)
+    service, action = _service_and_action(profile)
+
     out = {
         'name': 'test.channel',
         'as4_profile': profile,
-        'as4_from_party': 'party-a',
-        'as4_to_party': 'party-b',
-        'as4_service': 'urn:test:service',
-        'as4_action': 'SubmitInvoice',
+        'as4_from_party': from_party,
+        'as4_to_party': to_party,
+        'as4_service': service,
+        'as4_action': action,
         'as4_agreement': '',
         'as4_mpc': '',
         'as4_original_sender': '',
@@ -192,22 +271,46 @@ def _channel_config(parties:'TestParties', profile:'any_', serviced_participants
         'as4_serviced_participants': serviced_participants,
         'as4_inbound_topic': '',
         'service_name': service_name,
+        'is_audit_log_active': is_audit_log_active,
     }
     out.update(_keystore_config(parties.receiver, parties.sender))
     return out
 
 # ################################################################################################################################
 
-def _make_wrapper(parties:'TestParties', profile:'any_') -> 'any_':
+def _make_wrapper(
+    parties:'TestParties',
+    profile:'any_',
+    trust_anchors:'any_'='',
+    use_discovery:'any_'=False,
+    is_audit_log_active:'any_'=False,
+    ) -> 'any_':
     server = cast_('ParallelServer', _FakeServer())
-    out = AS4Wrapper(server, _outgoing_config(parties, profile))
+    config = _outgoing_config(parties, profile, trust_anchors, use_discovery, is_audit_log_active)
+    out = AS4Wrapper(server, config)
     return out
 
 # ################################################################################################################################
 
-def _make_channel(parties:'TestParties', profile:'any_', serviced_participants:'any_'='', service_name:'any_'='') -> 'any_':
+def _make_discovering_wrapper(parties:'TestParties') -> 'any_':
+    """ A wrapper configured for discovery - the CA is the network's trust anchor, which is what the
+    SMP metadata signature is verified against.
+    """
+    out = _make_wrapper(parties, 'peppol', _cert_pem(parties.ca_certificate), use_discovery=True)
+    return out
+
+# ################################################################################################################################
+
+def _make_channel(
+    parties:'TestParties',
+    profile:'any_',
+    serviced_participants:'any_'='',
+    service_name:'any_'='',
+    is_audit_log_active:'any_'=False,
+    ) -> 'any_':
     server = cast_('ParallelServer', _FakeServer())
-    out = AS4ChannelRuntime(server, _channel_config(parties, profile, serviced_participants, service_name))
+    config = _channel_config(parties, profile, serviced_participants, service_name, is_audit_log_active)
+    out = AS4ChannelRuntime(server, config)
     return out
 
 # ################################################################################################################################
@@ -321,9 +424,16 @@ def _smp_metadata(receiver_certificate:'any_') -> 'bytes':
 @pytest.fixture
 def recorded_discovery(rsa_parties:'TestParties', monkeypatch:'any_') -> 'any_':
     """ Replaces live SML and SMP lookups with recorded fixtures - the real discovery
-    code still runs, only DNS and HTTP are answered from the recordings.
+    code still runs, only DNS and HTTP are answered from the recordings. The recorded metadata is
+    signed by the test CA, as metadata off a real SMP is signed by the network's.
     """
-    smp_metadata = _smp_metadata(rsa_parties.receiver.signing_certificate_chain[0])
+    unsigned_metadata = _smp_metadata(rsa_parties.receiver.signing_certificate_chain[0])
+
+    smp_metadata = sign_smp_metadata(
+        unsigned_metadata,
+        rsa_parties.sender.signing_key,
+        rsa_parties.sender.signing_certificate_chain[0],
+    )
 
     def naptr_lookup(dns_name:'any_') -> 'any_':
         return ['https://smp.example.com']
@@ -331,9 +441,15 @@ def recorded_discovery(rsa_parties:'TestParties', monkeypatch:'any_') -> 'any_':
     def http_get(url:'any_') -> 'any_':
         return smp_metadata
 
-    def recorded_lookup(participant_type:'any_', participant_id:'any_', document_type:'any_', sml_domain:'any_') -> 'any_':
+    def recorded_lookup(
+        participant_type:'any_',
+        participant_id:'any_',
+        document_type:'any_',
+        trust_anchors:'any_',
+        sml_domain:'any_',
+        ) -> 'any_':
         out = lookup_endpoint(
-            participant_type, participant_id, document_type,
+            participant_type, participant_id, document_type, trust_anchors,
             sml_domain=sml_domain, naptr_lookup=naptr_lookup, http_get=http_get)
         return out
 
@@ -348,7 +464,7 @@ class TestSendTo:
     """
 
     def test_send_to_wraps_in_sbdh_and_delivers(self, rsa_parties:'TestParties', recorded_discovery:'any_') -> 'None':
-        wrapper = _make_wrapper(rsa_parties, 'peppol')
+        wrapper = _make_discovering_wrapper(rsa_parties)
         channel = _make_channel(rsa_parties, 'peppol', serviced_participants=Serviced_Participant)
         _connect(wrapper, channel)
 
@@ -379,7 +495,7 @@ class TestSendTo:
 # ################################################################################################################################
 
     def test_send_to_uses_the_smp_supplied_endpoint(self, rsa_parties:'TestParties', recorded_discovery:'any_') -> 'None':
-        wrapper = _make_wrapper(rsa_parties, 'peppol')
+        wrapper = _make_discovering_wrapper(rsa_parties)
         urls_requested = []
 
         def responder(request:'httpx.Request') -> 'any_':
@@ -397,6 +513,28 @@ class TestSendTo:
         assert urls_requested == ['https://ap.example.com/as4']
 
 # ################################################################################################################################
+
+    def test_send_to_without_discovery_uses_the_configured_endpoint(self, rsa_parties:'TestParties') -> 'None':
+        wrapper = _make_wrapper(rsa_parties, 'peppol')
+        urls_requested = []
+
+        def responder(request:'httpx.Request') -> 'any_':
+            urls_requested.append(str(request.url))
+            channel = _make_channel(rsa_parties, 'peppol')
+            result = channel.handle('test-cid', request.content, request.headers['content-type'])
+            out = httpx.Response(result.status_code, content=result.body, headers={'Content-Type': result.content_type})
+            return out
+
+        wrapper.session = httpx.Client(transport=httpx.MockTransport(responder))
+
+        result = wrapper.send_to(Test_CID, Serviced_Participant, Document_Type_Name, Payload)
+
+        # No SML or SMP was consulted - the document still went out, wrapped in its SBDH,
+        # to the address the connection is configured with.
+        assert result.is_ok
+        assert urls_requested == ['https://as4.invalid/msh']
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestNotServiced:
@@ -405,7 +543,7 @@ class TestNotServiced:
     """
 
     def test_unserviced_receiver_is_rejected(self, rsa_parties:'TestParties', recorded_discovery:'any_') -> 'None':
-        wrapper = _make_wrapper(rsa_parties, 'peppol')
+        wrapper = _make_discovering_wrapper(rsa_parties)
 
         # The channel serves one participant only - and it is not the receiver.
         channel = _make_channel(rsa_parties, 'peppol', serviced_participants=Other_Participant)
@@ -425,7 +563,7 @@ class TestNotServiced:
 # ################################################################################################################################
 
     def test_empty_participant_list_accepts_everyone(self, rsa_parties:'TestParties', recorded_discovery:'any_') -> 'None':
-        wrapper = _make_wrapper(rsa_parties, 'peppol')
+        wrapper = _make_discovering_wrapper(rsa_parties)
         channel = _make_channel(rsa_parties, 'peppol')
         _connect(wrapper, channel)
 
@@ -433,6 +571,50 @@ class TestNotServiced:
 
         assert result.is_ok
         assert len(channel.server.pubsub_backend.published) == 1
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestRoutingMetadata:
+    """ How the SBDH identifiers a Peppol payload is routed by are arrived at.
+    """
+
+    def test_the_sbdh_is_read_once_per_payload(
+        self,
+        rsa_parties:'TestParties',
+        recorded_discovery:'any_',
+        monkeypatch:'any_',
+        ) -> 'None':
+        """ Validation reads the SBDH and routing reuses what it read, so one payload costs one parse.
+        """
+        parses = []
+
+        def counting_parse(data:'any_') -> 'any_':
+            parses.append(data)
+
+            out = parse_sbdh(data)
+            return out
+
+        monkeypatch.setattr(server_channel, 'parse_sbdh', counting_parse)
+        monkeypatch.setattr(server_routing, 'parse_sbdh', counting_parse)
+
+        wrapper = _make_discovering_wrapper(rsa_parties)
+        channel = _make_channel(rsa_parties, 'peppol', serviced_participants=Serviced_Participant)
+        _connect(wrapper, channel)
+
+        result = wrapper.send_to(Test_CID, Serviced_Participant, Document_Type_Name, Payload)
+
+        assert result.is_ok
+
+        # One payload arrived and its SBDH identifiers reached the subscriber.
+        published = channel.server.pubsub_backend.published
+        assert len(published) == 1
+
+        _, message, _, _ = published[0]
+        assert message['sbdh_receiver'] == Serviced_Participant
+
+        parse_count = len(parses)
+        assert parse_count == 1
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -445,8 +627,7 @@ class TestDuplicateSuppression:
         """ One signed message, byte-identical however many times it is replayed.
         """
         pmode = new_edelivery1_pmode()
-        pmode.initiator.party_id = 'party-a'
-        pmode.responder.party_id = 'party-b'
+        set_party_ids(pmode, rsa_parties)
         pmode.service = 'urn:test:service'
         pmode.action = 'SubmitInvoice'
 
@@ -506,6 +687,136 @@ class TestDuplicateSuppression:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class TestRoutingFailures:
+    """ What happens to the claim duplicate detection places on a message id when the delivery that
+    claim stands for does not happen.
+    """
+
+    def _wire_message(self, rsa_parties:'TestParties') -> 'any_':
+        pmode = new_edelivery1_pmode()
+        set_party_ids(pmode, rsa_parties)
+        pmode.service = 'urn:test:service'
+        pmode.action = 'SubmitInvoice'
+
+        body, content_type, message_id, _ = build_push_message(pmode, rsa_parties.sender, [new_part(Payload)])
+
+        out = (body, content_type, message_id)
+        return out
+
+# ################################################################################################################################
+
+    def test_a_message_that_could_not_be_routed_is_not_a_duplicate_next_time(
+        self,
+        rsa_parties:'TestParties',
+        ) -> 'None':
+        channel = _make_channel(rsa_parties, 'edelivery1', service_name='my.service')
+        body, content_type, message_id = self._wire_message(rsa_parties)
+
+        attempts = []
+
+        def failing_invoke(service_name:'any_', message:'any_') -> 'None':
+            attempts.append(service_name)
+            raise Exception('The routing target is down')
+
+        channel.server.invoke = failing_invoke
+
+        with pytest.raises(Exception):
+            _ = channel.handle('cid-1', body, content_type)
+
+        # The claim is gone, so the sender's retry is a first delivery rather than a replay.
+        cache = channel.server.config_manager.cache_api
+        assert not cache.exists(AS4.Default.Duplicate_Cache_Prefix + message_id)
+
+        channel.server.invoke = _FakeServer.invoke.__get__(channel.server)
+
+        second = channel.handle('cid-2', body, content_type)
+
+        assert not second.is_duplicate
+        assert second.payloads[0].data == Payload
+        assert len(attempts) == 1
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestSignalRouting:
+    """ Receipts and errors that arrive on their own are about an earlier message of ours, so they
+    reach the application rather than stopping at the pipeline.
+    """
+
+    def _signal_body(self, rsa_parties:'TestParties', ref_to_message_id:'str') -> 'bytes':
+        pmode = new_edelivery1_pmode()
+
+        envelope = build_envelope()
+        _ = build_receipt(envelope, ref_to_message_id, [])
+        _ = sign_envelope(envelope, [], rsa_parties.sender, pmode.security)
+
+        out = etree.tostring(envelope, xml_declaration=True, encoding='UTF-8')
+        return out
+
+# ################################################################################################################################
+
+    def test_an_async_receipt_is_published_to_the_signal_topic(self, rsa_parties:'TestParties') -> 'None':
+        channel = _make_channel(rsa_parties, 'edelivery1')
+        body = self._signal_body(rsa_parties, 'earlier-message@test')
+
+        result = channel.handle('cid-1', body, 'application/soap+xml')
+
+        assert not result.is_error
+        assert len(result.signals) == 1
+
+        published = channel.server.pubsub_backend.published
+        assert len(published) == 1
+
+        topic_name, message, cid, _ = published[0]
+
+        assert topic_name == AS4.Default.Signal_Topic
+        assert cid == 'cid-1'
+        assert message['ref_to_message_id'] == 'earlier-message@test'
+        assert message['is_receipt'] is True
+        assert message['errors'] == []
+        assert message['timestamp']
+
+# ################################################################################################################################
+
+    def test_a_signal_reaches_a_configured_service(self, rsa_parties:'TestParties') -> 'None':
+        channel = _make_channel(rsa_parties, 'edelivery1', service_name='my.service')
+        body = self._signal_body(rsa_parties, 'earlier-message@test')
+
+        _ = channel.handle('cid-1', body, 'application/soap+xml')
+
+        assert channel.server.pubsub_backend.published == []
+        assert len(channel.server.invoked) == 1
+
+        service_name, message = channel.server.invoked[0]
+
+        assert service_name == 'my.service'
+        assert message['ref_to_message_id'] == 'earlier-message@test'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestPModeMatching:
+
+    def test_a_message_no_pmode_covers_is_refused(self, rsa_parties:'TestParties') -> 'None':
+        channel = _make_channel(rsa_parties, 'edelivery1')
+
+        # The same parties and keys, an action the channel is not configured for.
+        pmode = new_edelivery1_pmode()
+        set_party_ids(pmode, rsa_parties)
+        pmode.service = 'urn:test:service'
+        pmode.action = 'SomethingElse'
+
+        body, content_type, _, _ = build_push_message(pmode, rsa_parties.sender, [new_part(Payload)])
+
+        result = channel.handle('cid-1', body, content_type)
+
+        assert result.is_error
+        assert result.error_code == 'EBMS:0010'
+        assert channel.server.pubsub_backend.published == []
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class TestRoutedMessageMetadata:
     """ The shape of what subscribers receive - every key always present, no matter the profile.
     """
@@ -514,8 +825,7 @@ class TestRoutedMessageMetadata:
         channel = _make_channel(rsa_parties, 'edelivery1')
 
         pmode = new_edelivery1_pmode()
-        pmode.initiator.party_id = 'party-a'
-        pmode.responder.party_id = 'party-b'
+        set_party_ids(pmode, rsa_parties)
         pmode.service = 'urn:test:service'
         pmode.action = 'SubmitInvoice'
 

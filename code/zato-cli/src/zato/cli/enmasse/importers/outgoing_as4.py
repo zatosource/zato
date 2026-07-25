@@ -40,6 +40,18 @@ _default_url_path = '/'
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _with_audit_log_flag(item:'anydict') -> 'anydict':
+    """ Returns one definition with its audit log flag settled - the audit log is on
+    unless the YAML definition turns it off.
+    """
+    out = dict(item)
+    out['is_audit_log_active'] = item.get('is_audit_log_active', True)
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class OutgoingAS4Importer:
 
     def __init__(self, importer:'EnmasseYAMLImporter') -> 'None':
@@ -159,7 +171,7 @@ class OutgoingAS4Importer:
             outgoing_def = dict(outgoing_def)
             outgoing_def['validate_tls'] = True
 
-        set_instance_opaque_attrs(outgoing, outgoing_def)
+        set_instance_opaque_attrs(outgoing, _with_audit_log_flag(outgoing_def))
 
         session.add(outgoing)
         self.connection_defs[name] = outgoing
@@ -180,7 +192,7 @@ class OutgoingAS4Importer:
 
         # Fields that are not columns go into the opaque attributes,
         # merged with whatever the row already keeps there.
-        set_instance_opaque_attrs(outgoing, outgoing_def)
+        set_instance_opaque_attrs(outgoing, _with_audit_log_flag(outgoing_def))
 
         session.add(outgoing)
         self.connection_defs[name] = outgoing

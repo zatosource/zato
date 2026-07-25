@@ -212,7 +212,7 @@ class TestEncryptDecrypt:
         # The wire bytes are ciphertext now.
         assert part.data != plaintext
 
-        decrypt_parts(_reparse(envelope), [part], rsa_parties.receiver)
+        _ = decrypt_parts(_reparse(envelope), [part], rsa_parties.receiver)
         assert part.data == plaintext
 
 # ################################################################################################################################
@@ -230,7 +230,7 @@ class TestEncryptDecrypt:
         encrypt_parts(envelope, [part], eddsa_parties.sender, pmode.security)
         assert part.data != plaintext
 
-        decrypt_parts(_reparse(envelope), [part], eddsa_parties.receiver)
+        _ = decrypt_parts(_reparse(envelope), [part], eddsa_parties.receiver)
         assert part.data == plaintext
 
 # ################################################################################################################################
@@ -245,7 +245,7 @@ class TestEncryptDecrypt:
 
         # The sender's own key is not the receiver's key.
         with pytest.raises(Exception):
-            decrypt_parts(_reparse(envelope), [part], rsa_parties.sender)
+            _ = decrypt_parts(_reparse(envelope), [part], rsa_parties.sender)
 
 # ################################################################################################################################
 # ################################################################################################################################

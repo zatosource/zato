@@ -30,10 +30,26 @@ if 0:
 logger = logging.getLogger(__name__)
 
 # Keys that never map to database columns directly - they are handled separately.
-_non_column_keys = ('id', 'service', 'security', 'security_name')
+_non_column_keys = ('id', 'service', 'security', 'security_name', 'is_audit_log_active')
+
+# Keys the comparison handles on its own, which is fewer than the columns exclude - the audit log
+# flag is compared like any other stored value even though it is not a column of its own.
+_comparison_skip_keys = ('id', 'service', 'security', 'security_name')
 
 # What a YAML definition means when it does not say otherwise.
 _default_is_active = True
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _with_audit_log_flag(item:'anydict') -> 'anydict':
+    """ Returns one definition with its audit log flag settled - the audit log is on
+    unless the YAML definition turns it off.
+    """
+    out = dict(item)
+    out['is_audit_log_active'] = item.get('is_audit_log_active', True)
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -123,7 +139,7 @@ class ChannelAS4Importer:
                 # Compare standard attributes - security and the routing service are checked separately.
                 for key, value in item.items():
 
-                    if key in _non_column_keys:
+                    if key in _comparison_skip_keys:
                         continue
 
                     # A field the database row does not have yet means an update too.
@@ -221,7 +237,7 @@ class ChannelAS4Importer:
         self._assign_security(channel, channel_def, session)
 
         # Fields that are not columns go into the opaque attributes.
-        set_instance_opaque_attrs(channel, channel_def)
+        set_instance_opaque_attrs(channel, _with_audit_log_flag(channel_def))
 
         session.add(channel)
 
@@ -253,7 +269,7 @@ class ChannelAS4Importer:
 
         # Fields that are not columns go into the opaque attributes,
         # merged with whatever the row already keeps there.
-        set_instance_opaque_attrs(channel, channel_def)
+        set_instance_opaque_attrs(channel, _with_audit_log_flag(channel_def))
 
         session.add(channel)
 

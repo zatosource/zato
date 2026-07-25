@@ -25,7 +25,8 @@ from zato.common.util.xml_.constants import Algorithm, Transform
 from zato.common.util.xml_.core import element_text, from_timestamp, new_id, parse_xml, qname, to_timestamp, XMLException, \
     XMLSecurityException
 from zato.common.util.xml_.token import parse_x509v3
-from zato.common.util.xml_.wssec import compute_signature_value, validate_certificate_chain, verify_signature_value
+from zato.common.util.xml_.signature import compute_signature_value, verify_signature_value
+from zato.common.util.xml_.trust import validate_certificate_chain
 from zato.common.util.xml_.xmlsec import decode_base64, digest_element, encode_base64
 
 # ################################################################################################################################

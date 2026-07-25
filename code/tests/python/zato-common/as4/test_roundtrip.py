@@ -16,7 +16,10 @@ from zato.common.util.xml_.core import qname
 from zato.common.as4.inbound import handle
 from zato.common.as4.outbound import build_push_message, new_part
 from zato.common.as4.profiles import new_edelivery1_pmode, new_edelivery2_pmode, new_peppol_pmode
+from zato.common.as4.security.sign import sign_envelope
 from zato.common.as4.security.verify import verify_envelope
+
+from .conftest import set_party_ids
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,11 +37,10 @@ Payload = b'<Invoice xmlns="urn:test"><Total>100</Total></Invoice>'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _make_pmode(factory:'any_') -> 'any_':
+def _make_pmode(factory:'any_', parties:'TestParties') -> 'any_':
     out = factory()
 
-    out.initiator.party_id = 'party-a'
-    out.responder.party_id = 'party-b'
+    set_party_ids(out, parties)
 
     out.service = 'urn:test:service'
     out.action = 'SubmitInvoice'
@@ -64,7 +66,7 @@ def _roundtrip(pmode:'any_', parties:'TestParties') -> 'any_':
 class TestPushRoundtrip:
 
     def test_edelivery1_roundtrip(self, rsa_parties:'TestParties') -> 'None':
-        pmode = _make_pmode(new_edelivery1_pmode)
+        pmode = _make_pmode(new_edelivery1_pmode, rsa_parties)
         result, message_id, _ = _roundtrip(pmode, rsa_parties)
 
         assert not result.is_error
@@ -79,7 +81,7 @@ class TestPushRoundtrip:
 # ################################################################################################################################
 
     def test_edelivery1_wire_is_encrypted_and_compressed(self, rsa_parties:'TestParties') -> 'None':
-        pmode = _make_pmode(new_edelivery1_pmode)
+        pmode = _make_pmode(new_edelivery1_pmode, rsa_parties)
         parts = [new_part(Payload)]
 
         body, _, _, _ = build_push_message(pmode, rsa_parties.sender, parts)
@@ -92,7 +94,7 @@ class TestPushRoundtrip:
 # ################################################################################################################################
 
     def test_edelivery2_roundtrip(self, eddsa_parties:'TestParties') -> 'None':
-        pmode = _make_pmode(new_edelivery2_pmode)
+        pmode = _make_pmode(new_edelivery2_pmode, eddsa_parties)
         result, message_id, _ = _roundtrip(pmode, eddsa_parties)
 
         assert not result.is_error
@@ -102,7 +104,7 @@ class TestPushRoundtrip:
 # ################################################################################################################################
 
     def test_peppol_roundtrip(self, rsa_parties:'TestParties') -> 'None':
-        pmode = _make_pmode(new_peppol_pmode)
+        pmode = _make_pmode(new_peppol_pmode, rsa_parties)
         pmode.original_sender = '0192:991825827'
         pmode.final_recipient = '0192:810418052'
 
@@ -116,7 +118,7 @@ class TestPushRoundtrip:
 # ################################################################################################################################
 
     def test_peppol_wire_is_not_encrypted(self, rsa_parties:'TestParties') -> 'None':
-        pmode = _make_pmode(new_peppol_pmode)
+        pmode = _make_pmode(new_peppol_pmode, rsa_parties)
         parts = [new_part(Payload)]
 
         body, _, _, _ = build_push_message(pmode, rsa_parties.sender, parts)
@@ -130,7 +132,7 @@ class TestPushRoundtrip:
 class TestReceipt:
 
     def test_receipt_is_signed_and_echoes_digests(self, rsa_parties:'TestParties') -> 'None':
-        pmode = _make_pmode(new_edelivery1_pmode)
+        pmode = _make_pmode(new_edelivery1_pmode, rsa_parties)
         result, message_id, sent_digests = _roundtrip(pmode, rsa_parties)
 
         receipt_envelope = etree.fromstring(result.body)
@@ -156,7 +158,7 @@ class TestReceipt:
 class TestDuplicateDetection:
 
     def test_duplicate_gets_receipt_but_no_delivery(self, rsa_parties:'TestParties') -> 'None':
-        pmode = _make_pmode(new_edelivery1_pmode)
+        pmode = _make_pmode(new_edelivery1_pmode, rsa_parties)
         parts = [new_part(Payload)]
         body, content_type, message_id, _ = build_push_message(pmode, rsa_parties.sender, parts)
 
@@ -188,12 +190,13 @@ class TestDuplicateDetection:
 class TestInboundErrors:
 
     def test_tampered_message_yields_0101_error_signal(self, rsa_parties:'TestParties') -> 'None':
-        pmode = _make_pmode(new_edelivery1_pmode)
+        pmode = _make_pmode(new_edelivery1_pmode, rsa_parties)
         parts = [new_part(Payload)]
         body, content_type, _, _ = build_push_message(pmode, rsa_parties.sender, parts)
 
-        # Change the signed eb:Action element on the wire.
-        tampered = body.replace(b'SubmitInvoice', b'submitinvoice', 1)
+        # Change a signed party identifier on the wire. The service and action are left alone
+        # because they are what selects the P-Mode, which happens before verification.
+        tampered = body.replace(b'>party-a<', b'>party-x<', 1)
 
         result = handle(tampered, content_type, [pmode], rsa_parties.receiver)
 
@@ -207,7 +210,7 @@ class TestInboundErrors:
 # ################################################################################################################################
 
     def test_unparseable_envelope_yields_0009_error_signal(self, rsa_parties:'TestParties') -> 'None':
-        pmode = _make_pmode(new_edelivery1_pmode)
+        pmode = _make_pmode(new_edelivery1_pmode, rsa_parties)
 
         result = handle(b'this is not xml', 'application/soap+xml', [pmode], rsa_parties.receiver)
 
@@ -217,7 +220,7 @@ class TestInboundErrors:
 # ################################################################################################################################
 
     def test_pull_request_is_refused_with_0002(self, rsa_parties:'TestParties') -> 'None':
-        pmode = _make_pmode(new_edelivery1_pmode)
+        pmode = _make_pmode(new_edelivery1_pmode, rsa_parties)
 
         envelope = build_envelope()
         _ = build_pull_request(envelope, 'urn:test:mpc')
@@ -234,18 +237,37 @@ class TestInboundErrors:
 class TestAsyncSignals:
 
     def test_async_receipt_is_surfaced_to_the_caller(self, rsa_parties:'TestParties') -> 'None':
-        # Simulate an asynchronous receipt arriving on its own.
+        pmode = _make_pmode(new_edelivery1_pmode, rsa_parties)
+
+        # An asynchronous receipt arriving on its own, signed by the party it comes from.
         envelope = build_envelope()
         _ = build_receipt(envelope, 'earlier-message@test', [])
+        _ = sign_envelope(envelope, [], rsa_parties.sender, pmode.security)
+
         body = etree.tostring(envelope)
 
-        pmode = _make_pmode(new_edelivery1_pmode)
         result = handle(body, 'application/soap+xml', [pmode], rsa_parties.receiver)
 
         assert not result.is_error
         assert len(result.signals) == 1
         assert result.signals[0].is_receipt
         assert result.signals[0].ref_to_message_id == 'earlier-message@test'
+
+# ################################################################################################################################
+
+    def test_an_unsigned_signal_is_refused(self, rsa_parties:'TestParties') -> 'None':
+        pmode = _make_pmode(new_edelivery1_pmode, rsa_parties)
+
+        envelope = build_envelope()
+        _ = build_receipt(envelope, 'earlier-message@test', [])
+
+        body = etree.tostring(envelope)
+
+        result = handle(body, 'application/soap+xml', [pmode], rsa_parties.receiver)
+
+        assert result.is_error
+        assert result.error_code == EbMSError.Policy_Noncompliance
+        assert result.signals == []
 
 # ################################################################################################################################
 # ################################################################################################################################

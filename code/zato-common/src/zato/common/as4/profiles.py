@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.as4.common import CryptoSuite, Default, MEPBinding
+from zato.common.as4.common import CryptoSuite, Default
 from zato.common.as4.pmode import new_pmode, PMode
 from zato.common.util.xml_.constants import Algorithm, TokenType
 
@@ -39,7 +39,6 @@ def new_edelivery1_pmode() -> 'PMode':
     # stays correct even if the defaults ever change.
     out.security.crypto_suite = CryptoSuite.RSA
     out.security.signature_algorithm = Algorithm.RSA_SHA256
-    out.security.encryption_algorithm = Algorithm.AES128_GCM
     out.security.key_transport_algorithm = Algorithm.RSA_OAEP
     out.security.encrypt = True
     out.security.sign_receipts = True
@@ -79,8 +78,6 @@ def new_peppol_pmode() -> 'PMode':
     # Our response to produce
     out = new_pmode()
 
-    out.mep_binding = MEPBinding.Push
-
     out.agreement = Peppol_Agreement
 
     out.initiator.role = Default.Initiator_Role
@@ -97,6 +94,10 @@ def new_peppol_pmode() -> 'PMode':
     # Peppol signs everything but never encrypts on the message level.
     out.security.encrypt = False
     out.compress = True
+
+    # A Peppol access point's certificate carries its participant identifier as the common name,
+    # which is also what it names itself with in eb:From.
+    out.security.party_id_is_certificate_cn = True
 
     return out
 
@@ -115,7 +116,6 @@ def new_ics2_pmode() -> 'PMode':
     # Our response to produce
     out = new_edelivery1_pmode()
 
-    out.mep_binding = MEPBinding.Pull
     out.security.token_type = TokenType.PKIPath
 
     return out

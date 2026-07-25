@@ -128,6 +128,9 @@ class TestEnmasseChannelAS4FromYAML(TestCase):
         self.assertEqual(opaque['as4_serviced_participants'], '0192:991825827\n0088:7315458756324')
         self.assertEqual(opaque['as4_inbound_topic'], 'enmasse.as4.inbound')
 
+        # A definition that says nothing about the audit log gets it turned on
+        self.assertTrue(opaque['is_audit_log_active'])
+
 # ################################################################################################################################
 
     def test_channel_as4_creation_with_service_and_security(self):
@@ -161,6 +164,9 @@ class TestEnmasseChannelAS4FromYAML(TestCase):
         self.assertEqual(opaque['as4_service'], 'enmasse:service:1')
         self.assertEqual(opaque['as4_action'], 'enmasse:action:1')
         self.assertEqual(opaque['as4_extra_pmodes'], 'enmasse:service:2|enmasse:action:2')
+
+        # This is the channel whose audit log the template turns off
+        self.assertFalse(opaque['is_audit_log_active'])
 
 # ################################################################################################################################
 

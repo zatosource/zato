@@ -43,6 +43,7 @@ class CreateForm(forms.Form):
     # Main
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    is_audit_log_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     as4_profile = forms.ChoiceField(widget=forms.Select())
     as4_from_party = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
     as4_to_party = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
@@ -88,6 +89,7 @@ class CreateForm(forms.Form):
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_audit_log_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
 # ################################################################################################################################
 # ################################################################################################################################

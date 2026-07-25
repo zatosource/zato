@@ -18,7 +18,7 @@ from zato.common.soap.envelope import parse_envelope
 from zato.common.soap.security.saml import add_assertion
 from zato.common.util.xml_.core import parse_xml, XMLException
 from zato.common.util.xml_.message import parse as parse_xml_message
-from zato.common.util.xml_.wssec import add_saml_token
+from zato.common.util.xml_.tokens import add_saml_token
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -125,6 +125,9 @@ class TestEnmasseOutgoingAS4Exporter(TestCase):
         # Validated TLS is the default, so it is not exported
         self.assertNotIn('validate_tls', conn)
 
+        # The audit log of this connection was never turned off, so the flag stays out of the export
+        self.assertNotIn('is_audit_log_active', conn)
+
 # ################################################################################################################################
 
     def test_outgoing_as4_export_opaque_fields(self) -> 'None':
@@ -157,6 +160,9 @@ class TestEnmasseOutgoingAS4Exporter(TestCase):
         self.assertNotIn('as4_use_discovery', conn)
         self.assertNotIn('as4_sml_domain', conn)
         self.assertNotIn('as4_signing_key', conn)
+
+        # This is the connection whose audit log the template turns off
+        self.assertFalse(conn['is_audit_log_active'])
 
 # ################################################################################################################################
 

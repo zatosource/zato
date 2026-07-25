@@ -28,7 +28,7 @@ from zato.common.typing_ import cast_
 from zato.common.util.xml_.constants import Algorithm, Transform
 from zato.common.util.xml_.core import qname
 from zato.common.util.xml_.mime_ import part_list
-from zato.common.util.xml_.wssec import derive_key_encryption_key
+from zato.common.util.xml_.keys import derive_key_encryption_key
 from zato.common.util.xml_.xmlsec import encode_base64
 
 # ################################################################################################################################
@@ -166,11 +166,13 @@ def _add_encrypted_key_rsa(
     encryption_method = etree.SubElement(encrypted_key, _encryption_method_name)
     encryption_method.set('Algorithm', config.key_transport_algorithm)
 
+    # OAEP is performed with SHA-256 as both the label digest and the mask generation digest,
+    # so that is what the element says.
     digest_method = etree.SubElement(encryption_method, _digest_method_name)
-    digest_method.set('Algorithm', config.key_transport_digest)
+    digest_method.set('Algorithm', Algorithm.SHA256)
 
     mgf = etree.SubElement(encryption_method, _mgf_name)
-    mgf.set('Algorithm', config.key_transport_mgf)
+    mgf.set('Algorithm', Algorithm.MGF1_SHA256)
 
     _add_recipient_certificate(encrypted_key, keystore)
 

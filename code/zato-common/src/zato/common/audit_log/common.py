@@ -54,6 +54,7 @@ class AuditSource:
     SOAP_Outgoing = 'soap-outgoing'
     Email_IMAP    = 'email-imap'
     AS2           = 'as2'
+    AS4           = 'as4'
     X12           = 'x12'
     MCP           = 'mcp'
     HL7           = 'hl7'
@@ -65,6 +66,7 @@ class AuditSource:
 # The sources whose events are evidence rather than diagnostics, with how long each is kept for.
 _source_retention_days = {
     AuditSource.AS2: _default_evidence_retention_days,
+    AuditSource.AS4: _default_evidence_retention_days,
     AuditSource.X12: _default_evidence_retention_days,
 }
 
@@ -130,6 +132,8 @@ class AuditEvent:
     Message_Sent         = 'message-sent'
     MDN_Sent             = 'mdn-sent'
     MDN_Received         = 'mdn-received'
+    Receipt_Sent         = 'receipt-sent'
+    Receipt_Received     = 'receipt-received'
     Alert_Raised         = 'alert-raised'
     MCP_Initialize       = 'mcp-initialize'
     MCP_Tools_List       = 'mcp-tools-list'

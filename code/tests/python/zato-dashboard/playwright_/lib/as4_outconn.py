@@ -36,7 +36,7 @@ _Text_Fields = ('name', 'as4_from_party', 'as4_to_party', 'as4_service', 'as4_ac
 _Select_Fields = ('as4_profile', 'validate_tls')
 
 # Checkbox fields toggled by boolean options
-_Checkbox_Fields = ('is_active', 'as4_use_discovery')
+_Checkbox_Fields = ('is_active', 'is_audit_log_active', 'as4_use_discovery')
 
 # The forms are tabbed and a text field is only fillable while its tab is active
 _Field_To_Tab = {

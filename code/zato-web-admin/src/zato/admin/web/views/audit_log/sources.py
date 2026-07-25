@@ -56,6 +56,7 @@ def _new_outstanding_filter(open_event:'str', close_event:'str', needs_object_na
 # The sources whose pages carry the outstanding filter pill
 _source_outstanding = {
     'as2': _new_outstanding_filter(AuditEvent.Message_Sent, AuditEvent.MDN_Received, False),
+    'as4': _new_outstanding_filter(AuditEvent.Message_Sent, AuditEvent.Receipt_Received, True),
     'x12': _new_outstanding_filter(AuditEvent.Interchange_Sent, AuditEvent.Ack_Received, True),
     'hl7': _new_outstanding_filter(AuditEvent.Message_Sent, AuditEvent.Ack_Received, True),
 }
@@ -116,9 +117,33 @@ def _enrich_as2_row(row:'anydict') -> 'None':
 
 # ################################################################################################################################
 
+def _enrich_as4_row(row:'anydict') -> 'None':
+    """ Extracts the conversation id of an AS4 event out of its JSON data, so it renders as a column
+    of its own - one conversation groups the messages of a business exchange that spans several.
+    """
+    row['conversation_id'] = ''
+
+    data = row['data']
+    if not data:
+        return
+
+    # A payload that is not JSON has nothing to extract.
+    try:
+        details = json.loads(data)
+    except ValueError:
+        return
+
+    # Only the user message events carry a conversation - a receipt refers to one through
+    # the message id it echoes.
+    if conversation_id := details.get('conversation_id'):
+        row['conversation_id'] = conversation_id
+
+# ################################################################################################################################
+
 # Per-source row enrichment - a source with columns extracted out of the event data registers itself here
 _source_row_enrich = {
     'as2': _enrich_as2_row,
+    'as4': _enrich_as4_row,
 }
 
 # ################################################################################################################################

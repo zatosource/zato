@@ -70,6 +70,7 @@ $.fn.zato.outgoing.as4.field_descriptions = {
     // Main tab
     'id_name': 'A unique name for this connection.<br>Used to identify it in logs and the dashboard.',
     'id_is_active': 'Whether this connection can be used.<br>Messages are not sent through<br>inactive connections.',
+    'id_is_audit_log_active': 'Whether the exchanges of this connection<br>are recorded in the audit log - the messages,<br>the receipts and the bytes of each.',
     'id_as4_profile': 'The AS4 profile of the network you exchange<br>messages with - it selects the correct<br>signing, encryption and packaging settings.',
     'id_as4_from_party': 'Your own party identifier, the way<br>the receiving side knows you,<br>e.g. your access point certificate name.',
     'id_as4_to_party': 'The receiving side\'s party identifier.<br>With discovery it is filled in automatically<br>from the receiver\'s certificate.',
@@ -114,6 +115,17 @@ $.fn.zato.outgoing.as4.edit = function(id) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.outgoing.as4.audit_log_object_name = function(item) {
+
+    // Either party may be absent on an item saved without it.
+    let from_party = item.as4_from_party ? item.as4_from_party.trim() : '';
+    let to_party = item.as4_to_party ? item.as4_to_party.trim() : '';
+
+    return from_party + ':' + to_party;
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.outgoing.as4.data_table.new_row = function(item, data, include_tr) {
     let row = '';
 
@@ -145,11 +157,17 @@ $.fn.zato.outgoing.as4.data_table.new_row = function(item, data, include_tr) {
     row += "<td><span class='form_hint'>---</span></td>";
 
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:void(0)\" onclick=\"$.fn.zato.data_table.ping('{0}', this)\" class=\"ping-link\">Test</a>", item.id));
+
+    // The audit log of this connection's exchanges is filed under its party pair.
+    let audit_object_name = encodeURIComponent($.fn.zato.outgoing.as4.audit_log_object_name(item));
+    row += String.format('<td><a href="/zato/audit-log/?source=as4&object_name={0}&cluster=1">Audit log</a></td>', audit_object_name);
+
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.as4.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.as4.delete_('{0}');\">Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
 
     row += String.format("<td class='ignore'>{0}</td>", item.is_active);
+    row += String.format("<td class='ignore'>{0}</td>", to_django_bool(item.is_audit_log_active));
     row += String.format("<td class='ignore'>{0}</td>", item.timeout);
     row += String.format("<td class='ignore'>{0}</td>", item.validate_tls);
 

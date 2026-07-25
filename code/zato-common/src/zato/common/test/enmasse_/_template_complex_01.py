@@ -302,6 +302,7 @@ channel_as4:
     as4_action: enmasse:action:1
     as4_extra_pmodes: |-
       enmasse:service:2|enmasse:action:2
+    is_audit_log_active: false
 
 outgoing_rest:
 
@@ -656,6 +657,7 @@ outgoing_as4:
     as4_service: eu.customs.ics2
     as4_action: IE3F26
     as4_mpc: urn:fdc:ec.europa.eu:2019:mpc
+    is_audit_log_active: false
 
 microsoft_cloud:
 
