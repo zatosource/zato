@@ -16,7 +16,7 @@ import httpx
 from lxml import etree
 
 # Zato
-from zato.common.as4.common import AS4Exception, NS
+from zato.common.as4.common import AS4Exception, EbMSError, NS, Severity
 from zato.common.as4.ebms import build_envelope, build_pull_request, build_receipt, build_user_message, new_message_id, \
     parse_messaging
 from zato.common.as4.mime_ import build_multipart, compress_part, parse_multipart, restore_payloads
@@ -80,6 +80,10 @@ class PullResult:
     is_ok: bool = False
     has_message: bool = False
     http_status: int = 0
+
+    # Whether the responder answered that the channel holds nothing right now, which is a normal
+    # answer to a pull request rather than a failed exchange.
+    is_empty_channel: bool = False
 
     user_message: 'UserMessageDetails | None' = None
     payloads: 'part_list'
@@ -346,6 +350,38 @@ def _send_pull_receipt(
 
 # ################################################################################################################################
 
+def _has_failure(errors:'error_details_list') -> 'bool':
+    """ Tells whether the signals in one response report a failure rather than a warning. A pull
+    answered with the empty channel warning is answered, not failed - there was simply nothing on
+    the channel at that moment.
+    """
+
+    for error in errors:
+        if error.severity != Severity.Warning:
+            out = True
+            break
+    else:
+        out = False
+
+    return out
+
+# ################################################################################################################################
+
+def _is_empty_channel(errors:'error_details_list') -> 'bool':
+    """ Tells whether the responder answered a pull request with the empty channel warning.
+    """
+
+    for error in errors:
+        if error.error_code == EbMSError.Empty_Message_Partition:
+            out = True
+            break
+    else:
+        out = False
+
+    return out
+
+# ################################################################################################################################
+
 def pull(
     pmode:'PMode',
     keystore:'Keystore',
@@ -392,7 +428,8 @@ def pull(
 
     # No user message means there was nothing to pull.
     if not messaging.user_messages:
-        out.is_ok = not out.errors
+        out.is_empty_channel = _is_empty_channel(out.errors)
+        out.is_ok = not _has_failure(out.errors)
         return out
 
     user_message = messaging.user_messages[0]
@@ -411,7 +448,7 @@ def pull(
 
     out.receipt_sent = receipt_sent
     out.receipt_body = receipt_body
-    out.is_ok = not out.errors
+    out.is_ok = not _has_failure(out.errors)
 
     return out
 

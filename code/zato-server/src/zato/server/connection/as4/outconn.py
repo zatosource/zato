@@ -23,6 +23,7 @@ from zato.common.as4.audit import record_pull_result, record_send_result
 from zato.common.as4.common import AS4Exception, Default
 from zato.common.as4.config import apply_reception_awareness, build_keystore, build_pmode
 from zato.common.as4.discovery import lookup_endpoint, SML_Domain_Production
+from zato.common.as4.mpc import queue_message
 from zato.common.as4.outbound import new_part, pull as outbound_pull, send as outbound_send
 from zato.common.as4.presets import get_document_type_preset
 from zato.common.as4.profiles import Peppol_Participant_ID_Type
@@ -255,6 +256,45 @@ class AS4Wrapper:
         # Recorded before the result is judged, so a failed exchange leaves its evidence too.
         self._record_send(cid, pmode, submitted, out)
         self._check_send_result(cid, out)
+
+        return out
+
+# ################################################################################################################################
+
+    def queue_for_pull(
+        self,
+        cid:'str',
+        data:'strbytes',
+        mime_type:'str'=AS4.Default.Payload_MIME_Type,
+        conversation_id:'strnone'=None,
+        mpc:'strnone'=None,
+        ) -> 'str':
+        """ Puts one message on a message partition channel for the partner to pull, and returns the
+        eb:MessageId it will be handed over under. Nothing goes out here - the message waits until a
+        pull request from the partner asks for it, and the channel serving that request is what hands
+        it over, signed and encrypted as this connection's P-Mode says.
+
+        The channel it waits on is this connection's own unless another one is named, which is what
+        a connection serving several sub-channels queues each message on.
+        """
+        self._enforce_is_active()
+
+        if isinstance(data, str):
+            data = data.encode('utf8')
+
+        pmode = self._get_pmode()
+
+        if not mpc:
+            mpc = pmode.mpc
+
+        part = new_part(data, mime_type)
+        parts = [part]
+
+        out = queue_message(mpc, pmode.initiator.party_id, pmode.responder.party_id, pmode.service,
+            pmode.action, parts, conversation_id)
+
+        logger.info('AS4 queued for pull; name:%s; mpc:%s; message id:%s; cid:%s',
+            self.config['name'], mpc, out, cid)
 
         return out
 

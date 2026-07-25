@@ -54,12 +54,12 @@ if 0:
 # ################################################################################################################################
 
 class PullState:
-    """ What one queued message is doing - waiting for a pull request, handed over to one and
-    awaiting its receipt, or acknowledged and done with.
+    """ What one queued message is doing - waiting for a pull request, or handed over to one and
+    awaiting its receipt. A message that has been acknowledged is no longer here at all, because
+    what it leaves behind is the evidence in the audit log rather than a row on a channel.
     """
     Waiting   = 'waiting'
     In_Flight = 'in-flight'
-    Done      = 'done'
 
 # ################################################################################################################################
 
@@ -232,27 +232,33 @@ def claim_next(mpc:'str') -> 'QueuedMessage | None':
     """
     engine = get_audit_engine()
 
+    # Our response to produce
+    out:'QueuedMessage | None' = None
+
     for row in _candidate_rows(engine, mpc):
 
-        out = _new_queued_message(row)
+        candidate = _new_queued_message(row)
 
         # Another server may have taken this row a moment ago, in which case the next one is tried.
-        if _claim_row(engine, out.row_id, out.pull_count):
-            return out
+        if _claim_row(engine, candidate.row_id, candidate.pull_count):
+            out = candidate
+            break
 
-    return None
+    return out
 
 # ################################################################################################################################
 
 def complete(message_id:'str') -> 'bool':
     """ Closes the queue row of one message, which is what its receipt does - the message was pulled
-    and acknowledged, so it is not to be handed over again. Returns whether a row was closed at all,
-    because a receipt may answer a message that was pushed rather than pulled.
+    and acknowledged, so the channel is done with it and the evidence of the exchange is what
+    remains, in the audit log.
+
+    Returns whether a row was closed at all, because a receipt may answer a message that was pushed
+    rather than pulled, and one that arrives twice answers a message the channel has already let go.
     """
-    statement = update(as4_pull_queue_table)
+    statement = as4_pull_queue_table.delete()
     statement = statement.where(as4_pull_queue_table.c.message_id == message_id)
     statement = statement.where(as4_pull_queue_table.c.state == PullState.In_Flight)
-    statement = statement.values(state=PullState.Done)
 
     engine = get_audit_engine()
 

@@ -297,6 +297,100 @@ class AS4ChannelRuntime:
 
 # ################################################################################################################################
 
+    def _pull_pmode(self, pmode:'PMode', queued:'QueuedMessage') -> 'PMode':
+        """ Returns the P-Mode one queued message is handed over under - the one governing the channel
+        it waited on, with the business information the message was queued with.
+
+        The parties are the other way round from a delivery arriving here, because a message handed
+        over on a pull travels out from this access point.
+        """
+        out = deepcopy(pmode)
+
+        out.mpc = queued.mpc
+        out.service = queued.service
+        out.action = queued.action
+
+        out.initiator.party_id = queued.from_party
+        out.responder.party_id = queued.to_party
+
+        return out
+
+# ################################################################################################################################
+
+    def _record_pull_served(
+        self,
+        cid:'str',
+        queued:'QueuedMessage',
+        payloads:'part_list',
+        body:'bytes',
+        ) -> 'None':
+        """ Records the message one pull request was answered with. It went out from here, so it is
+        recorded the way a push is - a receipt for it is what closes the exchange.
+        """
+        if not self.needs_audit:
+            return
+
+        record_message_handed_over(self.audit_log, queued.from_party, queued.to_party,
+            message_id=queued.message_id, conversation_id=queued.conversation_id, service=queued.service,
+            action=queued.action, payloads=payloads, raw_message=body, cid=cid)
+
+# ################################################################################################################################
+
+    def _serve_pull(self, cid:'str', mpc:'str', pmode:'PMode') -> 'PullServed | None':
+        """ Hands over the message that has waited longest on one message partition channel, or
+        nothing at all when the channel is empty, which is what the pull request is then told.
+
+        The message is signed and encrypted as the P-Mode of its channel says, exactly as a pushed
+        message would be, because it is the same message travelling the other way around.
+        """
+        queued = claim_next(mpc)
+
+        if queued is None:
+            logger.info('AS4 pull of `%s` found no message on channel `%s`; cid:%s', mpc, self.name, cid)
+            return None
+
+        pull_pmode = self._pull_pmode(pmode, queued)
+        keystore = self._get_keystore()
+
+        body, content_type, submitted = build_response(pull_pmode, keystore, queued)
+
+        self._record_pull_served(cid, queued, submitted, body)
+
+        logger.info('AS4 pull of `%s` handed over message `%s` on channel `%s`; attempt:%d; cid:%s',
+            mpc, queued.message_id, self.name, queued.pull_count, cid)
+
+        # Our response to produce
+        out = PullServed()
+
+        out.body = body
+        out.content_type = content_type
+        out.message_id = queued.message_id
+        out.payloads = submitted
+
+        return out
+
+# ################################################################################################################################
+
+    def _close_pulled(self, result:'InboundResult') -> 'None':
+        """ Closes the queue row of each message a receipt in this request acknowledges. A receipt
+        answering a pushed message closes no row, which is what the store says by finding none.
+        """
+        for signal in result.signals:
+
+            if not signal.is_receipt:
+                continue
+
+            ref_to_message_id = signal.ref_to_message_id
+
+            if not ref_to_message_id:
+                continue
+
+            if complete(ref_to_message_id):
+                logger.info('AS4 pulled message `%s` acknowledged on channel `%s`',
+                    ref_to_message_id, self.name)
+
+# ################################################################################################################################
+
     def _record(self, cid:'str', body:'bytes', result:'InboundResult') -> 'None':
         """ Records what one incoming request produced - the message and the signal answering it, or
         the signals it delivered for messages sent from here.
@@ -316,6 +410,13 @@ class AS4ChannelRuntime:
         pmodes = self._get_pmodes()
         keystore = self._get_keystore()
 
+        # Only a channel that has a partition channel of its own answers pull requests - without one
+        # there is nothing for a partner to ask about and the request is refused.
+        if self.pull_mpc:
+            serve_pull = partial(self._serve_pull, cid)
+        else:
+            serve_pull = None
+
         out = inbound_handle(
             body,
             content_type,
@@ -323,6 +424,7 @@ class AS4ChannelRuntime:
             keystore,
             is_duplicate=self._is_duplicate,
             validate=self._validate,
+            serve_pull=serve_pull,
         )
 
         # The evidence is written before anything is routed - what arrived and what was answered
@@ -352,6 +454,11 @@ class AS4ChannelRuntime:
 
         # Signals arrive without a user message - they are about an earlier message of ours.
         elif out.signals:
+
+            # A receipt among them may be the one closing a message this channel handed over
+            # on a pull, in which case that message is done waiting.
+            self._close_pulled(out)
+
             self._route_signals(cid, out)
 
             signal_count = len(out.signals)

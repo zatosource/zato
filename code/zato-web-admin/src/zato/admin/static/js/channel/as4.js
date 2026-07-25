@@ -78,7 +78,7 @@ $.fn.zato.channel.as4.field_descriptions = {
     'id_as4_service': 'The ebMS service accepted by this channel,<br>e.g. a process identifier.<br>The profile preset supplies the usual value.',
     'id_as4_action': 'The ebMS action accepted by this channel,<br>e.g. a document type identifier.<br>The profile preset supplies the usual value.',
     'id_as4_agreement': 'The agreement reference accepted<br>by this channel, e.g. the Peppol TIA identifier.',
-    'id_as4_mpc': 'The message partition channel incoming<br>messages are assigned to. Leave empty<br>unless the network assigns you one.',
+    'id_as4_mpc': 'The message partition channel this endpoint<br>answers pull requests for, sub-channels of it<br>included. Leave empty to take deliveries only.',
     'id_as4_extra_pmodes': 'Additional service and action pairs accepted<br>under otherwise the same settings,<br>one per line, as service|action.',
 
     // Security tab
