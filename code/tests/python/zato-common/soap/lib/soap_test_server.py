@@ -20,13 +20,14 @@ from lxml import etree
 
 # Zato
 from zato.common.soap.addressing import add_addressing, AddressingInfo, parse_addressing
-from zato.common.soap.common import Content_Type, FaultCode, SOAPException
+from zato.common.soap.common import Content_Type, FaultCode, SOAPException, SOAPVersion
 from zato.common.soap.ebxml import build_message as build_ebxml_message, EbXMLInfo, parse_message_header
 from zato.common.soap.envelope import attach_body, build_envelope, build_fault, get_body, get_version, parse_body, \
     parse_envelope, to_bytes
 from zato.common.soap.message import SOAPMessage
-from zato.common.soap.mtom import build_mtom, parse_message, to_bytes_map
+from zato.common.soap.mtom import build_mtom, build_swa, parse_message, to_bytes_map
 from zato.common.soap.security.wss import enforce_wss
+from zato.common.util.xml_.mime_ import new_content_id, Part
 
 # ################################################################################################################################
 
@@ -212,7 +213,7 @@ class _Server(ThreadingHTTPServer):
 
         # ebXML paths answer with a message-service acknowledgment instead of a plain operation.
         if config.get('ebxml'):
-            out = self._ebxml_response(record)
+            out = self._ebxml_response(record, config)
             return out
 
         out = self._operation_response(record, config, version)
@@ -292,8 +293,10 @@ class _Server(ThreadingHTTPServer):
 
 # ################################################################################################################################
 
-    def _ebxml_response(self, record:'stranydict') -> 'any_':
-        """ Builds an ebXML acknowledgment that refers back to the incoming message.
+    def _ebxml_response(self, record:'stranydict', config:'stranydict') -> 'any_':
+        """ Builds an ebXML acknowledgment that refers back to the incoming message, carrying
+        the payloads the path was configured to answer with - the shape a query-style exchange
+        takes, where the reply's business document rides in a payload part of its own.
         """
         incoming = parse_message_header(record['envelope'])
 
@@ -306,10 +309,26 @@ class _Server(ThreadingHTTPServer):
         info.action = 'Acknowledgment'
         info.ref_to_message_id = incoming.message_id
 
-        envelope = build_ebxml_message(info, [])
-        body = to_bytes(envelope)
+        parts = []
 
-        out = (OK, body, Content_Type['1.1'])
+        for data in config.get('ebxml_respond_parts', []):
+            part = Part()
+            part.content_id = new_content_id()
+            part.data = data
+            parts.append(part)
+
+        envelope = build_ebxml_message(info, parts)
+        envelope_bytes = to_bytes(envelope)
+
+        # A reply with no payloads is a plain envelope, the way a bare acknowledgment arrives,
+        # and only one that has them needs the SOAP-with-Attachments packaging around it.
+        if parts:
+            body, content_type = build_swa(envelope_bytes, parts, SOAPVersion.V11)
+        else:
+            body = envelope_bytes
+            content_type = Content_Type[SOAPVersion.V11]
+
+        out = (OK, body, content_type)
         return out
 
 # ################################################################################################################################

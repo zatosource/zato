@@ -100,6 +100,17 @@ class EbXMLInfo:
     from_party_type: 'strnone' = None
     to_party_type:   'strnone' = None
 
+    # The MIME payload parts of an incoming message, in the order they arrived, empty when the
+    # message carries none. An ebXML message keeps its business document in a payload part rather
+    # than in the body, so for anything other than a bare acknowledgement this is the message -
+    # the Manifest in the body only points at what is here.
+    #
+    # A message being built leaves this empty, the parts to send being passed separately.
+    attachments: 'part_list'
+
+    def __init__(self) -> 'None':
+        self.attachments = []
+
 # ################################################################################################################################
 # ################################################################################################################################
 
