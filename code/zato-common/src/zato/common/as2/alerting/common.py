@@ -33,11 +33,12 @@ finding_list = list['Finding']
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The kinds of findings one alerting sweep can raise.
+# The kinds of findings one alerting sweep can raise, whichever B2B source raises them.
 Kind_MDN_Overdue         = 'mdn-overdue'
 Kind_Ack_Overdue         = 'ack-overdue'
 Kind_Cert_Expiry         = 'cert-expiry'
 Kind_Ship_Notice_Missing = 'ship-notice-missing'
+Kind_Receipt_Missing     = 'receipt-missing'
 
 # The server name alerting events are recorded under when none is given.
 Default_Server_Name = 'b2b-alerting'

@@ -36,6 +36,18 @@ class Default:
     # HTTP timeout for outbound AS4 requests.
     HTTP_Timeout_Seconds = 120
 
+    # How many times one message is delivered in total before it is left alone, the first
+    # attempt included, when the P-Mode does not say otherwise.
+    Retry_Max_Attempts = 4
+
+    # How long an attempt goes unanswered before it is repeated, in seconds.
+    Retry_Interval_Seconds = 15 * 60
+
+    # How long an exchange goes unanswered before its receipt counts as missing rather than late,
+    # in seconds. This is what alerting reports on and what ends the retries whether the attempts
+    # have run out or not.
+    Missing_Receipt_Seconds = 24 * 3600
+
 # ################################################################################################################################
 # ################################################################################################################################
 

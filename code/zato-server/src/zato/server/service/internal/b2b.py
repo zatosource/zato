@@ -7,8 +7,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.api import AS2, SMTPMessage
+from zato.common.api import AS2, SMTPMessage, URL_TYPE
 from zato.common.as2.alerting import build_digest, collect_findings, record_alerts
+from zato.common.as4.alerting import collect_findings as collect_as4_findings
 from zato.common.audit_log.api import AuditLog
 from zato.common.util.api import utcnow
 from zato.server.service.internal import AdminService
@@ -17,7 +18,8 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import anydict, dictlist
+    dictlist = dictlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,8 +31,8 @@ _keystore_service = 'zato.channel.as2.keystore.get'
 # ################################################################################################################################
 
 class B2BAlerting(AdminService):
-    """ Runs one B2B alerting sweep - overdue MDNs, overdue X12 acknowledgments, expiring
-    certificates and missing ship notices become alert-raised audit events and one email
+    """ Runs one B2B alerting sweep - overdue MDNs, overdue X12 acknowledgments, missing AS4 receipts,
+    expiring certificates and missing ship notices become alert-raised audit events and one email
     digest per run, sent through the SMTP connection named in the job's extra data.
     """
     name = AS2.Alerting.Service
@@ -43,6 +45,47 @@ class B2BAlerting(AdminService):
             out = value
         else:
             out = ''
+
+        return out
+
+# ################################################################################################################################
+
+    def _get_as4_outgoing_configs(self) -> 'dictlist':
+        """ Returns the configuration of every outgoing AS4 connection - the sending side of every
+        exchange whose receipts and certificates the sweep looks at.
+        """
+
+        # Our response to produce
+        out:'dictlist' = []
+
+        config_store = self.server.config_manager.config_store.out_as4
+
+        for name in list(config_store):
+            item = config_store[name]
+
+            # The store also holds entries that are not connections of their own.
+            if isinstance(item, str):
+                continue
+
+            out.append(item.config)
+
+        return out
+
+# ################################################################################################################################
+
+    def _get_as4_channel_configs(self) -> 'dictlist':
+        """ Returns the configuration of every AS4 channel - the receiving side, whose certificates
+        expire on their own schedule and stop the exchanges arriving on it when they do.
+        """
+
+        # Our response to produce
+        out:'dictlist' = []
+
+        url_data = self.server.config_manager.request_dispatcher.url_data
+
+        for item in url_data.channel_data:
+            if item['transport'] == URL_TYPE.AS4:
+                out.append(item)
 
         return out
 
@@ -68,6 +111,14 @@ class B2BAlerting(AdminService):
         own_cert_chain = keystore['as2_signing_cert_chain']
 
         findings = collect_findings(configs, now, own_cert_chain=own_cert_chain, server_name=self.server.name)
+
+        # AS4 keeps its own configuration and its own store, so its half of the sweep runs on its own
+        # and its findings join the digest of the run.
+        as4_outgoing_configs = self._get_as4_outgoing_configs()
+        as4_channel_configs = self._get_as4_channel_configs()
+
+        as4_findings = collect_as4_findings(as4_outgoing_configs, as4_channel_configs, now, self.server.name)
+        findings.extend(as4_findings)
 
         # A clean sweep raises nothing at all.
         if not findings:

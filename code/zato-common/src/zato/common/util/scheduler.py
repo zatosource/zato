@@ -27,7 +27,7 @@ from traceback import format_exc
 from zato.common.ext.bunch import Bunch
 
 # Zato
-from zato.common.api import Alerting, AS2, SCHEDULER
+from zato.common.api import Alerting, AS2, AS4, SCHEDULER
 from zato.common.odb.model import Cluster, IntervalBasedJob, Job, Service
 
 # ################################################################################################################################
@@ -59,6 +59,9 @@ _alerting_service_impl_name = 'zato.server.service.internal.alerting.AlertingRun
 # The Python paths of the two services the AS2 reliability jobs invoke, created upfront the same way.
 _as2_async_mdn_service_impl_name = 'zato.server.service.internal.as2.DeliverAsyncMDNs'
 _as2_resend_service_impl_name = 'zato.server.service.internal.as2.ResendOverdueMessages'
+
+# The Python path of the service the AS4 reception awareness job invokes, created upfront the same way.
+_as4_resend_service_impl_name = 'zato.server.service.internal.as4.ResendOverdueMessages'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -177,6 +180,18 @@ def ensure_as2_resend_job_exists(session:'any_', cluster_id:'int') -> 'bool':
     """
     out = _ensure_interval_job_exists(session, cluster_id, AS2.Resend.Job_Name, AS2.Resend.Service,
         _as2_resend_service_impl_name, AS2.Resend.Job_Interval_Minutes)
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def ensure_as4_resend_job_exists(session:'any_', cluster_id:'int') -> 'bool':
+    """ Checks if the interval job that repeats the delivery of messages with an overdue AS4 receipt
+    exists, creates it if not. Returns True if created, False if already existed.
+    """
+    out = _ensure_interval_job_exists(session, cluster_id, AS4.Resend.Job_Name, AS4.Resend.Service,
+        _as4_resend_service_impl_name, AS4.Resend.Job_Interval_Minutes)
 
     return out
 

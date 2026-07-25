@@ -218,14 +218,44 @@ class AS4:
     # The service that scheduler-driven pull jobs invoke.
     Pull_Service = 'zato.outgoing.as4.pull'
 
+    class Resend:
+        """ The automatic resend job - the sending half of AS4 reception awareness. A message whose
+        receipt has not arrived goes out again under its original eb:MessageId, which is what makes
+        the receiving side's duplicate detection the thing that decides whether the payload is
+        delivered once or twice.
+        """
+        # The interval job every server ensures exists, the service it invokes
+        # and how often it runs.
+        Job_Name             = 'zato.as4.resend'
+        Job_Interval_Minutes = 5
+        Service              = 'zato.as4.resend.run'
+
+        # How many messages one run resends, so that a partner outage does not turn one run
+        # into a burst of every message sent during it.
+        Batch_Size = 50
+
+    class Alerting:
+        """ What the B2B alerting sweep reports about AS4 - the exchanges nobody acknowledged and
+        the certificates the exchanges themselves rest on.
+        """
+        # A certificate expiring within this many days raises a finding. An access point certificate
+        # is renewed yearly on most networks, so the window is what turns that into a task in time.
+        Cert_Warning_Days = 30
+
     # The AS4 configuration fields shared by channels and outgoing connections.
     Common_Fields = ('as4_profile', 'as4_from_party', 'as4_to_party', 'as4_service', 'as4_action', 'as4_agreement',
         'as4_mpc', 'as4_original_sender', 'as4_final_recipient', 'as4_extra_pmodes', 'as4_signing_key',
         'as4_signing_cert_chain', 'as4_decryption_key', 'as4_peer_signing_cert', 'as4_peer_encryption_cert',
         'as4_trust_anchors')
 
-    # The fields that only outgoing AS4 connections use.
-    Outgoing_Fields = ('as4_use_discovery', 'as4_sml_domain')
+    # The fields that only outgoing AS4 connections use - the reception awareness parameters
+    # among them, because repeating a delivery is something only the sending side does.
+    Outgoing_Fields = ('as4_use_discovery', 'as4_sml_domain', 'as4_retry_max_attempts', 'as4_retry_interval',
+        'as4_missing_receipt_after')
+
+    # The integer fields, which arrive from the Dashboard as text and are declared as numbers
+    # so that everything downstream reads them as the numbers they are.
+    Numeric_Fields = ('as4_retry_max_attempts', 'as4_retry_interval', 'as4_missing_receipt_after')
 
     # The fields that only AS4 channels use.
     Channel_Fields = ('as4_serviced_participants', 'as4_inbound_topic')

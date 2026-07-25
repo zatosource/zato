@@ -126,6 +126,64 @@ def build_pmode(config:'stranydict') -> 'PMode':
 
 # ################################################################################################################################
 
+def get_text_field(config:'stranydict', name:'str') -> 'str':
+    """ Returns one text field of a stored AS4 configuration, or an empty string for a connection
+    saved without it - the opaque attributes hold only what was saved, and a column that was saved
+    empty genuinely holds a null.
+    """
+    value = config.get(name)
+
+    if value is None:
+        value = ''
+
+    out = value
+    return out
+
+# ################################################################################################################################
+
+def get_numeric_field(config:'stranydict', name:'str') -> 'int':
+    """ Returns one numeric field of a stored AS4 configuration, or zero for a connection saved
+    without it - the opaque attributes of a connection hold only what was saved on it, and zero is
+    what an unset field reads as everywhere one is used.
+
+    A config event published by an edit in the Dashboard carries the raw form value, which is text.
+    """
+    value = config.get(name)
+
+    if not value:
+        out = 0
+
+    elif isinstance(value, str):
+        out = int(value)
+
+    else:
+        out = value
+
+    return out
+
+# ################################################################################################################################
+
+def apply_reception_awareness(pmode:'PMode', config:'stranydict') -> 'None':
+    """ Overlays on one P-Mode the reception awareness parameters an outgoing connection configures,
+    leaving the profile preset's own value in place for each parameter left empty.
+    """
+    awareness = pmode.reception_awareness
+
+    if value := get_numeric_field(config, 'as4_retry_max_attempts'):
+        awareness.retry_max_attempts = value
+
+    if value := get_numeric_field(config, 'as4_retry_interval'):
+        awareness.retry_interval_seconds = value
+
+    if value := get_numeric_field(config, 'as4_missing_receipt_after'):
+        awareness.missing_receipt_seconds = value
+
+    # A single permitted attempt is how a connection says its messages go out once and are not
+    # repeated, so there is no separate switch for it to contradict.
+    awareness.retry = awareness.retry_max_attempts > 1
+
+# ################################################################################################################################
+
 def build_pmodes(config:'stranydict') -> 'pmode_list':
     """ Builds the full list of P-Modes for one channel or connection - the main one
     built from the configured fields plus one clone per extra service and action pair.

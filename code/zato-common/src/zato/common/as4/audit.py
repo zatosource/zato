@@ -188,11 +188,17 @@ def record_message_sent(
     payloads:'part_list',
     service:'str',
     action:'str',
+    original_sender:'str' = '',
+    final_recipient:'str' = '',
     cid:'str' = '',
     ) -> 'None':
     """ Records that a user message was pushed to the partner, with every payload stored alongside
-    so a later resubmit can send all of them again and with the request bytes kept as the evidence
-    of what was signed.
+    so a later resend or resubmit can send all of them again and with the request bytes kept as the
+    evidence of what was signed.
+
+    The four-corner endpoints travel with the event because a repeat delivery of a message that was
+    addressed through discovery has to be addressed the same way again, and the recipient it was
+    addressed to is not in the payload the store hands back.
     """
     if result.is_ok:
         outcome = AuditOutcome.OK
@@ -205,6 +211,8 @@ def record_message_sent(
         'conversation_id': result.conversation_id,
         'service': service,
         'action': action,
+        'original_sender': original_sender,
+        'final_recipient': final_recipient,
         'errors': _error_summary(result.errors),
         'http_status': result.http_status,
         'raw_message': encode_wire_bytes(result.request_body),
@@ -410,6 +418,8 @@ def record_send_result(
     payloads:'part_list',
     service:'str',
     action:'str',
+    original_sender:'str' = '',
+    final_recipient:'str' = '',
     cid:'str' = '',
     ) -> 'None':
     """ Records everything one push produced - the message-sent event with the request bytes and
@@ -418,8 +428,8 @@ def record_send_result(
     A push whose receipt is to arrive asynchronously records the send alone, and the receipt
     is recorded by the channel it later arrives on.
     """
-    record_message_sent(audit_log, from_party, to_party, result,
-        payloads=payloads, service=service, action=action, cid=cid)
+    record_message_sent(audit_log, from_party, to_party, result, payloads=payloads, service=service,
+        action=action, original_sender=original_sender, final_recipient=final_recipient, cid=cid)
 
     receipt = result.receipt
 

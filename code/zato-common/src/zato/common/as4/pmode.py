@@ -67,6 +67,35 @@ class SecurityConfig:
 # ################################################################################################################################
 
 @dataclass(init=False)
+class ReceptionAwareness:
+    """ PMode[1].ReceptionAwareness.* - the AS4 reliability feature. A sending access point that
+    turns it on owes the message a receipt, repeats the delivery while none arrives and expects
+    the receiving side to eliminate the duplicates that produces.
+    """
+    # PMode[1].ReceptionAwareness - whether the feature is used at all. With it off a message
+    # is delivered once and whatever comes back is the end of it.
+    is_enabled: bool = True
+
+    # PMode[1].ReceptionAwareness.Retry - whether an unanswered message is delivered again.
+    retry: bool = True
+
+    # PMode[1].ReceptionAwareness.Retry.Parameters - how many deliveries one message gets in total,
+    # the first attempt included, and how long an attempt goes unanswered before the next one.
+    retry_max_attempts:     int = Default.Retry_Max_Attempts
+    retry_interval_seconds: int = Default.Retry_Interval_Seconds
+
+    # PMode[1].ReceptionAwareness.DuplicateDetection - whether the receiving side is expected to
+    # recognize a repeated eb:MessageId. Retries are only safe to send because of it.
+    duplicate_detection: bool = True
+
+    # How long the exchange is given before its receipt counts as missing rather than late.
+    # Past this point the retries stop and the exchange is what alerting reports.
+    missing_receipt_seconds: int = Default.Missing_Receipt_Seconds
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
 class PMode:
     """ An ebMS3 processing mode - the full configuration of one message exchange relationship.
     Parameter names follow appendix D of the ebMS 3.0 Core specification so that the tables
@@ -98,6 +127,9 @@ class PMode:
     # PMode[1].Security.* - assigned by new_pmode.
     security: 'SecurityConfig'
 
+    # PMode[1].ReceptionAwareness.* - assigned by new_pmode.
+    reception_awareness: 'ReceptionAwareness'
+
     # Four-corner message properties - when set, they are added
     # as eb:MessageProperties (originalSender and finalRecipient).
     original_sender:      'strnone' = None
@@ -122,6 +154,7 @@ def new_pmode() -> 'PMode':
     out.initiator = Party()
     out.responder = Party()
     out.security = SecurityConfig()
+    out.reception_awareness = ReceptionAwareness()
 
     return out
 

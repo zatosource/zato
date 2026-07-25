@@ -1788,7 +1788,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             ensure_openapi_channel_exists
         from zato.common.util.gateway import ensure_mcp_gateway_exists
         from zato.common.util.scheduler import ensure_alerting_job_exists, ensure_as2_async_mdn_job_exists, \
-            ensure_as2_resend_job_exists, ensure_as2_rotation_job_exists, ensure_b2b_alerting_job_exists
+            ensure_as2_resend_job_exists, ensure_as2_rotation_job_exists, ensure_as4_resend_job_exists, \
+            ensure_b2b_alerting_job_exists
 
         with closing(self.odb.session()) as session:
             openapi_created = ensure_openapi_channel_exists(session, self.cluster_id)
@@ -1803,6 +1804,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             as2_async_mdn_job_created = ensure_as2_async_mdn_job_exists(session, self.cluster_id)
             as2_resend_job_created = ensure_as2_resend_job_exists(session, self.cluster_id)
 
+            # AS4 reception awareness rests on a job of its own, which repeats the delivery
+            # of a message whose receipt never came back.
+            as4_resend_job_created = ensure_as4_resend_job_exists(session, self.cluster_id)
+
             # So does the job running the B2B alerting sweep.
             b2b_alerting_job_created = ensure_b2b_alerting_job_exists(session, self.cluster_id)
 
@@ -1810,7 +1815,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             alerting_job_created = ensure_alerting_job_exists(session, self.cluster_id)
 
             needs_commit = openapi_created or mcp_created or as2_rotation_job_created or as2_async_mdn_job_created or \
-                as2_resend_job_created or b2b_alerting_job_created or alerting_job_created
+                as2_resend_job_created or as4_resend_job_created or b2b_alerting_job_created or alerting_job_created
 
             if needs_commit:
                 session.commit()
@@ -1829,6 +1834,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             if as2_resend_job_created:
                 logger.info('Created AS2 resend job')
+
+            if as4_resend_job_created:
+                logger.info('Created AS4 resend job')
 
             if b2b_alerting_job_created:
                 logger.info('Created B2B alerting job')

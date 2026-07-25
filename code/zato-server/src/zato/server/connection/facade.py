@@ -44,6 +44,7 @@ if 0:
     from requests import Response
     from zato.common.as2.outbound import SendResult as AS2SendResult
     from zato.common.as4.outbound import PullResult, SendResult
+    from zato.common.as4.resend import ResendCandidate
     from zato.common.pubsub.sql.backend import PublishResult
     from zato.common.typing_ import any_, anydict, callnone, strbytes, strnone
     from zato.server.base.parallel import ParallelServer
@@ -460,6 +461,15 @@ class AS4Invoker:
         wraps the business document in an SBDH and delivers it there, verifying the receipt.
         """
         out = self.conn.send_to(self.cid, participant_id, document_type, data, from_participant, conversation_id)
+        return out
+
+# ################################################################################################################################
+
+    def resend(self, candidate:'ResendCandidate') -> 'SendResult':
+        """ Delivers one message again under the eb:MessageId of the attempt it repeats - the
+        reception awareness retry, which the receiving side's duplicate detection is what makes safe.
+        """
+        out = self.conn.resend(self.cid, candidate)
         return out
 
 # ################################################################################################################################

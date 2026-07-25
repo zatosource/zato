@@ -55,6 +55,12 @@ Schemas_Dir = os.path.join(Fixtures_Dir, 'schemas')
 _rsa_public_exponent = 65537
 _rsa_key_size = 2048
 
+# For how long a test certificate is valid unless a test asks for another period.
+_default_days_valid = 365
+
+# The common name of the certificates issued for the expiry checks.
+_expiry_test_common_name = 'as4-expiry-test'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -71,6 +77,7 @@ def make_certificate(
     signer_key:'any_',
     hash_algorithm:'any_',
     is_ca:'bool'=False,
+    days_valid:'int'=_default_days_valid,
     ) -> 'any_':
     """ Issues a test certificate valid around the current moment.
     """
@@ -82,10 +89,27 @@ def make_certificate(
     builder = builder.public_key(public_key)
     builder = builder.serial_number(random_serial_number())
     builder = builder.not_valid_before(now - timedelta(days=1))
-    builder = builder.not_valid_after(now + timedelta(days=365))
+    builder = builder.not_valid_after(now + timedelta(days=days_valid))
     builder = builder.add_extension(BasicConstraints(ca=is_ca, path_length=None), critical=True)
 
     out = builder.sign(signer_key, hash_algorithm)
+    return out
+
+# ################################################################################################################################
+
+def make_certificate_pem(days_valid:'int') -> 'str':
+    """ Issues one self-signed certificate expiring in the given number of days, as the PEM text
+    a Dashboard form stores.
+    """
+    key = generate_private_key(_rsa_public_exponent, _rsa_key_size)
+    name = _make_name(_expiry_test_common_name)
+
+    public_key = key.public_key()
+    certificate = make_certificate(_expiry_test_common_name, public_key, name, key, SHA256(), days_valid=days_valid)
+
+    certificate_bytes = certificate.public_bytes(Encoding.PEM)
+
+    out = certificate_bytes.decode('ascii')
     return out
 
 # ################################################################################################################################
