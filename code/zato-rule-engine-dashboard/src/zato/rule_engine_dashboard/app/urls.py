@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django.urls import path
 
 # Zato
+from zato.common.webapp.static import static_file
 from zato.rule_engine_dashboard.app.views import auth, decisions, editor, events, notifications, rulesets, screens, tables, \
     test_sets, users, versions, vocabulary
 
@@ -22,7 +23,7 @@ urlpatterns = [
     path('', screens.home, name='home'),
 
     # Static files, served by the application itself
-    path('static/<path:path>', screens.static_file, name='static-file'),
+    path('static/<path:path>', static_file, name='static-file'),
 
     # Sign-in and sign-out
     path('login/', auth.login, name='login'),

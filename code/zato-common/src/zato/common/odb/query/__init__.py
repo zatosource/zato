@@ -18,7 +18,7 @@ from sqlalchemy import and_, cast as sa_cast, func, not_, or_, Text
 from sqlalchemy.sql.expression import case
 
 # Zato
-from zato.common.api import AMQP_Subtype_Plain, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, GENERIC, \
+from zato.common.api import AMQP_Subtype_Plain, GENERIC, MISC, \
      PARAMS_PRIORITY, PubSub, URL_PARAMS_PRIORITY
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import APIKeySecurity, ChannelAMQP, Cluster, \
@@ -538,8 +538,8 @@ def _http_soap(session, cluster_id):
         HTTPSOAP.security_id,
         HTTPSOAP.connection,
         HTTPSOAP.content_type,
-        case([(HTTPSOAP.ping_method != None, HTTPSOAP.ping_method)], else_=DEFAULT_HTTP_PING_METHOD).label('ping_method'), # noqa
-        case([(HTTPSOAP.pool_size != None, HTTPSOAP.pool_size)], else_=DEFAULT_HTTP_POOL_SIZE).label('pool_size'), # noqa: E711
+        case([(HTTPSOAP.ping_method != None, HTTPSOAP.ping_method)], else_=MISC.DEFAULT_HTTP_PING_METHOD).label('ping_method'), # noqa
+        case([(HTTPSOAP.pool_size != None, HTTPSOAP.pool_size)], else_=MISC.DEFAULT_HTTP_POOL_SIZE).label('pool_size'), # noqa: E711
         case([(HTTPSOAP.merge_url_params_req != None, HTTPSOAP.merge_url_params_req)], else_=True).label('merge_url_params_req'), # noqa: E711
         case([(HTTPSOAP.url_params_pri != None, HTTPSOAP.url_params_pri)], else_=URL_PARAMS_PRIORITY.DEFAULT).label('url_params_pri'), # noqa: E711
         case([(HTTPSOAP.params_pri != None, HTTPSOAP.params_pri)], else_=PARAMS_PRIORITY.DEFAULT).label('params_pri'), # noqa: E711

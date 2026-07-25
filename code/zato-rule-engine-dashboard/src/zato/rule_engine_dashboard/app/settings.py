@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 
 # Zato
-from zato.common.crypto.api import CryptoManager
+from zato.common.webapp.settings import build_settings
 from zato.rule_engine_dashboard.app.database import database_from_url
 
 # ################################################################################################################################
@@ -22,41 +22,37 @@ Env_DB_URL = 'Zato_Rule_Engine_Dashboard_DB_URL'
 # A local SQLite file is the default, created where the application runs
 Default_DB_URL = 'sqlite:///zato-rule-engine-dashboard.db'
 
-# ################################################################################################################################
-# ################################################################################################################################
-
-SECRET_KEY = CryptoManager.generate_secret(as_str=True)
-
-DEBUG = False
-
-ALLOWED_HOSTS = ['*']
-
-# Application definition - the shared webapp UI kit contributes its templates
-# and static files through the standard Django loaders.
-INSTALLED_APPS = [
+# What the dashboard needs of Django beyond the sessions and static files every application has -
+# its users live in Django's own tables and its screens speak through the messages framework.
+_extra_apps = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
-    'django.contrib.sessions',
     'django.contrib.messages',
-    'django.contrib.staticfiles',
     'zato.common.webapp.ui',
     'zato.rule_engine_dashboard.app',
 ]
 
-MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+_extra_middleware = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'zato.rule_engine_dashboard.app.urls'
+# ################################################################################################################################
+# ################################################################################################################################
+
+globals().update(build_settings(
+    root_urlconf='zato.rule_engine_dashboard.app.urls',
+    cookie_name='zato-rule-engine-dashboard',
+    extra_apps=_extra_apps,
+    extra_middleware=_extra_middleware,
+))
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 LOGIN_URL = '/login/'
 
+# The screens are found by the app-directories loader, both the dashboard's own and the shared UI kit's
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -72,13 +68,6 @@ TEMPLATES = [
     },
 ]
 
-STATIC_URL = 'static/'
-
-SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
-SESSION_COOKIE_NAME = 'zato-rule-engine-dashboard'
-SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'Lax'
-
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 if _db_url := os.environ.get(Env_DB_URL):
@@ -91,12 +80,6 @@ DATABASES = {
 }
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
-
-# Internationalization
-LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
-USE_I18N = True
-USE_TZ = True
 
 # ################################################################################################################################
 # ################################################################################################################################
