@@ -115,9 +115,32 @@ def new_keystore() -> 'Keystore':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def is_certificate_time_valid(certificate:'Certificate', now:'dtnone'=None) -> 'bool':
+    """ Tells whether a certificate's own notBefore and notAfter dates cover the given moment.
+    This is what the certificate itself says about when it may be used, as distinct from the
+    configured rotation window around it - a configuration that forgot to retire an expired
+    certificate would otherwise keep it in service.
+    """
+    if now is None:
+        now = datetime.now(timezone.utc)
+
+    # Our response to produce
+    out = True
+
+    if now < certificate.not_valid_before_utc:
+        out = False
+
+    if now > certificate.not_valid_after_utc:
+        out = False
+
+    return out
+
+# ################################################################################################################################
+
 def active_decryption_entries(keystore:'Keystore', now:'dtnone'=None) -> 'decryption_entry_list':
     """ Returns every decryption entry whose validity window covers the given moment -
-    an empty end of the window means unbounded on that side.
+    an empty end of the window means unbounded on that side. An entry whose own certificate
+    has expired or has not started yet is out of service regardless of that window.
     """
     if now is None:
         now = datetime.now(timezone.utc)
@@ -132,9 +155,14 @@ def active_decryption_entries(keystore:'Keystore', now:'dtnone'=None) -> 'decryp
             if now < entry.valid_from:
                 continue
 
-        # .. or it is not active anymore.
+        # .. or it is not active anymore ..
         if entry.valid_until:
             if now > entry.valid_until:
+                continue
+
+        # .. or the certificate the partner encrypts to has fallen outside its own dates.
+        if entry.certificate:
+            if not is_certificate_time_valid(entry.certificate, now):
                 continue
 
         out.append(entry)

@@ -314,7 +314,7 @@ class URLData(PyURLData):
             sec_def = url_info.get('sec_def')
             if not sec_def:
                 if url_info.get('data_format') != 'xml':
-                    self.logger.warn('Missing sec_def for url_info -> %s', url_info)
+                    self.logger.warning('Missing sec_def for url_info -> %s', url_info)
                 return
             if sec_def != ZATO_NONE and sec_def.sec_type == sec_def_type:
                 name = msg.get('old_name') if msg.get('old_name') else msg.get('name')

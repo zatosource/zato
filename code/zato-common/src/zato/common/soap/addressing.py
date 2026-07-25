@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from dataclasses import dataclass
-from uuid import uuid4
 
 # lxml
 from lxml import etree
@@ -16,7 +15,7 @@ from lxml import etree
 # Zato
 from zato.common.soap.common import NS
 from zato.common.soap.envelope import get_header, get_version, set_must_understand
-from zato.common.util.xml_.core import qname
+from zato.common.util.xml_.core import new_uuid_urn, qname
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,7 +56,7 @@ class AddressingInfo:
 def new_message_id() -> 'str':
     """ Returns a fresh wsa:MessageID in the urn:uuid form WS-Addressing recommends.
     """
-    out = f'urn:uuid:{uuid4()}'
+    out = new_uuid_urn()
     return out
 
 # ################################################################################################################################

@@ -7,7 +7,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.util.xml_.message import bytes_by_content_id, has_content, parse as _parse, serialize, to_lexical, XMLMessage
+from zato.common.util.xml_.message import parse as _parse, XMLMessage
+
+# Re-exported for callers that import them from here.
+from zato.common.util.xml_.message import bytes_by_content_id as bytes_by_content_id  # noqa: F401
+from zato.common.util.xml_.message import serialize as serialize                      # noqa: F401
+from zato.common.util.xml_.message import to_lexical as to_lexical                    # noqa: F401
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -15,15 +20,6 @@ from zato.common.util.xml_.message import bytes_by_content_id, has_content, pars
 if 0:
     from zato.common.typing_ import any_
     any_ = any_
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# Re-exported for callers that import them from here.
-bytes_by_content_id = bytes_by_content_id
-has_content = has_content
-serialize = serialize
-to_lexical = to_lexical
 
 # ################################################################################################################################
 # ################################################################################################################################

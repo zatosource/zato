@@ -124,7 +124,6 @@ class PyURLData:
     def __init__(self, channel_data=None):
         self.channel_data = channel_data
         self.url_path_cache = {}
-        self.url_target_cache = {}
         self.has_trace1 = logger.isEnabledFor(TRACE1)
 
 # ################################################################################################################################
@@ -148,24 +147,11 @@ class PyURLData:
 
     def match(self, url_path, http_method, http_accept, sep=target_separator, _bunchify=bunchify, _log_trace1=logger.log,
         _trace1=TRACE1):
-        """ Attemps to match the combination of SOAPt Action and URL path against
-        the list of HTTP channel targets.
+        """ Attemps to match the combination of HTTP method, Accept header and URL path
+        against the list of HTTP channel targets. The leading separator is where a SOAP action
+        used to go - channels no longer match on one, so the field stays empty.
         """
-        has_target_in_cache = True
-
-        target = ''
-        target += '' # This used to be a SOAP action, now it is always an empty string
-        target += sep
-        target += http_method
-        target += sep
-        target += http_accept
-        target += sep
-        target += url_path
-
-        try:
-            self.url_target_cache[target]
-        except KeyError:
-            has_target_in_cache = False
+        target = f'{sep}{http_method}{sep}{http_accept}{sep}{url_path}'
 
         # Return from cache if already seen
         try:
@@ -189,7 +175,7 @@ class PyURLData:
                     item_bunch = _bunchify(item)
 
                     # Cache that target but only if it's a static URL without dynamic variables
-                    if (not has_target_in_cache) and matcher.is_static:
+                    if matcher.is_static:
                         self.url_path_cache[target] = item_bunch
 
                     return match, item_bunch

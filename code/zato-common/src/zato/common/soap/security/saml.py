@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import datetime, timedelta, timezone
-from uuid import uuid4
 
 # cryptography
 from cryptography.hazmat.primitives.serialization import Encoding
@@ -20,7 +19,7 @@ from lxml import etree
 from zato.common.soap.common import NS, SOAPSecurityException
 from zato.common.soap.envelope import get_security_header
 from zato.common.util.xml_.constants import Algorithm, Transform
-from zato.common.util.xml_.core import qname, to_timestamp, XMLSecurityException
+from zato.common.util.xml_.core import new_id, qname, to_timestamp, xml_parser, XMLSecurityException
 from zato.common.util.xml_.token import parse_x509v3
 from zato.common.util.xml_.wssec import compute_signature_value, validate_certificate_chain, verify_signature_value
 from zato.common.util.xml_.xmlsec import decode_base64, digest_element, encode_base64
@@ -71,7 +70,7 @@ def new_assertion(
     not_on_or_after = now + timedelta(seconds=ttl_seconds)
 
     assertion = etree.Element(qname(NS.SAML2, 'Assertion'), nsmap=_saml_nsmap)
-    assertion.set('ID', f'_{uuid4().hex}')
+    assertion.set('ID', new_id('_'))
     assertion.set('Version', '2.0')
     assertion.set('IssueInstant', to_timestamp(now))
 
@@ -121,7 +120,7 @@ def _assertion_without_signature(assertion:'any_') -> 'any_':
     """ Returns a copy of an assertion with its ds:Signature child removed - the shape
     the enveloped-signature transform digests, both when signing and when verifying.
     """
-    out = etree.fromstring(etree.tostring(assertion))
+    out = etree.fromstring(etree.tostring(assertion), xml_parser)
 
     signature = out.find(qname(NS.DS, 'Signature'))
     if signature is not None:
@@ -253,7 +252,7 @@ def add_assertion(envelope:'any_', assertion:'any_') -> 'None':
     may also be raw bytes, e.g. one issued and signed by an external identity provider.
     """
     if isinstance(assertion, bytes):
-        assertion = etree.fromstring(assertion)
+        assertion = etree.fromstring(assertion, xml_parser)
 
     security = get_security_header(envelope)
     security.append(assertion)

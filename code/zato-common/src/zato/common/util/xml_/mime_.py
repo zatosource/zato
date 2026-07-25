@@ -8,7 +8,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from dataclasses import dataclass
-from uuid import uuid4
+
+# Zato
+from zato.common.crypto.api import CryptoManager
+from zato.common.util.xml_.core import Id_Size_Bits, new_id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -63,7 +66,7 @@ part_list = list[Part]
 def new_content_id(suffix:'str'='zato') -> 'str':
     """ Returns a fresh Content-ID for a MIME part.
     """
-    out = f'{uuid4().hex}@{suffix}'
+    out = f'{CryptoManager.generate_hex_string(Id_Size_Bits)}@{suffix}'
     return out
 
 # ################################################################################################################################
@@ -141,7 +144,7 @@ def build_related(
     """ Serializes a root document and its attachments into a multipart/related body.
     Returns the body bytes and the Content-Type header value to send with them.
     """
-    boundary = f'{boundary_prefix}{uuid4().hex}'
+    boundary = new_id(boundary_prefix)
     root_content_id = new_content_id()
 
     # The root document always goes into the first MIME part ..

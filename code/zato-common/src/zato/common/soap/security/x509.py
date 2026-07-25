@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from datetime import datetime, timedelta, timezone
 from os import urandom
-from uuid import uuid4
 
 # cryptography
 from cryptography.hazmat.primitives.asymmetric.padding import MGF1, OAEP
@@ -25,7 +24,7 @@ from zato.common.soap.common import NS, SOAPSecurityException
 from zato.common.soap.envelope import get_body, get_security_header
 from zato.common.typing_ import cast_
 from zato.common.util.xml_.constants import Algorithm, TokenType
-from zato.common.util.xml_.core import qname, to_timestamp, XMLSecurityException
+from zato.common.util.xml_.core import new_id, qname, to_timestamp, XMLSecurityException
 from zato.common.util.xml_.wssec import add_binary_security_token, add_element_reference, add_key_info_token_reference, \
     compute_signature_value, extract_signer_chain, recover_content_key, validate_certificate_chain, verify_one_reference, \
     verify_signature_value
@@ -87,7 +86,7 @@ def add_timestamp(envelope:'any_', ttl_seconds:'int'=Timestamp_TTL_Seconds) -> '
     so signatures can cover it.
     """
     security = get_security_header(envelope)
-    timestamp_id = f'TS-{uuid4().hex}'
+    timestamp_id = new_id('TS-')
 
     created_text, expires_text = _utc_pair(ttl_seconds)
 
@@ -120,7 +119,7 @@ def sign(
     body_id = body.get(_wsu_id)
 
     if body_id is None:
-        body_id = f'Body-{uuid4().hex}'
+        body_id = new_id('Body-')
         body.set(_wsu_id, body_id)
 
     timestamp_id = add_timestamp(envelope)
@@ -129,7 +128,7 @@ def sign(
     token_id = add_binary_security_token(security, keystore, token_type)
 
     signature = etree.SubElement(security, qname(NS.DS, 'Signature'), nsmap=_signature_nsmap)
-    signature.set('Id', f'SIG-{uuid4().hex}')
+    signature.set('Id', new_id('SIG-'))
 
     # The signed info lists everything the signature covers ..
     signed_info = etree.SubElement(signature, qname(NS.DS, 'SignedInfo'))
@@ -203,6 +202,8 @@ def encrypt_body(envelope:'any_', keystore:'Keystore') -> 'None':
     for child in body:
         plaintext += etree.tostring(child)
 
+    # Raw key material stays on urandom rather than going through CryptoManager - these are
+    # cipher inputs of an exact byte length, not identifiers.
     content_key = urandom(_content_key_size_bytes)
     nonce = urandom(_gcm_nonce_size_bytes)
 
@@ -213,7 +214,7 @@ def encrypt_body(envelope:'any_', keystore:'Keystore') -> 'None':
     for child in list(body):
         body.remove(child)
 
-    encrypted_data_id = f'ED-{uuid4().hex}'
+    encrypted_data_id = new_id('ED-')
 
     encrypted_data = etree.SubElement(body, qname(NS.XENC, 'EncryptedData'), nsmap=_xenc_nsmap)
     encrypted_data.set('Id', encrypted_data_id)
@@ -230,7 +231,7 @@ def encrypt_body(envelope:'any_', keystore:'Keystore') -> 'None':
     security = get_security_header(envelope)
 
     encrypted_key = etree.Element(qname(NS.XENC, 'EncryptedKey'), nsmap=_xenc_nsmap)
-    encrypted_key.set('Id', f'EK-{uuid4().hex}')
+    encrypted_key.set('Id', new_id('EK-'))
 
     encryption_method = etree.SubElement(encrypted_key, qname(NS.XENC, 'EncryptionMethod'))
     encryption_method.set('Algorithm', Algorithm.RSA_OAEP)
@@ -302,8 +303,10 @@ def decrypt_body(envelope:'any_', keystore:'Keystore') -> 'None':
     # The decrypted children replace the EncryptedData element.
     body.remove(encrypted_data)
 
-    # The plaintext is a sequence of sibling elements, so it needs a wrapper to parse.
-    wrapper = etree.fromstring(b'<wrapper>' + plaintext + b'</wrapper>')
+    # The plaintext is a sequence of sibling elements, so it needs a wrapper to parse. Decrypting
+    # proves the sender held the content key, not that the plaintext is safe, so this parse is
+    # hardened like any other - an attacker who can encrypt can otherwise plant an XXE payload.
+    wrapper = etree.fromstring(b'<wrapper>' + plaintext + b'</wrapper>', xml_parser)
 
     for child in wrapper:
         body.append(child)

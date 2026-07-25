@@ -13,7 +13,7 @@ from lxml import etree
 from zato.common.soap.common import Envelope_NS, FaultCode, Must_Understand_Value, NS, SOAPException, SOAPFault, \
     SOAPVersion, Version_By_NS
 from zato.common.soap.message import parse, serialize, SOAPMessage
-from zato.common.util.xml_.core import qname
+from zato.common.util.xml_.core import qname, xml_parser
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -155,7 +155,7 @@ def attach_body(envelope:'any_', message:'SOAPMessage', tag:'str', xop_parts:'an
 def parse_envelope(data:'bytes') -> 'any_':
     """ Parses incoming bytes into an envelope element, checking that it really is one.
     """
-    envelope = etree.fromstring(data)
+    envelope = etree.fromstring(data, xml_parser)
 
     # This raises SOAPException when the root element is not a SOAP envelope.
     _ = get_version(envelope)

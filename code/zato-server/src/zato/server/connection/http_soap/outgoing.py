@@ -35,7 +35,7 @@ from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditS
 from zato.common.exception import BadRequest, Inactive, BackendInvocationError
 from zato.common.json_ import dumps, loads
 from zato.common.soap.client import SOAPClient
-from zato.common.soap.common import SOAPFault
+from zato.common.soap.common import Content_Type as SOAP_Content_Type, Envelope_NS, SOAPFault, SOAPVersion
 from zato.common.marshal_.api import extract_model_class, is_list, Model
 from zato.common.typing_ import cast_
 from zato.common.util.api import get_component_name, utcnow
@@ -70,8 +70,21 @@ has_debug = logger.isEnabledFor(DEBUG)
 # ################################################################################################################################
 # ################################################################################################################################
 
-soapenv11_namespace = 'http://schemas.xmlsoap.org/soap/envelope/'
-soapenv12_namespace = 'http://www.w3.org/2003/05/soap-envelope'
+# The envelope each SOAP version's legacy string-formatting path wraps the outgoing data in.
+# Templates are shared by every connection, so they live here rather than being rebuilt per wrapper.
+SOAP_Envelope_Template = {
+
+    SOAPVersion.V11: """<?xml version="1.0" encoding="utf-8"?>
+<s11:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:s11="%s">
+  {header}
+  <s11:Body>{data}</s11:Body>
+</s11:Envelope>""" % (Envelope_NS[SOAPVersion.V11],),
+
+    SOAPVersion.V12: """<?xml version="1.0" encoding="utf-8"?>
+<s12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:s12="%s">{header}
+  <s12:Body>{data}</s12:Body>
+</s12:Envelope>""" % (Envelope_NS[SOAPVersion.V12],),
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -215,42 +228,6 @@ class BaseHTTPSOAPWrapper:
 
         if self.needs_audit:
             self.audit_log = AuditLog(server.name)
-
-        self.soap = {}
-        self.soap['1.1'] = {}
-        self.soap['1.1']['content_type'] = 'text/xml; charset=utf-8'
-        self.soap['1.1']['message'] = """<?xml version="1.0" encoding="utf-8"?>
-<s11:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:s11="%s">
-  {header}
-  <s11:Body>{data}</s11:Body>
-</s11:Envelope>""" % (soapenv11_namespace,)
-
-        self.soap['1.1']['header_template'] = """<s11:Header xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" >
-          <wsse:Security>
-            <wsse:UsernameToken>
-              <wsse:Username>{Username}</wsse:Username>
-              <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">{Password}</wsse:Password>
-            </wsse:UsernameToken>
-          </wsse:Security>
-        </s11:Header>
-        """
-
-        self.soap['1.2'] = {}
-        self.soap['1.2']['content_type'] = 'application/soap+xml; charset=utf-8'
-        self.soap['1.2']['message'] = """<?xml version="1.0" encoding="utf-8"?>
-<s12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:s12="%s">{header}
-  <s12:Body>{data}</s12:Body>
-</s12:Envelope>""" % (soapenv12_namespace,)
-
-        self.soap['1.2']['header_template'] = """<s12:Header xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" >
-          <wsse:Security>
-            <wsse:UsernameToken>
-              <wsse:Username>{Username}</wsse:Username>
-              <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">{Password}</wsse:Password>
-            </wsse:UsernameToken>
-          </wsse:Security>
-        </s12:Header>
-        """
 
         self.set_address_data()
         self.set_auth()
@@ -703,7 +680,7 @@ class BaseHTTPSOAPWrapper:
 # ################################################################################################################################
 
     def _create_headers(self, cid:'str', user_headers:'strstrdict', now:'str'='') -> 'strstrdict':
-        headers = deepcopy(self.base_headers)
+        headers = dict(self.base_headers)
         headers.update({
             'X-Zato-CID': cid,
             'X-Zato-Component': self._component_name,
@@ -814,13 +791,13 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         """ Wraps the data in a SOAP-specific messages and adds the headers required.
         """
         needs_soap_wrapper = False
-        soap_config:'strstrdict' = self.soap[self.config['soap_version']]
+        soap_version = self.config['soap_version']
 
         # The idea here is that even though there usually won't be the Content-Type
         # header provided by the user, we shouldn't overwrite it if one has been
         # actually passed in.
         if not headers.get('Content-Type'):
-            headers['Content-Type'] = soap_config['content_type']
+            headers['Content-Type'] = SOAP_Content_Type[soap_version]
 
         # We do not need an envelope if the data already has one ..
         if isinstance(data, bytes):
@@ -836,7 +813,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                 needs_soap_wrapper = True
 
         if needs_soap_wrapper:
-            return soap_config['message'].format(header='', data=data), headers
+            return SOAP_Envelope_Template[soap_version].format(header='', data=data), headers
         else:
             return data, headers
 
@@ -1135,11 +1112,11 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         # Make sure such a file exists
         if not os.path.exists(item):
-            raise Exception('File to upload not found -> `%s`', item)
+            raise Exception(f'File to upload not found -> `{item}`')
 
         # Ensure that the path actually is a file
         if not os.path.isfile(item):
-            raise Exception('Path is not a file -> `%s`', item)
+            raise Exception(f'Path is not a file -> `{item}`')
 
         # Extract the file
         file_name = os.path.basename(item)
@@ -1218,8 +1195,10 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                     qs_path = ''
                 msg =  f'Error calling outgoing connection: {self.config["name"]} -> {response.zato_method}'
                 msg += f' {response.zato_address}{qs_path} -> {response.data}'
-                msg_log = msg + f' -> Request headers: {response.request.headers} -> Request body: {response.request.body}'
-                logger.info(msg_log)
+
+                # The request headers carry Authorization and API keys, and the body may carry
+                # credentials too, so neither of them goes to the log.
+                logger.info(msg)
                 raise BackendInvocationError(cid, msg, needs_msg=True)
 
             # .. extract the underlying data ..
@@ -1254,7 +1233,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
             # .. run our callback, if there is any ..
             if callback:
-                data = callback(data, cid=cid, id=id, model=model, callback=callback)
+                data = callback(data, cid=cid, model=model, callback=callback)
 
             # .. and return the data to our caller ..
             return data, response

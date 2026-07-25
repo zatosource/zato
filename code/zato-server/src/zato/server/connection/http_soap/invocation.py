@@ -151,7 +151,9 @@ def _soap_value_to_plain(value:'any_') -> 'any_':
         else:
             out = value._text
     elif isinstance(value, list):
-        out = [_soap_value_to_plain(item) for item in value]
+        out = []
+        for item in value:
+            out.append(_soap_value_to_plain(item))
     else:
         out = value
 

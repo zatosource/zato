@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from dataclasses import dataclass
+from logging import getLogger
 
 # lxml
 from lxml.etree import XMLSyntaxError
@@ -41,9 +42,18 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+logger = getLogger('zato')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # The suffix of the response element and of the reply's wsa:Action, both derived
 # from the request per the WS-Addressing default action pattern.
 _response_suffix = 'Response'
+
+# What a caller is told when its message does not parse - the parser's own text names
+# internal entities and offsets, so it goes to the log rather than back over the wire.
+_invalid_request_reason = 'Invalid SOAP request'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -119,7 +129,8 @@ def parse_soap_request(cid:'str', body:'bytes', content_type:'str', channel_item
         envelope_bytes, parts = parse_message(body, content_type)
         element = parse_envelope(envelope_bytes)
     except (SOAPException, XMLSyntaxError) as e:
-        raise BadRequest(cid, f'Invalid SOAP request -> {e}', needs_msg=True)
+        logger.warning('Could not parse SOAP request -> cid:`%s` -> %s', cid, e)
+        raise BadRequest(cid, _invalid_request_reason, needs_msg=True)
 
     # .. the version comes from the envelope's own namespace ..
     out.soap_version = get_version(element)
