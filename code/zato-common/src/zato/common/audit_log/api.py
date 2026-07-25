@@ -16,10 +16,10 @@ from time import monotonic
 from zato.common.audit_log.buffer import get_flush_max_size, get_flush_max_wait_ms, Env_Flush_Max_Size, \
     Env_Flush_Max_Wait_Ms, EventBuffer, PendingEvent
 from zato.common.audit_log.common import audit_db_file_name, derive_classification, event_attr_table, event_body_table, \
-    event_link_table, event_table, get_retention_days, metadata, Attr_Value_Max_Len, AuditBody, AuditClassification, \
-    AuditEvent, AuditLink, AuditOutcome, AuditSource, Env_Retention_Days
+    event_link_table, event_table, get_retention_days, get_source_env_suffix, metadata, Attr_Value_Max_Len, AuditBody, \
+    AuditClassification, AuditEvent, AuditLink, AuditOutcome, AuditSource, Env_Retention_Days, Env_Retention_Days_Prefix
 from zato.common.audit_log.retention import get_content_retention_days, register_prunability, run_retention, \
-    Env_Archive_Dir, Env_Content_Retention_Days
+    Env_Archive_Dir, Env_Content_Retention_Days, Env_Content_Retention_Days_Prefix
 from zato.common.db_env import Default_SSL, Default_SSL_Verify, Default_Type, EnvDBConfig, get_env_engine, \
     Type_MySQL, Type_Oracle, Type_PostgreSQL, Type_SQLite
 from zato.common.util.api import utcnow
@@ -51,8 +51,8 @@ if 0:
 __all__ = [
     'audit_db_file_name', 'derive_classification', 'event_attr_table', 'event_body_table', 'event_link_table',
     'event_table', 'get_audit_db_path', 'get_audit_engine', 'get_content_retention_days', 'get_retention_days',
-    'metadata', 'register_prunability', 'AuditBody', 'AuditClassification', 'AuditEvent', 'AuditLink', 'AuditLog',
-    'AuditOutcome', 'AuditSource', 'ModuleCtx', 'Retention_Days',
+    'get_source_env_suffix', 'metadata', 'register_prunability', 'AuditBody', 'AuditClassification', 'AuditEvent',
+    'AuditLink', 'AuditLog', 'AuditOutcome', 'AuditSource', 'ModuleCtx', 'Retention_Days',
 ]
 
 # ################################################################################################################################
@@ -75,10 +75,13 @@ class ModuleCtx:
     Env_SSL_Key_File  = 'Zato_Audit_Log_DB_SSL_Key_File'
     Env_SSL_Verify    = 'Zato_Audit_Log_DB_SSL_Verify'
 
-    # The environment variables overriding how long events and their content are kept
-    Env_Retention_Days         = Env_Retention_Days
-    Env_Content_Retention_Days = Env_Content_Retention_Days
-    Env_Archive_Dir            = Env_Archive_Dir
+    # The environment variables overriding how long events and their content are kept,
+    # process-wide and, with the source name appended, for one source alone
+    Env_Retention_Days                = Env_Retention_Days
+    Env_Content_Retention_Days        = Env_Content_Retention_Days
+    Env_Retention_Days_Prefix         = Env_Retention_Days_Prefix
+    Env_Content_Retention_Days_Prefix = Env_Content_Retention_Days_Prefix
+    Env_Archive_Dir                   = Env_Archive_Dir
 
     # The environment variables configuring the buffered writer
     Env_Flush_Max_Size    = Env_Flush_Max_Size

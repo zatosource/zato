@@ -181,9 +181,30 @@ def build_related(
 
 # ################################################################################################################################
 
-def split_related(body:'bytes', boundary:'str') -> 'anytuple':
+def _normalize_content_id(value:'str') -> 'str':
+    """ Returns a Content-ID without the angle brackets a header wraps it in and without the
+    cid: prefix a reference to it carries, so the two forms compare equal.
+    """
+    out = value.strip()
+
+    if out.startswith('<'):
+        out = out[1:-1]
+
+    if out.startswith('cid:'):
+        out = out[4:]
+
+    return out
+
+# ################################################################################################################################
+
+def split_related(body:'bytes', boundary:'str', start:'strnone'=None) -> 'anytuple':
     """ Splits a multipart/related body on its boundary. Returns the root document bytes
     and the list of attachment parts, each with its Content-ID and Content-Type filled in.
+
+    The start parameter names the Content-ID of the root part. RFC 2387 lets the root be any part
+    of the package, not necessarily the first, so without honouring start a compliant package whose
+    root comes second is read with an attachment as the root document. When start is absent the
+    first part is the root, which is what the specification says.
     """
     delimiter = b'--' + boundary.encode('ascii')
 
@@ -192,21 +213,54 @@ def split_related(body:'bytes', boundary:'str') -> 'anytuple':
     pieces = body.split(delimiter)
     raw_parts = pieces[1:-1]
 
-    root_data = b''
-    parts:'part_list' = []
+    if start:
+        root_content_id = _normalize_content_id(start)
+    else:
+        root_content_id = ''
 
-    for index, raw in enumerate(raw_parts):
+    root_data = b''
+    root_index = -1
+    parsed_parts = []
+
+    # Everything is read first, because which part is the root is only known once their
+    # Content-IDs have been seen.
+    for raw in raw_parts:
 
         # Each part before the closing boundary ends with the CRLF that precedes the next boundary.
         if raw.endswith(_crlf):
             raw = raw[:-2]
 
         headers, part_body = parse_mime_part(raw)
+        parsed_parts.append((headers, part_body))
 
-        # The first part carries the root document, all the others are attachments.
-        if index == 0:
-            root_data = part_body
+    for index, entry in enumerate(parsed_parts):
+        headers, part_body = entry
+
+        content_id = headers.get('content-id')
+
+        if content_id is None:
             continue
+
+        if _normalize_content_id(content_id) == root_content_id:
+            root_index = index
+            root_data = part_body
+            break
+
+    # No start parameter, or one naming a part that is not in the package - either way the first
+    # part is the root, since that is what an unqualified multipart/related means.
+    if root_index == -1:
+        root_index = 0
+        if parsed_parts:
+            root_data = parsed_parts[0][1]
+
+    parts:'part_list' = []
+
+    for index, entry in enumerate(parsed_parts):
+
+        if index == root_index:
+            continue
+
+        headers, part_body = entry
 
         part = Part()
         part.data = part_body
@@ -216,10 +270,7 @@ def split_related(body:'bytes', boundary:'str') -> 'anytuple':
             part.content_type = part_parameters['']
 
         if content_id := headers.get('content-id'):
-            content_id = content_id.strip()
-            if content_id.startswith('<'):
-                content_id = content_id[1:-1]
-            part.content_id = content_id
+            part.content_id = _normalize_content_id(content_id)
 
         parts.append(part)
 

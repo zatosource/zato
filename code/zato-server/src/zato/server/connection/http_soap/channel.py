@@ -13,7 +13,8 @@ import socket
 import struct
 from datetime import datetime as _datetime_class, timedelta as _timedelta, timezone as _timezone
 from email.utils import format_datetime as _format_datetime
-from http.client import INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, OK, TOO_MANY_REQUESTS
+from http.client import FORBIDDEN, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, OK, TOO_MANY_REQUESTS, \
+    UNAUTHORIZED
 from traceback import format_exc
 from typing import NamedTuple
 
@@ -29,7 +30,7 @@ from zato.common.exception import HTTP_RESPONSES, BackendInvocationError, Servic
 from zato.common.json_ import dumps
 from zato.common.marshal_.api import Model, ModelValidationError
 from zato.common.rate_limiting.common import current_time_us
-from zato.common.soap.common import SOAPVersion
+from zato.common.soap.common import SOAP_Action_Header, SOAPVersion
 from zato.common.soap.message import SOAPMessage
 from zato.common.typing_ import cast_
 from zato.common.util.api import as_bool, utcnow
@@ -123,6 +124,31 @@ _sec_def_key_prefix_map = {
 # channel-level limits are infrastructure protection and stay silent.
 _header_rate_limit_limit     = 'X-RateLimit-Limit'
 _header_rate_limit_remaining = 'X-RateLimit-Remaining'
+
+# The largest SOAP request body accepted before parsing begins. Parsing untrusted XML costs time
+# and memory proportional to the input, so an unbounded body is a way to exhaust a worker without
+# any credential at all. A channel that genuinely exchanges larger messages raises this through
+# its own max_body_size, which is an opaque attribute, so channels that never set it use this.
+SOAP_Max_Body_Size = 10 * 1024 * 1024
+
+# What a caller is told when its message is too large - the limit itself stays out of the message,
+# since it is not something an unauthenticated caller needs to know.
+_body_too_large_reason = 'SOAP request is too large'
+
+# The SOAPAction header as WSGI spells it.
+_wsgi_soap_action_header = 'HTTP_{}'.format(SOAP_Action_Header.upper())
+
+# The statuses a SOAP fault does not override. A fault's status normally belongs to its fault code,
+# but these four carry HTTP-level meaning of their own that a client acts on before it looks at any
+# body: 401 is what makes a WWW-Authenticate challenge mean anything, 403 and 404 say the resource
+# is not the caller's to reach, and 429 is what a client retries against. Replacing them with the
+# fault's 500 would leave the fault well-formed and the transport semantics lost.
+_soap_transport_status_codes = {
+    UNAUTHORIZED,
+    FORBIDDEN,
+    NOT_FOUND,
+    TOO_MANY_REQUESTS,
+}
 
 # ################################################################################################################################
 
@@ -480,6 +506,39 @@ class RequestDispatcher:
 
 # ################################################################################################################################
 
+    def _check_soap_body_size(self, cid:'str', channel_item:'anydict', payload:'bytes') -> 'None':
+        """ Refuses a SOAP request body larger than the channel accepts, before it is parsed.
+        """
+        max_body_size = channel_item.get('max_body_size')
+
+        # The limit is an opaque attribute, so a channel that never set one uses the default.
+        if not max_body_size:
+            max_body_size = SOAP_Max_Body_Size
+
+        body_size = len(payload)
+
+        if body_size > max_body_size:
+            logger.warning('SOAP request body of %s bytes is over the limit of %s -> cid:`%s`', body_size,
+                max_body_size, cid)
+            raise BadRequest(cid, _body_too_large_reason, needs_msg=True)
+
+# ################################################################################################################################
+
+    def _needs_soap_parse_before_auth(self, channel_item:'anydict') -> 'bool':
+        """ Says whether a SOAP channel's security definition needs the envelope parsed in order
+        to authenticate at all, which only WS-Security does - its credentials are in the message.
+        """
+        match_target = channel_item['match_target']
+        sec = self.url_data.url_sec[match_target] # type: ignore
+
+        if sec.sec_def == ZATO_NONE:
+            return False
+
+        out = sec.sec_def['sec_type'] == SEC_DEF_TYPE.WSS
+        return out
+
+# ################################################################################################################################
+
     def _authenticate_and_invoke(
         self,
         cid:'str',
@@ -501,22 +560,41 @@ class RequestDispatcher:
 
         post_data = self._extract_post_data(channel_item, wsgi_environ)
 
-        # A SOAP channel has its envelope parsed once, up front, so security enforcement
-        # and the service both work with the same element - what enforcement decrypts
-        # in place is what the service reads.
-        if channel_item['transport'] == _transport_soap:
+        is_soap = channel_item['transport'] == _transport_soap
+        soap_context = None
+
+        # A SOAP channel has its envelope parsed once, so security enforcement and the service
+        # both work with the same element - what enforcement decrypts in place is what the
+        # service reads.
+        if is_soap:
+
+            self._check_soap_body_size(cid, channel_item, payload)
 
             content_type = wsgi_environ.get('CONTENT_TYPE')
             if content_type is None:
                 content_type = ''
 
-            soap_context = parse_soap_request(cid, payload, content_type, channel_item)
-            wsgi_environ['zato.request.soap'] = soap_context
-        else:
-            soap_context = None
+            # SOAP 1.1 declares the action in a header of its own, which WSGI spells with a prefix.
+            soap_action_header = wsgi_environ.get(_wsgi_soap_action_header)
+
+            # WS-Security is the one definition type whose credentials are inside the envelope, so
+            # it is the only one that needs the parse to happen before authentication. Everything
+            # else authenticates from headers alone, and for those the parse waits until the caller
+            # has proven who it is - which keeps the XML parser out of reach of anonymous callers.
+            needs_parse_before_auth = self._needs_soap_parse_before_auth(channel_item)
+
+            if needs_parse_before_auth:
+                soap_context = parse_soap_request(cid, payload, content_type, channel_item, soap_action_header)
+                wsgi_environ['zato.request.soap'] = soap_context
 
         # .. this will raise an exception if credentials are invalid ..
         self._check_security(cid, meta, channel_item, wsgi_environ, payload, post_data, config_manager)
+
+        # .. an authenticated caller's envelope is parsed now ..
+        if is_soap:
+            if not needs_parse_before_auth:
+                soap_context = parse_soap_request(cid, payload, content_type, channel_item, soap_action_header)
+                wsgi_environ['zato.request.soap'] = soap_context
 
         # .. with security enforced, the operation element becomes the service's payload ..
         if soap_context:
@@ -827,10 +905,17 @@ class RequestDispatcher:
 
         self._log_dispatch_error(cid, e, err.status_code, _exc_formatted)
 
-        body, content_type = build_soap_fault_response(soap_version, e, self.default_error_message)
+        body, content_type, fault_status_code = build_soap_fault_response(soap_version, e, self.default_error_message)
+
+        # The fault code decides the status, except where the classifier already produced one whose
+        # HTTP meaning the caller needs.
+        if err.status_code in _soap_transport_status_codes:
+            status = err.status
+        else:
+            status = status_response[fault_status_code]
 
         wsgi_environ['zato.http.response.headers']['Content-Type'] = content_type
-        wsgi_environ['zato.http.response.status'] = err.status
+        wsgi_environ['zato.http.response.status'] = status
 
         out = body
         return out

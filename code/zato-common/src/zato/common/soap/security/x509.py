@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from os import urandom
 
@@ -20,14 +21,15 @@ from cryptography.hazmat.primitives.serialization import Encoding
 from lxml import etree
 
 # Zato
-from zato.common.soap.common import NS, SOAPSecurityException
+from zato.common.soap.common import as_soap_security_exception, NS, SOAPSecurityException
 from zato.common.soap.envelope import get_body, get_security_header
 from zato.common.typing_ import cast_
 from zato.common.util.xml_.constants import Algorithm, TokenType
-from zato.common.util.xml_.core import new_id, qname, to_timestamp, XMLSecurityException
+from zato.common.util.xml_.core import element_text, from_timestamp, new_id, qname, to_timestamp, xml_parser, XMLException, \
+    XMLSecurityException
 from zato.common.util.xml_.wssec import add_binary_security_token, add_element_reference, add_key_info_token_reference, \
-    compute_signature_value, extract_signer_chain, recover_content_key, validate_certificate_chain, verify_one_reference, \
-    verify_signature_value
+    build_id_index, compute_signature_value, extract_signer_chain, recover_content_key, validate_certificate_chain, \
+    verify_one_reference, verify_signature_value
 from zato.common.util.xml_.xmlsec import decode_base64, encode_base64
 
 # ################################################################################################################################
@@ -36,9 +38,10 @@ from zato.common.util.xml_.xmlsec import decode_base64, encode_base64
 if 0:
     from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
     from cryptography.x509 import Certificate
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anylist
     from zato.common.util.xml_.keystore import Keystore
     any_ = any_
+    anylist = anylist
     Certificate = Certificate
     RSAPublicKey = RSAPublicKey
 
@@ -49,6 +52,11 @@ _wsu_id = f'{{{NS.WSU}}}Id'
 
 # How long a wsu:Timestamp stays valid.
 Timestamp_TTL_Seconds = 300
+
+# How far apart the two peers' clocks may be before a message is judged to have been created in
+# the future or to have expired. Without a window every message from a peer whose clock runs a
+# second fast would be rejected, and with too generous a window an expired message stays usable.
+Clock_Skew_Seconds = 60
 
 # AES-128-GCM parameters for body encryption.
 _content_key_size_bytes = 16
@@ -66,6 +74,19 @@ _xenc_nsmap = {
     'xenc11': NS.XENC11,
     'ds':     NS.DS,
 }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=True)
+class VerifiedSignature:
+    """ What verifying a signature established. The elements are the ones whose digests were
+    recomputed and matched, which is what lets a caller check that the part of the message it
+    goes on to process is the part the signature actually covered.
+    """
+    certificate: 'any_'
+    body:        'any_'
+    elements:    'anylist' = field(default_factory=list)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -155,16 +176,74 @@ def sign(
 
 # ################################################################################################################################
 
-def verify(envelope:'any_', keystore:'Keystore') -> 'any_':
-    """ Verifies the WS-Security signature of an incoming envelope -
-    every reference digest, the signature value and the trust in the signer.
-    Returns the signer's certificate.
+def get_timestamp(envelope:'any_') -> 'any_':
+    """ Returns the wsu:Timestamp of the security header, or None when there is none.
     """
     security = get_security_header(envelope)
-    signature = security.find(qname(NS.DS, 'Signature'))
 
-    if signature is None:
+    out = security.find(qname(NS.WSU, 'Timestamp'))
+    return out
+
+# ################################################################################################################################
+
+def validate_timestamp(timestamp:'any_', skew_seconds:'int'=Clock_Skew_Seconds) -> 'None':
+    """ Checks that a wsu:Timestamp puts the message inside its validity window. Without this
+    a captured message replays forever, because nothing else on the inbound path is time-bounded.
+    Both Created and Expires are required - a message that declares no expiry cannot be said
+    to have not expired, so treating an absent Expires as "still valid" would defeat the check.
+    """
+    created_element = timestamp.find(qname(NS.WSU, 'Created'))
+    expires_element = timestamp.find(qname(NS.WSU, 'Expires'))
+
+    if created_element is None:
+        raise SOAPSecurityException('Timestamp has no Created')
+
+    if expires_element is None:
+        raise SOAPSecurityException('Timestamp has no Expires')
+
+    try:
+        created = from_timestamp(element_text(created_element))
+        expires = from_timestamp(element_text(expires_element))
+    except XMLException as e:
+        raise SOAPSecurityException(e.args[0]) from e
+
+    now = datetime.now(timezone.utc)
+    skew = timedelta(seconds=skew_seconds)
+
+    # The clocks of the two peers are never exactly aligned, so a message may legitimately look
+    # as though it was created slightly in the future. Beyond the skew window it is either a
+    # badly-configured clock or a message minted to stay valid for longer than it should.
+    if created > now + skew:
+        raise SOAPSecurityException('Message was created too far in the future')
+
+    if expires < now - skew:
+        raise SOAPSecurityException('Message has expired')
+
+    # An expiry before the creation is not a window at all, and the two checks above would both
+    # pass for a message whose Expires precedes its Created by less than the skew.
+    if expires < created:
+        raise SOAPSecurityException('Message expires before it was created')
+
+# ################################################################################################################################
+
+def verify(envelope:'any_', keystore:'Keystore', skew_seconds:'int'=Clock_Skew_Seconds) -> 'VerifiedSignature':
+    """ Verifies the WS-Security signature of an incoming envelope - every reference digest,
+    the signature value, the trust in the signer and the message's validity window. Returns
+    what was verified so the caller can check that what it goes on to process is covered.
+    """
+    security = get_security_header(envelope)
+    signatures = security.findall(qname(NS.DS, 'Signature'))
+
+    if not signatures:
         raise SOAPSecurityException('Message is not signed')
+
+    # Verifying the first signature and ignoring the rest lets a sender attach a second one that
+    # covers whatever it likes, and there is no sensible way to report which of several signatures
+    # a given element was covered by, so more than one is refused.
+    if len(signatures) > 1:
+        raise SOAPSecurityException(f'Security header carries {len(signatures)} signatures')
+
+    signature = signatures[0]
 
     # Any failure of the shared primitives surfaces as one SOAP security exception.
     try:
@@ -173,19 +252,51 @@ def verify(envelope:'any_', keystore:'Keystore') -> 'any_':
         chain = extract_signer_chain(signature, security)
         validate_certificate_chain(chain, keystore)
 
-        # .. then check that nothing signed was tampered with ..
+        # .. then check that nothing signed was tampered with. The index is built once for the
+        # whole document rather than per reference, and it is what makes a duplicated id an error
+        # instead of a choice of which element to verify.
+        id_index = build_id_index(envelope)
         signed_info = signature.find(qname(NS.DS, 'SignedInfo'))
 
+        verified_elements = []
+
         for reference in signed_info.findall(qname(NS.DS, 'Reference')):
-            verify_one_reference(reference, envelope, [])
+            element = verify_one_reference(reference, envelope, [], id_index)
+            if element is not None:
+                verified_elements.append(element)
 
         # .. and finally that the signature value itself is genuine.
         verify_signature_value(signature, chain)
 
     except XMLSecurityException as e:
-        raise SOAPSecurityException(e.args[0])
+        raise as_soap_security_exception(e) from e
 
-    out = chain[0]
+    body = get_body(envelope)
+    timestamp = get_timestamp(envelope)
+
+    # The sender's own SignedInfo says what the signature covers, so leaving the choice to the
+    # sender means a signature over the timestamp alone verifies while the body travels unprotected.
+    # Identity comparison is deliberate - an element that merely looks like the body is not it.
+    body_is_covered = False
+    timestamp_is_covered = False
+
+    for element in verified_elements:
+        if element is body:
+            body_is_covered = True
+        elif timestamp is not None and element is timestamp:
+            timestamp_is_covered = True
+
+    if not body_is_covered:
+        raise SOAPSecurityException('Signature does not cover the SOAP body')
+
+    if not timestamp_is_covered:
+        raise SOAPSecurityException('Signature does not cover a Timestamp')
+
+    # Only now, with the timestamp known to be covered by a signature we trust, is it worth
+    # reading - an unsigned timestamp says whatever the sender wants it to say.
+    validate_timestamp(cast_('any_', timestamp), skew_seconds)
+
+    out = VerifiedSignature(certificate=chain[0], body=body, elements=verified_elements)
     return out
 
 # ################################################################################################################################
@@ -279,7 +390,7 @@ def decrypt_body(envelope:'any_', keystore:'Keystore') -> 'None':
     try:
         content_key = recover_content_key(encrypted_key, keystore)
     except XMLSecurityException as e:
-        raise SOAPSecurityException(e.args[0])
+        raise as_soap_security_exception(e) from e
 
     body = get_body(envelope)
     encrypted_data = body.find(qname(NS.XENC, 'EncryptedData'))

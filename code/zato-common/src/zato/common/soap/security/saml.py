@@ -16,10 +16,13 @@ from cryptography.hazmat.primitives.serialization import Encoding
 from lxml import etree
 
 # Zato
-from zato.common.soap.common import NS, SOAPSecurityException
+from zato.common.crypto.api import is_string_equal
+from zato.common.soap.common import as_soap_security_exception, NS, SOAPSecurityException
 from zato.common.soap.envelope import get_security_header
+from zato.common.soap.security.replay import replay_cache
 from zato.common.util.xml_.constants import Algorithm, Transform
-from zato.common.util.xml_.core import new_id, qname, to_timestamp, xml_parser, XMLSecurityException
+from zato.common.util.xml_.core import element_text, from_timestamp, new_id, qname, to_timestamp, xml_parser, XMLException, \
+    XMLSecurityException
 from zato.common.util.xml_.token import parse_x509v3
 from zato.common.util.xml_.wssec import compute_signature_value, validate_certificate_chain, verify_signature_value
 from zato.common.util.xml_.xmlsec import decode_base64, digest_element, encode_base64
@@ -39,6 +42,14 @@ if 0:
 
 # How long an assertion stays valid.
 Assertion_TTL_Seconds = 300
+
+# How far apart the issuer's clock and ours may be before an assertion is judged to be outside
+# its validity window.
+Clock_Skew_Seconds = 60
+
+# What assertion ids are keyed by in the shared replay cache, so they cannot collide with the
+# UsernameToken nonces the same cache remembers.
+Assertion_Cache_Prefix = 'saml-assertion:'
 
 # The subject confirmation method of assertions vouched for by the sender.
 Confirmation_Sender_Vouches = 'urn:oasis:names:tc:SAML:2.0:cm:sender-vouches'
@@ -213,13 +224,19 @@ def _signer_chain(signature:'any_') -> 'any_':
 # ################################################################################################################################
 
 def verify_assertion(assertion:'any_', keystore:'Keystore') -> 'any_':
-    """ Verifies an assertion's enveloped signature - the reference digest, the signature
-    value and the trust in the signer. Returns the signer's certificate.
+    """ Verifies an assertion's enveloped signature - that the reference names this assertion,
+    the reference digest, the signature value and the trust in the signer. Returns the
+    signer's certificate.
     """
     signature = assertion.find(qname(NS.DS, 'Signature'))
 
     if signature is None:
         raise SOAPSecurityException('Assertion is not signed')
+
+    assertion_id = assertion.get('ID')
+
+    if not assertion_id:
+        raise SOAPSecurityException('Assertion has no ID')
 
     try:
         chain = _signer_chain(signature)
@@ -227,23 +244,158 @@ def verify_assertion(assertion:'any_', keystore:'Keystore') -> 'any_':
 
         # The declared digest must match the assertion digested with its signature removed.
         signed_info = signature.find(qname(NS.DS, 'SignedInfo'))
-        reference = signed_info.find(qname(NS.DS, 'Reference'))
+
+        references = signed_info.findall(qname(NS.DS, 'Reference'))
+
+        # A signature over an assertion covers exactly the assertion, so more than one reference
+        # means the signature covers something else as well and there is no telling what.
+        if len(references) != 1:
+            raise XMLSecurityException(f'Assertion signature has {len(references)} references')
+
+        reference = references[0]
+
+        # The digest is recomputed over this assertion regardless of what the reference names, so
+        # without this check a signature legitimately issued over some other assertion would
+        # verify here as long as its digest happened to match - and the URI is the only thing
+        # that says which assertion the issuer meant to sign.
+        uri = reference.get('URI')
+
+        if uri != f'#{assertion_id}':
+            raise XMLSecurityException(f'Assertion signature references `{uri}` rather than this assertion')
+
         digest_value_element = reference.find(qname(NS.DS, 'DigestValue'))
-        expected_digest = ''.join((digest_value_element.text or '').split())
+
+        if digest_value_element is None:
+            raise XMLSecurityException('Assertion signature reference has no DigestValue')
+
+        expected_digest = ''.join(element_text(digest_value_element).split())
 
         actual_digest = digest_element(_assertion_without_signature(assertion))
 
-        if actual_digest != expected_digest:
+        if not is_string_equal(actual_digest, expected_digest):
             raise XMLSecurityException('Assertion digest mismatch')
 
         # .. and the signature value itself must be genuine.
         verify_signature_value(signature, chain)
 
     except XMLSecurityException as e:
-        raise SOAPSecurityException(e.args[0])
+        raise as_soap_security_exception(e) from e
 
     out = chain[0]
     return out
+
+# ################################################################################################################################
+
+def _check_conditions_window(conditions:'any_', skew_seconds:'int') -> 'None':
+    """ Checks that an assertion's Conditions put the message inside the validity window the
+    issuer set. Both bounds are written on the emitting side, so an assertion that carries
+    neither is either not from this implementation or has had them stripped.
+    """
+    not_before_text = conditions.get('NotBefore')
+    not_on_or_after_text = conditions.get('NotOnOrAfter')
+
+    if not_before_text is None:
+        raise SOAPSecurityException('Assertion Conditions have no NotBefore')
+
+    if not_on_or_after_text is None:
+        raise SOAPSecurityException('Assertion Conditions have no NotOnOrAfter')
+
+    try:
+        not_before = from_timestamp(not_before_text)
+        not_on_or_after = from_timestamp(not_on_or_after_text)
+    except XMLException as e:
+        raise SOAPSecurityException(e.args[0]) from e
+
+    now = datetime.now(timezone.utc)
+    skew = timedelta(seconds=skew_seconds)
+
+    if now + skew < not_before:
+        raise SOAPSecurityException('Assertion is not yet valid')
+
+    # SAML Core makes NotOnOrAfter exclusive, so the instant itself is already outside the window.
+    if now - skew >= not_on_or_after:
+        raise SOAPSecurityException('Assertion has expired')
+
+# ################################################################################################################################
+
+def _check_audience(conditions:'any_', expected_audience:'strnone') -> 'None':
+    """ Checks an assertion's AudienceRestriction against the audience this service is known by.
+    An assertion minted for a different service is a valid assertion, just not one addressed
+    to us, and accepting it means accepting anything the subject obtained anywhere.
+    """
+    if not expected_audience:
+        return
+
+    restrictions = conditions.findall(qname(NS.SAML2, 'AudienceRestriction'))
+
+    if not restrictions:
+        raise SOAPSecurityException('Assertion carries no AudienceRestriction')
+
+    # SAML Core reads several restrictions as an intersection, so the expected audience has to
+    # appear in every one of them for the assertion to be addressed to us.
+    for restriction in restrictions:
+
+        audience_matches = False
+
+        for audience in restriction.findall(qname(NS.SAML2, 'Audience')):
+            if element_text(audience) == expected_audience:
+                audience_matches = True
+                break
+
+        if not audience_matches:
+            raise SOAPSecurityException('Assertion was not issued for this audience')
+
+# ################################################################################################################################
+
+def _check_confirmation_method(assertion:'any_') -> 'None':
+    """ Checks that the assertion's subject confirmation is the one this implementation honours.
+    Sender-vouches means the attesting party, not the subject, is the one that has to be
+    authenticated - a different method would put a different obligation on the receiver.
+    """
+    subject = assertion.find(qname(NS.SAML2, 'Subject'))
+
+    if subject is None:
+        raise SOAPSecurityException('Assertion has no Subject')
+
+    confirmations = subject.findall(qname(NS.SAML2, 'SubjectConfirmation'))
+
+    if not confirmations:
+        raise SOAPSecurityException('Assertion has no SubjectConfirmation')
+
+    for confirmation in confirmations:
+        if confirmation.get('Method') == Confirmation_Sender_Vouches:
+            return
+
+    raise SOAPSecurityException(f'Assertion carries no `{Confirmation_Sender_Vouches}` SubjectConfirmation')
+
+# ################################################################################################################################
+
+def validate_assertion_conditions(
+    assertion:'any_',
+    expected_audience:'strnone'=None,
+    skew_seconds:'int'=Clock_Skew_Seconds,
+    ) -> 'None':
+    """ Checks everything an assertion asserts about its own applicability - the validity window,
+    the audience it was minted for, the confirmation method and that it has not been used before.
+    The signature has to have been verified first, or every field read here is attacker-controlled.
+    """
+    assertion_id = assertion.get('ID')
+
+    if not assertion_id:
+        raise SOAPSecurityException('Assertion has no ID')
+
+    conditions = assertion.find(qname(NS.SAML2, 'Conditions'))
+
+    if conditions is None:
+        raise SOAPSecurityException('Assertion has no Conditions')
+
+    _check_conditions_window(conditions, skew_seconds)
+    _check_audience(conditions, expected_audience)
+    _check_confirmation_method(assertion)
+
+    # An assertion is a bearer credential for the length of its validity window, so it is accepted
+    # once and once only - this is what stops a captured message being replayed inside the window.
+    replay_cache.check_and_add(f'{Assertion_Cache_Prefix}{assertion_id}', 'Assertion')
 
 # ################################################################################################################################
 

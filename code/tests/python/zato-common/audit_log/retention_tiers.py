@@ -18,7 +18,8 @@ from sqlalchemy import func, select
 # Zato
 from common import delete_all_events
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, \
-    get_audit_engine, register_prunability, AuditEvent, AuditLink, AuditLog, AuditOutcome, AuditSource
+    get_audit_engine, get_source_env_suffix, register_prunability, AuditEvent, AuditLink, AuditLog, AuditOutcome, \
+    AuditSource, Env_Retention_Days_Prefix
 from zato.common.audit_log.retention import Env_Archive_Dir, Env_Content_Retention_Days
 from zato.common.util.api import utcnow
 
@@ -54,6 +55,13 @@ _content_expired_age_days = 12
 
 # Old enough for row deletion
 _row_expired_age_days = 45
+
+# How many days of rows the scenario keeps for the source it deletes rows of. The B2B sources keep
+# their evidence for years by default, so a scenario about deletion has to say what it means here.
+_x12_retention_days = 30
+
+# The environment variable holding the above
+_env_x12_retention_days = f'{Env_Retention_Days_Prefix}{get_source_env_suffix(AuditSource.X12)}'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -155,6 +163,7 @@ def run_retention_tiers_scenario() -> 'None':
     archive_dir = mkdtemp(prefix='zato-audit-log-archive-')
 
     os.environ[Env_Content_Retention_Days] = f'{_content_retention_days}'
+    os.environ[_env_x12_retention_days] = f'{_x12_retention_days}'
     os.environ[Env_Archive_Dir] = archive_dir
 
     try:
@@ -180,6 +189,11 @@ def run_retention_tiers_scenario() -> 'None':
             data='the payload of a row past the retention window',
             attrs={'control_number': '000000102'},
             bodies={'request': 'the body of a row past the retention window'})
+
+        # .. an AS2 event of exactly that age, which is evidence rather than diagnostics
+        # and is kept for years without anyone configuring anything ..
+        evidence_id = _insert_event_at(audit_log, _row_expired_age_days,
+            source=AuditSource.AS2, data='the receipt a dispute is settled with')
 
         # .. a recent event linked to the expired one - the link goes when its parent does ..
         recent_id = _insert_event_at(audit_log, 0, data='a recent payload retention never touches')
@@ -213,6 +227,9 @@ def run_retention_tiers_scenario() -> 'None':
         assert _count_rows(event_body_table, event_body_table.c.event_id, expired_id) == 0
         assert _count_rows(event_link_table, event_link_table.c.parent_event_id, expired_id) == 0
 
+        # .. the AS2 event of the same age is still there, because its source outlives the others ..
+        assert _get_event_row(evidence_id) is not None
+
         # .. the recent event was never touched ..
         row = _get_event_row(recent_id)
         assert row is not None
@@ -235,6 +252,7 @@ def run_retention_tiers_scenario() -> 'None':
 
     finally:
         _ = os.environ.pop(Env_Content_Retention_Days, None)
+        _ = os.environ.pop(_env_x12_retention_days, None)
         _ = os.environ.pop(Env_Archive_Dir, None)
         rmtree(archive_dir, ignore_errors=True)
 

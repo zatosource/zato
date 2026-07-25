@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from base64 import b64encode
+from datetime import datetime, timedelta, timezone
 from hashlib import sha1
 
 # lxml
@@ -17,7 +18,8 @@ from lxml import etree
 from zato.common.crypto.api import CryptoManager, is_string_equal
 from zato.common.soap.common import NS, SOAPSecurityException
 from zato.common.soap.envelope import get_security_header
-from zato.common.util.xml_.core import qname, utc_timestamp
+from zato.common.soap.security.replay import replay_cache
+from zato.common.util.xml_.core import element_text, from_timestamp, qname, utc_timestamp, XMLException
 from zato.common.util.xml_.xmlsec import decode_base64
 
 # ################################################################################################################################
@@ -38,6 +40,19 @@ _nonce_encoding = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-
 
 # How much randomness goes into a nonce.
 _nonce_size_bits = 128
+
+# How long a digest token stays usable after its wsu:Created. This is the window inside which a
+# captured token would be accepted if it were not for the nonce cache, so it is deliberately
+# short - the profile leaves the value to the receiver.
+Created_TTL_Seconds = 300
+
+# How far apart the two peers' clocks may be. Without a window a peer whose clock runs a second
+# fast would have every token rejected.
+Clock_Skew_Seconds = 60
+
+# What nonces are keyed by in the shared replay cache, so they cannot collide with the assertion
+# ids the same cache remembers.
+Nonce_Cache_Prefix = 'wsse-nonce:'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -89,9 +104,84 @@ def add_username_token(envelope:'any_', username:'str', password:'str', use_dige
 
 # ################################################################################################################################
 
-def verify_username_token(envelope:'any_', expected_username:'str', expected_password:'str') -> 'None':
-    """ Verifies the wsse:UsernameToken of an incoming message against the expected
-    credentials, handling both the clear-text and the digest form.
+def _verify_digest_password(
+    token:'any_',
+    password_received:'str',
+    expected_password:'str',
+    skew_seconds:'int',
+    ) -> 'bool':
+    """ Recomputes the digest of a UsernameToken from the message's own nonce and creation time
+    and reports whether it matches. The nonce and the time are what stop the digest being
+    replayable, so both are validated before the digest is believed.
+    """
+    nonce_element = token.find(qname(NS.WSSE, 'Nonce'))
+    created_element = token.find(qname(NS.WSU, 'Created'))
+
+    if nonce_element is None:
+        raise SOAPSecurityException('Digest token has no Nonce')
+
+    if created_element is None:
+        raise SOAPSecurityException('Digest token has no Created')
+
+    nonce_text = element_text(nonce_element)
+    created_text = element_text(created_element)
+
+    # An empty Nonce element carries None rather than text, which decode_base64 cannot take,
+    # so it is refused here as the security failure it is rather than surfacing as a TypeError.
+    if not nonce_text:
+        raise SOAPSecurityException('Digest token has an empty Nonce')
+
+    if not created_text:
+        raise SOAPSecurityException('Digest token has an empty Created')
+
+    try:
+        nonce = decode_base64(nonce_text)
+    except Exception:
+        raise SOAPSecurityException('Digest token has a malformed Nonce')
+
+    # The creation time is what bounds how long a captured token stays usable, and the nonce is
+    # what stops it being used twice inside that window. Neither works without the other, so both
+    # are checked before the digest itself is compared.
+    _check_created(created_text, skew_seconds)
+
+    replay_cache.check_and_add(f'{Nonce_Cache_Prefix}{nonce_text}', 'Nonce')
+
+    expected_digest = _compute_digest(nonce, created_text, expected_password)
+
+    out = is_string_equal(password_received, expected_digest)
+    return out
+
+# ################################################################################################################################
+
+def _check_created(created_text:'str', skew_seconds:'int') -> 'None':
+    """ Checks that a UsernameToken's wsu:Created puts it inside its validity window.
+    """
+    try:
+        created = from_timestamp(created_text)
+    except XMLException as e:
+        raise SOAPSecurityException(e.args[0]) from e
+
+    now = datetime.now(timezone.utc)
+    skew = timedelta(seconds=skew_seconds)
+
+    if created > now + skew:
+        raise SOAPSecurityException('UsernameToken was created too far in the future')
+
+    if created < now - timedelta(seconds=Created_TTL_Seconds) - skew:
+        raise SOAPSecurityException('UsernameToken is too old')
+
+# ################################################################################################################################
+
+def verify_username_token(
+    envelope:'any_',
+    expected_username:'str',
+    expected_password:'str',
+    use_digest:'bool'=False,
+    skew_seconds:'int'=Clock_Skew_Seconds,
+    ) -> 'None':
+    """ Verifies the wsse:UsernameToken of an incoming message against the expected credentials
+    in the form the definition configured - which of the two forms is in use is the server's
+    decision, not the caller's, or a client could always pick the weaker one.
     """
     security = get_security_header(envelope)
     token = security.find(qname(NS.WSSE, 'UsernameToken'))
@@ -109,38 +199,38 @@ def verify_username_token(envelope:'any_', expected_username:'str', expected_pas
     if password_element is None:
         raise SOAPSecurityException('UsernameToken has no Password')
 
-    password_type = password_element.get('Type', _password_text)
+    # The profile says an absent Type means clear text.
+    password_type = password_element.get('Type')
+    if password_type is None:
+        password_type = _password_text
+
+    if use_digest:
+        expected_type = _password_digest
+    else:
+        expected_type = _password_text
+
+    # Reading whichever type the message declares lets the client choose the scheme. A definition
+    # configured for digest would then accept a clear-text password, and one configured for clear
+    # text would accept a digest, which is a different secret from the one the operator set.
+    if password_type != expected_type:
+        raise SOAPSecurityException('UsernameToken password type is not the configured one')
 
     # An empty XML element carries None instead of text and this is external input,
     # so both credentials are normalized to empty strings for the comparisons below.
-    username_received = username_element.text
-    if username_received is None:
-        username_received = ''
+    username_received = element_text(username_element)
+    password_received = element_text(password_element)
 
-    password_received = password_element.text
-    if password_received is None:
-        password_received = ''
-
-    # The digest form recomputes the digest from the message's own nonce and timestamp ..
-    if password_type == _password_digest:
-        nonce_element = token.find(qname(NS.WSSE, 'Nonce'))
-        created_element = token.find(qname(NS.WSU, 'Created'))
-
-        if nonce_element is None or created_element is None:
-            raise SOAPSecurityException('Digest token has no Nonce or Created')
-
-        nonce = decode_base64(nonce_element.text)
-        expected_digest = _compute_digest(nonce, created_element.text, expected_password)
-
-        password_matches = is_string_equal(password_received, expected_digest)
-
-    # .. the clear-text form is a direct comparison.
+    if use_digest:
+        password_matches = _verify_digest_password(token, password_received, expected_password, skew_seconds)
     else:
         password_matches = is_string_equal(password_received, expected_password)
 
     username_matches = is_string_equal(username_received, expected_username)
 
-    if not (username_matches and password_matches):
+    if not username_matches:
+        raise SOAPSecurityException('Username or password does not match')
+
+    if not password_matches:
         raise SOAPSecurityException('Username or password does not match')
 
 # ################################################################################################################################

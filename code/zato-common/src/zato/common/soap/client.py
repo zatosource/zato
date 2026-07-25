@@ -18,26 +18,30 @@ import requests
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditOutcome
-from zato.common.soap.addressing import add_addressing, AddressingInfo, parse_addressing
-from zato.common.soap.common import Content_Type, SOAPVersion
+from zato.common.crypto.api import is_string_equal
+from zato.common.soap.addressing import add_addressing, AddressingInfo, Fault_Invalid_Addressing_Header, parse_addressing
+from zato.common.soap.common import Action_Parameter, Content_Type, NS, SOAP_Action_Header, SOAPAddressingException, \
+    SOAPException, SOAPVersion
 from zato.common.soap.ebxml import build_message as build_ebxml_message, encrypt_payload, parse_message_header, sign_payload
 from zato.common.soap.envelope import attach_body, build_envelope, get_header, get_security_header, parse_body, \
     parse_envelope, raise_for_fault, to_bytes
 from zato.common.soap.message import SOAPMessage, to_lexical
 from zato.common.soap.mtom import build_mtom, build_swa, parse_message, to_bytes_map
 from zato.common.soap.security.wss import apply_wss, keystore_from_config
+from zato.common.util.xml_.core import qname
 from zato.common.util.xml_.keystore import new_keystore
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, stranydict, strdictnone, strnone
+    from zato.common.typing_ import any_, anydict, anylist, anytuple, stranydict, strdictnone, strnone
     from zato.common.util.xml_.keystore import Keystore
     from zato.common.util.xml_.mime_ import part_list
     any_ = any_
     anydict = anydict
     anylist = anylist
+    anytuple = anytuple
     Keystore = Keystore
     part_list = part_list
     stranydict = stranydict
@@ -49,9 +53,9 @@ if 0:
 
 logger = getLogger('zato')
 
-# The SOAPAction is carried differently by each SOAP version - a header in 1.1,
-# a Content-Type parameter in 1.2.
-SOAP_Action_Header = 'SOAPAction'
+# The lowest position a body credential mapping may name. Positions are 1-based, matching what the
+# dashboard shows, so 1 means the operation's first child.
+Minimum_Credential_Position = 1
 
 # What body credentials look like when a connection enables them without spelling out
 # a mapping of its own - one element per credential, each named after what it carries.
@@ -151,14 +155,32 @@ class SOAPClient:
         positioned_rows = []
 
         for row in mappings:
-            if row.get('position'):
-                positioned_rows.append(row)
-            else:
-                default_rows.append(row)
+            position = row.get('position')
 
-        for offset, row in enumerate(default_rows):
-            element = self._new_credential_element(row, namespace)
-            operation.insert(offset, element)
+            if position is None:
+                default_rows.append(row)
+                continue
+
+            # A position is 1-based, so anything below 1 is a configuration error. Left unchecked it
+            # becomes a negative index, which lxml reads from the end of the children - a credential
+            # that was meant to lead the message ends up trailing it, in a place the receiving
+            # endpoint does not look, and the request fails authentication for no visible reason.
+            if position < Minimum_Credential_Position:
+                raise SOAPException(f'Body credential position must be at least '
+                    f'{Minimum_Credential_Position}, not `{position}` -> `{row["name"]}`')
+
+            positioned_rows.append(row)
+
+        # The default rows go in ahead of whatever the operation already carries. They are built
+        # first and inserted in one reversed pass at the front, so each one is placed without
+        # walking past the elements the previous ones were placed at.
+        default_elements = []
+
+        for row in default_rows:
+            default_elements.append(self._new_credential_element(row, namespace))
+
+        for element in reversed(default_elements):
+            operation.insert(0, element)
 
         positioned_rows.sort(key=itemgetter('position'))
 
@@ -210,9 +232,11 @@ class SOAPClient:
 
 # ################################################################################################################################
 
-    def _build_request(self, operation:'str', message:'SOAPMessage', soap_headers:'strdictnone'=None) -> 'any_':
+    def _build_request(self, operation:'str', message:'SOAPMessage', soap_headers:'strdictnone'=None) -> 'anytuple':
         """ Builds the request body bytes and their Content-Type from a message - applying
-        credential injection, custom headers, WS-Security, WS-Addressing and MTOM packaging as configured.
+        credential injection, custom headers, WS-Security, WS-Addressing and MTOM packaging as
+        configured. Returns the body, its Content-Type and the wsa:MessageID the request went out
+        under, which is None when the connection does not use WS-Addressing.
         """
         envelope = build_envelope(self.soap_version)
 
@@ -232,8 +256,11 @@ class SOAPClient:
         if self.security:
             apply_wss(envelope, self.security)
 
+        # The id the request went out under is what the reply has to relate to.
+        message_id = None
+
         if self.use_ws_addressing:
-            add_addressing(envelope, self._addressing_info())
+            message_id = add_addressing(envelope, self._addressing_info())
 
         envelope_bytes = to_bytes(envelope)
 
@@ -244,7 +271,7 @@ class SOAPClient:
             body = envelope_bytes
             content_type = self._request_content_type()
 
-        out = (body, content_type)
+        out = (body, content_type, message_id)
         return out
 
 # ################################################################################################################################
@@ -256,7 +283,7 @@ class SOAPClient:
         out = self._content_type()
 
         if self.soap_version == SOAPVersion.V12 and self.soap_action:
-            out = f'{out}; action="{self.soap_action}"'
+            out = f'{out}; {Action_Parameter}="{self.soap_action}"'
 
         return out
 
@@ -293,7 +320,7 @@ class SOAPClient:
 
 # ################################################################################################################################
 
-    def _parse_response(self, response:'any_') -> 'SOAPMessage':
+    def _parse_response(self, response:'any_', message_id:'strnone'=None) -> 'SOAPMessage':
         """ Parses a raw response into a SOAPMessage, resolving MTOM parts, raising SOAP faults,
         and exposing the WS-Addressing headers and attachments as reserved attributes.
         """
@@ -304,14 +331,40 @@ class SOAPClient:
         # A fault surfaces as the one SOAPFault exception before anything else is read.
         raise_for_fault(envelope)
 
+        addressing = parse_addressing(envelope)
+
+        if message_id:
+            self._check_relates_to(addressing, message_id)
+
         parts_map = to_bytes_map(parts) if parts else None
         body = parse_body(envelope, parts_map)
 
         # The addressing headers and attachments ride along as reserved attributes a service may read.
-        object.__setattr__(body, 'addressing', parse_addressing(envelope))
+        object.__setattr__(body, 'addressing', addressing)
         object.__setattr__(body, 'attachments', parts)
 
         return body
+
+# ################################################################################################################################
+
+    def _check_relates_to(self, addressing:'AddressingInfo', message_id:'str') -> 'None':
+        """ Checks that a reply relates to the request that was actually sent.
+
+        This is what makes an addressed exchange a correlated one. Without the check, a reply
+        belonging to some other request - a stale one still in flight, or one an attacker chose -
+        is accepted as the answer to this one, and the MessageID the request went to the trouble of
+        carrying does nothing at all. A reply carrying no RelatesTo is a peer that does not
+        implement the reply half of WS-Addressing, which is not something to fail over, so it is
+        accepted and left to the caller to notice.
+        """
+        if addressing.relates_to is None:
+            return
+
+        if not is_string_equal(addressing.relates_to, message_id):
+            raise SOAPAddressingException(
+                f'Reply relates to `{addressing.relates_to}` rather than to `{message_id}`',
+                [qname(NS.WSA, Fault_Invalid_Addressing_Header)],
+            )
 
 # ################################################################################################################################
 
@@ -349,7 +402,7 @@ class SOAPClient:
         """ Invokes a SOAP operation - builds the request from the message, sends it and returns
         the parsed response body. The operation name becomes the single child of soap:Body.
         """
-        body, content_type = self._build_request(operation, message, soap_headers)
+        body, content_type, message_id = self._build_request(operation, message, soap_headers)
 
         logger.info('SOAP out -> %s %s; len=%d', operation, self.address, len(body))
 
@@ -357,7 +410,7 @@ class SOAPClient:
 
         logger.info('SOAP out <- %s; %s len=%d', operation, response.status_code, len(response.content))
 
-        out = self._parse_response(response)
+        out = self._parse_response(response, message_id)
         return out
 
 # ################################################################################################################################

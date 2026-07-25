@@ -21,8 +21,8 @@ from zato.common.typing_ import optional
 from zato.common.util.xml_.core import qname, XMLSecurityException, XMLSecurityUnsupportedAlgorithm
 from zato.common.util.xml_.keystore import certificate_list
 from zato.common.util.xml_.mime_ import part_list
-from zato.common.util.xml_.wssec import extract_signer_chain, find_part, recover_content_key, validate_certificate_chain, \
-    verify_one_reference, verify_signature_value
+from zato.common.util.xml_.wssec import build_id_index, extract_signer_chain, find_part, recover_content_key, \
+    validate_certificate_chain, verify_one_reference, verify_signature_value
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -104,8 +104,12 @@ def verify_envelope(envelope:'any_', parts:'part_list', keystore:'Keystore') -> 
         signed_info = signature.find(signed_info_name)
         references = signed_info.findall(reference_name)
 
+        # The index is built once for the whole document rather than once per reference, and it is
+        # what makes a duplicated id an error instead of a choice of which element to verify.
+        id_index = build_id_index(envelope)
+
         for reference in references:
-            verify_one_reference(reference, envelope, parts)
+            _ = verify_one_reference(reference, envelope, parts, id_index)
             reference_copy = deepcopy(reference)
             out.signed_references.append(reference_copy)
 

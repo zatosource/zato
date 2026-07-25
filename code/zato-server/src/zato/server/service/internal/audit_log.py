@@ -79,7 +79,9 @@ class ResendAS2Message(AdminService):
             invoker = self.as2[connection_name]
             reconciler = MDNReconciler(self.server.name)
 
-            def send(payload:'str', filename:'strnone') -> 'SendResult':
+            # The payload is the bytes of a single document, or the list of payload items
+            # a multi-attachment delivery consists of - the connection takes either.
+            def send(payload:'any_', filename:'strnone') -> 'SendResult':
                 out = invoker.send(payload, filename, needs_audit=False)
                 return out
 
@@ -118,6 +120,7 @@ class ReprocessAS2Message(AdminService):
             'is_ok': False,
             'target_kind': '',
             'target_name': '',
+            'message_count': 0,
             'error': '',
         }
 
@@ -145,6 +148,10 @@ class ReprocessAS2Message(AdminService):
             report['is_ok'] = True
             report['target_kind'] = result.target_kind
             report['target_name'] = result.target_name
+
+            # A multi-attachment delivery routes one message per document, so the operator
+            # sees how many actually went out rather than assuming it was one.
+            report['message_count'] = len(result.messages)
 
         except Exception:
             report['error'] = format_exc()

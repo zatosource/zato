@@ -314,7 +314,10 @@ class TestSignedSAML:
         # Re-verify the signature from the recorded wire bytes, independently of our own code.
         _independent_saml_verify(soap_server.last_request['envelope'], parties.ca_certificate)
 
-    def test_unsigned_assertion_still_works(self, soap_server):
+    def test_unsigned_assertion_rejected(self, soap_server):
+        """ An unsigned assertion is trusted on its Issuer text alone, which the sender writes,
+        so it has to be refused however the channel is configured.
+        """
         channel = {'mode': Mode.SAML, 'issuer': 'urn:idp'}
         soap_server.configure('/xua-unsigned', enforce_wss=channel)
 
@@ -324,10 +327,11 @@ class TestSignedSAML:
             'security': {'mode': Mode.SAML, 'issuer': 'urn:idp', 'subject': 'user@example.gov'},
         }
         client = SOAPClient(config)
-        response = client.invoke('DocumentQuery', _cdc_message())
-        client.close()
 
-        assert response.DocumentQueryResponse.status == 'ok'
+        with pytest.raises(SOAPFault):
+            _ = client.invoke('DocumentQuery', _cdc_message())
+
+        client.close()
 
     def test_tampered_signed_assertion_rejected(self, soap_server, parties):
         channel = {'mode': Mode.SAML, 'issuer': 'urn:qhin:example', 'sign': True,

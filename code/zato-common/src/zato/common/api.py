@@ -268,6 +268,53 @@ class AS2:
         Rotation_Job_Interval_Hours = 1
         Rotation_Service            = 'zato.generic.connection.complete-as2-rotation'
 
+    class Async_MDN:
+        """ The delivery queue of asynchronous MDNs - a receipt the sender asked to have delivered
+        to a separate URL is persisted before the inbound POST is answered, so that a restart
+        resumes the delivery instead of losing the receipt.
+        """
+        # The interval job every server ensures exists, the service it invokes
+        # and how often it runs.
+        Job_Name             = 'zato.as2.async-mdn'
+        Job_Interval_Minutes = 1
+        Service              = 'zato.as2.async-mdn.deliver'
+
+        # How many receipts one drain of the queue delivers, so that a long outage
+        # does not turn the drain into a run over the whole queue at once.
+        Batch_Size = 100
+
+        # How many attempts one receipt gets before it is given up on.
+        Max_Attempts = 10
+
+        # How long the wait is after the first failed attempt and the ceiling it doubles up to,
+        # both in seconds - the ceiling keeps a receipt going out hourly for as long as
+        # the queue holds it.
+        First_Retry_Seconds = 30
+        Max_Retry_Seconds   = 3600
+
+        # After this many days an undelivered receipt is dropped from the queue - the sender
+        # has long since alerted on the missing MDN and resent the message itself.
+        Retention_Days = 7
+
+    class Resend:
+        """ The automatic resend job - a sent message whose MDN is overdue goes out again under
+        the same Message-ID, which is what makes the receiver's duplicate detection the thing
+        that decides whether the document is delivered once or twice.
+        """
+        # The interval job every server ensures exists, the service it invokes
+        # and how often it runs.
+        Job_Name             = 'zato.as2.resend'
+        Job_Interval_Minutes = 5
+        Service              = 'zato.as2.resend.run'
+
+        # How many messages one run resends, so that a partner outage does not turn one run
+        # into a burst of every message sent during it.
+        Batch_Size = 50
+
+        # How many times an overdue MDN triggers a resend for partners
+        # that do not set resend_max_retries.
+        Default_Max_Retries = 3
+
     class Alerting:
         """ The B2B alerting job - overdue acknowledgments, pending MDNs, expiring certificates
         and missing ship notices raise one email digest per run.

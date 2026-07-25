@@ -56,6 +56,10 @@ _b2b_alerting_service_impl_name = 'zato.server.service.internal.b2b.B2BAlerting'
 # The Python path of the service the generic alerting job invokes, created upfront the same way.
 _alerting_service_impl_name = 'zato.server.service.internal.alerting.AlertingRun'
 
+# The Python paths of the two services the AS2 reliability jobs invoke, created upfront the same way.
+_as2_async_mdn_service_impl_name = 'zato.server.service.internal.as2.DeliverAsyncMDNs'
+_as2_resend_service_impl_name = 'zato.server.service.internal.as2.ResendOverdueMessages'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -100,6 +104,81 @@ def ensure_as2_rotation_job_exists(session:'any_', cluster_id:'int') -> 'bool':
     session.add(interval)
 
     return True
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _ensure_interval_job_exists(
+    session:'any_',
+    cluster_id:'int',
+    job_name:'str',
+    service_name:'str',
+    service_impl_name:'str',
+    minutes:'int',
+    ) -> 'bool':
+    """ Checks if the given minute-interval job exists, creates it if not.
+    Returns True if created, False if already existed.
+    """
+
+    existing = session.query(Job).\
+        filter(Job.name==job_name).\
+        filter(Job.cluster_id==cluster_id).\
+        first()
+
+    if existing:
+        return False
+
+    cluster = session.query(Cluster).\
+        filter(Cluster.id==cluster_id).\
+        one()
+
+    service = session.query(Service).\
+        filter(Service.name==service_name).\
+        filter(Service.cluster_id==cluster_id).\
+        first()
+
+    # On a first-ever start the service is not in ODB yet, so its row is created here
+    # and the deployment sync will find it already in place.
+    if not service:
+        service = Service(None, service_name, True, service_impl_name, True, cluster)
+        session.add(service)
+        session.flush()
+
+    # The start date is only the anchor the interval counts from.
+    start_date = datetime.now(timezone.utc)
+    start_date = start_date.replace(tzinfo=None)
+
+    job = Job(None, job_name, True, SCHEDULER.JOB_TYPE.INTERVAL_BASED, start_date, cluster=cluster, service=service)
+    interval = IntervalBasedJob(None, job, minutes=minutes)
+
+    session.add(job)
+    session.add(interval)
+
+    return True
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def ensure_as2_async_mdn_job_exists(session:'any_', cluster_id:'int') -> 'bool':
+    """ Checks if the interval job that drains the asynchronous MDN queue exists, creates it if not.
+    Returns True if created, False if already existed.
+    """
+    out = _ensure_interval_job_exists(session, cluster_id, AS2.Async_MDN.Job_Name, AS2.Async_MDN.Service,
+        _as2_async_mdn_service_impl_name, AS2.Async_MDN.Job_Interval_Minutes)
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def ensure_as2_resend_job_exists(session:'any_', cluster_id:'int') -> 'bool':
+    """ Checks if the interval job that resends messages with an overdue MDN exists, creates it
+    if not. Returns True if created, False if already existed.
+    """
+    out = _ensure_interval_job_exists(session, cluster_id, AS2.Resend.Job_Name, AS2.Resend.Service,
+        _as2_resend_service_impl_name, AS2.Resend.Job_Interval_Minutes)
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

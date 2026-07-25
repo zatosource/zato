@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from functools import lru_cache
 from json import dumps, loads
 
 # jsonata-python
@@ -34,6 +35,12 @@ if 0:
 _invocation = HTTP_SOAP.Invocation
 _health_check = HTTP_SOAP.HealthCheck
 
+# How many compiled JSONata expressions and parsed row sets are kept. Both are keyed by
+# configuration text rather than by anything a request carries, so the number of distinct keys is
+# the number of configured connections - these limits are a ceiling, not a working size.
+Compiled_Expression_Cache_Size = 1024
+Parsed_Rows_Cache_Size = 1024
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -51,10 +58,24 @@ def validate_xpath(expression:'str') -> 'None':
 
 # ################################################################################################################################
 
+@lru_cache(maxsize=Compiled_Expression_Cache_Size)
+def _compile_jsonata(expression:'str') -> 'Jsonata':
+    """ Compiles a JSONata expression, reusing the compiled form across calls.
+
+    Compilation is a parse of the expression's own syntax and its result depends on nothing but the
+    expression text, so recompiling on every invocation buys nothing. Expressions come from
+    connection configuration rather than from request data, which is what makes the cache bounded in
+    practice - the size limit is there for the case where that stops being true.
+    """
+    out = Jsonata(expression)
+    return out
+
+# ################################################################################################################################
+
 def evaluate_jsonata(expression:'str', data:'any_') -> 'any_':
     """ Evaluates a JSONata expression against the given data.
     """
-    compiled = Jsonata(expression)
+    compiled = _compile_jsonata(expression)
 
     out = compiled.evaluate(data)
     return out
@@ -92,13 +113,27 @@ def evaluate_xpath(expression:'str', xml_text:'str | bytes') -> 'any_':
 # ################################################################################################################################
 # ################################################################################################################################
 
+@lru_cache(maxsize=Parsed_Rows_Cache_Size)
+def _parse_param_rows(text:'str') -> 'dictlist':
+    """ The cached half of parse_param_rows - see there for why the result is copied.
+    """
+    out = loads(text)
+    return out
+
+# ################################################################################################################################
+
 def parse_param_rows(text:'str') -> 'dictlist':
     """ Parses the JSON rows of request parameters - each row is a dict of key, value and mode.
+
+    The parse is cached on the stored JSON, which is connection configuration and so changes only
+    when a definition is edited, rather than being redone on every invocation. What comes back is a
+    shallow copy of the cached list, so a caller that appends to or reorders the rows it was given
+    cannot reach into the cache and change what every later call sees.
     """
     if not text:
         return []
 
-    out = loads(text)
+    out = list(_parse_param_rows(text))
     return out
 
 # ################################################################################################################################

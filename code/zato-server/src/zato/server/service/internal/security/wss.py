@@ -16,6 +16,7 @@ from zato.common.api import query_parameters, SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, WSSecurity
 from zato.common.odb.query import wss_list
+from zato.common.soap.security.wss import Mode
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import Boolean
 from zato.server.service.internal import AdminService, ChangePasswordBase
@@ -43,6 +44,44 @@ _mode_fields = (
     # SAML - the assertion fields.
     '-issuer', '-subject', '-audience',
 )
+
+# What the operator is told about a definition that could never verify an incoming signature.
+_no_trust_material_warning = 'WS-Security definition `%s` has neither trust anchors nor a peer certificate, ' \
+    'so it cannot be used to verify incoming signatures - channels using it will refuse every signed message'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def has_trust_material(input:'any_') -> 'bool':
+    """ Says whether a definition could verify an incoming signature at all.
+
+    The signer's certificate arrives inside the message being verified, so without either trust
+    anchors or a pinned peer certificate there is nothing to check it against. Verification refuses
+    that outright at request time - this is what lets the operator be told about it at save time.
+
+    It cannot be a hard failure here, because one definition serves both directions: the same
+    `sign` flag means "sign what we send" on an outgoing connection and "verify what we receive"
+    on a channel, and an outgoing connection that only signs genuinely needs no trust material.
+    Rejecting the definition would therefore refuse a correct outgoing configuration.
+    """
+    mode = input.mode
+
+    # UsernameToken definitions verify no signatures, so trust material does not apply to them.
+    if mode == Mode.UsernameToken:
+        return True
+
+    # An X.509 definition that only encrypts verifies nothing either.
+    if mode == Mode.X509:
+        if not input.get('sign'):
+            return True
+
+    if input.get('trust_anchors'):
+        return True
+
+    if input.get('peer_certificate'):
+        return True
+
+    return False
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -84,6 +123,9 @@ class Create(AdminService):
 
         input = self.request.input
         input.password = uuid4().hex
+
+        if not has_trust_material(input):
+            self.logger.warning(_no_trust_material_warning, input.name)
 
         cluster_id = input.get('cluster_id') or self.server.cluster_id
 
@@ -142,6 +184,9 @@ class Edit(AdminService):
         input = self.request.input
         input_id = input.get('id')
         cluster_id = input.get('cluster_id') or self.server.cluster_id
+
+        if not has_trust_material(input):
+            self.logger.warning(_no_trust_material_warning, input.name)
 
         with closing(self.odb.session()) as session: # type: ignore
             try:

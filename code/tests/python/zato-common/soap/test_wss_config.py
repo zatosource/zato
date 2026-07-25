@@ -6,6 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from datetime import datetime, timedelta, timezone
+
 # lxml
 from lxml import etree
 
@@ -16,8 +19,9 @@ import pytest
 from zato.common.soap.common import NS, SOAPSecurityException, SOAPVersion
 from zato.common.soap.envelope import attach_body, build_envelope, get_body, parse_body, to_bytes
 from zato.common.soap.message import SOAPMessage
+from zato.common.soap.security.saml import Assertion_TTL_Seconds, sign_assertion
 from zato.common.soap.security.wss import apply_wss, enforce_wss, keystore_from_config, Mode
-from zato.common.util.xml_.core import qname
+from zato.common.util.xml_.core import qname, to_timestamp
 
 # ################################################################################################################################
 
@@ -80,6 +84,73 @@ def _receiver_x509_config(parties, sign, encrypt):
     }
 
     return out
+
+# ################################################################################################################################
+
+def _sender_saml_config(parties, issuer='urn:qhin:example', audience=None):
+    """ The config dict of an outgoing connection's SAML definition - an XUA-style assertion
+    signed with our own key.
+    """
+    out = {
+        'mode': Mode.SAML,
+        'issuer': issuer,
+        'subject': 'CN=Dr Smith,O=Example Hospital',
+        'sign': True,
+        'signing_key': private_key_pem_path(parties.sender.signing_key),
+        'signing_certificate_chain': certificate_pem_path(parties.sender.signing_certificate),
+        'attributes': {
+            'urn:oasis:names:tc:xspa:1.0:subject:organization': 'Example Hospital',
+            'urn:oasis:names:tc:xacml:2.0:subject:role': '224608005',
+        },
+    }
+
+    if audience:
+        out['audience'] = audience
+
+    return out
+
+# ################################################################################################################################
+
+def _receiver_saml_config(parties, issuer='urn:qhin:example', audience=None):
+    """ The config dict of a channel's SAML definition - the issuer it expects and the CA the
+    issuer's signing certificate has to chain to.
+    """
+    out = {
+        'mode': Mode.SAML,
+        'issuer': issuer,
+        'trust_anchors': certificate_pem_path(parties.ca_certificate),
+    }
+
+    if audience:
+        out['audience'] = audience
+
+    return out
+
+# ################################################################################################################################
+
+def _reissue_assertion_window(assertion, parties, seconds_ago):
+    """ Moves an assertion's validity window into the past and re-signs it, which is what an
+    issuer with a badly-set clock produces and what a captured assertion looks like once its
+    window has closed.
+    """
+    now = datetime.now(timezone.utc)
+    not_before = now - timedelta(seconds=seconds_ago)
+    not_on_or_after = not_before + timedelta(seconds=Assertion_TTL_Seconds)
+
+    conditions = assertion.find(qname(NS.SAML2, 'Conditions'))
+    conditions.set('NotBefore', to_timestamp(not_before))
+    conditions.set('NotOnOrAfter', to_timestamp(not_on_or_after))
+
+    # The old signature covered the old window, so it has to go before the new one is computed.
+    signature = assertion.find(qname(NS.DS, 'Signature'))
+    assertion.remove(signature)
+
+    keystore = keystore_from_config({
+        'signing_key': private_key_pem_path(parties.sender.signing_key),
+        'signing_certificate_chain': certificate_pem_path(parties.sender.signing_certificate),
+    })
+
+    _ = sign_assertion(assertion, keystore)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -258,18 +329,9 @@ class TestSAMLMode:
     """ The SAML mode - XUA-style assertions with attributes and an audience.
     """
 
-    def test_roundtrip_with_attributes_and_audience(self):
-        sender_config = {
-            'mode': Mode.SAML,
-            'issuer': 'urn:qhin:example',
-            'subject': 'CN=Dr Smith,O=Example Hospital',
-            'audience': 'urn:qhin:other',
-            'attributes': {
-                'urn:oasis:names:tc:xspa:1.0:subject:organization': 'Example Hospital',
-                'urn:oasis:names:tc:xacml:2.0:subject:role': '224608005',
-            },
-        }
-        channel_config = {'mode': Mode.SAML, 'issuer': 'urn:qhin:example'}
+    def test_roundtrip_with_attributes_and_audience(self, parties):
+        sender_config = _sender_saml_config(parties, audience='urn:qhin:other')
+        channel_config = _receiver_saml_config(parties, audience='urn:qhin:other')
 
         envelope = _sample_envelope()
         apply_wss(envelope, sender_config)
@@ -286,9 +348,9 @@ class TestSAMLMode:
         audience = received.find(f'.//{qname(NS.SAML2, "Audience")}')
         assert audience.text == 'urn:qhin:other'
 
-    def test_wrong_issuer_is_rejected(self):
-        sender_config = {'mode': Mode.SAML, 'issuer': 'urn:idp:untrusted', 'subject': 'user@example.gov'}
-        channel_config = {'mode': Mode.SAML, 'issuer': 'urn:qhin:example'}
+    def test_wrong_issuer_is_rejected(self, parties):
+        sender_config = _sender_saml_config(parties, issuer='urn:idp:untrusted')
+        channel_config = _receiver_saml_config(parties)
 
         envelope = _sample_envelope()
         apply_wss(envelope, sender_config)
@@ -296,13 +358,88 @@ class TestSAMLMode:
         with pytest.raises(SOAPSecurityException):
             enforce_wss(_reparse(envelope), channel_config)
 
-    def test_missing_assertion_is_rejected(self):
-        channel_config = {'mode': Mode.SAML, 'issuer': 'urn:qhin:example'}
+    def test_missing_assertion_is_rejected(self, parties):
+        channel_config = _receiver_saml_config(parties)
 
         envelope = _sample_envelope()
 
         with pytest.raises(SOAPSecurityException):
             enforce_wss(envelope, channel_config)
+
+    def test_unsigned_assertion_is_rejected(self, parties):
+        """ The Issuer is a string the sender writes, so an unsigned assertion proves nothing
+        and has to be refused however the channel is configured.
+        """
+        sender_config = _sender_saml_config(parties)
+        del sender_config['sign']
+
+        channel_config = _receiver_saml_config(parties)
+
+        envelope = _sample_envelope()
+        apply_wss(envelope, sender_config)
+
+        with pytest.raises(SOAPSecurityException):
+            enforce_wss(_reparse(envelope), channel_config)
+
+    def test_assertion_for_another_audience_is_rejected(self, parties):
+        """ An assertion minted for a different service is valid, just not addressed to us.
+        """
+        sender_config = _sender_saml_config(parties, audience='urn:qhin:somebody-else')
+        channel_config = _receiver_saml_config(parties, audience='urn:qhin:us')
+
+        envelope = _sample_envelope()
+        apply_wss(envelope, sender_config)
+
+        with pytest.raises(SOAPSecurityException):
+            enforce_wss(_reparse(envelope), channel_config)
+
+    def test_assertion_without_audience_restriction_is_rejected(self, parties):
+        """ A channel that names an audience will not take an assertion that restricts none.
+        """
+        sender_config = _sender_saml_config(parties)
+        channel_config = _receiver_saml_config(parties, audience='urn:qhin:us')
+
+        envelope = _sample_envelope()
+        apply_wss(envelope, sender_config)
+
+        with pytest.raises(SOAPSecurityException):
+            enforce_wss(_reparse(envelope), channel_config)
+
+    def test_expired_assertion_is_rejected(self, parties):
+        """ An assertion whose validity window has closed is a captured credential.
+        """
+        sender_config = _sender_saml_config(parties)
+        channel_config = _receiver_saml_config(parties)
+
+        envelope = _sample_envelope()
+        apply_wss(envelope, sender_config)
+
+        # Move the window into the past, after signing, so what fails is the expiry rather than
+        # the signature - Conditions are attributes on an element the signature does cover, so
+        # the assertion is re-signed over its new shape.
+        received = _reparse(envelope)
+        assertion = received.find(f'.//{qname(NS.SAML2, "Assertion")}')
+        _reissue_assertion_window(assertion, parties, seconds_ago=Assertion_TTL_Seconds * 10)
+
+        with pytest.raises(SOAPSecurityException):
+            enforce_wss(received, channel_config)
+
+    def test_replayed_assertion_is_rejected(self, parties):
+        """ An assertion is a bearer credential for the length of its window, so it is accepted
+        once and once only.
+        """
+        sender_config = _sender_saml_config(parties)
+        channel_config = _receiver_saml_config(parties)
+
+        envelope = _sample_envelope()
+        apply_wss(envelope, sender_config)
+
+        wire = to_bytes(envelope)
+
+        enforce_wss(etree.fromstring(wire), channel_config)
+
+        with pytest.raises(SOAPSecurityException):
+            enforce_wss(etree.fromstring(wire), channel_config)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -12,18 +12,20 @@ from base64 import b64encode
 from unittest.mock import MagicMock
 
 # lxml
-from lxml.etree import tostring as etree_tostring
+from lxml.etree import SubElement, tostring as etree_tostring
 
 # Zato
 from zato.common.api import URL_TYPE
-from zato.common.exception import BadRequest, NotFound
+from zato.common.exception import BadRequest, NotFound, Unauthorized
 from zato.common.soap.addressing import add_addressing, AddressingInfo
-from zato.common.soap.common import Content_Type, SOAPVersion
-from zato.common.soap.envelope import attach_body, build_envelope, parse_body, parse_envelope, to_bytes
+from zato.common.soap.common import Content_Type, Envelope_NS, SOAPMustUnderstandException, SOAPVersion
+from zato.common.soap.envelope import attach_body, build_envelope, get_header, parse_body, parse_envelope, \
+    set_must_understand, to_bytes
 from zato.common.soap.message import SOAPMessage
 from zato.common.soap.mtom import build_mtom, parse_message, to_bytes_map
 from zato.common.soap.security.saml import add_assertion, new_assertion
 from zato.common.soap.security.wss import Mode
+from zato.common.util.xml_.core import qname
 from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler
 from zato.server.connection.http_soap.channel_soap import build_soap_fault_response, build_soap_response, \
     parse_soap_request, resolve_soap_payload
@@ -40,6 +42,14 @@ if 0:
 _test_cid = 'zcid-test-0001'
 
 _test_operation = 'submitSingleMessage'
+
+# A namespace belonging to no specification this node implements, so a mandatory header block
+# in it is one the node must refuse rather than ignore.
+_Unknown_Header_NS = 'urn:zato:test:unknown-header'
+
+# A role this node does not play, so a block addressed to it is somebody else's to understand.
+_Other_Role = 'urn:zato:test:some-other-role'
+
 _test_hl7_message = 'MSH|^~\\&|MYAPP|MYFAC|IIS|STATE|20260115||VXU^V04^VXU_V04|CTRL-0001|P|2.5.1'
 _test_facility = 'FL0001'
 
@@ -73,14 +83,34 @@ def _make_request_message() -> 'SOAPMessage':
 
 # ################################################################################################################################
 
-def _make_envelope_bytes(version:'str', addressing:'AddressingInfo | None'=None) -> 'bytes':
-    """ Builds the wire bytes of a request envelope of the given version.
+def _make_envelope_bytes(
+    version:'str',
+    addressing:'AddressingInfo | None'=None,
+    header_block:'strnone'=None,
+    must_understand:'bool'=True,
+    role:'strnone'=None,
+) -> 'bytes':
+    """ Builds the wire bytes of a request envelope of the given version, optionally carrying one
+    extra header block in the given namespace.
     """
     envelope = build_envelope(version)
     _ = attach_body(envelope, _make_request_message(), _test_operation)
 
     if addressing:
         add_addressing(envelope, addressing)
+
+    if header_block:
+        header = get_header(envelope)
+        block = SubElement(header, qname(header_block, 'Block'))
+
+        if must_understand:
+            set_must_understand(block, version)
+
+        if role:
+            if version == SOAPVersion.V11:
+                block.set(qname(Envelope_NS[version], 'actor'), role)
+            else:
+                block.set(qname(Envelope_NS[version], 'role'), role)
 
     out = to_bytes(envelope)
     return out
@@ -144,6 +174,60 @@ class ParseSOAPRequestTestCase(unittest.TestCase):
 
         self.assertEqual(context.addressing.action, 'urn:cdc:iisb:2011:submitSingleMessage')
         self.assertEqual(context.addressing.message_id, 'urn:uuid:11112222-3333-4444-5555-666677778888')
+
+# ################################################################################################################################
+
+    def test_unknown_mandatory_header_is_refused(self) -> 'None':
+
+        for soap_version in (SOAPVersion.V11, SOAPVersion.V12):
+            with self.subTest(soap_version=soap_version):
+
+                body = _make_envelope_bytes(soap_version, header_block=_Unknown_Header_NS)
+
+                with self.assertRaises(SOAPMustUnderstandException):
+                    _ = parse_soap_request(_test_cid, body, Content_Type[soap_version], _make_channel_item())
+
+# ################################################################################################################################
+
+    def test_unknown_optional_header_passes_through(self) -> 'None':
+
+        # A block this node does not implement is only fatal when the sender marked it mandatory -
+        # an optional one travels through untouched, which is what makes extensibility work.
+        for soap_version in (SOAPVersion.V11, SOAPVersion.V12):
+            with self.subTest(soap_version=soap_version):
+
+                body = _make_envelope_bytes(soap_version, header_block=_Unknown_Header_NS, must_understand=False)
+                context = parse_soap_request(_test_cid, body, Content_Type[soap_version], _make_channel_item())
+
+                self.assertEqual(context.soap_version, soap_version)
+
+# ################################################################################################################################
+
+    def test_mandatory_header_for_another_role_passes_through(self) -> 'None':
+
+        # A mandatory block addressed to a role this node does not play is not this node's to
+        # understand - it is for some later node, so it goes through rather than being refused.
+        for soap_version in (SOAPVersion.V11, SOAPVersion.V12):
+            with self.subTest(soap_version=soap_version):
+
+                body = _make_envelope_bytes(soap_version, header_block=_Unknown_Header_NS, role=_Other_Role)
+                context = parse_soap_request(_test_cid, body, Content_Type[soap_version], _make_channel_item())
+
+                self.assertEqual(context.soap_version, soap_version)
+
+# ################################################################################################################################
+
+    def test_mandatory_known_header_is_accepted(self) -> 'None':
+
+        # WS-Addressing is a specification this node implements, so its blocks are understood -
+        # and they are emitted with mustUnderstand set, which is what makes this the case that
+        # would break every addressed message if understanding were decided per element name.
+        addressing = AddressingInfo()
+        addressing.action = 'urn:cdc:iisb:2011:submitSingleMessage'
+        addressing.message_id = 'urn:uuid:11112222-3333-4444-5555-666677778888'
+
+        context = _parse_context(SOAPVersion.V12, addressing)
+        self.assertEqual(context.addressing.action, 'urn:cdc:iisb:2011:submitSingleMessage')
 
 # ################################################################################################################################
 
@@ -370,29 +454,35 @@ class BuildSOAPFaultTestCase(unittest.TestCase):
     def test_client_error_becomes_sender_fault_11(self) -> 'None':
         exception = BadRequest(_test_cid, 'facilityID is required')
 
-        body, content_type = build_soap_fault_response(SOAPVersion.V11, exception, 'Internal error')
+        body, content_type, status_code = build_soap_fault_response(SOAPVersion.V11, exception, 'Internal error')
 
         self.assertEqual(content_type, Content_Type[SOAPVersion.V11])
         self.assertIn(b'soap:Client', body)
         self.assertIn(b'facilityID is required', body)
+
+        # Every 1.1 fault leaves on 500, whatever the fault code says.
+        self.assertEqual(status_code, 500)
 
 # ################################################################################################################################
 
     def test_client_error_becomes_sender_fault_12(self) -> 'None':
         exception = NotFound(_test_cid, 'No such document')
 
-        body, content_type = build_soap_fault_response(SOAPVersion.V12, exception, 'Internal error')
+        body, content_type, status_code = build_soap_fault_response(SOAPVersion.V12, exception, 'Internal error')
 
         self.assertEqual(content_type, Content_Type[SOAPVersion.V12])
         self.assertIn(b'soap:Sender', body)
         self.assertIn(b'No such document', body)
+
+        # 1.2 puts a Sender fault on 400 - the request was what was at fault.
+        self.assertEqual(status_code, 400)
 
 # ################################################################################################################################
 
     def test_server_error_becomes_receiver_fault_with_default_message(self) -> 'None':
         exception = Exception('A stack trace would show module paths and line numbers')
 
-        body, _ = build_soap_fault_response(SOAPVersion.V11, exception, 'Internal error')
+        body, _, _ = build_soap_fault_response(SOAPVersion.V11, exception, 'Internal error')
 
         self.assertIn(b'soap:Server', body)
         self.assertIn(b'Internal error', body)
@@ -405,10 +495,32 @@ class BuildSOAPFaultTestCase(unittest.TestCase):
     def test_server_error_receiver_fault_12(self) -> 'None':
         exception = Exception('Database connection details')
 
-        body, _ = build_soap_fault_response(SOAPVersion.V12, exception, 'Internal error')
+        body, _, status_code = build_soap_fault_response(SOAPVersion.V12, exception, 'Internal error')
 
         self.assertIn(b'soap:Receiver', body)
         self.assertNotIn(b'Database connection details', body)
+
+        # A Receiver fault stays on 500 in 1.2 as well - it was not the caller's fault.
+        self.assertEqual(status_code, 500)
+
+# ################################################################################################################################
+
+    def test_not_understood_becomes_must_understand_fault(self) -> 'None':
+        exception = SOAPMustUnderstandException('Mandatory header blocks not understood -> {urn:x}Block')
+
+        for soap_version in (SOAPVersion.V11, SOAPVersion.V12):
+            with self.subTest(soap_version=soap_version):
+
+                body, _, status_code = build_soap_fault_response(soap_version, exception, 'Internal error')
+
+                self.assertIn(b'soap:MustUnderstand', body)
+
+                # MustUnderstand is on 500 in both versions.
+                self.assertEqual(status_code, 500)
+
+                # The block's own name stays in the log rather than telling an unauthenticated
+                # caller which specifications this node speaks.
+                self.assertNotIn(b'urn:x', body)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -495,8 +607,37 @@ class DispatchErrorSOAPTestCase(unittest.TestCase):
         result = self._dispatch_error(BadRequest(_test_cid, 'facilityID is required'), wsgi_environ)
 
         self.assertIn(b'soap:Client', result)
-        self.assertIn('400', wsgi_environ['zato.http.response.status'])
         self.assertEqual(wsgi_environ['zato.http.response.headers']['Content-Type'], Content_Type[SOAPVersion.V11])
+
+        # The exception is a 400 one, but a 1.1 fault leaves on 500 whatever raised it - the status
+        # belongs to the fault, and a 1.1 client reads anything else as a transport failure.
+        self.assertIn('500', wsgi_environ['zato.http.response.status'])
+
+# ################################################################################################################################
+
+    def test_client_error_returns_sender_fault_12(self) -> 'None':
+        wsgi_environ:'anydict' = {'zato.http.response.headers': {}}
+
+        result = self._dispatch_error(BadRequest(_test_cid, 'facilityID is required'), wsgi_environ, SOAPVersion.V12)
+
+        self.assertIn(b'soap:Sender', result)
+
+        # 1.2 does put a Sender fault on 400.
+        self.assertIn('400', wsgi_environ['zato.http.response.status'])
+
+# ################################################################################################################################
+
+    def test_unauthorized_keeps_its_own_status(self) -> 'None':
+        wsgi_environ:'anydict' = {'zato.http.response.headers': {}}
+
+        result = self._dispatch_error(Unauthorized(_test_cid, 'Invalid credentials', 'Basic realm="Zato"'), wsgi_environ)
+
+        self.assertIn(b'soap:Client', result)
+
+        # The fault code would say 500, but a WWW-Authenticate challenge only means anything on a
+        # 401, so the transport status wins here.
+        self.assertIn('401', wsgi_environ['zato.http.response.status'])
+        self.assertEqual(wsgi_environ['zato.http.response.headers']['WWW-Authenticate'], 'Basic realm="Zato"')
 
 # ################################################################################################################################
 

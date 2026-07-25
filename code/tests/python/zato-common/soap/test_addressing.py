@@ -9,9 +9,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # lxml
 from lxml import etree
 
+# pytest
+import pytest
+
 # Zato
 from zato.common.soap.addressing import add_addressing, AddressingInfo, Anonymous_Address, new_message_id, parse_addressing
-from zato.common.soap.common import Must_Understand_Value, NS, SOAPVersion
+from zato.common.soap.common import Must_Understand_Value, NS, SOAPAddressingException, SOAPVersion
 from zato.common.soap.envelope import build_envelope, get_header, to_bytes
 from zato.common.util.xml_.core import qname
 
@@ -44,7 +47,7 @@ class TestAddressing:
         info.to = 'https://qhin.example.gov/xca/query'
         info.reply_to = Anonymous_Address
 
-        add_addressing(envelope, info)
+        _ = add_addressing(envelope, info)
 
         parsed = parse_addressing(_reparse(envelope))
 
@@ -58,14 +61,85 @@ class TestAddressing:
         info = AddressingInfo()
         info.action = _action_xca_query
 
-        add_addressing(envelope, info)
+        message_id = add_addressing(envelope, info)
 
         parsed = parse_addressing(_reparse(envelope))
 
         assert parsed.message_id.startswith('urn:uuid:')
 
-        # The generated id is also written back into the input info.
-        assert parsed.message_id == info.message_id
+        # The generated id comes back to the caller ..
+        assert parsed.message_id == message_id
+
+        # .. and the caller's own info is left alone, so reusing it for a second message
+        # does not send that one under the first message's id.
+        assert info.message_id is None
+
+    def test_reused_info_gets_a_fresh_message_id(self):
+        info = AddressingInfo()
+        info.action = _action_xca_query
+
+        first = add_addressing(build_envelope(SOAPVersion.V12), info)
+        second = add_addressing(build_envelope(SOAPVersion.V12), info)
+
+        assert first != second
+
+    def test_action_is_required(self):
+        envelope = build_envelope(SOAPVersion.V12)
+
+        with pytest.raises(SOAPAddressingException):
+            add_addressing(envelope, AddressingInfo())
+
+    def test_addressing_is_not_added_twice(self):
+        envelope = build_envelope(SOAPVersion.V12)
+
+        info = AddressingInfo()
+        info.action = _action_xca_query
+
+        _ = add_addressing(envelope, info)
+
+        with pytest.raises(SOAPAddressingException):
+            add_addressing(envelope, info)
+
+    def test_duplicate_header_is_refused(self):
+        envelope = build_envelope(SOAPVersion.V12)
+
+        info = AddressingInfo()
+        info.action = _action_xca_query
+
+        _ = add_addressing(envelope, info)
+
+        # A second Action lets a sender show one action to whatever inspects the message
+        # and have the receiver dispatch on the other.
+        header = get_header(envelope)
+        duplicate = etree.SubElement(header, qname(NS.WSA, 'Action'))
+        duplicate.text = 'urn:ihe:iti:2007:SomethingElse'
+
+        with pytest.raises(SOAPAddressingException):
+            parse_addressing(_reparse(envelope))
+
+    def test_reply_endpoint_without_message_id_is_refused(self):
+        envelope = build_envelope(SOAPVersion.V12)
+        header = get_header(envelope)
+
+        action = etree.SubElement(header, qname(NS.WSA, 'Action'))
+        action.text = _action_xca_query
+
+        reply_to = etree.SubElement(header, qname(NS.WSA, 'ReplyTo'))
+        address = etree.SubElement(reply_to, qname(NS.WSA, 'Address'))
+        address.text = Anonymous_Address
+
+        with pytest.raises(SOAPAddressingException):
+            parse_addressing(_reparse(envelope))
+
+    def test_addressing_without_action_is_refused(self):
+        envelope = build_envelope(SOAPVersion.V12)
+        header = get_header(envelope)
+
+        message_id = etree.SubElement(header, qname(NS.WSA, 'MessageID'))
+        message_id.text = new_message_id()
+
+        with pytest.raises(SOAPAddressingException):
+            parse_addressing(_reparse(envelope))
 
     def test_relates_to_on_responses(self):
         request_message_id = new_message_id()
@@ -76,7 +150,7 @@ class TestAddressing:
         info.action = 'urn:ihe:iti:2007:CrossGatewayQueryResponse'
         info.relates_to = request_message_id
 
-        add_addressing(envelope, info)
+        _ = add_addressing(envelope, info)
 
         parsed = parse_addressing(_reparse(envelope))
 
@@ -88,7 +162,7 @@ class TestAddressing:
         info = AddressingInfo()
         info.action = _action_xca_query
 
-        add_addressing(envelope, info)
+        _ = add_addressing(envelope, info)
 
         header = get_header(envelope)
         action = header.find(qname(NS.WSA, 'Action'))

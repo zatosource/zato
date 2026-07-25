@@ -44,6 +44,13 @@ _Action_Register_Payment = 'urn:example-erp/codeunit/PaymentEntryService:Registe
 _Action_Rest_Invoice = 'urn:example-erp/codeunit/InvoiceEntryService'
 _Action_Payment_Status = 'urn:example-erp/page/PaymentStatus:GetPaymentStatus'
 
+def _quoted_action(action:'str') -> 'str':
+    """ Returns a SOAPAction value as it goes on the wire - SOAP 1.1 defines the header
+    as a quoted string.
+    """
+    out = f'"{action}"'
+    return out
+
 # The static bodies the ERP answers with - consumed by the services as raw strings
 _Raw_Header_Result = b'<CreateInvoiceHeader_Result xmlns="urn:example-erp/codeunit/InvoiceEntryService">' \
     b'<return_value>INV-2026-0001</return_value></CreateInvoiceHeader_Result>'
@@ -214,7 +221,7 @@ class TestSOAPBillingLive:
         record = soap_test_server.last_request
 
         assert record['path'] == _Path_Header_Main
-        assert record['headers']['SOAPAction'] == _Action_Create_Header
+        assert record['headers']['SOAPAction'] == _quoted_action(_Action_Create_Header)
         assert record['headers']['Content-Type'].startswith('text/xml')
 
         # The basic-auth credentials from the connection's security definition
@@ -247,7 +254,7 @@ class TestSOAPBillingLive:
         record = soap_test_server.last_request
 
         assert record['path'] == _Path_Header_Branch
-        assert record['headers']['SOAPAction'] == _Action_Create_Header
+        assert record['headers']['SOAPAction'] == _quoted_action(_Action_Create_Header)
         assert record['raw_body'] == _build_header_envelope(_Invoice_Request)
 
 # ################################################################################################################################
@@ -271,7 +278,7 @@ class TestSOAPBillingLive:
 
         # This operation shares the endpoint but carries its own action
         assert record['path'] == _Path_Header_Main
-        assert record['headers']['SOAPAction'] == _Action_Create_Lines
+        assert record['headers']['SOAPAction'] == _quoted_action(_Action_Create_Lines)
 
         # The CDATA section arrived intact, with the markup characters unescaped inside it
         description = _Lines_Request['description']
@@ -303,7 +310,7 @@ class TestSOAPBillingLive:
         record = soap_test_server_tls.last_request
 
         assert record['path'] == _Path_Payment
-        assert record['headers']['SOAPAction'] == _Action_Register_Payment
+        assert record['headers']['SOAPAction'] == _quoted_action(_Action_Register_Payment)
         assert b'<pay:paymentNo>PAY-2026-0031</pay:paymentNo>' in record['raw_body']
 
 # ################################################################################################################################
