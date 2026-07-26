@@ -26,7 +26,6 @@ from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index,
 from zato.common.api import GENERIC, generic_attrs, Groups, HL7, SEC_DEF_TYPE, ZATO_NONE
 from zato.common.hl7.mllp.fields import resolve_max_msg_size
 from zato.common.hl7.mllp.settings import describe_bounds_violations
-from zato.common.json_internal import dumps
 from zato.common.model.hl7 import HL7MLLPChannelConfigObject
 
 # ################################################################################################################################
@@ -160,7 +159,7 @@ class _CreateEdit(CreateEdit):
         """ Refuses a channel asking for more room or more time than the listener it runs on has,
         since a channel's values tune what the listener already allows.
         """
-        prefix = self.form_prefix or ''
+        prefix = self.form_prefix
         post_data = self.req.POST
 
         max_msg_size = int(post_data[f'{prefix}max_msg_size'])
@@ -181,7 +180,7 @@ class _CreateEdit(CreateEdit):
         """ Returns the id of the mTLS definition the channel accepts messages under, zero when
         the channel accepts a connection whatever certificate it was made with.
         """
-        raw_value = get_security_id_from_select(self.req.POST, self.form_prefix or '', field_name='security_id')
+        raw_value = get_security_id_from_select(self.req.POST, self.form_prefix, field_name='security_id')
 
         # The select reports its empty choice as a marker rather than as an id
         if raw_value in ('', None, ZATO_NONE):
@@ -234,11 +233,11 @@ class _CreateEdit(CreateEdit):
 
         # .. extract security ID from the select widget ..
         security_id = get_security_id_from_select(
-            self.req.POST, self.form_prefix or '', field_name='rest_security_id')
+            self.req.POST, self.form_prefix, field_name='rest_security_id')
 
         # .. extract security groups from the full-page editor's checkbox list ..
         security_groups = get_security_groups_from_checkbox_list(
-            self.req.POST, self.form_prefix or '', field_name_prefix='mllp_security_group_checkbox_')
+            self.req.POST, self.form_prefix, field_name_prefix='mllp_security_group_checkbox_')
 
         # .. with two or more security definitions picked in the wizard,
         # all of them arrive in this list and a security group is created
@@ -252,7 +251,7 @@ class _CreateEdit(CreateEdit):
             security_groups.append(group_id)
             security_id = ZATO_NONE
 
-        prefix = self.form_prefix or ''
+        prefix = self.form_prefix
 
         out = {
             'cluster_id': self.cluster_id,
@@ -344,7 +343,7 @@ class _CreateEdit(CreateEdit):
         """ Brings the backing REST channel in line with what the REST bridge toggle says
         and returns the id the MLLP channel is to be saved with.
         """
-        prefix = self.form_prefix or ''
+        prefix = self.form_prefix
         use_rest = bool(self.req.POST.get(prefix + 'use_rest'))
         mllp_name = self.req.POST[prefix + 'name']
 
@@ -379,7 +378,7 @@ class _CreateEdit(CreateEdit):
     def post_process_return_data(self, return_data:'dict') -> 'dict':
         """ Reports the state of the REST bridge back to the page that saved the channel.
         """
-        prefix = self.form_prefix or ''
+        prefix = self.form_prefix
 
         return_data['rest_channel_id'] = self.input_dict['rest_channel_id']
         return_data['use_rest'] = bool(self.req.POST.get(prefix + 'use_rest'))
@@ -426,7 +425,7 @@ def editor_create(req:'any_') -> 'TemplateResponse':
         'form': CreateForm(req=req, security_list=security_list, mtls_security_list=mtls_security_list),
         'item_name': '',
         'item_id': '',
-        'item_json': 'null',
+        'item': None,
     }
 
     out = TemplateResponse(req, _Editor_Template, return_data)
@@ -482,13 +481,21 @@ class EditorEdit(Index):
         else:
             raise Exception(f'HL7 MLLP channel with id `{item_id}` not found')
 
-        # .. serialize it for the client-side populate call, including only the attributes actually set ..
+        # .. serialize it for the client-side populate call, including only the attributes actually
+        # .. set, since the list view only puts a field on an item where the service reported one ..
         item_dict = {}
 
         for name in chain(self.output_required, self.output_optional):
-            value = getattr(item, name, None)
-            if value is not None:
-                item_dict[name] = value
+
+            if not hasattr(item, name):
+                continue
+
+            value = getattr(item, name)
+
+            if value is None:
+                continue
+
+            item_dict[name] = value
 
         # .. and hand everything over to the editor template.
         security_list = self.get_sec_def_list(SEC_DEF_TYPE.BASIC_AUTH)
@@ -501,7 +508,7 @@ class EditorEdit(Index):
                 prefix='edit', req=self.req, security_list=security_list, mtls_security_list=mtls_security_list),
             'item_name': item_dict['name'],
             'item_id': item_dict['id'],
-            'item_json': dumps(item_dict),
+            'item': item_dict,
         }
 
         return out
@@ -611,10 +618,13 @@ def invoke_channel(req:'any_', id:'str') -> 'JsonResponse':
 # ################################################################################################################################
 # ################################################################################################################################
 
-@method_allowed('GET')
+@method_allowed('POST')
 def import_demo_config(req:'any_') -> 'HttpResponse':
     """ Runs the HL7 demo import on the server - the demo connections, the alert
     rules, the seeded week of audit history and the live traffic burst.
+
+    It creates all of that, so it is a POST and is covered by the cross-site request
+    checks that a GET would sit outside of.
     """
     response = req.zato.client.invoke('zato.server.invoker', {'func_name': 'import_demo_hl7'})
 

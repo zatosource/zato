@@ -45,7 +45,8 @@ $.fn.zato.channel.hl7.mllp.import_demo_config = function() {
 
     $.ajax({
         url: import_url,
-        method: 'GET',
+        method: 'POST',
+        headers: {'X-CSRFToken': $.cookie('csrftoken')},
         success: function() {
             $('#import-spinner').remove();
             window.location.reload();

@@ -14,6 +14,7 @@ from traceback import format_exc
 # Zato
 from zato.common.audit_log.api import AuditLog
 from zato.common.hl7.audit import audit_ack_received, audit_message_sent, get_wire_attrs, ACKStatus
+from zato.common.hl7.mllp.ack import AckResult
 from zato.common.hl7.mllp.client import HL7MLLPClient
 from zato.common.hl7.mllp.dedup import extract_control_id
 from zato.common.hl7.mllp.fields import Outconn_Defaults, Outconn_Int_Names
@@ -27,7 +28,12 @@ from zato.server.connection.queue import Wrapper
 
 if 0:
     from zato.common.ext.bunch import Bunch
+    from zato.common.typing_ import any_
     from zato.server.base.parallel import ParallelServer
+
+    any_ = any_
+    Bunch = Bunch
+    ParallelServer = ParallelServer
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -56,35 +62,35 @@ outconn_int_config_keys = Outconn_Int_Names
 class _HL7MLLPConnection:
     """ Wraps an HL7MLLPClient instance for use with the connection pool.
     """
-    def __init__(self, config:'object', audit_log:'AuditLog | None' = None) -> 'None':
+    def __init__(self, config:'Bunch', audit_log:'AuditLog | None' = None) -> 'None':
 
         # What the audit events are filed under and where they say the message went -
         # the name is only read when auditing is on, because offline tests build
         # minimal configs without one.
         self.audit_log = audit_log
-        self.address = config.address # type: ignore[union-attr]
+        self.address = config.address
 
         if audit_log:
-            self.name = config.name # type: ignore[union-attr]
+            self.name = config.name
         else:
             self.name = ''
 
-        host, port_string = parse_address(config.address) # type: ignore[union-attr]
+        host, port_string = parse_address(config.address)
         port = int(port_string)
 
-        start_sequence = hex_sequence_to_bytes(config.start_seq) # type: ignore[union-attr]
-        end_sequence   = hex_sequence_to_bytes(config.end_seq) # type: ignore[union-attr]
+        start_sequence = hex_sequence_to_bytes(config.start_seq)
+        end_sequence   = hex_sequence_to_bytes(config.end_seq)
 
         # Config recv_timeout is in milliseconds, the client expects seconds
-        receive_timeout = config.recv_timeout / 1000.0 # type: ignore[union-attr]
+        receive_timeout = config.recv_timeout / _ms_per_second
 
         # TLS turns on when a CA bundle is configured - the client then always verifies
         # the server against it, and a cert/key pair, if also configured, enables mTLS.
-        if config.tls_ca_path: # type: ignore[union-attr]
+        if config.tls_ca_path:
             ssl_context = build_client_ssl_context(
-                ca_file=config.tls_ca_path, # type: ignore[union-attr]
-                cert_file=config.tls_cert_path, # type: ignore[union-attr]
-                key_file=config.tls_key_path, # type: ignore[union-attr]
+                ca_file=config.tls_ca_path,
+                cert_file=config.tls_cert_path,
+                key_file=config.tls_key_path,
             )
         else:
             ssl_context = None
@@ -95,13 +101,13 @@ class _HL7MLLPConnection:
             start_sequence,
             end_sequence,
             receive_timeout=receive_timeout,
-            max_message_size=config.max_msg_size, # type: ignore[union-attr]
-            read_buffer_size=config.read_buffer_size, # type: ignore[union-attr]
-            should_log_messages=config.should_log_messages, # type: ignore[union-attr]
+            max_message_size=config.max_msg_size,
+            read_buffer_size=config.read_buffer_size,
+            should_log_messages=config.should_log_messages,
             ssl_context=ssl_context,
         )
 
-    def invoke(self, data:'object', *, needs_audit:'bool'=True) -> 'object':
+    def invoke(self, data:'bytes | str | any_', *, needs_audit:'bool'=True) -> 'AckResult':
         """ Sends data and returns an AckResult. The input may be ER7 text, raw bytes
         or a parsed message object, e.g. when a service forwards the parsed input
         its channel gave it. A resubmit turns needs_audit off because it records
@@ -115,7 +121,7 @@ class _HL7MLLPConnection:
         elif isinstance(data, str):
             message_text = data
         else:
-            message_text = data.to_er7() # type: ignore[attr-defined]
+            message_text = data.to_er7()
 
         # .. and the wire itself carries bytes.
         data = message_text.encode('utf-8')

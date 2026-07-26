@@ -22,16 +22,16 @@ from mllp_live_util import announce_sender, end_sequence, perf_log, sample_adt_a
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Step 13 - Sequential throughput
+# Sequential throughput
 _sequential_message_count           = 10_000
 _sequential_throughput_threshold    = 500
 
-# Step 14 - Concurrent throughput
+# Concurrent throughput
 _concurrent_thread_count            = 10
 _concurrent_messages_per_thread     = 1_000
 _concurrent_throughput_threshold    = 1_000
 
-# Step 14 - Large message sizes and counts
+# Large message sizes and counts
 _large_message_count_per_size       = 100
 _large_message_size_1kb             = 1_000
 _large_message_size_10kb            = 10_000
@@ -39,11 +39,11 @@ _large_message_size_100kb           = 100_000
 _large_message_size_1mb             = 1_000_000
 _bytes_per_megabyte                 = 1_000_000
 
-# Step 14 - New connection per message
+# New connection per message
 _new_connection_message_count       = 1_000
 _new_connection_throughput_threshold = 200
 
-# Step 14 - Persistent connection
+# Persistent connection
 _persistent_message_count           = 10_000
 _persistent_throughput_threshold    = 2_000
 
@@ -89,7 +89,7 @@ def _send_one(port:'int', message:'bytes') -> 'None':
 
 # ################################################################################################################################
 # ################################################################################################################################
-# Step 13 - Sequential throughput
+# Sequential throughput
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -122,7 +122,7 @@ class TestSequentialThroughput:
 
 # ################################################################################################################################
 # ################################################################################################################################
-# Step 14 - Concurrent, large, churn, persistent
+# Concurrent, large, churn, persistent
 # ################################################################################################################################
 # ################################################################################################################################
 

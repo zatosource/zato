@@ -112,17 +112,21 @@ $.fn.zato.outgoing.hl7.mllp.data_table.new_row = function(item, data, include_tr
     let is_active = item.is_active == true;
     let cluster_id = $(document).getUrlParam('cluster');
 
+    // Everything a user typed reaches this table as text and is placed into markup being built
+    // as a string, so it goes through here on the way in
+    let escape = $.fn.zato.escape_html;
+
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
 
     // 1
-    row += String.format('<td>{0}</td>', item.name);
+    row += String.format('<td>{0}</td>', escape(item.name));
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
-    row += String.format('<td>{0}</td>', item.address);
+    row += String.format('<td>{0}</td>', escape(item.address));
 
-    row += String.format("<td>{0}</td>", item.pool_size);
+    row += String.format("<td>{0}</td>", escape(item.pool_size));
     row += String.format('<td><a href="/zato/outgoing/hl7/mllp/invoke/{0}/{1}/{2}/{3}/?cluster={4}">Invoke</a></td>',
-        item.id, item.max_wait_time, item.name, $.fn.zato.slugify(item.name), cluster_id);
+        item.id, item.max_wait_time, encodeURIComponent(item.name), $.fn.zato.slugify(item.name), cluster_id);
 
     // The audit log of this connection's messages is filed under the connection's name
     row += String.format('<td><a href="/zato/audit-log/?source=hl7&object_name={0}&cluster=1">Audit log</a></td>', encodeURIComponent(item.name));
@@ -131,32 +135,32 @@ $.fn.zato.outgoing.hl7.mllp.data_table.new_row = function(item, data, include_tr
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.hl7.mllp.delete_('{0}');\">Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
 
-    row += String.format("<td class='ignore'>{0}</td>", item.is_active);
+    row += String.format("<td class='ignore'>{0}</td>", escape(item.is_active));
 
-    row += String.format("<td class='ignore'>{0}</td>", item.should_log_messages);
-    row += String.format("<td class='ignore'>{0}</td>", item.logging_level);
+    row += String.format("<td class='ignore'>{0}</td>", escape(item.should_log_messages));
+    row += String.format("<td class='ignore'>{0}</td>", escape(item.logging_level));
 
-    row += String.format("<td class='ignore'>{0}</td>", item.max_msg_size);
-    row += String.format("<td class='ignore'>{0}</td>", item.read_buffer_size);
-    row += String.format("<td class='ignore'>{0}</td>", item.recv_timeout);
+    row += String.format("<td class='ignore'>{0}</td>", escape(item.max_msg_size));
+    row += String.format("<td class='ignore'>{0}</td>", escape(item.read_buffer_size));
+    row += String.format("<td class='ignore'>{0}</td>", escape(item.recv_timeout));
 
-    row += String.format("<td class='ignore'>{0}</td>", item.start_seq);
-    row += String.format("<td class='ignore'>{0}</td>", item.end_seq);
+    row += String.format("<td class='ignore'>{0}</td>", escape(item.start_seq));
+    row += String.format("<td class='ignore'>{0}</td>", escape(item.end_seq));
 
-    row += String.format("<td class='ignore'>{0}</td>", item.max_wait_time);
+    row += String.format("<td class='ignore'>{0}</td>", escape(item.max_wait_time));
 
-    row += String.format("<td class='ignore'>{0}</td>", item.max_retries);
-    row += String.format("<td class='ignore'>{0}</td>", item.backoff_base_seconds);
-    row += String.format("<td class='ignore'>{0}</td>", item.backoff_cap_seconds);
-    row += String.format("<td class='ignore'>{0}</td>", item.backoff_jitter_percent);
+    row += String.format("<td class='ignore'>{0}</td>", escape(item.max_retries));
+    row += String.format("<td class='ignore'>{0}</td>", escape(item.backoff_base_seconds));
+    row += String.format("<td class='ignore'>{0}</td>", escape(item.backoff_cap_seconds));
+    row += String.format("<td class='ignore'>{0}</td>", escape(item.backoff_jitter_percent));
 
-    row += String.format("<td class='ignore'>{0}</td>", item.circuit_breaker_threshold_percent);
-    row += String.format("<td class='ignore'>{0}</td>", item.circuit_breaker_window_seconds);
-    row += String.format("<td class='ignore'>{0}</td>", item.circuit_breaker_reset_seconds);
+    row += String.format("<td class='ignore'>{0}</td>", escape(item.circuit_breaker_threshold_percent));
+    row += String.format("<td class='ignore'>{0}</td>", escape(item.circuit_breaker_window_seconds));
+    row += String.format("<td class='ignore'>{0}</td>", escape(item.circuit_breaker_reset_seconds));
 
-    row += String.format("<td class='ignore'>{0}</td>", item.tls_cert_path);
-    row += String.format("<td class='ignore'>{0}</td>", item.tls_key_path);
-    row += String.format("<td class='ignore'>{0}</td>", item.tls_ca_path);
+    row += String.format("<td class='ignore'>{0}</td>", escape(item.tls_cert_path));
+    row += String.format("<td class='ignore'>{0}</td>", escape(item.tls_key_path));
+    row += String.format("<td class='ignore'>{0}</td>", escape(item.tls_ca_path));
 
     if(include_tr) {
         row += '</tr>';

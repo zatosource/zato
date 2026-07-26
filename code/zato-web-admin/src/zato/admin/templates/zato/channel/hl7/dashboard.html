@@ -5,12 +5,14 @@
 
 {% block dashboard_domain_js %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/dashboard.js"></script>
+{{ dashboard_data|json_script:"dashboard-data" }}
+
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
     var dash = $.fn.zato.channel.hl7.dashboard;
     dash.config.poll_url = '{{ poll_url }}';
     dash.config.time_range = '{{ time_range }}';
-    dash.init({{ dashboard_data|safe }});
+    dash.init(JSON.parse(document.getElementById('dashboard-data').textContent));
 });
 </script>
 {% endblock %}

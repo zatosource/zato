@@ -175,7 +175,7 @@ def index(req:'any_') -> 'TemplateResponse':
         'time_range': time_range,
         'ranges': _get_ranges(),
         'poll_url': _poll_url,
-        'dashboard_data': json.dumps(data),
+        'dashboard_data': data,
         'zato_clusters': True,
         'zato_template_name': 'zato/channel/hl7/dashboard.html',
     }
