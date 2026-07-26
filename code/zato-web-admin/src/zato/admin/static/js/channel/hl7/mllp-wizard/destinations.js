@@ -1,11 +1,14 @@
 // HL7 MLLP channel wizard - the destination rows on step 2.
 //
-// Destinations show as compact one-line rows, each opening a popover
-// micro-form for its details, the same interaction the step 1 cards use.
-// The rows serialize into the form's hidden "destinations" and
-// "respond_from" fields in the very shape the full-page editor produces,
-// reusing the type and option definitions of the shared destinations module
-// and the wizard kit's popover scaffolding.
+// A destination is an outgoing connection every message is delivered to
+// after the channel's service ran. Each destination is one row - the kind
+// of connection, the connection itself, whatever options that kind has and
+// the switch deciding whether the destination receives messages at all.
+// The rows are the wizard kit's shared select rows, the same ones the REST
+// security picks wear on step 1. They serialize into the form's hidden
+// "destinations" and "respond_from" fields in the very shape the full-page
+// editor produces, reusing the type and option definitions of the shared
+// destinations module.
 
 (function($) {
 
@@ -22,11 +25,14 @@ destinations.config = {
     respondFromService: 'service',
     respondFromServiceLabel: 'The service',
 
-    // The label of rows whose destination is inactive
-    inactiveLabel: 'inactive',
+    // Where the rows are appended
+    rowsId: 'mllp-wizard-destination-rows',
 
-    // The label of the popover's confirm button
-    doneLabel: 'OK'
+    // The rows are too tight for labels, so their controls name
+    // themselves on hover
+    typeTitle: 'Destination type',
+    connectionTitle: 'Connection',
+    activeTitle: 'Whether this destination receives messages'
 };
 
 // Connections grouped by destination type, loaded once per page
@@ -38,10 +44,8 @@ destinations.init = function() {
 
     // Adding a row waits until the connection list has arrived ..
     $('#mllp-wizard-destination-add').on('click', function() {
-        var addLink = this;
-
         destinations._withConnectionData(function() {
-            destinations.add(addLink);
+            destinations.add();
         });
     });
 
@@ -75,7 +79,7 @@ destinations._withConnectionData = function(callback) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-destinations.add = function(anchorElement) {
+destinations.add = function() {
 
     var destination = {
         type: $.fn.zato.destinations.config.defaultType,
@@ -85,8 +89,8 @@ destinations.add = function(anchorElement) {
     };
     wizard.state.destinationList.push(destination);
 
-    var newIndex = wizard.state.destinationList.length - 1;
-    destinations.openEditor(newIndex, anchorElement);
+    destinations._appendRow(destination);
+    destinations.refreshRespondFrom();
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -107,10 +111,11 @@ destinations._getTypeLabelMap = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The one-line label a destination row shows - type, connection and options.
+// The one-line label a destination gets in the review - type, connection
+// and options.
 destinations._rowLabel = function(destination, typeLabelMap) {
 
-    // A single row labelled on its own has no map read ahead of it
+    // A single destination labelled on its own has no map read ahead of it
     if(typeLabelMap === undefined) {
         typeLabelMap = destinations._getTypeLabelMap();
     }
@@ -127,81 +132,33 @@ destinations._rowLabel = function(destination, typeLabelMap) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-destinations.renderRows = function() {
+// The kinds of connection a destination can be, in a select of their own.
+destinations._buildTypeSelect = function(destination) {
 
-    var config = destinations.config;
+    var select = document.createElement('select');
+    select.className = 'mllp-wizard-destination-type';
+    select.title = destinations.config.typeTitle;
 
-    var container = $('#mllp-wizard-destination-rows');
-    container.empty();
+    var typeList = $.fn.zato.destinations.config.typeList;
 
-    // The type list is read once for the whole render rather than once per row
-    var typeLabelMap = destinations._getTypeLabelMap();
-
-    for(var destinationIdx = 0; destinationIdx < wizard.state.destinationList.length; destinationIdx++) {
-        var destination = wizard.state.destinationList[destinationIdx];
-
-        var row = document.createElement('div');
-        row.className = 'wizard-conn-row';
-        row.setAttribute('data-destination-index', destinationIdx);
-
-        var text = document.createElement('span');
-        text.className = 'wizard-conn-row-text';
-        text.textContent = destinations._rowLabel(destination, typeLabelMap);
-        row.appendChild(text);
-
-        if(!destination.isActive) {
-            var inactive = document.createElement('span');
-            inactive.className = 'wizard-conn-row-inactive';
-            inactive.textContent = config.inactiveLabel;
-            row.appendChild(inactive);
-        }
-
-        var remove = document.createElement('span');
-        remove.className = 'wizard-conn-row-remove';
-        remove.textContent = 'x';
-        remove.title = 'Remove';
-        row.appendChild(remove);
-
-        container.append(row);
+    for(var typeIdx = 0; typeIdx < typeList.length; typeIdx++) {
+        var option = document.createElement('option');
+        option.value = typeList[typeIdx].id;
+        option.textContent = typeList[typeIdx].label;
+        select.appendChild(option);
     }
+    select.value = destination.type;
 
-    // Clicking a row edits it, the little x at its end removes it ..
-    container.find('.wizard-conn-row').on('click', function(event) {
-        var row = this;
-        var destinationIndex = parseInt(row.getAttribute('data-destination-index'));
-
-        if($(event.target).hasClass('wizard-conn-row-remove')) {
-            wizard.state.destinationList.splice(destinationIndex, 1);
-            destinations.renderRows();
-            destinations.refreshRespondFrom();
-            return;
-        }
-
-        destinations._withConnectionData(function() {
-            destinations.openEditor(destinationIndex, row);
-        });
-    });
+    var out = select;
+    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Builds the connection select and the per-type option inputs for one type.
-destinations._renderTypeFields = function(container, destination) {
+// Fills a select with the connections of the destination's type.
+destinations._fillConnectionSelect = function(select, destination) {
 
-    container.innerHTML = '';
-
-    // The connections of this type ..
-    var connectionRow = document.createElement('div');
-    connectionRow.className = 'wizard-tippy-field';
-
-    var connectionLabel = document.createElement('label');
-    connectionLabel.className = 'wizard-tippy-label';
-    connectionLabel.setAttribute('for', 'mllp-wizard-destination-connection');
-    connectionLabel.textContent = 'Connection';
-    connectionRow.appendChild(connectionLabel);
-
-    var connectionSelect = document.createElement('select');
-    connectionSelect.id = 'mllp-wizard-destination-connection';
+    select.textContent = '';
 
     var connectionList = destinations._connectionData[destination.type];
 
@@ -209,181 +166,157 @@ destinations._renderTypeFields = function(container, destination) {
         var option = document.createElement('option');
         option.value = connectionList[connectionIdx].name;
         option.textContent = connectionList[connectionIdx].name;
-        connectionSelect.appendChild(option);
+        select.appendChild(option);
     }
 
     if(destination.connection) {
-        connectionSelect.value = destination.connection;
+        select.value = destination.connection;
     }
 
-    connectionRow.appendChild(connectionSelect);
-    container.appendChild(connectionRow);
+    // A select always shows one of its options, so what it shows is what the
+    // destination is - and an empty string when this type has no connections
+    // to offer, which is what keeps such a row out of the serialized list
+    destination.connection = select.value;
+};
 
-    // .. and the options this type supports, e.g. the HTTP method.
+// ////////////////////////////////////////////////////////////////////////
+
+// One input for an option of the destination's type, e.g. the HTTP method
+// a REST destination is invoked with.
+destinations._buildOptionInput = function(destination, optionDef) {
+
+    var isSelect = optionDef.kind === 'select';
+    var input;
+
+    if(isSelect) {
+        input = document.createElement('select');
+
+        for(var valueIdx = 0; valueIdx < optionDef.values.length; valueIdx++) {
+            var valueOption = document.createElement('option');
+            valueOption.value = optionDef.values[valueIdx];
+            valueOption.textContent = optionDef.values[valueIdx];
+            input.appendChild(valueOption);
+        }
+    }
+    else {
+        input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = optionDef.placeholder;
+    }
+
+    input.className = 'mllp-wizard-destination-option';
+    input.title = optionDef.label;
+
+    if(destination.options[optionDef.id]) {
+        input.value = destination.options[optionDef.id];
+    }
+
+    // A select shows a value from the start, so the destination carries it
+    // right away - a text input starts out empty and only counts once typed in
+    if(isSelect) {
+        destination.options[optionDef.id] = input.value;
+    }
+
+    // A select settles on change, free text as it is typed
+    input.addEventListener(isSelect ? 'change' : 'input', function() {
+        if(input.value) {
+            destination.options[optionDef.id] = input.value;
+        }
+        else {
+            delete destination.options[optionDef.id];
+        }
+        destinations.refreshRespondFrom();
+    });
+
+    var out = input;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Rebuilds the inputs for the options the destination's type has - the
+// type is what decides which ones there are, so a new type brings new ones.
+destinations._fillOptions = function(optionBox, destination) {
+
+    optionBox.textContent = '';
+
     var optionDefs = $.fn.zato.destinations.config.optionList[destination.type];
 
     for(var optionIdx = 0; optionIdx < optionDefs.length; optionIdx++) {
-        var optionDef = optionDefs[optionIdx];
-
-        var optionRow = document.createElement('div');
-        optionRow.className = 'wizard-tippy-field';
-
-        var optionLabel = document.createElement('label');
-        optionLabel.className = 'wizard-tippy-label';
-        optionLabel.textContent = optionDef.label;
-        optionRow.appendChild(optionLabel);
-
-        var optionInput;
-
-        if(optionDef.kind === 'select') {
-            optionInput = document.createElement('select');
-            for(var valueIdx = 0; valueIdx < optionDef.values.length; valueIdx++) {
-                var valueOption = document.createElement('option');
-                valueOption.value = optionDef.values[valueIdx];
-                valueOption.textContent = optionDef.values[valueIdx];
-                optionInput.appendChild(valueOption);
-            }
-        }
-        else {
-            optionInput = document.createElement('input');
-            optionInput.type = 'text';
-            optionInput.placeholder = optionDef.placeholder;
-        }
-
-        optionInput.className = 'mllp-wizard-destination-option';
-        optionInput.setAttribute('data-option-id', optionDef.id);
-
-        if(destination.options[optionDef.id]) {
-            optionInput.value = destination.options[optionDef.id];
-        }
-
-        optionRow.appendChild(optionInput);
-        container.appendChild(optionRow);
+        optionBox.appendChild(destinations._buildOptionInput(destination, optionDefs[optionIdx]));
     }
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Opens the micro-form for one destination row.
-destinations.openEditor = function(destinationIndex, anchorElement) {
+// The switch at the end of a row - an inactive destination is skipped
+// when messages are delivered.
+destinations._buildActiveToggle = function(destination) {
 
-    var destination = wizard.state.destinationList[destinationIndex];
+    var toggle = document.createElement('input');
+    toggle.type = 'checkbox';
+    toggle.className = 'mllp-wizard-destination-active';
+    toggle.title = destinations.config.activeTitle;
+    toggle.checked = destination.isActive;
 
-    var container = document.createElement('div');
-    container.className = 'wizard-tippy-form zato-popup';
-    container.id = wizard.forms.config.popupId;
-
-    container.appendChild(wizard.forms.buildTitle('Destination'));
-
-    // The fields live under the header, in the popup body
-    var body = document.createElement('div');
-    body.className = 'wizard-tippy-body';
-    container.appendChild(body);
-
-    // The type select drives what the rest of the form shows ..
-    var typeRow = document.createElement('div');
-    typeRow.className = 'wizard-tippy-field';
-
-    var typeLabel = document.createElement('label');
-    typeLabel.className = 'wizard-tippy-label';
-    typeLabel.setAttribute('for', 'mllp-wizard-destination-type');
-    typeLabel.textContent = 'Type';
-    typeRow.appendChild(typeLabel);
-
-    var typeSelect = document.createElement('select');
-    typeSelect.id = 'mllp-wizard-destination-type';
-
-    var typeList = $.fn.zato.destinations.config.typeList;
-
-    for(var typeIdx = 0; typeIdx < typeList.length; typeIdx++) {
-        var typeOption = document.createElement('option');
-        typeOption.value = typeList[typeIdx].id;
-        typeOption.textContent = typeList[typeIdx].label;
-        typeSelect.appendChild(typeOption);
-    }
-    typeSelect.value = destination.type;
-
-    typeRow.appendChild(typeSelect);
-    body.appendChild(typeRow);
-
-    // .. the type-dependent fields live in their own block ..
-    var typeFields = document.createElement('div');
-    body.appendChild(typeFields);
-    destinations._renderTypeFields(typeFields, destination);
-
-    typeSelect.addEventListener('change', function() {
-        destination.type = typeSelect.value;
-        destination.connection = '';
-        destination.options = {};
-        destinations._renderTypeFields(typeFields, destination);
-
-        // The re-rendered fields need their help hooked up again
-        wizard.forms.initHelp(container);
+    toggle.addEventListener('change', function() {
+        destination.isActive = toggle.checked;
     });
 
-    // .. whether the destination receives messages at all ..
-    var activeRow = document.createElement('div');
-    activeRow.className = 'wizard-tippy-field';
+    var out = toggle;
+    return out;
+};
 
-    var activeLabel = document.createElement('label');
-    activeLabel.className = 'wizard-tippy-checkbox';
-    activeLabel.setAttribute('for', 'mllp-wizard-destination-active');
+// ////////////////////////////////////////////////////////////////////////
 
-    var activeCheckbox = document.createElement('input');
-    activeCheckbox.type = 'checkbox';
-    activeCheckbox.id = 'mllp-wizard-destination-active';
-    activeCheckbox.checked = destination.isActive;
+// Appends the row of one destination to the list on step 2.
+destinations._appendRow = function(destination) {
 
-    activeLabel.appendChild(document.createTextNode('Active '));
-    activeLabel.appendChild(activeCheckbox);
-    activeRow.appendChild(activeLabel);
-    body.appendChild(activeRow);
+    var list = document.getElementById(destinations.config.rowsId);
 
-    // .. and the confirm button, with the per-field help to its left.
-    var buttons = document.createElement('div');
-    buttons.className = 'wizard-tippy-buttons';
-    buttons.appendChild(wizard.forms.buildHelpBadge());
+    var buildContent = function(row) {
 
-    var doneButton = document.createElement('button');
-    doneButton.type = 'button';
-    doneButton.className = 'action-button';
-    doneButton.textContent = destinations.config.doneLabel;
+        var typeSelect = destinations._buildTypeSelect(destination);
+        row.appendChild(typeSelect);
 
-    doneButton.addEventListener('click', function() {
+        var connectionSelect = document.createElement('select');
+        connectionSelect.className = 'mllp-wizard-destination-connection';
+        connectionSelect.title = destinations.config.connectionTitle;
+        destinations._fillConnectionSelect(connectionSelect, destination);
+        row.appendChild(connectionSelect);
 
-        var connectionSelect = container.querySelector('#mllp-wizard-destination-connection');
-        destination.connection = connectionSelect.value;
-        destination.isActive = activeCheckbox.checked;
+        var optionBox = document.createElement('div');
+        optionBox.className = 'mllp-wizard-destination-options';
+        destinations._fillOptions(optionBox, destination);
+        row.appendChild(optionBox);
 
-        var options = {};
-        $(container).find('.mllp-wizard-destination-option').each(function() {
-            if(this.value) {
-                options[this.getAttribute('data-option-id')] = this.value;
-            }
+        // A new type comes with connections and options of its own,
+        // so neither the old connection nor the old options survive it
+        typeSelect.addEventListener('change', function() {
+            destination.type = typeSelect.value;
+            destination.connection = '';
+            destination.options = {};
+
+            destinations._fillConnectionSelect(connectionSelect, destination);
+            destinations._fillOptions(optionBox, destination);
+            destinations.refreshRespondFrom();
         });
-        destination.options = options;
 
-        wizard.forms.close();
-    });
+        connectionSelect.addEventListener('change', function() {
+            destination.connection = connectionSelect.value;
+            destinations.refreshRespondFrom();
+        });
 
-    buttons.appendChild(doneButton);
-    body.appendChild(buttons);
-
-    // Closing without a connection means the row never really existed
-    var onHidden = function() {
-        if(!destination.connection) {
-            var currentIndex = wizard.state.destinationList.indexOf(destination);
-            if(currentIndex > -1) {
-                wizard.state.destinationList.splice(currentIndex, 1);
-            }
-        }
-        destinations.renderRows();
-        destinations.refreshRespondFrom();
-        wizard.review.refreshSummaries();
+        row.appendChild(destinations._buildActiveToggle(destination));
     };
 
-    wizard.forms.showTippy(anchorElement, container, onHidden);
-    wizard.forms.initHelp(container);
+    var onRemove = function() {
+        var destinationIndex = wizard.state.destinationList.indexOf(destination);
+        wizard.state.destinationList.splice(destinationIndex, 1);
+        destinations.refreshRespondFrom();
+    };
+
+    $.fn.zato.wizard_kit.selectRows.appendRow(list, buildContent, onRemove);
 };
 
 // ////////////////////////////////////////////////////////////////////////

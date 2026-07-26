@@ -17,6 +17,7 @@ Two instances exist today:
 | `forms.js` | `kit.forms` | The popover micro-form engine - descriptor-driven tippy forms that seed from and write back to the Django form |
 | `review.js` | `kit.review` | Card summaries with the fade replay and the review step's grouped-rows renderer with Edit links |
 | `choices.js` | `kit.choices` | Pick-one choice cards - a radio group wearing the wizard card look, the selected card unfolds its inline fields |
+| `select-rows.js` | `kit.selectRows` | A column of rows, each with its own selects and a delete link, plus the add link under the list |
 
 An instance uses whichever modules its config declares - MLLP uses toggle rows and popovers, the schedule wizard uses choice cards and the context badge, both use the name badge, the help badges and the review renderer from the same code.
 
@@ -98,6 +99,21 @@ wizard.forms.registerKind('securityList', {
 });
 ```
 
+## Select rows
+
+A select row list is a column of rows, each holding one or more selects with a delete link at its end, and an add link under the list. Both the security definitions the MLLP wizard picks in its REST popover and the destinations it lists on step 2 are such rows, on a popover and on a step body respectively, so the two read as one kind of control.
+
+The list is whatever element carries `.wizard-select-list`. A row is appended by handing over what goes into it and what to do once it is deleted - the delete link and the row itself come from the kit:
+
+```javascript
+$.fn.zato.wizard_kit.selectRows.appendRow(list,
+    function(row) { row.appendChild(mySelect); },
+    function() { /* the row is already gone from the DOM */ }
+);
+
+list.after($.fn.zato.wizard_kit.selectRows.buildAddLink('Add security', function() { ... }));
+```
+
 ## Review groups
 
 The review step renders from a list of groups - each group is `{label, step, rows}`, each row a `[key, value]` pair. The value is usually text but may also be a ready DOM Node, e.g. a badge. Each group carries an Edit link that jumps back to the step the answers came from.
@@ -122,7 +138,7 @@ Clicks inside the unfolded body do not re-select, so typing into the card's own 
 
 ## CSS
 
-The shared stylesheet is `static/css/shared/wizard-kit.css` - the card, the step strip, the badges, the name row, sections, toggle rows, option cards, choice cards, the review, the popover micro-forms (tippy theme `wizard`), the footer and the status area. An instance stylesheet adds only what is truly its own, e.g. the MLLP security rows or the tolerance grid.
+The shared stylesheet is `static/css/shared/wizard-kit.css` - the card, the step strip, the badges, the name row, sections, toggle rows, select rows, the service picker, option cards, choice cards, the review, the popover micro-forms (tippy theme `wizard`), the footer and the status area. An instance stylesheet adds only what is truly its own, e.g. the MLLP tolerance grid.
 
 Parameterization runs through the `--wizard-*` tokens, declared with defaults on `:root` because the popover micro-forms are appended to `document.body`, outside any page container. An instance recolors itself by overriding the tokens in its own stylesheet, also on `:root`, since one page carries one wizard.
 

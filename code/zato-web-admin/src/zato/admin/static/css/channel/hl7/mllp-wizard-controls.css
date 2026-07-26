@@ -1,7 +1,9 @@
 /*
  * HL7 MLLP channel wizard - the controls only this wizard has: the
- * tolerance grid and the security rows of the REST popover. The shared
- * popover and card chrome lives in shared/wizard-kit.css.
+ * tolerance grid, the head above the REST security rows and the widths of
+ * the destination row controls. The rows themselves, their delete icons
+ * and their add links are the shared select rows of
+ * shared/wizard-kit.css, and so is the rest of the card chrome.
  */
 
 /* ------------------------------------------------------------ */
@@ -67,66 +69,35 @@
     cursor: pointer;
 }
 
-/* The security rows - one select per definition, a delete link to the
-   right of each row and the add link under the whole list */
-.mllp-wizard-security-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+/* ------------------------------------------------------------ */
+/* MLLP wizard - destination rows                                */
+/* ------------------------------------------------------------ */
+
+/* The type picker only ever shows one of a handful of words and the
+   per-type options are short too, so the connection name is what gets
+   whatever room the row has left. The row selector is what puts these
+   ahead of the shared rule sizing every select in a select row. */
+.wizard-select-row select.mllp-wizard-destination-type {
+    flex: 0 0 100px;
 }
 
-/* The flex display would otherwise trump the hidden attribute */
-.mllp-wizard-security-list[hidden] {
-    display: none;
-}
-
-.mllp-wizard-security-row {
+/* The options of the picked type sit between the connection and the
+   switch, as many of them as that type has */
+.mllp-wizard-destination-options {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex: 0 1 auto;
 }
 
-.mllp-wizard-security-row select {
-    flex: 1;
+.wizard-select-row select.mllp-wizard-destination-option,
+.wizard-select-row input.mllp-wizard-destination-option {
+    flex: 0 1 auto;
+    width: 130px;
 }
 
-/* The add link keeps to its own width under the rows */
-a.mllp-wizard-security-add {
-    align-self: flex-start;
-    margin-top: 7px;
-    font-size: 12px;
-}
-
-/* The delete icon is the shared close.svg drawn through a mask, so it
-   renders the same everywhere instead of depending on how a font shapes
-   the multiplication sign. The row centers its children, which keeps
-   the icon in the middle of the select next to it. */
-.tippy-box[data-theme~='wizard'] .tippy-content a.mllp-wizard-security-delete {
-    background-image: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+/* Whether a destination receives messages at all - the slider carries no
+   label of its own, the row it sits in names it */
+.mllp-wizard-destination-active {
     flex: 0 0 auto;
-    padding: 4px;
-}
-
-a.mllp-wizard-security-delete::before {
-    content: '';
-    display: block;
-    width: 8px;
-    height: 8px;
-    background-color: var(--wizard-text-muted);
-    -webkit-mask-image: url('/static/gfx/close.svg');
-    mask-image: url('/static/gfx/close.svg');
-    -webkit-mask-size: 8px 8px;
-    mask-size: 8px 8px;
-    -webkit-mask-repeat: no-repeat;
-    mask-repeat: no-repeat;
-    -webkit-mask-position: center;
-    mask-position: center;
-    transition: background-color 120ms ease;
-}
-
-a.mllp-wizard-security-delete:hover::before {
-    background-color: var(--wizard-error);
 }

@@ -203,11 +203,10 @@ class ServerInvoker(AdminService):
             value = self.request.raw['value']
             filter_name = self.request.raw.get('filter_name', '')
             filter_value = self.request.raw.get('filter_value', '')
-            soap_action = self.request.raw.get('soap_action', '')
             method = self.request.raw.get('method', '')
             http_accept = self.request.raw.get('http_accept', '')
 
-            response = func(entity_type, attr_name, value, filter_name, filter_value, soap_action, method, http_accept)
+            response = func(entity_type, attr_name, value, filter_name, filter_value, method, http_accept)
         elif func_name in ('test_logging', 'set_logging'):
             text = self.request.raw['text']
             response = func(text)

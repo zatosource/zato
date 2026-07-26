@@ -5,7 +5,7 @@
  * bodies with their answer cards, the review and the footer, plus the
  * popover micro-forms the cards open. This file carries everything the
  * wizards share - an instance stylesheet adds only what is truly its own,
- * e.g. the MLLP security rows or the tolerance grid.
+ * e.g. the MLLP tolerance grid.
  *
  * Parameterization runs through the --wizard-* tokens below. They sit on
  * :root because the popover micro-forms are appended to document.body,
@@ -462,6 +462,121 @@ a.wizard-toggle-edit {
 }
 
 /* ------------------------------------------------------------ */
+/* Wizard - select rows                                          */
+/* ------------------------------------------------------------ */
+
+/* A list of rows, each holding one or more selects plus a delete link at
+   its end, with an add link under the list. Both the security picks of a
+   popover micro-form and the destination rows of a step body are such
+   lists, so the two read as one kind of control. */
+.wizard-select-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-width: 560px;
+}
+
+/* The flex display would otherwise trump the hidden attribute */
+.wizard-select-list[hidden] {
+    display: none;
+}
+
+.wizard-select-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* A step body brings none of the popover's field styling with it, so the
+   controls of a row wear the same box the popover fields wear */
+.wizard-select-row select,
+.wizard-select-row input[type="text"],
+.wizard-respond-from-row select {
+    box-sizing: border-box;
+    height: 24px;
+    padding: 4px 8px;
+    border: 1px solid var(--wizard-border-strong);
+    border-radius: 3px;
+    background: #fff;
+    font-size: 12px;
+}
+
+/* Inside a row the controls share its width, which is what makes a list of
+   them read as one column. min-width lets a select shrink below the width
+   its longest option would ask for. */
+.wizard-select-row select,
+.wizard-select-row input[type="text"] {
+    flex: 1;
+    min-width: 0;
+}
+
+.wizard-select-row select:focus,
+.wizard-select-row input[type="text"]:focus,
+.wizard-respond-from-row select:focus {
+    border-color: var(--wizard-accent);
+}
+
+/* The add link keeps to its own width under the rows */
+a.wizard-select-add {
+    display: inline-block;
+    align-self: flex-start;
+    margin-top: 7px;
+    font-size: 12px;
+}
+
+/* The delete icon is the shared close.svg drawn through a mask, so it
+   renders the same everywhere instead of depending on how a font shapes
+   the multiplication sign. The row centers its children, which keeps the
+   icon in the middle of the select next to it. The tippy selector covers
+   the rows inside a popover, where the link face of the tooltip content
+   would otherwise paint its own underline over the icon. */
+a.wizard-select-delete,
+.tippy-box[data-theme~='wizard'] .tippy-content a.wizard-select-delete {
+    background-image: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    padding: 4px;
+}
+
+a.wizard-select-delete::before {
+    content: '';
+    display: block;
+    width: 8px;
+    height: 8px;
+    background-color: var(--wizard-text-muted);
+    -webkit-mask-image: url('/static/gfx/close.svg');
+    mask-image: url('/static/gfx/close.svg');
+    -webkit-mask-size: 8px 8px;
+    mask-size: 8px 8px;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    transition: background-color 120ms ease;
+}
+
+a.wizard-select-delete:hover::before {
+    background-color: var(--wizard-error);
+}
+
+/* The question a list of destinations raises - which of them the caller
+   hears back from - so it follows the rows it belongs to */
+.wizard-respond-from-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    font-size: 12px;
+}
+
+.wizard-respond-from-row label {
+    font-weight: 600;
+    color: var(--wizard-text);
+}
+
+/* ------------------------------------------------------------ */
 /* Wizard - service select                                       */
 /* ------------------------------------------------------------ */
 
@@ -474,79 +589,31 @@ a.wizard-toggle-edit {
     width: 100% !important;
 }
 
-/* ------------------------------------------------------------ */
-/* Wizard - connection rows                                      */
-/* ------------------------------------------------------------ */
-
-.wizard-conn-list {
-    max-width: 560px;
-}
-
-.wizard-conn-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 7px 10px;
-    margin-bottom: 4px;
-    border: 1px solid var(--wizard-border);
-    border-radius: 4px;
+/* The service picker is chosen-ized for its search box, so its face is
+   repainted to read as one more of the selects in the rows above it */
+.wizard-service-row .chosen-container-single .chosen-single {
+    height: 24px;
+    padding: 0 8px;
+    border: 1px solid var(--wizard-border-strong);
+    border-radius: 3px;
+    background: #fff;
+    box-shadow: none;
     font-size: 12px;
-    cursor: pointer;
-    transition: border-color 150ms ease;
-}
-
-.wizard-conn-row:hover {
-    border-color: var(--wizard-accent);
-}
-
-.wizard-conn-row-text {
-    flex: 1;
-    color: var(--wizard-done);
-    font-weight: 500;
-    animation: wizard-summary-fade-in 300ms ease-out;
-}
-
-.wizard-conn-row-inactive {
-    font-size: 11px;
-    color: var(--wizard-text-faint);
-    font-style: italic;
-}
-
-.wizard-conn-row-remove {
-    padding: 2px 5px;
-    color: var(--wizard-text-faint);
-    font-size: 11px;
-}
-
-.wizard-conn-row-remove:hover {
-    color: var(--wizard-error);
-}
-
-.wizard-conn-add {
-    display: inline-block;
-    margin-top: 2px;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--wizard-accent);
-    cursor: pointer;
-}
-
-.wizard-conn-add:hover {
-    text-decoration: underline;
-}
-
-.wizard-respond-from-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 12px;
-    font-size: 12px;
-}
-
-.wizard-respond-from-row label {
-    font-weight: 600;
+    line-height: 22px;
     color: var(--wizard-text);
+}
+
+/* An open or focused picker keeps the wizard accent instead of the stock
+   chosen blue, and its gradient stays off as well */
+.wizard-service-row .chosen-container-active .chosen-single,
+.wizard-service-row .chosen-container-active.chosen-with-drop .chosen-single {
+    border-color: var(--wizard-accent);
+    background-image: none;
+}
+
+/* The arrow rides one pixel higher against the shorter face */
+.wizard-service-row .chosen-container-single .chosen-single div b {
+    background-position: 0 1px;
 }
 
 /* ------------------------------------------------------------ */
