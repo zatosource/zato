@@ -894,11 +894,11 @@ class URLData(PyURLData):
 
 # ################################################################################################################################
 
-    def _channel_item_from_msg(self, msg, match_target, old_data=None):
-        """ Creates a channel info bunch out of an incoming CREATE_EDIT message.
+    def _channel_item_from_msg(self, msg, match_target, old_data):
+        """ Creates a channel info bunch out of an incoming CREATE_EDIT message. An edit arrives as
+        a delete followed by a create, so old_data is what the channel held until now - empty for
+        a channel being created.
         """
-        old_data = old_data or {}
-
         # The runtime hands this very object to services and to the dispatcher, both of which
         # reach into it by attribute as well as by key.
         channel_item = Bunch()
@@ -938,7 +938,15 @@ class URLData(PyURLData):
             channel_item['security_id'] = int(msg['security_id'])
             channel_item['security_name'] = msg['security_name']
 
-        if security_groups := msg.get('security_groups'):
+        # A message that does not mention security groups at all leaves the channel with the ones it
+        # already had - only an explicitly empty list clears them. The message never carries a context
+        # of its own, so whatever groups apply are turned into one here.
+        security_groups = msg.get('security_groups')
+
+        if security_groups is None:
+            security_groups = old_data.get('security_groups')
+
+        if security_groups:
             channel_item['security_groups'] = security_groups
             self.config_manager.server.security_groups_ctx_builder.populate_members()
             security_groups_ctx = self.config_manager.server.security_groups_ctx_builder.build_ctx(channel_item['id'], security_groups)

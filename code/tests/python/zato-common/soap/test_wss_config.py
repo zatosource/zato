@@ -20,7 +20,7 @@ from zato.common.soap.common import NS, SOAPSecurityException, SOAPVersion
 from zato.common.soap.envelope import attach_body, build_envelope, get_body, parse_body, to_bytes
 from zato.common.soap.message import SOAPMessage
 from zato.common.soap.security.saml import Assertion_TTL_Seconds, sign_assertion
-from zato.common.soap.security.wss import apply_wss, enforce_wss, keystore_from_config, Mode
+from zato.common.soap.security.wss import apply_wss, enforce_wss, keystore_from_config, Mode, No_X509_Operation_Message
 from zato.common.util.xml_.core import qname, to_timestamp
 
 # ################################################################################################################################
@@ -345,6 +345,58 @@ class TestX509Mode:
 
         with pytest.raises(SOAPSecurityException):
             enforce_wss(envelope, _receiver_x509_config(parties, sign=True, encrypt=False))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestX509WithNothingToEnforce:
+    """ An X.509 definition that asks for neither a signature nor encryption.
+
+    A signature and encryption are the two things the mode has, so such a definition states no
+    requirement for a message to meet, in either direction. It is refused when it is saved, and
+    one that predates that refusal is met here.
+    """
+
+    def test_a_definition_that_neither_signs_nor_encrypts_is_refused(self, parties):
+        envelope = _sample_envelope()
+        apply_wss(envelope, _sender_x509_config(parties, sign=True, encrypt=False))
+
+        channel_config = _receiver_x509_config(parties, sign=False, encrypt=False)
+
+        with pytest.raises(SOAPSecurityException) as e:
+            enforce_wss(_reparse(envelope), channel_config)
+
+        assert No_X509_Operation_Message in str(e.value)
+
+    def test_a_definition_carrying_neither_flag_is_refused(self):
+        # Both flags are optional fields kept in a definition's opaque attributes, so an enmasse
+        # YAML definition written without them has no such keys at all, and absent reads as off.
+        config = {'mode': Mode.X509}
+
+        with pytest.raises(SOAPSecurityException) as e:
+            enforce_wss(_sample_envelope(), config)
+
+        assert No_X509_Operation_Message in str(e.value)
+
+    def test_a_message_with_nothing_in_its_header_is_refused_too(self):
+        # The refusal does not depend on what arrived - a plain envelope reaching such a definition
+        # is refused for the same reason a signed one is.
+        config = {'mode': Mode.X509, 'sign': False, 'encrypt': False}
+
+        with pytest.raises(SOAPSecurityException):
+            enforce_wss(_sample_envelope(), config)
+
+    def test_signing_alone_is_enough_to_have_something_to_enforce(self, parties):
+        envelope = _sample_envelope()
+        apply_wss(envelope, _sender_x509_config(parties, sign=True, encrypt=False))
+
+        enforce_wss(_reparse(envelope), _receiver_x509_config(parties, sign=True, encrypt=False))
+
+    def test_encryption_alone_is_enough_to_have_something_to_enforce(self, parties):
+        envelope = _sample_envelope()
+        apply_wss(envelope, _sender_x509_config(parties, sign=False, encrypt=True))
+
+        enforce_wss(_reparse(envelope), _receiver_x509_config(parties, sign=False, encrypt=True))
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -64,7 +64,7 @@ class APIKeyHeaderInvariantTestCase(unittest.TestCase):
         ctx.on_apikey_created(_group_id, _security_id1, _header_custom, _header_value1)
 
         self.assertEqual(ctx.apikey_header, _header_custom)
-        self.assertIn(_header_value1, ctx.apikey_credentials)
+        self.assertIn(ctx._apikey_index_key(_header_value1), ctx.apikey_credentials)
 
 # ################################################################################################################################
 
@@ -81,7 +81,7 @@ class APIKeyHeaderInvariantTestCase(unittest.TestCase):
         self.assertEqual(ctx.apikey_header, _header_custom)
 
         # .. the second member's credentials were not stored ..
-        self.assertNotIn(_header_value2, ctx.apikey_credentials)
+        self.assertNotIn(ctx._apikey_index_key(_header_value2), ctx.apikey_credentials)
 
         # .. and the conflict was logged as an error.
         mock_logger.error.assert_called_once()
@@ -97,8 +97,8 @@ class APIKeyHeaderInvariantTestCase(unittest.TestCase):
         ctx.on_apikey_created(_group_id, _security_id2, _header_custom, _header_value2)
 
         self.assertEqual(ctx.apikey_header, _header_custom)
-        self.assertIn(_header_value1, ctx.apikey_credentials)
-        self.assertIn(_header_value2, ctx.apikey_credentials)
+        self.assertIn(ctx._apikey_index_key(_header_value1), ctx.apikey_credentials)
+        self.assertIn(ctx._apikey_index_key(_header_value2), ctx.apikey_credentials)
 
 # ################################################################################################################################
 
@@ -125,7 +125,7 @@ class APIKeyHeaderInvariantTestCase(unittest.TestCase):
         ctx.on_apikey_deleted(_security_id1)
 
         self.assertEqual(ctx.apikey_header, _header_custom)
-        self.assertIn(_header_value2, ctx.apikey_credentials)
+        self.assertIn(ctx._apikey_index_key(_header_value2), ctx.apikey_credentials)
 
 # ################################################################################################################################
 
@@ -152,7 +152,7 @@ class APIKeyHeaderInvariantTestCase(unittest.TestCase):
 
         self.assertEqual(ctx.apikey_header, _header_custom)
 
-        sec_info = ctx.apikey_credentials[_header_value1]
+        sec_info = ctx.apikey_credentials[ctx._apikey_index_key(_header_value1)]
         self.assertEqual(sec_info.header, _header_custom)
         self.assertEqual(sec_info.security_id, _security_id1)
 
@@ -167,9 +167,9 @@ class APIKeyHeaderInvariantTestCase(unittest.TestCase):
         ctx.set_current_apikey(_security_id1, _header_value2)
 
         self.assertEqual(ctx.apikey_header, _header_custom)
-        self.assertNotIn(_header_value1, ctx.apikey_credentials)
+        self.assertNotIn(ctx._apikey_index_key(_header_value1), ctx.apikey_credentials)
 
-        sec_info = ctx.apikey_credentials[_header_value2]
+        sec_info = ctx.apikey_credentials[ctx._apikey_index_key(_header_value2)]
         self.assertEqual(sec_info.header, _header_custom)
         self.assertEqual(sec_info.security_id, _security_id1)
 

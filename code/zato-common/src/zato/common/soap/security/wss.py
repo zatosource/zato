@@ -66,6 +66,10 @@ Default_Use_Digest = False
 Default_Sign = False
 Default_Encrypt = False
 
+# What an X.509 definition that asks for neither a signature nor encryption is told, both when it is
+# saved and if one already saved is met on the message path.
+No_X509_Operation_Message = 'An X.509 definition needs signing, encryption or both'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -233,14 +237,22 @@ def _enforce_x509(envelope:'any_', config:'stranydict') -> 'VerifiedSignature | 
     """ Decrypts the body and verifies the signature, each when the definition calls for it.
     Returns what the signature covered so the caller can bind its own reading of the message to it.
     """
+    needs_decryption = _flag(config, 'encrypt', Default_Encrypt)
+    needs_signature = _flag(config, 'sign', Default_Sign)
+
+    # A signature and encryption are the two things this mode has, so a definition
+    # asking for neither states no requirement for a message to meet.
+    if not needs_decryption and not needs_signature:
+        raise SOAPSecurityException(No_X509_Operation_Message)
+
     keystore = get_keystore(config)
 
     # Decryption comes first so the signature can be checked over the plaintext body ..
-    if _flag(config, 'encrypt', Default_Encrypt):
+    if needs_decryption:
         decrypt_body(envelope, keystore)
 
     # .. and now that the body is readable, the signature over it can be verified.
-    if _flag(config, 'sign', Default_Sign):
+    if needs_signature:
         out = verify(envelope, keystore)
     else:
         out = None

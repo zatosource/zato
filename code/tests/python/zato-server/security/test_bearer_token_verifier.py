@@ -16,15 +16,16 @@ from unittest import main, TestCase
 from jwt import encode as jwt_encode
 
 # Zato
-from zato.common.bearer_token_verifier import JWKS_Cache_TTL
+from zato.common.bearer_token_verifier import JWKS_Cache_TTL, JWKS_Fetch_Interval
 
 # The directory with the shared bearer token test helpers
 _this_directory = os.path.dirname(__file__)
 sys.path.insert(0, _this_directory)
 
 # Zato - test helpers
-from bearer_token_helpers import FakeCache, make_config, make_jwk, make_token, make_verifier, \
-    Issuer, Rotated_Key, Rotated_Key_ID, Signing_Key, Signing_Key_ID, Unpublished_Key  # noqa: E402
+from bearer_token_helpers import FakeCache, has_cached_document, let_fetch_interval_pass, make_config, make_jwk, \
+    make_token, make_verifier, Issuer, Rotated_Key, Rotated_Key_ID, Signing_Key, Signing_Key_ID, \
+    Unpublished_Key  # noqa: E402
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -309,12 +310,15 @@ class JWKSCaching(TestCase):
         cache = verifier.cache
         assert isinstance(cache, FakeCache)
 
-        set_call = cache.set_calls[0]
-        self.assertEqual(set_call[2], JWKS_Cache_TTL)
+        # The document and the fetch interval marker are both stored, each with its own expiry
+        expiry_by_key = {key:expiry for key, _, expiry in cache.set_calls}
+
+        self.assertIn(JWKS_Cache_TTL, expiry_by_key.values())
+        self.assertIn(JWKS_Fetch_Interval, expiry_by_key.values())
 
 # ################################################################################################################################
 
-    def test_empty_document_is_not_cached(self) -> 'None':
+    def test_a_document_with_no_keys_is_not_cached(self) -> 'None':
         """ A failed fetch must not lock callers out for the whole TTL.
         """
         config = make_config()
@@ -324,11 +328,7 @@ class JWKSCaching(TestCase):
         claims = verifier.verify(_cid, _channel_name, token, config)
 
         self.assertIsNone(claims)
-
-        cache = verifier.cache
-        assert isinstance(cache, FakeCache)
-
-        self.assertEqual(cache.set_calls, [])
+        self.assertFalse(has_cached_document(verifier))
 
 # ################################################################################################################################
 
@@ -348,12 +348,122 @@ class JWKSCaching(TestCase):
         # .. rotate the IdP keys - the new document only has the new key ..
         verifier.jwks_document = {'keys': [make_jwk(Rotated_Key, Rotated_Key_ID)]}
 
+        # .. the document was just fetched, and by the time a rotated key is in use the interval
+        # .. that follows a fetch has long passed, since the document itself is kept for an hour ..
+        let_fetch_interval_pass(verifier)
+
         # .. a token signed with the new key forces a refetch and then verifies fine.
         rotated_token = make_token(Rotated_Key, key_id=Rotated_Key_ID)
         claims = verifier.verify(_cid, _channel_name, rotated_token, config)
 
         self.assertIsNotNone(claims)
         self.assertEqual(verifier.fetch_count, 2)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class JWKSFetchInterval(TestCase):
+    """ One JWKS URL is fetched at most once per JWKS_Fetch_Interval seconds.
+
+    Which key a token asks for is chosen by whoever sends the token, and a key ID that no cached
+    document carries is what asks for a fetch, so the two are kept apart by the interval.
+    """
+
+    def test_unknown_key_ids_do_not_each_cost_a_fetch(self) -> 'None':
+        config = make_config()
+        verifier = make_verifier()
+
+        # The first token warms the cache up with the published document ..
+        _ = verifier.verify(_cid, _channel_name, make_token(Signing_Key), config)
+        self.assertEqual(verifier.fetch_count, 1)
+
+        # .. and a series of tokens naming key IDs that are not in it costs nothing more.
+        for suffix in range(1, 6):
+            token = make_token(Unpublished_Key, key_id=f'test-unknown-key-{suffix}')
+            claims = verifier.verify(_cid, _channel_name, token, config)
+
+            self.assertIsNone(claims)
+
+        self.assertEqual(verifier.fetch_count, 1)
+
+# ################################################################################################################################
+
+    def test_a_url_that_answers_with_no_keys_is_fetched_once_per_interval(self) -> 'None':
+        # Nothing fetched from such a URL ever fills the document cache, so without the interval
+        # every request would reach it.
+        config = make_config()
+        verifier = make_verifier(keys=[])
+
+        token = make_token(Signing_Key)
+
+        for _ in range(5):
+            claims = verifier.verify(_cid, _channel_name, token, config)
+            self.assertIsNone(claims)
+
+        self.assertEqual(verifier.fetch_count, 1)
+
+# ################################################################################################################################
+
+    def test_the_next_interval_brings_a_fresh_fetch(self) -> 'None':
+        config = make_config()
+        verifier = make_verifier(keys=[])
+
+        token = make_token(Signing_Key)
+
+        _ = verifier.verify(_cid, _channel_name, token, config)
+        self.assertEqual(verifier.fetch_count, 1)
+
+        let_fetch_interval_pass(verifier)
+
+        _ = verifier.verify(_cid, _channel_name, token, config)
+        self.assertEqual(verifier.fetch_count, 2)
+
+# ################################################################################################################################
+
+    def test_a_key_already_in_the_document_needs_no_fetch_at_all(self) -> 'None':
+        # The interval is never reached on the ordinary path - a key ID the cached document carries
+        # is served from it, so traffic with valid tokens is not affected by the interval.
+        config = make_config()
+        verifier = make_verifier()
+
+        token = make_token(Signing_Key)
+
+        for _ in range(5):
+            claims = verifier.verify(_cid, _channel_name, token, config)
+            self.assertIsNotNone(claims)
+
+        self.assertEqual(verifier.fetch_count, 1)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class JWKSURLMissing(TestCase):
+    """ A definition with no JWKS URL and no issuer to derive one from.
+    """
+
+    def test_a_definition_without_a_jwks_url_matches_nothing(self) -> 'None':
+        config = make_config()
+        config.jwks_url = ''
+
+        verifier = make_verifier()
+
+        token = make_token(Signing_Key)
+        claims = verifier.verify(_cid, _channel_name, token, config)
+
+        self.assertIsNone(claims)
+
+# ################################################################################################################################
+
+    def test_a_definition_without_a_jwks_url_reaches_no_network(self) -> 'None':
+        config = make_config()
+        config.jwks_url = ''
+
+        verifier = make_verifier()
+
+        token = make_token(Signing_Key)
+        _ = verifier.verify(_cid, _channel_name, token, config)
+
+        self.assertEqual(verifier.fetch_count, 0)
 
 # ################################################################################################################################
 # ################################################################################################################################

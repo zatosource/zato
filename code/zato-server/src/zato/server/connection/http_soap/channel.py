@@ -1451,10 +1451,17 @@ class RequestDispatcher:
             logger.warning('Received neither Basic Auth, bearer token nor API key (groups)')
             raise Forbidden(cid)
 
+        # A credential that matched has a definition behind it, and that definition is what the
+        # audit event, the definition-level rate limit and self.channel.security are all taken from,
+        # so a lookup that comes back with nothing ends the request here.
+        if sec_def is None:
+            logger.error('Could not look up the security definition a credential matched; channel=%s; cid=%s',
+                channel_name, cid)
+            raise Forbidden(cid)
+
         # Now we can enrich the WSGI environment with information
         # that will become self.channel.security for services.
-        if sec_def:
-            enrich_with_sec_data(wsgi_environ, sec_def, sec_def['sec_type'])
+        enrich_with_sec_data(wsgi_environ, sec_def, sec_def['sec_type'])
 
 # ################################################################################################################################
 
