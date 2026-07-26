@@ -11,7 +11,7 @@ import time
 
 # Zato
 from zato.common.hl7.mllp.dedup import MessageDeduplicator, extract_control_id
-from zato.common.hl7.mllp.server import TTL_Multipliers
+from zato.common.hl7.mllp.settings import TTL_Multipliers
 
 # ################################################################################################################################
 # ################################################################################################################################

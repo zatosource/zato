@@ -82,7 +82,7 @@ $.fn.zato.wizard_kit.forms.setup(wizard, {
             pages: [[
                 {field: 'should_return_errors', label: 'Return error details in NAK responses', kind: 'checkbox'},
                 {field: 'should_log_messages',  label: 'Log each message to the server log',    kind: 'checkbox'},
-                {field: 'logging_level', label: 'Log level', kind: 'select', width: '150px'}
+                {field: 'is_audit_log_active',  label: 'Record each message in the audit log',  kind: 'checkbox'}
             ]]
         }
     }

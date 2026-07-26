@@ -303,23 +303,38 @@ def preprocess_message(
 # ################################################################################################################################
 # ################################################################################################################################
 
-def build_channel_default_tolerance_config() -> 'ToleranceConfig':
-    """ Returns the parser tolerance configuration an MLLP channel applies unless
-    configured otherwise - the same values as channel_config_defaults in the channel wrapper.
+def build_tolerance_config(**toggles:'bool') -> 'ToleranceConfig':
+    """ Builds the parser's tolerance configuration from a channel's toggles. The names are the
+    field names themselves, so a toggle added to the field list needs nothing added here.
     """
 
     # Imported here because the Rust module is only needed by callers that actually parse
     from zato.hl7v2_rs import ToleranceConfig
 
     out = ToleranceConfig()
-    out.normalize_obx2_value_type          = True
-    out.replace_invalid_obx2_value_type    = True
-    out.normalize_invalid_escape_sequences = True
-    out.normalize_obx8_abnormal_flags      = True
-    out.normalize_quadruple_quoted_empty   = True
-    out.allow_short_encoding_characters    = True
-    out.fix_off_by_one_field_index         = False
 
+    for name, value in toggles.items():
+        setattr(out, name, value)
+
+    return out
+
+# ################################################################################################################################
+
+def build_channel_default_tolerance_config() -> 'ToleranceConfig':
+    """ Returns the parser tolerance configuration an MLLP channel applies unless configured
+    otherwise, taken from the same field list the channel form and enmasse are built from.
+    """
+
+    # Imported here so that the field list, which reads the shared defaults, is not pulled in
+    # by every caller of this module
+    from zato.common.hl7.mllp.fields import Channel_Defaults, Tolerance_Names
+
+    toggles = {}
+
+    for name in Tolerance_Names:
+        toggles[name] = Channel_Defaults[name]
+
+    out = build_tolerance_config(**toggles)
     return out
 
 # ################################################################################################################################

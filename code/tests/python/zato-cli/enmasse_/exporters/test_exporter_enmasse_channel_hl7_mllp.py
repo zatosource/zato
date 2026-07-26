@@ -159,7 +159,6 @@ class TestEnmasseChannelHL7MLLPExporter(TestCase):
             'is_active': False,
             'normalize_line_endings': False,
             'should_parse_on_input': False,
-            'should_validate': False,
         }]
 
         _, _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
@@ -176,7 +175,6 @@ class TestEnmasseChannelHL7MLLPExporter(TestCase):
         self.assertFalse(exported['is_active'])
         self.assertFalse(exported['normalize_line_endings'])
         self.assertFalse(exported['should_parse_on_input'])
-        self.assertFalse(exported['should_validate'])
 
 # ################################################################################################################################
 

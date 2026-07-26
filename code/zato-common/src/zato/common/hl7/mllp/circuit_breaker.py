@@ -143,7 +143,7 @@ class CircuitBreaker:
             entry_time = self._outcomes[0][0]
 
             if entry_time < cutoff:
-                self._outcomes.popleft()
+                _ = self._outcomes.popleft()
             else:
                 break
 

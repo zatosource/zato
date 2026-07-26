@@ -30,11 +30,13 @@ $.fn.zato.channel.hl7.mllp.editor.config = {
     required_fields: [
         'name',
         'service',
-        'logging_level',
         'max_msg_size',
         'max_msg_size_unit',
-        'read_buffer_size',
         'recv_timeout',
+        'idle_timeout',
+        'keepalive_idle',
+        'keepalive_interval',
+        'keepalive_probe_count',
         'start_seq',
         'end_seq',
         'default_character_encoding'

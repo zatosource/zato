@@ -8,7 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.api import GENERIC, HL7
-from zato.common.hl7.mllp.fields import Channel_Column_Defaults, Channel_Opaque_Defaults
+from zato.common.hl7.mllp.fields import Channel_Column_Defaults, Channel_Opaque_Defaults, resolve_max_msg_size
+from zato.common.hl7.mllp.settings import describe_bounds_violations
 from zato.cli.enmasse.importers.generic import GenericConnectionImporter
 
 # ################################################################################################################################
@@ -46,7 +47,8 @@ class ChannelHL7MLLPImporter(GenericConnectionImporter):
 
     def validate_definition(self, connection_def:'anydict') -> 'None':
         """ A channel hands each message it accepts to a service, to its destinations, or to both,
-        so a channel that names neither has nowhere to deliver.
+        so a channel that names neither has nowhere to deliver. Nor may it ask the listener for
+        more room or more time than the listener has.
         """
         service = connection_def.get('service')
         destinations = connection_def.get('destinations')
@@ -55,6 +57,19 @@ class ChannelHL7MLLPImporter(GenericConnectionImporter):
             if not destinations:
                 name = connection_def['name']
                 raise Exception(f'HL7 MLLP channel `{name}` needs a service or at least one destination')
+
+        max_msg_size = connection_def.get('max_msg_size', HL7.Default.max_msg_size_value)
+        max_msg_size_unit = connection_def.get('max_msg_size_unit', HL7.Default.max_msg_size_unit)
+        idle_timeout = connection_def.get('idle_timeout', HL7.Default.idle_timeout)
+
+        violations = describe_bounds_violations(
+            resolve_max_msg_size(max_msg_size, max_msg_size_unit),
+            idle_timeout,
+        )
+
+        if violations:
+            name = connection_def['name']
+            raise Exception(f'HL7 MLLP channel `{name}` - ' + ', '.join(violations))
 
 # ################################################################################################################################
 # ################################################################################################################################

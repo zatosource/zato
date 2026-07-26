@@ -237,7 +237,8 @@ review._loggingSummary = function() {
     var logMessages = wizard.field('should_log_messages').prop('checked');
     parts.push(logMessages ? 'log I/O on' : 'log I/O off');
 
-    parts.push(wizard.field('logging_level').val());
+    var auditLog = wizard.field('is_audit_log_active').prop('checked');
+    parts.push(auditLog ? 'audit log on' : 'audit log off');
 
     var out = parts.join(', ');
     return out;

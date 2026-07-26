@@ -706,43 +706,16 @@ class TestPreprocessingQuirks:
 # ################################################################################################################################
 
 class TestTlsAndMtls:
-    """ Verifies TLS and mutual TLS (mTLS) handshakes and communication.
+    """ Verifies what a channel does with the sender identity established for it. Inbound TLS
+    ends at the load balancer, so the handshake itself is not the listener's affair - what
+    matters is that the name reported on it decides whether a channel accepts the message.
     """
 
 # ################################################################################################################################
 
-    def test_tls_plain(self, tls_certs:'dict[str, str]', make_client:'callable_') -> 'None':
-        """ A TLS server with verify=none must accept a client that only trusts the CA
-        (no client cert required).
-        """
-
-        # Start a server with TLS but no client verification ..
-        process, port = start_server(
-            tls_cert=tls_certs['server_cert'],
-            tls_key=tls_certs['server_key'],
-            tls_ca=tls_certs['ca'],
-            tls_verify='none',
-        )
-
-        try:
-
-            # Build a client SSL context that trusts the CA ..
-            ssl_context = build_client_ssl_context(ca_file=tls_certs['ca'])
-
-            client = make_client(port, ssl_context=ssl_context)
-            result = client.send(sample_adt_a01('TLS001'), control_id='TLS001')
-
-            assert result.is_accepted is True
-            assert result.ack_code == 'AA'
-
-        finally:
-            stop_server(process)
-
-# ################################################################################################################################
-
-    def test_mtls_with_client_cert(self, mllp_tls_server:'int', tls_certs:'dict[str, str]',
+    def test_message_accepted_over_mtls(self, mllp_tls_server:'int', tls_certs:'dict[str, str]',
         make_client:'callable_') -> 'None':
-        """ A TLS server with verify=required must accept a client that presents a valid cert.
+        """ A sender that presents a valid certificate reaches the channel behind the balancer.
         """
 
         # Build a client SSL context with both CA trust and client certificate ..
@@ -760,10 +733,10 @@ class TestTlsAndMtls:
 
 # ################################################################################################################################
 
-    def test_mtls_without_client_cert_rejected(self, mllp_tls_server:'int',
+    def test_sender_without_client_cert_never_reaches_the_channel(self, mllp_tls_server:'int',
         tls_certs:'dict[str, str]') -> 'None':
-        """ A TLS server with verify=required must reject a client without a client certificate.
-        The rejection may happen during the handshake or on the first data exchange.
+        """ A sender with no certificate is turned away where TLS ends, so nothing of it
+        is ever seen further in.
         """
 
         # Build a client SSL context that trusts the CA but provides no client cert ..
@@ -773,21 +746,18 @@ class TestTlsAndMtls:
 
         try:
 
-            # The rejection may come during wrap_socket or on first send/recv,
-            # depending on the TLS implementation and timing.
+            # The refusal comes either during the handshake or on the first exchange after it,
+            # depending on when the far side gets to look at what was presented
             try:
                 tls_socket = ssl_context.wrap_socket(raw_socket, server_hostname='127.0.0.1')
 
-                # If handshake succeeded, the server will reject on data exchange ..
                 message = sample_adt_a01('NOPE001')
                 framed = frame_encode(message, start_sequence, end_sequence)
                 tls_socket.sendall(framed)
 
-                # .. reading the response should fail.
                 response = tls_socket.recv(_recv_buffer_size)
 
-                # If we got an empty response, the server closed the connection
-                assert response == b'', 'Expected empty response or SSLError'
+                assert response == b'', 'Expected the connection to be closed without a reply'
 
             except (ssl.SSLError, ConnectionResetError, BrokenPipeError):
                 pass
@@ -797,39 +767,117 @@ class TestTlsAndMtls:
 
 # ################################################################################################################################
 
-    def test_tls_minimum_version(self, tls_certs:'dict[str, str]') -> 'None':
-        """ A client attempting TLS 1.1 (below the server's minimum of 1.2)
-        must fail the handshake.
+    def test_channel_accepts_the_certificate_name_it_names(self, make_raw_sender:'callable_') -> 'None':
+        """ A channel tied to a certificate name accepts a sender presenting that name.
         """
 
-        # Start a TLS server with the standard minimum version ..
-        process, port = start_server(
-            tls_cert=tls_certs['server_cert'],
-            tls_key=tls_certs['server_key'],
-            tls_ca=tls_certs['ca'],
-            tls_verify='none',
-        )
+        process, port = start_server(security_common_name='hospital-a', sender_common_name='hospital-a')
 
         try:
+            with make_raw_sender(port) as raw_socket:
 
-            # Build a client context that caps at TLS 1.1 ..
-            ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-            ssl_context.load_verify_locations(cafile=tls_certs['ca'])
-            ssl_context.maximum_version = ssl.TLSVersion.TLSv1_1
+                raw_socket.sendall(frame_encode(sample_adt_a01('CN001'), start_sequence, end_sequence))
+                ack_bytes = _read_one_framed_response(raw_socket)
 
-            raw_socket = socket.create_connection(('127.0.0.1', port), timeout=_socket_timeout)
+                assert b'MSA|AA|CN001' in ack_bytes
 
-            try:
+        finally:
+            stop_server(process)
 
-                # The handshake should fail because TLS 1.1 is below the server minimum.
-                try:
-                    _ = ssl_context.wrap_socket(raw_socket, server_hostname='127.0.0.1')
-                    assert False, 'Expected ssl.SSLError for TLS version mismatch'
-                except ssl.SSLError:
-                    pass
+# ################################################################################################################################
 
-            finally:
-                raw_socket.close()
+    def test_channel_refuses_another_certificate_name(self, make_raw_sender:'callable_') -> 'None':
+        """ That same channel refuses a sender presenting any other name, which is the whole
+        point of naming one.
+        """
+
+        process, port = start_server(security_common_name='hospital-a', sender_common_name='hospital-b')
+
+        try:
+            with make_raw_sender(port) as raw_socket:
+
+                raw_socket.sendall(frame_encode(sample_adt_a01('CN002'), start_sequence, end_sequence))
+                ack_bytes = _read_one_framed_response(raw_socket)
+
+                assert b'MSA|AR|CN002' in ack_bytes
+
+        finally:
+            stop_server(process)
+
+# ################################################################################################################################
+
+    def test_channel_refuses_a_sender_presenting_nothing(self, make_raw_sender:'callable_') -> 'None':
+        """ A channel that names a certificate is not satisfied by a sender that presents none,
+        which is what a connection arriving without client verification amounts to.
+        """
+
+        process, port = start_server(security_common_name='hospital-a', sender_common_name='')
+
+        try:
+            with make_raw_sender(port) as raw_socket:
+
+                raw_socket.sendall(frame_encode(sample_adt_a01('CN003'), start_sequence, end_sequence))
+                ack_bytes = _read_one_framed_response(raw_socket)
+
+                assert b'MSA|AR|CN003' in ack_bytes
+
+        finally:
+            stop_server(process)
+
+# ################################################################################################################################
+
+    def test_channel_naming_no_certificate_takes_any_sender(self, make_raw_sender:'callable_') -> 'None':
+        """ A channel that names no certificate is not made to care about one.
+        """
+
+        process, port = start_server(sender_common_name='whoever')
+
+        try:
+            with make_raw_sender(port) as raw_socket:
+
+                raw_socket.sendall(frame_encode(sample_adt_a01('CN004'), start_sequence, end_sequence))
+                ack_bytes = _read_one_framed_response(raw_socket)
+
+                assert b'MSA|AA|CN004' in ack_bytes
+
+        finally:
+            stop_server(process)
+
+# ################################################################################################################################
+
+    def test_channel_accepts_a_sender_inside_its_networks(self, make_raw_sender:'callable_') -> 'None':
+        """ A channel limited to a set of networks accepts a sender whose address falls inside one.
+        """
+
+        process, port = start_server(allowed_networks='198.51.100.0/24, 203.0.113.0/24', sender_ip='203.0.113.10')
+
+        try:
+            with make_raw_sender(port) as raw_socket:
+
+                raw_socket.sendall(frame_encode(sample_adt_a01('NET001'), start_sequence, end_sequence))
+                ack_bytes = _read_one_framed_response(raw_socket)
+
+                assert b'MSA|AA|NET001' in ack_bytes
+
+        finally:
+            stop_server(process)
+
+# ################################################################################################################################
+
+    def test_channel_refuses_a_sender_outside_its_networks(self, make_raw_sender:'callable_') -> 'None':
+        """ That same channel refuses a sender from anywhere else, and the address it goes by is
+        the one reported for the sender rather than the balancer's own.
+        """
+
+        process, port = start_server(allowed_networks='198.51.100.0/24', sender_ip='203.0.113.10')
+
+        try:
+            with make_raw_sender(port) as raw_socket:
+
+                raw_socket.sendall(frame_encode(sample_adt_a01('NET002'), start_sequence, end_sequence))
+                ack_bytes = _read_one_framed_response(raw_socket)
+
+                assert b'MSA|AR|NET002' in ack_bytes
 
         finally:
             stop_server(process)

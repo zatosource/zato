@@ -6,6 +6,12 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# gevent
+# The listener serves each connection on a greenlet, so this has to happen before anything
+# imports a socket, the same way a Zato server patches itself before it starts
+from gevent.monkey import patch_all
+_ = patch_all()
+
 # stdlib
 import argparse
 import signal
@@ -14,9 +20,10 @@ import sys
 import time
 
 # Zato
+from zato.common.hl7.mllp.preprocess import build_tolerance_config
 from zato.common.hl7.mllp.router import HL7MessageRouter
 from zato.common.hl7.mllp.server import HL7MLLPServer
-from zato.common.hl7.mllp.tls import build_server_ssl_context
+from zato.common.hl7.mllp.settings import ListenerConfig, RouteSettings
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -112,11 +119,9 @@ def _build_argument_parser() -> 'argparse.ArgumentParser':
     _ = parser.add_argument('--log-messages', action=argparse.BooleanOptionalAction, default=False)
     _ = parser.add_argument('--should-return-errors', action=argparse.BooleanOptionalAction, default=False)
 
-    # TLS
-    _ = parser.add_argument('--tls-cert', default='')
-    _ = parser.add_argument('--tls-key', default='')
-    _ = parser.add_argument('--tls-ca', default='')
-    _ = parser.add_argument('--tls-verify', choices=['none', 'optional', 'required'], default='none')
+    # What the channel accepts a message from - the load balancer reports both on the PROXY header
+    _ = parser.add_argument('--security-common-name', default='')
+    _ = parser.add_argument('--allowed-networks', default='')
 
     # Pre-processing toggles (each has a --no- variant via BooleanOptionalAction)
     _ = parser.add_argument('--normalize-line-endings', action=argparse.BooleanOptionalAction, default=True)
@@ -160,35 +165,12 @@ def main() -> 'None':
 
     address = f'{host}:{port}'
 
-    # Build the TLS context if a certificate is provided
-    ssl_context = None
-
-    if args.tls_cert:
-        ssl_context = build_server_ssl_context(
-            cert_file=args.tls_cert,
-            key_file=args.tls_key,
-            ca_file=args.tls_ca,
-            verify_mode=args.tls_verify,
-        )
-
-    # Wrap the callback in a default-route router
-    router = HL7MessageRouter()
-    router.add_route(
-        channel_name='test',
-        service_name='test',
-        callback=callback_func,
-        is_default=True,
-    )
-
-    # Instantiate the server with all config
-    server = HL7MLLPServer(
-        address,
-        router,
-        _start_sequence,
-        _end_sequence,
-        receive_timeout=args.recv_timeout,
+    # How the one channel this server serves reads its messages
+    settings = RouteSettings(
+        start_sequence=_start_sequence,
+        end_sequence=_end_sequence,
+        recv_timeout=args.recv_timeout,
         max_message_size=args.max_msg_size,
-        read_buffer_size=args.read_buffer_size,
         should_log_messages=args.log_messages,
         should_return_errors=args.should_return_errors,
 
@@ -200,10 +182,29 @@ def main() -> 'None':
         should_force_standard_delimiters=args.force_standard_delimiters,
         should_use_msh18_encoding=args.use_msh18_encoding,
         default_character_encoding=args.default_character_encoding,
+        tolerance_config=build_tolerance_config(),
         dedup_ttl_value=args.dedup_ttl_value,
         dedup_ttl_unit=args.dedup_ttl_unit,
-        ssl_context=ssl_context,
+        security_common_name=args.security_common_name,
+        allowed_networks=args.allowed_networks,
     )
+
+    # Wrap the callback in a default-route router
+    router = HL7MessageRouter()
+    router.add_route(
+        channel_name='test',
+        service_name='test',
+        callback=callback_func,
+        is_default=True,
+        settings=settings,
+    )
+
+    # The listener takes its own settings from the environment, as a real server does
+    listener_config = ListenerConfig.from_env(address)
+    listener_config.read_buffer_size = args.read_buffer_size
+    listener_config.max_message_size = args.max_msg_size
+
+    server = HL7MLLPServer(listener_config, router)
 
     # Register SIGTERM handler for clean shutdown
     def _on_sigterm(signum:'int', frame:'object') -> 'None':

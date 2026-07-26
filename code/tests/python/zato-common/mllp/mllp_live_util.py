@@ -7,9 +7,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 import re
+import socket
+import socketserver
+import ssl
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -17,6 +22,7 @@ from pathlib import Path
 from colorama import Fore, Style, init as colorama_init
 
 # Zato
+from mllp_proxy_header import build_proxy_header
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -47,6 +53,134 @@ _server_startup_timeout_seconds = 10
 # How long to wait for the server process to terminate after SIGTERM
 _server_shutdown_timeout_seconds = 5
 
+# What the stand-in load balancer reports about a sender unless a test asks for something else
+default_sender_ip          = '203.0.113.10'
+default_sender_common_name = ''
+
+_relay_buffer_size = 65536
+
+# ################################################################################################################################
+# ################################################################################################################################
+# Load balancer stand-in
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _RelayHandler(socketserver.BaseRequestHandler):
+    """ Carries one connection through to the listener, announcing the sender first, which is
+    the whole of what the load balancer does for MLLP. Where it was given a TLS context it
+    terminates TLS too and reports the name on the certificate it verified.
+    """
+
+    def handle(self) -> 'None':
+
+        server = cast_('any_', self.server)
+        common_name = server.sender_common_name
+        downstream = self.request
+
+        if server.ssl_context:
+
+            try:
+                downstream = server.ssl_context.wrap_socket(downstream, server_side=True)
+            except ssl.SSLError:
+
+                # A sender that cannot be verified never reaches the listener at all
+                return
+
+            # The name on the verified certificate is the sender's identity from here on
+            peer_certificate = downstream.getpeercert()
+
+            if peer_certificate:
+                common_name = _common_name_from_certificate(peer_certificate)
+
+        upstream = socket.create_connection(('127.0.0.1', server.listener_port))
+
+        # The listener has no other way of knowing who is calling
+        upstream.sendall(build_proxy_header(server.sender_ip, self.client_address[1], common_name))
+
+        # Each direction runs on its own thread so neither has to wait on the other
+        downstream_thread = threading.Thread(target=_pump, args=(upstream, downstream), daemon=True)
+        downstream_thread.start()
+
+        _pump(downstream, upstream)
+        downstream_thread.join()
+
+        upstream.close()
+
+# ################################################################################################################################
+
+def _common_name_from_certificate(peer_certificate:'any_') -> 'str':
+    """ Digs the common name out of the subject of a verified certificate.
+    """
+
+    for part in peer_certificate['subject']:
+        for name, value in part:
+            if name == 'commonName':
+                return value
+
+    return ''
+
+# ################################################################################################################################
+
+def _pump(source:'socket.socket', destination:'socket.socket') -> 'None':
+    """ Moves bytes one way until the source has no more, then tells the destination as much.
+    """
+
+    while True:
+
+        try:
+            chunk = source.recv(_relay_buffer_size)
+        except OSError:
+            break
+
+        if not chunk:
+            break
+
+        try:
+            destination.sendall(chunk)
+        except OSError:
+            break
+
+    # Without this the far side waits out its own timeout instead of seeing the close
+    try:
+        destination.shutdown(socket.SHUT_WR)
+    except OSError:
+        pass
+
+# ################################################################################################################################
+
+class _Relay(socketserver.ThreadingTCPServer):
+    """ Stands in for the load balancer in front of a listener under test.
+    """
+
+    allow_reuse_address = True
+    daemon_threads = True
+
+    def __init__(
+        self,
+        listener_port:'int',
+        sender_ip:'str',
+        sender_common_name:'str',
+        ssl_context:'ssl.SSLContext | None'=None,
+    ) -> 'None':
+        super().__init__(('127.0.0.1', 0), _RelayHandler)
+        self.listener_port = listener_port
+        self.sender_ip = sender_ip
+        self.sender_common_name = sender_common_name
+        self.ssl_context = ssl_context
+
+# ################################################################################################################################
+
+# Which relay fronts which server process, so that stopping the one stops the other
+_relays:'dict[int, _Relay]' = {}
+
+# ################################################################################################################################
+
+def announce_sender(sock:'socket.socket', sender_ip:'str'=default_sender_ip, common_name:'str'='') -> 'None':
+    """ Says who is calling on a connection made straight to a listener, which is what a load
+    balancer would otherwise have done.
+    """
+    sock.sendall(build_proxy_header(sender_ip, sock.getsockname()[1], common_name))
+
 # ################################################################################################################################
 # ################################################################################################################################
 # Server process helpers
@@ -54,9 +188,21 @@ _server_shutdown_timeout_seconds = 5
 # ################################################################################################################################
 
 def start_server(**overrides:'object') -> 'tuple[subprocess.Popen, int]':
-    """ Starts the MLLP test server as a subprocess and waits for the READY signal.
-    Returns (process, port).
+    """ Starts the MLLP test server as a subprocess and waits for the READY signal. Puts a
+    stand-in for the load balancer in front of it and returns that port, since a listener is
+    never reached directly.
     """
+
+    # What the stand-in says about the sender, which is not the server's own business
+    sender_ip = cast_('str', overrides.pop('sender_ip', default_sender_ip))
+    sender_common_name = cast_('str', overrides.pop('sender_common_name', default_sender_common_name))
+    ssl_context = cast_('any_', overrides.pop('ssl_context', None))
+
+    # Measuring the listener means not measuring anything put in front of it
+    use_relay = cast_('bool', overrides.pop('use_relay', True))
+
+    # What the listener reads its own settings from, as against what any one channel brings
+    listener_env = cast_('any_', overrides.pop('listener_env', None))
 
     command = [sys.executable, _test_server_script, '--port', '0']
 
@@ -78,11 +224,17 @@ def start_server(**overrides:'object') -> 'tuple[subprocess.Popen, int]':
             command.append(cli_key)
             command.append(value_text)
 
+    process_env = dict(os.environ)
+
+    if listener_env:
+        process_env.update(listener_env)
+
     process = subprocess.Popen(
         command,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
+        env=process_env,
     )
 
     # Read stdout until we see the READY line
@@ -108,7 +260,16 @@ def start_server(**overrides:'object') -> 'tuple[subprocess.Popen, int]':
         process.kill()
         raise Exception('MLLP test server exited before printing READY')
 
-    return process, port
+    if not use_relay:
+        return process, port
+
+    relay = _Relay(port, sender_ip, sender_common_name, ssl_context)
+    relay_thread = threading.Thread(target=relay.serve_forever, daemon=True)
+    relay_thread.start()
+
+    _relays[id(process)] = relay
+
+    return process, relay.server_address[1]
 
 # ################################################################################################################################
 
@@ -116,6 +277,13 @@ def stop_server(process:'subprocess.Popen') -> 'None':
     """ Sends SIGTERM to the server process and waits for it to exit.
     Sends SIGKILL if it does not exit in time.
     """
+
+    relay = _relays.pop(id(process), None)
+
+    if relay:
+        relay.shutdown()
+        relay.server_close()
+
     process.terminate()
 
     try:

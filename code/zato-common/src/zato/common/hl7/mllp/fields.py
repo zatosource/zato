@@ -37,9 +37,6 @@ class MLLPField(NamedTuple):
     # Whether the field has a column of its own in generic_conn - everything else lives in the opaque blob
     is_column: 'bool' = False
 
-    # Whether the field configures the shared TCP listener rather than one route through it
-    is_listener_level: 'bool' = False
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -55,6 +52,19 @@ Max_Msg_Size_Multipliers = {
 }
 
 # ################################################################################################################################
+
+def resolve_max_msg_size(value:'int', unit:'str') -> 'int':
+    """ Turns a size and the unit it was entered in into bytes, which is what every bound the
+    listener holds a channel to is expressed in.
+    """
+
+    # The multiplier map is keyed lower-case and a stored unit may carry either casing
+    multiplier = Max_Msg_Size_Multipliers[unit.lower()]
+
+    out = value * multiplier
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 # Every field an MLLP channel carries, in the order the Dashboard and enmasse present them.
@@ -65,22 +75,29 @@ Channel_Fields:'mllp_field_list' = [
     MLLPField('hl7_version', HL7.Const.Version.v2.id),
     MLLPField('service', ''),
 
-    # Framing and I/O of the shared listener
-    MLLPField('start_seq', HL7.Default.start_seq, is_listener_level=True),
-    MLLPField('end_seq', HL7.Default.end_seq, is_listener_level=True),
-    MLLPField('recv_timeout', HL7.Default.recv_timeout, is_listener_level=True),
-    MLLPField('max_msg_size', HL7.Default.max_msg_size_value, is_listener_level=True),
-    MLLPField('max_msg_size_unit', HL7.Default.max_msg_size_unit, is_listener_level=True),
-    MLLPField('read_buffer_size', HL7.Default.read_buffer_size, is_listener_level=True),
+    # How this channel's own messages are framed and read. Each is capped at the listener's
+    # matching bound rather than able to exceed it.
+    MLLPField('start_seq', HL7.Default.start_seq),
+    MLLPField('end_seq', HL7.Default.end_seq),
+    MLLPField('recv_timeout', HL7.Default.recv_timeout),
+    MLLPField('max_msg_size', HL7.Default.max_msg_size_value),
+    MLLPField('max_msg_size_unit', HL7.Default.max_msg_size_unit),
+    MLLPField('idle_timeout', HL7.Default.idle_timeout),
+    MLLPField('keepalive_idle', HL7.Default.keepalive_idle),
+    MLLPField('keepalive_interval', HL7.Default.keepalive_interval),
+    MLLPField('keepalive_probe_count', HL7.Default.keepalive_probe_count),
+
+    # Who this channel accepts a message from
+    MLLPField('security_id', 0),
+    MLLPField('allowed_networks', ''),
 
     # Parsing
     MLLPField('should_parse_on_input', True),
-    MLLPField('should_validate', True),
+    MLLPField('should_validate', False),
 
     # Logging and audit
     MLLPField('should_log_messages', False),
     MLLPField('should_return_errors', False),
-    MLLPField('logging_level', HL7.Default.logging_level),
     MLLPField('is_audit_log_active', False),
 
     # Routing
@@ -231,6 +248,21 @@ def get_names(fields:'mllp_field_list') -> 'strtuple':
 
     out = tuple(names)
     return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The toggles the Rust parser's tolerance configuration is built from, named here rather than
+# in each of the places that build one.
+Tolerance_Names = (
+    'normalize_obx2_value_type',
+    'replace_invalid_obx2_value_type',
+    'normalize_invalid_escape_sequences',
+    'normalize_obx8_abnormal_flags',
+    'normalize_quadruple_quoted_empty',
+    'allow_short_encoding_characters',
+    'fix_off_by_one_field_index',
+)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -16,6 +16,13 @@ from zato.common.api import HL7
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 _default = HL7.Default
 
 _dedup_ttl_unit_choices = [
@@ -44,14 +51,13 @@ class CreateForm(forms.Form):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     should_parse_on_input = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
-    should_validate = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    should_validate = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     should_return_errors = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     should_log_messages = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_audit_log_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
     hl7_version = forms.ChoiceField(widget=forms.Select())
     service = forms.ChoiceField(widget=forms.Select(attrs={'class':'required', 'style':'width:100%'}))
-
-    logging_level = forms.ChoiceField(widget=forms.Select())
 
     max_msg_size = forms.CharField(initial=_default.max_msg_size_value, widget=forms.TextInput(attrs={'style':'width:8%'}))
     max_msg_size_unit = forms.ChoiceField(
@@ -59,10 +65,22 @@ class CreateForm(forms.Form):
         initial=_default.max_msg_size_unit,
         widget=forms.Select(attrs={'style':'width:60px'}),
     )
-    read_buffer_size = forms.CharField(initial=_default.read_buffer_size, widget=forms.TextInput(attrs={'style':'width:10%'}))
     recv_timeout = forms.CharField(initial=_default.recv_timeout, widget=forms.TextInput(attrs={'style':'width:8%'}))
+    idle_timeout = forms.CharField(initial=_default.idle_timeout, widget=forms.TextInput(attrs={'style':'width:8%'}))
     start_seq = forms.CharField(initial=_default.start_seq, widget=forms.TextInput(attrs={'style':'width:15%'}))
     end_seq = forms.CharField(initial=_default.end_seq, widget=forms.TextInput(attrs={'style':'width:15%'}))
+
+    keepalive_idle = forms.CharField(
+        initial=_default.keepalive_idle, widget=forms.TextInput(attrs={'style':'width:8%'}))
+    keepalive_interval = forms.CharField(
+        initial=_default.keepalive_interval, widget=forms.TextInput(attrs={'style':'width:8%'}))
+    keepalive_probe_count = forms.CharField(
+        initial=_default.keepalive_probe_count, widget=forms.TextInput(attrs={'style':'width:8%'}))
+
+    # Who the channel accepts a message from - the definition names the client certificate
+    # the sender's connection has to have been made with, and the networks its address may be in
+    security_id = forms.ChoiceField(required=False, widget=forms.Select(attrs={'style':'width:100%'}))
+    allowed_networks = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
 
     # Routing fields
     msh3_sending_app        = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:50%'}))
@@ -121,12 +139,27 @@ class CreateForm(forms.Form):
     rest_url_path    = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
     rest_security_id = forms.ChoiceField(required=False, widget=forms.Select(attrs={'style':'width:100%'}))
 
-    def __init__(self, prefix=None, post_data=None, req=None, security_list=None):
+    def __init__(
+        self,
+        prefix:'any_'=None,
+        post_data:'any_'=None,
+        req:'any_'=None,
+        security_list:'any_'=None,
+        mtls_security_list:'any_'=None,
+        ) -> 'None':
+
         super(CreateForm, self).__init__(post_data, prefix=prefix)
+
+        if security_list is None:
+            security_list = []
+
+        if mtls_security_list is None:
+            mtls_security_list = []
+
         add_select(self, 'hl7_version', HL7.Const.Version(), needs_initial_select=False)
-        add_select(self, 'logging_level', HL7.Const.LoggingLevel(), needs_initial_select=False)
         add_services(self, req)
-        add_security_select(self, security_list or [], field_name='rest_security_id')
+        add_security_select(self, security_list, field_name='rest_security_id')
+        add_security_select(self, mtls_security_list, field_name='security_id')
 
 # ################################################################################################################################
 # ################################################################################################################################
