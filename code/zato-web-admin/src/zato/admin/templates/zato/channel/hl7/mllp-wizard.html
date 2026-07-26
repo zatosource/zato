@@ -30,6 +30,7 @@ so the resulting channel is identical to one created through the editor.
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/destinations.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/core.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/select-rows.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/forms.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/review.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-descriptions.js"></script>
@@ -125,23 +126,23 @@ $(document).ready(function() {
 
                 </div>
 
-                <!-- Step 2 - service, destinations and options -->
+                <!-- Step 2 - destinations, service and options -->
                 <div class="wizard-step-body" id="mllp-wizard-step-body-1" hidden>
 
-                    <div class="wizard-section" id="mllp-wizard-service-section">
-                        <div class="wizard-section-title"><label for="id_service">Service</label></div>
-                        <div class="wizard-service-row" id="mllp-wizard-service-row">
-                            {{ form.service }}
-                        </div>
-                    </div>
-
                     <div class="wizard-section">
-                        <div class="wizard-section-title">Destinations</div>
-                        <div class="wizard-conn-list" id="mllp-wizard-destination-rows"></div>
-                        <span class="wizard-conn-add" id="mllp-wizard-destination-add">+ Add a destination</span>
+                        <div class="wizard-section-title"><label for="mllp-wizard-destination-add">Destinations</label></div>
+                        <div class="wizard-select-list" id="mllp-wizard-destination-rows"></div>
+                        <a href="javascript:void(0)" class="wizard-select-add" id="mllp-wizard-destination-add">Add a destination</a>
                         <div class="wizard-respond-from-row" id="mllp-wizard-respond-from-row" hidden>
                             <label for="mllp-wizard-respond-from">Respond from</label>
                             <select id="mllp-wizard-respond-from"></select>
+                        </div>
+                    </div>
+
+                    <div class="wizard-section" id="mllp-wizard-service-section">
+                        <div class="wizard-section-title"><label for="id_service">Service</label></div>
+                        <div class="wizard-select-row wizard-service-row" id="mllp-wizard-service-row">
+                            {{ form.service }}
                         </div>
                     </div>
 

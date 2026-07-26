@@ -140,11 +140,10 @@ wizard.helpDescriptions = function() {
     out['mllp-wizard-toggle-rest'] = shared['id_use_rest'];
     out['mllp-wizard-edit-routing'] = 'Which incoming messages this channel will accept.<br>With no matchers, every message will be accepted -<br>matchers filter by MSH header fields,<br>e.g. sending application or message type.';
 
-    // .. and the step 2 destination controls.
+    // .. and the step 2 destination rows, each of them a connection every
+    // message is delivered to once the service has run.
     out['mllp-wizard-respond-from'] = shared['destinations-respond-from-create'];
-    out['mllp-wizard-destination-type'] = 'The kind of the outgoing connection<br>this destination delivers to.';
-    out['mllp-wizard-destination-connection'] = 'The connection each message is delivered to<br>after the service runs.';
-    out['mllp-wizard-destination-active'] = 'Whether this destination receives messages.<br>Inactive destinations are skipped.';
+    out['mllp-wizard-destination-add'] = 'Where each message goes after the service runs.<br>A row picks the kind of the outgoing connection,<br>the connection itself and the options that kind has,<br>e.g. the HTTP method of a REST call.<br>The switch at the end of a row decides whether<br>the destination receives messages at all.';
 
     return out;
 };

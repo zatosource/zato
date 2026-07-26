@@ -199,15 +199,12 @@ forms._refreshSecurityRows = function(list) {
 // ////////////////////////////////////////////////////////////////////////
 
 // Appends one security row - a select plus the delete link to its right -
-// to the list of security rows in the REST popover.
+// to the list of security rows in the REST popover. The row, its delete
+// link and the add link under the list are the kit's shared select rows.
 forms._addSecurityRow = function(list, value) {
-
-    var row = document.createElement('div');
-    row.className = 'mllp-wizard-security-row';
 
     var select = document.createElement('select');
     forms._fillSecuritySelect(select, value);
-    row.appendChild(select);
 
     // A new pick here frees the old value for the other rows
     // and takes the new one away from them
@@ -215,15 +212,11 @@ forms._addSecurityRow = function(list, value) {
         forms._refreshSecurityRows(list);
     });
 
-    // The icon itself is drawn by the stylesheet, from the shared close.svg
-    var deleteLink = document.createElement('a');
-    deleteLink.href = 'javascript:void(0)';
-    deleteLink.className = 'mllp-wizard-security-delete';
-    deleteLink.title = 'Remove';
-    deleteLink.setAttribute('aria-label', 'Remove');
+    var buildContent = function(row) {
+        row.appendChild(select);
+    };
 
-    deleteLink.addEventListener('click', function() {
-        list.removeChild(row);
+    var onRemove = function() {
 
         // The list never goes fully empty - a blank row takes over
         if(!list.children.length) {
@@ -233,10 +226,9 @@ forms._addSecurityRow = function(list, value) {
 
         // The removed pick is up for grabs again in the remaining rows
         forms._refreshSecurityRows(list);
-    });
+    };
 
-    row.appendChild(deleteLink);
-    list.appendChild(row);
+    $.fn.zato.wizard_kit.selectRows.appendRow(list, buildContent, onRemove);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -300,7 +292,7 @@ forms.registerKind('securityList', {
         row.appendChild(head);
 
         var list = document.createElement('div');
-        list.className = 'mllp-wizard-security-list';
+        list.className = 'wizard-select-list';
         list.id = forms.securityConfig.securityListId;
         row.appendChild(list);
 
@@ -357,12 +349,7 @@ forms.registerKind('securityList', {
         forms._refreshSecurityRows(list);
 
         // .. the add link under the list grows it one row at a time ..
-        var addLink = document.createElement('a');
-        addLink.href = 'javascript:void(0)';
-        addLink.className = 'mllp-wizard-security-add';
-        addLink.textContent = 'Add security';
-
-        addLink.addEventListener('click', function() {
+        var addLink = $.fn.zato.wizard_kit.selectRows.buildAddLink('Add security', function() {
             forms._addSecurityRow(list, '');
             forms._renumberSecurityRows(list);
             forms._refreshSecurityRows(list);
@@ -399,7 +386,7 @@ forms.registerKind('securityList', {
         var securityConfig = forms.securityConfig;
         var keyList = [];
 
-        $(popper).find('.mllp-wizard-security-row select').each(function() {
+        $(popper).find('.wizard-select-row select').each(function() {
             var value = this.value;
             var isEmpty = !value || value === securityConfig.noSecurityValue;
 
