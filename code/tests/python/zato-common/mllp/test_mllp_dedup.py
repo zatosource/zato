@@ -115,6 +115,89 @@ class TestMessageDeduplicator:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class TestTheCacheStaysBounded:
+    """ A sender that never repeats a control id would grow the cache for as long as the TTL
+    window lasts, so the cache holds a fixed number of ids and drops what it has held longest.
+    """
+
+    def test_the_cache_never_exceeds_its_cap(self) -> 'None':
+        dedup = MessageDeduplicator(ttl_seconds=3600.0, max_entries=10)
+
+        for index in range(100):
+            _ = dedup.is_duplicate(f'CTRL{index}')
+
+        assert len(dedup._seen) == 10
+
+    def test_the_oldest_ids_are_the_ones_dropped(self) -> 'None':
+        dedup = MessageDeduplicator(ttl_seconds=3600.0, max_entries=3)
+
+        for control_id in ['FIRST', 'SECOND', 'THIRD', 'FOURTH']:
+            _ = dedup.is_duplicate(control_id)
+
+        assert 'FIRST' not in dedup._seen
+        assert 'FOURTH' in dedup._seen
+
+    def test_an_id_dropped_for_room_is_accepted_again(self) -> 'None':
+        dedup = MessageDeduplicator(ttl_seconds=3600.0, max_entries=2)
+
+        _ = dedup.is_duplicate('FIRST')
+        _ = dedup.is_duplicate('SECOND')
+        _ = dedup.is_duplicate('THIRD')
+
+        assert dedup.is_duplicate('FIRST') is False
+
+    def test_a_repeat_within_the_cap_is_still_caught(self) -> 'None':
+        dedup = MessageDeduplicator(ttl_seconds=3600.0, max_entries=10)
+
+        _ = dedup.is_duplicate('CTRL001')
+
+        assert dedup.is_duplicate('CTRL001') is True
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestEvictionCostsWhatItDrops:
+    """ Eviction walks the entries it actually drops rather than everything received so far,
+    which is what keeps the per-message cost from growing with the volume already handled.
+    """
+
+    def test_entries_inside_the_window_are_left_alone(self) -> 'None':
+        dedup = MessageDeduplicator(ttl_seconds=60.0)
+
+        for index in range(50):
+            _ = dedup.is_duplicate(f'CTRL{index}')
+
+        _ = dedup.is_duplicate('LATEST')
+
+        assert len(dedup._seen) == 51
+
+    def test_everything_expired_goes_in_one_pass(self) -> 'None':
+        dedup = MessageDeduplicator(ttl_seconds=0.05)
+
+        for index in range(50):
+            _ = dedup.is_duplicate(f'CTRL{index}')
+
+        time.sleep(0.1)
+
+        _ = dedup.is_duplicate('LATEST')
+
+        assert list(dedup._seen) == ['LATEST']
+
+    def test_eviction_stops_at_the_first_live_entry(self) -> 'None':
+        dedup = MessageDeduplicator(ttl_seconds=0.15)
+
+        _ = dedup.is_duplicate('OLD')
+        time.sleep(0.2)
+
+        # The entry behind the expired one arrived late enough to still be inside the window
+        _ = dedup.is_duplicate('RECENT')
+        _ = dedup.is_duplicate('LATEST')
+
+        assert list(dedup._seen) == ['RECENT', 'LATEST']
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class TestTTLMultipliers:
     """ Tests for TTL_Multipliers correctness.
     """

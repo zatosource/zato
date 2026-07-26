@@ -14,6 +14,7 @@ from __future__ import annotations
 
 # stdlib
 from collections import deque
+from datetime import datetime, timezone
 from time import time
 
 # Zato
@@ -59,9 +60,10 @@ class ChannelState:
         # even when the lifetime error rate still looks healthy
         self.nack_streak = 0
 
-        # When the last message arrived - what dead-feed detection watches
+        # When the last message arrived - what dead-feed detection watches. It is kept as the
+        # number the arrival already produced, and the text of it is written when read, because
+        # every message sets this and only a dashboard poll ever looks at it.
         self.last_message_time:'floatnone' = None
-        self.last_message_time_iso = ''
 
         # The listener's condition
         self.is_listening = False
@@ -86,7 +88,6 @@ class ChannelState:
     def on_message_received(self) -> 'None':
         self.received += 1
         self.last_message_time = time()
-        self.last_message_time_iso = utcnow().isoformat()
 
 # ################################################################################################################################
 
@@ -162,6 +163,18 @@ class ChannelState:
 
 # ################################################################################################################################
 
+    def get_last_message_time_iso(self) -> 'str':
+        """ Returns when the last message arrived, as text, or an empty string for a channel
+        that has not received anything yet.
+        """
+        if self.last_message_time is None:
+            return ''
+
+        out = datetime.fromtimestamp(self.last_message_time, timezone.utc).isoformat()
+        return out
+
+# ################################################################################################################################
+
     def get_metrics(self, now:'floatnone'=None) -> 'EndpointMetrics':
         """ Returns this channel's state in the endpoint-generic shape health derivation runs over.
         """
@@ -189,7 +202,7 @@ class ChannelState:
             'nacked': self.nacked,
             'errored': self.errored,
             'nack_streak': self.nack_streak,
-            'last_message_time_iso': self.last_message_time_iso,
+            'last_message_time_iso': self.get_last_message_time_iso(),
             'silence_seconds': self.get_silence_seconds(now),
             'error_rate': self.get_error_rate(now),
         }

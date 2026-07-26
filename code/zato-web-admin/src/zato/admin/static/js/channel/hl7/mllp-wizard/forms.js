@@ -103,21 +103,12 @@ forms.securityConfig = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Clones the options of the Django security select into the given select,
-// leaving out the values picked by the other rows so no definition can be
-// assigned twice. The requested value stays picked if it still exists -
-// when it does not, e.g. after a broadcast said the definition is gone,
-// the select falls to its default choice instead.
-forms._fillSecuritySelect = function(select, value, excludeValues) {
+// Reads the definitions the Django security select offers, which is what every
+// security row is built from.
+forms._getSecurityOptionList = function() {
 
     var securityConfig = forms.securityConfig;
-
-    // A row filled on its own has no siblings to leave anything out for
-    if(excludeValues === undefined) {
-        excludeValues = [];
-    }
-
-    select.textContent = '';
+    var out = [];
 
     wizard.field('rest_security_id').find('option').each(function() {
 
@@ -127,15 +118,48 @@ forms._fillSecuritySelect = function(select, value, excludeValues) {
             return;
         }
 
-        if(excludeValues.indexOf(this.value) !== -1) {
-            return;
+        out.push({value: this.value, label: this.textContent});
+    });
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Clones the definitions the Django security select offers into the given select,
+// leaving out the values picked by the other rows so no definition can be
+// assigned twice. The requested value stays picked if it still exists -
+// when it does not, e.g. after a broadcast said the definition is gone,
+// the select falls to its default choice instead.
+forms._fillSecuritySelect = function(select, value, pickedValues, optionList) {
+
+    // A row filled on its own has no siblings whose picks it has to leave out, and no
+    // list read ahead of it, so it reads the Django select itself
+    if(pickedValues === undefined) {
+        pickedValues = new Set();
+    }
+
+    if(optionList === undefined) {
+        optionList = forms._getSecurityOptionList();
+    }
+
+    select.textContent = '';
+
+    for(var idx = 0; idx < optionList.length; idx++) {
+
+        var entry = optionList[idx];
+
+        // A definition another row has taken is not on offer here, while this row's
+        // own pick always is
+        if(entry.value !== value && pickedValues.has(entry.value)) {
+            continue;
         }
 
         var option = document.createElement('option');
-        option.value = this.value;
-        option.textContent = this.textContent;
+        option.value = entry.value;
+        option.textContent = entry.label;
         select.appendChild(option);
-    });
+    }
 
     select.value = value;
     if(select.value !== value) {
@@ -152,26 +176,23 @@ forms._fillSecuritySelect = function(select, value, excludeValues) {
 forms._refreshSecurityRows = function(list) {
 
     var securityConfig = forms.securityConfig;
-
     var selects = list.querySelectorAll('select');
 
-    var pickedValues = [];
+    // The Django select is read once for the whole refresh rather than once per row ..
+    var optionList = forms._getSecurityOptionList();
+
+    // .. and what the rows have taken between them is gathered once too, so each row
+    // settles an option in a single lookup
+    var pickedValues = new Set();
+
     selects.forEach(function(select) {
-        pickedValues.push(select.value);
+        if(select.value && select.value !== securityConfig.noSecurityValue) {
+            pickedValues.add(select.value);
+        }
     });
 
-    selects.forEach(function(select, selectIdx) {
-
-        var excludeValues = [];
-
-        pickedValues.forEach(function(value, valueIdx) {
-            var isMeaningful = value && value !== securityConfig.noSecurityValue;
-            if(valueIdx !== selectIdx && isMeaningful) {
-                excludeValues.push(value);
-            }
-        });
-
-        forms._fillSecuritySelect(select, pickedValues[selectIdx], excludeValues);
+    selects.forEach(function(select) {
+        forms._fillSecuritySelect(select, select.value, pickedValues, optionList);
     });
 };
 

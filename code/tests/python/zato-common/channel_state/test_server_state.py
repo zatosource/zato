@@ -13,6 +13,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.common.hl7.mllp.router import HL7MessageRouter
 from zato.common.hl7.mllp.server import ConnectionContext, HL7MLLPServer
+from zato.common.hl7.mllp.settings import ListenerConfig, RouteSettings
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,8 +31,13 @@ if 0:
 _start_sequence = b'\x0b'
 _end_sequence   = b'\x1c\x0d'
 
-# The peer the fake connection pretends to be
-_peer_address = ('127.0.0.1', 12345)
+# Where the sender the fake connection pretends to be is, and the certificate it carried
+_peer_ip = '127.0.0.1'
+_peer_port = 12345
+_peer_common_name = ''
+
+# Where the listener would bind if any of these tests started one
+_bind_address = '127.0.0.1:0'
 
 # A well-formed admission
 _adt_a01 = (
@@ -56,26 +63,37 @@ class _FakeSocket:
 
 def _new_server(callback:'any_', **overrides:'any_') -> 'HL7MLLPServer':
     """ Builds a server whose default route leads to the given callback -
-    never started, so no transport runs.
+    never started, so no transport runs. The overrides tune that route's settings.
     """
-    router = HL7MessageRouter()
-    router.add_route(channel_name='test', service_name='test', callback=callback, is_default=True)
+    settings = RouteSettings(start_sequence=_start_sequence, end_sequence=_end_sequence, **overrides)
 
-    out = HL7MLLPServer('127.0.0.1:0', router, _start_sequence, _end_sequence, **overrides)
+    router = HL7MessageRouter()
+    router.add_route(
+        channel_name='test', service_name='test', callback=callback, is_default=True, settings=settings)
+
+    out = HL7MLLPServer(ListenerConfig(_bind_address), router)
     return out
 
 # ################################################################################################################################
 
 def _deliver(server:'HL7MLLPServer', message:'bytes', control_id:'str'='') -> '_FakeSocket':
-    """ Hands one message to the server's message handler over a fake socket.
+    """ Hands one message to the server's message handler over a fake socket, under the settings
+    of the route it matches, which is how the listener would hand it over after routing.
     """
     if control_id:
         message = message.replace(b'MSG000001', control_id.encode('utf8'))
 
     fake_socket = _FakeSocket()
-    context = ConnectionContext(_peer_address)
+    context = ConnectionContext(_peer_ip, _peer_port, _peer_common_name)
 
-    server._handle_message(fake_socket, message, context)
+    msh_line = message.split(b'\r', 1)[0].decode('ascii')
+    matched_route = server.router.match(msh_line)
+
+    if matched_route is None:
+        raise AssertionError(f'No route matched `{msh_line}`')
+
+    active_socket = cast_('any_', fake_socket)
+    server._handle_message(active_socket, message, context, matched_route, matched_route.settings)
 
     return fake_socket
 

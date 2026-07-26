@@ -351,11 +351,14 @@ review.render = function() {
 
     var destinationCount = 0;
 
+    // The type list is read once for the whole summary rather than once per destination
+    var typeLabelMap = wizard.destinations._getTypeLabelMap();
+
     for(var destinationIdx = 0; destinationIdx < wizard.state.destinationList.length; destinationIdx++) {
         var destination = wizard.state.destinationList[destinationIdx];
         if(destination.connection) {
             destinationCount++;
-            var rowLabel = wizard.destinations._rowLabel(destination);
+            var rowLabel = wizard.destinations._rowLabel(destination, typeLabelMap);
             if(!destination.isActive) {
                 rowLabel += ' (inactive)';
             }

@@ -87,11 +87,9 @@ _shared_state = _SharedMLLPState()
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_current_state() -> 'anylist':
-    """ Returns the state contract of every HL7 MLLP channel in this process -
-    what zato.channel.hl7.get-current-state serves. A channel that has not seen
-    any traffic yet reports zero counters, and with no listener running at all
-    every channel reports itself as not listening.
+def _iter_channel_states() -> 'anylist':
+    """ Returns the live state object of every HL7 MLLP channel in this process, which is what
+    both the state contract and the endpoint metrics are two projections of.
     """
 
     with _shared_state.lock:
@@ -109,8 +107,21 @@ def get_current_state() -> 'anylist':
         else:
             channel_state = ChannelState(channel_name)
 
-        out.append(channel_state.get_state())
+        out.append(channel_state)
 
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_current_state() -> 'anylist':
+    """ Returns the state contract of every HL7 MLLP channel in this process -
+    what zato.channel.hl7.get-current-state serves. A channel that has not seen
+    any traffic yet reports zero counters, and with no listener running at all
+    every channel reports itself as not listening.
+    """
+
+    out:'anylist' = [channel_state.get_state() for channel_state in _iter_channel_states()]
     return out
 
 # ################################################################################################################################
@@ -133,22 +144,10 @@ def get_current_metrics() -> 'stranydict':
     keyed by channel name - what the alerting sweep's feed-silent collector runs over.
     """
 
-    with _shared_state.lock:
-        server = _shared_state.server
-        channel_names = _shared_state.router.get_channel_names()
-
     out:'stranydict' = {}
 
-    for channel_name in channel_names:
-
-        # A running listener holds the live counters, without one there is nothing
-        # to count and a zeroed state says exactly that.
-        if server:
-            channel_state = server.get_channel_state(channel_name)
-        else:
-            channel_state = ChannelState(channel_name)
-
-        out[channel_name] = channel_state.get_metrics()
+    for channel_state in _iter_channel_states():
+        out[channel_state.name] = channel_state.get_metrics()
 
     return out
 
