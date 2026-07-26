@@ -11,6 +11,9 @@ from dataclasses import dataclass
 from logging import getLogger
 from threading import Lock
 
+# Zato
+from zato.common.hl7.mllp.settings import Default_End_Sequence, Default_Start_Sequence, RouteSettings
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -63,6 +66,9 @@ class ChannelRoute:
 
     # When True, messages arriving on this channel are written to the audit log
     is_audit_log_active:'bool'
+
+    # How this channel's messages are framed, read and interpreted, and who may send them
+    settings:'RouteSettings'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -147,10 +153,16 @@ class HL7MessageRouter:
         msh12_version_id:'str' = '',
         is_default:'bool' = False,
         is_audit_log_active:'bool' = False,
+        settings:'RouteSettings | None' = None,
         ) -> 'None':
         """ Registers a new routing rule. All match fields are optional - empty string means match any.
         Only one route can be the default at a time - setting a new default clears the previous one.
         """
+
+        # A channel that says nothing about how its messages are read gets the defaults,
+        # which is what every route had in common before the settings became per channel
+        if settings is None:
+            settings = RouteSettings()
 
         # If this route is marked as default, clear the flag from any existing default ..
         if is_default:
@@ -175,6 +187,7 @@ class HL7MessageRouter:
         route.msh12_version_id          = msh12_version_id
         route.is_default                = is_default
         route.is_audit_log_active       = is_audit_log_active
+        route.settings                  = settings
 
         with self._lock:
             self._routes.append(route)
@@ -219,6 +232,53 @@ class HL7MessageRouter:
 
             out = [route.channel_name for route in self._routes]
             return out
+
+# ################################################################################################################################
+
+    def get_start_sequences(self) -> 'list[bytes]':
+        """ Returns every opening sequence configured across all channels, which is what a frame
+        may begin with. Before a route is known there is no single channel whose framing applies,
+        and these are control bytes that cannot occur in HL7 text, so accepting all of them
+        never makes a frame ambiguous.
+        """
+        out:'list[bytes]' = []
+
+        with self._lock:
+
+            for route in self._routes:
+
+                sequence = route.settings.start_sequence
+
+                if sequence not in out:
+                    out.append(sequence)
+
+        # A listener with no routes yet still has to be able to read a first line
+        if not out:
+            out.append(Default_Start_Sequence)
+
+        return out
+
+# ################################################################################################################################
+
+    def get_end_sequences(self) -> 'list[bytes]':
+        """ Returns every closing sequence configured across all channels, which is what ends a
+        frame that matched no channel and so has none of its own to be read under.
+        """
+        out:'list[bytes]' = []
+
+        with self._lock:
+
+            for route in self._routes:
+
+                sequence = route.settings.end_sequence
+
+                if sequence not in out:
+                    out.append(sequence)
+
+        if not out:
+            out.append(Default_End_Sequence)
+
+        return out
 
 # ################################################################################################################################
 

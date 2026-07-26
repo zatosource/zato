@@ -64,7 +64,11 @@ $.fn.zato.channel.hl7.mllp.field_descriptions = {
     // Logging tab
     'id_should_return_errors': 'When on, error details are included<br>in NAK responses sent to the sender (ERR segment).<br>When off, the NAK code is sent without details.',
     'id_should_log_messages': 'When on, each incoming message body and<br>routing decision is written to the server log<br>(server.log in the server directory).',
-    'id_logging_level': 'Verbosity level for this channel\'s entries<br>in the server log (server.log).'
+    'id_is_audit_log_active': 'When on, each message this channel receives<br>and each acknowledgment it sends is recorded<br>in the audit log.',
+
+    // Security tab
+    'id_security_id': 'The mTLS definition naming the client certificate<br>a sender has to connect with. Without one, a sender<br>is accepted whatever certificate it used.',
+    'id_allowed_networks': 'Comma-separated addresses and CIDR blocks<br>a sender\'s address has to fall inside,<br>e.g. 10.0.0.0/8, 192.168.1.5.<br>Empty allows any address.'
 };
 
 // ////////////////////////////////////////////////////////////////////////

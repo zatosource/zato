@@ -9,20 +9,25 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import socket
-import ssl
 from logging import getLogger
 from time import monotonic
 from traceback import format_exc
+
+# gevent
+from gevent import spawn
+from gevent.lock import BoundedSemaphore
 
 # Zato
 from zato.common.hl7.audit import audit_ack_sent, audit_batch_received, audit_message_received, get_audit_attrs, \
     get_control_id, get_wire_attrs
 from zato.common.hl7.exception import HL7Exception
 from zato.common.hl7.mllp.ack import build_ack
-from zato.common.hl7.mllp.codec import FrameDecoder, frame_encode
-from zato.common.hl7.mllp.dedup import MessageDeduplicator, extract_control_id
+from zato.common.hl7.mllp.codec import FrameReader, frame_encode
+from zato.common.hl7.mllp.dedup import extract_control_id
 from zato.common.hl7.mllp.preprocess import BatchPayload, preprocess_message
+from zato.common.hl7.mllp.proxy_protocol import read_proxy_header
 from zato.common.hl7.mllp.router import HL7MessageRouter
+from zato.common.hl7.mllp.settings import ListenerConfig, RouteSettings, is_address_allowed
 from zato.common.hl7.mllp.state import ChannelState
 from zato.common.util.api import new_cid_server
 
@@ -33,7 +38,10 @@ from zato.hl7v2 import HL7ValidationError, parse_hl7
 
 if 0:
     from zato.common.audit_log.api import AuditLog
+    from zato.common.hl7.mllp.router import ChannelRoute
+
     AuditLog = AuditLog
+    ChannelRoute = ChannelRoute
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,131 +65,70 @@ def _trace(message:'str', *args:'object') -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 
-TTL_Multipliers = {
-    'minutes': 60,
-    'hours':   3600,
-    'days':    86400,
-}
+# How long the accept loop waits before checking whether it has been told to stop
+_Accept_Poll_Interval = 1.0
 
-_Default_Receive_Timeout_Seconds    = 30.0
-_Default_Max_Message_Size           = 2_000_000
-_Default_Read_Buffer_Size           = 4096
-_Default_Keepalive_Idle_Seconds     = 60
-_Default_Keepalive_Interval_Seconds = 10
-_Default_Keepalive_Probe_Count      = 6
+# What a sender is told when its connection is refused before any message was read
+_Rejection_Ack_Code = 'AR'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ConnectionContext:
-    """ Per-connection metadata.
+    """ Who is on one connection and what has come down it so far.
     """
-    def __init__(self, peer_address:'tuple[str, int]') -> 'None':
-        self.peer_ip   = peer_address[0]
-        self.peer_port = peer_address[1]
+    def __init__(self, client_ip:'str', client_port:'int', client_common_name:'str') -> 'None':
+
+        # The sender's own address, as reported by the load balancer that accepted the connection
+        self.client_ip = client_ip
+        self.client_port = client_port
+
+        # The common name of the client certificate that was verified, empty when there was none
+        self.client_common_name = client_common_name
+
         self.total_messages_received = 0
+
+    @property
+    def endpoint(self) -> 'str':
+        out = f'{self.client_ip}:{self.client_port}'
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class HL7MLLPServer:
     """ A gevent-based HL7 MLLP TCP server.
-    Accepts connections, reads MLLP-framed messages, runs them through
-    the pre-processing pipeline, routes them to the appropriate service via the message router,
-    and sends back MLLP-framed ACKs.
+
+    One listener serves every MLLP channel, with a greenlet per accepted connection. The listener
+    owns only what a socket can have one of - where it binds, how many connections it serves at
+    once, and the bounds that apply before a message has been matched to a channel. Everything
+    about how a message is framed, read and interpreted belongs to the channel it matched and is
+    derived per message rather than for the life of the connection.
     """
 
     def __init__(
         self,
-        address:'str',
+        config:'ListenerConfig',
         router:'HL7MessageRouter',
-        start_sequence:'bytes',
-        end_sequence:'bytes',
         *,
-        receive_timeout:'float' = _Default_Receive_Timeout_Seconds,
-        max_message_size:'int' = _Default_Max_Message_Size,
-        read_buffer_size:'int' = _Default_Read_Buffer_Size,
-        should_log_messages:'bool' = False,
-        should_return_errors:'bool' = False,
-        should_parse_on_input:'bool' = True,
-        keepalive_idle:'int' = _Default_Keepalive_Idle_Seconds,
-        keepalive_interval:'int' = _Default_Keepalive_Interval_Seconds,
-        keepalive_probe_count:'int' = _Default_Keepalive_Probe_Count,
-        should_normalize_line_endings:'bool' = True,
-        should_repair_truncated_msh:'bool' = True,
-        should_split_concatenated_messages:'bool' = True,
-        should_force_standard_delimiters:'bool' = True,
-        should_use_msh18_encoding:'bool' = True,
-        default_character_encoding:'str' = 'utf-8',
-        should_validate:'bool' = False,
-        dedup_ttl_value:'int' = 0,
-        dedup_ttl_unit:'str' = '',
-        normalize_obx2_value_type:'bool' = True,
-        replace_invalid_obx2_value_type:'bool' = True,
-        normalize_invalid_escape_sequences:'bool' = True,
-        normalize_obx8_abnormal_flags:'bool' = True,
-        normalize_quadruple_quoted_empty:'bool' = True,
-        allow_short_encoding_characters:'bool' = True,
-        fix_off_by_one_field_index:'bool' = False,
-        ssl_context:'ssl.SSLContext | None' = None,
         audit_log:'AuditLog | None' = None,
         ) -> 'None':
 
-        self.address = address
-        self.router  = router
-        self.start_sequence = start_sequence
-        self.end_sequence   = end_sequence
-        self.ssl_context    = ssl_context
+        self.config = config
+        self.router = router
 
         # The shared audit log all audited channels write through -
         # whether a given message is audited is each route's own flag.
         self.audit_log = audit_log
 
-        self.receive_timeout  = receive_timeout
-        self.max_message_size = max_message_size
-        self.read_buffer_size = read_buffer_size
-        self.should_log_messages   = should_log_messages
-        self.should_return_errors  = should_return_errors
-        self.should_parse_on_input = should_parse_on_input
-        self.should_validate       = should_validate
-
-        self.keepalive_idle        = keepalive_idle
-        self.keepalive_interval    = keepalive_interval
-        self.keepalive_probe_count = keepalive_probe_count
-
-        # Pre-processing toggles
-        self.should_normalize_line_endings      = should_normalize_line_endings
-        self.should_repair_truncated_msh        = should_repair_truncated_msh
-        self.should_split_concatenated_messages = should_split_concatenated_messages
-        self.should_force_standard_delimiters   = should_force_standard_delimiters
-        self.should_use_msh18_encoding          = should_use_msh18_encoding
-        self.default_character_encoding         = default_character_encoding
-
-        # Build the Rust-level parser tolerance config from channel settings ..
-        from zato.hl7v2_rs import ToleranceConfig
-        tolerance_config = ToleranceConfig()
-        tolerance_config.normalize_obx2_value_type          = normalize_obx2_value_type
-        tolerance_config.replace_invalid_obx2_value_type    = replace_invalid_obx2_value_type
-        tolerance_config.normalize_invalid_escape_sequences = normalize_invalid_escape_sequences
-        tolerance_config.normalize_obx8_abnormal_flags      = normalize_obx8_abnormal_flags
-        tolerance_config.normalize_quadruple_quoted_empty   = normalize_quadruple_quoted_empty
-        tolerance_config.allow_short_encoding_characters    = allow_short_encoding_characters
-        tolerance_config.fix_off_by_one_field_index         = fix_off_by_one_field_index
-        self.tolerance_config = tolerance_config
-
-        # Deduplication - only active when both ttl_value and ttl_unit are provided
-        if dedup_ttl_value and dedup_ttl_unit:
-            multiplier = TTL_Multipliers[dedup_ttl_unit]
-            ttl_seconds = dedup_ttl_value * multiplier
-            self._deduplicator = MessageDeduplicator(ttl_seconds)
-        else:
-            self._deduplicator:'MessageDeduplicator | None' = None
-
-        self._keep_running    = True
+        self._keep_running = True
         self._server_socket:'socket.socket | None' = None
 
+        # What caps how many connections are served at once, the rest being refused rather than queued
+        self._connection_semaphore = BoundedSemaphore(config.max_concurrent_connections)
+
         # The live state of the whole listener - counters and listener condition
-        self.state = ChannelState(address)
+        self.state = ChannelState(config.address)
 
         # The live state of each channel routed through this listener, keyed by channel name -
         # what zato.channel.hl7.get-current-state reads per channel.
@@ -194,13 +141,18 @@ class HL7MLLPServer:
         """
 
         # Parse host:port from the address string ..
-        host, port_string = self.address.rsplit(':', 1)
+        host, port_string = self.config.address.rsplit(':', 1)
         port = int(port_string)
 
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+        # Every worker process of one server binds the same port and the kernel spreads
+        # connections across them, which is what makes the port follow from the server's identity
+        server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+
         server_socket.bind((host, port))
-        server_socket.listen(128)
+        server_socket.listen(self.config.accept_backlog)
 
         self._server_socket = server_socket
         self.state.on_listener_up()
@@ -209,42 +161,52 @@ class HL7MLLPServer:
         for channel_state in self.channel_states.values():
             channel_state.on_listener_up()
 
-        logger.info('HL7 MLLP server listening on %s', self.address)
+        logger.info('HL7 MLLP server listening on %s', self.config.address)
 
         while self._keep_running:
 
             try:
-                server_socket.settimeout(1.0)
+                server_socket.settimeout(_Accept_Poll_Interval)
                 client_socket, peer_address = server_socket.accept()
             except socket.timeout:
                 continue
             except OSError:
                 break
 
-            # If TLS is configured, run the handshake before any MLLP data is read ..
-            if self.ssl_context:
-
-                # .. bound the handshake with the receive timeout so a silent client cannot stall the accept loop ..
-                client_socket.settimeout(self.receive_timeout)
-
-                # .. a failed handshake (e.g. a required client certificate is missing) only drops this connection ..
-                try:
-                    client_socket = self.ssl_context.wrap_socket(client_socket, server_side=True)
-                except (ssl.SSLError, socket.timeout, OSError):
-                    logger.warning('TLS handshake failed with %s:%s; e:`%s`', peer_address[0], peer_address[1], format_exc())
-                    client_socket.close()
-                    continue
-
-            try:
-                self._handle_connection(client_socket, peer_address)
-            except Exception:
-                logger.warning('Error handling connection from %s:%s; e:`%s`', peer_address[0], peer_address[1], format_exc())
+            # One greenlet per connection, so that the second sender to connect is served
+            # alongside the first rather than after it
+            _ = spawn(self._serve_connection, client_socket, peer_address)
 
         # The accept loop is over, so nothing is listening anymore
         self.state.on_listener_down()
 
         for channel_state in self.channel_states.values():
             channel_state.on_listener_down()
+
+# ################################################################################################################################
+
+    def _serve_connection(self, client_socket:'socket.socket', peer_address:'tuple[str, int]') -> 'None':
+        """ Runs one connection to completion under the concurrency limit, refusing it outright
+        when the listener is already serving as many as it is allowed to.
+        """
+
+        # Waiting for a slot would leave the sender with an accepted connection nothing is reading,
+        # which is worse than being told at once that there is no room
+        if not self._connection_semaphore.acquire(blocking=False):
+
+            logger.warning('Refused MLLP connection from %s:%s - at the %d connection limit',
+                peer_address[0], peer_address[1], self.config.max_concurrent_connections)
+
+            client_socket.close()
+            return
+
+        try:
+            self._handle_connection(client_socket, peer_address)
+        except Exception:
+            logger.warning('Error handling connection from %s:%s; e:`%s`',
+                peer_address[0], peer_address[1], format_exc())
+        finally:
+            _ = self._connection_semaphore.release()
 
 # ################################################################################################################################
 
@@ -282,63 +244,142 @@ class HL7MLLPServer:
 
 # ################################################################################################################################
 
-    def _handle_connection(self, client_socket:'socket.socket', peer_address:'tuple[str, int]') -> 'None':
-        """ Handles a single persistent MLLP connection.
-        Reads framed messages in a loop until the remote end disconnects.
+    def _read_connection_identity(self, client_socket:'socket.socket') -> 'ConnectionContext':
+        """ Reads who is on the connection from the header the load balancer prefixes it with.
         """
 
-        connection_context = ConnectionContext(peer_address)
+        # A header that has not arrived within the listener's own deadline is not going to
+        client_socket.settimeout(self.config.first_line_timeout)
 
-        # Set TCP keepalive ..
+        proxy_header = read_proxy_header(client_socket)
+
+        out = ConnectionContext(proxy_header.client_ip, proxy_header.client_port, proxy_header.client_common_name)
+        return out
+
+# ################################################################################################################################
+
+    def _apply_keepalive(self, client_socket:'socket.socket', settings:'RouteSettings') -> 'None':
+        """ Applies the matched channel's keepalive settings, which is how often the kernel probes
+        a connection that has gone quiet and how many unanswered probes end it.
+        """
         client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-        client_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, self.keepalive_idle)
-        client_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, self.keepalive_interval)
-        client_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, self.keepalive_probe_count)
+        client_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, settings.keepalive_idle)
+        client_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, settings.keepalive_interval)
+        client_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, settings.keepalive_probe_count)
 
-        # .. set receive timeout ..
-        client_socket.settimeout(self.receive_timeout)
+# ################################################################################################################################
 
-        logger.info('HL7 MLLP connection from %s:%d', connection_context.peer_ip, connection_context.peer_port)
+    def _is_sender_allowed(self, route:'ChannelRoute', connection_context:'ConnectionContext') -> 'bool':
+        """ Returns whether the channel a message matched accepts the connection it arrived on.
+        """
+        settings = route.settings
 
-        decoder = FrameDecoder(self.start_sequence, self.end_sequence, self.max_message_size)
+        # A channel with a security definition takes only the certificate that definition names,
+        # and a connection that carried none has nothing to be matched
+        if settings.security_common_name:
+            if settings.security_common_name != connection_context.client_common_name:
+                return False
+
+        if not is_address_allowed(connection_context.client_ip, settings.allowed_networks):
+            return False
+
+        return True
+
+# ################################################################################################################################
+
+    def _send_framed(
+        self,
+        active_socket:'socket.socket',
+        text:'str',
+        settings:'RouteSettings',
+        connection_context:'ConnectionContext',
+        ) -> 'None':
+        """ Frames a reply the way the matched channel frames its own and sends it back.
+        """
+        payload = text.encode(settings.default_character_encoding)
+        framed = frame_encode(payload, settings.start_sequence, settings.end_sequence)
+
+        try:
+            active_socket.sendall(framed)
+        except (BrokenPipeError, ConnectionResetError):
+            logger.warning('Could not send ACK to %s - connection lost', connection_context.endpoint)
+
+# ################################################################################################################################
+
+    def _handle_connection(self, client_socket:'socket.socket', peer_address:'tuple[str, int]') -> 'None':
+        """ Handles a single persistent MLLP connection.
+
+        Each message is routed on its own first line and then read under the bounds of the channel
+        it matched, so one message that matched a permissive channel never governs what is read
+        after it down the same connection.
+        """
+
+        connection_context = self._read_connection_identity(client_socket)
+
+        logger.info('HL7 MLLP connection from %s', connection_context.endpoint)
+
+        config = self.config
+        reader = FrameReader(client_socket, self.router.get_start_sequences(), config.read_buffer_size)
+
+        # Fallback settings for a frame that matched nothing, whose channel is by definition unknown
+        unmatched_settings = RouteSettings()
 
         try:
 
             while self._keep_running:
 
-                # Read a chunk of data ..
                 try:
-                    chunk = client_socket.recv(self.read_buffer_size)
-                except socket.timeout:
-                    continue
+                    msh_line = reader.read_first_line(
+                        config.max_first_line_size, config.idle_timeout, config.first_line_timeout)
 
-                # .. an ssl.SSLError means a TLS-level failure on an encrypted connection,
-                # .. e.g. the peer aborted mid-record, and the connection cannot continue ..
-                except (ConnectionResetError, BrokenPipeError, ssl.SSLError):
+                except HL7Exception as exception:
+                    self.state.on_error()
+                    logger.warning('Framing error from %s - %s', connection_context.endpoint, exception)
                     break
 
-                # .. remote end disconnected ..
-                if not chunk:
+                # .. the remote end disconnected between messages, which is how a feed ends ..
+                except (ConnectionResetError, BrokenPipeError, socket.timeout):
                     break
 
-                decoder.feed(chunk)
+                if msh_line is None:
+                    break
 
-                # .. extract all complete messages from the buffer ..
-                while True:
+                matched_route = self.router.match(msh_line)
 
-                    try:
-                        message_bytes = decoder.next_message()
-                    except HL7Exception as exception:
-                        self.state.on_error()
-                        logger.warning('Frame error from %s:%d - %s',
-                            connection_context.peer_ip, connection_context.peer_port, exception)
-                        break
+                if matched_route is None:
+                    settings = unmatched_settings
+                    end_sequences = self.router.get_end_sequences()
+                else:
+                    settings = matched_route.settings
+                    end_sequences = [settings.end_sequence]
+                    self._apply_keepalive(client_socket, settings)
 
-                    if message_bytes is None:
-                        break
+                # .. the rest of the frame is read under whatever the matched channel allows,
+                # .. which is what makes two senders down one connection read differently ..
+                try:
+                    message_bytes = reader.read_rest_of_frame(
+                        end_sequences, settings.max_message_size, settings.recv_timeout)
 
-                    # .. process each extracted message ..
-                    self._handle_message(client_socket, message_bytes, connection_context)
+                except HL7Exception as exception:
+
+                    # An oversized or unterminated frame leaves the stream with no known boundary,
+                    # so the sender is answered and the connection ends rather than resynchronising
+                    self.state.on_error()
+                    logger.warning('Frame error from %s - %s', connection_context.endpoint, exception)
+                    self._reject_frame(client_socket, msh_line, settings, connection_context, 'AE',
+                        'Message could not be read')
+                    break
+
+                except (ConnectionResetError, BrokenPipeError):
+                    break
+
+                # .. a sender the matched channel does not accept is told so and nothing is invoked ..
+                if matched_route is not None:
+                    if not self._is_sender_allowed(matched_route, connection_context):
+                        self._on_sender_refused(client_socket, msh_line, matched_route, connection_context)
+                        continue
+
+                self._handle_message(client_socket, message_bytes, connection_context, matched_route, settings)
 
         finally:
 
@@ -348,9 +389,62 @@ class HL7MLLPServer:
                 pass
 
             client_socket.close()
-            logger.info('HL7 MLLP connection closed from %s:%d (messages: %d)',
-                connection_context.peer_ip, connection_context.peer_port,
-                connection_context.total_messages_received)
+            logger.info('HL7 MLLP connection closed from %s (messages: %d)',
+                connection_context.endpoint, connection_context.total_messages_received)
+
+# ################################################################################################################################
+
+    def _reject_frame(
+        self,
+        active_socket:'socket.socket',
+        msh_line:'str',
+        settings:'RouteSettings',
+        connection_context:'ConnectionContext',
+        ack_code:'str',
+        error_text:'str',
+        ) -> 'None':
+        """ Answers a frame that was never delivered anywhere, which is what a sender waiting on
+        an acknowledgment needs rather than a connection that simply goes quiet.
+        """
+        self.state.on_nack_sent()
+
+        if not settings.should_return_errors:
+            error_text = ''
+
+        ack_string = build_ack(msh_line, ack_code, error_text=error_text)
+        self._send_framed(active_socket, ack_string, settings, connection_context)
+
+# ################################################################################################################################
+
+    def _on_sender_refused(
+        self,
+        active_socket:'socket.socket',
+        msh_line:'str',
+        route:'ChannelRoute',
+        connection_context:'ConnectionContext',
+        ) -> 'None':
+        """ Records and answers a message whose channel does not accept the connection it came on.
+        The refusal is attributed to the channel that matched, so it lands in that channel's
+        counters and audit trail rather than nowhere.
+        """
+        channel_state = self.get_channel_state(route.channel_name)
+        channel_state.on_message_received()
+        self.state.on_message_received()
+
+        logger.warning('Channel `%s` refused a message from %s', route.channel_name, connection_context.endpoint)
+
+        settings = route.settings
+        ack_string = build_ack(msh_line, _Rejection_Ack_Code, error_text='')
+
+        self.state.on_nack_sent()
+        channel_state.on_nack_sent()
+
+        if self.audit_log and route.is_audit_log_active:
+            _ = audit_ack_sent(
+                self.audit_log, route.channel_name, _Rejection_Ack_Code, ack_string,
+                cid=new_cid_server(), msg_id=extract_control_id(msh_line))
+
+        self._send_framed(active_socket, ack_string, settings, connection_context)
 
 # ################################################################################################################################
 
@@ -373,31 +467,28 @@ class HL7MLLPServer:
         active_socket:'socket.socket',
         batch_payload:'BatchPayload',
         connection_context:'ConnectionContext',
+        matched_route:'ChannelRoute | None',
+        settings:'RouteSettings',
         ) -> 'None':
         """ Processes a batch/file payload (BHS|... or FHS|...) as a single unit.
-        Routes using the first MSH found inside the batch, then passes the entire
-        raw batch string to the matched service callback.
+        The whole batch belongs to the channel its frame matched, and the entire raw batch string
+        is passed to that channel's callback.
         """
 
         raw = batch_payload.raw
 
-        # .. extract the first MSH line inside the batch for routing and ACK building,
-        # .. because routing is always keyed off MSH fields even for batches ..
+        # .. the ACK is built from the first MSH inside the batch, the routing decision
+        # .. having already been made on the frame's own first line ..
         msh_line = self._extract_first_msh_line(raw)
 
-        # .. if the batch contains no MSH at all, there is nothing to route or ACK ..
+        # .. if the batch contains no MSH at all, there is nothing to ACK ..
         if not msh_line:
             self.state.on_error()
-            logger.warning('Batch payload from %s:%d contains no MSH segment',
-                connection_context.peer_ip, connection_context.peer_port)
+            logger.warning('Batch payload from %s contains no MSH segment', connection_context.endpoint)
             return
 
-        if self.should_log_messages:
-            logger.info('Processing batch payload (%d bytes) from %s:%d',
-                len(raw), connection_context.peer_ip, connection_context.peer_port)
-
-        # .. find the matching route using the first MSH ..
-        matched_route = self.router.match(msh_line)
+        if settings.should_log_messages:
+            logger.info('Processing batch payload (%d bytes) from %s', len(raw), connection_context.endpoint)
 
         # .. a matched batch counts on its channel's own state too ..
         if matched_route:
@@ -412,18 +503,18 @@ class HL7MLLPServer:
         # .. all the batch's audit events share one correlation id ..
         if needs_audit:
             audit_cid = new_cid_server()
-            peer_endpoint = f'{connection_context.peer_ip}:{connection_context.peer_port}'
 
             # .. the parent row for the batch plus a child row per contained message ..
             _ = audit_batch_received(
-                self.audit_log, matched_route.channel_name, raw, cid=audit_cid, endpoint=peer_endpoint) # type: ignore[union-attr, arg-type]
+                self.audit_log, matched_route.channel_name, raw, # type: ignore[union-attr, arg-type]
+                cid=audit_cid, endpoint=connection_context.endpoint)
         else:
             audit_cid = ''
 
         # .. no route found - reject the entire batch ..
         if matched_route is None:
-            logger.warning('No matching MLLP channel for batch from %s:%d (MSH: %s)',
-                connection_context.peer_ip, connection_context.peer_port, msh_line[:80])
+            logger.warning('No matching MLLP channel for batch from %s (MSH: %s)',
+                connection_context.endpoint, msh_line)
             ack_code = 'AR'
             error_text = 'No matching channel for this batch'
 
@@ -431,7 +522,7 @@ class HL7MLLPServer:
         # .. the service is responsible for calling parse_batch_or_file on it ..
         else:
 
-            if self.should_log_messages:
+            if settings.should_log_messages:
                 logger.info('Routing batch to channel `%s` (service `%s`)',
                     matched_route.channel_name, matched_route.service_name)
 
@@ -441,13 +532,13 @@ class HL7MLLPServer:
                 ack_code = 'AA'
                 error_text = ''
             except Exception:
-                logger.warning('Service callback error for batch on channel `%s` from %s:%d; e:`%s`',
-                    matched_route.channel_name, connection_context.peer_ip, connection_context.peer_port, format_exc())
+                logger.warning('Service callback error for batch on channel `%s` from %s; e:`%s`',
+                    matched_route.channel_name, connection_context.endpoint, format_exc())
                 ack_code = 'AE'
                 error_text = 'Internal processing error'
 
         # .. suppress error details if the channel is configured to hide them ..
-        if not self.should_return_errors:
+        if not settings.should_return_errors:
             error_text = ''
 
         # .. the batch's acknowledgment outcome feeds the live state, the channel's own included ..
@@ -469,16 +560,28 @@ class HL7MLLPServer:
                 self.audit_log, matched_route.channel_name, ack_code, ack_string, # type: ignore[union-attr, arg-type]
                 cid=audit_cid, msg_id=extract_control_id(msh_line))
 
-        # .. encode and frame the ACK for MLLP transport ..
-        ack_bytes = ack_string.encode(self.default_character_encoding)
-        framed_ack = frame_encode(ack_bytes, self.start_sequence, self.end_sequence)
+        self._send_framed(active_socket, ack_string, settings, connection_context)
 
-        # .. send the framed ACK back to the sender ..
-        try:
-            active_socket.sendall(framed_ack)
-        except (BrokenPipeError, ConnectionResetError):
-            logger.warning('Could not send ACK to %s:%d - connection lost',
-                connection_context.peer_ip, connection_context.peer_port)
+# ################################################################################################################################
+
+    def _handle_duplicate(
+        self,
+        active_socket:'socket.socket',
+        msh_line:'str',
+        control_id:'str',
+        settings:'RouteSettings',
+        connection_context:'ConnectionContext',
+        ) -> 'None':
+        """ Answers a message the matched channel has already seen within its own TTL window.
+        A duplicate is acknowledged positively and its callback is not invoked.
+        """
+        if settings.should_log_messages:
+            logger.info('Duplicate message (MSH-10: %s) from %s, skipping', control_id, connection_context.endpoint)
+
+        self.state.on_ack_sent()
+
+        ack_string = build_ack(msh_line, 'AA')
+        self._send_framed(active_socket, ack_string, settings, connection_context)
 
 # ################################################################################################################################
 
@@ -487,8 +590,11 @@ class HL7MLLPServer:
         active_socket:'socket.socket',
         raw_message_bytes:'bytes',
         connection_context:'ConnectionContext',
+        matched_route:'ChannelRoute | None',
+        settings:'RouteSettings',
         ) -> 'None':
-        """ Processes a single unframed HL7 message: pre-process, route to service, send ACK.
+        """ Processes a single unframed HL7 message under the settings of the channel it matched:
+        pre-process, deliver, send ACK.
         """
 
         connection_context.total_messages_received += 1
@@ -498,31 +604,30 @@ class HL7MLLPServer:
         message_start = monotonic()
         _trace('message #%d in (%d bytes)', connection_context.total_messages_received, len(raw_message_bytes))
 
-        if self.should_log_messages:
-            logger.info('Received message #%d (%d bytes) from %s:%d',
-                connection_context.total_messages_received, len(raw_message_bytes),
-                connection_context.peer_ip, connection_context.peer_port)
+        if settings.should_log_messages:
+            logger.info('Received message #%d (%d bytes) from %s',
+                connection_context.total_messages_received, len(raw_message_bytes), connection_context.endpoint)
 
-        # Run the pre-processing pipeline ..
+        # Run the pre-processing pipeline under the matched channel's own settings ..
         preprocessed = preprocess_message(
             raw_message_bytes,
-            should_normalize_line_endings=self.should_normalize_line_endings,
-            should_repair_truncated_msh=self.should_repair_truncated_msh,
-            should_split_concatenated_messages=self.should_split_concatenated_messages,
-            should_force_standard_delimiters=self.should_force_standard_delimiters,
-            should_use_msh18_encoding=self.should_use_msh18_encoding,
-            default_character_encoding=self.default_character_encoding,
+            should_normalize_line_endings=settings.should_normalize_line_endings,
+            should_repair_truncated_msh=settings.should_repair_truncated_msh,
+            should_split_concatenated_messages=settings.should_split_concatenated_messages,
+            should_force_standard_delimiters=settings.should_force_standard_delimiters,
+            should_use_msh18_encoding=settings.should_use_msh18_encoding,
+            default_character_encoding=settings.default_character_encoding,
         )
 
         # .. if the payload is a batch/file, handle it as a single unit ..
         if isinstance(preprocessed, BatchPayload):
-            self._handle_batch_payload(active_socket, preprocessed, connection_context)
+            self._handle_batch_payload(active_socket, preprocessed, connection_context, matched_route, settings)
             return
 
         # .. process each message (usually just one, unless concatenated) ..
         for message_text in preprocessed:
 
-            # .. extract the MSH line for routing and ACK building ..
+            # .. extract the MSH line for ACK building ..
             first_cr = message_text.find('\r')
 
             if first_cr == -1:
@@ -530,48 +635,17 @@ class HL7MLLPServer:
             else:
                 msh_line = message_text[:first_cr]
 
-            # .. if deduplication is enabled, check whether this message was already seen
-            # .. within the configured TTL window. Duplicates are acknowledged with AA
-            # .. but the service callback is not invoked.
-            if self._deduplicator:
+            # .. a channel with deduplication on answers a control id it has already seen
+            # .. without invoking anything ..
+            if settings.deduplicator:
 
-                # .. extract the message control ID (MSH-10) which serves as the dedup key ..
                 control_id = extract_control_id(msh_line)
 
                 # .. only deduplicate if the message actually has a control ID ..
                 if control_id:
-
-                    # .. check the cache - returns True if this control ID was seen before ..
-                    if self._deduplicator.is_duplicate(control_id):
-
-                        # .. log the duplicate if message logging is on ..
-                        if self.should_log_messages:
-                            logger.info('Duplicate message (MSH-10: %s) from %s:%d, skipping',
-                                control_id, connection_context.peer_ip, connection_context.peer_port)
-
-                        # .. a duplicate is acknowledged positively, so it counts as one ..
-                        self.state.on_ack_sent()
-
-                        # .. build an AA ACK so the sender knows we received it ..
-                        ack_string = build_ack(msh_line, 'AA')
-
-                        # .. encode using the channel's configured character encoding ..
-                        ack_bytes = ack_string.encode(self.default_character_encoding)
-
-                        # .. wrap in MLLP framing before sending ..
-                        framed_ack = frame_encode(ack_bytes, self.start_sequence, self.end_sequence)
-
-                        # .. send the ACK back to the sender, ignoring broken connections ..
-                        try:
-                            active_socket.sendall(framed_ack)
-                        except (BrokenPipeError, ConnectionResetError):
-                            pass
-
-                        # .. skip routing and service invocation for this duplicate ..
+                    if settings.deduplicator.is_duplicate(control_id):
+                        self._handle_duplicate(active_socket, msh_line, control_id, settings, connection_context)
                         continue
-
-            # .. find the matching route for this message ..
-            matched_route = self.router.match(msh_line)
 
             # .. a matched message counts on its channel's own state too ..
             if matched_route:
@@ -589,7 +663,7 @@ class HL7MLLPServer:
                 audit_cid = new_cid_server()
                 audit_msg_id = extract_control_id(msh_line)
                 audit_attrs = get_wire_attrs(msh_line)
-                peer_endpoint = f'{connection_context.peer_ip}:{connection_context.peer_port}'
+                peer_endpoint = connection_context.endpoint
             else:
                 audit_cid = ''
                 audit_msg_id = ''
@@ -600,15 +674,15 @@ class HL7MLLPServer:
             callback_duration_ms = 0
 
             if matched_route is None:
-                logger.warning('No matching MLLP channel for message from %s:%d (MSH: %s)',
-                    connection_context.peer_ip, connection_context.peer_port, msh_line[:80])
+                logger.warning('No matching MLLP channel for message from %s (MSH: %s)',
+                    connection_context.endpoint, msh_line)
                 ack_code = 'AR'
                 error_text = 'No matching channel for this message'
 
             # .. invoke the matched route's callback ..
             else:
 
-                if self.should_log_messages:
+                if settings.should_log_messages:
                     logger.info('Routing message to channel `%s` (service `%s`)',
                         matched_route.channel_name, matched_route.service_name)
 
@@ -617,7 +691,7 @@ class HL7MLLPServer:
                 # .. enabled, the parser runs validation and raises on errors.
                 # .. On success the callback receives the parsed object, otherwise
                 # .. it receives the raw ER7 string.
-                if self.should_parse_on_input:
+                if settings.should_parse_on_input:
 
                     # .. attempt to parse (and optionally validate) the message ..
                     try:
@@ -625,7 +699,7 @@ class HL7MLLPServer:
                         parse_start = monotonic()
 
                         callback_data = parse_hl7(
-                            message_text, validate=self.should_validate, tolerance=self.tolerance_config)
+                            message_text, validate=settings.should_validate, tolerance=settings.tolerance_config)
 
                         _trace('parse done %.1fms (%s)', (monotonic() - parse_start) * _ms_per_second, audit_msg_id)
 
@@ -638,22 +712,19 @@ class HL7MLLPServer:
                     # .. parsing or validation failed - send an AE reject ACK
                     # .. back to the sender and skip this message ..
                     except (ValueError, HL7ValidationError):
-                        logger.warning('Parse/validation error for channel `%s` from %s:%d; e:`%s`',
-                            matched_route.channel_name, connection_context.peer_ip, connection_context.peer_port, format_exc())
+                        logger.warning('Parse/validation error for channel `%s` from %s; e:`%s`',
+                            matched_route.channel_name, connection_context.endpoint, format_exc())
                         ack_code = 'AE'
                         error_text = 'Message parsing or validation failed'
 
                         # .. suppress error details if the channel hides them ..
-                        if not self.should_return_errors:
+                        if not settings.should_return_errors:
                             error_text = ''
 
                         # .. a reject is a negative acknowledgment in the channel's live state ..
                         self.state.on_nack_sent()
 
-                        # .. build, frame and send the reject ACK ..
                         ack_string = build_ack(msh_line, ack_code, error_text=error_text)
-                        ack_bytes = ack_string.encode(self.default_character_encoding)
-                        framed_ack = frame_encode(ack_bytes, self.start_sequence, self.end_sequence)
 
                         # .. a rejected message still leaves its audit trail - the receipt
                         # .. and the negative acknowledgment that answered it ..
@@ -665,10 +736,7 @@ class HL7MLLPServer:
                                 self.audit_log, matched_route.channel_name, ack_code, ack_string, # type: ignore[arg-type]
                                 cid=audit_cid, msg_id=audit_msg_id)
 
-                        try:
-                            active_socket.sendall(framed_ack)
-                        except (BrokenPipeError, ConnectionResetError):
-                            pass
+                        self._send_framed(active_socket, ack_string, settings, connection_context)
 
                         # .. skip to the next message in the batch ..
                         continue
@@ -701,8 +769,8 @@ class HL7MLLPServer:
 
                 # .. service raised an exception - report it as an application error ..
                 except Exception:
-                    logger.warning('Service callback error for channel `%s` from %s:%d; e:`%s`',
-                        matched_route.channel_name, connection_context.peer_ip, connection_context.peer_port, format_exc())
+                    logger.warning('Service callback error for channel `%s` from %s; e:`%s`',
+                        matched_route.channel_name, connection_context.endpoint, format_exc())
                     ack_code = 'AE'
                     error_text = 'Internal processing error'
 
@@ -712,7 +780,7 @@ class HL7MLLPServer:
                 _trace('callback done %dms (%s)', callback_duration_ms, audit_msg_id)
 
             # .. suppress error details if configured to not return errors ..
-            if not self.should_return_errors:
+            if not settings.should_return_errors:
                 error_text = ''
 
             # .. the acknowledgment outcome feeds the live state, the channel's own included ..
@@ -725,10 +793,7 @@ class HL7MLLPServer:
                 if channel_state:
                     channel_state.on_nack_sent()
 
-            # .. build and frame the ACK ..
             ack_string = build_ack(msh_line, ack_code, error_text=error_text)
-            ack_bytes = ack_string.encode(self.default_character_encoding)
-            framed_ack = frame_encode(ack_bytes, self.start_sequence, self.end_sequence)
 
             # .. the acknowledgment lands on the same cid as the receipt it answers ..
             if needs_audit:
@@ -742,12 +807,7 @@ class HL7MLLPServer:
 
                 _trace('audit ack done %.1fms (%s)', (monotonic() - audit_ack_start) * _ms_per_second, audit_msg_id)
 
-            # .. send the framed ACK back.
-            try:
-                active_socket.sendall(framed_ack)
-            except (BrokenPipeError, ConnectionResetError):
-                logger.warning('Could not send ACK to %s:%d - connection lost',
-                    connection_context.peer_ip, connection_context.peer_port)
+            self._send_framed(active_socket, ack_string, settings, connection_context)
 
             # Trace point 6: the ACK left and the message is fully processed
             _trace('message done %.1fms total (%s %s)',

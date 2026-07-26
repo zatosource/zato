@@ -24,6 +24,8 @@ from zato.admin.web.forms.channel.hl7.mllp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, \
     get_security_id_from_select, get_security_groups_from_checkbox_list, SecurityList
 from zato.common.api import GENERIC, generic_attrs, Groups, HL7, SEC_DEF_TYPE, ZATO_NONE
+from zato.common.hl7.mllp.fields import resolve_max_msg_size
+from zato.common.hl7.mllp.settings import describe_bounds_violations
 from zato.common.json_internal import dumps
 from zato.common.model.hl7 import HL7MLLPChannelConfigObject
 
@@ -64,8 +66,10 @@ class Index(_Index):
     output_required = 'id', 'name', 'is_active', 'is_internal', 'service', 'security_name'
     output_optional = (
         'should_parse_on_input', 'should_validate', 'should_return_errors',
-        'should_log_messages', 'logging_level',
-        'max_msg_size', 'max_msg_size_unit', 'read_buffer_size', 'recv_timeout',
+        'should_log_messages', 'is_audit_log_active',
+        'max_msg_size', 'max_msg_size_unit', 'recv_timeout', 'idle_timeout',
+        'keepalive_idle', 'keepalive_interval', 'keepalive_probe_count',
+        'security_id', 'allowed_networks',
         'start_seq', 'end_seq',
         'msh3_sending_app', 'msh4_sending_facility',
         'msh5_receiving_app', 'msh6_receiving_facility', 'msh9_message_type',
@@ -85,11 +89,17 @@ class Index(_Index):
 # ################################################################################################################################
 
     def handle(self):
+
+        # The REST bridge is secured the way any REST channel is, while the MLLP channel itself
+        # is secured by the client certificate its senders connect with
         security_list = self.get_sec_def_list(SEC_DEF_TYPE.BASIC_AUTH)
+        mtls_security_list = self.get_sec_def_list(SEC_DEF_TYPE.MTLS)
+
         return {
             'show_search_form': True,
-            'create_form': CreateForm(req=self.req, security_list=security_list),
-            'edit_form': EditForm(prefix='edit', req=self.req, security_list=security_list),
+            'create_form': CreateForm(req=self.req, security_list=security_list, mtls_security_list=mtls_security_list),
+            'edit_form': EditForm(
+                prefix='edit', req=self.req, security_list=security_list, mtls_security_list=mtls_security_list),
         }
 
 # ################################################################################################################################
@@ -101,8 +111,10 @@ class _CreateEdit(CreateEdit):
     input_required = 'name', 'is_internal', 'service'
     input_optional = (
         'is_active', 'should_parse_on_input', 'should_validate', 'should_return_errors',
-        'should_log_messages', 'logging_level',
-        'max_msg_size', 'max_msg_size_unit', 'read_buffer_size', 'recv_timeout',
+        'should_log_messages', 'is_audit_log_active',
+        'max_msg_size', 'max_msg_size_unit', 'recv_timeout', 'idle_timeout',
+        'keepalive_idle', 'keepalive_interval', 'keepalive_probe_count',
+        'allowed_networks',
         'start_seq', 'end_seq',
         'msh3_sending_app', 'msh4_sending_facility',
         'msh5_receiving_app', 'msh6_receiving_facility', 'msh9_message_type',
@@ -122,6 +134,9 @@ class _CreateEdit(CreateEdit):
 # ################################################################################################################################
 
     def populate_initial_input_dict(self, initial_input_dict:'stranydict') -> 'None':
+
+        self._check_listener_bounds()
+
         initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP
         initial_input_dict['is_internal'] = False
         initial_input_dict['is_channel'] = True
@@ -132,9 +147,48 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['data_format'] = HL7.Const.Version.v2.id
         initial_input_dict['hl7_version'] = HL7.Const.Version.v2.id
 
+        # The security select carries its type along with the id, and only the id is stored
+        initial_input_dict['security_id'] = self._get_security_id()
+
         # The backing REST channel is named after the MLLP channel and needs nothing else from it,
         # so it is settled here and its id travels with the one and only save of the MLLP channel.
         initial_input_dict['rest_channel_id'] = self._sync_rest_channel()
+
+# ################################################################################################################################
+
+    def _check_listener_bounds(self) -> 'None':
+        """ Refuses a channel asking for more room or more time than the listener it runs on has,
+        since a channel's values tune what the listener already allows.
+        """
+        prefix = self.form_prefix or ''
+        post_data = self.req.POST
+
+        max_msg_size = int(post_data[f'{prefix}max_msg_size'])
+        max_msg_size_unit = post_data[f'{prefix}max_msg_size_unit']
+        idle_timeout = float(post_data[f'{prefix}idle_timeout'])
+
+        violations = describe_bounds_violations(
+            resolve_max_msg_size(max_msg_size, max_msg_size_unit),
+            idle_timeout,
+        )
+
+        if violations:
+            raise Exception(', '.join(violations))
+
+# ################################################################################################################################
+
+    def _get_security_id(self) -> 'int':
+        """ Returns the id of the mTLS definition the channel accepts messages under, zero when
+        the channel accepts a connection whatever certificate it was made with.
+        """
+        raw_value = get_security_id_from_select(self.req.POST, self.form_prefix or '', field_name='security_id')
+
+        # The select reports its empty choice as a marker rather than as an id
+        if raw_value in ('', None, ZATO_NONE):
+            return 0
+
+        out = int(raw_value)
+        return out
 
 # ################################################################################################################################
 
@@ -363,12 +417,13 @@ def editor_create(req:'any_') -> 'TemplateResponse':
     """ A full-page editor for a new HL7 MLLP channel.
     """
     security_list = SecurityList.from_service(req.zato.client, req.zato.cluster.id, SEC_DEF_TYPE.BASIC_AUTH)
+    mtls_security_list = SecurityList.from_service(req.zato.client, req.zato.cluster.id, SEC_DEF_TYPE.MTLS)
 
     return_data = {
         'cluster_id': req.zato.cluster_id,
         'action': 'create',
         'field_prefix': '',
-        'form': CreateForm(req=req, security_list=security_list),
+        'form': CreateForm(req=req, security_list=security_list, mtls_security_list=mtls_security_list),
         'item_name': '',
         'item_id': '',
         'item_json': 'null',
@@ -385,10 +440,11 @@ def wizard_create(req:'any_') -> 'TemplateResponse':
     """ A multi-step wizard for a new HL7 MLLP channel.
     """
     security_list = SecurityList.from_service(req.zato.client, req.zato.cluster.id, SEC_DEF_TYPE.BASIC_AUTH)
+    mtls_security_list = SecurityList.from_service(req.zato.client, req.zato.cluster.id, SEC_DEF_TYPE.MTLS)
 
     return_data = {
         'cluster_id': req.zato.cluster_id,
-        'form': CreateForm(req=req, security_list=security_list),
+        'form': CreateForm(req=req, security_list=security_list, mtls_security_list=mtls_security_list),
     }
 
     out = TemplateResponse(req, _Wizard_Template, return_data)
@@ -436,11 +492,13 @@ class EditorEdit(Index):
 
         # .. and hand everything over to the editor template.
         security_list = self.get_sec_def_list(SEC_DEF_TYPE.BASIC_AUTH)
+        mtls_security_list = self.get_sec_def_list(SEC_DEF_TYPE.MTLS)
 
         out = {
             'action': 'edit',
             'field_prefix': 'edit-',
-            'form': EditForm(prefix='edit', req=self.req, security_list=security_list),
+            'form': EditForm(
+                prefix='edit', req=self.req, security_list=security_list, mtls_security_list=mtls_security_list),
             'item_name': item_dict['name'],
             'item_id': item_dict['id'],
             'item_json': dumps(item_dict),

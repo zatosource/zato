@@ -7,11 +7,32 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from contextlib import ExitStack
+from os.path import join
+from shutil import rmtree
+from tempfile import mkdtemp
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
 # Zato
+from zato.common.api import HL7
+from zato.common.typing_ import cast_
 from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper, _shared_state
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.hl7.mllp.settings import RouteSettings
+    from zato.common.typing_ import any_
+    RouteSettings = RouteSettings
+    any_ = any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The port the listener is taken to have settled on, which nothing here depends on the value of
+_test_internal_port = 19000
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -31,6 +52,10 @@ def _make_config(**overrides:'object') -> 'MagicMock':
         'start_seq': '0b',
         'end_seq': '1c0d',
         'recv_timeout': 30000,
+        'idle_timeout': HL7.Default.idle_timeout,
+        'keepalive_idle': HL7.Default.keepalive_idle,
+        'keepalive_interval': HL7.Default.keepalive_interval,
+        'keepalive_probe_count': HL7.Default.keepalive_probe_count,
         'max_msg_size': 2,
         'max_msg_size_unit': 'mb',
         'default_character_encoding': 'utf-8',
@@ -54,6 +79,7 @@ def _make_config(**overrides:'object') -> 'MagicMock':
         # Logging
         'should_log_messages': False,
         'should_return_errors': False,
+        'is_audit_log_active': False,
 
         # Parsing
         'should_parse_on_input': True,
@@ -62,6 +88,10 @@ def _make_config(**overrides:'object') -> 'MagicMock':
         # Deduplication
         'dedup_ttl_value': 0,
         'dedup_ttl_unit': '',
+
+        # Who the channel accepts a message from
+        'security_id': 0,
+        'allowed_networks': '',
 
         # Routing
         'msh3_sending_app': '',
@@ -95,9 +125,76 @@ def _reset_shared_state() -> 'None':
     """
     _shared_state.server = None
     _shared_state.router._routes = []
-    _shared_state.channel_count = 0
+    _shared_state.listener_channel_count = 0
     _shared_state.internal_port = 0
     _shared_state.haproxy_config_path = ''
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _WiringTestCase(TestCase):
+    """ Stands everything the wrapper reaches outside its own process off to one side - the
+    listener, the greenlet it would run on and the load balancer's configuration file - so that
+    what the wrapper hands each of them can be read back.
+    """
+
+    def setUp(self) -> 'None':
+
+        _reset_shared_state()
+
+        # The wrapper only writes to a configuration file that is really there, so there has to be one
+        self._config_dir = mkdtemp(prefix='mllp-wiring-')
+        config_path = join(self._config_dir, 'haproxy.cfg')
+
+        with open(config_path, 'w') as config_file:
+            _ = config_file.write('')
+
+        self._patches = ExitStack()
+
+        def _start(name:'str', **kwargs:'any_') -> 'MagicMock':
+            return self._patches.enter_context(patch(f'zato.server.generic.api.channel_hl7_mllp.{name}', **kwargs))
+
+        self.mock_server_class = _start('HL7MLLPServer')
+        self.mock_spawn = _start('spawn_greenlet')
+        self.mock_resolve_port = _start('resolve_internal_port', return_value=_test_internal_port)
+        self.mock_find_haproxy = _start('find_haproxy_config', return_value=config_path)
+        self.mock_ensure_backend = _start('ensure_mllp_backend_server')
+
+    def tearDown(self) -> 'None':
+        self._patches.close()
+        rmtree(self._config_dir, ignore_errors=True)
+        _reset_shared_state()
+
+# ################################################################################################################################
+
+    def make_wrapper(self, **overrides:'object') -> 'ChannelHL7MLLPWrapper':
+        """ Builds a wrapper around a config without running the base class machinery.
+        """
+
+        wrapper = ChannelHL7MLLPWrapper.__new__(ChannelHL7MLLPWrapper)
+        wrapper.config = _make_config(**overrides)
+        wrapper.server = MagicMock()
+
+        return wrapper
+
+# ################################################################################################################################
+
+    def get_invoker(self, wrapper:'ChannelHL7MLLPWrapper') -> 'MagicMock':
+        """ Returns the stand-in the wrapper reaches the rest of the server through.
+        """
+        return cast_('MagicMock', wrapper.server)
+
+# ################################################################################################################################
+
+    def get_only_route_settings(self) -> 'RouteSettings':
+        """ Returns the settings of the one route registered, which is where everything a
+        channel decides about its own messages now lives.
+        """
+
+        routes = _shared_state.router._routes
+        self.assertEqual(len(routes), 1, 'Expected exactly one route to have been registered')
+
+        return routes[0].settings
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -140,96 +237,39 @@ class TestResolveMaxMsgSize(TestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestServerWiring(TestCase):
-    """ Tests that _ensure_shared_server_started passes all config fields to HL7MLLPServer.
+class TestRouteSettingsWiring(_WiringTestCase):
+    """ Tests that each channel's own configuration reaches the route registered for it, which
+    is what the listener reads once a message has been matched to that channel.
     """
 
-    def setUp(self) -> 'None':
-        _reset_shared_state()
-
-    def tearDown(self) -> 'None':
-        _reset_shared_state()
-
 # ################################################################################################################################
 
-    @patch('zato.server.generic.api.channel_hl7_mllp.reload_haproxy')
-    @patch('zato.server.generic.api.channel_hl7_mllp.update_mllp_backend_port')
-    @patch('zato.server.generic.api.channel_hl7_mllp.find_haproxy_config', return_value='/test/haproxy.cfg')
-    @patch('zato.server.generic.api.channel_hl7_mllp.spawn_greenlet')
-    @patch('zato.server.generic.api.channel_hl7_mllp.resolve_internal_port', return_value=19000)
-    @patch('zato.server.generic.api.channel_hl7_mllp.HL7MLLPServer')
-    def test_recv_timeout_conversion(
-        self,
-        mock_server_class:'MagicMock',
-        mock_resolve_port:'MagicMock',
-        mock_spawn:'MagicMock',
-        mock_find_haproxy:'MagicMock',
-        mock_update_port:'MagicMock',
-        mock_reload:'MagicMock',
-        ) -> 'None':
+    def test_recv_timeout_conversion(self) -> 'None':
         """ Config recv_timeout=250 (milliseconds) is passed as 0.25 seconds.
         """
-        config = _make_config(recv_timeout=250)
+        wrapper = self.make_wrapper(recv_timeout=250)
 
-        wrapper = ChannelHL7MLLPWrapper.__new__(ChannelHL7MLLPWrapper)
-        wrapper.config = config
-        wrapper.server = MagicMock()
+        wrapper._init_impl()
 
-        wrapper._ensure_shared_server_started()
-
-        _, kwargs = mock_server_class.call_args
-        self.assertAlmostEqual(kwargs['receive_timeout'], 0.25)
+        self.assertAlmostEqual(self.get_only_route_settings().recv_timeout, 0.25)
 
 # ################################################################################################################################
 
-    @patch('zato.server.generic.api.channel_hl7_mllp.reload_haproxy')
-    @patch('zato.server.generic.api.channel_hl7_mllp.update_mllp_backend_port')
-    @patch('zato.server.generic.api.channel_hl7_mllp.find_haproxy_config', return_value='/test/haproxy.cfg')
-    @patch('zato.server.generic.api.channel_hl7_mllp.spawn_greenlet')
-    @patch('zato.server.generic.api.channel_hl7_mllp.resolve_internal_port', return_value=19000)
-    @patch('zato.server.generic.api.channel_hl7_mllp.HL7MLLPServer')
-    def test_encoding_passed(
-        self,
-        mock_server_class:'MagicMock',
-        mock_resolve_port:'MagicMock',
-        mock_spawn:'MagicMock',
-        mock_find_haproxy:'MagicMock',
-        mock_update_port:'MagicMock',
-        mock_reload:'MagicMock',
-        ) -> 'None':
-        """ Config default_character_encoding='iso-8859-1' reaches the server constructor.
+    def test_encoding_passed(self) -> 'None':
+        """ Config default_character_encoding='iso-8859-1' reaches the route.
         """
-        config = _make_config(default_character_encoding='iso-8859-1')
+        wrapper = self.make_wrapper(default_character_encoding='iso-8859-1')
 
-        wrapper = ChannelHL7MLLPWrapper.__new__(ChannelHL7MLLPWrapper)
-        wrapper.config = config
-        wrapper.server = MagicMock()
+        wrapper._init_impl()
 
-        wrapper._ensure_shared_server_started()
-
-        _, kwargs = mock_server_class.call_args
-        self.assertEqual(kwargs['default_character_encoding'], 'iso-8859-1')
+        self.assertEqual(self.get_only_route_settings().default_character_encoding, 'iso-8859-1')
 
 # ################################################################################################################################
 
-    @patch('zato.server.generic.api.channel_hl7_mllp.reload_haproxy')
-    @patch('zato.server.generic.api.channel_hl7_mllp.update_mllp_backend_port')
-    @patch('zato.server.generic.api.channel_hl7_mllp.find_haproxy_config', return_value='/test/haproxy.cfg')
-    @patch('zato.server.generic.api.channel_hl7_mllp.spawn_greenlet')
-    @patch('zato.server.generic.api.channel_hl7_mllp.resolve_internal_port', return_value=19000)
-    @patch('zato.server.generic.api.channel_hl7_mllp.HL7MLLPServer')
-    def test_quirks_all_off(
-        self,
-        mock_server_class:'MagicMock',
-        mock_resolve_port:'MagicMock',
-        mock_spawn:'MagicMock',
-        mock_find_haproxy:'MagicMock',
-        mock_update_port:'MagicMock',
-        mock_reload:'MagicMock',
-        ) -> 'None':
-        """ All 5 quirks set to False reach the server constructor as False.
+    def test_quirks_all_off(self) -> 'None':
+        """ All 5 quirks set to False reach the route as False.
         """
-        config = _make_config(
+        wrapper = self.make_wrapper(
             normalize_line_endings=False,
             repair_truncated_msh=False,
             split_concatenated_messages=False,
@@ -237,146 +277,163 @@ class TestServerWiring(TestCase):
             use_msh18_encoding=False,
         )
 
-        wrapper = ChannelHL7MLLPWrapper.__new__(ChannelHL7MLLPWrapper)
-        wrapper.config = config
-        wrapper.server = MagicMock()
+        wrapper._init_impl()
 
-        wrapper._ensure_shared_server_started()
+        settings = self.get_only_route_settings()
 
-        _, kwargs = mock_server_class.call_args
-        self.assertFalse(kwargs['should_normalize_line_endings'])
-        self.assertFalse(kwargs['should_repair_truncated_msh'])
-        self.assertFalse(kwargs['should_split_concatenated_messages'])
-        self.assertFalse(kwargs['should_force_standard_delimiters'])
-        self.assertFalse(kwargs['should_use_msh18_encoding'])
+        self.assertFalse(settings.should_normalize_line_endings)
+        self.assertFalse(settings.should_repair_truncated_msh)
+        self.assertFalse(settings.should_split_concatenated_messages)
+        self.assertFalse(settings.should_force_standard_delimiters)
+        self.assertFalse(settings.should_use_msh18_encoding)
 
 # ################################################################################################################################
 
-    @patch('zato.server.generic.api.channel_hl7_mllp.reload_haproxy')
-    @patch('zato.server.generic.api.channel_hl7_mllp.update_mllp_backend_port')
-    @patch('zato.server.generic.api.channel_hl7_mllp.find_haproxy_config', return_value='/test/haproxy.cfg')
-    @patch('zato.server.generic.api.channel_hl7_mllp.spawn_greenlet')
-    @patch('zato.server.generic.api.channel_hl7_mllp.resolve_internal_port', return_value=19000)
-    @patch('zato.server.generic.api.channel_hl7_mllp.HL7MLLPServer')
-    def test_should_return_errors_passed(
-        self,
-        mock_server_class:'MagicMock',
-        mock_resolve_port:'MagicMock',
-        mock_spawn:'MagicMock',
-        mock_find_haproxy:'MagicMock',
-        mock_update_port:'MagicMock',
-        mock_reload:'MagicMock',
-        ) -> 'None':
-        """ Config should_return_errors=True reaches the server constructor.
+    def test_should_return_errors_passed(self) -> 'None':
+        """ Config should_return_errors=True reaches the route.
         """
-        config = _make_config(should_return_errors=True)
+        wrapper = self.make_wrapper(should_return_errors=True)
 
-        wrapper = ChannelHL7MLLPWrapper.__new__(ChannelHL7MLLPWrapper)
-        wrapper.config = config
-        wrapper.server = MagicMock()
+        wrapper._init_impl()
 
-        wrapper._ensure_shared_server_started()
-
-        _, kwargs = mock_server_class.call_args
-        self.assertTrue(kwargs['should_return_errors'])
+        self.assertTrue(self.get_only_route_settings().should_return_errors)
 
 # ################################################################################################################################
 
-    @patch('zato.server.generic.api.channel_hl7_mllp.reload_haproxy')
-    @patch('zato.server.generic.api.channel_hl7_mllp.update_mllp_backend_port')
-    @patch('zato.server.generic.api.channel_hl7_mllp.find_haproxy_config', return_value='/test/haproxy.cfg')
-    @patch('zato.server.generic.api.channel_hl7_mllp.spawn_greenlet')
-    @patch('zato.server.generic.api.channel_hl7_mllp.resolve_internal_port', return_value=19000)
-    @patch('zato.server.generic.api.channel_hl7_mllp.HL7MLLPServer')
-    def test_max_msg_size_bytes_passed(
-        self,
-        mock_server_class:'MagicMock',
-        mock_resolve_port:'MagicMock',
-        mock_spawn:'MagicMock',
-        mock_find_haproxy:'MagicMock',
-        mock_update_port:'MagicMock',
-        mock_reload:'MagicMock',
-        ) -> 'None':
-        """ Config max_msg_size=500, max_msg_size_unit='kb' reaches the server as 512000 bytes.
+    def test_max_msg_size_bytes_passed(self) -> 'None':
+        """ Config max_msg_size=500, max_msg_size_unit='kb' reaches the route as 512000 bytes.
         """
-        config = _make_config(max_msg_size=500, max_msg_size_unit='kb')
+        wrapper = self.make_wrapper(max_msg_size=500, max_msg_size_unit='kb')
 
-        wrapper = ChannelHL7MLLPWrapper.__new__(ChannelHL7MLLPWrapper)
-        wrapper.config = config
-        wrapper.server = MagicMock()
+        wrapper._init_impl()
 
-        wrapper._ensure_shared_server_started()
-
-        _, kwargs = mock_server_class.call_args
-        self.assertEqual(kwargs['max_message_size'], 500 * 1024)
+        self.assertEqual(self.get_only_route_settings().max_message_size, 500 * 1024)
 
 # ################################################################################################################################
 
-    @patch('zato.server.generic.api.channel_hl7_mllp.reload_haproxy')
-    @patch('zato.server.generic.api.channel_hl7_mllp.update_mllp_backend_port')
-    @patch('zato.server.generic.api.channel_hl7_mllp.find_haproxy_config', return_value='/test/haproxy.cfg')
-    @patch('zato.server.generic.api.channel_hl7_mllp.spawn_greenlet')
-    @patch('zato.server.generic.api.channel_hl7_mllp.resolve_internal_port', return_value=19000)
-    @patch('zato.server.generic.api.channel_hl7_mllp.HL7MLLPServer')
-    def test_should_log_messages_passed(
-        self,
-        mock_server_class:'MagicMock',
-        mock_resolve_port:'MagicMock',
-        mock_spawn:'MagicMock',
-        mock_find_haproxy:'MagicMock',
-        mock_update_port:'MagicMock',
-        mock_reload:'MagicMock',
-        ) -> 'None':
-        """ Config should_log_messages=True reaches the server constructor.
+    def test_should_log_messages_passed(self) -> 'None':
+        """ Config should_log_messages=True reaches the route.
         """
-        config = _make_config(should_log_messages=True)
+        wrapper = self.make_wrapper(should_log_messages=True)
 
-        wrapper = ChannelHL7MLLPWrapper.__new__(ChannelHL7MLLPWrapper)
-        wrapper.config = config
-        wrapper.server = MagicMock()
+        wrapper._init_impl()
 
-        wrapper._ensure_shared_server_started()
+        self.assertTrue(self.get_only_route_settings().should_log_messages)
 
-        _, kwargs = mock_server_class.call_args
-        self.assertTrue(kwargs['should_log_messages'])
+# ################################################################################################################################
+
+    def test_allowed_networks_passed(self) -> 'None':
+        """ The networks a channel limits itself to reach the route as configured.
+        """
+        wrapper = self.make_wrapper(allowed_networks='10.0.0.0/8, 192.168.1.5')
+
+        wrapper._init_impl()
+
+        networks = [str(one) for one in self.get_only_route_settings().allowed_networks]
+        self.assertEqual(networks, ['10.0.0.0/8', '192.168.1.5/32'])
+
+# ################################################################################################################################
+
+    def test_each_channel_gets_its_own_deduplicator(self) -> 'None':
+        """ Two channels must not share a memory of what they have already seen, or one would
+        silence the other's messages.
+        """
+
+        first = self.make_wrapper(name='first', dedup_ttl_value=1, dedup_ttl_unit='hours')
+        first._init_impl()
+
+        second = self.make_wrapper(name='second', dedup_ttl_value=1, dedup_ttl_unit='hours')
+        second._init_impl()
+
+        routes = _shared_state.router._routes
+        self.assertEqual(len(routes), 2)
+
+        self.assertIsNotNone(routes[0].settings.deduplicator)
+        self.assertIsNot(routes[0].settings.deduplicator, routes[1].settings.deduplicator)
+
+# ################################################################################################################################
+
+    def test_no_deduplicator_when_not_asked_for(self) -> 'None':
+        """ A channel that sets no window remembers nothing and pays for nothing.
+        """
+        wrapper = self.make_wrapper(dedup_ttl_value=0)
+
+        wrapper._init_impl()
+
+        self.assertIsNone(self.get_only_route_settings().deduplicator)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestIsActiveRouting(TestCase):
+class TestListenerWiring(_WiringTestCase):
+    """ Tests what the listener itself is started with, as against what each channel brings.
+    """
+
+# ################################################################################################################################
+
+    def test_listener_started_once_for_two_channels(self) -> 'None':
+        """ The listener is shared, so a second channel joins the one already running rather
+        than standing another up.
+        """
+
+        first = self.make_wrapper(name='first')
+        first._init_impl()
+
+        second = self.make_wrapper(name='second')
+        second._init_impl()
+
+        self.mock_server_class.assert_called_once()
+
+# ################################################################################################################################
+
+    def test_backend_line_written_once(self) -> 'None':
+        """ The load balancer is told where to reach this server when the listener starts, and
+        not again for every channel that follows.
+        """
+
+        first = self.make_wrapper(name='first')
+        first._init_impl()
+
+        second = self.make_wrapper(name='second')
+        second._init_impl()
+
+        self.mock_ensure_backend.assert_called_once()
+
+# ################################################################################################################################
+
+    def test_listener_stops_with_its_last_channel(self) -> 'None':
+        """ The listener comes down when the last channel using it goes, and not before.
+        """
+
+        first = self.make_wrapper(name='first')
+        first._init_impl()
+
+        second = self.make_wrapper(name='second')
+        second._init_impl()
+
+        listener = cast_('MagicMock', _shared_state.server)
+
+        first._delete()
+        self.assertIsNotNone(_shared_state.server, 'The listener stopped while a channel still used it')
+
+        second._delete()
+        self.assertIsNone(_shared_state.server, 'The listener outlived its last channel')
+
+        listener.stop.assert_called_once()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestIsActiveRouting(_WiringTestCase):
     """ Tests for the is_active flag controlling route registration.
     """
 
-    def setUp(self) -> 'None':
-        _reset_shared_state()
-
-    def tearDown(self) -> 'None':
-        _reset_shared_state()
-
 # ################################################################################################################################
 
-    @patch('zato.server.generic.api.channel_hl7_mllp.reload_haproxy')
-    @patch('zato.server.generic.api.channel_hl7_mllp.update_mllp_backend_port')
-    @patch('zato.server.generic.api.channel_hl7_mllp.find_haproxy_config', return_value='/test/haproxy.cfg')
-    @patch('zato.server.generic.api.channel_hl7_mllp.spawn_greenlet')
-    @patch('zato.server.generic.api.channel_hl7_mllp.resolve_internal_port', return_value=19000)
-    @patch('zato.server.generic.api.channel_hl7_mllp.HL7MLLPServer')
-    def test_inactive_channel_no_route(
-        self,
-        mock_server_class:'MagicMock',
-        mock_resolve_port:'MagicMock',
-        mock_spawn:'MagicMock',
-        mock_find_haproxy:'MagicMock',
-        mock_update_port:'MagicMock',
-        mock_reload:'MagicMock',
-        ) -> 'None':
+    def test_inactive_channel_no_route(self) -> 'None':
         """ is_active=False means router.add_route is not called.
         """
-        config = _make_config(is_active=False)
-
-        wrapper = ChannelHL7MLLPWrapper.__new__(ChannelHL7MLLPWrapper)
-        wrapper.config = config
-        wrapper.server = MagicMock()
+        wrapper = self.make_wrapper(is_active=False)
 
         wrapper._init_impl()
 
@@ -384,28 +441,10 @@ class TestIsActiveRouting(TestCase):
 
 # ################################################################################################################################
 
-    @patch('zato.server.generic.api.channel_hl7_mllp.reload_haproxy')
-    @patch('zato.server.generic.api.channel_hl7_mllp.update_mllp_backend_port')
-    @patch('zato.server.generic.api.channel_hl7_mllp.find_haproxy_config', return_value='/test/haproxy.cfg')
-    @patch('zato.server.generic.api.channel_hl7_mllp.spawn_greenlet')
-    @patch('zato.server.generic.api.channel_hl7_mllp.resolve_internal_port', return_value=19000)
-    @patch('zato.server.generic.api.channel_hl7_mllp.HL7MLLPServer')
-    def test_active_channel_adds_route(
-        self,
-        mock_server_class:'MagicMock',
-        mock_resolve_port:'MagicMock',
-        mock_spawn:'MagicMock',
-        mock_find_haproxy:'MagicMock',
-        mock_update_port:'MagicMock',
-        mock_reload:'MagicMock',
-        ) -> 'None':
+    def test_active_channel_adds_route(self) -> 'None':
         """ is_active=True means router.add_route is called and route exists.
         """
-        config = _make_config(is_active=True)
-
-        wrapper = ChannelHL7MLLPWrapper.__new__(ChannelHL7MLLPWrapper)
-        wrapper.config = config
-        wrapper.server = MagicMock()
+        wrapper = self.make_wrapper(is_active=True)
 
         wrapper._init_impl()
 
@@ -413,30 +452,11 @@ class TestIsActiveRouting(TestCase):
 
 # ################################################################################################################################
 
-    @patch('zato.server.generic.api.channel_hl7_mllp.reload_haproxy')
-    @patch('zato.server.generic.api.channel_hl7_mllp.update_mllp_backend_port')
-    @patch('zato.server.generic.api.channel_hl7_mllp.find_haproxy_config', return_value='/test/haproxy.cfg')
-    @patch('zato.server.generic.api.channel_hl7_mllp.spawn_greenlet')
-    @patch('zato.server.generic.api.channel_hl7_mllp.resolve_internal_port', return_value=19000)
-    @patch('zato.server.generic.api.channel_hl7_mllp.HL7MLLPServer')
-    def test_inactive_then_active(
-        self,
-        mock_server_class:'MagicMock',
-        mock_resolve_port:'MagicMock',
-        mock_spawn:'MagicMock',
-        mock_find_haproxy:'MagicMock',
-        mock_update_port:'MagicMock',
-        mock_reload:'MagicMock',
-        ) -> 'None':
+    def test_inactive_then_active(self) -> 'None':
         """ Toggle is_active from False to True via _delete + _init_impl, verify route appears.
         """
 
-        # Create inactive channel ..
-        config = _make_config(is_active=False)
-
-        wrapper = ChannelHL7MLLPWrapper.__new__(ChannelHL7MLLPWrapper)
-        wrapper.config = config
-        wrapper.server = MagicMock()
+        wrapper = self.make_wrapper(is_active=False)
 
         wrapper._init_impl()
         self.assertFalse(_shared_state.router.has_routes())
@@ -445,37 +465,18 @@ class TestIsActiveRouting(TestCase):
         wrapper._delete()
 
         # .. re-create as active ..
-        config.is_active = True
+        wrapper.config.is_active = True
         wrapper._init_impl()
 
         self.assertTrue(_shared_state.router.has_routes())
 
 # ################################################################################################################################
 
-    @patch('zato.server.generic.api.channel_hl7_mllp.reload_haproxy')
-    @patch('zato.server.generic.api.channel_hl7_mllp.update_mllp_backend_port')
-    @patch('zato.server.generic.api.channel_hl7_mllp.find_haproxy_config', return_value='/test/haproxy.cfg')
-    @patch('zato.server.generic.api.channel_hl7_mllp.spawn_greenlet')
-    @patch('zato.server.generic.api.channel_hl7_mllp.resolve_internal_port', return_value=19000)
-    @patch('zato.server.generic.api.channel_hl7_mllp.HL7MLLPServer')
-    def test_active_then_inactive(
-        self,
-        mock_server_class:'MagicMock',
-        mock_resolve_port:'MagicMock',
-        mock_spawn:'MagicMock',
-        mock_find_haproxy:'MagicMock',
-        mock_update_port:'MagicMock',
-        mock_reload:'MagicMock',
-        ) -> 'None':
+    def test_active_then_inactive(self) -> 'None':
         """ Toggle is_active from True to False via _delete + _init_impl, verify route is removed.
         """
 
-        # Create active channel ..
-        config = _make_config(is_active=True)
-
-        wrapper = ChannelHL7MLLPWrapper.__new__(ChannelHL7MLLPWrapper)
-        wrapper.config = config
-        wrapper.server = MagicMock()
+        wrapper = self.make_wrapper(is_active=True)
 
         wrapper._init_impl()
         self.assertTrue(_shared_state.router.has_routes())
@@ -484,7 +485,7 @@ class TestIsActiveRouting(TestCase):
         wrapper._delete()
 
         # .. re-create as inactive ..
-        config.is_active = False
+        wrapper.config.is_active = False
         wrapper._init_impl()
 
         self.assertFalse(_shared_state.router.has_routes())
@@ -492,40 +493,16 @@ class TestIsActiveRouting(TestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestIsDefaultRouting(TestCase):
+class TestIsDefaultRouting(_WiringTestCase):
     """ Tests for the is_default flag being passed through to the router.
     """
 
-    def setUp(self) -> 'None':
-        _reset_shared_state()
-
-    def tearDown(self) -> 'None':
-        _reset_shared_state()
-
 # ################################################################################################################################
 
-    @patch('zato.server.generic.api.channel_hl7_mllp.reload_haproxy')
-    @patch('zato.server.generic.api.channel_hl7_mllp.update_mllp_backend_port')
-    @patch('zato.server.generic.api.channel_hl7_mllp.find_haproxy_config', return_value='/test/haproxy.cfg')
-    @patch('zato.server.generic.api.channel_hl7_mllp.spawn_greenlet')
-    @patch('zato.server.generic.api.channel_hl7_mllp.resolve_internal_port', return_value=19000)
-    @patch('zato.server.generic.api.channel_hl7_mllp.HL7MLLPServer')
-    def test_is_default_passed_true(
-        self,
-        mock_server_class:'MagicMock',
-        mock_resolve_port:'MagicMock',
-        mock_spawn:'MagicMock',
-        mock_find_haproxy:'MagicMock',
-        mock_update_port:'MagicMock',
-        mock_reload:'MagicMock',
-        ) -> 'None':
+    def test_is_default_passed_true(self) -> 'None':
         """ is_default=True reaches the router as is_default=True on the route.
         """
-        config = _make_config(is_default=True)
-
-        wrapper = ChannelHL7MLLPWrapper.__new__(ChannelHL7MLLPWrapper)
-        wrapper.config = config
-        wrapper.server = MagicMock()
+        wrapper = self.make_wrapper(is_default=True)
 
         wrapper._init_impl()
 
@@ -534,28 +511,10 @@ class TestIsDefaultRouting(TestCase):
 
 # ################################################################################################################################
 
-    @patch('zato.server.generic.api.channel_hl7_mllp.reload_haproxy')
-    @patch('zato.server.generic.api.channel_hl7_mllp.update_mllp_backend_port')
-    @patch('zato.server.generic.api.channel_hl7_mllp.find_haproxy_config', return_value='/test/haproxy.cfg')
-    @patch('zato.server.generic.api.channel_hl7_mllp.spawn_greenlet')
-    @patch('zato.server.generic.api.channel_hl7_mllp.resolve_internal_port', return_value=19000)
-    @patch('zato.server.generic.api.channel_hl7_mllp.HL7MLLPServer')
-    def test_is_default_passed_false(
-        self,
-        mock_server_class:'MagicMock',
-        mock_resolve_port:'MagicMock',
-        mock_spawn:'MagicMock',
-        mock_find_haproxy:'MagicMock',
-        mock_update_port:'MagicMock',
-        mock_reload:'MagicMock',
-        ) -> 'None':
+    def test_is_default_passed_false(self) -> 'None':
         """ is_default=False reaches the router as is_default=False on the route.
         """
-        config = _make_config(is_default=False)
-
-        wrapper = ChannelHL7MLLPWrapper.__new__(ChannelHL7MLLPWrapper)
-        wrapper.config = config
-        wrapper.server = MagicMock()
+        wrapper = self.make_wrapper(is_default=False)
 
         wrapper._init_impl()
 
@@ -564,30 +523,11 @@ class TestIsDefaultRouting(TestCase):
 
 # ################################################################################################################################
 
-    @patch('zato.server.generic.api.channel_hl7_mllp.reload_haproxy')
-    @patch('zato.server.generic.api.channel_hl7_mllp.update_mllp_backend_port')
-    @patch('zato.server.generic.api.channel_hl7_mllp.find_haproxy_config', return_value='/test/haproxy.cfg')
-    @patch('zato.server.generic.api.channel_hl7_mllp.spawn_greenlet')
-    @patch('zato.server.generic.api.channel_hl7_mllp.resolve_internal_port', return_value=19000)
-    @patch('zato.server.generic.api.channel_hl7_mllp.HL7MLLPServer')
-    def test_is_default_toggle(
-        self,
-        mock_server_class:'MagicMock',
-        mock_resolve_port:'MagicMock',
-        mock_spawn:'MagicMock',
-        mock_find_haproxy:'MagicMock',
-        mock_update_port:'MagicMock',
-        mock_reload:'MagicMock',
-        ) -> 'None':
+    def test_is_default_toggle(self) -> 'None':
         """ Change is_default from False to True via re-init, verify the router sees the updated value.
         """
 
-        # Create non-default channel ..
-        config = _make_config(is_default=False)
-
-        wrapper = ChannelHL7MLLPWrapper.__new__(ChannelHL7MLLPWrapper)
-        wrapper.config = config
-        wrapper.server = MagicMock()
+        wrapper = self.make_wrapper(is_default=False)
 
         wrapper._init_impl()
 
@@ -596,7 +536,7 @@ class TestIsDefaultRouting(TestCase):
 
         # .. delete and re-create as default ..
         wrapper._delete()
-        config.is_default = True
+        wrapper.config.is_default = True
         wrapper._init_impl()
 
         route = _shared_state.router._routes[0]
@@ -605,162 +545,119 @@ class TestIsDefaultRouting(TestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestRestOnlyMode(TestCase):
+class TestRestOnlyMode(_WiringTestCase):
     """ Tests for the rest_only flag skipping the MLLP listener.
     """
 
-    def setUp(self) -> 'None':
-        _reset_shared_state()
-
-    def tearDown(self) -> 'None':
-        _reset_shared_state()
-
 # ################################################################################################################################
 
-    @patch('zato.server.generic.api.channel_hl7_mllp.reload_haproxy')
-    @patch('zato.server.generic.api.channel_hl7_mllp.update_mllp_backend_port')
-    @patch('zato.server.generic.api.channel_hl7_mllp.find_haproxy_config', return_value='/test/haproxy.cfg')
-    @patch('zato.server.generic.api.channel_hl7_mllp.spawn_greenlet')
-    @patch('zato.server.generic.api.channel_hl7_mllp.resolve_internal_port', return_value=19000)
-    @patch('zato.server.generic.api.channel_hl7_mllp.HL7MLLPServer')
-    def test_rest_only_skips_mllp_server(
-        self,
-        mock_server_class:'MagicMock',
-        mock_resolve_port:'MagicMock',
-        mock_spawn:'MagicMock',
-        mock_find_haproxy:'MagicMock',
-        mock_update_port:'MagicMock',
-        mock_reload:'MagicMock',
-        ) -> 'None':
+    def test_rest_only_skips_mllp_server(self) -> 'None':
         """ rest_only=True means the shared MLLP server is not started.
         """
-        config = _make_config(rest_only=True, use_rest=True)
-
-        wrapper = ChannelHL7MLLPWrapper.__new__(ChannelHL7MLLPWrapper)
-        wrapper.config = config
-        wrapper.server = MagicMock()
+        wrapper = self.make_wrapper(rest_only=True, use_rest=True)
 
         wrapper._init_impl()
 
         # .. the MLLP server constructor was never called ..
-        mock_server_class.assert_not_called()
+        self.mock_server_class.assert_not_called()
 
         # .. no route was registered ..
         self.assertFalse(_shared_state.router.has_routes())
 
 # ################################################################################################################################
 
-    @patch('zato.server.generic.api.channel_hl7_mllp.reload_haproxy')
-    @patch('zato.server.generic.api.channel_hl7_mllp.update_mllp_backend_port')
-    @patch('zato.server.generic.api.channel_hl7_mllp.find_haproxy_config', return_value='/test/haproxy.cfg')
-    @patch('zato.server.generic.api.channel_hl7_mllp.spawn_greenlet')
-    @patch('zato.server.generic.api.channel_hl7_mllp.resolve_internal_port', return_value=19000)
-    @patch('zato.server.generic.api.channel_hl7_mllp.HL7MLLPServer')
-    def test_rest_only_false_starts_mllp_server(
-        self,
-        mock_server_class:'MagicMock',
-        mock_resolve_port:'MagicMock',
-        mock_spawn:'MagicMock',
-        mock_find_haproxy:'MagicMock',
-        mock_update_port:'MagicMock',
-        mock_reload:'MagicMock',
-        ) -> 'None':
+    def test_rest_only_false_starts_mllp_server(self) -> 'None':
         """ rest_only=False with use_rest=True still starts the MLLP server normally.
         """
-        config = _make_config(rest_only=False, use_rest=True)
-
-        wrapper = ChannelHL7MLLPWrapper.__new__(ChannelHL7MLLPWrapper)
-        wrapper.config = config
-        wrapper.server = MagicMock()
+        wrapper = self.make_wrapper(rest_only=False, use_rest=True)
 
         wrapper._init_impl()
 
         # .. the MLLP server was started ..
-        mock_server_class.assert_called_once()
+        self.mock_server_class.assert_called_once()
 
         # .. route was registered ..
         self.assertTrue(_shared_state.router.has_routes())
 
 # ################################################################################################################################
+
+    def test_rest_only_channel_does_not_hold_the_listener_up(self) -> 'None':
+        """ A channel that only has a REST bridge never started the listener, so deleting the
+        one channel that did must still bring it down.
+        """
+
+        listening = self.make_wrapper(name='listening')
+        listening._init_impl()
+
+        rest_only = self.make_wrapper(name='rest-only', rest_only=True, use_rest=True)
+        rest_only._init_impl()
+
+        listening._delete()
+
+        self.assertIsNone(_shared_state.server, 'A channel that never used the listener kept it alive')
+
+# ################################################################################################################################
 # ################################################################################################################################
 
-class TestRestChannelCleanup(TestCase):
+class TestRestChannelCleanup(_WiringTestCase):
     """ Tests for the backing REST channel cleanup on MLLP channel delete.
     """
 
-    def setUp(self) -> 'None':
-        _reset_shared_state()
-
-    def tearDown(self) -> 'None':
-        _reset_shared_state()
-
 # ################################################################################################################################
 
-    @patch('zato.server.generic.api.channel_hl7_mllp.reload_haproxy')
-    @patch('zato.server.generic.api.channel_hl7_mllp.update_mllp_backend_port')
-    @patch('zato.server.generic.api.channel_hl7_mllp.find_haproxy_config', return_value='/test/haproxy.cfg')
-    @patch('zato.server.generic.api.channel_hl7_mllp.spawn_greenlet')
-    @patch('zato.server.generic.api.channel_hl7_mllp.resolve_internal_port', return_value=19000)
-    @patch('zato.server.generic.api.channel_hl7_mllp.HL7MLLPServer')
-    def test_delete_invokes_http_soap_delete(
-        self,
-        mock_server_class:'MagicMock',
-        mock_resolve_port:'MagicMock',
-        mock_spawn:'MagicMock',
-        mock_find_haproxy:'MagicMock',
-        mock_update_port:'MagicMock',
-        mock_reload:'MagicMock',
-        ) -> 'None':
+    def test_delete_invokes_http_soap_delete(self) -> 'None':
         """ Deleting an MLLP channel with rest_channel_id invokes zato.http-soap.delete.
         """
-        config = _make_config(use_rest=True, rest_channel_id=42)
+        wrapper = self.make_wrapper(use_rest=True, rest_channel_id=42)
 
-        wrapper = ChannelHL7MLLPWrapper.__new__(ChannelHL7MLLPWrapper)
-        wrapper.config = config
-        wrapper.server = MagicMock()
-
-        # .. init first so channel_count is incremented ..
+        # .. init first so the channel is counted ..
         wrapper._init_impl()
 
         # .. now delete ..
         wrapper._delete()
 
         # .. verify the server's invoke was called to delete the REST channel ..
-        wrapper.server.invoke.assert_called_with('zato.http-soap.delete', {
+        self.get_invoker(wrapper).invoke.assert_called_with('zato.http-soap.delete', {
             'id': 42,
             'cluster_id': 1,
         })
 
 # ################################################################################################################################
 
-    @patch('zato.server.generic.api.channel_hl7_mllp.reload_haproxy')
-    @patch('zato.server.generic.api.channel_hl7_mllp.update_mllp_backend_port')
-    @patch('zato.server.generic.api.channel_hl7_mllp.find_haproxy_config', return_value='/test/haproxy.cfg')
-    @patch('zato.server.generic.api.channel_hl7_mllp.spawn_greenlet')
-    @patch('zato.server.generic.api.channel_hl7_mllp.resolve_internal_port', return_value=19000)
-    @patch('zato.server.generic.api.channel_hl7_mllp.HL7MLLPServer')
-    def test_delete_no_rest_channel_no_invoke(
-        self,
-        mock_server_class:'MagicMock',
-        mock_resolve_port:'MagicMock',
-        mock_spawn:'MagicMock',
-        mock_find_haproxy:'MagicMock',
-        mock_update_port:'MagicMock',
-        mock_reload:'MagicMock',
-        ) -> 'None':
+    def test_delete_no_rest_channel_no_invoke(self) -> 'None':
         """ Deleting an MLLP channel without rest_channel_id does not invoke zato.http-soap.delete.
         """
-        config = _make_config(use_rest=False, rest_channel_id=0)
-
-        wrapper = ChannelHL7MLLPWrapper.__new__(ChannelHL7MLLPWrapper)
-        wrapper.config = config
-        wrapper.server = MagicMock()
+        wrapper = self.make_wrapper(use_rest=False, rest_channel_id=0)
 
         wrapper._init_impl()
         wrapper._delete()
 
         # .. invoke was only called from _invoke_service context, not for REST cleanup ..
-        wrapper.server.invoke.assert_not_called()
+        self.get_invoker(wrapper).invoke.assert_not_called()
+
+# ################################################################################################################################
+
+    def test_delete_leaves_alone_a_rest_channel_already_gone(self) -> 'None':
+        """ Every worker holding the channel runs this, so whoever finds the REST channel
+        already deleted must not try to delete it a second time.
+        """
+
+        wrapper = self.make_wrapper(use_rest=True, rest_channel_id=42)
+        wrapper._init_impl()
+
+        # Asking after a channel that is no longer there is what raises
+        def _invoke(service_name:'str', request:'object') -> 'object':
+            if service_name == 'zato.http-soap.get':
+                raise Exception('No such channel')
+            return None
+
+        invoker = self.get_invoker(wrapper)
+        invoker.invoke.side_effect = _invoke
+
+        wrapper._delete()
+
+        invoked_services = [one.args[0] for one in invoker.invoke.call_args_list]
+        self.assertNotIn('zato.http-soap.delete', invoked_services)
 
 # ################################################################################################################################
 # ################################################################################################################################

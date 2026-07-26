@@ -49,10 +49,10 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
     requiredFields: [
         'name',
         'service',
-        'logging_level',
         'max_msg_size',
         'max_msg_size_unit',
         'recv_timeout',
+        'idle_timeout',
         'start_seq',
         'end_seq',
         'default_character_encoding'

@@ -99,6 +99,14 @@ $(document).ready(function() {
 
                     <button type="button"
                             class="dashboard-tab"
+                            data-tab="security"
+                            role="tab"
+                            aria-selected="false">
+                        <span class="dashboard-tab-label">Security</span>
+                    </button>
+
+                    <button type="button"
+                            class="dashboard-tab"
                             data-tab="dedup"
                             role="tab"
                             aria-selected="false">
@@ -224,7 +232,11 @@ $(document).ready(function() {
                         </tr>
                         <tr>
                             <td><label for="id_{{ field_prefix }}recv_timeout">Recv. timeout</label></td>
-                            <td>{{ form.recv_timeout }}</td>
+                            <td>{{ form.recv_timeout }} <span class="form_hint">ms</span></td>
+                        </tr>
+                        <tr>
+                            <td><label for="id_{{ field_prefix }}idle_timeout">Idle timeout</label></td>
+                            <td>{{ form.idle_timeout }} <span class="form_hint">seconds</span></td>
                         </tr>
                         <tr>
                             <td><label for="id_{{ field_prefix }}max_msg_size">Max. msg. size</label></td>
@@ -237,6 +249,32 @@ $(document).ready(function() {
                         <tr>
                             <td><label for="id_{{ field_prefix }}end_seq">End separator</label></td>
                             <td>{{ form.end_seq }}</td>
+                        </tr>
+                        <tr>
+                            <td><label for="id_{{ field_prefix }}keepalive_idle">Keepalive idle</label></td>
+                            <td>{{ form.keepalive_idle }} <span class="form_hint">seconds</span></td>
+                        </tr>
+                        <tr>
+                            <td><label for="id_{{ field_prefix }}keepalive_interval">Keepalive interval</label></td>
+                            <td>{{ form.keepalive_interval }} <span class="form_hint">seconds</span></td>
+                        </tr>
+                        <tr>
+                            <td><label for="id_{{ field_prefix }}keepalive_probe_count">Keepalive probes</label></td>
+                            <td>{{ form.keepalive_probe_count }}</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- Security -->
+                <div class="dashboard-tab-panel" id="mllp-editor-tab-panel-security" role="tabpanel" hidden>
+                    <table class="form-data">
+                        <tr>
+                            <td><label for="id_{{ field_prefix }}security_id">Client certificate</label></td>
+                            <td>{{ form.security_id }}</td>
+                        </tr>
+                        <tr>
+                            <td><label for="id_{{ field_prefix }}allowed_networks">Allowed networks</label></td>
+                            <td>{{ form.allowed_networks }} <span class="form_hint">Comma-separated, e.g. 10.0.0.0/8</span></td>
                         </tr>
                     </table>
                 </div>
@@ -317,8 +355,8 @@ $(document).ready(function() {
                             <td>{{ form.should_log_messages }}</td>
                         </tr>
                         <tr>
-                            <td><label for="id_{{ field_prefix }}logging_level">Log level</label></td>
-                            <td>{{ form.logging_level }}</td>
+                            <td><label for="id_{{ field_prefix }}is_audit_log_active">Audit log</label></td>
+                            <td>{{ form.is_audit_log_active }}</td>
                         </tr>
                     </table>
                 </div>

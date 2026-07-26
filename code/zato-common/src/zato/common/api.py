@@ -2065,6 +2065,14 @@ class HL7:
         recv_timeout = 250
         start_seq = '0b'
 
+        # How long a channel lets a connection produce nothing before closing it, in seconds
+        idle_timeout = 300
+
+        # How often the kernel probes a quiet connection, and how many unanswered probes end it
+        keepalive_idle          = 60
+        keepalive_interval      = 10
+        keepalive_probe_count   = 6
+
         # The largest message accepted - channels express it as a value plus a unit,
         # outgoing connections as a byte count, and both describe the same size.
         max_msg_size_value = 2

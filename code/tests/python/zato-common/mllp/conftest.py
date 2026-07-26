@@ -194,6 +194,17 @@ def mllp_server() -> 'intgen':
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
+def mllp_listener() -> 'intgen':
+    """ Starts an MLLP test server with nothing in front of it and yields the listener's own
+    port, so that what is measured against it is the listener rather than the way in.
+    """
+    process, port = start_server(callback_mode='ok', use_relay=False)
+    yield port
+    stop_server(process)
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
 def tls_certs() -> 'strstrdict_gen':
     """ Generates ephemeral TLS certificates and yields a dict of file paths.
     """
@@ -204,16 +215,29 @@ def tls_certs() -> 'strstrdict_gen':
 
 # ################################################################################################################################
 
+def build_terminating_context(tls_certs:'strstrdict', is_client_cert_required:'bool') -> 'ssl.SSLContext':
+    """ Builds the context the stand-in load balancer terminates TLS with, which is where
+    inbound TLS ends - the listener itself never sees a handshake.
+    """
+
+    out = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    out.minimum_version = ssl.TLSVersion.TLSv1_2
+    out.load_cert_chain(certfile=tls_certs['server_cert'], keyfile=tls_certs['server_key'])
+
+    if is_client_cert_required:
+        out.verify_mode = ssl.CERT_REQUIRED
+        out.load_verify_locations(cafile=tls_certs['ca'])
+
+    return out
+
+# ################################################################################################################################
+
 @pytest.fixture(scope='session')
 def mllp_tls_server(tls_certs:'strstrdict') -> 'intgen':
-    """ Starts an MLLP test server with TLS (mTLS required) and yields its port.
+    """ Starts an MLLP test server behind a load balancer stand-in that requires a client
+    certificate, and yields the port senders connect to.
     """
-    process, port = start_server(
-        tls_cert=tls_certs['server_cert'],
-        tls_key=tls_certs['server_key'],
-        tls_ca=tls_certs['ca'],
-        tls_verify='required',
-    )
+    process, port = start_server(ssl_context=build_terminating_context(tls_certs, True))
     yield port
     stop_server(process)
 

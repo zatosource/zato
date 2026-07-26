@@ -10,15 +10,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from logging import getLogger
 from threading import Lock
+from traceback import format_exc
 
 # Zato
 from zato.common.audit_log.api import AuditLog
-from zato.common.hl7.mllp.fields import Channel_Defaults, Channel_Int_Names, Max_Msg_Size_Multipliers
-from zato.common.hl7.mllp.haproxy import find_haproxy_config, reload_haproxy, resolve_internal_port, \
-    update_mllp_backend_port
+from zato.common.hl7.mllp.fields import Channel_Defaults, Channel_Int_Names, resolve_max_msg_size, Tolerance_Names
+from zato.common.hl7.mllp.haproxy import ensure_mllp_backend_server, find_haproxy_config, resolve_internal_port
+from zato.common.hl7.mllp.preprocess import build_tolerance_config
 from zato.common.hl7.mllp.router import HL7MessageRouter
 from zato.common.hl7.mllp.server import HL7MLLPServer
+from zato.common.hl7.mllp.settings import extract_common_name, ListenerConfig, RouteSettings
 from zato.common.hl7.mllp.state import ChannelState
+from zato.common.typing_ import cast_
 from zato.common.util.api import asbool, hex_sequence_to_bytes, spawn_greenlet
 from zato.server.connection.wrapper import Wrapper
 
@@ -27,8 +30,10 @@ from zato.server.connection.wrapper import Wrapper
 
 if 0:
     from zato.common.typing_ import anylist, stranydict
+    from zato.server.base.parallel import ParallelServer
     anylist = anylist
     stranydict = stranydict
+    ParallelServer = ParallelServer
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,6 +50,15 @@ channel_config_defaults = Channel_Defaults
 # Config keys that must be integers but may arrive as strings from opaque storage
 channel_int_config_keys = Channel_Int_Names
 
+# What a channel is left accepting when the security definition it names cannot be resolved.
+# No certificate carries this, so the channel refuses everything rather than everything through.
+_Unresolvable_Common_Name = '\x00unresolvable'
+
+# What serialises the workers that all hold the same channel when its REST bridge is deleted
+_Rest_Channel_Lock_Prefix = 'zato.channel.hl7.mllp.rest-channel.'
+_Rest_Channel_Lock_Ttl    = 30
+_Rest_Channel_Lock_Block  = 30
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -57,9 +71,13 @@ class _SharedMLLPState:
         self.server:'HL7MLLPServer | None' = None
         self.router:'HL7MessageRouter' = HL7MessageRouter()
         self.lock = Lock()
-        self.channel_count = 0
         self.internal_port = 0
         self.haproxy_config_path = ''
+        self.listener_config = ListenerConfig()
+
+        # How many channels actually use the listener, which is what decides when it can stop.
+        # A channel that only has a REST bridge never starts one and so never counts.
+        self.listener_channel_count = 0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -161,94 +179,158 @@ class ChannelHL7MLLPWrapper(Wrapper):
     def _resolve_max_msg_size(self) -> 'int':
         """ Converts max_msg_size and max_msg_size_unit from config into bytes.
         """
-        max_msg_size = self.config.max_msg_size
+        out = resolve_max_msg_size(self.config.max_msg_size, self.config.max_msg_size_unit)
+        return out
 
-        # The multiplier map is keyed lower-case and stored units may carry either casing
-        unit = self.config.max_msg_size_unit.lower()
-        multiplier = Max_Msg_Size_Multipliers[unit]
+# ################################################################################################################################
 
-        out = max_msg_size * multiplier
+    def _get_security_common_name(self) -> 'str':
+        """ Resolves this channel's security definition to the client certificate common name it
+        accepts. A channel without one accepts a connection whatever certificate it was made with.
+
+        The common name is the only part of the certificate that reaches the listener, so it is
+        taken from the definition's subject distinguished name, of which it is a component.
+        """
+        security_id = self.config.security_id
+
+        if not security_id:
+            return ''
+
+        url_data = self.server.worker_store.request_dispatcher.url_data # pyright: ignore[reportOptionalMemberAccess]
+        security_definition = url_data.mtls_get_by_id(security_id)
+
+        # A definition that has been deleted since the channel referenced it leaves the channel
+        # accepting nothing, which is the safe end of the two
+        if not security_definition:
+            logger.warning('No mTLS definition with id %s for MLLP channel `%s`', security_id, self.config.name)
+            return _Unresolvable_Common_Name
+
+        subject_dn = security_definition['config'].get('client_cert_subject_dn')
+        common_name = extract_common_name(subject_dn)
+
+        # A definition that only names a fingerprint cannot be matched here, because a fingerprint
+        # is not among what the listener is told about the certificate
+        if not common_name:
+            logger.warning('The mTLS definition for MLLP channel `%s` has no subject DN to take a common name from',
+                self.config.name)
+            return _Unresolvable_Common_Name
+
+        return common_name
+
+# ################################################################################################################################
+
+    def _build_tolerance_config(self) -> 'object':
+        """ Builds the parser's tolerance configuration from this channel's own toggles, whose
+        names come from the same list the form and enmasse are built from.
+        """
+        toggles = {}
+
+        for name in Tolerance_Names:
+            toggles[name] = asbool(self.config[name])
+
+        out = build_tolerance_config(**toggles)
+        return out
+
+# ################################################################################################################################
+
+    def _build_route_settings(self) -> 'RouteSettings':
+        """ Builds how this channel's own messages are framed, read and interpreted, which is what
+        the listener applies to each message that matches this channel and to no other.
+        """
+
+        out = RouteSettings(
+            start_sequence=hex_sequence_to_bytes(self.config.start_seq),
+            end_sequence=hex_sequence_to_bytes(self.config.end_seq),
+
+            # The form asks for milliseconds, the socket layer works in seconds
+            recv_timeout=self.config.recv_timeout / 1000.0,
+            max_message_size=self._resolve_max_msg_size(),
+            idle_timeout=self.config.idle_timeout,
+
+            keepalive_idle=self.config.keepalive_idle,
+            keepalive_interval=self.config.keepalive_interval,
+            keepalive_probe_count=self.config.keepalive_probe_count,
+
+            default_character_encoding=self.config.default_character_encoding,
+            should_use_msh18_encoding=asbool(self.config.use_msh18_encoding),
+            should_normalize_line_endings=asbool(self.config.normalize_line_endings),
+            should_repair_truncated_msh=asbool(self.config.repair_truncated_msh),
+            should_split_concatenated_messages=asbool(self.config.split_concatenated_messages),
+            should_force_standard_delimiters=asbool(self.config.force_standard_delimiters),
+
+            should_parse_on_input=asbool(self.config.should_parse_on_input),
+            should_validate=asbool(self.config.should_validate),
+            should_log_messages=asbool(self.config.should_log_messages),
+            should_return_errors=asbool(self.config.should_return_errors),
+
+            tolerance_config=self._build_tolerance_config(),
+
+            dedup_ttl_value=self.config.dedup_ttl_value,
+            dedup_ttl_unit=self.config.dedup_ttl_unit,
+
+            security_common_name=self._get_security_common_name(),
+            allowed_networks=self.config.allowed_networks,
+        )
+
+        # A channel tunes underneath the listener rather than around it, so anything wider
+        # than what the listener allows is brought back to it
+        out.apply_listener_bounds(_shared_state.listener_config)
+
         return out
 
 # ################################################################################################################################
 
     def _ensure_shared_server_started(self) -> 'None':
-        """ Starts the shared MLLP server if this is the first channel being created.
-        Updates the mllp_backend port in haproxy.cfg and reloads HAProxy.
+        """ Starts the shared MLLP server if this is the first channel being created in this process.
         """
 
         if _shared_state.server:
             return
 
-        # Resolve a free internal port for the MLLP server ..
-        internal_port = resolve_internal_port()
+        # The internal port follows from the server's own port, so every worker process of one
+        # server binds the same one and HAProxy has a line for it before any channel exists
+        internal_port = resolve_internal_port(self.server.port) # pyright: ignore[reportOptionalMemberAccess]
         _shared_state.internal_port = internal_port
 
-        # .. build the bind address ..
-        address = f'127.0.0.1:{internal_port}'
+        # What one socket can have one of comes from the server's environment rather than
+        # from whichever channel happened to be created first
+        listener_config = ListenerConfig.from_env(f'127.0.0.1:{internal_port}')
+        _shared_state.listener_config = listener_config
 
-        # .. read framing sequences from config ..
-        start_sequence = hex_sequence_to_bytes(self.config.start_seq)
-        end_sequence   = hex_sequence_to_bytes(self.config.end_seq)
-
-        # .. convert recv_timeout from milliseconds to seconds ..
-        recv_timeout_seconds = self.config.recv_timeout / 1000.0
-
-        # .. resolve max message size to bytes ..
-        max_msg_size_bytes = self._resolve_max_msg_size()
-
-        # .. resolve dedup config ..
-        dedup_ttl_value = self.config.dedup_ttl_value
-        dedup_ttl_unit = self.config.dedup_ttl_unit
-
-        # .. the shared audit log all audited channels write through -
-        # .. whether a given message is audited is each route's own flag ..
+        # The shared audit log all audited channels write through -
+        # whether a given message is audited is each route's own flag
         audit_log = AuditLog(self.server.name) # pyright: ignore[reportOptionalMemberAccess]
 
-        # .. create and start the shared server ..
-        _shared_state.server = HL7MLLPServer(
-            address,
-            _shared_state.router,
-            start_sequence,
-            end_sequence,
-            audit_log=audit_log,
-            receive_timeout=recv_timeout_seconds,
-            max_message_size=max_msg_size_bytes,
-            should_log_messages=asbool(self.config.should_log_messages),
-            should_return_errors=asbool(self.config.should_return_errors),
-            should_parse_on_input=asbool(self.config.should_parse_on_input),
-            should_validate=asbool(self.config.should_validate),
-            default_character_encoding=self.config.default_character_encoding,
-            should_normalize_line_endings=asbool(self.config.normalize_line_endings),
-            should_repair_truncated_msh=asbool(self.config.repair_truncated_msh),
-            should_split_concatenated_messages=asbool(self.config.split_concatenated_messages),
-            should_force_standard_delimiters=asbool(self.config.force_standard_delimiters),
-            should_use_msh18_encoding=asbool(self.config.use_msh18_encoding),
-            dedup_ttl_value=dedup_ttl_value,
-            dedup_ttl_unit=dedup_ttl_unit,
-            normalize_obx2_value_type=asbool(self.config.normalize_obx2_value_type),
-            replace_invalid_obx2_value_type=asbool(self.config.replace_invalid_obx2_value_type),
-            normalize_invalid_escape_sequences=asbool(self.config.normalize_invalid_escape_sequences),
-            normalize_obx8_abnormal_flags=asbool(self.config.normalize_obx8_abnormal_flags),
-            normalize_quadruple_quoted_empty=asbool(self.config.normalize_quadruple_quoted_empty),
-            allow_short_encoding_characters=asbool(self.config.allow_short_encoding_characters),
-            fix_off_by_one_field_index=asbool(self.config.fix_off_by_one_field_index),
-        )
+        _shared_state.server = HL7MLLPServer(listener_config, _shared_state.router, audit_log=audit_log)
 
         _ = spawn_greenlet(_shared_state.server.start)
 
-        # .. update the mllp_backend port in haproxy.cfg so HAProxy routes to the right place ..
+        self._ensure_haproxy_backend_line(internal_port)
+
+        logger.info('Started shared MLLP server on %s', listener_config.address)
+
+# ################################################################################################################################
+
+    def _ensure_haproxy_backend_line(self, internal_port:'int') -> 'None':
+        """ Makes sure this server's line is in the load balancer's MLLP backend. The port follows
+        from the server's own port, so on every start after the first there is nothing to write
+        and nothing downstream to tell.
+        """
         server_base_directory = self.server.base_dir # pyright: ignore[reportOptionalMemberAccess]
-        haproxy_config_path = find_haproxy_config(server_base_directory)
-        _shared_state.haproxy_config_path = haproxy_config_path
+        config_path = find_haproxy_config(server_base_directory)
+        _shared_state.haproxy_config_path = config_path
 
-        if os.path.exists(haproxy_config_path):
-            update_mllp_backend_port(haproxy_config_path, internal_port)
-            _ = reload_haproxy(haproxy_config_path)
-        else:
-            logger.info('HAProxy config not found at %s, skipping HAProxy integration', haproxy_config_path)
+        if not os.path.exists(config_path):
+            logger.info('No load balancer configuration at %s, nothing to update', config_path)
+            return
 
-        logger.info('Started shared MLLP server on %s', address)
+        server_name = self.server.name # pyright: ignore[reportOptionalMemberAccess]
+        was_changed = ensure_mllp_backend_server(config_path, server_name, internal_port)
+
+        # A line that was already right needed no write, and a file that did not change needs
+        # nothing reloaded - which is the case from the second start of a server onward
+        if was_changed:
+            logger.info('Added the MLLP backend line for `%s`, it applies from the next reload', server_name)
 
 # ################################################################################################################################
 
@@ -270,13 +352,18 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
         with _shared_state.lock:
 
-            # .. if rest_only is set, the MLLP listener is not started ..
+            # .. a channel that only has a REST bridge never reaches the listener at all ..
             rest_only = asbool(self.config.rest_only)
 
-            # .. register this channel's routing rule only if the channel is active.
-            # The route is registered before the listener starts so the server
-            # never accepts a message for which no route exists yet ..
-            if self.config.is_active and not rest_only:
+            if rest_only:
+                self.is_connected = True
+                return
+
+            # .. the listener has to exist before a route can be built against its bounds ..
+            self._ensure_shared_server_started()
+
+            # .. register this channel's routing rule only if the channel is active ..
+            if self.config.is_active:
                 _shared_state.router.add_route(
                     channel_name=self.config.name,
                     service_name=self.config.service,
@@ -291,13 +378,10 @@ class ChannelHL7MLLPWrapper(Wrapper):
                     msh12_version_id=self.config.msh12_version_id,
                     is_default=asbool(self.config.is_default),
                     is_audit_log_active=asbool(self.config.is_audit_log_active),
+                    settings=self._build_route_settings(),
                 )
 
-            # .. start the shared server if needed, now that the route is in place ..
-            if not rest_only:
-                self._ensure_shared_server_started()
-
-            _shared_state.channel_count += 1
+            _shared_state.listener_channel_count += 1
             self.is_connected = True
 
 # ################################################################################################################################
@@ -306,26 +390,52 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
         with _shared_state.lock:
 
-            # Remove this channel's routing rule ..
-            _shared_state.router.remove_route(self.config.name)
-            _shared_state.channel_count -= 1
+            rest_only = asbool(self.config.rest_only)
 
-            # .. stop the shared server if no channels remain ..
-            if _shared_state.channel_count <= 0:
-                self._stop_shared_server()
-                _shared_state.channel_count = 0
+            # A channel that never used the listener has nothing to remove from it
+            if not rest_only:
 
-            # .. clean up the backing REST channel if one exists ..
-            rest_channel_id = self.config.rest_channel_id
-            if rest_channel_id:
-                try:
-                    self.server.invoke('zato.http-soap.delete', { # pyright: ignore[reportOptionalMemberAccess]
-                        'id': rest_channel_id,
-                        'cluster_id': 1,
-                    })
-                    logger.info('Deleted backing REST channel id=%s for MLLP channel `%s`', rest_channel_id, self.config.name)
-                except Exception:
-                    logger.warning('Could not delete backing REST channel id=%s', rest_channel_id)
+                _shared_state.router.remove_route(self.config.name)
+                _shared_state.listener_channel_count -= 1
+
+                # .. stop the shared server if no channels are left using it ..
+                if _shared_state.listener_channel_count <= 0:
+                    self._stop_shared_server()
+                    _shared_state.listener_channel_count = 0
+
+            self._delete_rest_channel()
+
+# ################################################################################################################################
+
+    def _delete_rest_channel(self) -> 'None':
+        """ Removes the backing REST channel of a channel that had one. Every worker process holds
+        the same channel and runs this, so the work is done under a cluster-wide lock and whoever
+        gets there second finds it already gone and leaves it alone.
+        """
+        rest_channel_id = self.config.rest_channel_id
+
+        if not rest_channel_id:
+            return
+
+        server = cast_('ParallelServer', self.server)
+        lock_name = f'{_Rest_Channel_Lock_Prefix}{rest_channel_id}'
+
+        with server.zato_lock_manager(lock_name, ttl=_Rest_Channel_Lock_Ttl, block=_Rest_Channel_Lock_Block):
+
+            # Another worker holding the same channel may already have deleted it, and asking
+            # is what tells that apart from a deletion that genuinely failed
+            try:
+                _ = server.invoke('zato.http-soap.get', {'id': rest_channel_id, 'cluster_id': 1})
+            except Exception:
+                logger.info('Backing REST channel id=%s is already gone', rest_channel_id)
+                return
+
+            try:
+                _ = server.invoke('zato.http-soap.delete', {'id': rest_channel_id, 'cluster_id': 1})
+                logger.info('Deleted backing REST channel id=%s for MLLP channel `%s`',
+                    rest_channel_id, self.config.name)
+            except Exception:
+                logger.warning('Could not delete backing REST channel id=%s; e:`%s`', rest_channel_id, format_exc())
 
 # ################################################################################################################################
 

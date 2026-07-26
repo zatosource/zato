@@ -234,17 +234,24 @@ $(document).ready(function() {
                     {{ form.use_msh18_encoding }}
                     {{ form.default_character_encoding }}
                     {{ form.recv_timeout }}
+                    {{ form.idle_timeout }}
+                    {{ form.keepalive_idle }}
+                    {{ form.keepalive_interval }}
+                    {{ form.keepalive_probe_count }}
                     {{ form.max_msg_size }}
                     {{ form.max_msg_size_unit }}
                     {{ form.start_seq }}
                     {{ form.end_seq }}
+
+                    {{ form.security_id }}
+                    {{ form.allowed_networks }}
 
                     {{ form.dedup_ttl_value }}
                     {{ form.dedup_ttl_unit }}
 
                     {{ form.should_return_errors }}
                     {{ form.should_log_messages }}
-                    {{ form.logging_level }}
+                    {{ form.is_audit_log_active }}
 
                     {{ form.destinations }}
                     {{ form.respond_from }}

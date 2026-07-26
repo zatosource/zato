@@ -14,13 +14,10 @@ import time
 # Zato
 from zato.common.hl7.mllp.codec import FrameDecoder, frame_encode
 
-from mllp_live_util import end_sequence, perf_log, sample_adt_a01, start_sequence
+from mllp_live_util import announce_sender, end_sequence, perf_log, sample_adt_a01, start_sequence
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-if 0:
-    from zato.common.typing_ import callable_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -58,6 +55,40 @@ _milliseconds_per_second            = 1000.0
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+def _send_one(port:'int', message:'bytes') -> 'None':
+    """ Sends one message on a connection of its own and waits for the reply, which is the
+    costliest thing a sender can do and so the one worth measuring.
+    """
+
+    raw_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    raw_socket.connect(('127.0.0.1', port))
+    raw_socket.settimeout(_socket_timeout)
+    raw_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+
+    try:
+        announce_sender(raw_socket)
+        raw_socket.sendall(frame_encode(message, start_sequence, end_sequence))
+
+        decoder = FrameDecoder(start_sequence, end_sequence, _max_message_size)
+
+        while True:
+
+            chunk = raw_socket.recv(_recv_buffer_size)
+
+            if not chunk:
+                raise ConnectionError('Socket closed before the reply arrived')
+
+            decoder.feed(chunk)
+
+            if decoder.next_message() is not None:
+                break
+
+    finally:
+        raw_socket.close()
+
+# ################################################################################################################################
+# ################################################################################################################################
 # Step 13 - Sequential throughput
 # ################################################################################################################################
 # ################################################################################################################################
@@ -69,7 +100,7 @@ class TestSequentialThroughput:
 
 # ################################################################################################################################
 
-    def test_sequential_throughput(self, mllp_server:'int', make_client:'callable_') -> 'None':
+    def test_sequential_throughput(self, mllp_listener:'int') -> 'None':
         """ Sends many messages sequentially, each on a fresh connection,
         and measures throughput and average latency.
         """
@@ -77,9 +108,7 @@ class TestSequentialThroughput:
         start_time = time.perf_counter()
 
         for index in range(_sequential_message_count):
-            control_id = f'SEQ{index:06d}'
-            client = make_client(mllp_server)
-            _ = client.send(sample_adt_a01(control_id), control_id=control_id)
+            _send_one(mllp_listener, sample_adt_a01(f'SEQ{index:06d}'))
 
         elapsed = time.perf_counter() - start_time
 
@@ -103,7 +132,7 @@ class TestConcurrentThroughput:
 
 # ################################################################################################################################
 
-    def test_concurrent_throughput(self, mllp_server:'int', make_client:'callable_') -> 'None':
+    def test_concurrent_throughput(self, mllp_listener:'int') -> 'None':
         """ Spawns multiple threads, each sending many messages, and measures
         the aggregate wall-clock throughput.
         """
@@ -114,8 +143,7 @@ class TestConcurrentThroughput:
             try:
                 for message_index in range(_concurrent_messages_per_thread):
                     control_id = f'CON{thread_index:03d}{message_index:04d}'
-                    client = make_client(mllp_server)
-                    _ = client.send(sample_adt_a01(control_id), control_id=control_id)
+                    _send_one(mllp_listener, sample_adt_a01(control_id))
             except Exception as exception:
                 errors.append(f'Thread {thread_index}: {exception}')
 
@@ -153,7 +181,7 @@ class TestLargeMessageThroughput:
 
 # ################################################################################################################################
 
-    def test_large_message_throughput(self, mllp_server:'int', make_client:'callable_') -> 'None':
+    def test_large_message_throughput(self, mllp_listener:'int') -> 'None':
         """ Sends batches of messages at different sizes and reports MB/s and latency.
         """
 
@@ -181,8 +209,7 @@ class TestLargeMessageThroughput:
             start_time = time.perf_counter()
 
             for _ in range(_large_message_count_per_size):
-                client = make_client(mllp_server)
-                _ = client.send(padded_message, control_id=f'BIG{target_size:07d}')
+                _send_one(mllp_listener, padded_message)
 
             elapsed = time.perf_counter() - start_time
 
@@ -201,16 +228,14 @@ class TestNewConnectionPerMessage:
 
 # ################################################################################################################################
 
-    def test_new_connection_per_message(self, mllp_server:'int', make_client:'callable_') -> 'None':
+    def test_new_connection_per_message(self, mllp_listener:'int') -> 'None':
         """ Sends messages each on a fresh connection to measure connection setup overhead.
         """
 
         start_time = time.perf_counter()
 
         for index in range(_new_connection_message_count):
-            control_id = f'NEWC{index:06d}'
-            client = make_client(mllp_server)
-            _ = client.send(sample_adt_a01(control_id), control_id=control_id)
+            _send_one(mllp_listener, sample_adt_a01(f'NEWC{index:06d}'))
 
         elapsed = time.perf_counter() - start_time
 
@@ -230,18 +255,20 @@ class TestPersistentConnection:
 
 # ################################################################################################################################
 
-    def test_persistent_connection(self, mllp_server:'int') -> 'None':
+    def test_persistent_connection(self, mllp_listener:'int') -> 'None':
         """ Sends many messages on one raw socket without reconnecting.
         """
 
         raw_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        raw_socket.connect(('127.0.0.1', mllp_server))
+        raw_socket.connect(('127.0.0.1', mllp_listener))
         raw_socket.settimeout(_socket_timeout)
         raw_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
         decoder = FrameDecoder(start_sequence, end_sequence, _max_message_size)
 
         try:
+
+            announce_sender(raw_socket)
 
             start_time = time.perf_counter()
             ack_count = 0

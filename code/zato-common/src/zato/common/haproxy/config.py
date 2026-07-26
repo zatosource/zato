@@ -36,34 +36,80 @@ Header_Zato_Forwarded_For = 'X-Zato-Forwarded-For'
 # The header anything in front of HAProxy would use to report the address it saw.
 Header_Forwarded_For = 'X-Forwarded-For'
 
+# Whether the connections arriving at the MLLP frontend open with a PROXY protocol header. This is
+# off unless something in front of HAProxy is known to send one, because the directive it turns on
+# is mandatory - a frontend that requires the header refuses a sender that connects without it.
+Env_MLLP_Expect_Proxy = 'Zato_MLLP_Expect_Proxy'
+
 # The generated directives live between these markers, one pair per frontend, so that the block
 # can be replaced without the rest of the frontend being touched.
 Block_Start = '#<zato-forwarded-headers>'
 Block_End   = '#</zato-forwarded-headers>'
 
-# Matches one marked block along with the indentation of its opening marker, which the generated
-# lines reuse so the result stays aligned with the surrounding directives.
-_block_pattern = re.compile(
-    r'([ \t]*)' + re.escape(Block_Start) + r'.*?' + re.escape(Block_End),
-    re.DOTALL,
-)
+# The same arrangement for the MLLP frontend, which is TCP and so carries no header directives.
+MLLP_Block_Start = '#<zato-mllp-expect-proxy>'
+MLLP_Block_End   = '#</zato-mllp-expect-proxy>'
+
+def _build_block_pattern(start_marker:'str', end_marker:'str') -> 're.Pattern':
+    """ Matches one marked block along with the indentation of its opening marker, which the generated
+    lines reuse so the result stays aligned with the surrounding directives.
+    """
+    out = re.compile(
+        r'([ \t]*)' + re.escape(start_marker) + r'.*?' + re.escape(end_marker),
+        re.DOTALL,
+    )
+    return out
+
+_block_pattern      = _build_block_pattern(Block_Start, Block_End)
+_mllp_block_pattern = _build_block_pattern(MLLP_Block_Start, MLLP_Block_End)
 
 # ################################################################################################################################
 
-def is_trust_enabled(environ:'dict | None'=None) -> 'bool':
-    """ Returns whether the forwarding headers reaching HAProxy are to be trusted.
+def _is_env_enabled(variable_name:'str', environ:'dict | None') -> 'bool':
+    """ Returns whether an on-off environment variable is on, an absent one counting as off.
     """
     if environ is None:
         environ = dict(os.environ)
 
-    # The variable is genuinely optional, so its absence is the same as the setting being off
-    raw_value = environ.get(Env_Trust_Forwarded_Headers)
+    # These variables are genuinely optional, so absence is the same as the setting being off
+    raw_value = environ.get(variable_name)
 
     if raw_value is None:
         out = False
     else:
         out = raw_value.strip().lower() in Trust_Enabled_Values
 
+    return out
+
+# ################################################################################################################################
+
+def is_trust_enabled(environ:'dict | None'=None) -> 'bool':
+    """ Returns whether the forwarding headers reaching HAProxy are to be trusted.
+    """
+    out = _is_env_enabled(Env_Trust_Forwarded_Headers, environ)
+    return out
+
+# ################################################################################################################################
+
+def is_mllp_expect_proxy_enabled(environ:'dict | None'=None) -> 'bool':
+    """ Returns whether the MLLP frontend requires each connection to open with a PROXY header.
+    """
+    out = _is_env_enabled(Env_MLLP_Expect_Proxy, environ)
+    return out
+
+# ################################################################################################################################
+
+def _build_marked_block(start_marker:'str', end_marker:'str', directives:'list', indent:'str') -> 'str':
+    """ Wraps generated directives in the markers that make the block replaceable.
+    """
+    lines = [indent + start_marker]
+
+    for directive in directives:
+        lines.append(indent + directive)
+
+    lines.append(indent + end_marker)
+
+    out = '\n'.join(lines)
     return out
 
 # ################################################################################################################################
@@ -76,12 +122,13 @@ def build_forwarded_headers_block(is_trusted:'bool', indent:'str'='    ') -> 'st
 
         # Whatever is in front reported an address, so the last element is taken - that is the one
         # the nearest proxy appended, whereas the first is whatever the caller put there itself.
+        set_header = f'http-request set-header {Header_Zato_Forwarded_For}'
+        was_reported = f'{{ req.hdr({Header_Forwarded_For}) -m found }}'
+
         directives = [
             f'http-request del-header {Header_Zato_Forwarded_For}',
-            f'http-request set-header {Header_Zato_Forwarded_For} '
-                f'%[req.hdr({Header_Forwarded_For},-1)] if {{ req.hdr({Header_Forwarded_For}) -m found }}',
-            f'http-request set-header {Header_Zato_Forwarded_For} '
-                f'%[src] unless {{ req.hdr({Header_Forwarded_For}) -m found }}',
+            f'{set_header} %[req.hdr({Header_Forwarded_For},-1)] if {was_reported}',
+            f'{set_header} %[src] unless {was_reported}',
         ]
     else:
 
@@ -93,14 +140,26 @@ def build_forwarded_headers_block(is_trusted:'bool', indent:'str'='    ') -> 'st
             f'http-request set-header {Header_Zato_Forwarded_For} %[src]',
         ]
 
-    lines = [indent + Block_Start]
+    out = _build_marked_block(Block_Start, Block_End, directives, indent)
+    return out
 
-    for directive in directives:
-        lines.append(indent + directive)
+# ################################################################################################################################
 
-    lines.append(indent + Block_End)
+def build_mllp_expect_proxy_block(is_expected:'bool', indent:'str'='    ') -> 'str':
+    """ Builds the MLLP frontend directive that decides whether a connection has to open with a
+    PROXY protocol header, wrapped in the markers that make the block replaceable.
+    """
+    if is_expected:
 
-    out = '\n'.join(lines)
+        # Something in front reports the sender's address this way, and the directive is mandatory
+        # once present, so a connection arriving without the header is closed rather than served.
+        directives = ['tcp-request connection expect-proxy layer4']
+    else:
+
+        # Nothing in front is known to send one, so the address is whatever this frontend itself sees
+        directives = []
+
+    out = _build_marked_block(MLLP_Block_Start, MLLP_Block_End, directives, indent)
     return out
 
 # ################################################################################################################################
@@ -122,30 +181,55 @@ def find_haproxy_config(server_base_directory:'str') -> 'str':
 
 # ################################################################################################################################
 
-def set_forwarded_headers_trust(config_path:'str', is_trusted:'bool') -> 'int':
-    """ Rewrites every marked forwarded-headers block in the configuration file. Returns how many
-    blocks were replaced, which is zero for a configuration that carries no markers.
+def _rewrite_blocks(config_path:'str', pattern:'re.Pattern', builder:'object', description:'str') -> 'int':
+    """ Rewrites every block the pattern marks out in the configuration file. Returns how many
+    blocks were replaced, which is zero for a configuration that carries no markers and zero
+    for one whose blocks already say what they are being set to.
     """
     with open(config_path, 'r') as config_file:
         content = config_file.read()
 
     def replace_one(match:'re.Match') -> 'str':
         indent = match.group(1)
-        return build_forwarded_headers_block(is_trusted, indent)
+        return builder(indent) # type: ignore[operator]
 
-    updated_content, block_count = _block_pattern.subn(replace_one, content)
+    updated_content, block_count = pattern.subn(replace_one, content)
 
     # Rewriting an unchanged file would still reload HAProxy for nothing, so it is skipped
     if updated_content == content:
-        logger.info('Forwarded-headers blocks in %s already set to is_trusted=%s', config_path, is_trusted)
+        logger.info('%s blocks in %s already up to date', description, config_path)
         return 0
 
     with open(config_path, 'w') as config_file:
         _ = config_file.write(updated_content)
 
-    logger.info('Set is_trusted=%s on %d forwarded-headers block(s) in %s', is_trusted, block_count, config_path)
+    logger.info('Rewrote %d %s block(s) in %s', block_count, description, config_path)
 
     return block_count
+
+# ################################################################################################################################
+
+def set_forwarded_headers_trust(config_path:'str', is_trusted:'bool') -> 'int':
+    """ Rewrites every marked forwarded-headers block in the configuration file. Returns how many
+    blocks were replaced, which is zero for a configuration that carries no markers.
+    """
+    def builder(indent:'str') -> 'str':
+        return build_forwarded_headers_block(is_trusted, indent)
+
+    out = _rewrite_blocks(config_path, _block_pattern, builder, 'forwarded-headers')
+    return out
+
+# ################################################################################################################################
+
+def set_mllp_expect_proxy(config_path:'str', is_expected:'bool') -> 'int':
+    """ Rewrites the marked MLLP expect-proxy block in the configuration file. Returns how many
+    blocks were replaced, which is zero for a configuration that carries no markers.
+    """
+    def builder(indent:'str') -> 'str':
+        return build_mllp_expect_proxy_block(is_expected, indent)
+
+    out = _rewrite_blocks(config_path, _mllp_block_pattern, builder, 'MLLP expect-proxy')
+    return out
 
 # ################################################################################################################################
 
@@ -194,16 +278,16 @@ def reload_haproxy(config_path:'str') -> 'bool':
 
 # ################################################################################################################################
 
-def apply_trust_from_env(config_path:'str', needs_reload:'bool'=True) -> 'None':
-    """ Brings the configuration file in line with the environment variable and, unless told
-    otherwise, has a running HAProxy pick the change up.
+def apply_env(config_path:'str', needs_reload:'bool'=True) -> 'None':
+    """ Brings every generated block in the configuration file in line with the environment
+    variables that drive it and, unless told otherwise, has a running HAProxy pick the change up.
     """
     if not os.path.exists(config_path):
         logger.info('No HAProxy configuration at %s, nothing to update', config_path)
         return
 
-    is_trusted = is_trust_enabled()
-    block_count = set_forwarded_headers_trust(config_path, is_trusted)
+    block_count = set_forwarded_headers_trust(config_path, is_trust_enabled())
+    block_count += set_mllp_expect_proxy(config_path, is_mllp_expect_proxy_enabled())
 
     # A file that did not change cannot need a reload
     if needs_reload and block_count:
@@ -213,11 +297,11 @@ def apply_trust_from_env(config_path:'str', needs_reload:'bool'=True) -> 'None':
 # ################################################################################################################################
 
 def main() -> 'None':
-    """ Applies the environment variable to the configuration file named on the command line.
+    """ Applies the environment variables to the configuration file named on the command line.
     Used at container start, where HAProxy has not been started yet and needs no reload.
     """
     config_path = sys.argv[1]
-    apply_trust_from_env(config_path, needs_reload=False)
+    apply_env(config_path, needs_reload=False)
 
 # ################################################################################################################################
 
