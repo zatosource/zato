@@ -2058,12 +2058,18 @@ class HL7:
         channel_port = 11223
         data_encoding = 'utf-8'
         end_seq = '1c 0d'
-        max_msg_size = 2_000_000
+        logging_level = 'INFO'
         max_wait_time = 5
         pool_size = 10
         read_buffer_size = 32768
         recv_timeout = 250
         start_seq = '0b'
+
+        # The largest message accepted - channels express it as a value plus a unit,
+        # outgoing connections as a byte count, and both describe the same size.
+        max_msg_size_value = 2
+        max_msg_size_unit  = 'mb'
+        max_msg_size       = 2 * 1024 * 1024
 
         # Retry engine defaults (outbound)
         max_retries                      = 5
@@ -2076,8 +2082,8 @@ class HL7:
         circuit_breaker_window_seconds    = 60
         circuit_breaker_reset_seconds     = 60
 
-        # Dedup defaults (inbound)
-        dedup_ttl_value = 14
+        # Dedup defaults (inbound) - a TTL of zero means every message is delivered
+        dedup_ttl_value = 0
         dedup_ttl_unit  = 'days'
 
         # TLS defaults

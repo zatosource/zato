@@ -53,10 +53,10 @@ class CreateForm(forms.Form):
 
     logging_level = forms.ChoiceField(widget=forms.Select())
 
-    max_msg_size = forms.CharField(initial='2', widget=forms.TextInput(attrs={'style':'width:8%'}))
+    max_msg_size = forms.CharField(initial=_default.max_msg_size_value, widget=forms.TextInput(attrs={'style':'width:8%'}))
     max_msg_size_unit = forms.ChoiceField(
         choices=_max_msg_size_unit_choices,
-        initial='mb',
+        initial=_default.max_msg_size_unit,
         widget=forms.Select(attrs={'style':'width:60px'}),
     )
     read_buffer_size = forms.CharField(initial=_default.read_buffer_size, widget=forms.TextInput(attrs={'style':'width:10%'}))
@@ -91,7 +91,7 @@ class CreateForm(forms.Form):
     default_character_encoding = forms.ChoiceField(
         required=False,
         choices=_encoding_choices,
-        initial='utf-8',
+        initial=_default.data_encoding,
         widget=forms.Select(attrs={'style':'width:20%'}),
     )
 

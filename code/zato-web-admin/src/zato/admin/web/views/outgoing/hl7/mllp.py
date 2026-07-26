@@ -13,7 +13,16 @@ from django.template.response import TemplateResponse
 from zato.admin.web.forms.outgoing.hl7.mllp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, invoke_action_handler, method_allowed
 from zato.common.api import GENERIC, generic_attrs
-from zato.common.model.hl7 import HL7MLLPConfigObject
+from zato.common.model.hl7 import HL7MLLPOutconnConfigObject
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, stranydict
+
+    any_ = any_
+    stranydict = stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -23,7 +32,7 @@ class Index(_Index):
     url_name = 'outgoing-hl7-mllp'
     template = 'zato/outgoing/hl7/mllp.html'
     service_name = 'zato.generic.connection.get-list'
-    output_class = HL7MLLPConfigObject
+    output_class = HL7MLLPOutconnConfigObject
     paginate = True
 
     input_required = 'cluster_id', 'type_'
@@ -67,19 +76,19 @@ class _CreateEdit(CreateEdit):
 
 # ################################################################################################################################
 
-    def populate_initial_input_dict(self, initial_input_dict):
+    def populate_initial_input_dict(self, initial_input_dict:'stranydict') -> 'None':
         initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP
         initial_input_dict['is_internal'] = False
         initial_input_dict['is_channel'] = False
         initial_input_dict['is_outgoing'] = True
-        initial_input_dict['is_outconn'] = False
+        initial_input_dict['is_outconn'] = True
         initial_input_dict['sec_use_rbac'] = False
-        initial_input_dict['recv_timeout'] = 250
 
 # ################################################################################################################################
 
-    def success_message(self, item):
-        return 'Successfully {} HL7 MLLP outgoing connection `{}`'.format(self.verb, item.name)
+    def success_message(self, item:'any_') -> 'str':
+        out = 'Successfully {} HL7 MLLP outgoing connection `{}`'.format(self.verb, item.name)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -108,7 +117,13 @@ class Delete(_Delete):
 # ################################################################################################################################
 
 @method_allowed('GET')
-def invoke(req, conn_id, max_wait_time, conn_name, conn_slug):
+def invoke(
+    req:'any_',
+    conn_id:'str',
+    max_wait_time:'str',
+    conn_name:'str',
+    conn_slug:'str',
+    ) -> 'TemplateResponse':
 
     return_data = {
         'conn_id': conn_id,
@@ -119,12 +134,16 @@ def invoke(req, conn_id, max_wait_time, conn_name, conn_slug):
         'cluster_id': req.zato.cluster_id,
     }
 
-    return TemplateResponse(req, 'zato/outgoing/hl7/mllp-invoke.html', return_data)
+    out = TemplateResponse(req, 'zato/outgoing/hl7/mllp-invoke.html', return_data)
+    return out
 
 # ################################################################################################################################
 
 @method_allowed('POST')
-def invoke_action(req, conn_name):
-    return invoke_action_handler(req, 'zato.generic.connection.invoke', ('conn_name', 'conn_type', 'request_data', 'timeout'))
+def invoke_action(req:'any_', conn_name:'str') -> 'any_':
+    field_names = ('conn_name', 'conn_type', 'request_data', 'timeout')
+
+    out = invoke_action_handler(req, 'zato.generic.connection.invoke', field_names)
+    return out
 
 # ################################################################################################################################

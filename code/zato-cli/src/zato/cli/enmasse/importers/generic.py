@@ -78,6 +78,12 @@ class GenericConnectionImporter:
 
 # ################################################################################################################################
 
+    def validate_definition(self, connection_def:'anydict') -> 'None':
+        """ May be overridden by subclasses to reject a YAML definition before anything is written.
+        """
+
+# ################################################################################################################################
+
     def compare_defs(self, yaml_defs:'anylist', db_defs:'anydict') -> 'tuple':
 
         # Find items to create and update
@@ -86,6 +92,7 @@ class GenericConnectionImporter:
 
         for yaml_def in yaml_defs:
             yaml_def = preprocess_item(yaml_def)
+            self.validate_definition(yaml_def)
             name = yaml_def['name']
 
             # Update existing definition
@@ -170,6 +177,12 @@ class GenericConnectionImporter:
         logger.info('Updating connection definition (%s): name=%s id=%s', self.connection_type, def_name, connection_id)
 
         connection = session.query(GenericConn).filter_by(id=connection_id).one()
+
+        # Apply defaults unless overridden in YAML - the same way a new connection gets them,
+        # so that a field such as is_active means what the YAML says on every run, not only the first
+        for key, default_value in self.connection_defaults.items():
+            value = connection_def.get(key, default_value)
+            setattr(connection, key, value)
 
         # Set required fields using global list of required attributes
         for attr in self.connection_required_attrs:

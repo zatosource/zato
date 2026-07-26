@@ -147,6 +147,67 @@ class TestEnmasseChannelHL7MLLPExporter(TestCase):
 
 # ################################################################################################################################
 
+    def test_export_keeps_settings_turned_off(self) -> 'None':
+        """ A channel switched away from a default that happens to be true or non-zero
+        exports that choice, so a re-import does not switch it back on.
+        """
+        self._setup_test_environment()
+
+        channel_defs = [{
+            'name': 'enmasse.hl7.mllp.tolerant.off',
+            'service': 'enmasse.hl7.test.service',
+            'is_active': False,
+            'normalize_line_endings': False,
+            'should_parse_on_input': False,
+            'should_validate': False,
+        }]
+
+        _, _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+
+        all_exported = self.channel_hl7_mllp_exporter.export(self.session, self.importer.cluster_id)
+
+        for item in all_exported:
+            if item['name'] == 'enmasse.hl7.mllp.tolerant.off':
+                exported = item
+                break
+        else:
+            self.fail('The channel was not exported')
+
+        self.assertFalse(exported['is_active'])
+        self.assertFalse(exported['normalize_line_endings'])
+        self.assertFalse(exported['should_parse_on_input'])
+        self.assertFalse(exported['should_validate'])
+
+# ################################################################################################################################
+
+    def test_export_omits_settings_left_at_their_default(self) -> 'None':
+        """ A channel that was never configured away from a default does not export that field.
+        """
+        self._setup_test_environment()
+
+        channel_defs = [{
+            'name': 'enmasse.hl7.mllp.plain',
+            'service': 'enmasse.hl7.test.service',
+        }]
+
+        _, _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+
+        all_exported = self.channel_hl7_mllp_exporter.export(self.session, self.importer.cluster_id)
+
+        for item in all_exported:
+            if item['name'] == 'enmasse.hl7.mllp.plain':
+                exported = item
+                break
+        else:
+            self.fail('The channel was not exported')
+
+        self.assertNotIn('is_active', exported)
+        self.assertNotIn('normalize_line_endings', exported)
+        self.assertNotIn('start_seq', exported)
+        self.assertNotIn('dedup_ttl_value', exported)
+
+# ################################################################################################################################
+
     def test_export_empty(self) -> 'None':
         """ Call export on a clean DB (no MLLP channels), assert empty list returned.
         """

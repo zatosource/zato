@@ -25,7 +25,7 @@ from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index,
     get_security_id_from_select, get_security_groups_from_checkbox_list, SecurityList
 from zato.common.api import GENERIC, generic_attrs, Groups, HL7, SEC_DEF_TYPE, ZATO_NONE
 from zato.common.json_internal import dumps
-from zato.common.model.hl7 import HL7MLLPConfigObject
+from zato.common.model.hl7 import HL7MLLPChannelConfigObject
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,7 +57,7 @@ class Index(_Index):
     url_name = 'channel-hl7-mllp'
     template = 'zato/channel/hl7/mllp.html'
     service_name = 'zato.generic.connection.get-list'
-    output_class = HL7MLLPConfigObject
+    output_class = HL7MLLPChannelConfigObject
     paginate = True
 
     input_required = 'cluster_id', 'type_'
@@ -128,23 +128,19 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['is_outconn'] = False
         initial_input_dict['sec_use_rbac'] = False
         initial_input_dict['pool_size'] = 1
-        initial_input_dict['should_validate'] = True
         initial_input_dict['should_parse_on_input'] = True
         initial_input_dict['data_format'] = HL7.Const.Version.v2.id
         initial_input_dict['hl7_version'] = HL7.Const.Version.v2.id
 
-# ################################################################################################################################
-
-    def pre_process_item(self, name:'str', value:'any_') -> 'any_':
-        if name == 'recv_timeout':
-            return int(value)
-        else:
-            return value
+        # The backing REST channel is named after the MLLP channel and needs nothing else from it,
+        # so it is settled here and its id travels with the one and only save of the MLLP channel.
+        initial_input_dict['rest_channel_id'] = self._sync_rest_channel()
 
 # ################################################################################################################################
 
     def success_message(self, item:'any_') -> 'str':
-        return 'Successfully {} HL7 MLLP channel `{}`'.format(self.verb, item.name)
+        out = 'Successfully {} HL7 MLLP channel `{}`'.format(self.verb, item.name)
+        return out
 
 # ################################################################################################################################
 
@@ -173,7 +169,7 @@ class _CreateEdit(CreateEdit):
             return group_id
         else:
             logger.error('Could not create security group `%s` for `%s`: %s', group_name, mllp_name, response.details)
-            return 0
+            raise Exception(f'Could not create security group `{group_name}`: {response.details}')
 
 # ################################################################################################################################
 
@@ -195,12 +191,12 @@ class _CreateEdit(CreateEdit):
         # for them on the fly - the group secures the channel and no single
         # definition is assigned to it directly ..
         security_id_list = self.req.POST.getlist('mllp_security_id_list')
+        security_id_count = len(security_id_list)
 
-        if len(security_id_list) > 1:
+        if security_id_count > 1:
             group_id = self._create_security_group(mllp_name, security_id_list)
-            if group_id:
-                security_groups.append(group_id)
-                security_id = ZATO_NONE
+            security_groups.append(group_id)
+            security_id = ZATO_NONE
 
         prefix = self.form_prefix or ''
 
@@ -237,7 +233,7 @@ class _CreateEdit(CreateEdit):
             return rest_channel_id
         else:
             logger.error('Could not create backing REST channel for `%s`: %s', mllp_name, response.details)
-            return 0
+            raise Exception(f'Could not create the backing REST channel: {response.details}')
 
 # ################################################################################################################################
 
@@ -252,6 +248,7 @@ class _CreateEdit(CreateEdit):
             logger.info('Updated backing REST channel id=%s for MLLP channel `%s`', rest_channel_id, mllp_name)
         else:
             logger.error('Could not update backing REST channel id=%s: %s', rest_channel_id, response.details)
+            raise Exception(f'Could not update the backing REST channel: {response.details}')
 
 # ################################################################################################################################
 
@@ -268,54 +265,70 @@ class _CreateEdit(CreateEdit):
             logger.info('Deleted backing REST channel id=%s', rest_channel_id)
         else:
             logger.error('Could not delete backing REST channel id=%s: %s', rest_channel_id, response.details)
+            raise Exception(f'Could not delete the backing REST channel: {response.details}')
+
+# ################################################################################################################################
+
+    def _get_rest_channel_id(self, mllp_name:'str') -> 'int':
+        """ Returns the id of the REST channel backing an MLLP channel of this name, zero if there is none.
+        """
+        response = self.req.zato.client.invoke('zato.http-soap.get', {
+            'cluster_id': self.cluster_id,
+            'name': _REST_Channel_Name_Prefix + mllp_name,
+        })
+
+        if response.ok:
+            out = response.data.id
+        else:
+            out = 0
+
+        return out
+
+# ################################################################################################################################
+
+    def _sync_rest_channel(self) -> 'int':
+        """ Brings the backing REST channel in line with what the REST bridge toggle says
+        and returns the id the MLLP channel is to be saved with.
+        """
+        prefix = self.form_prefix or ''
+        use_rest = bool(self.req.POST.get(prefix + 'use_rest'))
+        mllp_name = self.req.POST[prefix + 'name']
+
+        # A channel that already has a backing one carries its id in the form, and that id
+        # holds across a rename. Without one, the name the backing channel is always given
+        # says whether an earlier save got as far as creating it ..
+        rest_channel_id = self.req.POST.get('rest_channel_id')
+
+        if rest_channel_id:
+            rest_channel_id = int(rest_channel_id)
+        else:
+            rest_channel_id = self._get_rest_channel_id(mllp_name)
+
+        # .. with the bridge on, that channel is either brought up to date or created ..
+        if use_rest:
+            if rest_channel_id:
+                self._edit_rest_channel(rest_channel_id, mllp_name)
+                out = rest_channel_id
+            else:
+                out = self._create_rest_channel(mllp_name)
+
+        # .. and with the bridge off, whatever was created earlier goes away.
+        else:
+            if rest_channel_id:
+                self._delete_rest_channel(rest_channel_id)
+            out = 0
+
+        return out
 
 # ################################################################################################################################
 
     def post_process_return_data(self, return_data:'dict') -> 'dict':
-        """ After the MLLP channel is saved, manage the backing REST channel.
+        """ Reports the state of the REST bridge back to the page that saved the channel.
         """
-
         prefix = self.form_prefix or ''
-        use_rest = bool(self.req.POST.get(prefix + 'use_rest'))
-        mllp_name = return_data['name']
 
-        # .. read the existing rest_channel_id, if any ..
-        rest_channel_id = self.req.POST.get('rest_channel_id') or return_data.get('rest_channel_id') or 0
-        rest_channel_id = int(rest_channel_id) if rest_channel_id else 0
-
-        if use_rest:
-
-            if rest_channel_id:
-                # .. the backing channel already exists, update it ..
-                self._edit_rest_channel(rest_channel_id, mllp_name)
-            else:
-                # .. create a new backing channel ..
-                rest_channel_id = self._create_rest_channel(mllp_name)
-
-        else:
-            if rest_channel_id:
-                # .. REST was toggled off, delete the backing channel ..
-                self._delete_rest_channel(rest_channel_id)
-                rest_channel_id = 0
-
-        # .. update the MLLP channel config with the rest_channel_id ..
-        if rest_channel_id != int(return_data.get('rest_channel_id') or 0):
-            mllp_id = return_data.get('id') or self.req.POST.get('id')
-            if mllp_id:
-                self.req.zato.client.invoke('zato.generic.connection.edit', {
-                    'id': mllp_id,
-                    'cluster_id': self.cluster_id,
-                    'rest_channel_id': rest_channel_id,
-                    'type_': GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP,
-                    'is_internal': False,
-                    'is_channel': True,
-                    'is_outconn': False,
-                    'name': mllp_name,
-                    'service': self.req.POST[prefix + 'service'],
-                })
-
-        return_data['rest_channel_id'] = rest_channel_id
-        return_data['use_rest'] = use_rest
+        return_data['rest_channel_id'] = self.input_dict['rest_channel_id']
+        return_data['use_rest'] = bool(self.req.POST.get(prefix + 'use_rest'))
 
         return return_data
 

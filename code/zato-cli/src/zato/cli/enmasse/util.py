@@ -15,6 +15,7 @@ from json import dumps as json_dumps, loads as json_loads
 # Zato
 from zato.cli.enmasse.config import ModuleCtx
 from zato.common.api import EnvVariable, HTTP_SOAP, SCHEDULER, SchedulerLink, URL_TYPE
+from zato.common.hl7.mllp.fields import Channel_Names, Outconn_Names
 from zato.common.odb.model import Job
 from zato.common.util.api import asbool
 from zato.common.util.imap_scheduler import interval_from_unit
@@ -642,13 +643,8 @@ def get_object_order(object_type:'str') -> 'strlist':
     order['mcp_gateway'] = 'name', 'is_active', 'url_path', 'services', 'security_groups:list',
     order['outgoing_graphql'] = 'name', 'is_active', 'address', 'security', 'default_query_timeout',
     order['outgoing_kafka'] = 'name', 'is_active', 'address', 'topic',
-    order['channel_hl7_mllp'] = 'name', 'is_active', 'service', 'msh9_message_type', 'msh9_trigger_event', 'should_validate', \
-        'normalize_line_endings', 'fix_off_by_one_field_index', 'dedup_ttl_value', 'dedup_ttl_unit', 'is_default',
-    order['outgoing_hl7_mllp'] = 'name', 'is_active', 'address', 'start_seq', 'end_seq', 'recv_timeout', 'max_msg_size', \
-        'read_buffer_size', 'max_wait_time', 'should_log_messages', 'logging_level', \
-        'max_retries', 'backoff_base_seconds', 'backoff_cap_seconds', 'backoff_jitter_percent', \
-        'circuit_breaker_threshold_percent', 'circuit_breaker_window_seconds', 'circuit_breaker_reset_seconds', \
-        'tls_ca_path', 'tls_cert_path', 'tls_key_path',
+    order['channel_hl7_mllp'] = ('name',) + Channel_Names
+    order['outgoing_hl7_mllp'] = ('name', 'address') + Outconn_Names
     order['email_imap'] = 'name', 'is_active', 'type', 'host', 'port', 'username', 'tenant_id', 'client_id', \
         'scheduler_run_every', 'scheduler_run_unit', 'scheduler_start_date', 'scheduler_service', \
         'scheduler_invoke_with', # TODO: Implement type vs. server_type

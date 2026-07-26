@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.api import GENERIC, HL7
+from zato.common.hl7.mllp.fields import Max_Msg_Size_Multipliers
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,9 +61,9 @@ class TestHL7DefaultValues:
 # ################################################################################################################################
 
     def test_dedup_defaults(self) -> 'None':
-        """ Dedup defaults must match the documented values.
+        """ Dedup is off until a channel asks for it, and days is the unit its value is read in.
         """
-        assert HL7.Default.dedup_ttl_value == 14
+        assert HL7.Default.dedup_ttl_value == 0
         assert HL7.Default.dedup_ttl_unit == 'days'
 
 # ################################################################################################################################
@@ -79,6 +80,17 @@ class TestHL7DefaultValues:
         """
         assert HL7.Default.recv_timeout == 250
         assert HL7.Default.start_seq == '0b'
+
+# ################################################################################################################################
+
+    def test_max_msg_size_defaults(self) -> 'None':
+        """ The value plus unit a channel is configured with and the byte count an outgoing
+        connection is configured with must describe the same size.
+        """
+        multiplier = Max_Msg_Size_Multipliers[HL7.Default.max_msg_size_unit]
+        channel_bytes = HL7.Default.max_msg_size_value * multiplier
+
+        assert channel_bytes == HL7.Default.max_msg_size
 
 # ################################################################################################################################
 # ################################################################################################################################
