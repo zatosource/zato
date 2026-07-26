@@ -11,6 +11,7 @@ import logging
 
 # Zato
 from zato.common.api import GENERIC
+from zato.common.hl7.mllp.fields import Outconn_Fields
 from zato.common.odb.model import to_json
 from zato.common.odb.query.generic import connection_list
 from zato.common.util.sql import parse_instance_opaque_attr
@@ -29,27 +30,6 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
-
-Outgoing_Optional_Fields = [
-    'should_log_messages',
-    'logging_level',
-    'start_seq',
-    'end_seq',
-    'recv_timeout',
-    'max_msg_size',
-    'read_buffer_size',
-    'max_wait_time',
-    'max_retries',
-    'backoff_base_seconds',
-    'backoff_cap_seconds',
-    'backoff_jitter_percent',
-    'circuit_breaker_threshold_percent',
-    'circuit_breaker_window_seconds',
-    'circuit_breaker_reset_seconds',
-    'tls_ca_path',
-    'tls_cert_path',
-    'tls_key_path',
-]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -88,15 +68,17 @@ class OutgoingHL7MLLPExporter:
                 row.update(opaque)
                 del row[GENERIC.ATTR_NAME]
 
-            # .. build the export item with the connection name, its address and any non-empty optional fields ..
+            # .. build the export item with the connection name, its address and whatever the connection
+            # .. has been configured away from, so that a re-import reproduces it exactly ..
             item = {
                 'name': row['name'],
                 'address': row['address'],
             }
 
-            for field in Outgoing_Optional_Fields:
-                if value := row.get(field):
-                    item[field] = value
+            for field in Outconn_Fields:
+                value = row.get(field.name, field.default)
+                if value != field.default:
+                    item[field.name] = value
 
             # .. and add it to the output.
             exported.append(item)

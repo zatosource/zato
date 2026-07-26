@@ -12,11 +12,11 @@ from time import monotonic
 from traceback import format_exc
 
 # Zato
-from zato.common.api import HL7
 from zato.common.audit_log.api import AuditLog
 from zato.common.hl7.audit import audit_ack_received, audit_message_sent, get_wire_attrs, ACKStatus
 from zato.common.hl7.mllp.client import HL7MLLPClient
 from zato.common.hl7.mllp.dedup import extract_control_id
+from zato.common.hl7.mllp.fields import Outconn_Defaults, Outconn_Int_Names
 from zato.common.hl7.mllp.tls import build_client_ssl_context
 from zato.common.util.api import asbool, hex_sequence_to_bytes, new_cid_server
 from zato.common.util.tcp import parse_address
@@ -45,25 +45,10 @@ logger = getLogger(__name__)
 
 # Defaults applied by the config manager when the create path does not supply a field,
 # e.g. when an outconn is created directly through zato.generic.connection.create.
-outconn_config_defaults:'dict[str, object]' = {
-    'start_seq': HL7.Default.start_seq,
-    'end_seq': HL7.Default.end_seq,
-    'recv_timeout': HL7.Default.recv_timeout,
-    'max_msg_size': HL7.Default.max_msg_size,
-    'read_buffer_size': HL7.Default.read_buffer_size,
-    'should_log_messages': False,
-
-    # Audit - separate from server-log verbosity, off unless turned on per connection
-    'is_audit_log_active': False,
-
-    # TLS is off by default - it turns on when a CA bundle is configured
-    'tls_ca_path': '',
-    'tls_cert_path': '',
-    'tls_key_path': '',
-}
+outconn_config_defaults = Outconn_Defaults
 
 # Config keys that must be integers but may arrive as strings from opaque storage
-outconn_int_config_keys = ('recv_timeout', 'max_msg_size', 'read_buffer_size')
+outconn_int_config_keys = Outconn_Int_Names
 
 # ################################################################################################################################
 # ################################################################################################################################

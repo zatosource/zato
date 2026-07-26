@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.admin.web.forms.channel.hl7.rest import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, extract_security_id, Index as _Index
 from zato.common.api import CONNECTION, DATA_FORMAT, generic_attrs, HL7, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, URL_TYPE, ZATO_NONE
-from zato.common.model.hl7 import HL7MLLPConfigObject
+from zato.common.model.hl7 import HL7RESTChannelConfigObject
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -20,7 +20,7 @@ class Index(_Index):
     url_name = 'channel-hl7-rest'
     template = 'zato/channel/hl7/rest.html'
     service_name = 'zato.http-soap.get-list'
-    output_class = HL7MLLPConfigObject
+    output_class = HL7RESTChannelConfigObject
     paginate = True
 
     def get_initial_input(self):

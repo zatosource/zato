@@ -192,6 +192,40 @@ class TestEnmasseChannelHL7MLLPImporter(TestCase):
         self.assertFalse(opaque_1['fix_off_by_one_field_index'])
 
 # ################################################################################################################################
+
+    def test_channel_hl7_mllp_is_active_honoured_on_update(self) -> 'None':
+        """ A channel the YAML marks as inactive stays inactive when the same YAML is synced again.
+        """
+        self._setup_test_environment()
+
+        channel_defs = [{
+            'name': 'enmasse.hl7.mllp.inactive',
+            'service': 'enmasse.hl7.test.service',
+            'is_active': False,
+        }]
+
+        channels_created, _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+        self.assertFalse(channels_created[0].is_active)
+
+        # The second sync goes down the update path, which is where the flag used to be dropped
+        _, channels_updated = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+        self.assertFalse(channels_updated[0].is_active)
+
+# ################################################################################################################################
+
+    def test_channel_hl7_mllp_needs_somewhere_to_deliver(self) -> 'None':
+        """ A channel that names neither a service nor a destination is rejected.
+        """
+        self._setup_test_environment()
+
+        channel_defs = [{
+            'name': 'enmasse.hl7.mllp.no.delivery',
+        }]
+
+        with self.assertRaises(Exception):
+            _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
