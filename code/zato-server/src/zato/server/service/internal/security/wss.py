@@ -116,20 +116,13 @@ class GetList(AdminService):
     """
     _filter_by = WSSecurity.name,
 
-    input = 'cluster_id', '-needs_password', *query_parameters
-    output = 'id', 'name', 'is_active', 'username', '-mode', '-password', *_mode_fields
+    input = 'cluster_id', *query_parameters
+    output = 'id', 'name', 'is_active', 'username', '-mode', *_mode_fields
 
     def get_data(self, session): # type: ignore
 
-        data = elems_with_opaque(self._search(wss_list, session, self.request.input.cluster_id, False))
-
-        if self.request.input.needs_password:
-            for item in data:
-                password = item['password']
-                password = self.crypto.decrypt(password)
-                item['password'] = password
-
-        return data
+        out = elems_with_opaque(self._search(wss_list, session, self.request.input.cluster_id, False))
+        return out
 
     def handle(self):
         with closing(self.odb.session()) as session:

@@ -26,11 +26,13 @@ from zato.common.rate_limiting.cidr import SlottedCIDRRule
 from zato.common.odb.query import http_soap, http_soap_list
 from zato.common.typing_ import cast_
 from zato.common.util.api import as_bool, utcnow
-from zato.common.util.channel import find_channel_collision, validate_channel_url_path
+from zato.common.util.channel import channel_security_key, find_channel_collision, find_channel_conflict, \
+     get_channel_collision_items, validate_channel_url_path
 from zato.common.util.imap_scheduler import interval_from_unit
 from zato.common.util.rest_invocation import parse_param_rows, update_linked_job_fields, validate_jsonata, validate_xpath
 from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque, get_security_by_id, parse_instance_opaque_attr, \
      set_instance_opaque_attrs
+from zato.common.util.url_dispatcher import resolve_match_slash
 from zato.server.connection.http_soap import BadRequest
 from zato.server.connection.http_soap.response_cache import get_default_config as get_default_response_cache_config, \
     parse_config as parse_response_cache_config, purge_channel as purge_response_cache
@@ -761,6 +763,55 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
 
 # ################################################################################################################################
 
+    def _get_security_groups_to_compare(self, input, existing_items, skip_id):
+        """ Returns the security groups the channel will have once saved, as a list of their ids.
+        """
+        # A throwaway list, since what this preprocessing wants to leave out of the opaque
+        # attributes is decided by the one call that goes on to write them
+        out = self._preprocess_security_groups(input, [])
+
+        # An input that never mentioned groups leaves the ones the channel already has in place,
+        # so those are the ones a save would be judged on
+        if out is None:
+            out = []
+
+            for item in existing_items:
+                if item['id'] == skip_id:
+                    _, group_ids = item['security']
+                    out = list(group_ids)
+                    break
+
+        return out
+
+# ################################################################################################################################
+
+    def ensure_channel_does_not_conflict(self, session, input, cluster_id, skip_id):
+        """ Refuses a channel that one request could reach in place of one already there, when the
+        two secure that request differently and there is nothing but their names to settle which
+        of them answers it.
+        """
+        existing_items = get_channel_collision_items(session, cluster_id)
+
+        security_groups = self._get_security_groups_to_compare(input, existing_items, skip_id)
+        security = channel_security_key(input.security_id, security_groups)
+
+        conflicting_name = find_channel_conflict(
+            input.url_path,
+            input.http_accept,
+            input.method,
+            resolve_match_slash(input.match_slash),
+            security,
+            existing_items,
+            skip_id,
+        )
+
+        if conflicting_name:
+            msg = 'Channel `{}` matches the same requests as `{}` and secures them differently; '
+            msg += 'url_path:`{}`, http_accept:`{}`, http_method:`{}`'
+            raise Exception(msg.format(input.name, conflicting_name, input.url_path, input.http_accept, input.method))
+
+# ################################################################################################################################
+
     def _preprocess_security_groups(self, input, skip_opaque):
         """ Turns whatever security groups the input carries into a list of their IDs, or into None
         when the input did not mention them at all.
@@ -1058,6 +1109,7 @@ class Create(_CreateEdit):
                 validate_channel_url_path(input.url_path)
                 self.ensure_channel_is_unique(session,
                     input.url_path, input.http_accept, input.method, input.cluster_id, None)
+                self.ensure_channel_does_not_conflict(session, input, input.cluster_id, None)
 
             try:
 
@@ -1293,6 +1345,7 @@ class Edit(_CreateEdit):
                 validate_channel_url_path(input.url_path)
                 self.ensure_channel_is_unique(session,
                     input.url_path, input.http_accept, input.method, input.cluster_id, local_id)
+                self.ensure_channel_does_not_conflict(session, input, input.cluster_id, local_id)
 
             try:
                 item = session.query(HTTPSOAP).filter_by(id=local_id).one()

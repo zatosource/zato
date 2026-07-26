@@ -18,6 +18,7 @@ from regex import compile as re_compile
 
 # Zato
 from zato.common.api import HTTP_SOAP
+from zato.common.util.url_dispatcher import Match_Slash_Default, to_internal_accept
 
 http_any_internal = HTTP_SOAP.ACCEPT.ANY_INTERNAL
 
@@ -49,37 +50,20 @@ target_separator = ':::'
 
 _internal_url_path_indicator = '{}/zato/'.format(target_separator)
 
-# How many resolved match targets are kept. The cache key includes the client's own Accept header
-# and, now that dynamic paths are cached too, its own path parameters - both of which a client is
-# free to vary. Unbounded, that is a way to exhaust a worker's memory with nothing but valid
-# requests, so the cache evicts its least recently used entry instead of growing.
+# How many resolved match targets are kept. Part of the key comes from the request itself, so the
+# cache evicts its least recently used entry rather than growing with what arrives.
 Url_Path_Cache_Size = 10_000
 
 # What a path parameter's value is built of, apart from the slash, which match_slash decides on.
 _path_param_chars = r'\w \$.\-:|=~^%@+,;!()'
 
-# Whether a path parameter matches a value spanning several path segments, for a channel
-# whose configuration does not say either way.
-Match_Slash_Default = True
-
 # The Accept slot of a match target, for a channel that accepts anything. Anchored to
 # everything but the separator, so the slot stays within its own part of the target.
 _accept_any_pattern = '[^:]*'
 
-# ################################################################################################################################
-
-def resolve_match_slash(value:'any_') -> 'bool':
-    """ Returns whether path parameters match across slashes for a channel whose configuration
-    carries the given value, which a channel configured before the option existed does not carry.
-    """
-    if value is None:
-        return Match_Slash_Default
-
-    if value == '':
-        return Match_Slash_Default
-
-    out = bool(value)
-    return out
+# What the Accept slot of a match target carries for a channel that accepts anything, and what
+# an incoming header no channel names is turned into - see PyURLData._bucket_accept.
+_accept_any = to_internal_accept(HTTP_SOAP.ACCEPT.ANY)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -144,11 +128,12 @@ class Matcher:
                 return {}
             else:
 
-                # The method slot is a non-capturing group and so is the Accept one, which leaves
-                # the path parameters as the only groups there are, in the order they were declared.
-                groups = m.groups()
+                # Each path parameter is a group named after itself, so each is taken by that name.
+                # Taking them by position instead would have any other group in the pattern, such as
+                # a method slot that captures, shift the values away from the names.
+                group_dict = m.groupdict()
 
-                out = dict(zip(self.group_names, groups))
+                out = {name:group_dict[name] for name in self.group_names}
                 return out
 
 # ################################################################################################################################
@@ -161,16 +146,20 @@ class PyURLData:
 
         # Maps a match target to the channel item it resolved to and the path parameters it yielded.
         # An OrderedDict rather than a plain dict because the cache is bounded and evicts the
-        # least recently used entry - see Url_Path_Cache_Size on why it has to be bounded at all.
+        # least recently used entry - see Url_Path_Cache_Size.
         self.url_path_cache = OrderedDict()
 
         # Maps a match target that resolved to no channel at all to the methods its path does accept.
-        # Bounded and evicted the same way the cache above is, and for the same reason.
+        # Bounded and evicted the same way the cache above is.
         self.url_path_miss_cache = OrderedDict()
 
         # Maps a channel's match target to its channel item, so that a channel being created,
         # edited or deleted is found in one lookup rather than in a scan of every channel there is.
         self.match_target_index = {}
+
+        # Every Accept value that some channel names, in the form incoming headers are turned into
+        self.channel_accepts:'strset' = set()
+
         self.rebuild_match_target_index()
 
         self.has_trace1 = logger.isEnabledFor(TRACE1)
@@ -178,14 +167,34 @@ class PyURLData:
 # ################################################################################################################################
 
     def rebuild_match_target_index(self) -> 'None':
-        """ Rebuilds the match-target index from the channel data it indexes.
+        """ Rebuilds the match-target index, and the set of Accept values channels name,
+        from the channel data both are built out of.
         """
         index = {}
+        accepts = set()
 
         for item in self.channel_data:
             index[item['match_target']] = item
+            accepts.add(to_internal_accept(item['http_accept']))
 
         self.match_target_index = index
+        self.channel_accepts = accepts
+
+# ################################################################################################################################
+
+    def _bucket_accept(self, http_accept:'str') -> 'str':
+        """ Returns what the Accept slot of a match target is built with for the given header.
+
+        A channel names either one Accept value, which a request has to carry exactly, or */*, which
+        every request carries. A header that no channel names can therefore only ever reach the
+        latter kind, and the any/any form reaches that same kind, so as far as matching goes the two
+        stand for one and the same thing - and taking them for one keeps the caches keyed by what
+        the configuration has in it rather than by what arrives.
+        """
+        if http_accept in self.channel_accepts:
+            return http_accept
+
+        return _accept_any
 
 # ################################################################################################################################
 
@@ -259,30 +268,48 @@ class PyURLData:
 
 # ################################################################################################################################
 
-    def _get_allow_methods(self, url_path:'str', http_accept:'str', sep:'str'=target_separator) -> 'strset':
-        """ Returns the methods accepted at the given path by the channels that declare one,
-        which is what tells a path no channel is at from one reached with another method.
+    def _allow_methods_from(
+        self,
+        channel_items:'anylist',
+        url_path:'str',
+        http_accept:'str',
+        sep:'str'=target_separator
+        ) -> 'strset':
+        """ Returns which of the given channels' own methods are accepted at the given path.
         """
         out:'strset' = set()
 
+        for item in channel_items:
+
+            method = item['method']
+            target = f'{sep}{method}{sep}{http_accept}{sep}{url_path}'
+
+            if item['match_target_compiled'].match_func(target) is not None:
+                out.add(method)
+
+        return out
+
+# ################################################################################################################################
+
+    def _get_allow_methods(self, url_path:'str', http_accept:'str') -> 'strset':
+        """ Returns the methods accepted at the given path by the channels that declare one,
+        which is what tells a path no channel is at from one reached with another method.
+        """
         needs_user = not url_path.startswith('/zato')
+
+        channel_items = []
 
         for item in self.channel_data:
 
-            matcher = item['match_target_compiled']
-            if needs_user and matcher.is_internal:
+            if needs_user and item['match_target_compiled'].is_internal:
                 continue
 
             # A channel that accepts every method has nothing to say here - the request would
             # have matched the channel itself had its path matched at all.
-            method = item['method']
-            if not method:
-                continue
+            if item['method']:
+                channel_items.append(item)
 
-            target = f'{sep}{method}{sep}{http_accept}{sep}{url_path}'
-
-            if matcher.match_func(target) is not None:
-                out.add(method)
+        out = self._allow_methods_from(channel_items, url_path, http_accept)
 
         return out
 
@@ -291,6 +318,9 @@ class PyURLData:
     def get_allow_methods(self, url_path:'str', http_method:'str', http_accept:'str', sep:'str'=target_separator) -> 'strset':
         """ Returns the methods accepted at the given path, for a request that matched no channel.
         """
+        # The same bucket the match went through, so that the entry it left behind is the one found
+        http_accept = self._bucket_accept(http_accept)
+
         target = f'{sep}{http_method}{sep}{http_accept}{sep}{url_path}'
 
         out = self.url_path_miss_cache.get(target)
@@ -317,6 +347,8 @@ class PyURLData:
         against the list of HTTP channel targets. The leading separator is where a SOAP action
         used to go - channels no longer match on one, so the field stays empty.
         """
+        http_accept = self._bucket_accept(http_accept)
+
         target = f'{sep}{http_method}{sep}{http_accept}{sep}{url_path}'
 
         # Return from cache if already seen
@@ -341,6 +373,12 @@ class PyURLData:
 
         needs_user = not url_path.startswith('/zato')
 
+        # The channels that name a method of their own and that this target did not match. Should
+        # the scan below end without a match, these are the only ones that have anything to say
+        # about which methods the path does accept, so gathering them as they go past is what
+        # spares a second walk of every channel there is.
+        method_channels = []
+
         for item in self.channel_data:
 
             matcher = item['match_target_compiled']
@@ -356,15 +394,17 @@ class PyURLData:
                 # A dynamic path is cached along with the parameters it yielded. Those parameters
                 # are a function of the target alone, and the target is the cache key, so caching
                 # them is sound - and it is what stops a dynamic-path channel from paying a full
-                # regex scan of every channel on every single request. What used to make this
-                # unsafe was the cache being unbounded, which is no longer the case.
+                # regex scan of every channel on every single request.
                 self._cache(target, match, item)
 
                 return match, item
 
+            if item['method']:
+                method_channels.append(item)
+
         # Nothing matched, so the methods this path does accept are worked out once and kept
         # along with the miss, which is what the next request for the same target is answered from.
-        allow_methods = self._get_allow_methods(url_path, http_accept)
+        allow_methods = self._allow_methods_from(method_channels, url_path, http_accept)
         self._cache_miss(target, allow_methods)
 
         return None, None

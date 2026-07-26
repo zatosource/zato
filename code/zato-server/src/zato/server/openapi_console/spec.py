@@ -13,8 +13,9 @@ from contextlib import closing
 from inspect import isclass
 
 # Zato
-from zato.common.api import OpenAPI_Console_Auth, URL_TYPE
+from zato.common.api import OpenAPI_Console_Auth, SEC_DEF_TYPE, URL_TYPE
 from zato.common.crypto.api import is_string_equal
+from zato.common.odb.model import SecurityBase
 from zato.common.typing_ import cast_
 from zato.common.webapp.auth.dashboard_users import is_dashboard_admin
 from zato.openapi.generator.io_scanner import TypeMapper, extract_model_fields_recursive
@@ -41,11 +42,57 @@ _spec_title = 'Zato API'
 # The HTTP method used when a service has no method-specific handlers
 _default_http_method = 'post'
 
+# The definition types whose callers sign in with the username the definition carries
+_username_sec_types = [SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.OAUTH]
+
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _get_sec_names_by_username(server:'ParallelServer', username:'str') -> 'anydict':
+    """ Returns, per security definition type, the name of the definition that carries the given username.
+    The database holds at most one row per username and type, so this is a single indexed read.
+    """
+    out = {}
+
+    with closing(server.odb.session()) as session:
+        rows = session.query(
+            SecurityBase.sec_type,
+            SecurityBase.name,
+        ).filter(
+            SecurityBase.cluster_id==server.cluster_id
+        ).filter(
+            SecurityBase.username==username
+        ).filter(
+            SecurityBase.sec_type.in_(_username_sec_types)
+        ).all()
+
+    for sec_type, name in rows:
+        out[sec_type] = name
+
+    return out
+
+# ################################################################################################################################
+
+def _has_secret(sec_def:'anydict | None', password:'str') -> 'bool':
+    """ Whether the given definition is active and its secret is the one the caller sent.
+    """
+    # There may be no definition of a given type for this username
+    if sec_def is None:
+        return False
+
+    config = sec_def['config']
+
+    # Inactive definitions can never match
+    if not config['is_active']:
+        return False
+
+    out = is_string_equal(password, config['password'])
+    return out
+
+# ################################################################################################################################
+
 def validate_credentials(server:'ParallelServer', username:'str', password:'str') -> 'intnone':
-    """ Checks the username and password against all the active security definitions of the types
+    """ Checks the username and password against the active security definitions of the types
     REST channels support - Basic Auth, API keys and Bearer tokens. API key callers sign in with
     the definition's name as the username and the key itself as the password, Bearer token callers
     with the definition's username and its secret.
@@ -53,46 +100,36 @@ def validate_credentials(server:'ParallelServer', username:'str', password:'str'
     """
     url_data = server.config_manager.request_dispatcher.url_data
 
-    # Go through all the Basic Auth definitions and find one whose username and password match ..
-    for sec_def in url_data.basic_auth_config.values():
-        config = sec_def['config']
+    # The generated usernames of API key definitions mean nothing to callers, so it is the definition's
+    # name that identifies one on the sign-in form, and that is what they are held under here ..
+    apikey_sec_def = url_data.apikey_config.get(username)
 
-        # .. inactive definitions can never match ..
-        if not config['is_active']:
+    if apikey_sec_def:
+        if _has_secret(apikey_sec_def, password):
+            return apikey_sec_def['config']['id']
+
+    # .. Basic Auth and Bearer token definitions are reached by the username they carry,
+    # which the database resolves to the one name each type can hold it under ..
+    sec_names = _get_sec_names_by_username(server, username)
+
+    # .. and the runtime configuration is what has the secret to compare with.
+    for sec_type, config_dict in ((SEC_DEF_TYPE.BASIC_AUTH, url_data.basic_auth_config),
+        (SEC_DEF_TYPE.OAUTH, url_data.oauth_config)):
+
+        sec_name = sec_names.get(sec_type)
+
+        if not sec_name:
             continue
 
-        # .. both the username and the password have to be equal ..
-        if config['username'] == username:
-            if is_string_equal(password, config['password']):
-                return config['id']
+        sec_def = config_dict.get(sec_name)
 
-    # .. then through the API key definitions, whose generated usernames mean nothing to callers,
-    # so it is the definition's name that identifies it on the sign-in form ..
-    for name, sec_def in url_data.apikey_config.items():
-        config = sec_def['config']
+        if sec_def:
+            if _has_secret(sec_def, password):
+                config = sec_def['config']
 
-        # .. inactive definitions can never match ..
-        if not config['is_active']:
-            continue
-
-        # .. the name has to match and the password field has to carry the key.
-        if name == username:
-            if is_string_equal(password, config['password']):
-                return config['id']
-
-    # .. and finally through the Bearer token definitions, whose secrets are stored
-    # in the password field, so they are checked the same way Basic Auth ones are.
-    for sec_def in url_data.oauth_config.values():
-        config = sec_def['config']
-
-        # .. inactive definitions can never match ..
-        if not config['is_active']:
-            continue
-
-        # .. both the username and the secret have to be equal.
-        if config['username'] == username:
-            if is_string_equal(password, config['password']):
-                return config['id']
+                # The database matched the username, so the runtime configuration has to carry it too
+                if is_string_equal(username, config['username']):
+                    return config['id']
 
 # ################################################################################################################################
 

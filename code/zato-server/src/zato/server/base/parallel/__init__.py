@@ -58,6 +58,7 @@ from zato.common.util.log_destinations import delete_log_destination, get_log_de
 from zato.common.util.logging_ import get_logging_levels, set_logging_levels, test_logging_levels
 from zato.common.util.platform_ import is_posix
 from zato.common.util.time_ import TimeUtil
+from zato.common.util.url_dispatcher import build_methods_allowed_re
 from zato.hl7.common import add_config_location as hl7_add_config_location
 from zato.distlock import LockManager
 from zato.server.base.parallel.config import ConfigLoader
@@ -857,8 +858,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.http_methods_allowed.extend(methods_allowed)
 
         # As above, as a regular expression to be used in pattern matching
-        http_methods_allowed_re = '|'.join(self.http_methods_allowed)
-        self.http_methods_allowed_re = '({})'.format(http_methods_allowed_re)
+        self.http_methods_allowed_re = build_methods_allowed_re(self.http_methods_allowed)
 
         # Build the object responsible for quota tiers - it must exist before the config is set up
         # because tier references are resolved to concrete rules at config-build time.

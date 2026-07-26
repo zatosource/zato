@@ -88,8 +88,7 @@ class SecurityImporter:
         self._process_security_defs(spnego, 'spnego', out)
 
         oauth = oauth_list(session, cluster_id)
-        oauth_json = to_json(oauth)
-        logger.info('Getting oauth/bearer_token definitions: %s', oauth_json)
+        logger.info('Getting oauth/bearer_token definitions')
         self._process_security_defs(oauth, 'bearer_token', out)
 
         wss = wss_list(session, cluster_id)
@@ -123,11 +122,9 @@ class SecurityImporter:
         for item in yaml_defs:
             item = preprocess_item(item)
 
-            logger.debug('Item before auth_endpoint rename: %s', item)
             if 'auth_endpoint' in item:
                 logger.debug('Renaming auth_endpoint to auth_server_url')
                 item['auth_server_url'] = item.pop('auth_endpoint')
-            logger.debug('Item after auth_endpoint rename: %s', item)
 
             name = item['name']
             sec_type = item['type']
@@ -195,7 +192,7 @@ class SecurityImporter:
 
                     db_value = db_def[key]
                     if db_value != value:
-                        logger.info('Value mismatch for %s.%s: YAML=%s DB=%s', name, key, value, db_value)
+                        logger.info('Value mismatch for %s.%s', name, key)
                         needs_update = True
                         break
 
@@ -302,9 +299,6 @@ class SecurityImporter:
 
     def _create_bearer_token(self, security_def:'anydict', cluster:'any_') -> 'any_':
         name = security_def['name']
-        logger.debug('=== Creating bearer_token: name=%s ===', name)
-        logger.debug('Input security_def keys: %s', list(security_def.keys()))
-        logger.debug('Input security_def FULL: %s', security_def)
 
         auth = OAuth(
             None,
@@ -317,18 +311,9 @@ class SecurityImporter:
             0,
             cluster
         )
-        logger.debug('Created OAuth instance for %s', name)
-        logger.debug('OAuth instance attributes before set_instance_opaque_attrs:')
-        logger.debug('  - name: %s', auth.name)
-        logger.debug('  - username: %s', auth.username)
-        logger.debug('  - opaque1 (before): %s', getattr(auth, 'opaque1', None))
-
-        logger.debug('Calling set_instance_opaque_attrs with security_def: %s', security_def)
         set_instance_opaque_attrs(auth, security_def)
 
-        logger.debug('OAuth instance attributes after set_instance_opaque_attrs:')
-        logger.debug('  - opaque1 (after): %s', getattr(auth, 'opaque1', None))
-        logger.debug('=== Finished creating bearer_token: %s ===', name)
+        logger.debug('Created bearer_token `%s`', name)
         return auth
 
 # ################################################################################################################################
@@ -401,11 +386,8 @@ class SecurityImporter:
         def_id = sec_def['id']
         def_name = sec_def['name']
         logger.debug('Updating security definition: name=%s type=%s id=%s', def_name, sec_type, def_id)
-        logger.debug('Input sec_def keys: %s', list(sec_def.keys()))
-        logger.debug('Input sec_def: %s', sec_def)
 
         model = self.get_class_by_type(sec_type)
-        logger.debug('Using model class: %s', model)
 
         # Remember which of the two mutually exclusive keys came from YAML
         # before database values are merged in below.
@@ -413,22 +395,16 @@ class SecurityImporter:
         has_yaml_rate_limiting = 'rate_limiting' in sec_def
 
         db_def = db_defs[def_name]
-        logger.debug('DB definition for %s: %s', def_name, db_def)
 
         if 'opaque1' in db_def and db_def['opaque1']:
-            logger.debug('Parsing opaque1 from DB: %s', db_def['opaque1'])
             opaque_data = loads(db_def['opaque1'])
-            logger.debug('Parsed opaque data: %s', opaque_data)
             for key, value in opaque_data.items():
                 if key not in sec_def:
-                    logger.debug('Adding opaque key %s=%s from DB to sec_def', key, value)
                     sec_def[key] = value
 
         for item in db_def:
             if item not in sec_def and item not in ('id', 'type', 'definition', 'opaque1'):
-                logger.debug('Adding missing key %s=%s from DB to sec_def', item, db_def[item])
                 sec_def[item] = db_def[item]
-        logger.debug('sec_def after merging DB values: %s', sec_def)
 
         # A definition either references a quota tier or carries its own rules, never both,
         # so the stale counterpart merged in from the previous opaque data is dropped.
@@ -439,10 +415,7 @@ class SecurityImporter:
             del sec_def['quota_tier']
 
         definition = session.query(model).filter_by(id=def_id).one()
-        logger.debug('Retrieved definition instance from DB')
-        logger.debug('Calling _update_definition')
         self._update_definition(definition, sec_def)
-        logger.debug('Finished _update_definition')
 
         session.add(definition)
         logger.debug('Finished updating security definition: %s', def_name)

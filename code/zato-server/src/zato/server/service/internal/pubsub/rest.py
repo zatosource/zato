@@ -81,33 +81,66 @@ class PubSubRESTService(Service):
     def authenticate(self) -> 'tuple':
         """ Extract and validate credentials. Returns (username, error_response) tuple.
         """
-        username, password = extract_basic_auth_credentials(self.wsgi_environ)
+        username, _ = extract_basic_auth_credentials(self.wsgi_environ)
 
         if not username:
             return None, ('Authentication required', _status_unauthorized, UNAUTHORIZED)
 
-        if not self._validate_credentials(username, password):
+        if not self._validate_credentials(username):
             return None, ('Invalid credentials', _status_unauthorized, UNAUTHORIZED)
 
         return username, None
 
-    def _validate_credentials(self, username:'str', password:'str') -> 'bool':
-        """ Validate username/password against all basic auth security definitions.
+    def _get_sec_def(self, username:'str') -> 'anydict | None':
+        """ Returns the security definition the given username belongs to, out of the pub/sub clients
+        the server knows of - a definition that pub/sub was never told about is not a caller here.
         """
-        basic_auth_config = self.server.config_manager.request_dispatcher.url_data.basic_auth_config
-        auth_header = self.wsgi_environ.get('HTTP_AUTHORIZATION', '')
+        # The pub/sub client store is filled from the permissions and subscriptions of the cluster,
+        # so this is both the lookup by username and what says the definition may be used here ..
+        sec_name = self.server.pubsub_subscriptions.get_sec_name_by_username(username)
 
-        for sec_def in basic_auth_config.values():
-            config = sec_def['config']
-            if not config['is_active']:
-                continue
-            expected_username = config['username']
-            expected_password = config['password']
-            if expected_username and expected_password:
-                result = check_basic_auth(self.cid, auth_header, expected_username, expected_password)
-                if result is True:
-                    return True
-        return False
+        if not sec_name:
+            logger.info('No pub/sub client for username `%s`, cid:`%s`', username, self.cid)
+            return None
+
+        # .. and the name it answers with is what the definitions themselves are held under.
+        basic_auth_config = self.server.config_manager.request_dispatcher.url_data.basic_auth_config
+        sec_def = basic_auth_config.get(sec_name)
+
+        # A pub/sub client of another definition type has no Basic Auth credentials to be reached with
+        if sec_def is None:
+            logger.info('Pub/sub client `%s` is no Basic Auth definition, cid:`%s`', sec_name, self.cid)
+            return None
+
+        out = sec_def['config']
+        return out
+
+    def _validate_credentials(self, username:'str') -> 'bool':
+        """ Whether the credentials the request carries are those of the pub/sub client
+        the username belongs to.
+        """
+        config = self._get_sec_def(username)
+
+        if config is None:
+            return False
+
+        if not config['is_active']:
+            logger.info('Pub/sub client `%s` is not active, cid:`%s`', config['name'], self.cid)
+            return False
+
+        # A definition with no credentials of its own can be reached with none either
+        expected_username = config['username']
+        expected_password = config['password']
+
+        if not (expected_username and expected_password):
+            logger.info('Pub/sub client `%s` has no credentials, cid:`%s`', config['name'], self.cid)
+            return False
+
+        auth_header = self.wsgi_environ.get('HTTP_AUTHORIZATION', '')
+        result = check_basic_auth(self.cid, auth_header, expected_username, expected_password)
+
+        out = result is True
+        return out
 
 # ################################################################################################################################
 

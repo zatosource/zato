@@ -10,7 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import unittest
 
 # Zato
-from zato.common.util.url_dispatcher import get_match_target
+from zato.common.api import HTTP_SOAP
+from zato.common.util.url_dispatcher import build_methods_allowed_re, get_match_target, to_internal_accept
 from zato.server.connection.http_soap.url_dispatcher import Matcher, PyURLData, target_separator, Url_Path_Cache_Size
 
 # ################################################################################################################################
@@ -22,22 +23,37 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_any_accept = 'haanyHTTP_SEPhaany'
-_methods_allowed_re = '(?:GET|POST|PUT|PATCH|DELETE)'
+_any_accept = to_internal_accept(HTTP_SOAP.ACCEPT.ANY)
+
+# The methods a server allows, and the pattern it turns them into for a channel that names none
+_methods_allowed = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
+_methods_allowed_re = build_methods_allowed_re(_methods_allowed)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _make_channel_item(url_path:'str', name:'str'='test.channel', method:'str'='POST') -> 'anydict':
-    """ Builds the one part of a channel item the dispatcher looks at - its match target and the
-    matcher compiled from it.
+def _make_channel_item(
+    url_path:'str',
+    name:'str'='test.channel',
+    method:'str'='POST',
+    http_accept:'str'='',
+    ) -> 'anydict':
+    """ Builds the parts of a channel item the dispatcher looks at, with its match target built
+    the way the server builds one.
     """
-    match_target = f'{target_separator}{method}{target_separator}{_any_accept}{target_separator}{url_path}'
+    config = {
+        'url_path': url_path,
+        'method': method,
+        'http_accept': http_accept,
+    }
+
+    match_target = get_match_target(config, http_methods_allowed_re=_methods_allowed_re)
 
     out:'anydict' = {
         'name': name,
         'url_path': url_path,
         'method': method,
+        'http_accept': http_accept,
         'match_target': match_target,
         'match_target_compiled': Matcher(match_target),
     }
@@ -213,22 +229,7 @@ class ConfiguredPatternTestCase(unittest.TestCase):
 # ################################################################################################################################
 
     def _make_url_data(self, url_path:'str', method:'str'='', http_accept:'str'='') -> 'PyURLData':
-
-        config = {
-            'url_path': url_path,
-            'method': method,
-            'http_accept': http_accept,
-        }
-
-        match_target = get_match_target(config, http_methods_allowed_re=_methods_allowed_re)
-
-        channel_item:'anydict' = {
-            'name': 'test.channel',
-            'url_path': url_path,
-            'method': method,
-            'match_target': match_target,
-            'match_target_compiled': Matcher(match_target),
-        }
+        channel_item = _make_channel_item(url_path, method=method, http_accept=http_accept)
 
         out = PyURLData([channel_item])
         return out
@@ -245,12 +246,33 @@ class ConfiguredPatternTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
+    def test_a_parameter_of_a_method_less_channel_gets_the_value_from_the_path(self) -> 'None':
+
+        # A channel that names no method has every method a server allows standing in that slot,
+        # and what goes into the parameter is the path, never the method the request came with.
+        url_data = self._make_url_data('/api/{action}')
+
+        match = _match(url_data, '/api/archive')
+
+        self.assertEqual(match, {'action': 'archive'})
+
+# ################################################################################################################################
+
     def test_a_parameter_value_that_reads_as_a_method_is_kept(self) -> 'None':
         url_data = self._make_url_data('/api/{action}')
 
         match = _match(url_data, '/api/POST')
 
         self.assertEqual(match, {'action': 'POST'})
+
+# ################################################################################################################################
+
+    def test_every_parameter_of_a_method_less_channel_gets_its_own_value(self) -> 'None':
+        url_data = self._make_url_data('/api/{user_id}/order/{order_id}')
+
+        match = _match(url_data, '/api/123/order/456')
+
+        self.assertEqual(match, {'user_id': '123', 'order_id': '456'})
 
 # ################################################################################################################################
 
@@ -400,6 +422,123 @@ class AllowMethodsTestCase(unittest.TestCase):
         allow_methods = url_data.get_allow_methods('/api/invoice/INV-0001', 'PATCH', _any_accept)
 
         self.assertEqual(allow_methods, {'GET'})
+
+# ################################################################################################################################
+
+    def test_a_channel_naming_no_method_reports_none(self) -> 'None':
+
+        # Such a channel accepts whatever method a server allows, so a request that did not match
+        # it did not match its path either - which is a 404 rather than anything about methods.
+        url_data = _make_url_data([_make_channel_item('/api/invoice', method='')])
+
+        _, _ = url_data.match('/api/nothing-here', 'DELETE', _any_accept)
+        allow_methods = url_data.get_allow_methods('/api/nothing-here', 'DELETE', _any_accept)
+
+        self.assertEqual(allow_methods, set())
+
+# ################################################################################################################################
+
+    def test_the_methods_are_worked_out_within_the_scan_that_missed(self) -> 'None':
+
+        # The scan that ends in a miss is what the methods come out of, so they are already
+        # remembered by the time the miss is answered - no second walk of every channel.
+        url_data = _make_url_data([_make_channel_item('/api/invoice', method='POST')])
+
+        _, _ = url_data.match('/api/invoice', 'DELETE', _any_accept)
+
+        self.assertEqual(list(url_data.url_path_miss_cache.values()), [{'POST'}])
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class AcceptBucketTestCase(unittest.TestCase):
+    """ Tests for which Accept headers are told apart when a target is matched and cached, which is
+    the ones some channel names - the caches stay keyed by the configuration rather than by the
+    header a request happens to carry.
+    """
+
+# ################################################################################################################################
+
+    def test_a_header_no_channel_names_still_matches_a_channel_taking_anything(self) -> 'None':
+        url_data = _make_url_data([_make_channel_item('/api/invoice')])
+
+        _, channel_item = url_data.match('/api/invoice', 'POST', 'textHTTP_SEPplain')
+
+        self.assertEqual(channel_item['name'], 'test.channel')
+
+# ################################################################################################################################
+
+    def test_headers_no_channel_names_share_one_entry(self) -> 'None':
+        url_data = _make_url_data([_make_channel_item('/api/invoice')])
+
+        for counter in range(20):
+            _, channel_item = url_data.match('/api/invoice', 'POST', f'textHTTP_SEPmade-up-{counter}')
+            self.assertIsNotNone(channel_item)
+
+        self.assertEqual(len(url_data.url_path_cache), 1)
+
+# ################################################################################################################################
+
+    def test_misses_of_headers_no_channel_names_share_one_entry(self) -> 'None':
+        url_data = _make_url_data([_make_channel_item('/api/invoice')])
+
+        for counter in range(20):
+            _ = url_data.match('/api/nothing-here', 'POST', f'textHTTP_SEPmade-up-{counter}')
+
+        self.assertEqual(len(url_data.url_path_miss_cache), 1)
+
+# ################################################################################################################################
+
+    def test_a_header_a_channel_names_is_kept_apart(self) -> 'None':
+        # The channel that names an Accept value of its own comes first, which is the order
+        # sort_channel_data puts the two in.
+        url_data = _make_url_data([
+            _make_channel_item('/api/invoice', 'invoice.json', http_accept='application/json'),
+            _make_channel_item('/api/invoice', 'invoice.any'),
+        ])
+
+        json_accept = to_internal_accept('application/json')
+
+        _, json_channel = url_data.match('/api/invoice', 'POST', json_accept)
+        _, any_channel = url_data.match('/api/invoice', 'POST', 'textHTTP_SEPplain')
+
+        self.assertEqual(json_channel['name'], 'invoice.json')
+        self.assertEqual(any_channel['name'], 'invoice.any')
+
+        # One entry for the Accept value a channel names and one for everything else
+        self.assertEqual(len(url_data.url_path_cache), 2)
+
+# ################################################################################################################################
+
+    def test_a_header_no_channel_names_does_not_reach_a_channel_that_names_one(self) -> 'None':
+        url_data = _make_url_data([_make_channel_item('/api/invoice', http_accept='application/json')])
+
+        _, channel_item = url_data.match('/api/invoice', 'POST', 'applicationHTTP_SEPxml')
+
+        self.assertIsNone(channel_item)
+
+# ################################################################################################################################
+
+    def test_a_channel_appearing_brings_its_own_header_into_the_set(self) -> 'None':
+        invoice = _make_channel_item('/api/invoice', 'invoice.any')
+        channel_data = [invoice]
+        url_data = _make_url_data(channel_data)
+
+        json_accept = to_internal_accept('application/json')
+
+        # Until the channel that names it exists, that header is one of the many that reach
+        # only the channels taking anything ..
+        _, channel_item = url_data.match('/api/invoice', 'POST', json_accept)
+        self.assertEqual(channel_item['name'], 'invoice.any')
+
+        # .. and once it does exist, the header is the one thing that reaches it.
+        json_channel = _make_channel_item('/api/invoice', 'invoice.json', http_accept='application/json')
+        channel_data.insert(0, json_channel)
+        url_data.rebuild_match_target_index()
+        url_data._remove_from_cache(json_channel['match_target'])
+
+        _, channel_item = url_data.match('/api/invoice', 'POST', json_accept)
+        self.assertEqual(channel_item['name'], 'invoice.json')
 
 # ################################################################################################################################
 # ################################################################################################################################

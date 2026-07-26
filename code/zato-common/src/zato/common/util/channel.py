@@ -40,6 +40,14 @@ _url_path_param_name_pattern = re_compile(r'^[\w $.\-:|=~^/]+$')
 # The runtime joins a method, an Accept header and a URL path with this, so a path cannot carry it.
 _target_separator = MISC.SEPARATOR
 
+# What opens and closes a path parameter in a channel's URL path
+_url_path_param_start = '{'
+_url_path_param_end = '}'
+
+# What a path parameter stands for while two URL paths are compared against one another - not a
+# value a literal segment of a channel's path can be, so a parameter is never taken for a literal.
+_url_path_probe = '\x00probe'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -235,12 +243,247 @@ def find_channel_collision(
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _url_path_literal_length(url_path:'str') -> 'int':
+    """ How much of a channel's URL path is matched literally, i.e. everything outside its path
+    parameters. A parameter's name is no part of what the channel matches, so two paths that
+    differ in nothing but the names of their parameters come to the same length here.
+    """
+    out = 0
+    position = 0
+
+    while True:
+
+        start = url_path.find(_url_path_param_start, position)
+
+        # What is left opens no parameter, so all of it is literal
+        if start == -1:
+            out += len(url_path) - position
+            break
+
+        out += start - position
+
+        end = url_path.find(_url_path_param_end, start)
+
+        # A parameter that is never closed is literal too, name and all
+        if end == -1:
+            out += len(url_path) - start
+            break
+
+        position = end + 1
+
+    return out
+
+# ################################################################################################################################
+
+def channel_specificity(url_path:'str', http_accept:'strnone', http_method:'strnone') -> 'tuple':
+    """ Returns how far a channel narrows down the requests that reach it, which is what decides
+    between two channels a request matches both of. Each element is negated, so that ordering
+    channels by this puts the one that leaves the least open first.
+
+    A path parameter takes in whole segments and, unless the channel says otherwise, several of
+    them, so what a channel spells out literally is what tells its own requests from another's.
+    """
+    # Everything up to the first path parameter is matched literally, and a channel with more
+    # of it before anything is left open speaks about a narrower set of paths ..
+    literal_prefix_end = url_path.find(_url_path_param_start)
+
+    if literal_prefix_end == -1:
+        literal_prefix_length = len(url_path)
+    else:
+        literal_prefix_length = literal_prefix_end
+
+    # .. what a channel spells out past that point narrows it down further ..
+    # .. and a channel that names an Accept value or a method of its own is reached by fewer
+    # requests than one that takes whatever arrives.
+    out = (-literal_prefix_length, -_url_path_literal_length(url_path), not http_accept, not http_method)
+
+    return out
+
+# ################################################################################################################################
+
+def channel_security_key(security_id:'any_', security_groups:'anylist | None') -> 'tuple':
+    """ Returns what a channel authenticates its requests against, in a form two channels' can be
+    compared by. Ids arrive as numbers from the database and as strings from the Dashboard.
+    """
+    if security_id:
+        definition = int(security_id)
+    else:
+        definition = None
+
+    if security_groups:
+        groups = tuple(sorted(int(elem) for elem in security_groups))
+    else:
+        groups = ()
+
+    out = (definition, groups)
+    return out
+
+# ################################################################################################################################
+
+def _url_path_segments(url_path:'str') -> 'anylist':
+    """ Splits a channel's URL path into the segments a request's own path is compared against.
+    """
+    out = [elem for elem in url_path.split('/') if elem]
+    return out
+
+# ################################################################################################################################
+
+def _is_param_segment(segment:'str') -> 'bool':
+    """ Whether the whole of a segment is one path parameter, which is what makes it stand for
+    whatever a caller sends there. A segment that merely carries a parameter within it, such as
+    `invoice-{id}`, is compared as the literal it mostly is.
+    """
+    if not segment.startswith('{'):
+        return False
+
+    if not segment.endswith('}'):
+        return False
+
+    out = segment.count('{') == 1
+    return out
+
+# ################################################################################################################################
+
+def _probe_segments(segments:'anylist') -> 'anylist':
+    """ Returns the segments with a value standing in for each parameter, which turns a channel's
+    path into one concrete path that channel is reached by.
+    """
+    out = [_url_path_probe if _is_param_segment(elem) else elem for elem in segments]
+    return out
+
+# ################################################################################################################################
+
+def _channel_reaches(pattern:'anylist', path:'anylist', match_slash:'bool') -> 'bool':
+    """ Whether a channel whose URL path is the given pattern is reached by the given path.
+    A parameter takes in one segment, or one and more when the channel matches across slashes.
+    """
+    # How far into the path each way of matching the pattern so far has come
+    reached = {0}
+
+    for elem in pattern:
+
+        next_reached = set()
+
+        for position in reached:
+
+            # Nothing is left of the path for this part of the pattern to take in
+            if position >= len(path):
+                continue
+
+            if _is_param_segment(elem):
+
+                # A parameter that matches across slashes takes in every run of segments
+                # from here on, so each of those is a way for the rest of the pattern to go
+                if match_slash:
+                    for end in range(position + 1, len(path) + 1):
+                        next_reached.add(end)
+                else:
+                    next_reached.add(position + 1)
+
+            elif path[position] == elem:
+                next_reached.add(position + 1)
+
+        reached = next_reached
+
+        # No way of matching the pattern is left, so there is nothing to carry on with
+        if not reached:
+            return False
+
+    # The pattern is matched only by a path it took the whole of in
+    out = len(path) in reached
+    return out
+
+# ################################################################################################################################
+
+def url_paths_overlap(first:'str', second:'str', first_match_slash:'bool', second_match_slash:'bool') -> 'bool':
+    """ Whether some one path a caller may send is matched by both channels' URL paths.
+
+    Each path is turned into a concrete one by standing a value in for its parameters, and that is
+    tried against the other channel - both ways round, since either may be the broader of the two.
+    """
+    first_segments = _url_path_segments(first)
+    second_segments = _url_path_segments(second)
+
+    if _channel_reaches(first_segments, _probe_segments(second_segments), first_match_slash):
+        return True
+
+    if _channel_reaches(second_segments, _probe_segments(first_segments), second_match_slash):
+        return True
+
+    return False
+
+# ################################################################################################################################
+
+def _slots_overlap(first:'strnone', second:'strnone') -> 'bool':
+    """ Whether two channels' method slots, or their Accept slots, are reached by one request.
+    A channel that names nothing there takes whatever arrives.
+    """
+    if not first:
+        return True
+
+    if not second:
+        return True
+
+    out = first == second
+    return out
+
+# ################################################################################################################################
+
+def find_channel_conflict(
+    url_path,       # type: str
+    http_accept,    # type: strnone
+    http_method,    # type: strnone
+    match_slash,    # type: bool
+    security,       # type: tuple
+    existing_items, # type: anylist
+    skip_id         # type: intnone
+) -> 'strnone':
+    """ Returns the name of a channel that one request could reach either of, with the candidate,
+    while the two secure that request differently and neither of them is the narrower one - or None
+    when there is no such channel.
+
+    Of two channels a request matches, the narrower one answers it, so this leaves the pairs where
+    neither is narrower and their names are all there is to order them by. A name is no way to
+    settle which of two channels secures a request, so such a pair is refused.
+    """
+    specificity = channel_specificity(url_path, http_accept, http_method)
+
+    for item in existing_items:
+
+        # An edit does not conflict with the channel it is editing ..
+        if item['id'] == skip_id:
+            continue
+
+        # .. two channels that secure a request the same way answer it the same way either ..
+        if item['security'] == security:
+            continue
+
+        # .. one of them being the narrower one is what decides between them ..
+        if channel_specificity(item['url_path'], item['http_accept'], item['method']) != specificity:
+            continue
+
+        # .. and neither has anything to do with the other unless a request can reach both.
+        if not _slots_overlap(item['method'], http_method):
+            continue
+
+        if not _slots_overlap(item['http_accept'], http_accept):
+            continue
+
+        if url_paths_overlap(url_path, item['url_path'], match_slash, item['match_slash']):
+            return item['name']
+
+    return None
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def get_channel_collision_items(session:'any_', cluster_id:'int') -> 'anylist':
-    """ Returns every channel in the cluster with the fields the collision rule compares.
+    """ Returns every channel in the cluster with the fields the collision and conflict rules compare.
     """
     from zato.common.api import CONNECTION
     from zato.common.odb.model import HTTPSOAP
     from zato.common.util.sql import parse_instance_opaque_attr
+    from zato.common.util.url_dispatcher import resolve_match_slash
 
     existing_ones = session.query(HTTPSOAP).\
         filter(HTTPSOAP.cluster_id==cluster_id).\
@@ -257,6 +500,8 @@ def get_channel_collision_items(session:'any_', cluster_id:'int') -> 'anylist':
             'url_path': item.url_path,
             'method': item.method,
             'http_accept': opaque.get('http_accept'),
+            'match_slash': resolve_match_slash(opaque.get('match_slash')),
+            'security': channel_security_key(item.security_id, opaque.get('security_groups')),
         })
 
     return out
