@@ -35,6 +35,11 @@ _Minimum_Encoding_Characters_Length = 4
 # MSH field separator position in MSH|...|
 _MSH_Prefix = 'MSH|'
 
+# How many pipe-separated parts a whole MSH segment has. MSH-12, the version id, is the last
+# field the standard requires, and splitting a segment that carries it gives twelve parts -
+# 'MSH' itself and then MSH-2 through MSH-12.
+_MSH_Whole_Length = 12
+
 # Batch/File header prefixes - used as a tuple for startswith matching
 _Batch_Prefixes = ('BHS|', 'FHS|')
 
@@ -93,27 +98,54 @@ def normalize_line_endings(data:'str') -> 'str':
 # ################################################################################################################################
 
 def repair_truncated_msh(data:'str') -> 'str':
-    """ Repairs messages with truncated or prefixed MSH segment.
-    Handles 'SH|...' (missing leading M) and junk before 'MSH|' (e.g. 'ORU_R01|MSH|...').
+    """ Repairs messages whose MSH segment arrived damaged - one that lost its leading M, one
+    that carries junk ahead of it, and one that was cut short of the fields the standard requires.
     """
 
     # Check for the 'SH|' prefix (missing M) ..
     if data.startswith('SH|'):
-        out = 'M' + data
+        data = 'M' + data
         logger.warning('Repaired truncated MSH: prepended M to SH|')
-        return out
 
-    # Check for junk before the first 'MSH|' ..
-    msh_position = data.find(_MSH_Prefix)
+    else:
 
-    if msh_position > 0:
-        stripped_prefix = data[:msh_position]
-        logger.warning('Stripped %d bytes before MSH: %r', msh_position, stripped_prefix)
+        # .. check for junk before the first 'MSH|' ..
+        msh_position = data.find(_MSH_Prefix)
 
-        out = data[msh_position:]
-        return out
+        if msh_position > 0:
+            stripped_prefix = data[:msh_position]
+            logger.warning('Stripped %d bytes before MSH: %r', msh_position, stripped_prefix)
 
-    out = data
+            data = data[msh_position:]
+
+    out = _pad_short_msh(data)
+    return out
+
+# ################################################################################################################################
+
+def _pad_short_msh(data:'str') -> 'str':
+    """ Fills out an MSH segment that stops short of MSH-12 with the empty fields it is missing,
+    so that everything reading the message by field number finds a field where one should be
+    rather than the end of the segment.
+    """
+
+    if not data.startswith(_MSH_Prefix):
+        return data
+
+    # Only the header itself is padded, so the rest of the message is set aside first
+    msh_line, separator, remainder = data.partition('\r')
+
+    fields = msh_line.split('|')
+    missing_count = _MSH_Whole_Length - len(fields)
+
+    if missing_count <= 0:
+        return data
+
+    logger.warning('Padded MSH with %d missing field(s): %r', missing_count, msh_line)
+
+    fields.extend([''] * missing_count)
+    out = '|'.join(fields) + separator + remainder
+
     return out
 
 # ################################################################################################################################

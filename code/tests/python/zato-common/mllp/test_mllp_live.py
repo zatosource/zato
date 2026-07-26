@@ -11,7 +11,7 @@ import signal
 import socket
 import ssl
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Zato
 from zato.common.hl7.exception import HL7Exception
@@ -199,7 +199,8 @@ class TestAckCodesAndStructure:
 # ################################################################################################################################
 
     def test_ack_timestamp_is_recent(self, mllp_server:'int') -> 'None':
-        """ The ACK MSH-7 timestamp must be within a few seconds of now.
+        """ The ACK MSH-7 timestamp must be within a few seconds of now, and must say which
+        clock it is on so that a receiver in another zone can place it.
         """
 
         raw_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -210,7 +211,7 @@ class TestAckCodesAndStructure:
 
             # Capture the time before sending, truncated to whole seconds
             # because MSH-7 uses YYYYMMDDHHMMSS with no sub-second precision ..
-            before = datetime.now().replace(microsecond=0)
+            before = datetime.now(timezone.utc).replace(microsecond=0)
 
             # .. send a framed message ..
             message = sample_adt_a01('TIME001')
@@ -224,11 +225,12 @@ class TestAckCodesAndStructure:
             fields = msh_line.split('|')
             ack_timestamp_string = fields[6]
 
-            # .. parse the timestamp (format: YYYYMMDDHHMMSS) ..
-            ack_timestamp = datetime.strptime(ack_timestamp_string, '%Y%m%d%H%M%S')
+            # .. parse the timestamp, whose offset is what makes it mean one time
+            # .. rather than one time per reader ..
+            ack_timestamp = datetime.strptime(ack_timestamp_string, '%Y%m%d%H%M%S%z')
 
             # .. the ACK timestamp must be between before-send and now+tolerance.
-            after = datetime.now()
+            after = datetime.now(timezone.utc)
             assert ack_timestamp >= before
             assert (after - ack_timestamp).total_seconds() <= _ack_timestamp_tolerance_seconds
 
