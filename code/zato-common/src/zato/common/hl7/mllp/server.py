@@ -21,7 +21,7 @@ from gevent.lock import BoundedSemaphore
 from zato.common.hl7.audit import audit_ack_sent, audit_batch_received, audit_message_received, get_audit_attrs, \
     get_control_id, get_wire_attrs
 from zato.common.hl7.exception import HL7Exception
-from zato.common.hl7.mllp.ack import build_ack
+from zato.common.hl7.mllp.ack import build_ack, Condition_Data_Type_Error, ErrorCondition
 from zato.common.hl7.mllp.codec import FrameReader, frame_encode
 from zato.common.hl7.mllp.dedup import extract_control_id
 from zato.common.hl7.mllp.preprocess import BatchPayload, preprocess_message
@@ -367,7 +367,7 @@ class HL7MLLPServer:
                     self.state.on_error()
                     logger.warning('Frame error from %s - %s', connection_context.endpoint, exception)
                     self._reject_frame(client_socket, msh_line, settings, connection_context, 'AE',
-                        'Message could not be read')
+                        'Message could not be read', Condition_Data_Type_Error)
                     break
 
                 except (ConnectionResetError, BrokenPipeError):
@@ -402,6 +402,7 @@ class HL7MLLPServer:
         connection_context:'ConnectionContext',
         ack_code:'str',
         error_text:'str',
+        error_condition:'ErrorCondition',
         ) -> 'None':
         """ Answers a frame that was never delivered anywhere, which is what a sender waiting on
         an acknowledgment needs rather than a connection that simply goes quiet.
@@ -411,7 +412,7 @@ class HL7MLLPServer:
         if not settings.should_return_errors:
             error_text = ''
 
-        ack_string = build_ack(msh_line, ack_code, error_text=error_text)
+        ack_string = build_ack(msh_line, ack_code, error_text=error_text, error_condition=error_condition)
         self._send_framed(active_socket, ack_string, settings, connection_context)
 
 # ################################################################################################################################
@@ -724,7 +725,8 @@ class HL7MLLPServer:
                         # .. a reject is a negative acknowledgment in the channel's live state ..
                         self.state.on_nack_sent()
 
-                        ack_string = build_ack(msh_line, ack_code, error_text=error_text)
+                        ack_string = build_ack(msh_line, ack_code, error_text=error_text,
+                            error_condition=Condition_Data_Type_Error)
 
                         # .. a rejected message still leaves its audit trail - the receipt
                         # .. and the negative acknowledgment that answered it ..

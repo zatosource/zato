@@ -226,10 +226,11 @@ class TestMLLPChannelWire:
         assert msa_fields[1] == 'AA'
         assert msa_fields[2] == 'CORR-7890'
 
-        # Verify the ACK's own MSH-10 contains the expected prefix ..
+        # Verify the ACK's own MSH-10 is its own identifier rather than the sender's handed back ..
         msh_fields = segments[0].split('|')
         ack_control_id = msh_fields[9]
-        assert ack_control_id.startswith('ACK-CORR-7890-')
+        assert ack_control_id
+        assert 'CORR-7890' not in ack_control_id
 
 # ################################################################################################################################
 
