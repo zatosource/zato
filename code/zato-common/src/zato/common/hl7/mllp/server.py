@@ -498,16 +498,20 @@ class HL7MLLPServer:
         else:
             channel_state = None
 
-        # .. a batch is audited when its channel says so - with no route there is no channel to ask ..
-        needs_audit = bool(self.audit_log and matched_route and matched_route.is_audit_log_active)
+        # .. a batch is audited when its channel says so - with no route there is no channel to ask,
+        # .. and the channel it is filed under is what says afterwards whether it was audited ..
+        audit_log = self.audit_log
+        audit_channel_name = ''
 
         # .. all the batch's audit events share one correlation id ..
-        if needs_audit:
+        if audit_log and matched_route and matched_route.is_audit_log_active:
+
             audit_cid = new_cid_server()
+            audit_channel_name = matched_route.channel_name
 
             # .. the parent row for the batch plus a child row per contained message ..
             _ = audit_batch_received(
-                self.audit_log, matched_route.channel_name, raw, # type: ignore[union-attr, arg-type]
+                audit_log, audit_channel_name, raw,
                 cid=audit_cid, endpoint=connection_context.endpoint)
         else:
             audit_cid = ''
@@ -556,9 +560,9 @@ class HL7MLLPServer:
         ack_string = build_ack(msh_line, ack_code, error_text=error_text)
 
         # .. one acknowledgment covers the entire batch, on the same cid as its rows ..
-        if needs_audit:
+        if audit_log and audit_channel_name:
             _ = audit_ack_sent(
-                self.audit_log, matched_route.channel_name, ack_code, ack_string, # type: ignore[union-attr, arg-type]
+                audit_log, audit_channel_name, ack_code, ack_string,
                 cid=audit_cid, msg_id=extract_control_id(msh_line))
 
         self._send_framed(active_socket, ack_string, settings, connection_context)
@@ -655,12 +659,15 @@ class HL7MLLPServer:
             else:
                 channel_state = None
 
-            # .. a message is audited when its channel says so - with no route there is no channel to ask ..
-            needs_audit = bool(self.audit_log and matched_route and matched_route.is_audit_log_active)
+            # .. a message is audited when its channel says so - with no route there is no channel
+            # .. to ask, and the channel it is filed under is what says afterwards whether it was ..
+            audit_log = self.audit_log
+            audit_channel_name = ''
 
             # .. the received event and its acknowledgment share one correlation id,
             # .. with the wire-level attributes as the fallback the parsed ones replace ..
-            if needs_audit:
+            if audit_log and matched_route and matched_route.is_audit_log_active:
+                audit_channel_name = matched_route.channel_name
                 audit_cid = new_cid_server()
                 audit_msg_id = extract_control_id(msh_line)
                 audit_attrs = get_wire_attrs(msh_line)
@@ -706,7 +713,7 @@ class HL7MLLPServer:
 
                         # .. a parsed message contributes richer searchable attributes,
                         # .. including the patient's medical record number ..
-                        if needs_audit:
+                        if audit_channel_name:
                             audit_attrs = get_audit_attrs(callback_data)
                             audit_msg_id = get_control_id(callback_data)
 
@@ -730,12 +737,12 @@ class HL7MLLPServer:
 
                         # .. a rejected message still leaves its audit trail - the receipt
                         # .. and the negative acknowledgment that answered it ..
-                        if needs_audit:
+                        if audit_log and audit_channel_name:
                             _ = audit_message_received(
-                                self.audit_log, matched_route.channel_name, message_text, # type: ignore[arg-type]
+                                audit_log, audit_channel_name, message_text,
                                 cid=audit_cid, msg_id=audit_msg_id, attrs=audit_attrs, endpoint=peer_endpoint)
                             _ = audit_ack_sent(
-                                self.audit_log, matched_route.channel_name, ack_code, ack_string, # type: ignore[arg-type]
+                                audit_log, audit_channel_name, ack_code, ack_string,
                                 cid=audit_cid, msg_id=audit_msg_id)
 
                         self._send_framed(active_socket, ack_string, settings, connection_context)
@@ -749,13 +756,13 @@ class HL7MLLPServer:
 
                 # .. the receipt is recorded before the service runs, so a message
                 # .. that crashes its service is still visibly received ..
-                if needs_audit:
+                if audit_log and audit_channel_name:
 
                     # Trace point 3: how long the received-event audit write took
                     audit_received_start = monotonic()
 
                     _ = audit_message_received(
-                        self.audit_log, matched_route.channel_name, message_text, # type: ignore[arg-type]
+                        audit_log, audit_channel_name, message_text,
                         cid=audit_cid, msg_id=audit_msg_id, attrs=audit_attrs, endpoint=peer_endpoint)
 
                     _trace('audit received done %.1fms (%s)',
@@ -798,13 +805,13 @@ class HL7MLLPServer:
             ack_string = build_ack(msh_line, ack_code, error_text=error_text)
 
             # .. the acknowledgment lands on the same cid as the receipt it answers ..
-            if needs_audit:
+            if audit_log and audit_channel_name:
 
                 # Trace point 5: how long the acknowledgment audit write took
                 audit_ack_start = monotonic()
 
                 _ = audit_ack_sent(
-                    self.audit_log, matched_route.channel_name, ack_code, ack_string, # type: ignore[union-attr, arg-type]
+                    audit_log, audit_channel_name, ack_code, ack_string,
                     cid=audit_cid, msg_id=audit_msg_id, duration_ms=callback_duration_ms)
 
                 _trace('audit ack done %.1fms (%s)', (monotonic() - audit_ack_start) * _ms_per_second, audit_msg_id)

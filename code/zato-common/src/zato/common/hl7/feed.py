@@ -130,8 +130,9 @@ class FeedRunResult:
     # How many of them carried the injected-failure marker
     error_injected_count:'int' = 0
 
-    # How long each send took, in milliseconds, in send order
-    durations_ms:'anylist' = None # type: ignore[assignment]
+    # How long each send took, in milliseconds, in send order. It carries no default because
+    # a dataclass built with init=False never runs its field factories - the run assigns it.
+    durations_ms:'anylist'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -215,8 +216,7 @@ def run_feed(
     # The gap between two sends that yields the configured rate
     interval = _seconds_per_minute / config.rate_per_minute
 
-    # Our response to produce - the list is assigned here because a dataclass
-    # built with init=False never runs its field factories.
+    # Our response to produce
     out = FeedRunResult()
     out.durations_ms = []
 

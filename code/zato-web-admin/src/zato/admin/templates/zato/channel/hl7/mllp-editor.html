@@ -32,11 +32,13 @@ The form posts to the same create/edit endpoints the former popup dialogs used.
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-descriptions.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-editor.js"></script>
 
+{{ item|json_script:"mllp-editor-item" }}
+
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
     $.fn.zato.channel.hl7.mllp.editor.init({
         action: '{{ action }}',
-        item: {{ item_json|safe }},
+        item: JSON.parse(document.getElementById('mllp-editor-item').textContent),
         list_url: '{% url "channel-hl7-mllp" %}?cluster={{ cluster_id }}&type_=channel-hl7-mllp'
     });
 });

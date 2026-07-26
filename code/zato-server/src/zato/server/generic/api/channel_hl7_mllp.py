@@ -168,10 +168,19 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
 # ################################################################################################################################
 
+    @property
+    def parallel_server(self) -> 'ParallelServer':
+        """ The server this channel runs on. The base class allows for one built without a server,
+        which a channel never is, so this is where that is said once rather than at each use.
+        """
+        return cast_('ParallelServer', self.server)
+
+# ################################################################################################################################
+
     def _invoke_service(self, data:'str') -> 'object':
         """ Invokes the service configured for this channel, passing the HL7 message as the request payload.
         """
-        out = self.server.invoke(self.config.service, data) # pyright: ignore[reportOptionalMemberAccess]
+        out = self.parallel_server.invoke(self.config.service, data)
         return out
 
 # ################################################################################################################################
@@ -196,7 +205,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
         if not security_id:
             return ''
 
-        url_data = self.server.worker_store.request_dispatcher.url_data # pyright: ignore[reportOptionalMemberAccess]
+        url_data = self.parallel_server.worker_store.request_dispatcher.url_data
         security_definition = url_data.mtls_get_by_id(security_id)
 
         # A definition that has been deleted since the channel referenced it leaves the channel
@@ -289,7 +298,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
         # The internal port follows from the server's own port, so every worker process of one
         # server binds the same one and HAProxy has a line for it before any channel exists
-        internal_port = resolve_internal_port(self.server.port) # pyright: ignore[reportOptionalMemberAccess]
+        internal_port = resolve_internal_port(self.parallel_server.port)
         _shared_state.internal_port = internal_port
 
         # What one socket can have one of comes from the server's environment rather than
@@ -299,7 +308,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
         # The shared audit log all audited channels write through -
         # whether a given message is audited is each route's own flag
-        audit_log = AuditLog(self.server.name) # pyright: ignore[reportOptionalMemberAccess]
+        audit_log = AuditLog(self.parallel_server.name)
 
         _shared_state.server = HL7MLLPServer(listener_config, _shared_state.router, audit_log=audit_log)
 
@@ -316,7 +325,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
         from the server's own port, so on every start after the first there is nothing to write
         and nothing downstream to tell.
         """
-        server_base_directory = self.server.base_dir # pyright: ignore[reportOptionalMemberAccess]
+        server_base_directory = self.parallel_server.base_dir
         config_path = find_haproxy_config(server_base_directory)
         _shared_state.haproxy_config_path = config_path
 
@@ -324,7 +333,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
             logger.info('No load balancer configuration at %s, nothing to update', config_path)
             return
 
-        server_name = self.server.name # pyright: ignore[reportOptionalMemberAccess]
+        server_name = self.parallel_server.name
         was_changed = ensure_mllp_backend_server(config_path, server_name, internal_port)
 
         # A line that was already right needed no write, and a file that did not change needs
@@ -417,7 +426,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
         if not rest_channel_id:
             return
 
-        server = cast_('ParallelServer', self.server)
+        server = self.parallel_server
         lock_name = f'{_Rest_Channel_Lock_Prefix}{rest_channel_id}'
 
         with server.zato_lock_manager(lock_name, ttl=_Rest_Channel_Lock_Ttl, block=_Rest_Channel_Lock_Block):

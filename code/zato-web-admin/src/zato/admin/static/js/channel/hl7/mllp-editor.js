@@ -132,7 +132,7 @@ $.fn.zato.channel.hl7.mllp.editor._populate_groups_callback = function(data, sta
 
     var itemList = $.parseJSON(data.responseText);
 
-    if(itemList && itemList.length) {
+    if(itemList.length) {
         $.fn.zato.populate_multi_checkbox(
             itemList,
             checkboxPrefix,

@@ -564,13 +564,9 @@ class CreateEdit(BaseView):
         self.input_dict.clear()
 
         try:
-            logger.info('CreateEdit step 1: calling super().__call__')
             super(CreateEdit, self).__call__(req, *args, **kwargs)
 
-            logger.info('CreateEdit step 2: set_input')
             self.set_input()
-
-            logger.info('CreateEdit step 3: populate_initial_input_dict')
             self.populate_initial_input_dict(initial_input_dict)
 
             input_dict = {'cluster_id': self.cluster_id}
@@ -580,8 +576,6 @@ class CreateEdit(BaseView):
                 input_dict['id'] = post_id
 
             input_dict.update(initial_input_dict)
-
-            logger.info('CreateEdit step 4: building input_dict from I/O, initial_input_dict=%s', initial_input_dict)
 
             for name in chain(self.input_required, self.input_optional):
                 if name not in input_dict and name not in self.input_dict:
@@ -593,19 +587,7 @@ class CreateEdit(BaseView):
             self.input_dict.update(input_dict)
             self.pre_process_input_dict(self.input_dict)
 
-            logger.info('CreateEdit step 5: input_dict=%s', self.input_dict)
-            logger.info('CreateEdit step 5: input_required=%s', self.input_required)
-            logger.info('CreateEdit step 5: input_optional=%s', self.input_optional)
-            logger.info('CreateEdit step 5: self.input=%s', self.input)
-            logger.info('CreateEdit step 5: POST=%s', dict(self.req.POST))
-            logger.info('CreateEdit step 5 is_active trace -> input_dict=%r (type=%s), self.input=%r (type=%s)',
-                self.input_dict.get('is_active'), type(self.input_dict.get('is_active')).__name__,
-                self.input.get('is_active'), type(self.input.get('is_active')).__name__)
-
-            logger.info('CreateEdit step 6: invoking service_name=%s', self.service_name)
             response = self.req.zato.client.invoke(self.service_name, self.input_dict)
-
-            logger.info('CreateEdit step 7: response.ok=%s, response.data=%s', response.ok, response.data)
 
             if response.ok:
                 return_data = {
@@ -617,8 +599,6 @@ class CreateEdit(BaseView):
                 io_output = tuple(chain(self.output_optional, self.output_required))
                 output_names = io_output if io_output else response.data.keys()
 
-                logger.info('CreateEdit step 8: output_names=%s', output_names)
-
                 for name in output_names:
                     if name not in initial_return_data:
                         value = getattr(response.data, name, None)
@@ -629,16 +609,14 @@ class CreateEdit(BaseView):
 
                 self.post_process_return_data(return_data)
 
-                logger.info('CreateEdit step 9: return_data=%s', return_data)
-
                 return HttpResponse(dumps(return_data), content_type='application/javascript')
             else:
                 # The log keeps the full context while the popup shows the server's message alone.
-                logger.error('CreateEdit step 7-ERR: response:`%s`, details:`%s`', response, response.details)
+                logger.error('CreateEdit response:`%s`, details:`%s`', response, response.details)
                 raise ZatoException(msg=response.details)
 
         except Exception as e:
-            logger.error('CreateEdit EXCEPTION: type=%s, e=%s, traceback=%s', type(e).__name__, e, format_exc())
+            logger.error('CreateEdit exception: type=%s, e=%s, traceback=%s', type(e).__name__, e, format_exc())
             msg = str(e) or format_exc()
             return HttpResponseServerError(msg)
 

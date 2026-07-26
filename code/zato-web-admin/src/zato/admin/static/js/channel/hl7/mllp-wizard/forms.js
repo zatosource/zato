@@ -111,7 +111,11 @@ forms.securityConfig = {
 forms._fillSecuritySelect = function(select, value, excludeValues) {
 
     var securityConfig = forms.securityConfig;
-    excludeValues = excludeValues || [];
+
+    // A row filled on its own has no siblings to leave anything out for
+    if(excludeValues === undefined) {
+        excludeValues = [];
+    }
 
     select.textContent = '';
 
@@ -299,7 +303,16 @@ forms.registerKind('securityList', {
             placement: 'left',
             zIndex: 100002,
             appendTo: function() {
-                return disabledBadge.closest('.wizard-tippy-form') || document.body;
+
+                // The badge sits inside the form while the form is on screen, and the
+                // body is where it goes once tippy has moved it out
+                var form = disabledBadge.closest('.wizard-tippy-form');
+
+                if(form === null) {
+                    return document.body;
+                }
+
+                return form;
             },
             onShow: function() {
                 var helpState = $.fn.zato.how_it_works._state;
@@ -313,7 +326,7 @@ forms.registerKind('securityList', {
         // select the first time around ..
         var keyList = wizard.state.securityKeyList.slice();
         if(!keyList.length) {
-            keyList = [wizard.field('rest_security_id').val() || ''];
+            keyList = [wizard.field('rest_security_id').val()];
         }
 
         for(var keyIdx = 0; keyIdx < keyList.length; keyIdx++) {
@@ -375,7 +388,7 @@ forms.registerKind('securityList', {
         });
 
         var enabledToggle = popper.querySelector('#' + forms.inputId('rest_security_enabled'));
-        var isEnabled = enabledToggle ? enabledToggle.checked : true;
+        var isEnabled = enabledToggle.checked;
 
         wizard.state.isSecurityEnabled = isEnabled;
         wizard.state.securityKeyList = keyList;
