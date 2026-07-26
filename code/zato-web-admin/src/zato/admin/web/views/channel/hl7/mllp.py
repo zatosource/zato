@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from http import HTTPStatus
-from itertools import chain
 from logging import getLogger
 from socket import AF_INET, SOCK_STREAM, socket as socket_
 from time import time
@@ -89,16 +88,10 @@ class Index(_Index):
 
     def handle(self):
 
-        # The REST bridge is secured the way any REST channel is, while the MLLP channel itself
-        # is secured by the client certificate its senders connect with
-        security_list = self.get_sec_def_list(SEC_DEF_TYPE.BASIC_AUTH)
-        mtls_security_list = self.get_sec_def_list(SEC_DEF_TYPE.MTLS)
-
+        # Creating and editing happen on their own pages, so the list renders no dialog and
+        # needs neither the forms nor the security definitions a dialog would be built from
         return {
             'show_search_form': True,
-            'create_form': CreateForm(req=self.req, security_list=security_list, mtls_security_list=mtls_security_list),
-            'edit_form': EditForm(
-                prefix='edit', req=self.req, security_list=security_list, mtls_security_list=mtls_security_list),
         }
 
 # ################################################################################################################################
@@ -452,66 +445,35 @@ def wizard_create(req:'any_') -> 'TemplateResponse':
 # ################################################################################################################################
 # ################################################################################################################################
 
-class EditorEdit(Index):
+@method_allowed('GET')
+def editor_edit(req:'any_', id:'str') -> 'TemplateResponse':
     """ A full-page editor for one existing HL7 MLLP channel.
     """
-    url_name = 'channel-hl7-mllp-editor-edit'
-    template = _Editor_Template
-    paginate = False
 
-    def __call__(self, req:'any_', *args:'any_', **kwargs:'any_') -> 'any_':
+    # The URL points to one channel, so one channel is what is fetched - the page renders
+    # nothing about any of the others
+    response = req.zato.client.invoke('zato.generic.connection.get-by-id', {'id': id})
 
-        # The editor always works with MLLP channels - the type is fixed instead of being read from the query string.
-        kwargs['type_'] = GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP
+    if not response.ok:
+        raise Exception(f'HL7 MLLP channel with id `{id}` could not be read')
 
-        out = super().__call__(req, *args, **kwargs)
-        return out
+    item_dict = response.data
 
-# ################################################################################################################################
+    security_list = SecurityList.from_service(req.zato.client, req.zato.cluster.id, SEC_DEF_TYPE.BASIC_AUTH)
+    mtls_security_list = SecurityList.from_service(req.zato.client, req.zato.cluster.id, SEC_DEF_TYPE.MTLS)
 
-    def handle(self) -> 'stranydict':
+    return_data = {
+        'cluster_id': req.zato.cluster_id,
+        'action': 'edit',
+        'field_prefix': 'edit-',
+        'form': EditForm(prefix='edit', req=req, security_list=security_list, mtls_security_list=mtls_security_list),
+        'item_name': item_dict['name'],
+        'item_id': item_dict['id'],
+        'item': item_dict,
+    }
 
-        # The URL points to one channel - find it in the list that the service returned ..
-        item_id = int(self.req.zato.args['id'])
-
-        for candidate in self.items:
-            if candidate.id == item_id:
-                item = candidate
-                break
-        else:
-            raise Exception(f'HL7 MLLP channel with id `{item_id}` not found')
-
-        # .. serialize it for the client-side populate call, including only the attributes actually
-        # .. set, since the list view only puts a field on an item where the service reported one ..
-        item_dict = {}
-
-        for name in chain(self.output_required, self.output_optional):
-
-            if not hasattr(item, name):
-                continue
-
-            value = getattr(item, name)
-
-            if value is None:
-                continue
-
-            item_dict[name] = value
-
-        # .. and hand everything over to the editor template.
-        security_list = self.get_sec_def_list(SEC_DEF_TYPE.BASIC_AUTH)
-        mtls_security_list = self.get_sec_def_list(SEC_DEF_TYPE.MTLS)
-
-        out = {
-            'action': 'edit',
-            'field_prefix': 'edit-',
-            'form': EditForm(
-                prefix='edit', req=self.req, security_list=security_list, mtls_security_list=mtls_security_list),
-            'item_name': item_dict['name'],
-            'item_id': item_dict['id'],
-            'item': item_dict,
-        }
-
-        return out
+    out = TemplateResponse(req, _Editor_Template, return_data)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

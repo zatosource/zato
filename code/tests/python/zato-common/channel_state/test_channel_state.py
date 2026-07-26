@@ -7,6 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import time as time_module
+from datetime import datetime, timedelta, timezone
 from time import time
 
 # Zato
@@ -204,6 +206,52 @@ class TestStateContract:
         assert contract['last_message_time_iso'] != ''
         assert contract['error_rate'] == 0.0
         assert contract['silence_seconds'] >= 0.0
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestWhenTheLastMessageArrived:
+    """ Every message sets the arrival time and only a dashboard poll ever reads it, so it is
+    kept as the number the arrival produced and written out as text on the way out.
+    """
+
+    def test_a_channel_with_no_traffic_reports_no_arrival(self) -> 'None':
+        state = ChannelState(_channel_name)
+
+        assert state.get_last_message_time_iso() == ''
+        assert state.get_state()['last_message_time_iso'] == ''
+
+    def test_the_arrival_is_reported_in_utc(self) -> 'None':
+        state = ChannelState(_channel_name)
+        state.on_message_received()
+
+        reported = state.get_last_message_time_iso()
+        parsed = datetime.fromisoformat(reported)
+
+        assert parsed.tzinfo is not None
+        assert parsed.utcoffset() == timedelta(0)
+
+    def test_the_arrival_matches_the_time_it_was_recorded_at(self) -> 'None':
+        state = ChannelState(_channel_name)
+        state.on_message_received()
+
+        reported = state.get_last_message_time_iso()
+        expected = datetime.fromtimestamp(state.last_message_time, timezone.utc)
+
+        assert datetime.fromisoformat(reported) == expected
+
+    def test_a_later_message_moves_the_arrival_forward(self) -> 'None':
+        state = ChannelState(_channel_name)
+
+        state.on_message_received()
+        first = state.get_last_message_time_iso()
+
+        time_module.sleep(0.01)
+
+        state.on_message_received()
+        second = state.get_last_message_time_iso()
+
+        assert second > first
 
 # ################################################################################################################################
 # ################################################################################################################################

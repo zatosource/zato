@@ -189,7 +189,7 @@ class TestSplitConcatenatedMessages:
             message_a = (
                 'MSH|^~\\&|SendApp|SendFac|RecvApp|RecvFac|20230101120000||ADT^A01|CONCAT_A|P|2.5\r'
                 'EVN|A01|20230101120000\r'
-                'PID|||12345^^^MRN||Doe^John||19800101|M'
+                'PID|||12345^^^MRN||Doe^John||19800101|M\r'
             )
             message_b = (
                 'MSH|^~\\&|LabSys|LabFac|OrderSys|OrderFac|20230101130000||ORU^R01|CONCAT_B|P|2.5\r'

@@ -50,11 +50,17 @@ class FrameDecoder:
         self.end_sequence   = end_sequence
         self.max_message_size = max_message_size
 
-        #  Internal buffer accumulating bytes fed so far
-        self._buffer = b''
+        # One buffer for the life of the decoder, consumed through an offset rather than resliced,
+        # so a large message arriving in small reads is not copied once per read
+        self._buffer = bytearray()
+        self._offset = 0
 
         #  Whether we are currently inside a frame (past the start sequence)
         self._inside_frame = False
+
+        # How much has to be kept when nothing frame-like has been found yet, so that an opening
+        # sequence split across two reads is still recognised
+        self._keep_tail = max(len(start_sequence), len(Bare_Message_Prefix)) - 1
 
 # ################################################################################################################################
 
@@ -65,6 +71,40 @@ class FrameDecoder:
 
 # ################################################################################################################################
 
+    def _compact(self) -> 'None':
+        """ Drops what has already been consumed, which is what keeps the buffer from growing
+        for the life of a decoder that reads thousands of frames.
+        """
+        if self._offset:
+            del self._buffer[:self._offset]
+            self._offset = 0
+
+# ################################################################################################################################
+
+    def _find_frame_start(self) -> 'int':
+        """ Returns where the payload of the next frame begins, or -1 when no opening has arrived
+        yet. A sender that omits the opening sequence and starts at MSH is taken as it comes.
+        """
+        earliest = self._buffer.find(self.start_sequence, self._offset)
+        earliest_skip = len(self.start_sequence)
+
+        bare_position = self._buffer.find(Bare_Message_Prefix, self._offset)
+
+        # A bare opening only counts when it comes first, so that the sequence of a properly
+        # framed message is not skipped in favour of the MSH inside it
+        if bare_position != -1:
+            if earliest == -1 or bare_position < earliest:
+                earliest = bare_position
+                earliest_skip = 0
+
+        if earliest == -1:
+            return -1
+
+        out = earliest + earliest_skip
+        return out
+
+# ################################################################################################################################
+
     def next_message(self) -> 'bytes | None':
         """ Returns the next complete unframed message, or None if no complete frame is available yet.
         Raises HL7Exception if the frame exceeds max_message_size.
@@ -72,59 +112,50 @@ class FrameDecoder:
 
         while True:
 
-            # If we are not yet inside a frame, look for the start sequence ..
+            # If we are not yet inside a frame, look for the opening ..
             if not self._inside_frame:
 
-                start_position = self._buffer.find(self.start_sequence)
+                frame_start = self._find_frame_start()
 
-                # .. if no start sequence was found but the buffer begins with MSH
-                # (a common real-world quirk where senders omit 0x0B), treat byte 0
-                # as the implicit start position ..
-                if start_position == -1:
-                    if self._buffer.startswith(b'MSH'):
-                        start_position = 0
-                    else:
+                if frame_start == -1:
 
-                        # .. otherwise discard and wait for more data.
-                        self._buffer = b''
-                        return None
+                    # .. nothing frame-like so far, so all but the tail that could hold an opening
+                    # .. split across two reads is dropped rather than accumulated ..
+                    surplus = len(self._buffer) - self._offset - self._keep_tail
 
-                # .. skip past the start sequence (or past nothing if the sender omitted it) ..
-                bytes_to_skip = start_position + len(self.start_sequence)
+                    if surplus > 0:
+                        self._offset += surplus
+                        self._compact()
 
-                if start_position == 0:
-                    if self._buffer.startswith(b'MSH'):
-                        bytes_to_skip = 0
+                    return None
 
-                self._buffer = self._buffer[bytes_to_skip:]
+                self._offset = frame_start
                 self._inside_frame = True
 
             # .. now we are inside a frame, look for the end sequence ..
-            end_position = self._buffer.find(self.end_sequence)
+            end_position = self._buffer.find(self.end_sequence, self._offset)
 
             # .. end sequence not found yet ..
             if end_position == -1:
 
-                # .. check if the accumulated payload already exceeds the limit ..
-                buffer_length = len(self._buffer)
-
-                if buffer_length > self.max_message_size:
+                # .. a frame already over the limit is not going to come back under it ..
+                if len(self._buffer) - self._offset > self.max_message_size:
                     self._inside_frame = False
-                    self._buffer = b''
+                    self._buffer = bytearray()
+                    self._offset = 0
                     raise HL7Exception(f'MLLP frame exceeds max_message_size ({self.max_message_size} bytes)')
 
                 # .. otherwise, wait for more data.
                 return None
 
-            # .. extract the payload between start and end ..
-            payload = self._buffer[:end_position]
+            # .. the payload is what sits between the opening and the closing ..
+            payload = bytes(self._buffer[self._offset:end_position])
 
-            # .. advance the buffer past the end sequence ..
-            end_of_frame = end_position + len(self.end_sequence)
-            self._buffer = self._buffer[end_of_frame:]
+            # .. and what follows the closing sequence is the start of whatever comes next ..
+            self._offset = end_position + len(self.end_sequence)
+            self._compact()
             self._inside_frame = False
 
-            # .. check that the extracted payload is within the size limit ..
             payload_length = len(payload)
 
             if payload_length > self.max_message_size:

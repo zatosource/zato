@@ -11,7 +11,7 @@ import os
 from ipaddress import ip_address, ip_network
 
 # Zato
-from zato.common.hl7.mllp.dedup import MessageDeduplicator
+from zato.common.hl7.mllp.dedup import Default_Max_Entries, MessageDeduplicator
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,6 +54,9 @@ Default_Keepalive_Probe_Count   = 6
 
 # How the common name is written in a subject distinguished name.
 _Common_Name_Attribute = 'CN'
+
+# How many control ids one route's deduplication cache holds before the oldest are dropped.
+Dedup_Max_Entries = Default_Max_Entries
 
 # How many seconds each deduplication TTL unit stands for.
 TTL_Multipliers = {
@@ -195,10 +198,12 @@ class RouteSettings:
 
         self.tolerance_config = tolerance_config
 
-        # Each route counts duplicates on its own, so one channel's TTL never governs another's
+        # Each route counts duplicates on its own, so one channel's TTL never governs another's,
+        # and each holds the same number of ids before the oldest of them are dropped
         if dedup_ttl_value and dedup_ttl_unit:
             ttl_seconds = dedup_ttl_value * TTL_Multipliers[dedup_ttl_unit]
-            self.deduplicator:'MessageDeduplicator | None' = MessageDeduplicator(ttl_seconds)
+            self.deduplicator:'MessageDeduplicator | None' = MessageDeduplicator(
+                ttl_seconds, Dedup_Max_Entries)
         else:
             self.deduplicator = None
 

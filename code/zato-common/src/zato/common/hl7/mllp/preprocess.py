@@ -35,6 +35,14 @@ _Minimum_Encoding_Characters_Length = 4
 # MSH field separator position in MSH|...|
 _MSH_Prefix = 'MSH|'
 
+# What ends every segment of a message
+_Segment_Terminator = '\r'
+
+# Where a second message in one frame begins. Line endings have already been normalised to CR by
+# the time a payload is split, so a header that opens a message always follows a segment terminator
+# and one that appears mid-field never does.
+_Concatenated_Message_Prefix = _Segment_Terminator + _MSH_Prefix
+
 # How many pipe-separated parts a whole MSH segment has. MSH-12, the version id, is the last
 # field the standard requires, and splitting a segment that carries it gives twelve parts -
 # 'MSH' itself and then MSH-2 through MSH-12.
@@ -156,20 +164,33 @@ def split_concatenated_messages(data:'str') -> 'list[str]':
     Returns a list of individual messages. If only one MSH is found, returns a single-element list.
     """
 
-    # Split on the MSH prefix ..
-    parts = data.split(_MSH_Prefix)
+    if not data:
+        return []
 
-    # .. the first element is whatever was before the first MSH (usually empty) ..
+    # A second message can only begin where a segment ended, so the split is anchored on a
+    # segment terminator followed by the header. An MSH| inside a free-text field is text ..
+    parts = data.split(_Concatenated_Message_Prefix)
+
+    # .. and a payload holding one message is that message, whatever its fields say ..
+    if len(parts) == 1:
+        return [data]
+
     messages:'list[str]' = []
+    last_index = len(parts) - 1
 
-    for part in parts:
-        if not part:
-            continue
-        message = _MSH_Prefix + part
-        messages.append(message)
+    for index, part in enumerate(parts):
 
-    if len(messages) > 1:
-        logger.warning('Split %d concatenated messages from a single MLLP frame', len(messages))
+        # .. every part but the first lost the header the split consumed ..
+        if index:
+            part = _MSH_Prefix + part
+
+        # .. and every part but the last lost the terminator that ended it.
+        if index != last_index:
+            part = part + _Segment_Terminator
+
+        messages.append(part)
+
+    logger.warning('Split %d concatenated messages from a single MLLP frame', len(messages))
 
     return messages
 

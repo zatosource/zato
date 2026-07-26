@@ -91,19 +91,31 @@ destinations.add = function(anchorElement) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The one-line label a destination row shows - type, connection and options.
-destinations._rowLabel = function(destination) {
+// What each destination type is called, keyed by the type itself, so that labelling a list
+// of rows reads the type list once rather than searching it once per row.
+destinations._getTypeLabelMap = function() {
 
     var typeList = $.fn.zato.destinations.config.typeList;
+    var out = {};
 
     for(var typeIdx = 0; typeIdx < typeList.length; typeIdx++) {
-        if(typeList[typeIdx].id === destination.type) {
-            var typeLabel = typeList[typeIdx].label;
-            break;
-        }
+        out[typeList[typeIdx].id] = typeList[typeIdx].label;
     }
 
-    var parts = [typeLabel, destination.connection];
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The one-line label a destination row shows - type, connection and options.
+destinations._rowLabel = function(destination, typeLabelMap) {
+
+    // A single row labelled on its own has no map read ahead of it
+    if(typeLabelMap === undefined) {
+        typeLabelMap = destinations._getTypeLabelMap();
+    }
+
+    var parts = [typeLabelMap[destination.type], destination.connection];
 
     for(var optionName in destination.options) {
         parts.push(destination.options[optionName]);
@@ -122,6 +134,9 @@ destinations.renderRows = function() {
     var container = $('#mllp-wizard-destination-rows');
     container.empty();
 
+    // The type list is read once for the whole render rather than once per row
+    var typeLabelMap = destinations._getTypeLabelMap();
+
     for(var destinationIdx = 0; destinationIdx < wizard.state.destinationList.length; destinationIdx++) {
         var destination = wizard.state.destinationList[destinationIdx];
 
@@ -131,7 +146,7 @@ destinations.renderRows = function() {
 
         var text = document.createElement('span');
         text.className = 'wizard-conn-row-text';
-        text.textContent = destinations._rowLabel(destination);
+        text.textContent = destinations._rowLabel(destination, typeLabelMap);
         row.appendChild(text);
 
         if(!destination.isActive) {
