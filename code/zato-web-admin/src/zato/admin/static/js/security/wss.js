@@ -22,6 +22,7 @@ $(document).ready(function() {
         'name',
         'username',
     ]);
+    $.fn.zato.data_table.before_submit_hook = $.fn.zato.security.wss.beforeSubmitHook;
 
     // .. the mode selector decides which tabs apply ..
     $(document).on('change', '#id_mode', function() {
@@ -31,6 +32,17 @@ $(document).ready(function() {
         $.fn.zato.security.wss.update_mode_tabs('edit');
     });
 })
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.security.wss.config = {
+
+    // Which tab holds the signing and encryption toggles, and what the form says
+    // when an X.509 definition turns both of them off.
+    'cryptoTab': 'crypto',
+    'x509Mode': 'x509',
+    'noX509OperationMessage': 'An X.509 definition needs signing, encryption or both'
+};
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -84,6 +96,45 @@ $.fn.zato.security.wss.update_mode_tabs = function(action) {
             div.find('.dashboard-tab[data-tab="main"]').click();
         }
     });
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.security.wss.beforeSubmitHook = function(form) {
+
+    var config = $.fn.zato.security.wss.config;
+    var isEdit = $(form).attr('id').indexOf('edit') !== -1;
+    var prefix = isEdit ? 'edit-' : '';
+
+    var signSelector = '#id_' + prefix + 'sign';
+    var encryptSelector = '#id_' + prefix + 'encrypt';
+
+    // Clear anything left over from a previous attempt ..
+    $.fn.zato.remove_css_attention(signSelector);
+    $.fn.zato.remove_css_attention(encryptSelector);
+
+    // .. signing and encryption belong to the X.509 mode alone ..
+    var mode = $('#id_' + prefix + 'mode').val();
+
+    if(mode !== config.x509Mode) {
+        return true;
+    }
+
+    // .. and that mode needs at least one of the two.
+    if($(signSelector).is(':checked') || $(encryptSelector).is(':checked')) {
+        return true;
+    }
+
+    // The two toggles sit on their own tab, which has to be the active one
+    // before the form can point at them.
+    var div = $(isEdit ? '#edit-div' : '#create-div');
+    div.find('.dashboard-tab[data-tab="' + config.cryptoTab + '"]').click();
+
+    $.fn.zato.draw_attention_to(signSelector);
+    $.fn.zato.draw_attention_to(encryptSelector);
+    $.fn.zato.show_bottom_tooltip(signSelector, config.noX509OperationMessage, true);
+
+    return false;
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

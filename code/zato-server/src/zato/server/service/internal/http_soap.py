@@ -761,13 +761,26 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
 
 # ################################################################################################################################
 
-    def _preprocess_security_groups(self, input):
-
+    def _preprocess_security_groups(self, input, skip_opaque):
+        """ Turns whatever security groups the input carries into a list of their IDs, or into None
+        when the input did not mention them at all.
+        """
         # This will contain only IDs
         new_input_security_groups = []
 
         # Security groups are optional
-        if input_security_groups := input.get('security_groups'):
+        input_security_groups = input['security_groups']
+
+        # A request that never mentioned the field arrives with None here, whereas one that sent an
+        # empty list means it - the Dashboard sends an empty list once the operator unchecks every
+        # group. Only the latter says a channel has no groups, so the former leaves what is stored
+        # where it is, the same way username and password are left alone, and travels on to the
+        # servers as None so that they keep what they already have too.
+        if input_security_groups is None:
+            skip_opaque.append('security_groups')
+            return None
+
+        if input_security_groups:
 
             # Get information about security groups which is need to turn group names into group IDs
             existing_security_groups = self.invoke('zato.groups.get-list', group_type=Groups.Type.API_Clients)
@@ -948,7 +961,7 @@ class Create(_CreateEdit):
         input.security_id = input.security_id if input.security_id not in (ZATO_NONE, ) else None
         input.soap_action = input.soap_action if input.soap_action else ''
         input.timeout = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
-        input.security_groups = self._preprocess_security_groups(input)
+        input.security_groups = self._preprocess_security_groups(input, skip_opaque)
 
         input.is_active   = input.get('is_active',   True)
         input.is_internal = input.get('is_internal', False)
@@ -1169,7 +1182,7 @@ class Edit(_CreateEdit):
         input.security_id  = input.security_id if input.security_id not in (ZATO_NONE,) else None
         input.soap_action  = input.soap_action if input.soap_action else ''
         input.timeout      = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
-        input.security_groups = self._preprocess_security_groups(input)
+        input.security_groups = self._preprocess_security_groups(input, skip_opaque)
 
         input.is_active   = input.get('is_active',   True)
         input.is_internal = input.get('is_internal', False)

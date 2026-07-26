@@ -44,6 +44,12 @@ JWT_Algorithm = 'RS256'
 # How long fetched JWKS documents stay in the cache, in seconds
 JWKS_Cache_TTL = 3600
 
+# How often one JWKS URL may be fetched, in seconds. This applies to the first fetch and to a
+# refetch for a key ID the cached document does not carry alike, since the key ID is whatever the
+# token being verified says it is. A key the issuer has rotated to is therefore picked up within
+# this many seconds, which is why it is far shorter than JWKS_Cache_TTL.
+JWKS_Fetch_Interval = 60
+
 # The case-insensitive prefix inbound Authorization headers carry
 Bearer_Prefix = 'bearer '
 
@@ -55,6 +61,9 @@ _http_timeout = 10
 
 # Cache keys for JWKS documents start with this prefix
 _jwks_cache_key_prefix = 'zato.sec.bearer-token.jwks.'
+
+# Cache keys marking a JWKS URL as fetched recently start with this prefix
+_jwks_fetch_key_prefix = 'zato.sec.bearer-token.jwks-fetch.'
 
 # What jwt_decode must always validate
 _decode_options:'any_' = {'require': ['exp', 'iss', 'aud']}
@@ -231,6 +240,13 @@ class BearerTokenVerifier:
                 config.sec_def_name, channel_name, cid)
             return None
 
+        # .. the key lives in the issuer's JWKS document, so a definition that names none of them
+        # .. has nothing to verify against ..
+        if not config.jwks_url:
+            logger.info('Bearer token definition `%s` has no JWKS URL and no issuer to derive one from; '
+                'channel=%s; cid=%s', config.sec_def_name, channel_name, cid)
+            return None
+
         # .. find the signing key, refetching the JWKS document if the key is unknown ..
         key = self._get_signing_key(config.jwks_url, key_id)
 
@@ -323,7 +339,8 @@ class BearerTokenVerifier:
         document = self._get_jwks_document(jwks_url, force_refetch=False)
         key = self._find_key(document, key_id)
 
-        # .. an unknown key ID may mean the IdP has rotated its keys, so refetch once.
+        # .. a key ID the document does not carry may mean the issuer has rotated its keys, so the
+        # .. document is fetched again - within the limit that _get_jwks_document keeps.
         if key is None:
             document = self._get_jwks_document(jwks_url, force_refetch=True)
             key = self._find_key(document, key_id)
@@ -349,7 +366,8 @@ class BearerTokenVerifier:
 
     def _get_jwks_document(self, jwks_url:'str', force_refetch:'bool') -> 'stranydict':
         """ Returns the JWKS document for the given URL, from the cache if possible.
-        Fetched documents with any keys are cached for JWKS_Cache_TTL seconds.
+        Fetched documents with any keys are cached for JWKS_Cache_TTL seconds, and one URL is
+        fetched at most once per JWKS_Fetch_Interval seconds.
         """
         cache_key = _jwks_cache_key_prefix + jwks_url
 
@@ -357,6 +375,20 @@ class BearerTokenVerifier:
         if not force_refetch:
             if cached_document := self.cache.get(cache_key):
                 return cached_document
+
+        # .. the document has to come over the network, which is what the interval limits - it is
+        # .. what a caller can drive, both through a key ID that no cached document carries and
+        # .. through a URL that never answers, since neither of those two ever fills the cache ..
+        fetch_key = _jwks_fetch_key_prefix + jwks_url
+
+        if self.cache.get(fetch_key):
+            logger.info('JWKS document from `%s` was fetched less than %s seconds ago',
+                jwks_url, JWKS_Fetch_Interval)
+            return {'keys': []}
+
+        # .. the interval starts when the fetch is attempted rather than when it comes back,
+        # .. so a URL that answers slowly or not at all is subject to it too ..
+        self.cache.set(fetch_key, True, expiry=JWKS_Fetch_Interval)
 
         # .. fetch the document from the IdP ..
         document = self._fetch_jwks_document(jwks_url)

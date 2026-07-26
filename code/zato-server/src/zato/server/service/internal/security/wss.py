@@ -16,7 +16,7 @@ from zato.common.api import query_parameters, SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, WSSecurity
 from zato.common.odb.query import wss_list
-from zato.common.soap.security.wss import Mode
+from zato.common.soap.security.wss import Mode, No_X509_Operation_Message
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import Boolean
 from zato.server.service.internal import AdminService, ChangePasswordBase
@@ -48,6 +48,31 @@ _mode_fields = (
 # What the operator is told about a definition that could never verify an incoming signature.
 _no_trust_material_warning = 'WS-Security definition `%s` has neither trust anchors nor a peer certificate, ' \
     'so it cannot be used to verify incoming signatures - channels using it will refuse every signed message'
+
+# What the operator is told when a definition in X.509 mode is saved with neither of the two.
+_no_x509_operation_error = No_X509_Operation_Message + ', and `{}` has neither'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def has_x509_operation(input:'any_') -> 'bool':
+    """ Says whether an X.509 definition asks for anything at all.
+
+    Signing and encryption are the two things the mode offers, in either direction - one that asks
+    for neither leaves an outgoing message exactly as it was and states no requirement for an
+    incoming one to meet. Unlike trust material, this is the same answer in both directions,
+    so it is a refusal rather than a warning.
+    """
+    if input.mode != Mode.X509:
+        return True
+
+    if input.get('sign'):
+        return True
+
+    if input.get('encrypt'):
+        return True
+
+    return False
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -124,6 +149,9 @@ class Create(AdminService):
         input = self.request.input
         input.password = uuid4().hex
 
+        if not has_x509_operation(input):
+            raise Exception(_no_x509_operation_error.format(input.name))
+
         if not has_trust_material(input):
             self.logger.warning(_no_trust_material_warning, input.name)
 
@@ -184,6 +212,9 @@ class Edit(AdminService):
         input = self.request.input
         input_id = input.get('id')
         cluster_id = input.get('cluster_id') or self.server.cluster_id
+
+        if not has_x509_operation(input):
+            raise Exception(_no_x509_operation_error.format(input.name))
 
         if not has_trust_material(input):
             self.logger.warning(_no_trust_material_warning, input.name)

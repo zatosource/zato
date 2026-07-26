@@ -7,6 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from hashlib import sha256
+from hmac import new as hmac_new
 from logging import getLogger
 
 # gevent
@@ -14,7 +16,7 @@ from gevent.lock import RLock
 
 # Zato
 from zato.common.api import Groups, Sec_Def_Type
-from zato.common.crypto.api import is_string_equal
+from zato.common.crypto.api import CryptoManager, is_string_equal
 from zato.common.groups import Member
 from zato.server.groups.ctx_bearer import BearerTokenCtx
 
@@ -33,6 +35,16 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+# How many bytes of key material each context object derives its API key index keys with
+_index_key_size = 32
+
+# What the operator is told when two definitions in one channel's groups claim the same credential
+_apikey_conflict = 'API key already belongs to another definition; existing=%s; given=%s'
+_username_conflict = 'Username already belongs to another definition; username=%s; existing=%s; given=%s'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class _BasicAuthSecDef:
     security_id: 'int'
     username: 'str'
@@ -45,6 +57,9 @@ class _APIKeySecDef:
     security_id: 'int'
     header: 'str'
     header_value: 'str'
+
+    # What apikey_credentials holds this definition under
+    index_key: 'str'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -64,7 +79,7 @@ class SecurityGroupsCtx(BearerTokenCtx):
     # Maps usernames to _BasicAuthSecDef objects
     basic_auth_credentials: 'dict_[str, _BasicAuthSecDef]'
 
-    # Maps header values to _APIKeySecDef objects
+    # Maps index keys, as built by _apikey_index_key, to _APIKeySecDef objects
     apikey_credentials: 'dict_[str, _APIKeySecDef]'
 
     # The environ key of the one header that all API key definitions of this channel use,
@@ -85,7 +100,20 @@ class SecurityGroupsCtx(BearerTokenCtx):
         self.bearer_token_credentials = {}
         self._bearer_token_verifier = None
 
+        # Each context object indexes its API keys under keys of its own, built on first use
+        # and never stored anywhere, so that what the dictionary holds is not the keys themselves.
+        self._index_key = CryptoManager.generate_bytes(_index_key_size)
+
         self._lock = RLock()
+
+# ################################################################################################################################
+
+    def _apikey_index_key(self, header_value:'str') -> 'str':
+        """ Returns what apikey_credentials holds the given API key under.
+        """
+        out = hmac_new(self._index_key, header_value.encode('utf8'), sha256).hexdigest()
+
+        return out
 
 # ################################################################################################################################
 
@@ -169,16 +197,26 @@ class SecurityGroupsCtx(BearerTokenCtx):
         security_id:'int',
         username:'str',
         password:'str'
-    ) -> 'None':
+    ) -> 'bool':
 
-        # Build a business object containing all the data needed in runtime ..
+        # One username identifies one definition, so a definition claiming a username that another
+        # one in this channel's groups already holds is left out rather than taking it over ..
+        if existing := self.basic_auth_credentials.get(username):
+            if existing.security_id != security_id:
+                logger.error(_username_conflict, username, existing.security_id, security_id)
+                return False
+
+        # .. build a business object containing all the data needed in runtime ..
         item = _BasicAuthSecDef()
         item.security_id = security_id
         item.username = username
         item.password = password
 
-        # .. and add the business object to our container ..
+        # .. add the business object to our container ..
         self.basic_auth_credentials[username] = item
+
+        # .. and confirm to our caller that the member was added.
+        return True
 
 # ################################################################################################################################
 
@@ -197,6 +235,15 @@ class SecurityGroupsCtx(BearerTokenCtx):
                     f'security_id={security_id}')
                 return False
 
+        # .. one API key identifies one definition, so a definition whose key another one in this
+        # .. channel's groups already holds is left out rather than taking it over ..
+        index_key = self._apikey_index_key(header_value)
+
+        if existing := self.apikey_credentials.get(index_key):
+            if existing.security_id != security_id:
+                logger.error(_apikey_conflict, existing.security_id, security_id)
+                return False
+
         # .. this may be the first API key definition, in which case its header becomes the channel-wide one ..
         if self.apikey_header is None:
             self.apikey_header = header
@@ -206,9 +253,10 @@ class SecurityGroupsCtx(BearerTokenCtx):
         item.security_id = security_id
         item.header = header
         item.header_value = header_value
+        item.index_key = index_key
 
         # .. add the business object to our container ..
-        self.apikey_credentials[item.header_value] = item
+        self.apikey_credentials[item.index_key] = item
 
         # .. and confirm to our caller that the member was added.
         return True
@@ -218,7 +266,7 @@ class SecurityGroupsCtx(BearerTokenCtx):
     def set_basic_auth(self, security_id:'int', username:'str', password:'str') -> 'None':
 
         if self._delete_basic_auth(security_id):
-            self._create_basic_auth(security_id, username, password)
+            _ = self._create_basic_auth(security_id, username, password)
 
 # ################################################################################################################################
 
@@ -258,7 +306,7 @@ class SecurityGroupsCtx(BearerTokenCtx):
         if sec_info := self._get_apikey_by_security_id(security_id):
 
             # .. delete the definition itself ..
-            _ = self.apikey_credentials.pop(sec_info.header_value, None)
+            _ = self.apikey_credentials.pop(sec_info.index_key, None)
 
             # .. remove it from maps too ..
             self._after_auth_deleted(security_id)
@@ -287,13 +335,13 @@ class SecurityGroupsCtx(BearerTokenCtx):
         # Our response to produce
         out = None
 
-        # Compare the incoming key against every stored one without stopping early ..
-        # .. so that the time taken does not reveal whether a key exists or how much of it matched.
-        for stored_value, sec_info in self.apikey_credentials.items():
-            if is_string_equal(header_value, stored_value):
-                out = sec_info.security_id
+        # The container is keyed by what _apikey_index_key builds out of each stored key, so the
+        # incoming one is turned into the same shape and looked up, whatever the number of members.
+        index_key = self._apikey_index_key(header_value)
 
-        if out is None:
+        if sec_info := self.apikey_credentials.get(index_key):
+            out = sec_info.security_id
+        else:
             logger.info(f'Invalid API key; channel={channel_name}; cid={cid}')
 
         return out
@@ -309,10 +357,10 @@ class SecurityGroupsCtx(BearerTokenCtx):
     ) -> 'None':
 
         # Create the base object ..
-        self._create_basic_auth(security_id, username, password)
+        if self._create_basic_auth(security_id, username, password):
 
-        # .. and populate common containers.
-        self._after_auth_created(group_id, security_id)
+            # .. and populate common containers.
+            self._after_auth_created(group_id, security_id)
 
 # ################################################################################################################################
 
@@ -412,7 +460,7 @@ class SecurityGroupsCtx(BearerTokenCtx):
         # A list of all the Basic Auth usernames we are going to delete
         basic_auth_list:'strlist' = []
 
-        # A list of all the API key header values we are going to delete
+        # A list of all the API key index keys we are going to delete
         apikey_list:'strlist' = []
 
         # A list of all the bearer token security IDs we are going to delete
@@ -434,10 +482,10 @@ class SecurityGroupsCtx(BearerTokenCtx):
                 if item.security_id in sec_id_list:
                     basic_auth_list.append(username)
 
-            # .. turn security IDs into their header values (API keys) ..
-            for header_value, item in self.apikey_credentials.items():
+            # .. turn security IDs into their index keys (API keys) ..
+            for index_key, item in self.apikey_credentials.items():
                 if item.security_id in sec_id_list:
-                    apikey_list.append(header_value)
+                    apikey_list.append(index_key)
 
             # .. collect bearer token definitions belonging to this group ..
             for security_id in self.bearer_token_credentials:
