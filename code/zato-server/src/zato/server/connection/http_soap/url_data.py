@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from operator import itemgetter
 from threading import RLock
 from traceback import format_exc
 
@@ -27,9 +26,10 @@ from zato.common.soap.envelope import parse_envelope
 from zato.common.soap.security.wss import enforce_wss, invalidate_keystores
 from zato.common.util.api import update_apikey_username_to_channel, wait_for_dict_key
 from zato.common.util.auth import enrich_with_sec_data, on_basic_auth
-from zato.common.util.url_dispatcher import get_match_target
+from zato.common.util.channel import channel_specificity
+from zato.common.util.url_dispatcher import get_match_target, resolve_match_slash
 from zato.server.connection.http_soap import Unauthorized
-from zato.server.connection.http_soap.url_dispatcher import Matcher, PyURLData, resolve_match_slash
+from zato.server.connection.http_soap.url_dispatcher import Matcher, PyURLData
 
 # ################################################################################################################################
 
@@ -83,6 +83,21 @@ _channel_sec_types = (
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _channel_sort_key(item:'anydict') -> 'tuple':
+    """ Returns what orders one channel against another when a request could match either, which is
+    how far each of them narrows its requests down, and then the name.
+
+    A name only ever comes into it for two channels of the very same shape, and the create and edit
+    services refuse such a pair unless the two secure a request the same way.
+    """
+    specificity = channel_specificity(item['url_path'], item['http_accept'], item['method'])
+
+    out = specificity + (item['name'],)
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class URLData(PyURLData):
     """ Performs URL matching and security checks.
     """
@@ -117,7 +132,8 @@ class URLData(PyURLData):
 
         dispatcher.listen_for_updates(SECURITY, self.dispatcher_callback)
 
-        # Needs always to be sorted by name in case of conflicts in paths resolution
+        # Ordered right away, since the order is what decides which channel answers a request
+        # that more than one of them matches
         self.sort_channel_data()
 
 # ################################################################################################################################
@@ -483,6 +499,21 @@ class URLData(PyURLData):
 
 # ################################################################################################################################
 
+    def _pop_old_sec_def(self, config, sec_def_type, old_name):
+        """ Takes the definition an edit is about out of the configuration it was held in until now,
+        under the name it was held under. Returns None if the server never had it there, which an
+        edit for a definition whose create never arrived is what leads to.
+        """
+        out = config.pop(old_name, None)
+
+        if out is None:
+            logger.warning('No %s definition cached as `%s`, so there is none for the edit to take over from',
+                sec_def_type, old_name)
+
+        return out
+
+# ################################################################################################################################
+
     def _update_apikey(self, name, config):
         config.orig_header = config.header
         update_apikey_username_to_channel(config)
@@ -513,7 +544,11 @@ class URLData(PyURLData):
         """ Updates an existing API key security definition.
         """
         with self.url_sec_lock:
-            del self.apikey_config[msg.old_name]
+
+            # The edit brings the whole definition with it, so it is stored under its new name
+            # whether or not the old one was there to be taken out.
+            _ = self._pop_old_sec_def(self.apikey_config, SEC_DEF_TYPE.APIKEY, msg.old_name)
+
             self._update_apikey(msg.name, msg)
             self._update_url_sec(msg, SEC_DEF_TYPE.APIKEY)
 
@@ -570,9 +605,15 @@ class URLData(PyURLData):
         """ Updates an existing HTTP Basic Auth security definition.
         """
         with self.url_sec_lock:
-            current_config = self.basic_auth_config[msg.old_name]
+
+            # An edit travels without a secret, so the definition held until now is where the one
+            # to go on with comes from - and with none of it here there is nothing to edit either.
+            current_config = self._pop_old_sec_def(self.basic_auth_config, SEC_DEF_TYPE.BASIC_AUTH, msg.old_name)
+
+            if current_config is None:
+                return
+
             msg.password = current_config.config.password
-            del self.basic_auth_config[msg.old_name]
             self._update_basic_auth(msg.name, msg)
             self._update_url_sec(msg, SEC_DEF_TYPE.BASIC_AUTH)
 
@@ -624,7 +665,10 @@ class URLData(PyURLData):
         """ Updates an existing mTLS security definition.
         """
         with self.url_sec_lock:
-            del self.mtls_config[msg.old_name]
+
+            # As with API keys, the edit carries the definition itself
+            _ = self._pop_old_sec_def(self.mtls_config, SEC_DEF_TYPE.MTLS, msg.old_name)
+
             self._update_mtls(msg.name, msg)
             self._update_url_sec(msg, SEC_DEF_TYPE.MTLS)
 
@@ -661,9 +705,14 @@ class URLData(PyURLData):
         """ Updates an existing NTLM security definition.
         """
         with self.url_sec_lock:
-            current_config = self.ntlm_config[msg.old_name]
+
+            # As with Basic Auth, the secret is only here to be carried over
+            current_config = self._pop_old_sec_def(self.ntlm_config, SEC_DEF_TYPE.NTLM, msg.old_name)
+
+            if current_config is None:
+                return
+
             msg.password = current_config.config.password
-            del self.ntlm_config[msg.old_name]
             self._update_ntlm(msg.name, msg)
             self._update_url_sec(msg, SEC_DEF_TYPE.NTLM)
 
@@ -714,7 +763,10 @@ class URLData(PyURLData):
         """ Updates an existing Kerberos (SPNEGO) security definition.
         """
         with self.url_sec_lock:
-            del self.spnego_config[msg.old_name]
+
+            # A Kerberos definition keeps no secret of its own, so the edit carries all of it
+            _ = self._pop_old_sec_def(self.spnego_config, SEC_DEF_TYPE.SPNEGO, msg.old_name)
+
             self._update_spnego(msg.name, msg)
             self._update_url_sec(msg, SEC_DEF_TYPE.SPNEGO)
 
@@ -757,9 +809,14 @@ class URLData(PyURLData):
         """ Updates an existing WS-Security definition.
         """
         with self.url_sec_lock:
-            current_config = self.wss_config[msg.old_name]
+
+            # As with Basic Auth, the secret is only here to be carried over
+            current_config = self._pop_old_sec_def(self.wss_config, SEC_DEF_TYPE.WSS, msg.old_name)
+
+            if current_config is None:
+                return
+
             msg.password = current_config.config.password
-            del self.wss_config[msg.old_name]
             self._update_wss(msg.name, msg)
             self._update_url_sec(msg, SEC_DEF_TYPE.WSS)
 
@@ -816,9 +873,14 @@ class URLData(PyURLData):
         """ Updates an existing OAuth account.
         """
         with self.url_sec_lock:
-            current_config = self.oauth_config[msg.old_name]
+
+            # As with Basic Auth, the secret is only here to be carried over
+            current_config = self._pop_old_sec_def(self.oauth_config, SEC_DEF_TYPE.OAUTH, msg.old_name)
+
+            if current_config is None:
+                return
+
             msg.password = current_config.config.password
-            del self.oauth_config[msg.old_name]
             self._update_oauth(msg.name, msg)
             self._update_url_sec(msg, SEC_DEF_TYPE.OAUTH)
 
@@ -868,8 +930,10 @@ class URLData(PyURLData):
 # ################################################################################################################################
 
     def sort_channel_data(self):
-        """ Sorts channel items by name and then re-arranges the result so that user-facing services are closer to the begining
-        of the list which makes it faster to look them up - searches in the list are O(n).
+        """ Orders channel items so that the first one a request matches is the one whose pattern
+        speaks about the narrowest set of paths, and then re-arranges the result so that user-facing
+        services are closer to the begining of the list which makes it faster to look them up -
+        searches in the list are O(n).
         """
         channel_data = []
         user_services = []
@@ -881,8 +945,8 @@ class URLData(PyURLData):
             else:
                 user_services.append(item)
 
-        user_services.sort(key=itemgetter('name'))
-        internal_services.sort(key=itemgetter('name')) # Internal services will never conflict in names but let's do it anyway
+        user_services.sort(key=_channel_sort_key)
+        internal_services.sort(key=_channel_sort_key)
 
         channel_data.extend(user_services)
         channel_data.extend(internal_services)
@@ -903,7 +967,7 @@ class URLData(PyURLData):
         # reach into it by attribute as well as by key.
         channel_item = Bunch()
 
-        for name in('connection', 'content_type', 'data_format', 'host', 'id', 'impl_name', 'is_active',
+        for name in('connection', 'content_type', 'data_format', 'host', 'http_accept', 'id', 'impl_name', 'is_active',
             'is_internal', 'merge_url_params_req', 'method', 'name', 'params_pri', 'ping_method', 'pool_size', 'service_id',
             'service_name', 'soap_action', 'soap_version', 'transport', 'url_params_pri', 'url_path',
             'match_slash',

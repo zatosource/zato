@@ -3120,6 +3120,11 @@ class ConfigManager(_ConfigManagerBase):
                         })
             self.server.pubsub_pattern_matcher.set_permissions(msg.username, permissions)
 
+            # The credentials of an incoming pub/sub REST request are resolved through the pub/sub clients
+            # the server knows of, so a newly permissioned definition has to be among them right away,
+            # without waiting for a subscription or a restart.
+            _ = self.server.pubsub_subscriptions.register_user(msg.username, msg.sec_name)
+
 # ################################################################################################################################
 
     def invalidate_service_topic(self, service_name:'str') -> 'None':

@@ -22,9 +22,9 @@ from zato.common.odb.query.generic import connection_list
 from zato.common.typing_ import cast_
 from zato.common.util.config import resolve_name
 from zato.common.util.sql import elems_with_opaque
-from zato.common.util.url_dispatcher import get_match_target
+from zato.common.util.url_dispatcher import get_match_target, resolve_match_slash
 from zato.server.config import ConfigDict
-from zato.server.connection.http_soap.url_dispatcher import Matcher, resolve_match_slash
+from zato.server.connection.http_soap.url_dispatcher import Matcher
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -263,6 +263,12 @@ class ConfigLoader:
             # so the outer-joined column comes back as NULL - the runtime spells that as an empty string.
             if channel['service_name'] is None:
                 channel['service_name'] = ''
+
+            # The Accept value a channel names is an opaque attribute, so a channel saved without one
+            # arrives without the field itself - the dispatcher reads it alongside the match target
+            # built out of it here, so both find the same thing.
+            if channel.get('http_accept') is None:
+                channel['http_accept'] = ''
 
             channel['match_target'] = get_match_target(channel, http_methods_allowed_re=self.http_methods_allowed_re)
 

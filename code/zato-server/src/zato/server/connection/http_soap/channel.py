@@ -19,7 +19,7 @@ from traceback import format_exc
 from typing import NamedTuple
 
 # Zato
-from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HL7, HTTP_SOAP, MISC, SEC_DEF_TYPE, IO, \
+from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HL7, MISC, SEC_DEF_TYPE, IO, \
     TRACE1, URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.hl7.audit import get_wire_attrs, get_wire_msa_control_id
@@ -37,7 +37,7 @@ from zato.common.util.api import utcnow
 from zato.common.util.auth import enrich_with_sec_data, extract_basic_auth
 from zato.common.util.http_ import get_form_data as util_get_form_data, QueryDict
 from zato.common.util.logging_ import current_cid, current_service_name
-from zato.common.util.url_dispatcher import normalize_path_info
+from zato.common.util.url_dispatcher import normalize_path_info, to_internal_accept
 from zato.server.reqresp.payload import IOPayload
 from zato.server.connection.as2 import AS2ChannelRuntime
 from zato.server.connection.as4 import AS4ChannelRuntime
@@ -73,9 +73,6 @@ logger = logging.getLogger('zato_rest')
 _logger_is_enabled_for = logger.isEnabledFor
 _logging_info = logging.INFO
 # ################################################################################################################################
-
-accept_any_http = HTTP_SOAP.ACCEPT.ANY
-accept_any_internal = HTTP_SOAP.ACCEPT.ANY_INTERNAL
 
 # ################################################################################################################################
 
@@ -136,9 +133,8 @@ _header_zato_message = 'X-Zato-Message'
 _header_line_breaks = ('\r', '\n')
 _header_line_break_replacement = ' '
 
-# The largest SOAP request body accepted before parsing begins. Parsing untrusted XML costs time
-# and memory proportional to the input, so an unbounded body is a way to exhaust a worker without
-# any credential at all. A channel that genuinely exchanges larger messages raises this through
+# The largest SOAP request body accepted before parsing begins, since parsing costs time and memory
+# proportional to the input. A channel that genuinely exchanges larger messages raises this through
 # its own max_body_size, which is an opaque attribute, so channels that never set it use this.
 SOAP_Max_Body_Size = 10 * 1024 * 1024
 
@@ -342,8 +338,7 @@ class RequestDispatcher:
         """
         http_method = wsgi_environ['REQUEST_METHOD']
 
-        http_accept = wsgi_environ.get('HTTP_ACCEPT') or accept_any_http
-        http_accept = http_accept.replace('*', accept_any_internal).replace('/', 'HTTP_SEP')
+        http_accept = to_internal_accept(wsgi_environ.get('HTTP_ACCEPT'))
 
         # Everything downstream works with the path in its canonical form, and the URI
         # exactly as it arrived stays available under RAW_URI.

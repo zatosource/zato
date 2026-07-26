@@ -19,8 +19,10 @@ from zato.common.api import HTTP_SOAP, MISC
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import any_, anydict, strlist
+    any_ = any_
     anydict = anydict
+    strlist = strlist
 
 # ################################################################################################################################
 
@@ -33,6 +35,52 @@ accept_any_internal = HTTP_SOAP.ACCEPT.ANY_INTERNAL
 
 # What a slash inside one path segment is spelled as, both on the way in and in a match target.
 _encoded_slash = '%2F'
+
+# Whether a path parameter matches a value spanning several path segments, for a channel
+# whose configuration does not say either way.
+Match_Slash_Default = True
+
+# ################################################################################################################################
+
+def resolve_match_slash(value:'any_') -> 'bool':
+    """ Returns whether path parameters match across slashes for a channel whose configuration
+    carries the given value, which a channel configured before the option existed does not carry.
+    """
+    if value is None:
+        return Match_Slash_Default
+
+    if value == '':
+        return Match_Slash_Default
+
+    out = bool(value)
+    return out
+
+# ################################################################################################################################
+
+def to_internal_accept(http_accept:'str | None') -> 'str':
+    """ Returns the form of an Accept header that channels are matched on, which both a channel's
+    own configured value and an incoming header are turned into before the two ever meet.
+    """
+    if not http_accept:
+        http_accept = accept_any_http
+
+    out = http_accept.replace('*', accept_any_internal).replace('/', 'HTTP_SEP')
+
+    return out
+
+# ################################################################################################################################
+
+def build_methods_allowed_re(http_methods_allowed:'strlist') -> 'str':
+    """ Returns the pattern that stands in the method slot of a channel which names no method
+    of its own, so that such a channel is reached with any of the methods a server allows.
+    """
+    alternatives = '|'.join(http_methods_allowed)
+
+    # Non-capturing, because the runtime matcher takes a channel's path parameters
+    # to be the only groups its pattern has.
+    out = f'(?:{alternatives})'
+
+    return out
 
 # ################################################################################################################################
 
@@ -128,8 +176,7 @@ def get_match_target(
     if not http_method:
         http_method = http_methods_allowed_re
 
-    http_accept = config.get('http_accept') or accept_any_http
-    http_accept = http_accept.replace('*', '{}'.format(accept_any_internal)).replace('/', 'HTTP_SEP')
+    http_accept = to_internal_accept(config.get('http_accept'))
 
     # The Accept header and the URL path are matched literally, so whatever either of them
     # carries that a regular expression would read as syntax is escaped here. The internal
