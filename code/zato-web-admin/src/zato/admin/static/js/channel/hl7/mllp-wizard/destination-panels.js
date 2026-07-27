@@ -34,9 +34,21 @@ panels.config = {
     },
 
     widths: {
-        destinations: 660,
+
+        // Two zones side by side, and a row of the right one carries a name,
+        // a kind and the options of that kind - this is what fits all three
+        // without the name having to give way on the first connection
+        destinations: 980,
         service: 480,
         reply: 470
+    },
+
+    // How narrow the corners may drag a panel - for the destinations that
+    // is the width where a row still holds its options and its switch whole
+    minWidths: {
+        destinations: 700,
+        service: 340,
+        reply: 380
     },
 
     labels: {
@@ -51,9 +63,7 @@ panels.config = {
         replyService: 'The service',
         replyDestinations: 'The destinations',
         noneActive: 'Nothing is active',
-        active: 'Active',
-        connections: ' connections',
-        servicesCounted: ' services'
+        active: 'Active'
     }
 };
 
@@ -66,6 +76,7 @@ panels.destinationsPanel = function() {
     var out = {
         title: panelsConfig.titles.destinations,
         width: panelsConfig.widths.destinations,
+        minWidth: panelsConfig.minWidths.destinations,
         build: panels._buildDestinations
     };
 
@@ -90,8 +101,6 @@ panels._buildDestinations = function(body) {
         is_assigned: panels._isAssigned,
         filter_badge: panels._filterBadge
     });
-
-    $.fn.zato.wizard_kit.lines.setPanelCount(itemList.length + panelsConfig.labels.connections);
 
     // What the zones hold when the panel closes is what the channel does
     var out = panels._readPicker;
@@ -307,15 +316,17 @@ panels._makeBadge = function(item, num) {
     number.textContent = num + '.';
     badge.appendChild(number);
 
-    var name = document.createElement('span');
-    name.className = 'security-badge-name';
-    name.textContent = item.name;
-    badge.appendChild(name);
-
+    // The kind comes first and always takes the same width, so every name
+    // down the zone starts at the same place
     var kind = document.createElement('span');
     kind.className = 'wizard-destination-kind';
     kind.textContent = item.typeLabel;
     badge.appendChild(kind);
+
+    var name = document.createElement('span');
+    name.className = 'security-badge-name';
+    name.textContent = item.name;
+    badge.appendChild(name);
 
     badge.appendChild(panels._buildBadgeControls(item));
 
@@ -446,6 +457,7 @@ panels.servicePanel = function() {
     var out = {
         title: panelsConfig.titles.service,
         width: panelsConfig.widths.service,
+        minWidth: panelsConfig.minWidths.service,
         build: panels._buildService
     };
 
@@ -485,8 +497,6 @@ panels._buildService = function(body) {
     fill('');
     body.appendChild(list);
 
-    lines.setPanelCount(nameList.length + labels.servicesCounted);
-
     var out = null;
     return out;
 };
@@ -514,12 +524,20 @@ panels._fillServiceList = function(list, nameList, filterText) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The row of one service knows the name it stands for.
+// The row of one service knows the name it stands for. Picking the one
+// already picked is how the channel is left without a service at all.
 panels._pickService = function(name) {
 
     var out = function() {
 
-        wizard.field('service').val(name);
+        var field = wizard.field('service');
+
+        if(field.val() === name) {
+            field.val('');
+        }
+        else {
+            field.val(name);
+        }
 
         $.fn.zato.wizard_kit.lines.closePanel();
         destinations.render();
@@ -537,6 +555,7 @@ panels.replyPanel = function() {
     var out = {
         title: panelsConfig.titles.reply,
         width: panelsConfig.widths.reply,
+        minWidth: panelsConfig.minWidths.reply,
         build: panels._buildReply
     };
 

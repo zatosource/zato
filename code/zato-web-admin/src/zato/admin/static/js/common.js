@@ -918,10 +918,7 @@ $.fn.zato.data_table._create_edit = function(action, title, id, remove_multirow,
             break;
         }
     }
-    if(_all_badge_picker) {
-        console.log('[live_form_updates] _create_edit: skipping auto-start for action=' + action + ' (all configs are badge_picker, will start after load)');
-    } else {
-        console.log('[live_form_updates] _create_edit: calling start for action=' + action);
+    if(!_all_badge_picker) {
         $.fn.zato.live_form_updates.start(action);
     }
 }
@@ -3921,7 +3918,6 @@ $.fn.zato.validate_unique_on_submit = function(form) {
         for(var i = 0; i < configs.length; i++) {
             _registry[action].push(configs[i]);
         }
-        console.log('[live_form_updates] register: action=' + action + ', total configs=' + _registry[action].length + ', object_types=' + JSON.stringify(configs.map(function(c) { return c.object_type; })));
     };
 
     // ------------------------------------------------------------------------------------------------------------------------
@@ -4022,11 +4018,8 @@ $.fn.zato.validate_unique_on_submit = function(form) {
 
     $.fn.zato.live_form_updates.start = function(action) {
 
-        console.log('[live_form_updates] start: called for action=' + action);
-
         // Do nothing if no configs registered for this action
         if(!$.fn.zato.live_form_updates.has_config(action)) {
-            console.log('[live_form_updates] start: no config registered for action=' + action + ', skipping');
             return;
         }
 
@@ -4077,12 +4070,11 @@ $.fn.zato.validate_unique_on_submit = function(form) {
                 connection.is_first_response = false;
 
                 if(Object.keys(diffs).length) {
-                    console.log('[live_form_updates] poll: action=' + action + ', diff types=' + JSON.stringify(Object.keys(diffs)));
                     $.fn.zato.live_form_updates._apply_diffs(action, diffs, skip_puff);
                 }
             },
-            error: function(jqXHR, text_status) {
-                console.log('[live_form_updates] poll error: action=' + action + ', status=' + text_status);
+            error: function() {
+                // A failed poll is retried by the loop below, there is nothing to report
             },
             complete: function() {
 
@@ -4102,14 +4094,11 @@ $.fn.zato.validate_unique_on_submit = function(form) {
     $.fn.zato.live_form_updates.stop = function(action) {
         var connection = _connections[action];
         if(connection) {
-            console.log('[live_form_updates] stop: stopping polling loop for action=' + action);
             connection.is_active = false;
             if(connection.timer_id) {
                 clearTimeout(connection.timer_id);
             }
             delete _connections[action];
-        } else {
-            console.log('[live_form_updates] stop: no polling loop to stop for action=' + action);
         }
     };
 
@@ -4117,13 +4106,11 @@ $.fn.zato.validate_unique_on_submit = function(form) {
 
     $.fn.zato.live_form_updates._apply_diffs = function(action, diffs, skip_puff) {
         var configs = _registry[action] || [];
-        console.log('[live_form_updates] _apply_diffs: action=' + action + ', skip_puff=' + !!skip_puff + ', object_types in diff=' + JSON.stringify(Object.keys(diffs)));
 
         for(var object_type in diffs) {
             if(!diffs.hasOwnProperty(object_type)) continue;
 
             var diff = diffs[object_type];
-            console.log('[live_form_updates] _apply_diffs: object_type=' + object_type + ', created=' + (diff.created ? diff.created.length : 0) + ', deleted=' + (diff.deleted ? diff.deleted.length : 0) + ', renamed=' + (diff.renamed ? diff.renamed.length : 0));
 
             var config = null;
             for(var i = 0; i < configs.length; i++) {
@@ -4133,11 +4120,8 @@ $.fn.zato.validate_unique_on_submit = function(form) {
                 }
             }
             if(!config) {
-                console.log('[live_form_updates] _apply_diffs: no config found for object_type=' + object_type);
                 continue;
             }
-
-            console.log('[live_form_updates] _apply_diffs: applying diff for object_type=' + object_type + ', handler=' + (config.handler || 'select'));
 
             if(config.handler === 'badge_picker') {
                 $.fn.zato.live_form_updates._apply_badge_picker_diff(action, config, diff, skip_puff);
@@ -4237,8 +4221,6 @@ $.fn.zato.validate_unique_on_submit = function(form) {
     // ------------------------------------------------------------------------------------------------------------------------
 
     $.fn.zato.live_form_updates._apply_badge_picker_diff = function(action, config, diff, skip_puff) {
-
-        console.log('[live_form_updates] _apply_badge_picker_diff: action=' + action + ', skip_puff=' + !!skip_puff + ', created=' + JSON.stringify(diff.created) + ', deleted=' + JSON.stringify(diff.deleted) + ', renamed=' + JSON.stringify(diff.renamed));
 
         // For badge picker, if there's a callback, call it with the full diff.
         if(config.callback) {

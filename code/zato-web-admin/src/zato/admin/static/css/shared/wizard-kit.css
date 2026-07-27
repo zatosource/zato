@@ -50,7 +50,12 @@
 
 :root {
     --wizard-accent: var(--zato-seablue-light2);
-    --wizard-accent-tint: color-mix(in srgb, var(--wizard-accent) 8%, #fff);
+    /* The accent as a picked option wears it - the same blue, softened, so a
+       strip of options reads as a choice made and not as an alarm */
+    --wizard-accent-soft: color-mix(in srgb, var(--wizard-accent) 78%, #fff);
+
+    /* What anything clickable turns while the pointer is on it */
+    --wizard-hover: #eef0f2;
     --wizard-done: #28a745;
     --wizard-error: #dc3545;
     --wizard-border: #d9dee3;

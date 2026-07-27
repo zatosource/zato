@@ -25,6 +25,11 @@ kit.lines.config = {
     panelGap: 5,
     panelMargin: 16,
 
+    // How short a panel may be dragged by its corners - below this the
+    // lists inside would have no room left to show a row. How narrow it may
+    // be is the panel's own, since that is what a row of it decides.
+    panelMinHeight: 240,
+
     // The panel currently open, one at a time for the whole page
     openPanel: null
 };
@@ -156,7 +161,7 @@ kit.lines._buildCaret = function() {
 // may return a function to run when the panel closes, which is where a panel
 // that edits the DOM directly writes its answers back into the state.
 //
-// spec: {title, width, build(body, panel)}
+// spec: {title, width, minWidth, build(body, panel)}
 kit.lines.openPanel = function(chip, spec) {
 
     var linesConfig = kit.lines.config;
@@ -181,9 +186,8 @@ kit.lines.openPanel = function(chip, spec) {
         event.stopPropagation();
     });
 
-    // The buttons row goes in before the panel is filled - its count is
-    // written by the build itself, so the row has to be there to write into
     var content = document.createElement('div');
+    content.className = 'wizard-panel-content';
     body.appendChild(content);
     body.appendChild(kit.lines._buildButtons());
 
@@ -193,6 +197,7 @@ kit.lines.openPanel = function(chip, spec) {
 
     kit.lines._place(panel, chip);
     kit.lines._makeDraggable(panel, header);
+    kit.lines._makeResizable(panel, spec);
 
     linesConfig.openPanel = {element: panel, chipId: chip.id, onClose: onClose};
 
@@ -227,17 +232,11 @@ kit.lines.closePanel = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The buttons row every panel ends with - the count of what the panel shows
-// on the left, filled in by the panel itself, and OK on the right.
+// The buttons row every panel ends with - OK, and nothing else.
 kit.lines._buildButtons = function() {
 
     var buttons = document.createElement('div');
     buttons.className = 'wizard-tippy-buttons';
-
-    var count = document.createElement('span');
-    count.className = 'wizard-panel-count';
-    count.id = 'wizard-panel-count';
-    buttons.appendChild(count);
 
     var done = document.createElement('button');
     done.type = 'button';
@@ -252,15 +251,6 @@ kit.lines._buildButtons = function() {
 
     var out = buttons;
     return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// What the buttons row of the open panel says on its left.
-kit.lines.setPanelCount = function(text) {
-
-    var count = document.getElementById('wizard-panel-count');
-    count.textContent = text;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -296,6 +286,19 @@ kit.lines._makeDraggable = function(panel, header) {
             panel.style.left = x + 'px';
             panel.style.top = y + 'px';
         }
+    });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The bottom corners resize the panel, through the same popup machinery.
+// Everything a panel holds is laid out in flex, so the lists take whatever
+// height the panel is dragged to and nothing inside moves out of place.
+kit.lines._makeResizable = function(panel, spec) {
+
+    $.fn.zato.popup.install_resize(panel, {
+        min_width: spec.minWidth,
+        min_height: kit.lines.config.panelMinHeight
     });
 };
 
