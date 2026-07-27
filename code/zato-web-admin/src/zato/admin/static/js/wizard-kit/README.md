@@ -19,6 +19,7 @@ Two instances exist today:
 | `choices.js` | `kit.choices` | Pick-one choice cards - a radio group wearing the wizard card look, the selected card unfolds its inline fields |
 | `select-rows.js` | `kit.selectRows` | A column of rows, each with its own selects and a delete link, plus the add link under the list |
 | `lines.js` | `kit.lines` | Decision lines - a step body written as sentences, each line one label and one value, the value a chip opening a panel or a strip of options |
+| `collapse.js` | `kit.collapse` | Collapsibles - a section folded behind one line of the step, and the groups a section or a card folds inside itself |
 
 An instance uses whichever modules its config declares - MLLP uses toggle rows and popovers, the schedule wizard uses choice cards and the context badge, both use the name badge, the help badges and the review renderer from the same code.
 
@@ -140,6 +141,24 @@ A panel wears the shared popup chrome of `shared/popup.css` - the dark header wi
 The `build` function fills the body and may return a function to run when the panel closes, which is how a panel that edits the DOM directly - a badge picker, say - writes its answers back into the state. It runs while the panel is still on the page, so it can read the answers out of it. Inside a panel the kit offers `buildFilter` and `buildPickRow`, so a panel is a filter above a list of rows, and the row under it holds nothing but OK.
 
 A list in a panel keeps its height with the scrollbar always in view, which is what makes a filter over hundreds of entries feel steady - nothing resizes as the matches narrow. The panel runs one flex column from itself down to the lists, so the room a corner adds or takes away lands on the lists alone and the filter, the headings and the buttons row stay exactly where they are.
+
+## Collapsibles
+
+A step with more to offer than it has room for folds the rest away. A section is folded behind one line reading like the rest of the step - a label, a link saying what is currently set and a soft hint offering the click:
+
+```javascript
+$.fn.zato.wizard_kit.collapse.initSection({
+    toggleId: 'mllp-wizard-edit-options',
+    bodyId: 'mllp-wizard-options-body',
+    hintId: 'mllp-wizard-hint-options'
+});
+
+$.fn.zato.wizard_kit.collapse.initGroups('#mllp-wizard-tolerance-body');
+```
+
+A group is folded behind its own heading with a chevron, and groups sit inside a section or a card one heading after another, each opening on its own. The markup is `.wizard-collapse-group` holding a `.wizard-collapse-group-title` and the `.wizard-collapse-group-body` right after it, and the template decides what starts open by putting `hidden` on the bodies it wants closed.
+
+Both hide with the `hidden` attribute rather than with a height that animates - a body sliding out of something that is itself sliding open is what makes an opening jerk. The spacing, the indent under a heading and the chevron are the kit's, so an instance writes only what its own body holds.
 
 ## Review groups
 

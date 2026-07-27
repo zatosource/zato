@@ -403,7 +403,6 @@
     flex: 0 0 auto;
     width: 4em;
     font-size: 13px;
-    font-weight: 600;
     line-height: var(--toggle-height);
     color: var(--wizard-text);
     cursor: pointer;
@@ -669,6 +668,53 @@ a.wizard-select-delete:hover::before {
 }
 
 /* ------------------------------------------------------------ */
+/* Wizard - collapsibles                                         */
+/* ------------------------------------------------------------ */
+
+/* A section folded behind one line of the step, and the groups a section
+   or a card folds inside itself. Both are simply gone while closed - a
+   body sliding out of something that is itself sliding open is what makes
+   an opening jerk. */
+.wizard-collapse-body {
+    margin-top: 12px;
+}
+
+.wizard-collapse-body[hidden],
+.wizard-collapse-group-body[hidden] {
+    display: none;
+}
+
+/* A group stands well clear of the group before it and of the heading of
+   whatever holds them, so the headings read as the outline they are */
+.wizard-collapse-group {
+    margin-top: 22px;
+}
+
+.wizard-collapse-group:first-child {
+    margin-top: 8px;
+}
+
+.wizard-collapse-group-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--wizard-text);
+    cursor: pointer;
+    user-select: none;
+}
+
+/* What a group holds starts under its heading's own text, past the
+   chevron in front of it */
+.wizard-collapse-group-body {
+    margin-top: 9px;
+    padding-left: 18px;
+}
+
+/* ------------------------------------------------------------ */
 /* Wizard - pick-one choice cards                                */
 /* ------------------------------------------------------------ */
 
@@ -786,7 +832,7 @@ a.wizard-select-delete:hover::before {
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--wizard-text-muted);
+    color: var(--wizard-text);
 }
 
 .wizard-review-edit {
