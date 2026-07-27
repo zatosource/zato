@@ -278,8 +278,17 @@
     flex: 0 0 auto;
     width: 4em;
     font-size: 13px;
-    font-weight: 600;
     color: var(--wizard-text);
+}
+
+/* One weight for every label that names a row of a step, wherever the row
+   comes from - the name, the transports, the decision lines and the folded
+   sections under them. The switches riding along the name row are not one
+   of those, they name themselves and stay in the regular weight. */
+.wizard-name-field label,
+.wizard-toggle-label,
+.wizard-line-label {
+    font-weight: 600;
 }
 
 /* No vertical padding on purpose - the 24px box centers the text and
