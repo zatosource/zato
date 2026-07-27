@@ -42,6 +42,11 @@ kit.review.config = {
     // The word every group's link into its step is written with
     editLabel: 'Edit',
 
+    // The pointer on a link is answered with that word and the group's own
+    // label, shown the way the rest of the pages show a tooltip
+    editTooltipTheme: 'dark',
+    editTooltipPlacement: 'right',
+
     // How many rows of a group's leading list are on screen before the
     // list scrolls - an instance that wants more or fewer sets this
     listScrollAfter: 2,
@@ -141,6 +146,23 @@ kit.review.setup = function(wizard) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+    // Says on the link what it goes to - the label reads as a heading over the
+    // group, so in a sentence it goes on in the lower case it is spoken in.
+    review._addEditTooltip = function(editLink, groupLabel) {
+
+        var reviewConfig = kit.review.config;
+
+        tippy(editLink, {
+            content: reviewConfig.editLabel + ' ' + groupLabel.toLowerCase(),
+            allowHTML: false,
+            theme: reviewConfig.editTooltipTheme,
+            placement: reviewConfig.editTooltipPlacement,
+            arrow: true
+        });
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
     // Renders the review step from a list of groups. A group is
     // {label, step, rows}, each row a [key, value] pair, and may also carry:
     //
@@ -153,6 +175,13 @@ kit.review.setup = function(wizard) {
     review.renderGroups = function(groups) {
 
         var container = $('#' + idPrefix + '-review');
+
+        // The step re-renders whenever it is entered, so the tooltips of the
+        // links about to be thrown out go with them
+        container.find('.wizard-review-edit').each(function() {
+            this._tippy.destroy();
+        });
+
         container.empty();
 
         for(var groupIdx = 0; groupIdx < groups.length; groupIdx++) {
@@ -174,6 +203,8 @@ kit.review.setup = function(wizard) {
             editLink.textContent = kit.review.config.editLabel;
             editLink.setAttribute('data-group', groupIdx);
             header.appendChild(editLink);
+
+            review._addEditTooltip(editLink, group.label);
 
             groupElement.appendChild(header);
 

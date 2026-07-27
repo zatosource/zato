@@ -922,9 +922,8 @@ a.wizard-select-delete:hover::before {
     color: var(--wizard-text);
 }
 
-/* The way into a group reads as text until the group is pointed at, and takes
-   the accent only then - a review at rest is something to read, not a row of
-   links to be drawn to */
+/* The way into a group reads as text throughout - a review is something to
+   read, not a row of links to be drawn to */
 .wizard-review-edit {
     font-size: 12px;
     font-weight: 500;
@@ -966,11 +965,10 @@ a.wizard-select-delete:hover::before {
 }
 
 /* The link is the way into the group, so it answers too - in the same honey
-   the label wears, and its text turns to the accent, which is where it says
-   that this one is to be clicked. It is drawn outside the text the way the
-   highlight badge is, so nothing moves. */
+   the label wears. The text stays as it reads, the pointer on the link being
+   answered by the tooltip that names what it goes to. The honey is drawn
+   outside the text the way the highlight badge is, so nothing moves. */
 .wizard-review-group:hover .wizard-review-edit {
-    color: var(--wizard-accent);
     background: linear-gradient(to bottom, var(--zato-highlight-badge-top), var(--zato-highlight-badge-bottom));
     border-radius: var(--zato-highlight-badge-radius);
     box-shadow: 0 0 0 var(--zato-highlight-badge-spread) var(--zato-highlight-badge-bottom);
