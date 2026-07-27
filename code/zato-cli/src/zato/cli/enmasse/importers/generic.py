@@ -84,6 +84,14 @@ class GenericConnectionImporter:
 
 # ################################################################################################################################
 
+    def resolve_references(self, connection_def:'anydict') -> 'None':
+        """ May be overridden by subclasses to turn the names a YAML definition refers other objects
+        by into the ids that are stored. Runs before validation, so what validation sees is what
+        will be written.
+        """
+
+# ################################################################################################################################
+
     def compare_defs(self, yaml_defs:'anylist', db_defs:'anydict') -> 'tuple':
 
         # Find items to create and update
@@ -92,6 +100,7 @@ class GenericConnectionImporter:
 
         for yaml_def in yaml_defs:
             yaml_def = preprocess_item(yaml_def)
+            self.resolve_references(yaml_def)
             self.validate_definition(yaml_def)
             name = yaml_def['name']
 

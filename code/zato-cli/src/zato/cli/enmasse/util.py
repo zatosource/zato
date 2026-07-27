@@ -15,7 +15,7 @@ from json import dumps as json_dumps, loads as json_loads
 # Zato
 from zato.cli.enmasse.config import ModuleCtx
 from zato.common.api import EnvVariable, HTTP_SOAP, SCHEDULER, SchedulerLink, URL_TYPE
-from zato.common.hl7.mllp.fields import Channel_Names, Outconn_Names
+from zato.common.hl7.mllp.fields import Channel_Enmasse_Names, Outconn_Names
 from zato.common.odb.model import Job
 from zato.common.util.api import asbool
 from zato.common.util.imap_scheduler import interval_from_unit
@@ -643,7 +643,7 @@ def get_object_order(object_type:'str') -> 'strlist':
     order['mcp_gateway'] = 'name', 'is_active', 'url_path', 'services', 'security_groups:list',
     order['outgoing_graphql'] = 'name', 'is_active', 'address', 'security', 'default_query_timeout',
     order['outgoing_kafka'] = 'name', 'is_active', 'address', 'topic',
-    order['channel_hl7_mllp'] = ('name',) + Channel_Names
+    order['channel_hl7_mllp'] = ('name',) + Channel_Enmasse_Names
     order['outgoing_hl7_mllp'] = ('name', 'address') + Outconn_Names
     order['email_imap'] = 'name', 'is_active', 'type', 'host', 'port', 'username', 'tenant_id', 'client_id', \
         'scheduler_run_every', 'scheduler_run_unit', 'scheduler_start_date', 'scheduler_service', \

@@ -8,7 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.api import GENERIC, HL7
-from zato.common.hl7.mllp.fields import Channel_Column_Defaults, Channel_Opaque_Defaults, resolve_max_msg_size
+from zato.common.hl7.mllp.fields import Channel_Column_Defaults, Channel_Opaque_Defaults, Channel_Security_Id_Key, \
+    Channel_Security_Name_Key, resolve_max_msg_size
 from zato.common.hl7.mllp.settings import describe_bounds_violations
 from zato.cli.enmasse.importers.generic import GenericConnectionImporter
 
@@ -42,6 +43,27 @@ class ChannelHL7MLLPImporter(GenericConnectionImporter):
 
     connection_secret_keys:'list' = []
     connection_required_attrs = ['name']
+
+# ################################################################################################################################
+
+    def resolve_references(self, connection_def:'anydict') -> 'None':
+        """ A channel names the security definition it accepts a sender's certificate against, and
+        what is stored is that definition's id, so the name is looked up and then dropped - it is
+        not a field of the channel and must not reach the opaque attributes.
+        """
+        security_name = connection_def.pop(Channel_Security_Name_Key, '')
+
+        # A channel without one accepts a connection whatever certificate it was made with
+        if not security_name:
+            return
+
+        sec_def = self.importer.sec_defs.get(security_name)
+
+        if not sec_def:
+            name = connection_def['name']
+            raise Exception(f'Security definition `{security_name}` not found for HL7 MLLP channel `{name}`')
+
+        connection_def[Channel_Security_Id_Key] = sec_def['id']
 
 # ################################################################################################################################
 
