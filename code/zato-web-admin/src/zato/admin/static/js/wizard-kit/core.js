@@ -45,7 +45,8 @@
 //                       {source, field, filterName, filterValue}
 //      onInit         - optional, instance wiring run during init
 //      beforeSave     - optional, runs before validation on Finish, e.g. to
-//                       serialize rows into hidden fields
+//                       serialize rows into hidden fields - returning false
+//                       stops the save, the instance having said why itself
 //      finishLabel    - optional, what the button on the last step says,
 //                       named after the action - Create or Edit
 //      savedMessage, saveErrorMessage, redirectDelayMs,
@@ -393,9 +394,12 @@ kit.core.setup = function(wizard, config) {
         var wizardConfig = wizard.config;
         var form = $(wizardConfig.formSelector);
 
-        // The instance writes its hidden fields first, e.g. serialized rows ..
+        // The instance writes its hidden fields first, e.g. serialized rows -
+        // and it may refuse the save outright, having said why itself ..
         if(wizardConfig.beforeSave) {
-            wizardConfig.beforeSave(form);
+            if(wizardConfig.beforeSave(form) === false) {
+                return;
+            }
         }
 
         // .. client-side validation next ..

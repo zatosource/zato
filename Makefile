@@ -909,12 +909,17 @@ test-alerting: ## Alerting engine tests - rules, actions, dedup, lifecycle and c
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_alerting -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-destinations: ## Channel destination tests - the destination list, payload overrides, delivery order, retries, the dispatchers and the per-hop trail, fully offline.
-	$(CURDIR)/code/bin/ruff check $(CURDIR)/code/tests/python/zato-common/destination/ $(CURDIR)/code/tests/python/zato-server/destinations/
+test-destinations: ## Channel destination tests - the destination list, payload overrides, delivery order, retries, the dispatchers, the per-hop trail and the Dashboard views, fully offline.
+	$(CURDIR)/code/bin/ruff check $(CURDIR)/code/tests/python/zato-common/destination/ $(CURDIR)/code/tests/python/zato-server/destinations/ \
+		$(CURDIR)/code/tests/python/zato-dashboard/destination_views/
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/destination/ \
 		$(CURDIR)/code/tests/python/zato-server/destinations/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_destinations -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/destination_views/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_destination_views -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-demo-seed: ## Demo-data seeder tests - the seeded week of traffic, alerts and config history, fully offline.

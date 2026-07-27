@@ -23,7 +23,8 @@ from zato.admin.web.forms.channel.hl7.mllp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, \
     get_security_id_from_select, get_security_groups_from_checkbox_list, SecurityList
 from zato.common.api import GENERIC, generic_attrs, Groups, HL7, SEC_DEF_TYPE, ZATO_NONE
-from zato.common.hl7.mllp.fields import resolve_max_msg_size
+from zato.common.destination.model import count_entries
+from zato.common.hl7.mllp.fields import Channel_Defaults, resolve_max_msg_size
 from zato.common.hl7.mllp.settings import describe_bounds_violations
 from zato.common.model.hl7 import HL7MLLPChannelConfigObject
 
@@ -87,6 +88,15 @@ class Index(_Index):
 
 # ################################################################################################################################
 
+    def on_before_append_item(self, item:'any_') -> 'any_':
+        """ Counts the channel's destinations so the list can say how many there are without
+        each row's stored list having to be read again by the page itself.
+        """
+        item.destination_count = count_entries(item.destinations)
+        return item
+
+# ################################################################################################################################
+
     def handle(self):
 
         # Creating and editing happen on their own pages, so the list renders no dialog and
@@ -130,8 +140,21 @@ class _CreateEdit(CreateEdit):
 
 # ################################################################################################################################
 
+    def pre_process_item(self, name:'str', value:'any_') -> 'any_':
+        """ A field the page leaves empty arrives with no value at all, so what travels on is
+        what the field defaults to - a channel stores its own defaults rather than nulls.
+        """
+        if value is None:
+            if name in Channel_Defaults:
+                value = Channel_Defaults[name]
+
+        return value
+
+# ################################################################################################################################
+
     def populate_initial_input_dict(self, initial_input_dict:'stranydict') -> 'None':
 
+        self._check_target()
         self._check_listener_bounds()
 
         initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP
@@ -150,6 +173,31 @@ class _CreateEdit(CreateEdit):
         # The backing REST channel is named after the MLLP channel and needs nothing else from it,
         # so it is settled here and its id travels with the one and only save of the MLLP channel.
         initial_input_dict['rest_channel_id'] = self._sync_rest_channel()
+
+# ################################################################################################################################
+
+    def _check_target(self) -> 'None':
+        """ Refuses a channel that hands each message it accepts to neither a service nor a
+        destination, there being nowhere for its messages to go - the same rule the enmasse
+        importer enforces, applied to what the page posts.
+        """
+        prefix = self.form_prefix
+        post_data = self.req.POST
+
+        service = post_data[f'{prefix}service']
+        destinations = post_data[f'{prefix}destinations']
+
+        if not service:
+
+            if not count_entries(destinations):
+                name = post_data[f'{prefix}name']
+                raise Exception(f'HL7 MLLP channel `{name}` needs a service or at least one destination')
+
+            # The backing REST channel hands each request to a service of its own, which is the
+            # channel's, so there is no bridge to build for a channel that names no service.
+            if post_data.get(f'{prefix}use_rest'):
+                name = post_data[f'{prefix}name']
+                raise Exception(f'HL7 MLLP channel `{name}` needs a service for its REST bridge')
 
 # ################################################################################################################################
 
@@ -178,11 +226,16 @@ class _CreateEdit(CreateEdit):
         """ Returns the id of the mTLS definition the channel accepts messages under, zero when
         the channel accepts a connection whatever certificate it was made with.
         """
-        raw_value = get_security_id_from_select(self.req.POST, self.form_prefix, field_name='security_id')
+        posted_value = self.req.POST[f'{self.form_prefix}security_id']
 
-        # The select reports its empty choice as a marker rather than as an id
-        if raw_value in ('', None, ZATO_NONE):
+        # The select's placeholder and its no-security choice both mean a channel accepting
+        # a connection whatever certificate it was made with
+        if posted_value in ('', ZATO_NONE):
             return 0
+
+        # What is posted otherwise is the definition's type alongside its id, and the id is
+        # the only part of it a channel stores.
+        raw_value = get_security_id_from_select(self.req.POST, self.form_prefix, field_name='security_id')
 
         out = int(raw_value)
         return out

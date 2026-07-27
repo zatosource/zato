@@ -18,8 +18,9 @@ from json import dumps
 
 # Zato
 from zato.common.audit_log.common import AuditEvent, AuditOutcome, AuditSource
-from zato.common.destination.constants import Default_Method, Default_Path, DestinationOption, DestinationType
-from zato.common.destination.model import get_option
+from zato.common.destination.constants import Default_Method, Default_Path, Default_Subject, Default_To, \
+    DestinationOption, DestinationType, Hop_Destination_Name
+from zato.common.destination.model import get_option, new_entry, DestinationException
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,8 +42,28 @@ _source_by_type = {
     DestinationType.SMTP: AuditSource.Email_SMTP,
 }
 
-# The types whose delivery is one HTTP call, so repeating it needs the method and the path as well
-_types_with_method = (DestinationType.REST, DestinationType.FHIR)
+# Which destination type a recorded delivery went to, read the other way round
+_type_by_source = {source: destination_type for destination_type, source in _source_by_type.items()}
+
+# What repeating one delivery needs beyond the payload, by the type of connection it went through -
+# each option stored flat alongside the payload, at the default in force when the destination
+# does not carry it. This is the convention every producer of a resendable row follows.
+_stored_options = {
+    DestinationType.REST: {
+        DestinationOption.Method: Default_Method,
+    },
+    DestinationType.FHIR: {
+        DestinationOption.Method: Default_Method,
+        DestinationOption.Path: Default_Path,
+    },
+    DestinationType.SMTP: {
+        DestinationOption.To: Default_To,
+        DestinationOption.Subject: Default_Subject,
+    },
+
+    # An MLLP delivery is the message itself and nothing else
+    DestinationType.MLLP: {},
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,16 +94,43 @@ def get_payload_text(payload:'any_') -> 'str':
 # ################################################################################################################################
 
 def build_stored_data(entry:'DestinationEntry', payload:'str') -> 'str':
-    """ Builds the document one delivery is recorded with - the payload that went out, plus
-    what an HTTP delivery needs to be repeated exactly as it was made.
+    """ Builds the document one delivery is recorded with - the payload that went out, the
+    destination it went to and whatever else repeating that one delivery needs.
     """
-    details:'stranydict' = {'payload': payload}
+    details:'stranydict' = {
+        'payload': payload,
+        Hop_Destination_Name: entry.name,
+    }
 
-    if entry.type in _types_with_method:
-        details[DestinationOption.Method] = get_option(entry, DestinationOption.Method, Default_Method)
-        details[DestinationOption.Path] = get_option(entry, DestinationOption.Path, Default_Path)
+    for name, default in _stored_options[entry.type].items():
+        details[name] = get_option(entry, name, default)
 
     out = dumps(details)
+    return out
+
+# ################################################################################################################################
+
+def get_hop_entry(source:'str', connection:'str', details:'stranydict') -> 'DestinationEntry':
+    """ Returns the destination one recorded delivery went to, rebuilt out of the row that
+    delivery left behind, so repeating it goes out exactly the way it did the first time.
+    """
+    if source not in _type_by_source:
+        raise DestinationException(f'Source `{source}` records no delivery that can be repeated on its own')
+
+    destination_type = _type_by_source[source]
+
+    # Whatever the row carries of what its type needs - a row recorded before an option existed
+    # falls back to the default in force for it, the same as a destination not carrying it.
+    options = {}
+
+    for name, default in _stored_options[destination_type].items():
+        options[name] = details.get(name, default)
+
+    # A row names the destination it went to, and one recorded by a connection on its own behalf
+    # is addressed by that connection.
+    name = details.get(Hop_Destination_Name, connection)
+
+    out = new_entry(name, destination_type, connection, options=options)
     return out
 
 # ################################################################################################################################

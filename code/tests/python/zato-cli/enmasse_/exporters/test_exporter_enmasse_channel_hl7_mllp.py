@@ -108,7 +108,7 @@ class TestEnmasseChannelHL7MLLPExporter(TestCase):
                 exported.append(item)
 
         exported_count = len(exported)
-        self.assertEqual(exported_count, 3)
+        self.assertEqual(exported_count, len(channel_defs))
 
         # Build a lookup by name
         exported_by_name = {}
@@ -153,6 +153,77 @@ class TestEnmasseChannelHL7MLLPExporter(TestCase):
         # Verify channel 3 roundtrip for overridden tolerance toggles
         channel_3 = exported_by_name['enmasse.hl7.mllp.3']
         self.assertIn('is_default', channel_3)
+
+# ################################################################################################################################
+
+    def test_export_writes_the_destinations_as_a_list(self) -> 'None':
+        """ A channel stores its destinations as the JSON text the Dashboard writes, and what an
+        export carries is a list, so a file this export produces reads the way a hand-written one does.
+        """
+        self._setup_test_environment()
+
+        channel_defs = self.yaml_config['channel_hl7_mllp']
+        _, _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+
+        all_exported = self.channel_hl7_mllp_exporter.export(self.session, self.importer.cluster_id)
+
+        exported_by_name = {}
+        for item in all_exported:
+            if item['name'].startswith('enmasse.hl7.mllp.'):
+                exported_by_name[item['name']] = item
+
+        channel_3 = exported_by_name['enmasse.hl7.mllp.3']
+        destinations = channel_3['destinations']
+
+        self.assertIsInstance(destinations, list)
+        self.assertEqual(len(destinations), 2)
+
+        self.assertEqual(destinations[0]['name'], 'enmasse.outgoing.rest.1')
+        self.assertEqual(destinations[0]['type'], 'rest')
+        self.assertEqual(destinations[0]['connection'], 'enmasse.outgoing.rest.1')
+        self.assertTrue(destinations[0]['is_active'])
+        self.assertEqual(destinations[0]['options'], {'method': 'POST'})
+
+        self.assertEqual(destinations[1]['type'], 'smtp')
+        self.assertFalse(destinations[1]['is_active'])
+        self.assertEqual(destinations[1]['options']['subject'], 'A message arrived')
+
+        # The reply and the order the rest are delivered in are exported alongside the list
+        self.assertEqual(channel_3['respond_from'], 'enmasse.outgoing.rest.1')
+        self.assertEqual(channel_3['delivery_mode'], 'in-order')
+
+# ################################################################################################################################
+
+    def test_export_omits_the_options_a_destination_does_not_have(self) -> 'None':
+        """ A destination of a type that takes no options carries no options key, there being
+        nothing for a hand-written file to say about them.
+        """
+        self._setup_test_environment()
+
+        channel_defs = [{
+            'name': 'enmasse.hl7.mllp.plain.destination',
+            'destinations': [{'type': 'hl7-mllp', 'connection': 'enmasse.hl7.forward.1'}],
+        }]
+
+        _, _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+
+        all_exported = self.channel_hl7_mllp_exporter.export(self.session, self.importer.cluster_id)
+
+        for item in all_exported:
+            if item['name'] == 'enmasse.hl7.mllp.plain.destination':
+                exported = item
+                break
+        else:
+            self.fail('The channel was not exported')
+
+        destination = exported['destinations'][0]
+
+        self.assertEqual(destination['type'], 'hl7-mllp')
+        self.assertEqual(destination['connection'], 'enmasse.hl7.forward.1')
+        self.assertNotIn('options', destination)
+
+        # A channel delivering to its destinations alone exports no service at all
+        self.assertNotIn('service', exported)
 
 # ################################################################################################################################
 

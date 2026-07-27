@@ -81,6 +81,7 @@
                         <th><a href="#">REST</a></th>
 
                         <th><a href="#">Service</a></th>
+                        <th><a href="#">Destinations</a></th>
 
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
@@ -108,6 +109,13 @@
                         <td>---</td>
                         {% endif %}
 
+                        {# How many outgoing connections each message is delivered to on top of the service #}
+                        {% if item.destination_count %}
+                        <td><a href="{% url "channel-hl7-mllp-editor-edit" item.id %}?cluster={{ cluster_id }}">{{ item.destination_count }}</a></td>
+                        {% else %}
+                        <td>---</td>
+                        {% endif %}
+
                         <td><a href="/zato/audit-log/?source=hl7&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a></td>
                         <td><a href="{% url "channel-hl7-mllp-editor-edit" item.id %}?cluster={{ cluster_id }}">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.channel.hl7.mllp.delete_('{{ item.id }}')">Delete</a></td>
@@ -118,7 +126,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='11'>No results</td>
+                        <td colspan='12'>No results</td>
                     </tr>
                 {% endif %}
 

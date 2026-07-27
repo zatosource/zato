@@ -432,6 +432,28 @@ channel_hl7_mllp:
     is_default: true
     normalize_obx2_value_type: false
     allow_short_encoding_characters: false
+    destinations:
+      - name: enmasse.outgoing.rest.1
+        type: rest
+        connection: enmasse.outgoing.rest.1
+        is_active: true
+        options:
+          method: POST
+      - name: enmasse.email.smtp.1
+        type: smtp
+        connection: enmasse.email.smtp.1
+        is_active: false
+        options:
+          to: ops@example.com
+          subject: A message arrived
+    respond_from: enmasse.outgoing.rest.1
+    delivery_mode: in-order
+
+  - name: enmasse.hl7.mllp.4
+    destinations:
+      - name: enmasse.outgoing.rest.2
+        type: rest
+        connection: enmasse.outgoing.rest.2
 
 outgoing_kafka:
 

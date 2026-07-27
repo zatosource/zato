@@ -40,6 +40,10 @@ $.fn.zato.destinations.config = {
     respondFromService: 'service',
     respondFromServiceLabel: 'The service',
     defaultType: 'rest',
+
+    // What a channel handing its messages to neither a service nor a destination is told
+    noTargetMessage: 'Pick a service, a destination, or both - a channel needs at least one of them',
+
     typeList: [
         {id: 'rest',     label: 'REST'},
         {id: 'hl7-mllp', label: 'MLLP'},
@@ -342,6 +346,14 @@ $.fn.zato.destinations._rowNames = function(action) {
     });
 
     return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// How many destinations the tab currently declares - a row whose connection
+// has not been picked yet counts for nothing, the same way serializing skips it.
+$.fn.zato.destinations.getCount = function(action) {
+    return $.fn.zato.destinations._rowNames(action).length;
 };
 
 // ////////////////////////////////////////////////////////////////////////

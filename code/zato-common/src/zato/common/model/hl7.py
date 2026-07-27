@@ -21,6 +21,11 @@ class HL7MLLPChannelConfigObject:
     service: strnone = None
     security_name: strnone = None
 
+    # The channel's destination list as it is stored, plus how many destinations that comes to -
+    # a channel that declares none keeps the empty string and the count of zero.
+    destinations: str = ''
+    destination_count: int = 0
+
 # ################################################################################################################################
 # ################################################################################################################################
 

@@ -509,12 +509,7 @@ class ResendHop(AdminService):
         try:
             event = load_event(event_id)
 
-            # Each source contributes its own way of repeating a delivery
-            # through the connection the original event names.
-            if event.source == AuditSource.FHIR:
-                send = self._build_fhir_send(event)
-            else:
-                raise Exception(f'Per-hop resend does not cover source `{event.source}` (event `{event_id}`)')
+            send = self._build_send(event)
 
             audit_log = AuditLog(self.server.name)
             result = resend_hop(event, send, audit_log, self.cid)
@@ -531,18 +526,16 @@ class ResendHop(AdminService):
 
 # ################################################################################################################################
 
-    def _build_fhir_send(self, event:'any_') -> 'callable_':
-        """ Returns a callable repeating one FHIR call - the stored event carries the method
-        and path alongside the payload, and the connection's own recording is off because
-        the per-hop resend records the attempt itself.
+    def _build_send(self, event:'any_') -> 'callable_':
+        """ Returns a callable repeating one recorded delivery. The row says which destination
+        it went to and what its own type needed, so the repeat goes out through the very adapter
+        the delivery went out through - with the connection's own recording off, because the
+        per-hop resend records the attempt itself.
         """
-        client = self.fhir[event.object_name]
+        entry = get_hop_entry(event.source, event.object_name, event.details)
 
-        method = event.details['method']
-        path = event.details['path']
-
-        def send(payload:'str') -> 'object':
-            out = client._do_request(method, path, data=loads(payload), needs_audit=False)
+        def send(payload:'str') -> 'any_':
+            out = dispatch_send(self, entry, payload)
             return out
 
         return send

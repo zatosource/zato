@@ -57,7 +57,10 @@ class CreateForm(forms.Form):
     is_audit_log_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
     hl7_version = forms.ChoiceField(widget=forms.Select())
-    service = forms.ChoiceField(widget=forms.Select(attrs={'class':'required', 'style':'width:100%'}))
+
+    # A channel hands each message to a service, to its destinations, or to both, so this
+    # is not required on its own - the page checks that at least one of the two is there.
+    service = forms.ChoiceField(required=False, widget=forms.Select(attrs={'style':'width:100%'}))
 
     max_msg_size = forms.CharField(initial=_default.max_msg_size_value, widget=forms.TextInput(attrs={'style':'width:8%'}))
     max_msg_size_unit = forms.ChoiceField(
