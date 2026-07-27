@@ -26,9 +26,13 @@ logger = getLogger(__name__)
 # application payload can be mistaken for one.
 Signature = b'\x0d\x0a\x0d\x0a\x00\x0d\x0a\x51\x55\x49\x54\x0a'
 
+# The version and command byte, the family and protocol byte and the two length bytes -
+# what follows the signature before the rest of the header can be sized.
+_Sizing_Length = 4
+
 # The signature, the version and command byte, the family and protocol byte and the
 # two length bytes - what has to be read before the rest of the header can be sized.
-Prefix_Length = len(Signature) + 4
+Prefix_Length = len(Signature) + _Sizing_Length
 
 # The high nibble of the version and command byte, which is the only version accepted here.
 _Version_2 = 0x20
@@ -151,14 +155,47 @@ def read_proxy_header(sock:'socket.socket') -> 'ProxyHeader':
     at the first byte of the application payload.
     """
 
-    prefix = _receive_exactly(sock, Prefix_Length)
+    signature = _receive_exactly(sock, len(Signature))
 
-    if not prefix.startswith(Signature):
+    if signature != Signature:
         raise HL7Exception('Connection did not open with a PROXY protocol header')
 
-    version_and_command = prefix[len(Signature)]
-    family_and_protocol = prefix[len(Signature) + 1]
-    remainder_length = unpack('!H', prefix[len(Signature) + 2:])[0]
+    out = _read_after_signature(sock)
+    return out
+
+# ################################################################################################################################
+
+def read_optional_proxy_header(sock:'socket.socket') -> 'tuple':
+    """ Reads the header a load balancer prefixes a connection with, for a connection that has
+    one. A sender that reached this socket directly opens with its message instead, so the bytes
+    read to tell the two apart are handed back rather than consumed.
+
+    Returns the header and whatever of the application payload was already read - a connection
+    that carried a header has nothing of its payload read yet, and one that carried none has
+    no header to report.
+    """
+
+    opening = _receive_exactly(sock, len(Signature))
+
+    # The message itself opens the connection, and what was read is the beginning of it
+    if opening != Signature:
+        return None, opening
+
+    # The load balancer announced the sender, and the rest of what it said follows
+    header = _read_after_signature(sock)
+    return header, b''
+
+# ################################################################################################################################
+
+def _read_after_signature(sock:'socket.socket') -> 'ProxyHeader':
+    """ Reads the rest of a version 2 header whose signature has already been read off the socket.
+    """
+
+    sizing = _receive_exactly(sock, _Sizing_Length)
+
+    version_and_command = sizing[0]
+    family_and_protocol = sizing[1]
+    remainder_length = unpack('!H', sizing[2:])[0]
 
     if version_and_command & 0xf0 != _Version_2:
         raise HL7Exception('Unsupported PROXY protocol version')

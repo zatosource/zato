@@ -32,6 +32,13 @@ _adt_a01_with_lf = (
     'PV1|1|I|ICU^101^A\n'
 )
 
+# A message whose MSH-9 names a message type no structure is known for - there is nothing
+# to build it into, so the parser refuses it however tolerantly it is asked to read
+_unknown_message_type = (
+    'MSH|^~\\&|HIS|GENERAL_HOSPITAL|LAB_SYSTEM|CENTRAL_LAB|20260115103000||ZZZ^Q99|MSG000003|P|2.9\r'
+    'PID|1||NHS7788990^^^NHS^NH||SMITH^JOHN^A||19850315|M\r'
+)
+
 # A batch payload - a channel hands these to the service as raw text, unparsed
 _batch = (
     'BHS|^~\\&|LAB_SYSTEM|CENTRAL_LAB|HIS|GENERAL_HOSPITAL|20260115110000\r'
@@ -68,7 +75,16 @@ class TestParseWithChannelDefaults:
     def test_a_payload_that_does_not_parse_raises(self) -> 'None':
 
         with pytest.raises(Exception):
-            _ = parse_with_channel_defaults('This is not an HL7 message at all')
+            _ = parse_with_channel_defaults(_unknown_message_type)
+
+    def test_segments_without_a_header_come_back_as_a_fragment(self) -> 'None':
+
+        # A run of segments with no MSH to dispatch on is what an implementation guide documents
+        # standalone, and a channel delivers it as the fragment the parser makes of it
+        out = parse_with_channel_defaults('PID|1||334455^^^CLINIC^MR||DOE^JANE||19900101|F')
+        message = cast_('HL7Message', out)
+
+        assert message.get('PID.5') == 'DOE'
 
 # ################################################################################################################################
 # ################################################################################################################################
