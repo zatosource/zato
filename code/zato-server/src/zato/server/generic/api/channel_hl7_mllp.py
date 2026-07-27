@@ -213,7 +213,9 @@ class ChannelHL7MLLPWrapper(Wrapper):
             logger.warning('No mTLS definition with id %s for MLLP channel `%s`', security_id, self.config.name)
             return _Unresolvable_Common_Name
 
-        subject_dn = security_definition['config'].get('client_cert_subject_dn')
+        # Looking a definition up by its id gives the configuration itself, whereas looking one up
+        # by name gives an object that has the configuration under an attribute of its own
+        subject_dn = security_definition.get('client_cert_subject_dn')
         common_name = extract_common_name(subject_dn)
 
         # A definition that only names a fingerprint cannot be matched here, because a fingerprint

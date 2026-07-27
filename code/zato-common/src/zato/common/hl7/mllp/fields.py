@@ -273,6 +273,35 @@ Channel_Defaults        = get_defaults(Channel_Fields)
 Channel_Int_Names       = get_int_names(Channel_Fields)
 Channel_Names           = get_names(Channel_Fields)
 
+# What enmasse names a channel's security definition by. The id is what a channel stores, but an id
+# means nothing in another environment, so YAML carries the definition's name in its place.
+Channel_Security_Id_Key   = 'security_id'
+Channel_Security_Name_Key = 'security'
+
+# ################################################################################################################################
+
+def get_enmasse_channel_names() -> 'strtuple':
+    """ The channel field names as enmasse presents them, which is every stored field except that
+    the security definition appears under the name YAML refers to it by.
+    """
+    names = []
+
+    for name in Channel_Names:
+
+        if name == Channel_Security_Id_Key:
+            names.append(Channel_Security_Name_Key)
+        else:
+            names.append(name)
+
+    out = tuple(names)
+    return out
+
+# ################################################################################################################################
+
+Channel_Enmasse_Names = get_enmasse_channel_names()
+
+# ################################################################################################################################
+
 Outconn_Column_Defaults = get_column_defaults(Outconn_Fields)
 Outconn_Opaque_Defaults = get_opaque_defaults(Outconn_Fields)
 Outconn_Defaults        = get_defaults(Outconn_Fields)

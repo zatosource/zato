@@ -31,10 +31,17 @@ logger = getLogger(__name__)
 
 _Channel_HL7_MLLP_Template = """
 
+security:
+
+  - name: enmasse.hl7.mllp.mtls.{test_suffix}
+    type: mtls
+    client_cert_subject_dn: CN=enmasse.hl7.client,O=Enmasse,C=US
+
 channel_hl7_mllp:
 
   - name: enmasse.hl7.mllp.1.{test_suffix}
     service: demo.ping
+    security: enmasse.hl7.mllp.mtls.{test_suffix}
     should_validate: true
     msh9_message_type: ORU
 
@@ -98,7 +105,8 @@ class TestEnmasseChannelHL7MLLPLive(BaseEnmasseTestCase):
             _ = self.invoke_enmasse(import_path)
 
             # .. export them back out ..
-            _ = self.invoke_enmasse(export_path, is_import=False, is_export=True, include_type='channel_hl7_mllp')
+            _ = self.invoke_enmasse(
+                export_path, is_import=False, is_export=True, include_type='channel_hl7_mllp,security')
 
             # .. read the exported file ..
             with open(export_path, 'r') as f:
@@ -133,6 +141,17 @@ class TestEnmasseChannelHL7MLLPLive(BaseEnmasseTestCase):
 
             self.assertEqual(channels_by_name[channel_2_name]['msh9_message_type'], 'ADT')
             self.assertEqual(channels_by_name[channel_2_name]['msh9_trigger_event'], 'A01')
+
+            # .. the security definition the first channel names travels by name in both directions,
+            # .. the id it resolved to never appearing in the export ..
+            channel_1 = channels_by_name[channel_1_name]
+            self.assertEqual(channel_1['security'], f'enmasse.hl7.mllp.mtls.{test_suffix}')
+            self.assertNotIn('security_id', channel_1)
+
+            # .. while a channel that names none carries neither key ..
+            channel_2 = channels_by_name[channel_2_name]
+            self.assertNotIn('security', channel_2)
+            self.assertNotIn('security_id', channel_2)
 
             # .. now reimport the exported file to confirm idempotency ..
             _ = self.invoke_enmasse(export_path)

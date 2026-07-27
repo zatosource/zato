@@ -61,6 +61,15 @@
     --wizard-text-muted: #71717a;
     --wizard-text-faint: #9ca3af;
 
+    /* What a label reads as while the switch it names is off - the text
+       stepped back a notch, never so far as to read as disabled */
+    --wizard-text-off: color-mix(in srgb, var(--wizard-text) 68%, #fff);
+    --wizard-text-off-transition: color 150ms ease;
+
+    /* One step further back still, for the two switches riding along the
+       name row, which are the quietest thing a step shows */
+    --wizard-text-off-more: color-mix(in srgb, var(--wizard-text-faint) 87%, #fff);
+
     /* Every checkbox on a wizard page - the card, the step bodies and all
        the popover micro-forms - renders as the smaller slider, in the
        wizard accent, through the site-wide checkbox slider tokens. */
@@ -302,14 +311,34 @@
     font-size: 13px;
 }
 
+/* The two switches riding along the name are the smallest thing on the
+   row and the quietest - the name is what the row is about */
 .wizard-active-field {
     display: flex;
     align-items: center;
     gap: 6px;
     height: 32px;
-    font-size: 13px;
+    font-size: 12px;
     color: var(--wizard-text);
     cursor: pointer;
+}
+
+/* A label naming a switch that is off steps back with it, wherever the
+   switch is - beside the name, inside a micro-form or in a grid of them */
+.wizard-active-field,
+.wizard-tippy-checkbox {
+    transition: var(--wizard-text-off-transition);
+}
+
+.wizard-active-field:has(input[type="checkbox"]:not(:checked)),
+.wizard-tippy-checkbox:has(input[type="checkbox"]:not(:checked)) {
+    color: var(--wizard-text-off);
+}
+
+/* Off takes these two one step further back than the rest, since they are
+   the quietest thing a step shows - on, they read as everything else does */
+.wizard-active-field:has(input[type="checkbox"]:not(:checked)) {
+    color: var(--wizard-text-off-more);
 }
 
 /* formalize.css paints a grey glow on every focused control - kill it here */

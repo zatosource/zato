@@ -18,6 +18,7 @@ from zato.cli.enmasse.exporter import EnmasseYAMLExporter
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.exporters.channel_hl7_mllp import ChannelHL7MLLPExporter
 from zato.cli.enmasse.importers.channel_hl7_mllp import ChannelHL7MLLPImporter
+from zato.cli.enmasse.importers.security import SecurityImporter
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
 from zato.common.defaults import default_server_base_dir
@@ -55,6 +56,9 @@ class TestEnmasseChannelHL7MLLPExporter(TestCase):
         self.importer = EnmasseYAMLImporter()
         self.channel_hl7_mllp_importer = ChannelHL7MLLPImporter(self.importer)
 
+        # A channel may name a security definition, so the definitions have to exist first
+        self.security_importer = SecurityImporter(self.importer)
+
         # Exporter under test
         self.exporter = EnmasseYAMLExporter()
         self.channel_hl7_mllp_exporter = ChannelHL7MLLPExporter(self.exporter)
@@ -73,6 +77,11 @@ class TestEnmasseChannelHL7MLLPExporter(TestCase):
             self.yaml_config = self.importer.from_path(self.temp_file.name)
 
         _ = self.importer.get_cluster(self.session)
+
+        # A channel that names a security definition can only resolve it once the definitions exist,
+        # which is the order the importer itself runs the two sections in
+        security_list = self.yaml_config['security']
+        _ = self.security_importer.sync_security_definitions(security_list, self.session)
 
 # ################################################################################################################################
 
@@ -144,6 +153,34 @@ class TestEnmasseChannelHL7MLLPExporter(TestCase):
         # Verify channel 3 roundtrip for overridden tolerance toggles
         channel_3 = exported_by_name['enmasse.hl7.mllp.3']
         self.assertIn('is_default', channel_3)
+
+# ################################################################################################################################
+
+    def test_export_names_the_security_definition(self) -> 'None':
+        """ The security definition a channel accepts is exported by name rather than by the id that
+        is stored, because an id means nothing in the environment the export is imported into.
+        """
+        self._setup_test_environment()
+
+        channel_defs = self.yaml_config['channel_hl7_mllp']
+        _, _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+
+        all_exported = self.channel_hl7_mllp_exporter.export(self.session, self.importer.cluster_id)
+
+        exported_by_name = {}
+        for item in all_exported:
+            if item['name'].startswith('enmasse.hl7.mllp.'):
+                exported_by_name[item['name']] = item
+
+        # The first channel names the definition ..
+        channel_1 = exported_by_name['enmasse.hl7.mllp.1']
+        self.assertEqual(channel_1['security'], 'enmasse.mtls.2')
+        self.assertNotIn('security_id', channel_1)
+
+        # .. and the second names none, so neither key is exported for it.
+        channel_2 = exported_by_name['enmasse.hl7.mllp.2']
+        self.assertNotIn('security', channel_2)
+        self.assertNotIn('security_id', channel_2)
 
 # ################################################################################################################################
 

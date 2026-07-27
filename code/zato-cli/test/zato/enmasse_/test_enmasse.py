@@ -197,6 +197,17 @@ class EnmasseTestCase(BaseEnmasseTestCase):
                     self.assertEqual(enmasse_channel_count, 3,
                         f'Expected 3 HL7 MLLP channels, found {enmasse_channel_count}')
 
+                    # The channel that names a security definition exports it by name, not by the id
+                    # that is stored, because an id means nothing in another environment
+                    exported_hl7_by_name = {}
+
+                    for channel in enmasse_hl7_channels:
+                        exported_hl7_by_name[channel['name']] = channel
+
+                    hl7_channel_1 = exported_hl7_by_name['enmasse.hl7.mllp.1']
+                    self.assertEqual(hl7_channel_1['security'], 'enmasse.mtls.2')
+                    self.assertNotIn('security_id', hl7_channel_1)
+
             # Verify that rate_limiting survived the round trip for security
             if exported_dict and 'security' in exported_dict:
                 exported_security_by_name = {}

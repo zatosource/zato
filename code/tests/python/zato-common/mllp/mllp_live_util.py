@@ -98,10 +98,10 @@ class _RelayHandler(socketserver.BaseRequestHandler):
         upstream.sendall(build_proxy_header(server.sender_ip, self.client_address[1], common_name))
 
         # Each direction runs on its own thread so neither has to wait on the other
-        downstream_thread = threading.Thread(target=_pump, args=(upstream, downstream), daemon=True)
+        downstream_thread = threading.Thread(target=_forward, args=(upstream, downstream), daemon=True)
         downstream_thread.start()
 
-        _pump(downstream, upstream)
+        _forward(downstream, upstream)
         downstream_thread.join()
 
         upstream.close()
@@ -121,7 +121,7 @@ def _common_name_from_certificate(peer_certificate:'any_') -> 'str':
 
 # ################################################################################################################################
 
-def _pump(source:'socket.socket', destination:'socket.socket') -> 'None':
+def _forward(source:'socket.socket', destination:'socket.socket') -> 'None':
     """ Moves bytes one way until the source has no more, then tells the destination as much.
     """
 

@@ -415,6 +415,7 @@ channel_hl7_mllp:
 
   - name: enmasse.hl7.mllp.1
     service: enmasse.hl7.test.service
+    security: enmasse.mtls.2
     should_validate: true
     msh9_message_type: ORU
 

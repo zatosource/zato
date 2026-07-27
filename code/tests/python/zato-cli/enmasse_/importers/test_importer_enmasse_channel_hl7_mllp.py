@@ -16,6 +16,7 @@ from unittest import TestCase, main
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.channel_hl7_mllp import ChannelHL7MLLPImporter
+from zato.cli.enmasse.importers.security import SecurityImporter
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
 from zato.common.defaults import default_server_base_dir
@@ -51,6 +52,9 @@ class TestEnmasseChannelHL7MLLPImporter(TestCase):
         # Initialize the HL7 MLLP channel importer
         self.channel_hl7_mllp_importer = ChannelHL7MLLPImporter(self.importer)
 
+        # A channel may name a security definition, so the definitions have to exist first
+        self.security_importer = SecurityImporter(self.importer)
+
         self.yaml_config = cast_('stranydict', None)
         self.session = cast_('any_', None)
 
@@ -72,6 +76,11 @@ class TestEnmasseChannelHL7MLLPImporter(TestCase):
 
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
+
+        # A channel that names a security definition can only resolve it once the definitions exist,
+        # which is the order the importer itself runs the two sections in
+        security_list = self.yaml_config['security']
+        _ = self.security_importer.sync_security_definitions(security_list, self.session)
 
 # ################################################################################################################################
 
@@ -220,6 +229,51 @@ class TestEnmasseChannelHL7MLLPImporter(TestCase):
 
         channel_defs = [{
             'name': 'enmasse.hl7.mllp.no.delivery',
+        }]
+
+        with self.assertRaises(Exception):
+            _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+
+# ################################################################################################################################
+
+    def test_channel_hl7_mllp_security_name_resolves_to_id(self) -> 'None':
+        """ The security definition a channel names is stored as that definition's id, and the name
+        it was given by never reaches the channel's own fields.
+        """
+        self._setup_test_environment()
+
+        channel_defs = self.yaml_config['channel_hl7_mllp']
+        channels_created, _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+
+        channels_by_name = {}
+        for channel in channels_created:
+            channels_by_name[channel.name] = channel
+
+        expected_id = self.importer.sec_defs['enmasse.mtls.2']['id']
+
+        # The first channel names the definition ..
+        channel_1 = channels_by_name['enmasse.hl7.mllp.1']
+        opaque_1 = json.loads(channel_1.opaque1)
+        self.assertEqual(opaque_1['security_id'], expected_id)
+        self.assertNotIn('security', opaque_1)
+
+        # .. and the second names none, so it accepts a sender whatever certificate it presented.
+        channel_2 = channels_by_name['enmasse.hl7.mllp.2']
+        opaque_2 = json.loads(channel_2.opaque1)
+        self.assertEqual(opaque_2['security_id'], 0)
+
+# ################################################################################################################################
+
+    def test_channel_hl7_mllp_unknown_security_is_rejected(self) -> 'None':
+        """ A channel naming a security definition that does not exist is rejected rather than
+        created without one, which would leave it accepting every sender.
+        """
+        self._setup_test_environment()
+
+        channel_defs = [{
+            'name': 'enmasse.hl7.mllp.unknown.security',
+            'service': 'demo.ping',
+            'security': 'enmasse.no.such.definition',
         }]
 
         with self.assertRaises(Exception):

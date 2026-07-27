@@ -31,6 +31,13 @@
     font-size: 12px;
     color: var(--wizard-text);
     cursor: pointer;
+    transition: var(--wizard-text-off-transition);
+}
+
+/* A fixup that is off reads a notch back, the way every other label naming
+   a switch does */
+.mllp-wizard-tolerance-grid label:has(input[type="checkbox"]:not(:checked)) {
+    color: var(--wizard-text-off);
 }
 
 /* ------------------------------------------------------------ */

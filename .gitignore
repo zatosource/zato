@@ -94,3 +94,6 @@ vscode
 
 # CycloneDX SBOM output
 /sbom/
+
+# Compiled clients of the MLLP language tests, built on demand from their own sources
+code/tests/python/zato-server/mllp_languages/clients/*/.build/
