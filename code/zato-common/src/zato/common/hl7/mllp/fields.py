@@ -286,6 +286,10 @@ Channel_Names           = get_names(Channel_Fields)
 Channel_Security_Id_Key   = 'security_id'
 Channel_Security_Name_Key = 'security'
 
+# The field holding where a channel delivers each message it accepts. A channel stores it as the
+# JSON text the Dashboard writes while YAML holds it as a list, so both sides of enmasse name it here.
+Channel_Destinations_Key = 'destinations'
+
 # ################################################################################################################################
 
 def get_enmasse_channel_names() -> 'strtuple':

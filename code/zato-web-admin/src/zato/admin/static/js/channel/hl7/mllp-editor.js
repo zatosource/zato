@@ -26,10 +26,10 @@ $.fn.zato.channel.hl7.mllp.editor.config = {
     security_groups_page_url: '/zato/groups/group/zato-api-creds/?cluster=1',
     security_groups_link_url: '/zato/groups/group/zato-api-creds/?cluster=1&query={1}&highlight={2}',
 
-    // Fields that must not be empty on submit
+    // Fields that must not be empty on submit - the service is not among them
+    // because a channel may hand its messages to its destinations instead
     required_fields: [
         'name',
-        'service',
         'max_msg_size',
         'max_msg_size_unit',
         'recv_timeout',
@@ -259,6 +259,19 @@ $.fn.zato.channel.hl7.mllp.editor.init = function(options) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.channel.hl7.mllp.editor._has_target = function(action) {
+
+    var prefix = action === 'edit' ? 'id_edit-' : 'id_';
+
+    if($('#' + prefix + 'service').val()) {
+        return true;
+    }
+
+    return $.fn.zato.destinations.getCount(action) > 0;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.channel.hl7.mllp.editor.save = function() {
 
     var editor = $.fn.zato.channel.hl7.mllp.editor;
@@ -267,6 +280,12 @@ $.fn.zato.channel.hl7.mllp.editor.save = function() {
 
     // The destinations rows travel in hidden JSON fields the backend reads ..
     $.fn.zato.destinations._serialize(action);
+
+    // .. a channel has to hand each message to a service, to a destination, or to both ..
+    if(!editor._has_target(action)) {
+        $.fn.zato.user_message(false, $.fn.zato.destinations.config.noTargetMessage);
+        return;
+    }
 
     // .. client-side validation first ..
     if(!$.fn.zato.is_form_valid(form)) {

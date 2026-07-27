@@ -58,6 +58,25 @@ channel_hl7_mllp:
     is_default: true
     normalize_obx2_value_type: false
     allow_short_encoding_characters: false
+    destinations:
+      - name: enmasse.hl7.dest.rest.{test_suffix}
+        type: rest
+        connection: enmasse.hl7.dest.rest.{test_suffix}
+        is_active: true
+        options:
+          method: POST
+      - name: enmasse.hl7.dest.forward.{test_suffix}
+        type: hl7-mllp
+        connection: enmasse.hl7.dest.forward.{test_suffix}
+        is_active: false
+    respond_from: enmasse.hl7.dest.rest.{test_suffix}
+    delivery_mode: in-order
+
+  - name: enmasse.hl7.mllp.4.{test_suffix}
+    destinations:
+      - name: enmasse.hl7.dest.forward.{test_suffix}
+        type: hl7-mllp
+        connection: enmasse.hl7.dest.forward.{test_suffix}
 
 """
 
@@ -126,7 +145,7 @@ class TestEnmasseChannelHL7MLLPLive(BaseEnmasseTestCase):
                     test_channels.append(channel)
 
             test_channel_count = len(test_channels)
-            self.assertEqual(test_channel_count, 3, f'Expected 3 HL7 MLLP channels, found {test_channel_count}')
+            self.assertEqual(test_channel_count, 4, f'Expected 4 HL7 MLLP channels, found {test_channel_count}')
 
             # .. verify key fields survived the round trip ..
             channels_by_name = {}
@@ -135,6 +154,8 @@ class TestEnmasseChannelHL7MLLPLive(BaseEnmasseTestCase):
 
             channel_1_name = f'enmasse.hl7.mllp.1.{test_suffix}'
             channel_2_name = f'enmasse.hl7.mllp.2.{test_suffix}'
+            channel_3_name = f'enmasse.hl7.mllp.3.{test_suffix}'
+            channel_4_name = f'enmasse.hl7.mllp.4.{test_suffix}'
 
             self.assertIn('service', channels_by_name[channel_1_name])
             self.assertEqual(channels_by_name[channel_1_name]['msh9_message_type'], 'ORU')
@@ -152,6 +173,37 @@ class TestEnmasseChannelHL7MLLPLive(BaseEnmasseTestCase):
             channel_2 = channels_by_name[channel_2_name]
             self.assertNotIn('security', channel_2)
             self.assertNotIn('security_id', channel_2)
+
+            # .. a channel's destinations come back as a list rather than as the text they are
+            # .. stored as, each one keeping the options and the switch it went in with ..
+            channel_3 = channels_by_name[channel_3_name]
+            destinations = channel_3['destinations']
+
+            self.assertEqual(len(destinations), 2)
+
+            self.assertEqual(destinations[0]['connection'], f'enmasse.hl7.dest.rest.{test_suffix}')
+            self.assertEqual(destinations[0]['type'], 'rest')
+            self.assertTrue(destinations[0]['is_active'])
+            self.assertEqual(destinations[0]['options']['method'], 'POST')
+
+            self.assertEqual(destinations[1]['type'], 'hl7-mllp')
+            self.assertFalse(destinations[1]['is_active'])
+
+            # .. a destination with no options of its own carries no options key at all ..
+            self.assertNotIn('options', destinations[1])
+
+            # .. and the reply and the order the rest are delivered in travel too ..
+            self.assertEqual(channel_3['respond_from'], f'enmasse.hl7.dest.rest.{test_suffix}')
+            self.assertEqual(channel_3['delivery_mode'], 'in-order')
+
+            # .. a channel that delivers to its destinations alone needs no service, and the two
+            # .. defaults it never set stay out of the export ..
+            channel_4 = channels_by_name[channel_4_name]
+
+            self.assertNotIn('service', channel_4)
+            self.assertNotIn('respond_from', channel_4)
+            self.assertNotIn('delivery_mode', channel_4)
+            self.assertEqual(len(channel_4['destinations']), 1)
 
             # .. now reimport the exported file to confirm idempotency ..
             _ = self.invoke_enmasse(export_path)
@@ -173,7 +225,17 @@ class TestEnmasseChannelHL7MLLPLive(BaseEnmasseTestCase):
                     reimport_channels.append(channel)
 
             reimport_count = len(reimport_channels)
-            self.assertEqual(reimport_count, 3, f'Reimport produced {reimport_count} channels instead of 3')
+            self.assertEqual(reimport_count, 4, f'Reimport produced {reimport_count} channels instead of 4')
+
+            # The destination list survives being imported from an export as it does from a
+            # hand-written file, which is what makes one environment's export the next one's input.
+            for channel in reimport_channels:
+                if channel['name'] == channel_3_name:
+                    self.assertEqual(len(channel['destinations']), 2)
+                    self.assertEqual(channel['respond_from'], f'enmasse.hl7.dest.rest.{test_suffix}')
+                    break
+            else:
+                self.fail(f'Channel `{channel_3_name}` was not exported after the reimport')
 
             if os.path.exists(reimport_export_path):
                 os.remove(reimport_export_path)

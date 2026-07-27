@@ -96,7 +96,7 @@ class TestEnmasseChannelHL7MLLPImporter(TestCase):
 
         channels_created, _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
 
-        # All three channels from the template should be created
+        # Every channel the template declares should be created
         created_count = len(channels_created)
         self.assertEqual(created_count, channel_def_count, 'Not all HL7 MLLP channels were created')
 
@@ -155,8 +155,10 @@ class TestEnmasseChannelHL7MLLPImporter(TestCase):
         # First sync - all channels should be created
         channels_created, _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
 
+        channel_def_count = len(channel_defs)
+
         created_count = len(channels_created)
-        self.assertEqual(created_count, 3)
+        self.assertEqual(created_count, channel_def_count)
 
         # Second sync - no new creates, only updates
         channels_created_2, channels_updated_2 = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
@@ -164,7 +166,7 @@ class TestEnmasseChannelHL7MLLPImporter(TestCase):
         created_count_2 = len(channels_created_2)
         updated_count_2 = len(channels_updated_2)
         self.assertEqual(created_count_2, 0)
-        self.assertEqual(updated_count_2, 3)
+        self.assertEqual(updated_count_2, channel_def_count)
 
 # ################################################################################################################################
 
@@ -219,6 +221,103 @@ class TestEnmasseChannelHL7MLLPImporter(TestCase):
         # The second sync goes down the update path, which is where the flag used to be dropped
         _, channels_updated = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
         self.assertFalse(channels_updated[0].is_active)
+
+# ################################################################################################################################
+
+    def test_channel_hl7_mllp_stores_the_destination_list_as_text(self) -> 'None':
+        """ A file writes a channel's destinations as a list of its own, while what a channel
+        stores is the JSON text the Dashboard writes - one stored form for both.
+        """
+        self._setup_test_environment()
+
+        channel_defs = self.yaml_config['channel_hl7_mllp']
+        channels_created, _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+
+        channels_by_name = {}
+        for channel in channels_created:
+            channels_by_name[channel.name] = channel
+
+        opaque = json.loads(channels_by_name['enmasse.hl7.mllp.3'].opaque1)
+
+        destinations = json.loads(opaque['destinations'])
+        self.assertEqual(len(destinations), 2)
+
+        self.assertEqual(destinations[0]['connection'], 'enmasse.outgoing.rest.1')
+        self.assertEqual(destinations[0]['type'], 'rest')
+        self.assertTrue(destinations[0]['is_active'])
+        self.assertEqual(destinations[0]['options']['method'], 'POST')
+
+        # A destination that receives nothing is stored all the same, its options with it
+        self.assertFalse(destinations[1]['is_active'])
+        self.assertEqual(destinations[1]['options']['to'], 'ops@example.com')
+
+        self.assertEqual(opaque['respond_from'], 'enmasse.outgoing.rest.1')
+        self.assertEqual(opaque['delivery_mode'], 'in-order')
+
+# ################################################################################################################################
+
+    def test_channel_hl7_mllp_delivers_without_a_service(self) -> 'None':
+        """ A channel that hands each message to its destinations alone needs no service, and
+        what it never said stays at its default.
+        """
+        self._setup_test_environment()
+
+        channel_defs = self.yaml_config['channel_hl7_mllp']
+        channels_created, _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+
+        channels_by_name = {}
+        for channel in channels_created:
+            channels_by_name[channel.name] = channel
+
+        opaque = json.loads(channels_by_name['enmasse.hl7.mllp.4'].opaque1)
+
+        self.assertEqual(opaque['service'], '')
+        self.assertEqual(opaque['respond_from'], 'service')
+        self.assertEqual(opaque['delivery_mode'], 'same-time')
+
+        destinations = json.loads(opaque['destinations'])
+        self.assertEqual(len(destinations), 1)
+
+        # A destination the file says nothing else about receives messages and is addressed
+        # by the connection it delivers through
+        self.assertTrue(destinations[0]['is_active'])
+        self.assertEqual(destinations[0]['name'], 'enmasse.outgoing.rest.2')
+
+# ################################################################################################################################
+
+    def test_channel_hl7_mllp_rejects_an_unusable_destination_list(self) -> 'None':
+        """ A destination list that could not be delivered to is refused before it is stored.
+        """
+        self._setup_test_environment()
+
+        # A reply from a destination the channel does not have
+        channel_defs = [{
+            'name': 'enmasse.hl7.mllp.bad.reply',
+            'destinations': [{'type': 'rest', 'connection': 'enmasse.outgoing.rest.1'}],
+            'respond_from': 'enmasse.no.such.destination',
+        }]
+
+        with self.assertRaises(Exception):
+            _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+
+        # A destination of a type nothing can deliver through
+        channel_defs = [{
+            'name': 'enmasse.hl7.mllp.bad.type',
+            'destinations': [{'type': 'carrier-pigeon', 'connection': 'enmasse.outgoing.rest.1'}],
+        }]
+
+        with self.assertRaises(Exception):
+            _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+
+        # A delivery mode that does not exist, the reserved one included
+        channel_defs = [{
+            'name': 'enmasse.hl7.mllp.bad.mode',
+            'destinations': [{'type': 'rest', 'connection': 'enmasse.outgoing.rest.1'}],
+            'delivery_mode': 'service-decides',
+        }]
+
+        with self.assertRaises(Exception):
+            _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
 
 # ################################################################################################################################
 

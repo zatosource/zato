@@ -57,10 +57,10 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
     helpRowSelector: '.dashboard-card-header, .wizard-name-row, .wizard-toggle-row, ' +
         '.wizard-section-title, .wizard-line, .mllp-wizard-tolerance-grid',
 
-    // Fields that must not be empty on submit - the same list the editor uses
+    // Fields that must not be empty on submit - the same list the editor uses,
+    // the service not among them because the destinations may take the messages instead
     requiredFields: [
         'name',
-        'service',
         'max_msg_size',
         'max_msg_size_unit',
         'recv_timeout',
@@ -116,10 +116,32 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         // The destination rows travel in hidden JSON fields the backend reads ..
         wizard.destinations.serialize();
 
-        // .. so do the security definitions picked for the REST bridge.
+        // .. so do the security definitions picked for the REST bridge ..
         wizard._writeSecurityIdInputs(form);
+
+        // .. and a channel handing its messages to neither a service nor a destination
+        // is not created at all, the step saying which of the two is missing.
+        if(!wizard._has_target()) {
+            $.fn.zato.user_message(false, $.fn.zato.destinations.config.noTargetMessage);
+            return false;
+        }
+
+        return true;
     }
 });
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Whether the channel has anything to hand a message to - a service, a
+// destination that receives messages, or both.
+wizard._has_target = function() {
+
+    if(wizard.field('service').val()) {
+        return true;
+    }
+
+    return wizard.destinations.activeList().length > 0;
+};
 
 // ////////////////////////////////////////////////////////////////////////
 

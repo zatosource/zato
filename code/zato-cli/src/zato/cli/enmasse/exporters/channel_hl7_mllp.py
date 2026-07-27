@@ -11,7 +11,9 @@ import logging
 
 # Zato
 from zato.common.api import GENERIC
-from zato.common.hl7.mllp.fields import Channel_Fields, Channel_Security_Id_Key, Channel_Security_Name_Key
+from zato.common.destination.model import describe_entries, DestinationException, parse_entries
+from zato.common.hl7.mllp.fields import Channel_Destinations_Key, Channel_Fields, Channel_Security_Id_Key, \
+    Channel_Security_Name_Key
 from zato.common.odb.model import SecurityBase, to_json
 from zato.common.odb.query.generic import connection_list
 from zato.common.util.sql import parse_instance_opaque_attr
@@ -22,8 +24,9 @@ from zato.common.util.sql import parse_instance_opaque_attr
 if 0:
     from sqlalchemy.orm.session import Session as SASession
     from zato.cli.enmasse.exporter import EnmasseYAMLExporter
-    from zato.common.typing_ import anydict, list_
+    from zato.common.typing_ import any_, anydict, list_
 
+    any_ = any_
     channel_hl7_mllp_def_list = list_[anydict]
 
 # ################################################################################################################################
@@ -53,6 +56,22 @@ class ChannelHL7MLLPExporter:
             return ''
 
         out = sec_def.name
+        return out
+
+# ################################################################################################################################
+
+    def _describe_destinations(self, channel_name:'str', destinations:'any_') -> 'any_':
+        """ Returns a channel's destination list in the form YAML holds it, which is a list of its
+        own. A list that cannot be read is exported as it stands, because an export saying what a
+        channel actually holds is better than one quietly leaving its destinations out.
+        """
+        try:
+            entries = parse_entries(destinations)
+        except DestinationException as e:
+            logger.warning('Exporting the destinations of `%s` as they stand; e:`%s`', channel_name, e)
+            return destinations
+
+        out = describe_entries(entries)
         return out
 
 # ################################################################################################################################
@@ -102,6 +121,12 @@ class ChannelHL7MLLPExporter:
                     security_name = self._get_security_name(session, value)
                     if security_name:
                         item[Channel_Security_Name_Key] = security_name
+                    continue
+
+                # .. the destination list travels as a list rather than as the JSON text that is
+                # stored, so that a file this export produces reads the way one written by hand does ..
+                if field.name == Channel_Destinations_Key:
+                    item[field.name] = self._describe_destinations(row['name'], value)
                     continue
 
                 item[field.name] = value

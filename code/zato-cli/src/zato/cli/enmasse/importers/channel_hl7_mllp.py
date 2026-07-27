@@ -8,6 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.api import GENERIC, HL7
+from zato.common.destination.constants import Default_Delivery_Mode, Respond_From_Service
+from zato.common.destination.model import count_entries, dump_entries, parse_config
 from zato.common.hl7.mllp.fields import Channel_Column_Defaults, Channel_Opaque_Defaults, Channel_Security_Id_Key, \
     Channel_Security_Name_Key, resolve_max_msg_size
 from zato.common.hl7.mllp.settings import describe_bounds_violations
@@ -47,6 +49,40 @@ class ChannelHL7MLLPImporter(GenericConnectionImporter):
 # ################################################################################################################################
 
     def resolve_references(self, connection_def:'anydict') -> 'None':
+        """ Turns what a YAML definition names or spells out its own way into what a channel
+        stores - the security definition it accepts senders against and its destination list.
+        """
+        self._resolve_security(connection_def)
+        self._resolve_destinations(connection_def)
+
+# ################################################################################################################################
+
+    def _resolve_destinations(self, connection_def:'anydict') -> 'None':
+        """ A hand-written file holds a channel's destinations as a list of its own while a channel
+        stores the JSON text the Dashboard writes, so what YAML says becomes that text - one stored
+        form no matter which of the two wrote it. A list that could not be delivered to is refused
+        here rather than after it has been written.
+        """
+        destinations = connection_def.get('destinations')
+
+        # A channel with no destinations keeps what the field defaults to
+        if not destinations:
+            return
+
+        name = connection_def['name']
+        respond_from = connection_def.get('respond_from', Respond_From_Service)
+        delivery_mode = connection_def.get('delivery_mode', Default_Delivery_Mode)
+
+        # Refuses a destination of an unknown type, a reply from a destination the channel does
+        # not have and a delivery mode that does not exist ..
+        config = parse_config(name, destinations, respond_from, delivery_mode)
+
+        # .. and what is stored is the same text either source of the list produces.
+        connection_def['destinations'] = dump_entries(config.entries)
+
+# ################################################################################################################################
+
+    def _resolve_security(self, connection_def:'anydict') -> 'None':
         """ A channel names the security definition it accepts a sender's certificate against, and
         what is stored is that definition's id, so the name is looked up and then dropped - it is
         not a field of the channel and must not reach the opaque attributes.
@@ -76,7 +112,7 @@ class ChannelHL7MLLPImporter(GenericConnectionImporter):
         destinations = connection_def.get('destinations')
 
         if not service:
-            if not destinations:
+            if not count_entries(destinations):
                 name = connection_def['name']
                 raise Exception(f'HL7 MLLP channel `{name}` needs a service or at least one destination')
 
