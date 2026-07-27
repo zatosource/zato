@@ -328,9 +328,12 @@ class BaseHTTPSOAPWrapper:
         A pool of zero is not a smaller pool, it is one that discards every connection, so anything
         below the floor falls back to the shared default rather than being honoured literally.
         """
-        pool_size = self.config['pool_size']
+        # A connection configured through the dashboard reaches the wrapper with the pool size
+        # still in the string form that the form sent it in, so it cannot be compared as it is.
+        config_pool_size = self.config['pool_size']
+        pool_size = int(config_pool_size) if config_pool_size else 0
 
-        if not pool_size or pool_size < Minimum_Pool_Size:
+        if pool_size < Minimum_Pool_Size:
             pool_size = MISC.DEFAULT_HTTP_POOL_SIZE
 
         out = pool_size
