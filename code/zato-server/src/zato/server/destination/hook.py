@@ -19,7 +19,8 @@ from gevent import sleep as gevent_sleep, spawn as gevent_spawn
 from zato.common.audit_log.api import AuditLog
 from zato.common.destination.constants import Default_Delivery_Mode, Respond_From_Service
 from zato.common.destination.coordinator import deliver, new_context, new_transports
-from zato.common.destination.model import has_active_entries, parse_config
+from zato.common.destination.model import dump_entries, has_active_entries, parse_config, select_entries, \
+    DestinationException
 from zato.server.destination.dispatch import send as dispatch_send
 
 # ################################################################################################################################
@@ -29,7 +30,7 @@ if 0:
     from zato.common.destination.coordinator import DeliveryResult, DeliveryTransports
     from zato.common.destination.model import ChannelDestinationConfig, DestinationEntry
     from zato.common.destination.payload import PayloadOverrides
-    from zato.common.typing_ import any_, stranydict
+    from zato.common.typing_ import any_, stranydict, strlist
     from zato.server.destination.dispatch import DestinationConnections
     from zato.server.service import Service
 
@@ -82,6 +83,33 @@ def get_config(channel_item:'stranydict') -> 'ChannelDestinationConfig | None':
 
     if not has_active_entries(out):
         return None
+
+    return out
+
+# ################################################################################################################################
+
+def narrow_to(channel_item:'stranydict', names:'strlist') -> 'stranydict':
+    """ Returns the channel as it looks to one message that is to reach only the destinations named,
+    which is what sending an already-received message to some of them rather than to all of them
+    runs on. The channel itself is left exactly as it stands - this is about one message and not
+    about what the channel does with the next one.
+    """
+    config = get_config(channel_item)
+
+    if not config:
+        raise DestinationException(f'Channel `{channel_item["name"]}` has no destination a message reaches')
+
+    selected = select_entries(config, names)
+
+    # Naming destinations the channel does not have is a mistake worth hearing about rather than
+    # a message quietly going nowhere
+    if not selected.entries:
+        raise DestinationException(f'Channel `{channel_item["name"]}` has no destination among `{names}`')
+
+    out = dict(channel_item)
+
+    out['destinations'] = dump_entries(selected.entries)
+    out['respond_from'] = selected.respond_from
 
     return out
 

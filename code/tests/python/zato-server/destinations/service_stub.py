@@ -87,6 +87,14 @@ class RESTFacadeRecorder:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class AckResultStub:
+    """ Stands in for what an MLLP outgoing connection answers a send with.
+    """
+    def __init__(self, ack_text:'str') -> 'None':
+        self.ack_text = ack_text
+
+# ################################################################################################################################
+
 class MLLPInvokerRecorder:
     """ Stands in for the invoker self.mllp hands out.
     """
@@ -94,9 +102,11 @@ class MLLPInvokerRecorder:
         self.connection = connection
         self.calls = calls
 
-    def send(self, payload:'any_', *, needs_audit:'bool'=True) -> 'str':
+    def send(self, payload:'any_', *, needs_audit:'bool'=True) -> 'AckResultStub':
         self.calls.append((self.connection, payload, needs_audit))
-        return MLLP_Response
+
+        out = AckResultStub(MLLP_Response)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

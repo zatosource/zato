@@ -20,6 +20,7 @@ import sys
 import time
 
 # Zato
+from zato.common.hl7.mllp.dedup import extract_control_id
 from zato.common.hl7.mllp.preprocess import build_tolerance_config
 from zato.common.hl7.mllp.router import HL7MessageRouter
 from zato.common.hl7.mllp.server import HL7MLLPServer
@@ -31,17 +32,21 @@ from zato.common.hl7.mllp.settings import ListenerConfig, RouteSettings
 # Module-level variable set by --callback-delay for the slow callback
 _slow_callback_delay_seconds = 5.0
 
+# What the reply mode names itself as in MSH-3 of the acknowledgment it answers with, which is
+# what tells an answer this backend produced apart from one whoever asked it built by itself
+Reply_Sending_Application = 'MLLP_TEST_BACKEND'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _callback_ok(message_text:'str') -> 'None':
+def _callback_ok(message_text:'str', cid:'str') -> 'None':
     """ Accepts the message, does nothing. Server will auto-ACK with AA.
     """
     return None
 
 # ################################################################################################################################
 
-def _callback_echo(message_text:'str') -> 'None':
+def _callback_echo(message_text:'str', cid:'str') -> 'None':
     """ Logs the message text to stdout for debugging. Server still auto-ACKs with AA.
     """
     _ = sys.stdout.write(f'ECHO:{message_text}\n')
@@ -50,18 +55,35 @@ def _callback_echo(message_text:'str') -> 'None':
 
 # ################################################################################################################################
 
-def _callback_error(message_text:'str') -> 'None':
+def _callback_error(message_text:'str', cid:'str') -> 'None':
     """ Raises an exception so the server will auto-ACK with AE.
     """
     raise RuntimeError('Intentional test error')
 
 # ################################################################################################################################
 
-def _callback_slow(message_text:'str') -> 'None':
+def _callback_slow(message_text:'str', cid:'str') -> 'None':
     """ Sleeps for the configured delay before returning. Server auto-ACKs with AA after the sleep.
     """
     time.sleep(_slow_callback_delay_seconds)
     return None
+
+# ################################################################################################################################
+
+def _callback_reply(message_text:'str', cid:'str') -> 'str':
+    """ Answers with an acknowledgment of its own rather than letting the server build one, so that
+    whoever forwards a message here can be shown to relay this backend's own answer back.
+    """
+    msh_line = message_text.split('\r', 1)[0]
+    control_id = extract_control_id(msh_line)
+
+    out = (
+        f'MSH|^~\\&|{Reply_Sending_Application}|BACKEND_FACILITY|INTEGRATION_ENGINE|CENTRAL_HOSPITAL|'
+        f'20260507120000||ACK|{control_id}|P|2.5\r'
+        f'MSA|AA|{control_id}'
+    )
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -71,6 +93,7 @@ _callback_map = {
     'echo':  _callback_echo,
     'error': _callback_error,
     'slow':  _callback_slow,
+    'reply': _callback_reply,
 }
 
 # ################################################################################################################################

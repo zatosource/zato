@@ -576,9 +576,10 @@ class HL7MLLPServer:
                 logger.info('Routing batch to channel `%s` (%s)',
                     matched_route.channel_name, matched_route.get_target())
 
-            # .. invoke the callback with the raw batch string ..
+            # .. invoke the callback with the raw batch string, under the correlation id the
+            # .. batch's own rows were written with, so everything it leads to shares them ..
             try:
-                callback_response = matched_route.callback(raw)
+                callback_response = matched_route.callback(raw, audit_cid)
                 ack_code = 'AA'
                 error_text = ''
             except Exception:
@@ -821,8 +822,11 @@ class HL7MLLPServer:
                 # .. invoke the matched route's service callback ..
                 callback_start = monotonic()
 
+                # The correlation id goes along with the message, so what the channel does with it
+                # next - the service it runs and the destinations it fans out to - is recorded
+                # under the very id the receipt was
                 try:
-                    callback_response = matched_route.callback(callback_data)
+                    callback_response = matched_route.callback(callback_data, audit_cid)
                     ack_code = 'AA'
                     error_text = ''
 

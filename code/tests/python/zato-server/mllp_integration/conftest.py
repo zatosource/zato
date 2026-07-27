@@ -33,8 +33,9 @@ from zato.common.typing_ import cast_
 from zato.common.util.config import get_config_object, update_config_file
 
 # Zato - test services deployed to the server under test
-from _services import accept_service_source, alert_rule_service_source, demo_import_service_source, echo_service_source, \
-    error_service_source, fhir_invoke_service_source, fhir_save_service_source, forward_service_source, inspect_service_source
+from _services import accept_service_source, alert_rule_service_source, demo_import_service_source, \
+    destination_service_source, echo_service_source, error_service_source, fhir_invoke_service_source, \
+    fhir_save_service_source, forward_service_source, inspect_service_source
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -455,9 +456,9 @@ class BackendHandle:
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.fixture(scope='session')
-def mllp_backend(backend_port:'int') -> 'backend_gen':
-    """ Starts the standalone mllp_test_server.py in echo mode and captures its stdout.
+def _run_backend(port:'int', callback_mode:'str', log_prefix:'str') -> 'backend_gen':
+    """ Runs the standalone mllp_test_server.py in the callback mode given, captures its stdout
+    and stops it once whoever asked for it is done with it.
     """
 
     handle = BackendHandle()
@@ -467,8 +468,8 @@ def mllp_backend(backend_port:'int') -> 'backend_gen':
     command = [
         _zato_python, server_script,
         '--host', '127.0.0.1',
-        '--port', str(backend_port),
-        '--callback-mode', 'echo',
+        '--port', str(port),
+        '--callback-mode', callback_mode,
         '--log-messages',
     ]
 
@@ -485,7 +486,7 @@ def mllp_backend(backend_port:'int') -> 'backend_gen':
         for line in iter(process.stdout.readline, b''):
             text = line.decode('utf-8', errors='replace').rstrip()
             handle.received_lines.append(text)
-            print(f'[BACKEND] {text}')
+            print(f'[{log_prefix}] {text}')
 
     capture_thread = threading.Thread(target=_capture_output, daemon=True)
     capture_thread.start()
@@ -518,6 +519,35 @@ def mllp_backend(backend_port:'int') -> 'backend_gen':
 # ################################################################################################################################
 # ################################################################################################################################
 
+@pytest.fixture(scope='session')
+def mllp_backend(backend_port:'int') -> 'backend_gen':
+    """ Starts the standalone mllp_test_server.py in echo mode and captures its stdout.
+    """
+    yield from _run_backend(backend_port, 'echo', 'BACKEND')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def reply_backend_port() -> 'int':
+    """ Returns a free port for the backend that answers with an acknowledgment of its own.
+    """
+    out = _find_free_port()
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def reply_backend(reply_backend_port:'int') -> 'backend_gen':
+    """ Starts a second backend that answers with an acknowledgment naming itself, which is what
+    shows a channel relaying the answer of the destination it replies from.
+    """
+    yield from _run_backend(reply_backend_port, 'reply', 'REPLY BACKEND')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @pytest.fixture(scope='session', autouse=True)
 def hot_deploy_services(zato_server:'strobj_dict', zato_client:'ZatoClient') -> 'none_gen':
     """ Writes the test service files into the pickup directory and waits for Zato to register them.
@@ -533,6 +563,7 @@ def hot_deploy_services(zato_server:'strobj_dict', zato_client:'ZatoClient') -> 
         '_test_hl7_mllp_forward.py': forward_service_source,
         '_test_hl7_mllp_inspect.py': inspect_service_source,
         '_test_hl7_mllp_accept.py':  accept_service_source,
+        '_test_hl7_mllp_destinations.py': destination_service_source,
         '_test_hl7_fhir_invoke.py':  fhir_invoke_service_source,
         '_test_hl7_fhir_save.py':    fhir_save_service_source,
         '_test_alerting_rule.py':    alert_rule_service_source,

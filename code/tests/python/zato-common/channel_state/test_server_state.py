@@ -104,7 +104,7 @@ class TestServerState:
 
     def test_a_processed_message_counts_as_received_and_acked(self) -> 'None':
 
-        def callback(data:'any_') -> 'None':
+        def callback(data:'any_', cid:'str') -> 'None':
             pass
 
         server = _new_server(callback)
@@ -125,7 +125,7 @@ class TestServerState:
 
     def test_a_failing_service_counts_as_nacked(self) -> 'None':
 
-        def callback(data:'any_') -> 'None':
+        def callback(data:'any_', cid:'str') -> 'None':
             raise ValueError('The service failed')
 
         server = _new_server(callback)
@@ -147,7 +147,7 @@ class TestServerState:
 
         outcomes = [ValueError('down'), ValueError('still down'), None]
 
-        def callback(data:'any_') -> 'None':
+        def callback(data:'any_', cid:'str') -> 'None':
             outcome = outcomes.pop(0)
             if outcome is not None:
                 raise outcome
@@ -171,7 +171,7 @@ class TestServerState:
 
         invocations:'anylist' = []
 
-        def callback(data:'any_') -> 'None':
+        def callback(data:'any_', cid:'str') -> 'None':
             invocations.append(data)
 
         server = _new_server(callback, dedup_ttl_value=5, dedup_ttl_unit='minutes')
@@ -191,7 +191,7 @@ class TestServerState:
 
     def test_the_state_carries_the_channel_metrics(self) -> 'None':
 
-        def callback(data:'any_') -> 'None':
+        def callback(data:'any_', cid:'str') -> 'None':
             pass
 
         server = _new_server(callback)

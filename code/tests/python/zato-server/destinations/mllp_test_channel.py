@@ -53,6 +53,10 @@ Client_Port = 45678
 # The message that arrives on the channel
 Request_Message = 'MSH|^~\\&|SENDER|FACILITY|RECEIVER|FACILITY|20260101120000||ADT^A01|MSG00001|P|2.5'
 
+# The correlation id the channel recorded the message's arrival under, which everything
+# the message leads to is recorded under as well
+Message_CID = 'cid-channel-message-1'
+
 # The connections the destinations of the tests point at
 MLLP_Connection = 'hl7.forward.ehr'
 REST_Connection = 'rest.billing'

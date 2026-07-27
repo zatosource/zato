@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from traceback import format_exc
 
 # Zato
-from zato.common.api import AS2, URL_TYPE
+from zato.common.api import AS2, CHANNEL, URL_TYPE
 from zato.common.as2.config import build_partnerships
 from zato.common.as2.outbound import describe_send_result, new_send_report
 from zato.common.as2.reconcile import MDNReconciler
@@ -18,11 +18,15 @@ from zato.common.as2.resubmit import find_connection_name, load_event, reprocess
 from zato.common.as4.resubmit import describe_send_result as as4_describe_send_result, \
     find_connection_name as as4_find_connection_name, load_event as as4_load_event, \
     new_send_report as as4_new_send_report, reprocess as as4_reprocess, resend as as4_resend
-from zato.common.audit_log.api import AuditLog, AuditSource
+from zato.common.audit_log.api import AuditLog
 from zato.common.audit_log.resubmit import resend_hop
+from zato.common.destination.audit import get_hop_entry
 from zato.common.hl7.resubmit import reprocess as hl7_reprocess, resend as hl7_resend
-from zato.common.json_internal import dumps, loads
+from zato.common.json_internal import dumps
 from zato.server.connection.as4 import AS4ChannelRuntime
+from zato.server.destination.channel import new_channel_item, run_for_channel
+from zato.server.destination.dispatch import send as dispatch_send
+from zato.server.destination.hook import narrow_to
 from zato.server.service import Int
 from zato.server.service.internal import AdminService
 
@@ -34,7 +38,7 @@ if 0:
     from zato.common.as4.ebms import UserMessageDetails
     from zato.common.as4.outbound import SendResult as AS4SendResult
     from zato.common.as4.resend import ResendCandidate
-    from zato.common.typing_ import any_, anylist, callable_, dictlist, stranydict, strnone
+    from zato.common.typing_ import any_, anylist, callable_, dictlist, stranydict, strlist, strnone
     from zato.common.util.xml_.mime_ import part_list
     any_ = any_
     anylist = anylist
@@ -412,13 +416,17 @@ class ResendHL7Message(AdminService):
 # ################################################################################################################################
 
 class ReprocessHL7Message(AdminService):
-    """ Re-routes the payload stored with an inbound HL7 audit event to the channel's
-    service - for when the recipient system was down and the already-received messages
-    are to flow through again. An edited payload may be supplied in place of the stored one.
-    The new attempt lands as its own audit event linked to the original by the correlation id.
+    """ Re-routes the payload stored with an inbound HL7 audit event through the channel it arrived
+    on - for when the recipient system was down and the already-received messages are to flow
+    through again. The channel's service runs the way a live delivery would run it and the channel's
+    destinations receive what it produced, a channel with no service of its own sending the message
+    on as it stands. Naming destinations sends the message to those alone, for catching one receiver
+    up without the others being sent it twice. An edited payload may be supplied in place of the
+    stored one. The new attempt lands as its own audit event linked to the original
+    by the correlation id.
     """
     name = 'zato.audit-log.hl7.reprocess'
-    input = Int('event_id'), '-payload'
+    input = Int('event_id'), '-payload', '-destinations'
     output = 'response_data'
 
     def handle(self) -> 'None':
@@ -430,6 +438,8 @@ class ReprocessHL7Message(AdminService):
         if edited_payload == '':
             edited_payload = None
 
+        destination_names = _get_destination_names(self.request.input.destinations)
+
         # A failed reprocess comes back as a report too, never as a bare exception,
         # so the caller always sees the same shape with the details inside.
         report:'stranydict' = {
@@ -437,26 +447,44 @@ class ReprocessHL7Message(AdminService):
             'event_id': None,
             'control_id': '',
             'service_name': '',
+            'destinations': [],
             'error': '',
         }
-
-        def invoke_service(service_name:'str', payload:'str') -> 'None':
-            _ = self.server.invoke(service_name, payload)
 
         try:
             event = load_event(event_id)
 
-            # The original event names the channel - its configuration names the service
-            # the message is re-routed to, the same one a live delivery would run.
-            service_name = _find_channel_service(self.server.config_manager.channel_hl7_mllp, event.object_name)
+            # The original event names the channel it arrived on, and that channel says everything
+            # about how the message flows through a second time
+            config = _find_channel_config(self.server.config_manager.channel_hl7_mllp, event.object_name)
+            channel_item = new_channel_item(config)
+
+            # The message reaches the destinations named and no others
+            if destination_names:
+                channel_item = narrow_to(channel_item, destination_names)
+
+            def invoke_service(service_name:'str', payload:'str') -> 'None':
+
+                # A channel with a service of its own fans out at the end of that service's
+                # pipeline, so the channel rides along with the invocation to be read there ..
+                if service_name:
+                    _ = self.server.invoke(service_name, payload,
+                        channel=CHANNEL.HL7_MLLP, zato_ctx={'zato.channel_item': channel_item})
+
+                # .. and one without a service delivers the message as it stands, the same as
+                # it does when a message arrives on it live.
+                else:
+                    _ = run_for_channel(self.server, channel_item, payload)
 
             audit_log = AuditLog(self.server.name)
-            result = hl7_reprocess(event, service_name, invoke_service, audit_log, self.cid, payload=edited_payload)
+            result = hl7_reprocess(event, config['service'], invoke_service, audit_log, self.cid,
+                payload=edited_payload, destination_names=destination_names)
 
             report['is_ok'] = True
             report['event_id'] = result.event_id
             report['control_id'] = result.control_id
             report['service_name'] = result.service_name
+            report['destinations'] = result.destination_names
 
         except Exception:
             report['error'] = format_exc()
@@ -469,15 +497,29 @@ class ReprocessHL7Message(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _find_channel_service(channel_configs:'stranydict', channel_name:'str') -> 'str':
-    """ Returns the name of the service one HL7 MLLP channel routes to.
+def _find_channel_config(channel_configs:'stranydict', channel_name:'str') -> 'stranydict':
+    """ Returns what one HL7 MLLP channel is configured as.
     """
     for config in channel_configs.values():
         if config['name'] == channel_name:
-            out = config['service']
+            out = config
             break
     else:
         raise Exception(f'No HL7 MLLP channel matches the name `{channel_name}`')
+
+    return out
+
+# ################################################################################################################################
+
+def _get_destination_names(destinations:'str') -> 'strlist':
+    """ Returns the destinations one reprocess was aimed at, out of the comma-separated list
+    it names them in - naming none of them aims the reprocess at all of them.
+    """
+    out:'strlist' = []
+
+    for name in destinations.split(','):
+        if name := name.strip():
+            out.append(name)
 
     return out
 

@@ -86,11 +86,15 @@ def _send_rest(connections:'DestinationConnections', entry:'DestinationEntry', p
 # ################################################################################################################################
 
 def _send_mllp(connections:'DestinationConnections', entry:'DestinationEntry', payload:'any_') -> 'any_':
-    """ Delivers to an outgoing HL7 MLLP connection and returns the acknowledgment it answered with.
+    """ Delivers to an outgoing HL7 MLLP connection and returns the text of the acknowledgment it
+    answered with - that text, and not the result object around it, is what a channel replying
+    from this destination answers its own sender with.
     """
     invoker = connections.mllp[entry.connection]
 
-    out = invoker.send(payload, needs_audit=False)
+    result = invoker.send(payload, needs_audit=False)
+
+    out = result.ack_text
     return out
 
 # ################################################################################################################################

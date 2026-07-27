@@ -16,8 +16,9 @@ from sqlalchemy import select
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditOutcome
 from zato.common.destination.constants import DeliveryMode, DestinationType, Respond_From_Service
 from zato.common.destination.coordinator import new_transports
+from zato.common.destination.model import DestinationException
 from zato.common.typing_ import cast_
-from zato.server.destination.hook import get_config, run_destinations, run_for_service, ConnectionDispatcher
+from zato.server.destination.hook import get_config, narrow_to, run_destinations, run_for_service, ConnectionDispatcher
 
 from service_stub import ServiceStub, MLLP_Response
 
@@ -197,6 +198,63 @@ class TestReadingTheChannelConfiguration:
         channel_item = _new_channel_item(stored)
 
         assert get_config(channel_item) is None
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestNarrowingOneMessageToSomeDestinations:
+
+    def test_only_the_destinations_named_receive_the_message(self) -> 'None':
+        channel_item = _new_channel_item(_get_stored_list())
+
+        narrowed = narrow_to(channel_item, [_rest_connection])
+
+        config = get_config(narrowed)
+
+        assert config
+        assert len(config.entries) == 1
+        assert config.entries[0].name == _rest_connection
+
+        # The channel itself is untouched, this being about one message only
+        assert len(get_config(channel_item).entries) == 2 # type: ignore[union-attr]
+
+# ################################################################################################################################
+
+    def test_a_reply_that_was_to_come_from_a_destination_left_out_comes_from_the_service(self) -> 'None':
+        channel_item = _new_channel_item(_get_stored_list(), _mllp_connection)
+
+        narrowed = narrow_to(channel_item, [_rest_connection])
+
+        assert narrowed['respond_from'] == Respond_From_Service
+
+        # The destination that stays is still the one the reply comes from
+        kept = narrow_to(channel_item, [_mllp_connection])
+
+        assert kept['respond_from'] == _mllp_connection
+
+# ################################################################################################################################
+
+    def test_a_destination_the_channel_does_not_have_is_refused(self) -> 'None':
+        channel_item = _new_channel_item(_get_stored_list())
+
+        try:
+            _ = narrow_to(channel_item, ['no.such.destination'])
+        except DestinationException as e:
+            assert 'no.such.destination' in str(e)
+        else:
+            raise Exception('A destination the channel does not have was expected to be refused')
+
+# ################################################################################################################################
+
+    def test_a_channel_with_nothing_to_deliver_to_is_refused(self) -> 'None':
+        channel_item = _new_channel_item('')
+
+        try:
+            _ = narrow_to(channel_item, [_rest_connection])
+        except DestinationException as e:
+            assert _channel_name in str(e)
+        else:
+            raise Exception('A channel with no destinations was expected to be refused')
 
 # ################################################################################################################################
 # ################################################################################################################################

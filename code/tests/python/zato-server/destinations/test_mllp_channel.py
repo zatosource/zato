@@ -20,8 +20,8 @@ from zato.common.destination.constants import DeliveryMode
 from zato.server.destination.channel import ChannelConnections, run_for_channel
 
 from service_stub import EMailAPIRecorder, FHIRFacadeRecorder, MLLPFacadeRecorder, RESTFacadeRecorder, MLLP_Response
-from mllp_test_channel import get_invoker, Channel_Name, MLLP_Connection, new_channel_item, new_parallel_server, \
-    new_stored_list, new_wrapper, Request_Message, REST_Connection
+from mllp_test_channel import get_invoker, Channel_Name, Message_CID, MLLP_Connection, new_channel_item, \
+    new_parallel_server, new_stored_list, new_wrapper, Request_Message, REST_Connection
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -103,12 +103,16 @@ class TestWhatAChannelTellsItsService:
     def test_a_service_is_invoked_as_the_channel_it_was_invoked_from(self) -> 'None':
         wrapper = new_wrapper(destinations=new_stored_list())
 
-        _ = wrapper._invoke_service(Request_Message)
+        _ = wrapper._invoke_service(Request_Message, Message_CID)
 
         _, kwargs = get_invoker(wrapper).invoke.call_args
 
         assert kwargs['channel'] == CHANNEL.HL7_MLLP
         assert kwargs['zato_ctx']['zato.channel_item']['name'] == Channel_Name
+
+        # The message keeps the correlation id it arrived under, so what the service does with it
+        # is part of that one message's trail
+        assert kwargs['cid'] == Message_CID
 
 # ################################################################################################################################
 
@@ -116,7 +120,7 @@ class TestWhatAChannelTellsItsService:
         wrapper = new_wrapper()
         get_invoker(wrapper).invoke.return_value = MLLP_Response
 
-        out = wrapper._invoke_service(Request_Message)
+        out = wrapper._invoke_service(Request_Message, Message_CID)
 
         assert out == MLLP_Response
 
@@ -229,7 +233,7 @@ class TestAChannelWithNoService:
         wrapper.server = new_parallel_server()
 
         with _running_synchronously():
-            out = wrapper._deliver_to_destinations(Request_Message)
+            out = wrapper._deliver_to_destinations(Request_Message, Message_CID)
 
         assert out == MLLP_Response
 

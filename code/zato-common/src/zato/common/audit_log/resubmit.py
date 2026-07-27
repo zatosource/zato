@@ -214,13 +214,18 @@ def resend_hop(event:'StoredEvent', send:'callable_', audit_log:'AuditLog', cid:
 
     payload = get_stored_payload(event)
 
+    # The attempt is recorded with everything the original carried, the payload included, which is
+    # what keeps it as repeatable as the original was - a resend of a resend goes to the same place.
+    stored_details = dict(event.details)
+    stored_details['payload'] = payload
+
     # The recording is shared by both branches - only the outcome fields differ
     values:'stranydict' = {
         'cid': cid,
         'msg_id': event.msg_id,
         'correl_id': event.cid,
         'size': len(payload),
-        'data': dumps({'payload': payload}),
+        'data': dumps(stored_details),
         'parents': [event.id],
     }
 

@@ -27,7 +27,7 @@ _unknown_msh = 'MSH|^~\\&|UnknownApp|UnknownFac|NoMatch|NoMatch|20230101140000||
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _noop_callback(message_text:'str') -> 'None':
+def _noop_callback(message_text:'str', cid:'str') -> 'None':
     """ A no-op callback for routing tests that only need to verify route matching.
     """
     return None

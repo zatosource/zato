@@ -2125,12 +2125,18 @@ class ConfigManager(_ConfigManagerBase):
         else:
             serialize = True
 
+        # A caller that already has a correlation id for what it is invoking on behalf of hands it
+        # over, so the invocation's own trail reads as part of that, and everything else gets a new one
+        cid = kwargs.get('cid')
+        if not cid:
+            cid = new_cid_server()
+
         return self.on_message_invoke_service({
             'channel': channel,
             'payload': payload,
             'data_format': kwargs.get('data_format'),
             'service': service,
-            'cid': new_cid_server(),
+            'cid': cid,
             'is_async': kwargs.get('is_async'),
             'callback': kwargs.get('callback'),
             'zato_ctx': kwargs.get('zato_ctx'),
