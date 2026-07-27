@@ -8,7 +8,7 @@
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console \
 	help install-deps \
 	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-pubsub-backend test-pubsub-backend-perf test-pubsub-backend-perf-mass test-pubsub-system-perf test-enmasse \
-	test-cli test-mcp _test-mcp test-bearer _test-bearer test-graphql test-grpc test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-llm test-hl7 test-hl7-languages test-hl7-volume test-ui test-ui-pubsub test-ui-openapi _test-ui test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
+	test-cli test-mcp _test-mcp test-bearer _test-bearer test-graphql test-grpc test-as2 test-as2-offline test-as2-interop test-as2-live test-as4 test-as4-offline test-as2-as4 test-edifact test-x12 test-soap test-llm test-hl7 test-hl7-languages test-hl7-volume test-ui test-ui-pubsub test-ui-openapi _test-ui test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-audit-log-ui test-alerting test-destinations test-analytics test-analytics-ui test-demo-seed test-logging test-ibm-mq test-mongodb test-es \
 	test-rule-engine test-rule-engine-perf test-rule-engine-jobs test-rule-engine-dashboard-ui test-webapp-ui \
 	rule-engine-notify rule-engine-retention rule-engine-spike-alerts rule-engine-dashboard \
@@ -377,6 +377,41 @@ restart-dashboard:
 
 COSMIC_RAY := $(CURDIR)/code/bin/cosmic-ray
 
+# ############################################################################
+# Per-target test logs
+#
+# Every test-% and _test-% target mirrors its output to a file named after the
+# target itself - no name is ever spelled out twice. The name is discovered from
+# $@ inside a target-specific .SHELLFLAGS, so the wrapper below applies to every
+# recipe line of every matching target, including ones added later.
+#
+# The prelude runs once per recipe line, so truncation cannot key off "first
+# line". Instead a stamp file is touched once per top-level make run and a log
+# older than the stamp is the first write of this run, hence truncated. Sub-makes
+# are skipped, otherwise re-touching the stamp would wipe a parent target's log
+# halfway through.
+#
+# `eval "$$1"` runs the recipe line that make appends after the flags, with `--`
+# soaking up $$0. Keeping -o pipefail means a failing command still fails the
+# recipe even though its output now flows through tee.
+# ############################################################################
+
+ZATO_TEST_LOG_DIR := /tmp/zato-tests-logs
+ZATO_TEST_LOG_STAMP := $(ZATO_TEST_LOG_DIR)/.run-stamp
+ZATO_TEST_LOG = $(ZATO_TEST_LOG_DIR)/$@.txt
+
+$(if $(filter 0,$(MAKELEVEL)),$(shell mkdir -p $(ZATO_TEST_LOG_DIR) && touch $(ZATO_TEST_LOG_STAMP)))
+
+ZATO_TEST_LOG_PRELUDE = mkdir -p $(ZATO_TEST_LOG_DIR); [ $(ZATO_TEST_LOG) -nt $(ZATO_TEST_LOG_STAMP) ] || : > $(ZATO_TEST_LOG)
+ZATO_TEST_LOG_SHELLFLAGS = -o pipefail -c '$(ZATO_TEST_LOG_PRELUDE); { eval "$$1"; } 2>&1 | tee -a $(ZATO_TEST_LOG)' --
+
+test-%: .SHELLFLAGS = $(ZATO_TEST_LOG_SHELLFLAGS)
+_test-%: .SHELLFLAGS = $(ZATO_TEST_LOG_SHELLFLAGS)
+
+# Targets that only aggregate others have no output of their own, so their log is
+# the logs of their prerequisites, again discovered rather than named.
+ZATO_TEST_LOG_MERGE = cat $(addsuffix .txt,$(addprefix $(ZATO_TEST_LOG_DIR)/,$^)) > $(ZATO_TEST_LOG_DIR)/$@.txt
+
 test-server: ## Server unit and integration tests.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/zato-common/test/zato/common/marshall_/ \
@@ -428,7 +463,7 @@ test-rate-limiting: ## All rate limiting tests.
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-pubsub: ## All pub/sub tests.
-	$(MAKE) _test-pubsub 2>&1 | tee /tmp/logs-test-pubsub.txt
+	$(MAKE) _test-pubsub
 
 _test-pubsub:
 	$(MAKE) test-pubsub-backend 2>&1 | $(TS)
@@ -628,7 +663,7 @@ test-cli: ## CLI tests.
 	$(MAKE) -C $(CURDIR)/code/zato-cli test
 
 test-mcp: ## All MCP tests.
-	$(MAKE) _test-mcp 2>&1 | tee /tmp/logs-test-mcp.txt
+	$(MAKE) _test-mcp
 
 _test-mcp:
 	ruff check \
@@ -653,7 +688,7 @@ _test-mcp:
 		2>&1 | $(TS)
 
 test-bearer: ## Inbound bearer token live tests.
-	$(MAKE) _test-bearer 2>&1 | tee /tmp/logs-test-bearer.txt
+	$(MAKE) _test-bearer
 
 _test-bearer:
 	ruff check \
@@ -691,29 +726,38 @@ test-grpc: ## gRPC live tests.
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_grpc -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-as2: ## AS2 messaging tests - fully offline, no external services needed.
+test-as2-offline: ## AS2 messaging tests - fully offline, no external services needed.
 	$(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/as2/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_as2 -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-as2-interop: ## AS2 interop tests against a real counterparty in docker - opt-in, never part of test-all.
+test-as2-interop: ## AS2 interop tests against a real counterparty in docker.
 	$(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/as2_interop/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_as2_interop -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-as2-live: ## AS2 live tests - a real server and dashboard driven with Playwright, opt-in.
+test-as2-live: ## AS2 live tests - a real server and dashboard driven with Playwright.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/as2_live/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_as2_live -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-as4: ## AS4 messaging tests - fully offline, no external services needed.
+test-as2: test-as2-offline test-as2-interop test-as2-live ## All AS2 tests - offline, interop in docker and live server plus dashboard.
+	$(ZATO_TEST_LOG_MERGE)
+
+test-as4-offline: ## AS4 messaging tests - fully offline, no external services needed.
 	$(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/as4/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_as4 -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
+
+test-as4: test-as4-offline ## All AS4 tests.
+	$(ZATO_TEST_LOG_MERGE)
+
+test-as2-as4: test-as2 test-as4 test-edifact test-x12 test-audit-log test-audit-log-ui ## AS2, AS4, EDIFACT, X12 and every audit log suite.
+	$(ZATO_TEST_LOG_MERGE)
 
 test-edifact: ## EDIFACT tests - fully offline, no external services needed.
 	$(ZATO_PY) -m pytest \
@@ -822,10 +866,10 @@ test-hl7-fhir: ## HL7 to FHIR conversion tests - fully offline, proven against d
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-ui: ## Dashboard backend and Playwright tests.
-	$(MAKE) test-ui-pubsub 2>&1 | tee /tmp/logs-test-ui-pubsub.txt
-	$(MAKE) test-ui-openapi 2>&1 | tee /tmp/logs-test-ui-openapi.txt
-	$(MAKE) test-analytics-ui 2>&1 | tee /tmp/logs-test-analytics-ui.txt
-	$(MAKE) _test-ui 2>&1 | tee /tmp/logs-test-ui.txt
+	$(MAKE) test-ui-pubsub
+	$(MAKE) test-ui-openapi
+	$(MAKE) test-analytics-ui
+	$(MAKE) _test-ui
 	$(MAKE) -C $(CURDIR)/code/zato-web-admin test
 
 test-ui-openapi:
@@ -1091,8 +1135,10 @@ test-request-response: ## Unified service I/O tests - messages, request.raw, req
 
 test-all: test-server test-rest test-scheduler test-rate-limiting test-pubsub test-enmasse \
 	test-cli test-mcp test-bearer test-graphql test-grpc test-as2 test-as4 test-edifact test-x12 test-llm test-hl7 test-ui test-audit-log test-audit-log-ui test-alerting test-destinations test-analytics test-demo-seed test-logging test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response test-rule-engine test-rule-engine-jobs test-rule-engine-dashboard-ui ## Everything.
+	$(ZATO_TEST_LOG_MERGE)
 
 test: test-all ## Alias for test-all.
+	$(ZATO_TEST_LOG_MERGE)
 
 # ############################################################################
 # Rust lint infrastructure
