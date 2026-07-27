@@ -40,11 +40,10 @@ kit.lines.config = {
 // a caret after it and opens the panel it was given when clicked.
 //
 // spec:
-//   text      - what the chip says
-//   note      - optional, a quieter word after the text, e.g. how many are paused
-//   isBlank   - the value is not set yet, the chip is drawn as an outline
-//   isWarning - the value is set to something that cannot work
-//   panel     - {title, width, build} handed over to openPanel
+//   text    - what the chip says
+//   note    - optional, a quieter word after the text, e.g. how many are paused
+//   isBlank - nothing has been picked on this line yet, so the chip is dashed
+//   panel   - {title, width, build} handed over to openPanel
 kit.lines.setChip = function(slotId, spec) {
 
     var slot = document.getElementById(slotId);
@@ -56,7 +55,7 @@ kit.lines.setChip = function(slotId, spec) {
     chip.id = slotId + '-chip';
 
     var value = document.createElement('span');
-    value.className = spec.isWarning ? 'wizard-chip-warning' : 'wizard-chip-value';
+    value.className = 'wizard-chip-value';
     value.textContent = spec.text;
     chip.appendChild(value);
 
@@ -112,8 +111,9 @@ kit.lines.setSegments = function(slotId, optionList, currentName, onPick) {
     var slot = document.getElementById(slotId);
     slot.textContent = '';
 
+    // The strip is the shared tab component, recolored by wizard-lines.css
     var strip = document.createElement('div');
-    strip.className = 'wizard-segments';
+    strip.className = 'wizard-segments dashboard-tabs';
 
     for(var optionIdx = 0; optionIdx < optionList.length; optionIdx++) {
         strip.appendChild(kit.lines._buildSegment(optionList[optionIdx], currentName, onPick));
@@ -131,8 +131,12 @@ kit.lines._buildSegment = function(option, currentName, onPick) {
 
     var button = document.createElement('button');
     button.type = 'button';
-    button.className = option.name === currentName ? 'wizard-segment wizard-segment-active' : 'wizard-segment';
+    button.className = 'wizard-segment dashboard-tab';
     button.textContent = option.label;
+
+    if(option.name === currentName) {
+        button.className = button.className + ' wizard-segment-active dashboard-tab-active';
+    }
 
     button.addEventListener('click', function() {
         onPick(option.name);
@@ -195,9 +199,16 @@ kit.lines.openPanel = function(chip, spec) {
 
     var onClose = spec.build(content, panel);
 
-    kit.lines._place(panel, chip);
-    kit.lines._makeDraggable(panel, header);
-    kit.lines._makeResizable(panel, spec);
+    // A panel the user has already moved or resized opens the way it was
+    // left, the rest hang under their chip
+    var isRestored = $.fn.zato.popup.restore_geometry(chip.id, panel);
+
+    if(!isRestored) {
+        kit.lines._place(panel, chip);
+    }
+
+    kit.lines._makeDraggable(panel, header, chip.id);
+    kit.lines._makeResizable(panel, spec, chip.id);
 
     linesConfig.openPanel = {element: panel, chipId: chip.id, onClose: onClose};
 
@@ -223,11 +234,14 @@ kit.lines.closePanel = function() {
     }
 
     kit.lines.config.openPanel = null;
-    open.element.remove();
 
+    // A panel that writes its answers back reads them out of its own DOM,
+    // so it is asked first and taken off the page after
     if(open.onClose) {
         open.onClose();
     }
+
+    open.element.remove();
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -270,8 +284,9 @@ kit.lines._place = function(panel, chip) {
 // ////////////////////////////////////////////////////////////////////////
 
 // The header is the handle, through the same drag machinery the micro-forms
-// and the IDE menus use.
-kit.lines._makeDraggable = function(panel, header) {
+// and the IDE menus use. Where the panel is let go is where it opens next
+// time, which is what the key is for - one per line.
+kit.lines._makeDraggable = function(panel, header, key) {
 
     $.fn.zato.popup.install_drag(header, {
 
@@ -280,6 +295,10 @@ kit.lines._makeDraggable = function(panel, header) {
         on_start: function() {
             var out = {x: panel.offsetLeft, y: panel.offsetTop};
             return out;
+        },
+
+        on_end: function() {
+            $.fn.zato.popup.save_geometry(key, panel);
         },
 
         on_move: function(x, y) {
@@ -294,11 +313,16 @@ kit.lines._makeDraggable = function(panel, header) {
 // The bottom corners resize the panel, through the same popup machinery.
 // Everything a panel holds is laid out in flex, so the lists take whatever
 // height the panel is dragged to and nothing inside moves out of place.
-kit.lines._makeResizable = function(panel, spec) {
+kit.lines._makeResizable = function(panel, spec, key) {
 
     $.fn.zato.popup.install_resize(panel, {
+
         min_width: spec.minWidth,
-        min_height: kit.lines.config.panelMinHeight
+        min_height: kit.lines.config.panelMinHeight,
+
+        on_end: function() {
+            $.fn.zato.popup.save_geometry(key, panel);
+        }
     });
 };
 
@@ -331,35 +355,6 @@ kit.lines.buildFilter = function(labelText, placeholder, onInput) {
     });
 
     var out = {field: field, input: input};
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// A row of columns inside a panel - the same side-by-side row the micro-forms
-// put their short fields in.
-kit.lines.buildColumns = function(labelList) {
-
-    var row = document.createElement('div');
-    row.className = 'wizard-tippy-row';
-
-    var columnList = [];
-
-    for(var labelIdx = 0; labelIdx < labelList.length; labelIdx++) {
-
-        var column = document.createElement('div');
-        column.className = 'wizard-panel-column';
-
-        var label = document.createElement('span');
-        label.className = 'wizard-tippy-label';
-        label.textContent = labelList[labelIdx];
-        column.appendChild(label);
-
-        row.appendChild(column);
-        columnList.push(column);
-    }
-
-    var out = {row: row, columnList: columnList};
     return out;
 };
 

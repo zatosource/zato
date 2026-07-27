@@ -91,10 +91,69 @@ $.fn.zato.popup.resize_icon =
 //
 // options:
 //   min_width, min_height - how small a popup may be dragged
+//   on_end                - optional, runs when the button comes back up
 $.fn.zato.popup.install_resize = function(popup, options) {
 
     $.fn.zato.popup._install_grip(popup, options, 'left');
     $.fn.zato.popup._install_grip(popup, options, 'right');
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Where a popup was left the last time it was open. The key is the caller's,
+// one per popup it opens, and the browser is free to refuse the storage
+// altogether - with cookies blocked even reading it throws - in which case a
+// popup simply opens where it always did.
+$.fn.zato.popup.geometry_prefix = 'zato.popup.geometry.';
+
+$.fn.zato.popup.save_geometry = function(key, popup) {
+
+    var geometry = {
+        left: popup.offsetLeft,
+        top: popup.offsetTop,
+        width: popup.offsetWidth,
+        height: popup.offsetHeight
+    };
+
+    try {
+        window.localStorage.setItem($.fn.zato.popup.geometry_prefix + key, JSON.stringify(geometry));
+    }
+    catch(storage_error) {
+        return;
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Puts a popup back where it was left, keeping it inside the window in case
+// the window is smaller now than it was then. Returns whether anything was
+// restored, so the caller knows whether to place the popup itself.
+$.fn.zato.popup.restore_geometry = function(key, popup) {
+
+    var stored = null;
+
+    try {
+        stored = window.localStorage.getItem($.fn.zato.popup.geometry_prefix + key);
+    }
+    catch(storage_error) {
+        return false;
+    }
+
+    if(!stored) {
+        return false;
+    }
+
+    var geometry = JSON.parse(stored);
+
+    var left = Math.min(geometry.left, window.scrollX + window.innerWidth - geometry.width);
+    var top = Math.min(geometry.top, window.scrollY + window.innerHeight - geometry.height);
+
+    popup.style.left = Math.max(left, window.scrollX) + 'px';
+    popup.style.top = Math.max(top, window.scrollY) + 'px';
+    popup.style.width = geometry.width + 'px';
+    popup.style.height = geometry.height + 'px';
+
+    return true;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -150,6 +209,10 @@ $.fn.zato.popup._install_grip = function(popup, options, side) {
             $(document.documentElement).removeClass('zato-popup-resizing-' + side);
             $(document).off('mousemove.zato-popup-resize');
             $(document).off('mouseup.zato-popup-resize');
+
+            if(options.on_end) {
+                options.on_end();
+            }
         });
     });
 };

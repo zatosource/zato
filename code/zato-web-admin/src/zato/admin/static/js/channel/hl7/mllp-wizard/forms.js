@@ -27,10 +27,10 @@ $.fn.zato.wizard_kit.forms.setup(wizard, {
                 [
                     {field: 'start_seq',  label: 'Start separator', kind: 'text'},
                     {field: 'end_seq',    label: 'End separator',   kind: 'text'},
-                    {field: 'recv_timeout', label: 'Receive timeout (ms)', kind: 'text'}
+                    {field: 'recv_timeout', label: 'Receive timeout (ms)', kind: 'number'}
                 ],
                 [
-                    {field: 'max_msg_size', label: 'Max message size', kind: 'text', unitField: 'max_msg_size_unit', width: '110px'},
+                    {field: 'max_msg_size', label: 'Max message size', kind: 'number', unitField: 'max_msg_size_unit', width: '160px'},
                     {field: 'default_character_encoding', label: 'Encoding', kind: 'select'},
                     {field: 'use_msh18_encoding', label: 'Use MSH-18 too', kind: 'checkbox'}
                 ]
@@ -72,8 +72,7 @@ $.fn.zato.wizard_kit.forms.setup(wizard, {
         'dedup': {
             title: 'Deduplication',
             pages: [[
-                {field: 'dedup_ttl_value', label: 'Remember control IDs for', kind: 'text', unitField: 'dedup_ttl_unit',
-                    width: '210px'}
+                {field: 'dedup_ttl_value', label: 'Remember control IDs for', kind: 'number', unitField: 'dedup_ttl_unit'}
             ]]
         },
 

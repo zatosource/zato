@@ -840,10 +840,12 @@ $.fn.zato.how_it_works._collectFields = function(container, config) {
             }
 
             // .. when the label wraps its own control, anchor at the control itself
-            // .. so the tooltip centers on the input, not on the label plus input box ..
+            // .. so the tooltip centers on the input, not on the label plus input box,
+            // .. unless the label asks to be the anchor - which is what a row holding
+            // .. a label and its switch does, so that a tooltip beside it clears both ..
             var control = document.getElementById(fieldId);
             if (targetElement === label) {
-                if (control && label.contains(control)) {
+                if (control && label.contains(control) && label.getAttribute('data-help-anchor') !== 'label') {
                     targetElement = control;
                 }
             }
