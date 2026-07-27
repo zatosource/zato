@@ -63,6 +63,11 @@ _Enveloped_Data_OID = bytes([0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x0
 # How far into the wire body the OID above may sit - it belongs to the outermost ContentInfo.
 _OID_Search_Window = 64
 
+# The toggles the receiving side enforces on an incoming message - the reverse connection
+# requires whatever it is set to require, so a layer the sending side does not apply
+# has to stop being required on the receiving side as well.
+_Inbound_Policy_Fields = ('sign', 'encrypt')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -196,7 +201,23 @@ class _Loopback:
     def __init__(self) -> 'None':
         self.sender_name = ''
         self.sender_id = ''
+        self.receiver_name = ''
         self.receiver_id = ''
+
+# ################################################################################################################################
+
+def _inbound_policy_of(options:'anydict') -> 'anydict':
+    """ Returns the subset of one connection's options the receiving side enforces -
+    the reverse connection is configured with the same values, because the channel holds
+    the peer to what that connection requires rather than to what arrives.
+    """
+    out = {}
+
+    for field_name in _Inbound_Policy_Fields:
+        if field_name in options:
+            out[field_name] = options[field_name]
+
+    return out
 
 # ################################################################################################################################
 
@@ -239,9 +260,9 @@ def _new_loopback(
 
     # .. and the receiving side - the inbound channel matches the reversed identity pair
     # against this connection and routes the payload to the pre-deployed receiver service.
-    receiver_name = _Test_Name_Prefix + name_infix + '.reverse'
+    out.receiver_name = _Test_Name_Prefix + name_infix + '.reverse'
 
-    out.receiver_id = create_as2_outconn(page, base_url, receiver_name, 'https://as2.example.com/exchange', {
+    receiver_form = {
         'as2_from': receiver_identity,
         'as2_to': sender_identity,
         'as2_partner_cert': sender_party.certificate,
@@ -249,7 +270,11 @@ def _new_loopback(
         'as2_signing_cert_chain': channel_party.certificate,
         'as2_decryption_key': channel_party.key,
         'inbound_service': _Receiver_Service,
-    })
+    }
+    receiver_form.update(_inbound_policy_of(sender_options))
+
+    out.receiver_id = create_as2_outconn(page, base_url, out.receiver_name, 'https://as2.example.com/exchange',
+        receiver_form)
 
     return out
 
@@ -263,15 +288,30 @@ def _delete_loopback(page:'Page', loopback:'_Loopback') -> 'None':
 
 # ################################################################################################################################
 
-def _edit_sender(page:'Page', base_url:'str', loopback:'_Loopback', options:'anydict') -> 'None':
-    """ Applies changes to the sending connection through the Dashboard edit dialog -
-    the page has to be back on the connections list first, because the tests
-    drive the IDE in between the edits.
+def _edit_connection(page:'Page', base_url:'str', name:'str', outconn_id:'str', options:'anydict') -> 'None':
+    """ Applies changes to one connection through the Dashboard edit dialog - the page has
+    to be back on the connections list first, because the tests drive the IDE
+    in between the edits.
     """
-    open_as2_outconn_page(page, base_url, query=loopback.sender_name)
-    _ = wait_for_as2_outconn_row(page, loopback.sender_name)
+    open_as2_outconn_page(page, base_url, query=name)
+    _ = wait_for_as2_outconn_row(page, name)
 
-    edit_as2_outconn(page, loopback.sender_id, options)
+    edit_as2_outconn(page, outconn_id, options)
+
+# ################################################################################################################################
+
+def _edit_exchange(page:'Page', base_url:'str', loopback:'_Loopback', options:'anydict') -> 'None':
+    """ Applies changes to the sending connection and keeps the receiving side's security
+    policy in step with them - a layer the sender stops applying has to stop being required
+    on the receiving side too, or the channel turns the delivery down.
+    """
+    receiver_options = _inbound_policy_of(options)
+
+    # The receiving side goes first, so the requirement is lifted before the layer stops arriving.
+    if receiver_options:
+        _edit_connection(page, base_url, loopback.receiver_name, loopback.receiver_id, receiver_options)
+
+    _edit_connection(page, base_url, loopback.sender_name, loopback.sender_id, options)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -385,7 +425,7 @@ class TestAS2LiveWireShape:
 
             # .. with encryption and compression off, the wire is multipart/signed
             # and the payload rides in it in the clear, next to its signature ..
-            _edit_sender(page, base_url, loopback, {'encrypt': False, 'compress': False})
+            _edit_exchange(page, base_url, loopback, {'encrypt': False, 'compress': False})
 
             def _is_signed_only(reply:'anydict') -> 'bool':
                 if not _is_reply_ok(reply):
@@ -401,7 +441,7 @@ class TestAS2LiveWireShape:
 
             # .. and with signing off too, the wire is the bare MIME entity -
             # no signature part and no CMS layer anywhere.
-            _edit_sender(page, base_url, loopback, {'sign': False})
+            _edit_exchange(page, base_url, loopback, {'sign': False})
 
             def _is_plain(reply:'anydict') -> 'bool':
                 if not _is_reply_ok(reply):
