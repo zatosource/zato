@@ -678,6 +678,7 @@ class CHANNEL(Attrs):
     FANOUT_CALL = 'fanout-call'
     FANOUT_ON_FINAL = 'fanout-on-final'
     FANOUT_ON_TARGET = 'fanout-on-target'
+    HL7_MLLP = 'hl7-mllp'
     HTTP_SOAP = 'http-soap'
     INTERNAL_CHECK = 'internal-check'
     INVOKE = 'invoke'

@@ -1,0 +1,237 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# What an MLLP channel does with a message on its way in - the service it hands it to and what it
+# tells that service about the channel it came from, or, with no service to hand it to, the
+# destinations it delivers to itself and in what order.
+
+# stdlib
+from contextlib import contextmanager
+from unittest.mock import patch
+
+# Zato
+from zato.common.api import CHANNEL
+from zato.common.destination.constants import DeliveryMode
+from zato.server.destination.channel import ChannelConnections, run_for_channel
+
+from service_stub import EMailAPIRecorder, FHIRFacadeRecorder, MLLPFacadeRecorder, RESTFacadeRecorder, MLLP_Response
+from mllp_test_channel import get_invoker, Channel_Name, MLLP_Connection, new_channel_item, new_parallel_server, \
+    new_stored_list, new_wrapper, Request_Message, REST_Connection
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, anylist, stranydict
+
+    anylist = anylist
+    stranydict = stranydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The connections every delivery of these tests goes through, kept here so that a test reads back
+# what was sent through them after the channel is done with the message
+_recorders:'stranydict' = {}
+
+# ################################################################################################################################
+
+def _install_recorders(self:'ChannelConnections', server:'any_', cid:'str') -> 'None':
+    """ Gives a channel with no service connections that record what they were sent, in place of
+    the ones that would really reach something.
+    """
+    self.rest  = _recorders['rest']
+    self.mllp  = _recorders['mllp']
+    self.fhir  = _recorders['fhir']
+    self.email = _recorders['email']
+
+# ################################################################################################################################
+
+@contextmanager
+def _running_synchronously() -> 'any_':
+    """ Runs the deliveries a channel does not wait for here and now, so that a test sees the whole
+    fan-out rather than only the part the sender waits for.
+    """
+    _recorders['rest']  = RESTFacadeRecorder()
+    _recorders['mllp']  = MLLPFacadeRecorder()
+    _recorders['fhir']  = FHIRFacadeRecorder()
+    _recorders['email'] = EMailAPIRecorder()
+
+    def spawn(function:'any_', *args:'any_') -> 'None':
+        function(*args)
+
+    with patch.object(ChannelConnections, 'init', _install_recorders):
+        with patch('zato.server.destination.hook.gevent_spawn', spawn):
+            yield
+
+# ################################################################################################################################
+
+def _get_mllp_calls() -> 'anylist':
+    out = _recorders['mllp'].calls
+    return out
+
+# ################################################################################################################################
+
+def _get_rest_calls() -> 'anylist':
+    out = _recorders['rest'].calls
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestWhatAChannelTellsItsService:
+
+    def test_the_channel_item_carries_everything_the_channel_declares(self) -> 'None':
+        stored = new_stored_list()
+        wrapper = new_wrapper(destinations=stored, respond_from=MLLP_Connection,
+            delivery_mode=DeliveryMode.In_Order)
+
+        channel_item = wrapper._build_channel_item()
+
+        assert channel_item['name'] == Channel_Name
+        assert channel_item['destinations'] == stored
+        assert channel_item['respond_from'] == MLLP_Connection
+        assert channel_item['delivery_mode'] == DeliveryMode.In_Order
+
+# ################################################################################################################################
+
+    def test_a_service_is_invoked_as_the_channel_it_was_invoked_from(self) -> 'None':
+        wrapper = new_wrapper(destinations=new_stored_list())
+
+        _ = wrapper._invoke_service(Request_Message)
+
+        _, kwargs = get_invoker(wrapper).invoke.call_args
+
+        assert kwargs['channel'] == CHANNEL.HL7_MLLP
+        assert kwargs['zato_ctx']['zato.channel_item']['name'] == Channel_Name
+
+# ################################################################################################################################
+
+    def test_what_the_service_pipeline_produced_is_what_the_channel_answers_with(self) -> 'None':
+        wrapper = new_wrapper()
+        get_invoker(wrapper).invoke.return_value = MLLP_Response
+
+        out = wrapper._invoke_service(Request_Message)
+
+        assert out == MLLP_Response
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestWhichWayAMessageGoes:
+
+    def test_a_channel_that_names_a_service_hands_its_messages_to_it(self) -> 'None':
+        wrapper = new_wrapper()
+
+        assert wrapper._get_callback() == wrapper._invoke_service
+
+# ################################################################################################################################
+
+    def test_a_channel_that_names_no_service_delivers_to_its_destinations_itself(self) -> 'None':
+        wrapper = new_wrapper(service='', destinations=new_stored_list())
+
+        assert wrapper._get_callback() == wrapper._deliver_to_destinations
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestAChannelWithNoService:
+
+    def test_every_destination_receives_the_message_as_it_arrived(self) -> 'None':
+        channel_item = new_channel_item(new_stored_list(), delivery_mode=DeliveryMode.In_Order)
+
+        with _running_synchronously():
+            result = run_for_channel(new_parallel_server(), channel_item, Request_Message)
+
+        assert result
+        assert result.has_response is False
+
+        assert _get_mllp_calls()[0][1] == Request_Message
+        assert _get_rest_calls()[0][2] == (Request_Message,)
+
+# ################################################################################################################################
+
+    def test_the_destination_the_channel_replies_from_produces_the_answer(self) -> 'None':
+        stored = new_stored_list()[:1]
+        channel_item = new_channel_item(stored, respond_from=MLLP_Connection)
+
+        with _running_synchronously():
+            result = run_for_channel(new_parallel_server(), channel_item, Request_Message)
+
+        assert result
+        assert result.has_response is True
+        assert result.response == MLLP_Response
+
+# ################################################################################################################################
+
+    def test_a_destination_that_is_paused_receives_nothing(self) -> 'None':
+        stored = new_stored_list()
+        stored[1]['is_active'] = False
+
+        channel_item = new_channel_item(stored, delivery_mode=DeliveryMode.In_Order)
+
+        with _running_synchronously():
+            _ = run_for_channel(new_parallel_server(), channel_item, Request_Message)
+
+        assert len(_get_mllp_calls()) == 1
+        assert _get_rest_calls() == []
+
+# ################################################################################################################################
+
+    def test_a_channel_with_every_destination_paused_delivers_nothing(self) -> 'None':
+        stored = new_stored_list()
+
+        for entry in stored:
+            entry['is_active'] = False
+
+        channel_item = new_channel_item(stored)
+
+        with _running_synchronously():
+            assert run_for_channel(new_parallel_server(), channel_item, Request_Message) is None
+
+        assert _get_mllp_calls() == []
+        assert _get_rest_calls() == []
+
+# ################################################################################################################################
+
+    def test_delivering_one_after_another_reaches_every_destination_in_turn(self) -> 'None':
+        channel_item = new_channel_item(new_stored_list(), delivery_mode=DeliveryMode.In_Order)
+
+        with _running_synchronously():
+            _ = run_for_channel(new_parallel_server(), channel_item, Request_Message)
+
+        assert _get_mllp_calls()[0][0] == MLLP_Connection
+        assert _get_rest_calls()[0][0] == REST_Connection
+
+# ################################################################################################################################
+
+    def test_delivering_all_at_once_reaches_every_destination_too(self) -> 'None':
+        channel_item = new_channel_item(new_stored_list(), delivery_mode=DeliveryMode.Same_Time)
+
+        with _running_synchronously():
+            _ = run_for_channel(new_parallel_server(), channel_item, Request_Message)
+
+        assert len(_get_mllp_calls()) == 1
+        assert len(_get_rest_calls()) == 1
+
+# ################################################################################################################################
+
+    def test_the_channel_answers_with_what_the_destination_it_replies_from_said(self) -> 'None':
+        """ The whole way through the wrapper, which is what the listener turns into the
+        acknowledgment the sender receives.
+        """
+        wrapper = new_wrapper(service='', destinations=new_stored_list(), respond_from=MLLP_Connection)
+        wrapper.server = new_parallel_server()
+
+        with _running_synchronously():
+            out = wrapper._deliver_to_destinations(Request_Message)
+
+        assert out == MLLP_Response
+
+# ################################################################################################################################
+# ################################################################################################################################

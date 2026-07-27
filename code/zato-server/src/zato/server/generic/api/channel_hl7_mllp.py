@@ -13,6 +13,7 @@ from threading import Lock
 from traceback import format_exc
 
 # Zato
+from zato.common.api import CHANNEL
 from zato.common.audit_log.api import AuditLog
 from zato.common.hl7.mllp.fields import Channel_Defaults, Channel_Int_Names, resolve_max_msg_size, Tolerance_Names
 from zato.common.hl7.mllp.haproxy import ensure_mllp_backend_server, find_haproxy_config, resolve_internal_port
@@ -24,14 +25,17 @@ from zato.common.hl7.mllp.state import ChannelState
 from zato.common.typing_ import cast_
 from zato.common.util.api import asbool, hex_sequence_to_bytes, spawn_greenlet
 from zato.server.connection.wrapper import Wrapper
+from zato.server.destination.channel import run_for_channel
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anylist, stranydict
+    from zato.common.typing_ import any_, anylist, callable_, stranydict
     from zato.server.base.parallel import ParallelServer
+    any_ = any_
     anylist = anylist
+    callable_ = callable_
     stranydict = stranydict
     ParallelServer = ParallelServer
 
@@ -195,10 +199,69 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
 # ################################################################################################################################
 
-    def _invoke_service(self, data:'str') -> 'object':
-        """ Invokes the service configured for this channel, passing the HL7 message as the request payload.
+    def _build_channel_item(self) -> 'stranydict':
+        """ What this channel says about itself to everything that runs on its behalf - its own
+        identity plus everything it declares about its destinations, which is what the fan-out
+        at the end of a service's pipeline reads and what a service-less channel delivers by.
         """
-        out = self.parallel_server.invoke(self.config.service, data)
+        out = {
+            'id': self.config.id,
+            'name': self.config.name,
+            'is_internal': self.config.is_internal,
+            'data_format': self.config.data_format,
+            'destinations': self.config.destinations,
+            'respond_from': self.config.respond_from,
+            'delivery_mode': self.config.delivery_mode,
+        }
+
+        return out
+
+# ################################################################################################################################
+
+    def _invoke_service(self, data:'str') -> 'any_':
+        """ Invokes the service configured for this channel, passing the HL7 message as the request
+        payload, and returns what the service's pipeline produced - which is the answer of the
+        destination this channel replies from, when it replies from one of them.
+        """
+        out = self.parallel_server.invoke(
+            self.config.service,
+            data,
+            channel=CHANNEL.HL7_MLLP,
+            zato_ctx={'zato.channel_item': self._build_channel_item()},
+        )
+
+        return out
+
+# ################################################################################################################################
+
+    def _deliver_to_destinations(self, data:'str') -> 'any_':
+        """ Delivers one message to this channel's destinations with nothing between the two, which
+        is what a channel that names no service does with everything it accepts. Nothing here looks
+        at what the message says - a channel with no service passes bytes through and no more.
+        """
+        result = run_for_channel(self.parallel_server, self._build_channel_item(), data)
+
+        # Our response to produce - a channel that replies from one of its destinations answers
+        # with what that destination said, and one that does not has nothing of its own to say
+        out = None
+
+        if result:
+            if result.has_response:
+                out = result.response
+
+        return out
+
+# ################################################################################################################################
+
+    def _get_callback(self) -> 'callable_':
+        """ Returns what each message matching this channel is handed to - the channel's service
+        when it names one, and its destinations directly when it does not.
+        """
+        if self.config.service:
+            out = self._invoke_service
+        else:
+            out = self._deliver_to_destinations
+
         return out
 
 # ################################################################################################################################
@@ -414,8 +477,9 @@ class ChannelHL7MLLPWrapper(Wrapper):
             if self.config.is_active:
                 _shared_state.router.add_route(
                     channel_name=self.config.name,
+                    callback=self._get_callback(),
                     service_name=self.config.service,
-                    callback=self._invoke_service,
+                    has_destinations=bool(self.config.destinations),
                     msh3_sending_application=self.config.msh3_sending_app,
                     msh4_sending_facility=self.config.msh4_sending_facility,
                     msh5_receiving_application=self.config.msh5_receiving_app,

@@ -30,7 +30,7 @@ from zato.common.soap.message import SOAPMessage, to_lexical
 from zato.common.soap.mtom import build_mtom, build_swa, parse_message, to_bytes_map
 from zato.common.soap.security.wss import apply_wss, keystore_from_config
 from zato.common.util.http_retry import RetryPolicy, send_with_retry
-from zato.common.util.tls_verify import resolve_tls_verify
+from zato.common.util.tls_verify import Default_Validate_TLS, resolve_tls_verify
 from zato.common.util.xml_.core import qname
 from zato.common.util.xml_.mime_ import parse_header_parameters
 from zato.common.util.xml_.keystore import new_keystore
@@ -138,6 +138,12 @@ class SOAPClient:
         self.soap_action  = config.get('soap_action', '')
         self.timeout      = float(config.get('timeout') or 0) or None
         self.content_type = config.get('content_type')
+
+        # TLS verification belongs to a connection's configuration, so a client built by hand,
+        # e.g. one in a test, need not spell it out - it is filled in here because the resolver
+        # this client's requests go through expects every configuration to carry it.
+        if 'validate_tls' not in config:
+            config['validate_tls'] = Default_Validate_TLS
 
         # A transport-level failure is retried per the connection's own configuration - the
         # dashboard offers the four retry settings for outgoing SOAP as much as it does for REST.

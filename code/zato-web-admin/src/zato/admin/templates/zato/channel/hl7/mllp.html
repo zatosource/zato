@@ -101,7 +101,12 @@
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.use_rest|yesno:'Yes,No' }}</td>
 
+                        {# A channel that only delivers to its destinations has no service to link to #}
+                        {% if item.service %}
                         <td><a href="{% url "service-overview" item.service %}?cluster={{ cluster_id }}">{{ item.service }}</a></td>
+                        {% else %}
+                        <td>---</td>
+                        {% endif %}
 
                         <td><a href="/zato/audit-log/?source=hl7&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a></td>
                         <td><a href="{% url "channel-hl7-mllp-editor-edit" item.id %}?cluster={{ cluster_id }}">Edit</a></td>

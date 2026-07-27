@@ -44,12 +44,19 @@ _MSH12_Index = 11
 
 @dataclass(init=False)
 class ChannelRoute:
-    """ A single routing rule mapping MSH field criteria to a service callback.
+    """ A single routing rule mapping MSH field criteria to what the channel does with a message.
     """
 
     channel_name:'str'
-    service_name:'str'
     callback:'callable_'
+
+    # The service each matched message is handed to, empty when the channel has none - a channel
+    # that only delivers to destinations of its own needs no service to accept a message.
+    service_name:'str'
+
+    # Whether the channel declares destinations of its own, which is what a channel without
+    # a service delivers everything it accepts to.
+    has_destinations:'bool'
 
     # Match criteria - empty string means "match any"
     msh3_sending_application:'str'
@@ -69,6 +76,18 @@ class ChannelRoute:
 
     # How this channel's messages are framed, read and interpreted, and who may send them
     settings:'RouteSettings'
+
+# ################################################################################################################################
+
+    def get_target(self) -> 'str':
+        """ What a message matching this route is handed to, for the lines that log it being routed.
+        """
+        if self.service_name:
+            out = f'service `{self.service_name}`'
+        else:
+            out = 'its own destinations'
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -140,9 +159,10 @@ class HL7MessageRouter:
     def add_route(
         self,
         channel_name:'str',
-        service_name:'str',
         callback:'callable_',
         *,
+        service_name:'str' = '',
+        has_destinations:'bool' = False,
         msh3_sending_application:'str' = '',
         msh4_sending_facility:'str' = '',
         msh5_receiving_application:'str' = '',
@@ -173,9 +193,10 @@ class HL7MessageRouter:
                         logger.info('Cleared default flag from channel `%s`', existing_route.channel_name)
 
         route = ChannelRoute()
-        route.channel_name = channel_name
-        route.service_name = service_name
-        route.callback     = callback
+        route.channel_name     = channel_name
+        route.callback         = callback
+        route.service_name     = service_name
+        route.has_destinations = has_destinations
 
         route.msh3_sending_application  = msh3_sending_application
         route.msh4_sending_facility     = msh4_sending_facility
@@ -192,7 +213,7 @@ class HL7MessageRouter:
         with self._lock:
             self._routes.append(route)
 
-        logger.info('Added MLLP route for channel `%s` -> service `%s` (default: %s)', channel_name, service_name, is_default)
+        logger.info('Added MLLP route for channel `%s` -> %s (default: %s)', channel_name, route.get_target(), is_default)
 
 # ################################################################################################################################
 

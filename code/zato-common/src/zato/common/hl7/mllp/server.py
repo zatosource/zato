@@ -39,9 +39,11 @@ from zato.hl7v2 import HL7ValidationError, parse_hl7
 if 0:
     from zato.common.audit_log.api import AuditLog
     from zato.common.hl7.mllp.router import ChannelRoute
+    from zato.common.typing_ import any_
 
     AuditLog = AuditLog
     ChannelRoute = ChannelRoute
+    any_ = any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -70,6 +72,25 @@ _Accept_Poll_Interval = 1.0
 
 # What a sender is told when its connection is refused before any message was read
 _Rejection_Ack_Code = 'AR'
+
+# What a channel's own answer has to begin with to be sent back in place of a locally built
+# acknowledgment. A channel that replies from one of its destinations answers with the
+# acknowledgment that destination gave it, and everything else is not an answer at all.
+_Reply_Segment_Prefix = 'MSH'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _resolve_reply(callback_response:'any_', msh_line:'str', ack_code:'str', error_text:'str') -> 'str':
+    """ Returns what the sender is answered with - the message the channel itself produced when it
+    produced one, and otherwise an acknowledgment built here from the outcome of the delivery.
+    """
+    if isinstance(callback_response, str):
+        if callback_response.startswith(_Reply_Segment_Prefix):
+            return callback_response
+
+    out = build_ack(msh_line, ack_code, error_text=error_text)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -543,6 +564,7 @@ class HL7MLLPServer:
         if matched_route is None:
             logger.warning('No matching MLLP channel for batch from %s (MSH: %s)',
                 connection_context.endpoint, msh_line)
+            callback_response = None
             ack_code = 'AR'
             error_text = 'No matching channel for this batch'
 
@@ -551,17 +573,18 @@ class HL7MLLPServer:
         else:
 
             if settings.should_log_messages:
-                logger.info('Routing batch to channel `%s` (service `%s`)',
-                    matched_route.channel_name, matched_route.service_name)
+                logger.info('Routing batch to channel `%s` (%s)',
+                    matched_route.channel_name, matched_route.get_target())
 
             # .. invoke the callback with the raw batch string ..
             try:
-                _ = matched_route.callback(raw)
+                callback_response = matched_route.callback(raw)
                 ack_code = 'AA'
                 error_text = ''
             except Exception:
                 logger.warning('Service callback error for batch on channel `%s` from %s; e:`%s`',
                     matched_route.channel_name, connection_context.endpoint, format_exc())
+                callback_response = None
                 ack_code = 'AE'
                 error_text = 'Internal processing error'
 
@@ -579,8 +602,9 @@ class HL7MLLPServer:
             if channel_state:
                 channel_state.on_nack_sent()
 
-        # .. build the ACK using the first MSH from the batch ..
-        ack_string = build_ack(msh_line, ack_code, error_text=error_text)
+        # .. build the ACK using the first MSH from the batch, unless the channel already
+        # .. answered with a message of its own ..
+        ack_string = _resolve_reply(callback_response, msh_line, ack_code, error_text)
 
         # .. one acknowledgment covers the entire batch, on the same cid as its rows ..
         if audit_log and audit_channel_name:
@@ -704,6 +728,9 @@ class HL7MLLPServer:
             # .. how long the service callback ran, reported on the acknowledgment's row ..
             callback_duration_ms = 0
 
+            # .. what the channel answered with itself, when it answered at all ..
+            callback_response = None
+
             if matched_route is None:
                 logger.warning('No matching MLLP channel for message from %s (MSH: %s)',
                     connection_context.endpoint, msh_line)
@@ -714,8 +741,8 @@ class HL7MLLPServer:
             else:
 
                 if settings.should_log_messages:
-                    logger.info('Routing message to channel `%s` (service `%s`)',
-                        matched_route.channel_name, matched_route.service_name)
+                    logger.info('Routing message to channel `%s` (%s)',
+                        matched_route.channel_name, matched_route.get_target())
 
                 # .. when should_parse_on_input is enabled, parse the raw ER7 text
                 # .. into a structured HL7Message object. If should_validate is also
@@ -795,7 +822,7 @@ class HL7MLLPServer:
                 callback_start = monotonic()
 
                 try:
-                    _ = matched_route.callback(callback_data)
+                    callback_response = matched_route.callback(callback_data)
                     ack_code = 'AA'
                     error_text = ''
 
@@ -825,7 +852,9 @@ class HL7MLLPServer:
                 if channel_state:
                     channel_state.on_nack_sent()
 
-            ack_string = build_ack(msh_line, ack_code, error_text=error_text)
+            # .. a channel that answered with a message of its own is answered with,
+            # .. and everything else is acknowledged by an acknowledgment built here ..
+            ack_string = _resolve_reply(callback_response, msh_line, ack_code, error_text)
 
             # .. the acknowledgment lands on the same cid as the receipt it answers ..
             if audit_log and audit_channel_name:
