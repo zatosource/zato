@@ -153,7 +153,7 @@ wizard.helpDescriptions = function() {
     out['mllp-wizard-slot-reply-chip'] = shared['destinations-respond-from-create'];
 
     // .. and the options folded away under the four decisions.
-    out['mllp-wizard-edit-options'] = 'Everything the channel does beyond receiving<br>and delivering a message - the fixups applied<br>to messages that do not quite follow the standard,<br>how long control IDs are remembered for<br>and what is written to the logs.<br>The line says what is currently set.';
+    out['mllp-wizard-edit-options'] = 'The fixups applied to messages that do not<br>quite follow the standard, how long control IDs<br>are remembered for and what is written to the logs.<br>The line says what is currently set.';
 
     return out;
 };
