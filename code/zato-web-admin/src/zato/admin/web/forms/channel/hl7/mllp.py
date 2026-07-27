@@ -130,8 +130,9 @@ class CreateForm(forms.Form):
     fix_off_by_one_field_index          = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
     # Destinations - serialized by JS to hidden JSON fields
-    destinations = forms.CharField(required=False, widget=forms.HiddenInput())
-    respond_from = forms.CharField(required=False, widget=forms.HiddenInput())
+    destinations  = forms.CharField(required=False, widget=forms.HiddenInput())
+    respond_from  = forms.CharField(required=False, widget=forms.HiddenInput())
+    delivery_mode = forms.CharField(required=False, widget=forms.HiddenInput())
 
     # REST bridge
     use_rest         = forms.BooleanField(required=False, widget=forms.CheckboxInput())

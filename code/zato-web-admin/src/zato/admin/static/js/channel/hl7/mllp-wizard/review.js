@@ -370,9 +370,10 @@ review.render = function() {
         serviceRows.push(['Destinations', config.noDestinationsLabel]);
     }
     else {
-        var respondFrom = $('#mllp-wizard-respond-from').find('option:selected').text();
-        serviceRows.push(['Respond from', respondFrom]);
+        serviceRows.push(['Delivery', wizard.destinations.deliveryLabel()]);
     }
+
+    serviceRows.push(['Respond from', wizard.destinations.replyLabel()]);
 
     review.renderGroups([
         {label: 'Basics',       step: 0, rows: basicsRows},

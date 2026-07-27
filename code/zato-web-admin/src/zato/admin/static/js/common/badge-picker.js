@@ -134,6 +134,12 @@ $.fn.zato.badge_picker.attach_events = function(action, config) {
     var assigned_body = picker.find('#badge-zone-assigned-' + action + ' .badge-zone-body');
 
     picker.off('click.badge', '.security-badge').on('click.badge', '.security-badge', function(e) {
+        // A badge may carry controls of its own, e.g. a switch or a select -
+        // those answer to their own clicks, they never move the badge
+        if ($(e.target).is('input, select, textarea, button, label, option')) {
+            return;
+        }
+
         if (e.ctrlKey || e.metaKey) {
             $(this).toggleClass('selected');
             return;
@@ -166,6 +172,12 @@ $.fn.zato.badge_picker.attach_events = function(action, config) {
     var drag_state = {};
 
     picker.find('.badge-zone-body').off('mousedown.unified').on('mousedown.unified', function(e) {
+        // The press that reaches a control inside a badge belongs to that
+        // control - the default action is what focuses it and opens its list
+        if ($(e.target).is('input, select, textarea, button, label, option')) {
+            return;
+        }
+
         if (e.ctrlKey || e.metaKey) {
             if ($(e.target).closest('.security-badge').length) {
                 return;

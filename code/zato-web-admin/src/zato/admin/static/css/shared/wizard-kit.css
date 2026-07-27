@@ -50,6 +50,7 @@
 
 :root {
     --wizard-accent: var(--zato-seablue-light2);
+    --wizard-accent-tint: color-mix(in srgb, var(--wizard-accent) 8%, #fff);
     --wizard-done: #28a745;
     --wizard-error: #dc3545;
     --wizard-border: #d9dee3;
@@ -490,8 +491,7 @@ a.wizard-toggle-edit {
 /* A step body brings none of the popover's field styling with it, so the
    controls of a row wear the same box the popover fields wear */
 .wizard-select-row select,
-.wizard-select-row input[type="text"],
-.wizard-respond-from-row select {
+.wizard-select-row input[type="text"] {
     box-sizing: border-box;
     height: 24px;
     padding: 4px 8px;
@@ -511,8 +511,7 @@ a.wizard-toggle-edit {
 }
 
 .wizard-select-row select:focus,
-.wizard-select-row input[type="text"]:focus,
-.wizard-respond-from-row select:focus {
+.wizard-select-row input[type="text"]:focus {
     border-color: var(--wizard-accent);
 }
 
@@ -559,21 +558,6 @@ a.wizard-select-delete::before {
 
 a.wizard-select-delete:hover::before {
     background-color: var(--wizard-error);
-}
-
-/* The question a list of destinations raises - which of them the caller
-   hears back from - so it follows the rows it belongs to */
-.wizard-respond-from-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 12px;
-    font-size: 12px;
-}
-
-.wizard-respond-from-row label {
-    font-weight: 600;
-    color: var(--wizard-text);
 }
 
 /* ------------------------------------------------------------ */

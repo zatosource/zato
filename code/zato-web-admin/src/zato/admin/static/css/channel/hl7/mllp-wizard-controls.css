@@ -1,9 +1,10 @@
 /*
  * HL7 MLLP channel wizard - the controls only this wizard has: the
- * tolerance grid, the head above the REST security rows and the widths of
- * the destination row controls. The rows themselves, their delete icons
- * and their add links are the shared select rows of
- * shared/wizard-kit.css, and so is the rest of the card chrome.
+ * tolerance grid, the head above the REST security rows and what a
+ * destination badge carries inside the picker. The badges themselves come
+ * from multi-select.css, the decision lines and their panels from
+ * shared/wizard-lines.css, the rest of the card chrome from
+ * shared/wizard-kit.css.
  */
 
 /* ------------------------------------------------------------ */
@@ -70,34 +71,48 @@
 }
 
 /* ------------------------------------------------------------ */
-/* MLLP wizard - destination rows                                */
+/* MLLP wizard - destination badges                              */
 /* ------------------------------------------------------------ */
 
-/* The type picker only ever shows one of a handful of words and the
-   per-type options are short too, so the connection name is what gets
-   whatever room the row has left. The row selector is what puts these
-   ahead of the shared rule sizing every select in a select row. */
-.wizard-select-row select.mllp-wizard-destination-type {
-    flex: 0 0 100px;
+/* The connection name takes whatever room the badge has left, the kind of
+   the connection reads as data behind it */
+.wizard-destination-badge .security-badge-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-/* The options of the picked type sit between the connection and the
-   switch, as many of them as that type has */
-.mllp-wizard-destination-options {
+.wizard-destination-kind {
+    flex: 0 0 auto;
+    margin-left: 8px;
+    font-size: 9.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--wizard-text-faint);
+}
+
+/* The switch and the options of a destination only mean something once
+   messages actually go to it */
+.wizard-destination-controls {
     display: flex;
     align-items: center;
-    gap: 8px;
-    flex: 0 1 auto;
-}
-
-.wizard-select-row select.mllp-wizard-destination-option,
-.wizard-select-row input.mllp-wizard-destination-option {
-    flex: 0 1 auto;
-    width: 130px;
-}
-
-/* Whether a destination receives messages at all - the slider carries no
-   label of its own, the row it sits in names it */
-.mllp-wizard-destination-active {
+    gap: 6px;
     flex: 0 0 auto;
+    margin-left: 8px;
+}
+
+.badge-zone-available .wizard-destination-controls {
+    display: none;
+}
+
+.wizard-destination-controls select.wizard-destination-option,
+.wizard-destination-controls input.wizard-destination-option {
+    width: 90px;
+    height: 20px;
+    padding: 2px 4px;
+    font-size: 11px;
+    border: 1px solid var(--wizard-border-strong);
+    border-radius: 3px;
 }

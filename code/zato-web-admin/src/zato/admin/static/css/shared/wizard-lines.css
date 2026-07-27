@@ -1,0 +1,225 @@
+/*
+ * The wizard kit's decision lines and the panels they open. The lines are a
+ * step body written as sentences, the panels wear the shared popup chrome of
+ * shared/popup.css with the sandy body of the micro-forms in
+ * shared/wizard-kit.css. Tokens come from there too.
+ */
+
+/* ------------------------------------------------------------ */
+/* Wizard lines - one decision per line                          */
+/* ------------------------------------------------------------ */
+
+.wizard-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 44em;
+}
+
+.wizard-line {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.wizard-line-label {
+    flex: 0 0 auto;
+    width: 14.5em;
+    font-size: 13px;
+    color: var(--wizard-text);
+}
+
+.wizard-line-slot {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+/* ------------------------------------------------------------ */
+/* Wizard lines - the chip a line's value wears                  */
+/* ------------------------------------------------------------ */
+
+/* The face of a select, since that is what a chip stands for - and no more
+   than a dashed outline of one while the line has no value yet */
+.wizard-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 24px;
+    padding: 0 8px;
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--wizard-text);
+    background: #fff;
+    border: 1px solid var(--wizard-border-strong);
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.wizard-chip:hover {
+    border-color: var(--wizard-accent);
+}
+
+.wizard-chip-blank {
+    color: var(--wizard-text-faint);
+    background: none;
+    border-style: dashed;
+}
+
+.wizard-chip-warning {
+    color: var(--wizard-error);
+}
+
+.wizard-chip-note {
+    font-size: 11px;
+    color: var(--wizard-text-faint);
+}
+
+.wizard-chip-caret {
+    display: flex;
+    color: var(--wizard-text-muted);
+}
+
+/* ------------------------------------------------------------ */
+/* Wizard lines - the options strip                              */
+/* ------------------------------------------------------------ */
+
+.wizard-segments {
+    display: inline-flex;
+    border: 1px solid var(--wizard-border-strong);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.wizard-segment {
+    height: 24px;
+    padding: 0 11px;
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--wizard-text);
+    background: #fff;
+    border: none;
+    border-right: 1px solid var(--wizard-border);
+    cursor: pointer;
+}
+
+.wizard-segment:last-child {
+    border-right: none;
+}
+
+.wizard-segment:hover {
+    background: var(--wizard-accent-tint);
+}
+
+.wizard-segment-active,
+.wizard-segment-active:hover {
+    color: #fff;
+    background: var(--wizard-accent);
+}
+
+/* ------------------------------------------------------------ */
+/* Wizard lines - the panel a chip opens                         */
+/* ------------------------------------------------------------ */
+
+.wizard-panel {
+    position: absolute;
+    z-index: 20;
+}
+
+.wizard-panel-column {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.wizard-panel-count {
+    margin-right: auto;
+    font-size: 11px;
+    color: var(--wizard-text-faint);
+}
+
+/* One height for every list a panel shows, with the bar always in view, so
+   the panel keeps its size no matter what the filter leaves behind */
+.wizard-panel-list {
+    height: 13em;
+    overflow-y: scroll;
+    background: #fff;
+    border: 1px solid var(--wizard-border-strong);
+    border-radius: 3px;
+}
+
+.wizard-pick-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    cursor: pointer;
+}
+
+.wizard-pick-row:hover {
+    background: var(--zato-popup-sand-highlight);
+}
+
+.wizard-pick-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wizard-pick-dot {
+    position: relative;
+    flex: 0 0 auto;
+    width: 13px;
+    height: 13px;
+    border: 1.5px solid var(--wizard-border-strong);
+    border-radius: 50%;
+}
+
+.wizard-pick-dot-on {
+    border-color: var(--wizard-accent);
+}
+
+.wizard-pick-dot-on::before {
+    content: '';
+    position: absolute;
+    inset: 2.5px;
+    background: var(--wizard-accent);
+    border-radius: 50%;
+}
+
+.wizard-panel-empty {
+    padding: 6px 8px;
+    font-size: 12px;
+    color: var(--wizard-text-faint);
+}
+
+/* ------------------------------------------------------------ */
+/* Wizard lines - a badge picker inside a panel                  */
+/* ------------------------------------------------------------ */
+
+/* The zones take one height of their own here, the same the panel lists
+   have, and keep the bar in view so the panel never resizes under a filter */
+.wizard-panel .badge-picker {
+    min-height: 0;
+}
+
+.wizard-panel .badge-zone-body {
+    min-height: 13em;
+    max-height: 13em;
+    overflow-y: scroll;
+}
+
+.wizard-panel .badge-picker-filter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.wizard-panel .badge-picker-filter .wizard-panel-filter {
+    flex: 1;
+}
