@@ -978,10 +978,6 @@ a.wizard-select-delete:hover::before {
     outline-offset: var(--zato-highlight-badge-spread);
 }
 
-.wizard-review-edit:hover {
-    text-decoration: underline;
-}
-
 .wizard-review-row {
     display: flex;
 
