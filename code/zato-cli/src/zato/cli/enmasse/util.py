@@ -533,6 +533,8 @@ def get_top_level_order() -> 'strlist':
         'microsoft_cloud',
         'microsoft_fabric',
         'microsoft_power_automate',
+        'microsoft_teams',
+        'slack',
         'confluence',
         'jira',
         'channel_ibm_mq',
@@ -540,6 +542,7 @@ def get_top_level_order() -> 'strlist':
         'channel_kafka',
         'mcp_gateway',
         'outgoing_graphql',
+        'outgoing_grpc',
         'outgoing_kafka',
         'channel_hl7_mllp',
         'outgoing_hl7_mllp',
@@ -633,6 +636,11 @@ def get_object_order(object_type:'str') -> 'strlist':
     order['microsoft_cloud'] = 'name', 'is_active', 'client_id', 'tenant_id', 'scopes:list',
     order['microsoft_fabric'] = 'name', 'is_active', 'address', 'client_id', 'tenant_id',
     order['microsoft_power_automate'] = 'name', 'is_active', 'address', 'client_id', 'tenant_id', 'environment_id',
+
+    # Microsoft Teams connections run on the Microsoft 365 implementation, so their fields are ordered the same way
+    order['microsoft_teams'] = order['microsoft_cloud']
+
+    order['slack'] = 'name', 'is_active',
     order['confluence'] = 'name', 'is_active', 'address', 'username',
     order['jira'] = 'name', 'is_active', 'address', 'username',
     order['channel_ibm_mq'] = 'name', 'is_active', 'address', 'queue_manager', 'mq_channel_name', 'queue', 'service', \
@@ -642,6 +650,8 @@ def get_object_order(object_type:'str') -> 'strlist':
     order['channel_kafka'] = 'name', 'is_active', 'address', 'topic', 'group_id', 'service',
     order['mcp_gateway'] = 'name', 'is_active', 'url_path', 'services', 'security_groups:list',
     order['outgoing_graphql'] = 'name', 'is_active', 'address', 'security', 'default_query_timeout',
+    order['outgoing_grpc'] = 'name', 'is_active', 'address', 'security', 'is_tls', 'tls_ca_certs_file', 'proto_path', \
+        'stub_module', 'stub_class', 'ping_timeout', 'max_send_message_size', 'max_recv_message_size',
     order['outgoing_kafka'] = 'name', 'is_active', 'address', 'topic',
     order['channel_hl7_mllp'] = ('name',) + Channel_Enmasse_Names
     order['outgoing_hl7_mllp'] = ('name', 'address') + Outconn_Names

@@ -411,7 +411,7 @@ class TestEnmassePickup(TestCase):
         # .. channel_rest is synced in the middle of an import, so the import that brought it
         # may still be running - wait until it fully completes, otherwise its remaining sections,
         # elastic_search among them, would race with the edits made below and overwrite them ..
-        _ = self._wait_for_imports_done(min_completed=1)
+        completed_imports = self._wait_for_imports_done(min_completed=1)
 
         # .. re-export now that the whole import is done ..
         data = self._export_to_dict()
@@ -453,6 +453,11 @@ class TestEnmassePickup(TestCase):
         # so poll until the edited elastic_search timeout becomes visible in the export ..
         full_data_round2 = self._wait_for_edited_es_timeout(timeout=90)
         self.assertTrue(full_data_round2, 'Full export after edits is empty')
+
+        # .. elastic_search is synced before outgoing_rest, so its edit becoming visible only means
+        # the import is under way - wait for it to finish, then re-export to see every section ..
+        _ = self._wait_for_imports_done(min_completed=completed_imports + 1)
+        full_data_round2 = self._export_to_dict()
 
         # .. verify edits took effect for verifiable sections ..
         for item in full_data_round2['elastic_search']:
