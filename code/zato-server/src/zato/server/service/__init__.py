@@ -49,6 +49,8 @@ from zato.server.connection.email import EMailAPI
 from zato.server.connection.facade import AS2Facade, AS4Facade, ESFacade, FHIRFacade, IBMMQFacade, KafkaFacade, GraphQLFacade, \
     KeysightContainer, MLLPFacade, MongoDBFacade, ODataFacade, RESTFacade, SchedulerFacade, SFTPFacade, SMBFacade, SOAPFacade
 from zato.server.connection.grpc_ import GRPCFacade
+from zato.server.destination.facade import DestinationFacade
+from zato.server.destination.hook import run_for_service as run_destinations_for_service
 from zato.server.pattern.api import FanOut
 from zato.server.pattern.api import InvokeRetry
 from zato.server.pattern.api import ParallelExec
@@ -524,6 +526,9 @@ class Service:
         # gRPC facade for outgoing connections
         self.grpc = GRPCFacade()
 
+        # What this service says about what its channel's destinations receive
+        self.destination = DestinationFacade()
+
 # ################################################################################################################################
 
     @staticmethod
@@ -684,6 +689,10 @@ class Service:
 
         # gRPC facade
         self.grpc.init(self.cid, self._config_manager)
+
+        # Destination facade - what the service says about its channel's destinations,
+        # starting each invocation with the service having said nothing
+        self.destination.init(self.request.raw)
 
         # Vendors - Keysight
         self.keysight = KeysightContainer()
@@ -907,6 +916,16 @@ class Service:
                 exc_formatted = format_exc()
             finally:
                 try:
+
+                    # A channel that declares destinations delivers to them here, the one it replies
+                    # from going first so that its answer can be the answer the caller gets. A service
+                    # that failed produced nothing to deliver, so nothing is delivered.
+                    if not e:
+                        destination_result = run_destinations_for_service(service, channel_item)
+
+                        if destination_result:
+                            if destination_result.has_response:
+                                service.response.payload = destination_result.response
 
                     response = set_response_func(service, data_format=data_format, transport=transport, **kwargs)
 

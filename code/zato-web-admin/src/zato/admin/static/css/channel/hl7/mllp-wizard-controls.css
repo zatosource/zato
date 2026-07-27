@@ -11,22 +11,30 @@
 /* MLLP wizard - tolerance grid                                  */
 /* ------------------------------------------------------------ */
 
-/* Each column is as wide as its longest fixup, so the switches line up
-   right after the labels instead of out at the edge of the card. The
-   folding, the spacing and the indent are the kit's, in
-   shared/wizard-kit.css - this is only what a grid of fixups adds. */
+/* One width for every fixup, held here rather than left to each group's own
+   longest label, so that the switches line up down both columns and across
+   the groups. It is what the longest fixup needs - its text, the gap and the
+   switch - and the shorter labels are written full enough to reach across it
+   rather than the room being taken back. The folding, the spacing and the
+   indent are the kit's, in shared/wizard-kit.css - this is only what a grid
+   of fixups adds. */
+:root {
+    --mllp-tolerance-fixup-width: 21em;
+}
+
 .mllp-wizard-tolerance-grid {
     display: grid;
-    grid-template-columns: max-content max-content;
+    grid-template-columns: repeat(2, max-content);
     gap: 5px 28px;
 }
 
-/* The switch is held against the right edge of its column, so a column of
-   them lines up however long or short the labels next to them are */
+/* The switch is held against the right edge of the fixup, so the switches
+   line up however long or short the labels next to them are */
 .mllp-wizard-tolerance-grid label {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    width: var(--mllp-tolerance-fixup-width);
     gap: 12px;
     font-size: 12px;
     color: var(--wizard-text);
