@@ -60,6 +60,27 @@
     border-color: var(--wizard-accent);
 }
 
+/* A chip and a segment are <button> elements, so formalize.css hands them
+   its own grey 3D button - a gradient at rest, a lighter one on hover, a
+   darker one plus an inset shadow while pressed, bold Helvetica and a white
+   text shadow. Each of those is named back here, in each state formalize
+   writes one for, which is what makes this a plain override and not a
+   blanket !important. The order of the sheets settles the ties. */
+.wizard-chip,
+.wizard-chip:hover,
+.wizard-chip:focus,
+.wizard-chip:active,
+.wizard-segment,
+.wizard-segment:hover,
+.wizard-segment:focus,
+.wizard-segment:active {
+    background-image: none;
+    box-shadow: none;
+    text-shadow: none;
+    font-weight: 400;
+    outline: none;
+}
+
 .wizard-chip-blank {
     color: var(--wizard-text-faint);
     background: none;
@@ -87,8 +108,6 @@
 .wizard-segments {
     display: inline-flex;
     border: 1px solid var(--wizard-border-strong);
-    border-radius: 3px;
-    overflow: hidden;
 }
 
 .wizard-segment {
@@ -108,22 +127,71 @@
 }
 
 .wizard-segment:hover {
-    background: var(--wizard-accent-tint);
+    background: var(--wizard-hover);
 }
 
 .wizard-segment-active,
 .wizard-segment-active:hover {
     color: #fff;
-    background: var(--wizard-accent);
+    background: var(--wizard-accent-soft);
 }
 
 /* ------------------------------------------------------------ */
 /* Wizard lines - the panel a chip opens                         */
 /* ------------------------------------------------------------ */
 
+/* The panel is a column of header, body and buttons, and the body is what
+   gives way when the corners resize it - that is the whole reason for the
+   flex chain running from here down to the lists */
 .wizard-panel {
     position: absolute;
     z-index: 20;
+    display: flex;
+    flex-direction: column;
+}
+
+.wizard-panel > .wizard-tippy-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.wizard-panel-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* A filter, a column heading and the buttons keep their height, so the
+   lists are the only thing a resize actually grows */
+.wizard-panel-content > .wizard-tippy-field,
+.wizard-panel-content > .wizard-tippy-label,
+.wizard-panel-content > .badge-picker-filter,
+.wizard-panel > .wizard-tippy-body > .wizard-tippy-buttons {
+    flex: 0 0 auto;
+}
+
+/* The buttons row clears the two corner grips */
+.wizard-panel .wizard-tippy-buttons {
+    padding-left: 16px;
+    padding-right: 16px;
+}
+
+.wizard-panel .wizard-tippy-row {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* A panel is appended to document.body, so the card's own reset of the
+   formalize.css focus glow never reaches what a panel holds */
+.wizard-panel input:focus,
+.wizard-panel select:focus,
+.wizard-panel textarea:focus,
+.wizard-panel button:focus {
+    outline: none;
+    box-shadow: none;
 }
 
 .wizard-panel-column {
@@ -132,18 +200,16 @@
     gap: 3px;
     flex: 1 1 0;
     min-width: 0;
-}
-
-.wizard-panel-count {
-    margin-right: auto;
-    font-size: 11px;
-    color: var(--wizard-text-faint);
+    min-height: 0;
 }
 
 /* One height for every list a panel shows, with the bar always in view, so
-   the panel keeps its size no matter what the filter leaves behind */
+   the panel keeps its size no matter what the filter leaves behind. The
+   13em is a starting height, not a fixed one - a list is what takes up the
+   room the corners add and gives back the room they take away. */
 .wizard-panel-list {
-    height: 13em;
+    flex: 1 1 13em;
+    min-height: 4em;
     overflow-y: scroll;
     background: #fff;
     border: 1px solid var(--wizard-border-strong);
@@ -201,15 +267,17 @@
 /* Wizard lines - a badge picker inside a panel                  */
 /* ------------------------------------------------------------ */
 
-/* The zones take one height of their own here, the same the panel lists
-   have, and keep the bar in view so the panel never resizes under a filter */
+/* The zones start at the height the panel lists start at and follow the
+   corners from there, with the bar always in view so the panel never
+   resizes on its own under a filter */
 .wizard-panel .badge-picker {
+    flex: 1 1 10.5em;
     min-height: 0;
 }
 
 .wizard-panel .badge-zone-body {
-    min-height: 13em;
-    max-height: 13em;
+    min-height: 0;
+    max-height: none;
     overflow-y: scroll;
 }
 
@@ -222,4 +290,50 @@
 
 .wizard-panel .badge-picker-filter .wizard-panel-filter {
     flex: 1;
+}
+
+/* The filter row is built by the badge picker, so its controls carry no
+   field styling of their own - here they take the same box the fields of a
+   micro-form take, instead of the grey bevel formalize.css gives them */
+.wizard-panel .badge-picker-filter input[type="text"],
+.wizard-panel .badge-picker-filter select {
+    box-sizing: border-box;
+    height: 24px;
+    padding: 0 8px;
+    font-size: 12px;
+    color: var(--wizard-text);
+    background: #fff;
+    border: 1px solid var(--wizard-border-strong);
+    border-radius: 3px;
+}
+
+.wizard-panel .badge-picker-filter input[type="text"]:focus,
+.wizard-panel .badge-picker-filter select:focus {
+    border-color: var(--wizard-accent);
+}
+
+/* The clear button is a <button>, hence the same list formalize.css writes
+   for the chips above - it reads as one more field of the filter row */
+.wizard-panel .badge-filter-clear,
+.wizard-panel .badge-filter-clear:hover,
+.wizard-panel .badge-filter-clear:focus,
+.wizard-panel .badge-filter-clear:active {
+    height: 24px;
+    padding: 0 8px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--wizard-text-muted);
+    background: #fff;
+    background-image: none;
+    border: 1px solid var(--wizard-border-strong);
+    border-radius: 3px;
+    box-shadow: none;
+    text-shadow: none;
+    outline: none;
+}
+
+.wizard-panel .badge-filter-clear:hover {
+    color: var(--wizard-text);
+    border-color: var(--wizard-accent);
 }

@@ -74,19 +74,22 @@
 /* MLLP wizard - destination badges                              */
 /* ------------------------------------------------------------ */
 
-/* The connection name takes whatever room the badge has left, the kind of
-   the connection reads as data behind it */
+/* The name takes what it needs and no more, and it is the one part that
+   gives way when a name is longer than the row, hence the ellipsis */
 .wizard-destination-badge .security-badge-name {
-    flex: 1;
+    flex: 0 1 auto;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
+/* The kind reads in front of the name and holds one width for all of them,
+   the width of the longest kind there is, so the names line up down the
+   zone instead of starting wherever the kind before them ended */
 .wizard-destination-kind {
-    flex: 0 0 auto;
-    margin-left: 8px;
+    flex: 0 0 6.4em;
+    margin-right: 8px;
     font-size: 9.5px;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -94,13 +97,17 @@
 }
 
 /* The switch and the options of a destination only mean something once
-   messages actually go to it */
+   messages actually go to it. The controls take the room the name leaves
+   and hold it against the right edge, which is what makes a column of them
+   line up down the zone. */
 .wizard-destination-controls {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 6px;
-    flex: 0 0 auto;
-    margin-left: 8px;
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-left: 12px;
 }
 
 .badge-zone-available .wizard-destination-controls {
@@ -109,10 +116,37 @@
 
 .wizard-destination-controls select.wizard-destination-option,
 .wizard-destination-controls input.wizard-destination-option {
-    width: 90px;
-    height: 20px;
-    padding: 2px 4px;
-    font-size: 11px;
+    box-sizing: border-box;
+    height: 24px;
+    padding: 0 6px;
+    font-size: 12px;
+    color: var(--wizard-text);
+    background: #fff;
     border: 1px solid var(--wizard-border-strong);
     border-radius: 3px;
+}
+
+/* An address or a subject line is what goes in here, so the field grows
+   with the row and only ever gives way down to the width that still shows
+   what is typed in it */
+.wizard-destination-controls input.wizard-destination-option {
+    flex: 1 1 120px;
+    min-width: 70px;
+    max-width: 260px;
+}
+
+/* The switch is the last thing in the row and the one thing that must stay
+   whole - it keeps its size however narrow the row is dragged */
+.wizard-destination-controls input.wizard-destination-active {
+    flex: 0 0 var(--toggle-width);
+}
+
+/* A picked value is as wide as the words it picks between */
+.wizard-destination-controls select.wizard-destination-option {
+    flex: 0 0 auto;
+    width: auto;
+}
+
+.wizard-destination-controls .wizard-destination-option:focus {
+    border-color: var(--wizard-accent);
 }

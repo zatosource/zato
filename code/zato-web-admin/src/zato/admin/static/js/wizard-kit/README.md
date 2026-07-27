@@ -125,7 +125,7 @@ $.fn.zato.wizard_kit.lines.setChip('mllp-wizard-slot-destinations', {
     note: '1 paused',
     isBlank: false,
     isWarning: false,
-    panel: {title: 'destinations', width: 660, build: buildDestinationsPanel}
+    panel: {title: 'destinations', width: 980, minWidth: 700, build: buildDestinationsPanel}
 });
 
 $.fn.zato.wizard_kit.lines.setSegments('mllp-wizard-slot-delivery', modeList, currentMode, onPick);
@@ -133,11 +133,11 @@ $.fn.zato.wizard_kit.lines.setSegments('mllp-wizard-slot-delivery', modeList, cu
 
 The template holds the labels and one empty slot per line, the instance fills the slots on every render. A blank chip is drawn as a dashed outline instead of a value, a warning chip in the error color.
 
-A panel wears the shared popup chrome of `shared/popup.css` - the dark header with the grip, the sandy body, the buttons row with OK - so it is the same popup the micro-forms and the IDE menus open, and `$.fn.zato.popup.install_drag` makes its header the handle. One panel is open at a time, a press outside it or Escape closes it.
+A panel wears the shared popup chrome of `shared/popup.css` - the dark header with the grip, the sandy body, the buttons row with OK - so it is the same popup the micro-forms and the IDE menus open, and `$.fn.zato.popup.install_drag` makes its header the handle. `$.fn.zato.popup.install_resize` adds the grip in each bottom corner, so a panel is dragged wider and taller from either side, never below the `minWidth` its own spec names by the kit's `panelMinHeight`. One panel is open at a time, a press outside it or Escape closes it.
 
-The `build` function fills the body and may return a function to run when the panel closes, which is how a panel that edits the DOM directly - a badge picker, say - writes its answers back into the state. Inside a panel the kit offers `buildFilter`, `buildColumns`, `buildPickRow` and `setPanelCount`, so a panel is a filter above one or two columns of lists, with the count of what it holds next to OK.
+The `build` function fills the body and may return a function to run when the panel closes, which is how a panel that edits the DOM directly - a badge picker, say - writes its answers back into the state. Inside a panel the kit offers `buildFilter`, `buildColumns` and `buildPickRow`, so a panel is a filter above one or two columns of lists, and the row under them holds nothing but OK.
 
-A list in a panel keeps one height with the scrollbar always in view, which is what makes a filter over hundreds of entries feel steady - nothing resizes as the matches narrow.
+A list in a panel keeps its height with the scrollbar always in view, which is what makes a filter over hundreds of entries feel steady - nothing resizes as the matches narrow. The panel runs one flex column from itself down to the lists, so the room a corner adds or takes away lands on the lists alone and the filter, the headings and the buttons row stay exactly where they are.
 
 ## Review groups
 

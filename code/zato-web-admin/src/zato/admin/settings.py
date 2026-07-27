@@ -129,7 +129,14 @@ MEDIA_URL = '/static/'
 # Examples: 'https://foo.com/media/', '/media/'.
 ADMIN_MEDIA_PREFIX = '/media/'
 
-CSP_DEFAULT_SRC = ["'none'"]
+# Same origin rather than nothing at all, because every fetch kind that has no
+# directive of its own falls back to this one - the web manifest, the media and
+# what the browser itself reads back, e.g. a devtools fetch of a page or of a
+# script it already loaded, each of which was logged as a violation under
+# 'none' even though the page's own loads went through. Plugins stay banned
+# outright below and everything that matters keeps its own directive.
+CSP_DEFAULT_SRC = ["'self'"]
+CSP_OBJECT_SRC  = ["'none'"]
 CSP_IMG_SRC     = ["'self'", "data:", "https://upcdn.io"]
 CSP_STYLE_SRC   = ["'self'"]
 CSP_FONT_SRC   = ["'self'", "data:"]

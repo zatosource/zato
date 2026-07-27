@@ -55,3 +55,41 @@
 .zato-popup-dragging * {
     cursor: grabbing;
 }
+
+/* The resize grips - one in each bottom corner, drawn into the corner
+   itself so they take no room from what the popup holds */
+.zato-popup-grip {
+    position: absolute;
+    bottom: 1px;
+    display: flex;
+    padding: 2px;
+    color: #b8b4a7;
+}
+
+.zato-popup-grip:hover {
+    color: #6d6a5c;
+}
+
+.zato-popup-grip-right {
+    right: 1px;
+    cursor: nwse-resize;
+}
+
+/* The same corner glyph, mirrored, hence the one icon for the two grips */
+.zato-popup-grip-left {
+    left: 1px;
+    cursor: nesw-resize;
+    transform: scaleX(-1);
+}
+
+/* Mid-resize the pointer is off the grip most of the time, so the corner's
+   cursor is held for the whole page until the button comes back up */
+.zato-popup-resizing-right,
+.zato-popup-resizing-right * {
+    cursor: nwse-resize;
+}
+
+.zato-popup-resizing-left,
+.zato-popup-resizing-left * {
+    cursor: nesw-resize;
+}

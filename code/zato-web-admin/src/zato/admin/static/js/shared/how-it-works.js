@@ -67,11 +67,15 @@ $.fn.zato.how_it_works.init = function(config) {
         var fieldId = $(this).attr('for');
         var howItWorks = $.fn.zato.how_it_works;
 
-        // .. a label click on a toggle is for reading, not for flipping it -
-        // .. the slider itself stays the one place that toggles ..
+        // .. a label click is for reading, so it never works the control it
+        // .. describes - the browser forwards a label click to a checkbox as
+        // .. a flip and to a button as a press, and both are suppressed here,
+        // .. leaving the control itself the one place that acts ..
         var control = document.getElementById(fieldId);
-        if (control && control.type === 'checkbox') {
-            event.preventDefault();
+        if (control) {
+            if (control.type === 'checkbox' || control.tagName === 'BUTTON') {
+                event.preventDefault();
+            }
         }
 
         // .. if help mode is active for another dialog, leave it first ..

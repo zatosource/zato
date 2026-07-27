@@ -41,6 +41,8 @@ The right zone is the order of one-after-another delivery, so what the panel is 
 
 A destination badge carries the switch that pauses it and the options its kind has, e.g. the method a REST call is made with. They come from the type and option definitions of `shared/destinations.js`, the same ones the editor uses, and they show only in the right zone, since a connection nothing is sent to has nothing to configure.
 
+A row is read left to right: the kind comes first in a column of its own, so every name below starts at the same place, then the name, then the options held against the right edge where they line up as a column too. The options grow into whatever the name leaves and give way first when a name is long - past that the name is the one that gives way, with an ellipsis, and the switch at the end never gives way at all.
+
 ## Help texts
 
 `wizard.helpDescriptions` returns the map behind every "How does it work?" badge - the shared field descriptions of `mllp-descriptions.js`, re-keyed for the popover inputs, plus the entries for the controls only the wizard has. A decision line takes part through its label's `for`, which names the chip the line holds.
