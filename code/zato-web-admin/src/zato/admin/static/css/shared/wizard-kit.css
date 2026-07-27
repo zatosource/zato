@@ -65,6 +65,12 @@
        rows is given its height in */
     --wizard-review-row-height: 26px;
 
+    /* How far in from its own heading whatever a collapsible holds starts -
+       past the chevron in front of the heading and the gap after it. One
+       step per level, so a card, the groups inside it and the rows inside
+       those step in by the same amount each time. */
+    --wizard-collapse-indent: 18px;
+
     /* What a label reads as while the switch it names is off - the text
        stepped back a notch, never so far as to read as disabled */
     --wizard-text-off: color-mix(in srgb, var(--wizard-text) 68%, #fff);
@@ -695,18 +701,24 @@ a.wizard-select-delete:hover::before {
     transform: rotate(90deg);
 }
 
+/* A card's body is simply gone while closed, the way every other
+   collapsible of the kit is - a body sliding out of a card that sits in an
+   already open section is one animation too many, and a height it slides to
+   is a height its content has to stay under. */
 .wizard-option-body {
-    max-height: 0;
-    margin-top: 0;
-    overflow: hidden;
-    opacity: 0;
-    transition: max-height 200ms ease, opacity 150ms ease, margin 150ms ease;
+    display: none;
+
+    /* What the card holds starts under its header's own text, the same step
+       in that the groups inside take from their own headings */
+    padding-left: var(--wizard-collapse-indent);
 }
 
+/* The room under the header is padding rather than margin, so that the
+   first group's own top margin stays inside the body instead of collapsing
+   out through it */
 .wizard-option-body-open {
-    max-height: 800px;
-    margin-top: 10px;
-    opacity: 1;
+    display: block;
+    padding-top: 10px;
 }
 
 /* ------------------------------------------------------------ */
@@ -753,7 +765,7 @@ a.wizard-select-delete:hover::before {
    chevron in front of it */
 .wizard-collapse-group-body {
     margin-top: 9px;
-    padding-left: 18px;
+    padding-left: var(--wizard-collapse-indent);
 }
 
 /* ------------------------------------------------------------ */
