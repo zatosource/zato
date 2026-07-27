@@ -11,40 +11,14 @@
 /* MLLP wizard - tolerance grid                                  */
 /* ------------------------------------------------------------ */
 
-/* Each group is its own header and its own body, and one group is open at
-   a time, so the card is read a handful of switches at a time */
-.mllp-wizard-tolerance-group + .mllp-wizard-tolerance-group {
-    margin-top: 14px;
-}
-
-.mllp-wizard-tolerance-group-title {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--wizard-text);
-    cursor: pointer;
-    user-select: none;
-}
-
-/* A closed group is gone rather than clipped - a body sliding out of a
-   card that is itself sliding open is what made the opening jerk */
-.mllp-wizard-tolerance-grid[hidden] {
-    display: none;
-}
-
 /* Each column is as wide as its longest fixup, so the switches line up
-   right after the labels instead of out at the edge of the card. The body
-   starts under the title's own text, past the chevron in front of it. */
+   right after the labels instead of out at the edge of the card. The
+   folding, the spacing and the indent are the kit's, in
+   shared/wizard-kit.css - this is only what a grid of fixups adds. */
 .mllp-wizard-tolerance-grid {
     display: grid;
     grid-template-columns: max-content max-content;
     gap: 5px 28px;
-    margin-top: 7px;
-    padding-left: 18px;
 }
 
 /* The switch is held against the right edge of its column, so a column of

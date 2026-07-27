@@ -43,9 +43,13 @@ A destination badge carries the switch that pauses it and the options its kind h
 
 A row is read left to right: the kind comes first in a column of its own, so every name below starts at the same place, then the name, then the options held against the right edge where they line up as a column too. The options grow into whatever the name leaves and give way first when a name is long - past that the name is the one that gives way, with an ellipsis, and the switch at the end never gives way at all.
 
-### The option cards
+### The options
 
-Under the lines are the three option cards. Tolerance opens in place and holds the fixups, each of its two groups opening on its own, so what is read is one group of switches and not eleven at once. Deduplication and logging open their micro-forms of the kit.
+Everything past the four decisions is folded behind one line written the way the transport rows of step 1 are - the label, a link saying what is currently set and the soft hint offering the click. The line counts rather than lists, e.g. "10 of 11 fixups, dedup 5 minutes, 2 of 3 logging options on", and `review._optionsSummary` recomputes it with every other summary, so it follows whatever is changed inside.
+
+Opened, it holds the three option cards. Tolerance opens in place and holds the fixups in two groups, each opening on its own. Deduplication and logging open their micro-forms of the kit. The folding itself is `kit.collapse` - the section behind the line and the groups inside the card - so all this file adds is the grid a group of fixups is laid out in.
+
+A fixup is a label with its switch at the end of it, two to a row, so the help of the left column opens to the left of the label and the help of the right column to the right of the switch - `review._placeToleranceHelp` writes the placement and the `data-help-anchor` the shared help engine reads.
 
 ## Help texts
 

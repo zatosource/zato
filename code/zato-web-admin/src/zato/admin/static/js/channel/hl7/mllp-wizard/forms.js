@@ -32,7 +32,7 @@ $.fn.zato.wizard_kit.forms.setup(wizard, {
                 [
                     {field: 'max_msg_size', label: 'Max message size', kind: 'number', unitField: 'max_msg_size_unit', width: '160px'},
                     {field: 'default_character_encoding', label: 'Encoding', kind: 'select'},
-                    {field: 'use_msh18_encoding', label: 'Use MSH-18 too', kind: 'checkbox'}
+                    {field: 'use_msh18_encoding', label: 'Use MSH-18 first', kind: 'checkbox'}
                 ]
             ]]
         },

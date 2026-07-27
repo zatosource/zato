@@ -25,12 +25,24 @@ review.config = {
     // What the review says when no destination is configured
     noDestinationsLabel: 'None - the service handles everything',
 
+    // What the review says when the channel runs no service at all
+    noServiceLabel: 'None - the destinations do the work',
+
     // What the tolerance review says when nothing differs from the defaults
     allStandardFixupsLabel: 'All standard fixups enabled',
 
     // How many fixups a row of the tolerance grid holds - which column a
     // fixup is in is what decides the side its help opens on
     toleranceColumnCount: 2,
+
+    // The words the folded options line is written with - three counts,
+    // never the options themselves
+    ofLabel: ' of ',
+    fixupsLabel: ' fixups',
+    dedupLabel: 'dedup ',
+    noDedupLabel: 'no dedup',
+    loggingLabel: ' logging options on',
+    offLabel: 'Off',
 
     // The matcher fields and their labels, in MSH order
     matcherFields: [
@@ -57,6 +69,13 @@ review.config = {
         'normalize_quadruple_quoted_empty',
         'allow_short_encoding_characters',
         'fix_off_by_one_field_index'
+    ],
+
+    // The logging toggles, counted for the folded options line
+    loggingFields: [
+        'should_return_errors',
+        'should_log_messages',
+        'is_audit_log_active'
     ]
 };
 
@@ -92,22 +111,18 @@ review.initOptionCards = function() {
         $('#mllp-wizard-tolerance-chevron').toggleClass('wizard-chevron-open');
     });
 
-    // .. one group of fixups is read at a time, so opening one closes the
-    // other and the card never turns into a wall of switches ..
-    $('[data-tolerance-group]').on('click', function() {
-
-        var title = $(this);
-        var grid = title.next('.mllp-wizard-tolerance-grid');
-        var isOpening = grid.prop('hidden');
-
-        $('.mllp-wizard-tolerance-grid').prop('hidden', true);
-        $('[data-tolerance-group] .wizard-chevron').removeClass('wizard-chevron-open');
-
-        grid.prop('hidden', !isOpening);
-        title.find('.wizard-chevron').toggleClass('wizard-chevron-open', isOpening);
-    });
+    // .. each group of fixups opens and closes on its own ..
+    $.fn.zato.wizard_kit.collapse.initGroups('#mllp-wizard-tolerance-body');
 
     review._placeToleranceHelp();
+
+    // .. and the whole options block is folded away behind one line, the
+    // way the transport rows of step 1 are, its link saying what is inside.
+    $.fn.zato.wizard_kit.collapse.initSection({
+        toggleId: 'mllp-wizard-edit-options',
+        bodyId: 'mllp-wizard-options-body',
+        hintId: 'mllp-wizard-hint-options'
+    });
 
     // .. its summary follows the checkboxes as they are toggled ..
     $('#mllp-wizard-tolerance-body input[type="checkbox"]').on('change', function() {
@@ -292,6 +307,48 @@ review._loggingSummary = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// What the one line above the folded options says - the shape of each of
+// the three, counted rather than listed.
+review._optionsSummary = function() {
+
+    var config = review.config;
+    var parts = [];
+
+    var enabledCount = 0;
+
+    for(var fieldIdx = 0; fieldIdx < config.toleranceFields.length; fieldIdx++) {
+        if(wizard.field(config.toleranceFields[fieldIdx]).prop('checked')) {
+            enabledCount++;
+        }
+    }
+
+    parts.push(enabledCount + config.ofLabel + config.toleranceFields.length + config.fixupsLabel);
+
+    var dedup = review._dedupSummary();
+
+    if(dedup === config.offLabel) {
+        parts.push(config.noDedupLabel);
+    }
+    else {
+        parts.push(config.dedupLabel + dedup);
+    }
+
+    var loggingCount = 0;
+
+    for(var loggingIdx = 0; loggingIdx < config.loggingFields.length; loggingIdx++) {
+        if(wizard.field(config.loggingFields[loggingIdx]).prop('checked')) {
+            loggingCount++;
+        }
+    }
+
+    parts.push(loggingCount + config.ofLabel + config.loggingFields.length + config.loggingLabel);
+
+    var out = parts.join(', ');
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 // Recomputes every card summary and the card selection states.
 review.refreshSummaries = function() {
 
@@ -305,6 +362,7 @@ review.refreshSummaries = function() {
     review.setSummary('mllp-wizard-summary-tolerance', review._toleranceSummary());
     review.setSummary('mllp-wizard-summary-dedup', review._dedupSummary());
     review.setSummary('mllp-wizard-summary-logging', review._loggingSummary());
+    review.setSummary('mllp-wizard-summary-options', review._optionsSummary());
 
     // .. and the transport toggles mirror the hidden form flags.
     $('#mllp-wizard-toggle-mllp').prop('checked', isMllpOn);
@@ -390,11 +448,10 @@ review.render = function() {
         routingRows.push([config.anyMessageLabel, '']);
     }
 
-    // Service and destinations
-    var serviceRows = [
-        ['Service', wizard.field('service').val()]
-    ];
-
+    // Destinations and service, in the order the four lines of step 2 ask
+    // the questions - where messages go, who handles them, in what order
+    // the destinations receive them and which one replies
+    var serviceRows = [];
     var destinationCount = 0;
 
     // The type list is read once for the whole summary rather than once per destination
@@ -406,7 +463,7 @@ review.render = function() {
             destinationCount++;
             var rowLabel = wizard.destinations._rowLabel(destination, typeLabelMap);
             if(!destination.isActive) {
-                rowLabel += ' (inactive)';
+                rowLabel += ' (paused)';
             }
             serviceRows.push(['Destination', rowLabel]);
         }
@@ -415,17 +472,21 @@ review.render = function() {
     if(!destinationCount) {
         serviceRows.push(['Destinations', config.noDestinationsLabel]);
     }
-    else {
+
+    var serviceName = wizard.field('service').val();
+    serviceRows.push(['Service', serviceName ? serviceName : config.noServiceLabel]);
+
+    if(destinationCount) {
         serviceRows.push(['Delivery', wizard.destinations.deliveryLabel()]);
     }
 
-    serviceRows.push(['Respond from', wizard.destinations.replyLabel()]);
+    serviceRows.push(['Reply from', wizard.destinations.replyLabel()]);
 
     review.renderGroups([
         {label: 'Basics',       step: 0, rows: basicsRows},
         {label: 'Transport',    step: 0, rows: transportRows},
         {label: 'Routing',      step: 0, rows: routingRows},
-        {label: 'Service and destinations', step: 1, rows: serviceRows},
+        {label: 'Destinations and service', step: 1, rows: serviceRows},
         {label: 'Tolerance',    step: 1, rows: review._toleranceReviewRows()},
         {label: 'Deduplication', step: 1, rows: [['Window', review._dedupSummary()]]},
         {label: 'Logging',      step: 1, rows: [['Behavior', review._loggingSummary()]]}
