@@ -1322,14 +1322,28 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
     cursor: pointer;
 }
 
-/* The badge worn by the row's name cell while its inline form is open - the padding
-   and the border are compensated by equal negative margins so the layout never moves. */
-.zato-inline-form-badge {
-    background: linear-gradient(to bottom, #ffd84a, #ffc311);
-    border: 1px dashed #d4a00a;
-    border-radius: 3px;
-    padding: 1px 5px;
-    margin: -2px -6px;
+:root {
+    --zato-highlight-badge-top: #ffd84a;
+    --zato-highlight-badge-bottom: #ffc311;
+    --zato-highlight-badge-edge: #d4a00a;
+
+    /* How far the honey reaches past the text it is behind, and how its
+       corners are taken off */
+    --zato-highlight-badge-spread: 3px;
+    --zato-highlight-badge-radius: 3px;
+}
+
+/* The badge worn by whatever the reader is being pointed at - the name cell of the row
+   an inline form or a tooltip is open for, the review group an Edit link would take them
+   to. Everything outside the text is drawn rather than added to the box - the shadow
+   spreads the honey out and the dashed edge rides on its rim as an outline - because a
+   badge that goes on and off must not move so much as a pixel of what is around it. */
+.zato-highlight-badge {
+    background: linear-gradient(to bottom, var(--zato-highlight-badge-top), var(--zato-highlight-badge-bottom));
+    border-radius: var(--zato-highlight-badge-radius);
+    box-shadow: 0 0 0 var(--zato-highlight-badge-spread) var(--zato-highlight-badge-bottom);
+    outline: 1px dashed var(--zato-highlight-badge-edge);
+    outline-offset: var(--zato-highlight-badge-spread);
 }
 
 /* ------------------------------------------------------------ */

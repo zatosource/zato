@@ -1105,6 +1105,14 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         # First, make sure that the connection is active
         self._enforce_is_active()
 
+        # A caller that records events of its own, such as the engine delivering to a channel's
+        # destinations, turns this connection's own recording off for the duration of one call ..
+        needs_audit = kwargs.pop('needs_audit', True)
+
+        # .. and a connection that does not record anything anyway stays that way.
+        if not self.needs_audit:
+            needs_audit = False
+
         # Local variables
         _is_soap = self.config['transport'] == 'soap'
 
@@ -1174,7 +1182,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                 data = data.encode('utf-8')
 
         # .. record the outgoing request in the audit log ..
-        if self.needs_audit:
+        if needs_audit:
             self._insert_audit_event(cid, AuditEvent.Request_Sent, f'{method} {address}', AuditOutcome.OK, data)
 
         # .. do invoke the connection ..
@@ -1183,14 +1191,14 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         except Exception as e:
 
             # .. record the error in the audit log before re-raising, sharing the request's CID ..
-            if self.needs_audit:
+            if needs_audit:
                 self._insert_audit_event(cid, AuditEvent.Response_Received, f'{method} {address}', AuditOutcome.Error, str(e))
             raise
 
         response = cast_('Response', response)
 
         # .. record the received response in the audit log, sharing the request's CID ..
-        if self.needs_audit:
+        if needs_audit:
             if response.ok:
                 response_outcome = AuditOutcome.OK
             else:

@@ -2456,14 +2456,14 @@ $.fn.zato.time_ago.update_cell = function(cell, iso_utc, duration_ms) {
                     if(config.highlight_column) {
                         var row_id = cell.closest('tr').attr('id').replace('tr_', '');
                         var highlight = $.fn.zato.data_table.get_cell(row_id, config.highlight_column);
-                        instance.badge_elem = $.fn.zato.inline_edit.badge_on(highlight);
+                        instance.badge_elem = $.fn.zato.highlight_badge.on(highlight);
                     }
                 },
                 onHide: function(instance) {
                     document.removeEventListener('keydown', instance.handle_escape);
 
                     if(instance.badge_elem) {
-                        $.fn.zato.inline_edit.badge_off(instance.badge_elem);
+                        $.fn.zato.highlight_badge.off(instance.badge_elem);
                         instance.badge_elem = null;
                     }
                 },
@@ -2749,6 +2749,33 @@ $.fn.zato.time_ago.start_auto_refresh = function(container_selector, url) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+// The honey badge that says which thing on the page whatever is going on belongs to -
+// the name cell of the row an inline form or a tooltip is open for, the review group an
+// Edit link under the pointer would take the reader to. It wraps an element's contents
+// rather than styling the element itself, so it fits the text and not its box.
+
+$.fn.zato.highlight_badge = {};
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+// Puts the badge on. Returns the element, which is what taking it off again needs.
+$.fn.zato.highlight_badge.on = function(elem) {
+    var highlight = $(elem);
+    highlight.wrapInner('<span class="zato-highlight-badge"></span>');
+    return highlight;
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.highlight_badge.off = function(elem) {
+    var badge = $(elem).find('.zato-highlight-badge');
+    badge.contents().unwrap();
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 // Inline editing - a reusable way to change one or a few fields of a data-table row
 // without opening the edit dialog. The hidden edit form is populated exactly the way
 // the dialog populates it, selected fields are overridden and the form is submitted,
@@ -2962,26 +2989,10 @@ $.fn.zato.inline_edit.toggle_active = function(id, link_elem, opts) {
 //   validate       - called with a map of trimmed input values, returns an error
 //                    message when the form must not be submitted or an empty string
 //   on_submit      - called with the map of values once they validate
-//   highlight_elem - optional, an element whose text wears a badge while the form is open
+//   highlight_elem - optional, an element whose text wears the highlight badge
+//                    while the form is open
 //
 // The Enter key anywhere in the inputs submits the form, Escape closes it.
-// Wraps an element's contents in the highlight badge - the honey background that marks
-// which row an open form or tooltip belongs to. Returns the element for later cleanup.
-$.fn.zato.inline_edit.badge_on = function(elem) {
-    var highlight = $(elem);
-    highlight.wrapInner('<span class="zato-inline-form-badge"></span>');
-    return highlight;
-}
-
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-$.fn.zato.inline_edit.badge_off = function(elem) {
-    var badge = $(elem).find('.zato-inline-form-badge');
-    badge.contents().unwrap();
-}
-
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
 $.fn.zato.inline_edit.form_tippy = function(opts) {
 
     var config = $.fn.zato.inline_edit.config;
@@ -3076,7 +3087,7 @@ $.fn.zato.inline_edit.form_tippy = function(opts) {
             // While the form is open, the related element wears a badge
             // so it is clear which row the form belongs to.
             if(opts.highlight_elem) {
-                tippy_instance.badge_elem = $.fn.zato.inline_edit.badge_on(opts.highlight_elem);
+                tippy_instance.badge_elem = $.fn.zato.highlight_badge.on(opts.highlight_elem);
             }
         },
         onHide: function(tippy_instance) {
@@ -3084,7 +3095,7 @@ $.fn.zato.inline_edit.form_tippy = function(opts) {
             document.removeEventListener('mousedown', tippy_instance.handle_outside_mousedown);
 
             if(tippy_instance.badge_elem) {
-                $.fn.zato.inline_edit.badge_off(tippy_instance.badge_elem);
+                $.fn.zato.highlight_badge.off(tippy_instance.badge_elem);
                 tippy_instance.badge_elem = null;
             }
         },

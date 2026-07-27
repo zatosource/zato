@@ -53,6 +53,7 @@ class AuditSource:
     REST_Outgoing = 'rest-outgoing'
     SOAP_Outgoing = 'soap-outgoing'
     Email_IMAP    = 'email-imap'
+    Email_SMTP    = 'email-smtp'
     AS2           = 'as2'
     AS4           = 'as4'
     X12           = 'x12'

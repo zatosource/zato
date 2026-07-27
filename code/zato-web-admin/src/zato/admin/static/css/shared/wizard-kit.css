@@ -65,6 +65,27 @@
        rows is given its height in */
     --wizard-review-row-height: 26px;
 
+    /* A group's heading - its line of text, the room under it and the rule
+       itself - and the room between that rule and the first row. Both are
+       held here because the wash a hovered group wears starts where they end. */
+    --wizard-review-heading-height: 24px;
+    --wizard-review-heading-margin: 4px;
+
+    /* How far the words of a group stand in from the ends of its rule, which
+       is as far as the honey behind them reaches */
+    --wizard-review-inset: 8px;
+
+    /* The wash behind a marked group's answers - at its strongest under the
+       rule, still plainly there at the last row, and gone by the end of the
+       room kept under it, so the last row never looks left out */
+    --wizard-review-wash-top: color-mix(in srgb, var(--zato-highlight-badge-bottom) 26%, transparent);
+    --wizard-review-wash-bottom: color-mix(in srgb, var(--zato-highlight-badge-bottom) 13%, transparent);
+
+    /* The room under the last row the wash fades out in, which is part of
+       what separates one group from the next */
+    --wizard-review-wash-fade: 8px;
+    --wizard-review-group-space: 16px;
+
     /* How far in from its own heading whatever a collapsible holds starts -
        past the chevron in front of the heading and the gap after it. One
        step per level, so a card, the groups inside it and the rows inside
@@ -869,15 +890,27 @@ a.wizard-select-delete:hover::before {
 
 .wizard-review-group {
     max-width: 640px;
-    margin-bottom: 16px;
+
+    /* The room under the last row is where the wash ends, so it belongs to the
+       group as padding - what is left of the space to the next group is margin */
+    padding-bottom: var(--wizard-review-wash-fade);
+    margin-bottom: calc(var(--wizard-review-group-space) - var(--wizard-review-wash-fade));
 }
 
+/* The heading is a fixed height, its rule included, which is what lets the
+   wash under it be given the room the rows take and nothing more. Its own
+   text stands in from the ends of the rule, which is where the honey reaches
+   to - the rule and the wash keep the full width, only the words step in. */
 .wizard-review-group-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    height: var(--wizard-review-heading-height);
+    box-sizing: border-box;
     padding-bottom: 5px;
-    margin-bottom: 4px;
+    padding-left: var(--wizard-review-inset);
+    padding-right: var(--wizard-review-inset);
+    margin-bottom: var(--wizard-review-heading-margin);
     border-bottom: 1px solid var(--wizard-border);
 }
 
@@ -889,11 +922,60 @@ a.wizard-select-delete:hover::before {
     color: var(--wizard-text);
 }
 
+/* The way into a group reads as text until the group is pointed at, and takes
+   the accent only then - a review at rest is something to read, not a row of
+   links to be drawn to */
 .wizard-review-edit {
     font-size: 12px;
     font-weight: 500;
-    color: var(--wizard-accent);
+    color: var(--wizard-text);
     cursor: pointer;
+}
+
+/* The pointer anywhere on a group says which group Edit would take the reader
+   to - the whole group answers, not only the link. The label wears the
+   highlight badge, the rule under the heading turns honey and glows below
+   itself, and the answers under the rule lie in a wash that picks the glow up
+   where it fades and carries it down to the last row. Neither the line nor the
+   heading changes size, so nothing moves. */
+.wizard-review-group:hover .wizard-review-group-header {
+    border-bottom-color: var(--zato-highlight-badge-edge);
+    box-shadow: 0 3px 5px -2px var(--zato-highlight-badge-bottom);
+}
+
+/* The wash is held to the rows by being anchored at the bottom and given the
+   group's height less its heading, so it begins right under the rule. It holds
+   its color all the way past the last row and only lets go in the room kept
+   under it - a wash that had run out by the last row would leave the rows at
+   the end looking like they belonged to nothing. */
+.wizard-review-group:hover {
+    background-image: linear-gradient(to bottom,
+        var(--wizard-review-wash-top) 0,
+        var(--wizard-review-wash-bottom) calc(100% - var(--wizard-review-wash-fade)),
+        transparent 100%);
+    background-repeat: no-repeat;
+    background-position: left bottom;
+    background-size: 100% calc(100% - var(--wizard-review-heading-height) - var(--wizard-review-heading-margin));
+}
+
+/* A key reads back a notch while nothing is going on, which is a notch too
+   far once there is honey behind it - against the wash it takes the full text
+   color, the way the value beside it already has */
+.wizard-review-group:hover .wizard-review-key {
+    color: var(--wizard-text);
+}
+
+/* The link is the way into the group, so it answers too - in the same honey
+   the label wears, and its text turns to the accent, which is where it says
+   that this one is to be clicked. It is drawn outside the text the way the
+   highlight badge is, so nothing moves. */
+.wizard-review-group:hover .wizard-review-edit {
+    color: var(--wizard-accent);
+    background: linear-gradient(to bottom, var(--zato-highlight-badge-top), var(--zato-highlight-badge-bottom));
+    border-radius: var(--zato-highlight-badge-radius);
+    box-shadow: 0 0 0 var(--zato-highlight-badge-spread) var(--zato-highlight-badge-bottom);
+    outline: 1px dashed var(--zato-highlight-badge-edge);
+    outline-offset: var(--zato-highlight-badge-spread);
 }
 
 .wizard-review-edit:hover {
@@ -902,7 +984,10 @@ a.wizard-select-delete:hover::before {
 
 .wizard-review-row {
     display: flex;
-    padding: 4px 0;
+
+    /* A row stands in from the edge of the honey the same way the heading
+       above it does, so no text of a group ever touches it */
+    padding: 4px var(--wizard-review-inset);
     font-size: 13px;
 
     /* A row is one line tall, which is what lets a list of them be given a

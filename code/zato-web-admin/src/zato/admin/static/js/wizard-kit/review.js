@@ -131,6 +131,16 @@ kit.review.setup = function(wizard) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+    // The label of a group, which is what the group marks while the pointer
+    // is anywhere on it.
+    review._getGroupLabel = function(groupElement) {
+
+        var out = $(groupElement).find('.wizard-review-group-label');
+        return out;
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
     // Renders the review step from a list of groups. A group is
     // {label, step, rows}, each row a [key, value] pair, and may also carry:
     //
@@ -177,6 +187,18 @@ kit.review.setup = function(wizard) {
 
             container.append(groupElement);
         }
+
+        // The pointer anywhere on a group marks that group's label with the
+        // same badge the data tables put on the row an inline form belongs to.
+        // What the honey behind the group does is in the stylesheet - only the
+        // badge needs the wrapping a script does.
+        container.find('.wizard-review-group').on('mouseenter', function() {
+            $.fn.zato.highlight_badge.on(review._getGroupLabel(this));
+        });
+
+        container.find('.wizard-review-group').on('mouseleave', function() {
+            $.fn.zato.highlight_badge.off(review._getGroupLabel(this));
+        });
 
         // An Edit link goes to the step its group came from and opens
         // whatever the group named, so the answer is there to be changed
