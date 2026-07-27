@@ -79,9 +79,15 @@ _as4_resubmit = {
 _hl7_resubmit = {
     AuditEvent.Message_Sent:     {'label': 'Resend',    'service': 'zato.audit-log.hl7.resend'},
     AuditEvent.Message_Received: {'label': 'Reprocess', 'service': 'zato.audit-log.hl7.reprocess'},
+
+    # A message a channel fanned out to one of its destinations is repeated per hop, that one
+    # delivery going out again without the rest of the destinations being involved
+    AuditEvent.Request_Sent:     {'label': 'Resend',    'service': 'zato.audit-log.resend-hop'},
 }
 
-_fhir_resubmit = {
+# One recorded delivery to one destination is repeated on its own, whatever kind of connection
+# it went through - the row says which destination it went to and what repeating it needs.
+_hop_resubmit = {
     AuditEvent.Request_Sent: {'label': 'Resend', 'service': 'zato.audit-log.resend-hop'},
 }
 
@@ -90,7 +96,9 @@ _source_resubmit = {
     'as2': _as2_resubmit,
     'as4': _as4_resubmit,
     'hl7': _hl7_resubmit,
-    'fhir': _fhir_resubmit,
+    'fhir': _hop_resubmit,
+    'rest-outgoing': _hop_resubmit,
+    'email-smtp': _hop_resubmit,
 }
 
 # ################################################################################################################################

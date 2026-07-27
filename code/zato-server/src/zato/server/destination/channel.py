@@ -66,10 +66,32 @@ class ChannelConnections:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def new_channel_item(config:'any_') -> 'stranydict':
+    """ What one channel says about itself to everything that runs on its behalf - its own identity
+    plus everything it declares about its destinations, which is what the fan-out at the end of a
+    service's pipeline reads and what a channel with no service delivers by. A message arriving live
+    and one sent again from the audit log both fan out by this, so the two go to the same places.
+    """
+    out = {
+        'id': config.id,
+        'name': config.name,
+        'is_internal': config.is_internal,
+        'data_format': config.data_format,
+        'destinations': config.destinations,
+        'respond_from': config.respond_from,
+        'delivery_mode': config.delivery_mode,
+    }
+
+    return out
+
+# ################################################################################################################################
+
 def run_for_channel(
     server:'ParallelServer',
     channel_item:'stranydict',
     request_payload:'any_',
+    *,
+    cid:'str' = '',
     ) -> 'DeliveryResult | None':
     """ Delivers one message a channel accepted to the destinations that channel declares, with
     no service between the two. Returns nothing when the channel has no destination a message
@@ -80,9 +102,11 @@ def run_for_channel(
     if not config:
         return None
 
-    # Every delivery of this message is recorded under one correlation id of its own, there being
-    # no service invocation to take one from
-    cid = new_cid_server()
+    # Every delivery is recorded under the correlation id the message arrived under, so the trail
+    # of that one message shows everything it fanned out to. A channel that is not audited has no
+    # receipt to share an id with, so the deliveries are recorded under one of their own.
+    if not cid:
+        cid = new_cid_server()
 
     connections = ChannelConnections()
     connections.init(server, cid)

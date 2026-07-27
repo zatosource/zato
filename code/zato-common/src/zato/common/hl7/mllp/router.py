@@ -48,6 +48,10 @@ class ChannelRoute:
     """
 
     channel_name:'str'
+
+    # callback(message, cid) - what a matched message is handed to, along with the correlation id
+    # the channel recorded its receipt under, so everything the message leads to shares that id.
+    # The id is empty for a channel that is not audited, there being no receipt to share one with.
     callback:'callable_'
 
     # The service each matched message is handed to, empty when the channel has none - a channel

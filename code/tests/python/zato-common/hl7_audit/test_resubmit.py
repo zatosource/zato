@@ -21,7 +21,7 @@ from zato.common.audit_log.api import event_attr_table, event_link_table, event_
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
 from zato.common.audit_log.resubmit import get_resubmit_handler, load_event, Action_Reprocess, Action_Resend, \
     ResubmitException
-from zato.common.hl7.resubmit import reprocess, resend, validate_payload
+from zato.common.hl7.resubmit import reprocess, resend, validate_payload, Reprocess_Destinations
 from zato.common.json_internal import dumps, loads
 
 # ################################################################################################################################
@@ -388,6 +388,36 @@ class TestReprocess:
 
         attr_map = _get_attr_map(result.event_id)
         assert attr_map['mrn'] == '999888'
+
+# ################################################################################################################################
+
+    def test_a_reprocess_aimed_at_some_destinations_says_which(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        original_id = _seed_event(audit_log, AuditEvent.Message_Received, _channel_name, _adt_a01)
+
+        invoke = _InvokeRecorder()
+        result = reprocess(load_event(original_id), _service_name, invoke, audit_log, 'cid-reprocess-4',
+            destination_names=['hl7.forward.ehr', 'rest.billing'])
+
+        assert result.destination_names == ['hl7.forward.ehr', 'rest.billing']
+
+        # The row says the message went to some of the channel's destinations rather than to all
+        attr_map = _get_attr_map(result.event_id)
+        assert attr_map[Reprocess_Destinations] == 'hl7.forward.ehr, rest.billing'
+
+# ################################################################################################################################
+
+    def test_a_reprocess_aimed_at_the_whole_channel_says_nothing_of_destinations(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        original_id = _seed_event(audit_log, AuditEvent.Message_Received, _channel_name, _adt_a01)
+
+        invoke = _InvokeRecorder()
+        result = reprocess(load_event(original_id), _service_name, invoke, audit_log, 'cid-reprocess-5')
+
+        assert result.destination_names == []
+
+        attr_map = _get_attr_map(result.event_id)
+        assert Reprocess_Destinations not in attr_map
 
 # ################################################################################################################################
 

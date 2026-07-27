@@ -24,6 +24,7 @@ from zato.common.audit_log.resubmit import get_stored_payload, register_resubmit
     Action_Reprocess, Action_Resend
 from zato.common.hl7.audit import get_audit_attrs, get_control_id, interpret_ack
 from zato.common.json_internal import dumps
+from zato.common.typing_ import list_field
 from zato.hl7v2 import parse_hl7, validate_message
 
 # ################################################################################################################################
@@ -32,7 +33,7 @@ from zato.hl7v2 import parse_hl7, validate_message
 if 0:
     from zato.common.audit_log.api import AuditLog
     from zato.common.audit_log.resubmit import StoredEvent
-    from zato.common.typing_ import any_, callable_, intnone, strnone
+    from zato.common.typing_ import any_, callable_, intnone, strlist, strlistnone, strnone
     from zato.hl7v2 import ValidationResult
     any_ = any_
     AuditLog = AuditLog
@@ -41,6 +42,12 @@ if 0:
     StoredEvent = StoredEvent
     strnone = strnone
     ValidationResult = ValidationResult
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# What a reprocess aimed at some of a channel's destinations is recorded under
+Reprocess_Destinations = 'reprocess_destinations'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -59,11 +66,13 @@ class ResendResult:
 
 @dataclass(init=False)
 class HL7ReprocessResult:
-    """ What one HL7 reprocess did - the new event and the service the message was re-routed to.
+    """ What one HL7 reprocess did - the new event, the service the message was re-routed to
+    and the destinations it was aimed at, empty when it was aimed at all of them.
     """
     event_id: 'intnone' = None
     control_id: str = ''
     service_name: str = ''
+    destination_names: 'strlist' = list_field()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -178,20 +187,33 @@ def reprocess(
     cid:'str',
     *,
     payload:'strnone' = None,
+    destination_names:'strlistnone' = None,
     ) -> 'HL7ReprocessResult':
     """ Re-routes the payload stored with an inbound event to the channel's service -
     for when the recipient system was down and the already-received messages
     are to flow through again. The new attempt is its own message-received event
     linked to the original by the correlation id.
+
+    Naming destinations sends the message to those of the channel's destinations alone, which is
+    for when one receiver has to be caught up without the ones that already have the message
+    being sent it twice.
     """
     require_event_type(event, AuditEvent.Message_Received, 'reprocessed')
 
     effective_payload = _get_effective_payload(event, payload)
 
+    if destination_names is None:
+        destination_names = []
+
     # Extracted afresh, same as on a resend
     msg = parse_hl7(effective_payload, validate=False)
     attrs = get_audit_attrs(msg)
     control_id = get_control_id(msg)
+
+    # A reprocess aimed at some of the destinations says so on its own row, so the trail
+    # tells one apart from a replay the whole channel took part in
+    if destination_names:
+        attrs[Reprocess_Destinations] = ', '.join(destination_names)
 
     # The channel's service receives the message the way a live delivery would arrive
     invoke_service(service_name, effective_payload)
@@ -200,6 +222,7 @@ def reprocess(
     out = HL7ReprocessResult()
     out.control_id = control_id
     out.service_name = service_name
+    out.destination_names = destination_names
 
     out.event_id = audit_log.insert(
         AuditSource.HL7, AuditEvent.Message_Received, event.object_name,

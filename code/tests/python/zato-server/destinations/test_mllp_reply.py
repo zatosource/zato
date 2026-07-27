@@ -38,7 +38,7 @@ class TestWhatTheSenderIsAnswered:
 
     def test_a_message_that_got_through_is_acknowledged_positively(self) -> 'None':
 
-        def callback(data:'any_') -> 'None':
+        def callback(data:'any_', cid:'str') -> 'None':
             pass
 
         route = new_route(callback, service_name='test.hl7.mllp.echo')
@@ -55,7 +55,7 @@ class TestWhatTheSenderIsAnswered:
         what the listener's own try/except turns into the negative acknowledgment.
         """
 
-        def callback(data:'any_') -> 'None':
+        def callback(data:'any_', cid:'str') -> 'None':
             raise Exception('Channel `x` could not deliver to `y`')
 
         route = new_route(callback)
@@ -69,7 +69,7 @@ class TestWhatTheSenderIsAnswered:
 
     def test_the_answer_of_the_destination_a_channel_replies_from_is_the_answer(self) -> 'None':
 
-        def callback(data:'any_') -> 'str':
+        def callback(data:'any_', cid:'str') -> 'str':
             return _downstream_ack
 
         route = new_route(callback)
@@ -85,7 +85,7 @@ class TestWhatTheSenderIsAnswered:
         returned is its caller's business, not the sender's.
         """
 
-        def callback(data:'any_') -> 'any_':
+        def callback(data:'any_', cid:'str') -> 'any_':
             return _service_response
 
         route = new_route(callback, service_name='test.hl7.mllp.echo', has_destinations=False)
@@ -100,7 +100,7 @@ class TestWhatTheSenderIsAnswered:
 
     def test_a_channel_that_answered_with_text_that_is_not_a_message_is_answered_for(self) -> 'None':
 
-        def callback(data:'any_') -> 'str':
+        def callback(data:'any_', cid:'str') -> 'str':
             return 'Accepted'
 
         route = new_route(callback)
@@ -117,7 +117,7 @@ class TestWhatTheSenderIsAnswered:
         what keeps the reason for a failed hop inside the audit trail.
         """
 
-        def callback(data:'any_') -> 'None':
+        def callback(data:'any_', cid:'str') -> 'None':
             raise Exception('Connection refused by the destination')
 
         route = new_route(callback)
@@ -139,7 +139,7 @@ class TestWhatTheChannelIsGiven:
         """
         received = []
 
-        def callback(data:'any_') -> 'None':
+        def callback(data:'any_', cid:'str') -> 'None':
             received.append(data)
 
         route = new_route(callback)
@@ -156,7 +156,7 @@ class TestWhatTheChannelIsGiven:
         """
         received = []
 
-        def callback(data:'any_') -> 'None':
+        def callback(data:'any_', cid:'str') -> 'None':
             received.append(data)
 
         route = new_route(callback)

@@ -383,6 +383,63 @@ class TestHL7MLLPForward(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
+destination_service_source = '''\
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# Zato
+from zato.server.service import Service
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The destinations of the channel this service runs on, by the names the channel declares them under
+_forward_destination = 'forward-ehr'
+_fhir_destination = 'fhir-ehr'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestHL7MLLPDestinations(Service):
+    """ Says what each destination of its channel receives, in the way the message asks for -
+    the tests send one message per way of saying it.
+    """
+    name = 'test.hl7.mllp.destinations'
+
+    def handle(self):
+
+        message = self.request.raw_request
+        if isinstance(message, bytes):
+            message = message.decode('utf-8')
+
+        # A FHIR server is sent a resource rather than the HL7 message the channel received,
+        # so this one destination is always spoken for
+        self.destination[_fhir_destination] = {'resourceType': 'Patient', 'id': 'from-the-service'}
+
+        # Every destination receives what the service made of the message ..
+        if 'BROADCAST' in message:
+            self.destination.payload = message + '\\rNTE|1||Seen by the service'
+
+        # .. one destination receives something of its own ..
+        elif 'PER_NAME' in message:
+            self.destination[_forward_destination] = message + '\\rNTE|1||For the EHR alone'
+
+        # .. and one destination receives nothing at all.
+        elif 'DROPPED' in message:
+            self.destination[_forward_destination] = None
+
+# ################################################################################################################################
+# ################################################################################################################################
+'''
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 inspect_service_source = '''\
 # -*- coding: utf-8 -*-
 

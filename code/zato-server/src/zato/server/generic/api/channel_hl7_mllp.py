@@ -25,7 +25,7 @@ from zato.common.hl7.mllp.state import ChannelState
 from zato.common.typing_ import cast_
 from zato.common.util.api import asbool, hex_sequence_to_bytes, spawn_greenlet
 from zato.server.connection.wrapper import Wrapper
-from zato.server.destination.channel import run_for_channel
+from zato.server.destination.channel import new_channel_item, run_for_channel
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -200,32 +200,25 @@ class ChannelHL7MLLPWrapper(Wrapper):
 # ################################################################################################################################
 
     def _build_channel_item(self) -> 'stranydict':
-        """ What this channel says about itself to everything that runs on its behalf - its own
-        identity plus everything it declares about its destinations, which is what the fan-out
-        at the end of a service's pipeline reads and what a service-less channel delivers by.
+        """ What this channel says about itself to everything that runs on its behalf, in the one
+        shape a message sent again from the audit log is fanned out by as well.
         """
-        out = {
-            'id': self.config.id,
-            'name': self.config.name,
-            'is_internal': self.config.is_internal,
-            'data_format': self.config.data_format,
-            'destinations': self.config.destinations,
-            'respond_from': self.config.respond_from,
-            'delivery_mode': self.config.delivery_mode,
-        }
-
+        out = new_channel_item(self.config)
         return out
 
 # ################################################################################################################################
 
-    def _invoke_service(self, data:'str') -> 'any_':
+    def _invoke_service(self, data:'str', cid:'str') -> 'any_':
         """ Invokes the service configured for this channel, passing the HL7 message as the request
         payload, and returns what the service's pipeline produced - which is the answer of the
-        destination this channel replies from, when it replies from one of them.
+        destination this channel replies from, when it replies from one of them. The invocation
+        runs under the correlation id the message arrived under, so the service's own trail and
+        the fan-out that follows it read as one message rather than as several.
         """
         out = self.parallel_server.invoke(
             self.config.service,
             data,
+            cid=cid,
             channel=CHANNEL.HL7_MLLP,
             zato_ctx={'zato.channel_item': self._build_channel_item()},
         )
@@ -234,12 +227,12 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
 # ################################################################################################################################
 
-    def _deliver_to_destinations(self, data:'str') -> 'any_':
+    def _deliver_to_destinations(self, data:'str', cid:'str') -> 'any_':
         """ Delivers one message to this channel's destinations with nothing between the two, which
         is what a channel that names no service does with everything it accepts. Nothing here looks
         at what the message says - a channel with no service passes bytes through and no more.
         """
-        result = run_for_channel(self.parallel_server, self._build_channel_item(), data)
+        result = run_for_channel(self.parallel_server, self._build_channel_item(), data, cid=cid)
 
         # Our response to produce - a channel that replies from one of its destinations answers
         # with what that destination said, and one that does not has nothing of its own to say

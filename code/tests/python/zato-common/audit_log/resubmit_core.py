@@ -196,6 +196,22 @@ def _run_hop_resend_checks(audit_log:'AuditLog') -> 'None':
 
     assert _get_parent_ids(result.event_id) == [original_id]
 
+    # .. what the original carried beyond the payload is carried over too, so the attempt
+    # is as repeatable as the original was ..
+    detailed_id = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Request_Sent, _hop_connection_name,
+        cid='cid-core-hop-detailed', outcome=AuditOutcome.Error, status='Connection timeout',
+        data=dumps({'payload': 'hop-payload', 'destination_name': 'Warehouse', 'method': 'PUT'}))
+
+    detailed_result = resend_hop(load_event(detailed_id), send, audit_log, 'cid-core-hop-detailed-new')
+
+    detailed_row = _get_event_row(detailed_result.event_id)
+
+    assert loads(detailed_row['data']) == {
+        'payload': 'hop-payload',
+        'destination_name': 'Warehouse',
+        'method': 'PUT',
+    }
+
     # .. only outgoing events can be resent per hop ..
     inbound_id = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Message_Received, _hop_connection_name,
         cid='cid-core-hop-inbound', data=dumps({'payload': 'inbound-payload'}))
