@@ -174,6 +174,8 @@ A group may also carry:
 
 The pointer anywhere on a group says which group its Edit link would take the reader to - the label wears `$.fn.zato.highlight_badge`, the honey badge the data tables put on the name cell of the row an inline form or a tooltip is open for, and the group's own rule and rows take the honey up in the stylesheet. The badge is the same class and the same pair of calls the tables use, so the two never drift apart.
 
+The pointer on the link itself is answered by a tooltip naming what the link goes to, the group's label in the lower case a sentence puts it in, e.g. `Edit tolerance`. The link's own text does not change color - what is to be clicked has already been said by the honey the group is in.
+
 Card summaries go through `review.setSummary(elementId, text)`, which replays the fade-in when the text changed.
 
 Every question a step asks has a row of its own, whether it has been answered or not - a row left out is a question the reader cannot check. A row states what is set, never what not setting it would mean, so an unanswered one reads as `Not set` or as the plain absence it is, e.g. `No service`.
