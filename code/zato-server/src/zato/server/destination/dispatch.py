@@ -15,6 +15,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from json import loads
+from typing import Protocol
 
 # Zato
 from zato.common.api import SMTPMessage
@@ -28,7 +29,20 @@ from zato.common.destination.model import get_option, DestinationException
 if 0:
     from zato.common.destination.model import DestinationEntry
     from zato.common.typing_ import any_, strcalldict
-    from zato.server.service import Service
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DestinationConnections(Protocol):
+    """ What an adapter needs of whoever it delivers on behalf of - nothing beyond the outgoing
+    connections themselves, reached the way a service reaches them. A service satisfies this, and
+    so does what a channel with no service of its own delivers through.
+    """
+
+    rest:  'any_'
+    mllp:  'any_'
+    fhir:  'any_'
+    email: 'any_'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -48,7 +62,7 @@ _rest_methods_with_body = ('POST', 'PUT', 'PATCH')
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _send_rest(service:'Service', entry:'DestinationEntry', payload:'any_') -> 'any_':
+def _send_rest(connections:'DestinationConnections', entry:'DestinationEntry', payload:'any_') -> 'any_':
     """ Delivers to an outgoing REST connection, with the method the destination names.
     """
     method = get_option(entry, DestinationOption.Method, Default_Method)
@@ -56,7 +70,7 @@ def _send_rest(service:'Service', entry:'DestinationEntry', payload:'any_') -> '
     if method not in _rest_invoker_method:
         raise DestinationException(f'Destination `{entry.name}` cannot be delivered to with method `{method}`')
 
-    invoker = service.rest[entry.connection]
+    invoker = connections.rest[entry.connection]
     function = getattr(invoker, _rest_invoker_method[method])
 
     # A method with a body carries what is being delivered ..
@@ -71,17 +85,17 @@ def _send_rest(service:'Service', entry:'DestinationEntry', payload:'any_') -> '
 
 # ################################################################################################################################
 
-def _send_mllp(service:'Service', entry:'DestinationEntry', payload:'any_') -> 'any_':
+def _send_mllp(connections:'DestinationConnections', entry:'DestinationEntry', payload:'any_') -> 'any_':
     """ Delivers to an outgoing HL7 MLLP connection and returns the acknowledgment it answered with.
     """
-    invoker = service.mllp[entry.connection]
+    invoker = connections.mllp[entry.connection]
 
     out = invoker.send(payload, needs_audit=False)
     return out
 
 # ################################################################################################################################
 
-def _send_fhir(service:'Service', entry:'DestinationEntry', payload:'any_') -> 'any_':
+def _send_fhir(connections:'DestinationConnections', entry:'DestinationEntry', payload:'any_') -> 'any_':
     """ Delivers to an outgoing HL7 FHIR connection, with the method and the path the destination names.
     """
     method = get_option(entry, DestinationOption.Method, Default_Method)
@@ -94,18 +108,18 @@ def _send_fhir(service:'Service', entry:'DestinationEntry', payload:'any_') -> '
     if isinstance(payload, str):
         payload = loads(payload)
 
-    client = service.fhir[entry.connection]
+    client = connections.fhir[entry.connection]
 
     out = client._do_request(method, path, data=payload, needs_audit=False)
     return out
 
 # ################################################################################################################################
 
-def _send_smtp(service:'Service', entry:'DestinationEntry', payload:'any_') -> 'any_':
+def _send_smtp(connections:'DestinationConnections', entry:'DestinationEntry', payload:'any_') -> 'any_':
     """ Delivers to an outgoing SMTP connection, as the body of a message to the recipient
     and under the subject line the destination names.
     """
-    if service.email is None:
+    if connections.email is None:
         raise DestinationException(f'Destination `{entry.name}` cannot be delivered to, e-mail is not enabled')
 
     to = get_option(entry, DestinationOption.To, Default_To)
@@ -119,7 +133,7 @@ def _send_smtp(service:'Service', entry:'DestinationEntry', payload:'any_') -> '
     message.subject = get_option(entry, DestinationOption.Subject, Default_Subject)
     message.body = payload
 
-    item = service.email.smtp[entry.connection]
+    item = connections.email.smtp[entry.connection]
 
     out = item.conn.send(message)
     return out
@@ -137,11 +151,11 @@ _adapters:'strcalldict' = {
 
 # ################################################################################################################################
 
-def send(service:'Service', entry:'DestinationEntry', payload:'any_') -> 'any_':
+def send(connections:'DestinationConnections', entry:'DestinationEntry', payload:'any_') -> 'any_':
     """ Delivers one payload to one destination, whatever the type of connection behind it.
     """
     if adapter := _adapters.get(entry.type):
-        out = adapter(service, entry, payload)
+        out = adapter(connections, entry, payload)
 
     # .. a type nothing delivers to should never have been stored in the first place.
     else:

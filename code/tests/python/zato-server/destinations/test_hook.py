@@ -17,9 +17,9 @@ from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent,
 from zato.common.destination.constants import DeliveryMode, DestinationType, Respond_From_Service
 from zato.common.destination.coordinator import new_transports
 from zato.common.typing_ import cast_
-from zato.server.destination.hook import get_config, run_destinations, run_for_service, ServiceDispatcher
+from zato.server.destination.hook import get_config, run_destinations, run_for_service, ConnectionDispatcher
 
-from fake_service import FakeService, MLLP_Response
+from service_stub import ServiceStub, MLLP_Response
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -96,14 +96,14 @@ def _get_stored_list() -> 'anylist':
 
 # ################################################################################################################################
 
-def _new_service() -> 'FakeService':
-    out = FakeService(_request_payload)
+def _new_service() -> 'ServiceStub':
+    out = ServiceStub(_request_payload)
     return out
 
 # ################################################################################################################################
 
-def _as_service(fake:'FakeService') -> 'Service':
-    out = cast_('Service', fake)
+def _as_service(stub:'ServiceStub') -> 'Service':
+    out = cast_('Service', stub)
     return out
 
 # ################################################################################################################################
@@ -113,7 +113,7 @@ class _SynchronousTransports:
     here and now, so a test sees the whole fan-out rather than only the part the caller waits for.
     """
     def __init__(self, service:'Service') -> 'None':
-        self.dispatcher = ServiceDispatcher(service)
+        self.dispatcher = ConnectionDispatcher(service)
         self.sleeps:'anylist' = []
 
 # ################################################################################################################################
@@ -204,49 +204,55 @@ class TestReadingTheChannelConfiguration:
 class TestDeliveringWhatAServiceHandled:
 
     def test_every_destination_receives_the_message_the_service_was_given(self) -> 'None':
-        fake = _new_service()
-        service = _as_service(fake)
+        stub = _new_service()
+        service = _as_service(stub)
 
         config = _new_config()
-        overrides = fake.destination.get_overrides()
+        overrides = stub.destination.get_overrides()
         transports = _SynchronousTransports(service)
 
-        result = run_destinations(service, config, overrides, fake.request.raw, transports.make())
+        result = run_destinations(
+            config, overrides, stub.request.raw, transports.make(),
+            cid=stub.cid, server_name=stub.server.name)
 
         assert result.has_response is False
 
-        assert fake.mllp.calls[0][1] == _request_payload
-        assert fake.rest.calls[0][2] == (_request_payload,)
+        assert stub.mllp.calls[0][1] == _request_payload
+        assert stub.rest.calls[0][2] == (_request_payload,)
 
 # ################################################################################################################################
 
     def test_what_the_service_said_through_its_facade_is_what_goes_out(self) -> 'None':
-        fake = _new_service()
-        service = _as_service(fake)
+        stub = _new_service()
+        service = _as_service(stub)
 
-        fake.destination.payload = 'What the service made of it'
-        fake.destination[_rest_connection] = None
+        stub.destination.payload = 'What the service made of it'
+        stub.destination[_rest_connection] = None
 
         config = _new_config()
-        overrides = fake.destination.get_overrides()
+        overrides = stub.destination.get_overrides()
         transports = _SynchronousTransports(service)
 
-        _ = run_destinations(service, config, overrides, fake.request.raw, transports.make())
+        _ = run_destinations(
+            config, overrides, stub.request.raw, transports.make(),
+            cid=stub.cid, server_name=stub.server.name)
 
-        assert fake.mllp.calls[0][1] == 'What the service made of it'
-        assert fake.rest.calls == []
+        assert stub.mllp.calls[0][1] == 'What the service made of it'
+        assert stub.rest.calls == []
 
 # ################################################################################################################################
 
     def test_every_delivery_is_recorded_under_the_server_it_ran_on(self) -> 'None':
-        fake = _new_service()
-        service = _as_service(fake)
+        stub = _new_service()
+        service = _as_service(stub)
 
         config = _new_config()
-        overrides = fake.destination.get_overrides()
+        overrides = stub.destination.get_overrides()
         transports = _SynchronousTransports(service)
 
-        _ = run_destinations(service, config, overrides, fake.request.raw, transports.make())
+        _ = run_destinations(
+            config, overrides, stub.request.raw, transports.make(),
+            cid=stub.cid, server_name=stub.server.name)
 
         engine = get_audit_engine()
 
@@ -260,8 +266,8 @@ class TestDeliveringWhatAServiceHandled:
         assert len(rows) == 2
 
         for row in rows:
-            assert row.server_name == fake.server.name
-            assert row.cid == fake.cid
+            assert row.server_name == stub.server.name
+            assert row.cid == stub.cid
             assert row.outcome == AuditOutcome.OK
 
 # ################################################################################################################################
@@ -270,22 +276,22 @@ class TestDeliveringWhatAServiceHandled:
 class TestTheServicePipeline:
 
     def test_a_channel_with_no_destinations_delivers_nothing(self) -> 'None':
-        fake = _new_service()
-        service = _as_service(fake)
+        stub = _new_service()
+        service = _as_service(stub)
 
         channel_item = _new_channel_item('')
 
         assert run_for_service(service, channel_item) is None
 
-        assert fake.mllp.calls == []
-        assert fake.rest.calls == []
+        assert stub.mllp.calls == []
+        assert stub.rest.calls == []
         assert _count_hop_rows() == 0
 
 # ################################################################################################################################
 
     def test_the_destination_a_channel_replies_from_produces_the_reply(self) -> 'None':
-        fake = _new_service()
-        service = _as_service(fake)
+        stub = _new_service()
+        service = _as_service(stub)
 
         # The one destination the channel has is the one it replies from, so the whole delivery
         # is the one the caller waits for and nothing is left running afterwards.
@@ -298,7 +304,7 @@ class TestTheServicePipeline:
         assert result.has_response is True
         assert result.response == MLLP_Response
 
-        assert fake.mllp.calls[0][1] == _request_payload
+        assert stub.mllp.calls[0][1] == _request_payload
         assert _count_hop_rows() == 1
 
 # ################################################################################################################################

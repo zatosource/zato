@@ -80,6 +80,7 @@ class Index(_Index):
         'normalize_invalid_escape_sequences', 'normalize_obx8_abnormal_flags',
         'normalize_quadruple_quoted_empty', 'allow_short_encoding_characters',
         'fix_off_by_one_field_index',
+        'destinations', 'respond_from', 'delivery_mode',
         'use_rest', 'rest_only', 'rest_channel_id',
     ) + generic_attrs
     output_repeated = True
@@ -100,8 +101,11 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
-    input_required = 'name', 'is_internal', 'service'
+    # A channel hands each message to a service, to its destinations, or to both, so the service
+    # is not required here - what a channel may not do is name neither of the two.
+    input_required = 'name', 'is_internal'
     input_optional = (
+        'service',
         'is_active', 'should_parse_on_input', 'should_validate', 'should_return_errors',
         'should_log_messages', 'is_audit_log_active',
         'max_msg_size', 'max_msg_size_unit', 'recv_timeout', 'idle_timeout',
@@ -119,6 +123,7 @@ class _CreateEdit(CreateEdit):
         'normalize_invalid_escape_sequences', 'normalize_obx8_abnormal_flags',
         'normalize_quadruple_quoted_empty', 'allow_short_encoding_characters',
         'fix_off_by_one_field_index',
+        'destinations', 'respond_from', 'delivery_mode',
         'use_rest', 'rest_only', 'rest_channel_id', 'rest_url_path', 'rest_security_id',
     ) + generic_attrs
     output_required = 'id', 'name'

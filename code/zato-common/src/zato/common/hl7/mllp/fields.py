@@ -11,6 +11,7 @@ from typing import NamedTuple
 
 # Zato
 from zato.common.api import HL7
+from zato.common.destination.constants import Default_Delivery_Mode, Respond_From_Service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -133,6 +134,13 @@ Channel_Fields:'mllp_field_list' = [
     MLLPField('normalize_quadruple_quoted_empty', True),
     MLLPField('allow_short_encoding_characters', True),
     MLLPField('fix_off_by_one_field_index', False),
+
+    # Where each message the channel accepts is delivered to once the channel is done with it.
+    # The list is the JSON text the Dashboard writes, respond_from is either the service or the
+    # name of one destination, and delivery_mode says how the rest of them receive their message.
+    MLLPField('destinations', ''),
+    MLLPField('respond_from', Respond_From_Service),
+    MLLPField('delivery_mode', Default_Delivery_Mode),
 
     # REST bridge
     MLLPField('use_rest', False),

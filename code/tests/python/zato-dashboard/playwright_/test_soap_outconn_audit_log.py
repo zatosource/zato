@@ -88,6 +88,10 @@ _Propagation_Poll_Interval = 1.0
 # Log patterns produced when an invocation cannot reach its target
 _Connection_Failure_Log_Patterns = ('Connection refused', 'NewConnectionError', 'Max retries exceeded', 'ConnectionError')
 
+# Log patterns produced when a ping reaches the loopback channel - a ping is a bodiless HEAD request,
+# so the SOAP channel on the other end has no envelope to parse and says so.
+_Ping_Log_Patterns = ('Could not parse SOAP request', 'Malformed XML')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -828,6 +832,7 @@ class TestSOAPOutconnAuditLog:
 
 # ################################################################################################################################
 
+    @pytest.mark.expect_log_errors(*_Ping_Log_Patterns)
     def test_ping_not_audited(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Pings never write audit events - only actual invocations do.
         """

@@ -30,6 +30,11 @@ Skip_Verify_Env_Key = 'Zato_Skip_SSL_Verify'
 
 _skip_verify_warning = 'TLS verification is disabled process-wide by the %s environment variable'
 
+# What a configuration that does not spell TLS verification out at all gets. Only a connection
+# stored in the ODB carries the setting, so a client built by hand outside one has to start
+# somewhere, and the only safe place to start is verifying.
+Default_Validate_TLS = True
+
 # Whether the warning above has already been emitted. It is a process-wide setting, so saying so
 # once at the first outgoing request is the point - repeating it per request would bury it.
 _warning_emitted = False

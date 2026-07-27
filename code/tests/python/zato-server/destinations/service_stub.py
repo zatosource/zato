@@ -41,7 +41,7 @@ SMTP_Response = True
 # ################################################################################################################################
 # ################################################################################################################################
 
-class FakeRESTInvoker:
+class RESTInvokerRecorder:
     """ Stands in for the invoker self.rest hands out.
     """
     def __init__(self, connection:'str', calls:'anylist') -> 'None':
@@ -74,20 +74,20 @@ class FakeRESTInvoker:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class FakeRESTFacade:
+class RESTFacadeRecorder:
     """ Stands in for self.rest.
     """
     def __init__(self) -> 'None':
         self.calls:'anylist' = []
 
-    def __getitem__(self, connection:'str') -> 'FakeRESTInvoker':
-        out = FakeRESTInvoker(connection, self.calls)
+    def __getitem__(self, connection:'str') -> 'RESTInvokerRecorder':
+        out = RESTInvokerRecorder(connection, self.calls)
         return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class FakeMLLPInvoker:
+class MLLPInvokerRecorder:
     """ Stands in for the invoker self.mllp hands out.
     """
     def __init__(self, connection:'str', calls:'anylist') -> 'None':
@@ -101,20 +101,20 @@ class FakeMLLPInvoker:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class FakeMLLPFacade:
+class MLLPFacadeRecorder:
     """ Stands in for self.mllp.
     """
     def __init__(self) -> 'None':
         self.calls:'anylist' = []
 
-    def __getitem__(self, connection:'str') -> 'FakeMLLPInvoker':
-        out = FakeMLLPInvoker(connection, self.calls)
+    def __getitem__(self, connection:'str') -> 'MLLPInvokerRecorder':
+        out = MLLPInvokerRecorder(connection, self.calls)
         return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class FakeFHIRClient:
+class FHIRClientRecorder:
     """ Stands in for the client self.fhir hands out.
     """
     def __init__(self, connection:'str', calls:'anylist') -> 'None':
@@ -128,20 +128,20 @@ class FakeFHIRClient:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class FakeFHIRFacade:
+class FHIRFacadeRecorder:
     """ Stands in for self.fhir.
     """
     def __init__(self) -> 'None':
         self.calls:'anylist' = []
 
-    def __getitem__(self, connection:'str') -> 'FakeFHIRClient':
-        out = FakeFHIRClient(connection, self.calls)
+    def __getitem__(self, connection:'str') -> 'FHIRClientRecorder':
+        out = FHIRClientRecorder(connection, self.calls)
         return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class FakeSMTPConnection:
+class SMTPConnectionRecorder:
     """ Stands in for the connection an SMTP item holds.
     """
     def __init__(self, connection:'str', calls:'anylist') -> 'None':
@@ -154,36 +154,36 @@ class FakeSMTPConnection:
 
 # ################################################################################################################################
 
-class FakeSMTPItem:
+class SMTPItemRecorder:
     """ Stands in for one item of self.email.smtp.
     """
     def __init__(self, connection:'str', calls:'anylist') -> 'None':
-        self.conn = FakeSMTPConnection(connection, calls)
+        self.conn = SMTPConnectionRecorder(connection, calls)
 
 # ################################################################################################################################
 
-class FakeSMTPFacade:
+class SMTPFacadeRecorder:
     """ Stands in for self.email.smtp.
     """
     def __init__(self) -> 'None':
         self.calls:'anylist' = []
 
-    def __getitem__(self, connection:'str') -> 'FakeSMTPItem':
-        out = FakeSMTPItem(connection, self.calls)
+    def __getitem__(self, connection:'str') -> 'SMTPItemRecorder':
+        out = SMTPItemRecorder(connection, self.calls)
         return out
 
 # ################################################################################################################################
 
-class FakeEMailAPI:
+class EMailAPIRecorder:
     """ Stands in for self.email.
     """
     def __init__(self) -> 'None':
-        self.smtp = FakeSMTPFacade()
+        self.smtp = SMTPFacadeRecorder()
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class FakeRequest:
+class RequestStub:
     """ Stands in for self.request, carrying the message as it arrived.
     """
     def __init__(self, raw:'any_') -> 'None':
@@ -191,7 +191,7 @@ class FakeRequest:
 
 # ################################################################################################################################
 
-class FakeServer:
+class ServerStub:
     """ Stands in for self.server, which a delivery reaches only for the name it records under.
     """
     def __init__(self) -> 'None':
@@ -200,24 +200,24 @@ class FakeServer:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class FakeService:
+class ServiceStub:
     """ Stands in for a service whose channel has destinations.
     """
-    email: 'FakeEMailAPI | None'
+    email: 'EMailAPIRecorder | None'
 
     def __init__(self, request_payload:'any_', *, has_email:'bool'=True) -> 'None':
 
         self.cid = CID
-        self.request = FakeRequest(request_payload)
-        self.server = FakeServer()
+        self.request = RequestStub(request_payload)
+        self.server = ServerStub()
 
-        self.rest = FakeRESTFacade()
-        self.mllp = FakeMLLPFacade()
-        self.fhir = FakeFHIRFacade()
+        self.rest = RESTFacadeRecorder()
+        self.mllp = MLLPFacadeRecorder()
+        self.fhir = FHIRFacadeRecorder()
 
         # A server with the e-mail component turned off has no such facade at all
         if has_email:
-            self.email = FakeEMailAPI()
+            self.email = EMailAPIRecorder()
         else:
             self.email = None
 

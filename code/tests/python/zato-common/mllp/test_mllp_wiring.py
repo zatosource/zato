@@ -16,6 +16,7 @@ from unittest.mock import MagicMock, patch
 
 # Zato
 from zato.common.api import HL7
+from zato.common.destination.constants import Default_Delivery_Mode, Respond_From_Service
 from zato.common.typing_ import cast_
 from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper, _shared_state
 
@@ -42,9 +43,12 @@ def _make_config(**overrides:'object') -> 'MagicMock':
     """
 
     defaults:'dict[str, object]' = {
+        'id': 1,
         'name': 'test-mllp-channel',
         'service': 'test.hl7.mllp.echo',
         'is_active': True,
+        'is_internal': False,
+        'data_format': 'hl7-v2',
         'username': '',
         'username_pretty': '',
 
@@ -103,6 +107,11 @@ def _make_config(**overrides:'object') -> 'MagicMock':
         'msh11_processing_id': '',
         'msh12_version_id': '',
         'is_default': False,
+
+        # Destinations
+        'destinations': '',
+        'respond_from': Respond_From_Service,
+        'delivery_mode': Default_Delivery_Mode,
 
         # REST bridge
         'use_rest': False,

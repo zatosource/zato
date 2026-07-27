@@ -16,7 +16,7 @@ from zato.common.destination.coordinator import deliver
 from zato.common.destination.model import parse_config
 from zato.common.destination.payload import new_overrides
 
-from fake_connections import get_attr_map, get_hop_rows, get_stored_list, new_test_context, Channel_Name, \
+from connection_recorder import get_attr_map, get_hop_rows, get_stored_list, new_test_context, Channel_Name, \
     ConnectionRecorder, FHIR_Connection, MLLP_Connection, Request_Payload, REST_Connection, Transient_Error
 
 # ################################################################################################################################
