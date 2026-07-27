@@ -21,6 +21,8 @@ so the resulting channel is identical to one created through the editor.
 <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-lines.css">
+<link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
 <link rel="stylesheet" type="text/css" href="/static/css/channel/hl7/mllp-wizard.css">
 <link rel="stylesheet" type="text/css" href="/static/css/channel/hl7/mllp-wizard-controls.css">
 {% endblock %}
@@ -29,14 +31,17 @@ so the resulting channel is identical to one created through the editor.
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/destinations.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/badge-picker.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/core.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/select-rows.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/lines.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/forms.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/review.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-descriptions.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-wizard/core.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-wizard/forms.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-wizard/destinations.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-wizard/destination-panels.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-wizard/review.js"></script>
 
 <script nonce="{{ CSP_NONCE }}">
@@ -129,20 +134,30 @@ $(document).ready(function() {
                 <!-- Step 2 - destinations, service and options -->
                 <div class="wizard-step-body" id="mllp-wizard-step-body-1" hidden>
 
+                    <!-- One decision per line, each value a chip opening a panel -->
                     <div class="wizard-section">
-                        <div class="wizard-section-title"><label for="mllp-wizard-destination-add">Destinations</label></div>
-                        <div class="wizard-select-list" id="mllp-wizard-destination-rows"></div>
-                        <a href="javascript:void(0)" class="wizard-select-add" id="mllp-wizard-destination-add">Add a destination</a>
-                        <div class="wizard-respond-from-row" id="mllp-wizard-respond-from-row" hidden>
-                            <label for="mllp-wizard-respond-from">Respond from</label>
-                            <select id="mllp-wizard-respond-from"></select>
-                        </div>
-                    </div>
+                        <div class="wizard-lines" id="mllp-wizard-lines">
 
-                    <div class="wizard-section" id="mllp-wizard-service-section">
-                        <div class="wizard-section-title"><label for="id_service">Service</label></div>
-                        <div class="wizard-select-row wizard-service-row" id="mllp-wizard-service-row">
-                            {{ form.service }}
+                            <div class="wizard-line" id="mllp-wizard-line-destinations">
+                                <label class="wizard-line-label" for="mllp-wizard-slot-destinations-chip">Incoming messages go to</label>
+                                <span class="wizard-line-slot" id="mllp-wizard-slot-destinations"></span>
+                            </div>
+
+                            <div class="wizard-line" id="mllp-wizard-line-service">
+                                <label class="wizard-line-label" for="mllp-wizard-slot-service-chip">Each message is handled by</label>
+                                <span class="wizard-line-slot" id="mllp-wizard-slot-service"></span>
+                            </div>
+
+                            <div class="wizard-line" id="mllp-wizard-line-delivery" hidden>
+                                <label class="wizard-line-label" for="mllp-wizard-slot-delivery">The destinations receive it</label>
+                                <span class="wizard-line-slot" id="mllp-wizard-slot-delivery"></span>
+                            </div>
+
+                            <div class="wizard-line" id="mllp-wizard-line-reply">
+                                <label class="wizard-line-label" for="mllp-wizard-slot-reply-chip">The reply is produced by</label>
+                                <span class="wizard-line-slot" id="mllp-wizard-slot-reply"></span>
+                            </div>
+
                         </div>
                     </div>
 
@@ -254,8 +269,10 @@ $(document).ready(function() {
                     {{ form.should_log_messages }}
                     {{ form.is_audit_log_active }}
 
+                    {{ form.service }}
                     {{ form.destinations }}
                     {{ form.respond_from }}
+                    {{ form.delivery_mode }}
 
                 </div>
 

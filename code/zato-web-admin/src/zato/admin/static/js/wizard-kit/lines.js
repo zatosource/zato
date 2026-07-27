@@ -1,0 +1,404 @@
+// The wizard kit's decision lines - a step body written as sentences, one
+// decision per line. A line is a label and one control: either a chip that
+// opens a panel, or a strip of options with the picked one in the accent.
+//
+// A panel wears the shared popup chrome - the dark header with the grip,
+// the sandy body, the buttons row - so it is the same popup the micro-forms
+// and the IDE menus open, and it is dragged by its header just like them.
+// What goes inside a panel is the instance's own, usually two columns.
+
+(function($) {
+
+// ////////////////////////////////////////////////////////////////////////
+
+var kit = $.fn.zato.wizard_kit;
+kit.lines = {};
+
+// ////////////////////////////////////////////////////////////////////////
+
+kit.lines.config = {
+
+    // The button that closes a panel
+    doneLabel: 'OK',
+
+    // Where a panel opens in relation to the chip it belongs to
+    panelGap: 5,
+    panelMargin: 16,
+
+    // The panel currently open, one at a time for the whole page
+    openPanel: null
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Fills the value slot of a line with a chip. A chip reads as a value with
+// a caret after it and opens the panel it was given when clicked.
+//
+// spec:
+//   text      - what the chip says
+//   note      - optional, a quieter word after the text, e.g. how many are paused
+//   isBlank   - the value is not set yet, the chip is drawn as an outline
+//   isWarning - the value is set to something that cannot work
+//   panel     - {title, width, build} handed over to openPanel
+kit.lines.setChip = function(slotId, spec) {
+
+    var slot = document.getElementById(slotId);
+    slot.textContent = '';
+
+    var chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = spec.isBlank ? 'wizard-chip wizard-chip-blank' : 'wizard-chip';
+    chip.id = slotId + '-chip';
+
+    var value = document.createElement('span');
+    value.className = spec.isWarning ? 'wizard-chip-warning' : 'wizard-chip-value';
+    value.textContent = spec.text;
+    chip.appendChild(value);
+
+    if(spec.note) {
+        var note = document.createElement('span');
+        note.className = 'wizard-chip-note';
+        note.textContent = spec.note;
+        chip.appendChild(note);
+    }
+
+    chip.appendChild(kit.lines._buildCaret());
+
+    // The press on a chip must not reach the document, whose own press is
+    // what closes an open panel - the click below is where a chip toggles
+    chip.addEventListener('mousedown', function(event) {
+        event.stopPropagation();
+    });
+
+    chip.addEventListener('click', function(event) {
+
+        event.stopPropagation();
+
+        // A second click on the same chip is how a panel is closed again
+        var linesConfig = kit.lines.config;
+        var wasOpen = linesConfig.openPanel;
+
+        kit.lines.closePanel();
+
+        if(wasOpen) {
+            if(wasOpen.chipId === chip.id) {
+                return;
+            }
+        }
+
+        kit.lines.openPanel(chip, spec.panel);
+    });
+
+    slot.appendChild(chip);
+
+    var out = chip;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Fills the value slot of a line with a strip of options, the picked one in
+// the accent color. Every option is one word the reader chooses between,
+// so the whole answer is visible without opening anything.
+//
+// optionList - [{name, label}], currentName - which one is picked
+kit.lines.setSegments = function(slotId, optionList, currentName, onPick) {
+
+    var slot = document.getElementById(slotId);
+    slot.textContent = '';
+
+    var strip = document.createElement('div');
+    strip.className = 'wizard-segments';
+
+    for(var optionIdx = 0; optionIdx < optionList.length; optionIdx++) {
+        strip.appendChild(kit.lines._buildSegment(optionList[optionIdx], currentName, onPick));
+    }
+
+    slot.appendChild(strip);
+
+    var out = strip;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+kit.lines._buildSegment = function(option, currentName, onPick) {
+
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.className = option.name === currentName ? 'wizard-segment wizard-segment-active' : 'wizard-segment';
+    button.textContent = option.label;
+
+    button.addEventListener('click', function() {
+        onPick(option.name);
+    });
+
+    var out = button;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+kit.lines._buildCaret = function() {
+
+    var caret = document.createElement('span');
+    caret.className = 'wizard-chip-caret';
+    caret.innerHTML = '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+        'stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+
+    var out = caret;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Opens a panel under a chip. The caller's build function fills the body and
+// may return a function to run when the panel closes, which is where a panel
+// that edits the DOM directly writes its answers back into the state.
+//
+// spec: {title, width, build(body, panel)}
+kit.lines.openPanel = function(chip, spec) {
+
+    var linesConfig = kit.lines.config;
+
+    var panel = document.createElement('div');
+    panel.className = 'zato-popup wizard-panel';
+    panel.id = 'wizard-panel';
+    panel.style.width = spec.width + 'px';
+
+    var header = document.createElement('div');
+    header.className = 'zato-popup-header';
+    header.appendChild($.fn.zato.popup.build_grip());
+    header.appendChild(document.createTextNode(spec.title));
+    panel.appendChild(header);
+
+    var body = document.createElement('div');
+    body.className = 'wizard-tippy-body';
+    panel.appendChild(body);
+
+    // Clicks inside the panel are the panel's own, only the ones outside close it
+    panel.addEventListener('mousedown', function(event) {
+        event.stopPropagation();
+    });
+
+    // The buttons row goes in before the panel is filled - its count is
+    // written by the build itself, so the row has to be there to write into
+    var content = document.createElement('div');
+    body.appendChild(content);
+    body.appendChild(kit.lines._buildButtons());
+
+    document.body.appendChild(panel);
+
+    var onClose = spec.build(content, panel);
+
+    kit.lines._place(panel, chip);
+    kit.lines._makeDraggable(panel, header);
+
+    linesConfig.openPanel = {element: panel, chipId: chip.id, onClose: onClose};
+
+    // The filter of a panel that has one is where the typing goes from the start
+    var filter = panel.querySelector('.wizard-panel-filter');
+
+    if(filter) {
+        filter.focus();
+    }
+
+    var out = panel;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+kit.lines.closePanel = function() {
+
+    var open = kit.lines.config.openPanel;
+
+    if(!open) {
+        return;
+    }
+
+    kit.lines.config.openPanel = null;
+    open.element.remove();
+
+    if(open.onClose) {
+        open.onClose();
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The buttons row every panel ends with - the count of what the panel shows
+// on the left, filled in by the panel itself, and OK on the right.
+kit.lines._buildButtons = function() {
+
+    var buttons = document.createElement('div');
+    buttons.className = 'wizard-tippy-buttons';
+
+    var count = document.createElement('span');
+    count.className = 'wizard-panel-count';
+    count.id = 'wizard-panel-count';
+    buttons.appendChild(count);
+
+    var done = document.createElement('button');
+    done.type = 'button';
+    done.className = 'action-button';
+    done.textContent = kit.lines.config.doneLabel;
+
+    done.addEventListener('click', function() {
+        kit.lines.closePanel();
+    });
+
+    buttons.appendChild(done);
+
+    var out = buttons;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// What the buttons row of the open panel says on its left.
+kit.lines.setPanelCount = function(text) {
+
+    var count = document.getElementById('wizard-panel-count');
+    count.textContent = text;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// A panel hangs under its chip and stays inside the window on the right.
+kit.lines._place = function(panel, chip) {
+
+    var linesConfig = kit.lines.config;
+    var box = chip.getBoundingClientRect();
+    var room = window.innerWidth - panel.offsetWidth - linesConfig.panelMargin;
+    var left = Math.min(box.left + window.scrollX, room);
+
+    panel.style.left = left + 'px';
+    panel.style.top = (box.bottom + window.scrollY + linesConfig.panelGap) + 'px';
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The header is the handle, through the same drag machinery the micro-forms
+// and the IDE menus use.
+kit.lines._makeDraggable = function(panel, header) {
+
+    $.fn.zato.popup.install_drag(header, {
+
+        dragging_elem: panel,
+
+        on_start: function() {
+            var out = {x: panel.offsetLeft, y: panel.offsetTop};
+            return out;
+        },
+
+        on_move: function(x, y) {
+            panel.style.left = x + 'px';
+            panel.style.top = y + 'px';
+        }
+    });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The filter field a panel puts above a long list - the list is walked by
+// typing, so the field is what the panel opens on.
+kit.lines.buildFilter = function(labelText, placeholder, onInput) {
+
+    var field = document.createElement('div');
+    field.className = 'wizard-tippy-field';
+
+    var label = document.createElement('label');
+    label.className = 'wizard-tippy-label';
+    label.textContent = labelText;
+    field.appendChild(label);
+
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'wizard-panel-filter';
+    input.id = 'wizard-panel-filter';
+    input.autocomplete = 'off';
+    input.placeholder = placeholder;
+    field.appendChild(input);
+
+    label.setAttribute('for', input.id);
+
+    input.addEventListener('input', function() {
+        onInput(input.value.trim().toLowerCase());
+    });
+
+    var out = {field: field, input: input};
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// A row of columns inside a panel - the same side-by-side row the micro-forms
+// put their short fields in.
+kit.lines.buildColumns = function(labelList) {
+
+    var row = document.createElement('div');
+    row.className = 'wizard-tippy-row';
+
+    var columnList = [];
+
+    for(var labelIdx = 0; labelIdx < labelList.length; labelIdx++) {
+
+        var column = document.createElement('div');
+        column.className = 'wizard-panel-column';
+
+        var label = document.createElement('span');
+        label.className = 'wizard-tippy-label';
+        label.textContent = labelList[labelIdx];
+        column.appendChild(label);
+
+        row.appendChild(column);
+        columnList.push(column);
+    }
+
+    var out = {row: row, columnList: columnList};
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// One pickable row of a panel list - a radio dot in front of a name.
+kit.lines.buildPickRow = function(name, isPicked, onPick) {
+
+    var row = document.createElement('div');
+    row.className = 'wizard-pick-row';
+
+    var dot = document.createElement('span');
+    dot.className = isPicked ? 'wizard-pick-dot wizard-pick-dot-on' : 'wizard-pick-dot';
+    row.appendChild(dot);
+
+    var label = document.createElement('span');
+    label.className = 'wizard-pick-name';
+    label.textContent = name;
+    row.appendChild(label);
+
+    row.addEventListener('click', function() {
+        onPick();
+    });
+
+    var out = row;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// A click anywhere outside an open panel closes it, and so does Escape.
+$(document).on('mousedown', function() {
+    kit.lines.closePanel();
+});
+
+$(document).on('keydown', function(event) {
+
+    if(event.key === 'Escape') {
+        kit.lines.closePanel();
+    }
+});
+
+// ////////////////////////////////////////////////////////////////////////
+
+})(jQuery);

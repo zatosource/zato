@@ -1,14 +1,13 @@
-// HL7 MLLP channel wizard - the destination rows on step 2.
+// HL7 MLLP channel wizard - what happens to a message on step 2.
 //
-// A destination is an outgoing connection every message is delivered to
-// after the channel's service ran. Each destination is one row - the kind
-// of connection, the connection itself, whatever options that kind has and
-// the switch deciding whether the destination receives messages at all.
-// The rows are the wizard kit's shared select rows, the same ones the REST
-// security picks wear on step 1. They serialize into the form's hidden
-// "destinations" and "respond_from" fields in the very shape the full-page
-// editor produces, reusing the type and option definitions of the shared
-// destinations module.
+// The step is four sentences, one decision each - where messages go, which
+// service handles them, in what order the destinations receive them and
+// which one of them produces the reply. Every value is a chip opening a
+// panel of the wizard kit's decision lines, the panels themselves are in
+// destination-panels.js. The answers serialize into the form's hidden
+// "destinations", "respond_from" and "delivery_mode" fields in the very
+// shape the full-page editor produces, reusing the type and option
+// definitions of the shared destinations module.
 
 (function($) {
 
@@ -25,14 +24,32 @@ destinations.config = {
     respondFromService: 'service',
     respondFromServiceLabel: 'The service',
 
-    // Where the rows are appended
-    rowsId: 'mllp-wizard-destination-rows',
+    // The slots on the step the four values are written into
+    slots: {
+        destinations: 'mllp-wizard-slot-destinations',
+        service: 'mllp-wizard-slot-service',
+        delivery: 'mllp-wizard-slot-delivery',
+        reply: 'mllp-wizard-slot-reply'
+    },
 
-    // The rows are too tight for labels, so their controls name
-    // themselves on hover
-    typeTitle: 'Destination type',
-    connectionTitle: 'Connection',
-    activeTitle: 'Whether this destination receives messages'
+    // The line that only makes sense once there is a destination
+    deliveryLineId: 'mllp-wizard-line-delivery',
+
+    // How the destinations reach their messages - the last one is the
+    // service's own call, made through self.destination[name]
+    deliveryModeList: [
+        {name: 'same-time', label: 'At the same time'},
+        {name: 'in-order', label: 'One after another'},
+        {name: 'service-decides', label: 'The service decides'}
+    ],
+
+    // What a chip says
+    noDestinationsLabel: 'none yet',
+    oneDestinationLabel: '1 destination',
+    manyDestinationsLabel: ' destinations',
+    pausedLabel: ' paused',
+    noServiceLabel: 'none',
+    noReplyLabel: 'nothing replies'
 };
 
 // Connections grouped by destination type, loaded once per page
@@ -42,61 +59,185 @@ destinations._connectionData = null;
 
 destinations.init = function() {
 
-    // Adding a row waits until the connection list has arrived ..
-    $('#mllp-wizard-destination-add').on('click', function() {
-        destinations._withConnectionData(function() {
-            destinations.add();
-        });
-    });
+    // The step reads as soon as it is opened, so the connections are on
+    // their way before anything is clicked ..
+    destinations._loadConnectionData();
 
-    // .. and picking the response source updates the hidden field right away.
-    $('#mllp-wizard-respond-from').on('change', function() {
-        wizard.field('respond_from').val($(this).val());
-    });
-
-    destinations.refreshRespondFrom();
+    // .. and until they arrive the lines already show what the state holds.
+    destinations.settle();
+    destinations.render();
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Runs the callback once the connection list is available,
-// loading it on the first call and caching it for the rest of the page.
-destinations._withConnectionData = function(callback) {
-
-    if(destinations._connectionData) {
-        callback();
-        return;
-    }
+// Loads the connection list once and redraws the lines with it.
+destinations._loadConnectionData = function() {
 
     var onLoaded = function(data, status) {
+
         if(status === 'success') {
             destinations._connectionData = JSON.parse(data.responseText);
-            callback();
+            destinations.render();
         }
     };
+
     $.fn.zato.post($.fn.zato.destinations.config.connectionListUrl, onLoaded, '', '', true);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-destinations.add = function() {
+// The destinations messages are actually delivered to.
+destinations.activeList = function() {
 
-    var destination = {
-        type: $.fn.zato.destinations.config.defaultType,
-        connection: '',
-        isActive: true,
-        options: {}
-    };
-    wizard.state.destinationList.push(destination);
+    var out = [];
 
-    destinations._appendRow(destination);
-    destinations.refreshRespondFrom();
+    for(var destinationIdx = 0; destinationIdx < wizard.state.destinationList.length; destinationIdx++) {
+
+        var destination = wizard.state.destinationList[destinationIdx];
+
+        if(destination.isActive) {
+            out.push(destination);
+        }
+    }
+
+    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// What each destination type is called, keyed by the type itself, so that labelling a list
-// of rows reads the type list once rather than searching it once per row.
+// How many destinations are there but receive nothing.
+destinations.pausedCount = function() {
+
+    var activeCount = destinations.activeList().length;
+    var out = wizard.state.destinationList.length - activeCount;
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The reply comes from one active thing - a destination that was paused or
+// removed hands the reply back to the service.
+destinations.settle = function() {
+
+    if(wizard.state.respondFrom === destinations.config.respondFromService) {
+        return;
+    }
+
+    var activeList = destinations.activeList();
+    var names = [];
+
+    for(var activeIdx = 0; activeIdx < activeList.length; activeIdx++) {
+        names.push(activeList[activeIdx].connection);
+    }
+
+    if(names.indexOf(wizard.state.respondFrom) === -1) {
+        wizard.state.respondFrom = destinations.config.respondFromService;
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+destinations.render = function() {
+
+    var lines = $.fn.zato.wizard_kit.lines;
+    var destinationsConfig = destinations.config;
+
+    lines.setChip(destinationsConfig.slots.destinations, destinations._destinationChip());
+    lines.setChip(destinationsConfig.slots.service, destinations._serviceChip());
+    lines.setChip(destinationsConfig.slots.reply, destinations._replyChip());
+
+    lines.setSegments(destinationsConfig.slots.delivery, destinationsConfig.deliveryModeList,
+        wizard.state.delivery, destinations._pickDelivery);
+
+    // The order they receive messages in is a question only a list can raise
+    var hasDestinations = wizard.state.destinationList.length > 0;
+    $('#' + destinationsConfig.deliveryLineId).prop('hidden', !hasDestinations);
+
+    wizard.review.refreshSummaries();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+destinations._pickDelivery = function(name) {
+
+    wizard.state.delivery = name;
+    destinations.render();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+destinations._destinationChip = function() {
+
+    var destinationsConfig = destinations.config;
+    var count = wizard.state.destinationList.length;
+    var paused = destinations.pausedCount();
+
+    var text = count + destinationsConfig.manyDestinationsLabel;
+
+    if(count === 0) {
+        text = destinationsConfig.noDestinationsLabel;
+    }
+    else if(count === 1) {
+        text = destinationsConfig.oneDestinationLabel;
+    }
+
+    var out = {
+        text: text,
+        note: paused ? paused + destinationsConfig.pausedLabel : '',
+        isBlank: count === 0,
+        isWarning: false,
+        panel: destinations.panels.destinationsPanel()
+    };
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+destinations._serviceChip = function() {
+
+    var name = wizard.field('service').val();
+
+    var out = {
+        text: name ? name : destinations.config.noServiceLabel,
+        note: '',
+        isBlank: !name,
+        isWarning: false,
+        panel: destinations.panels.servicePanel()
+    };
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+destinations._replyChip = function() {
+
+    var destinationsConfig = destinations.config;
+    var name = wizard.state.respondFrom;
+    var isService = name === destinationsConfig.respondFromService;
+
+    if(isService) {
+        name = wizard.field('service').val();
+    }
+
+    var out = {
+        text: name ? name : destinationsConfig.noReplyLabel,
+        note: '',
+        isBlank: false,
+        isWarning: !name,
+        panel: destinations.panels.replyPanel()
+    };
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// What each destination type is called, keyed by the type itself, so that
+// labelling a list of destinations reads the type list once rather than
+// searching it once per destination.
 destinations._getTypeLabelMap = function() {
 
     var typeList = $.fn.zato.destinations.config.typeList;
@@ -132,253 +273,48 @@ destinations._rowLabel = function(destination, typeLabelMap) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The kinds of connection a destination can be, in a select of their own.
-destinations._buildTypeSelect = function(destination) {
+// What the review says about the order messages are delivered in.
+destinations.deliveryLabel = function() {
 
-    var select = document.createElement('select');
-    select.className = 'mllp-wizard-destination-type';
-    select.title = destinations.config.typeTitle;
+    var modeList = destinations.config.deliveryModeList;
 
-    var typeList = $.fn.zato.destinations.config.typeList;
-
-    for(var typeIdx = 0; typeIdx < typeList.length; typeIdx++) {
-        var option = document.createElement('option');
-        option.value = typeList[typeIdx].id;
-        option.textContent = typeList[typeIdx].label;
-        select.appendChild(option);
+    for(var modeIdx = 0; modeIdx < modeList.length; modeIdx++) {
+        if(modeList[modeIdx].name === wizard.state.delivery) {
+            var out = modeList[modeIdx].label;
+            break;
+        }
     }
-    select.value = destination.type;
 
-    var out = select;
     return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Fills a select with the connections of the destination's type.
-destinations._fillConnectionSelect = function(select, destination) {
+// What the review says about where the reply comes from.
+destinations.replyLabel = function() {
 
-    select.textContent = '';
+    var destinationsConfig = destinations.config;
 
-    var connectionList = destinations._connectionData[destination.type];
-
-    for(var connectionIdx = 0; connectionIdx < connectionList.length; connectionIdx++) {
-        var option = document.createElement('option');
-        option.value = connectionList[connectionIdx].name;
-        option.textContent = connectionList[connectionIdx].name;
-        select.appendChild(option);
-    }
-
-    if(destination.connection) {
-        select.value = destination.connection;
-    }
-
-    // A select always shows one of its options, so what it shows is what the
-    // destination is - and an empty string when this type has no connections
-    // to offer, which is what keeps such a row out of the serialized list
-    destination.connection = select.value;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// One input for an option of the destination's type, e.g. the HTTP method
-// a REST destination is invoked with.
-destinations._buildOptionInput = function(destination, optionDef) {
-
-    var isSelect = optionDef.kind === 'select';
-    var input;
-
-    if(isSelect) {
-        input = document.createElement('select');
-
-        for(var valueIdx = 0; valueIdx < optionDef.values.length; valueIdx++) {
-            var valueOption = document.createElement('option');
-            valueOption.value = optionDef.values[valueIdx];
-            valueOption.textContent = optionDef.values[valueIdx];
-            input.appendChild(valueOption);
-        }
+    if(wizard.state.respondFrom === destinationsConfig.respondFromService) {
+        var out = destinationsConfig.respondFromServiceLabel;
     }
     else {
-        input = document.createElement('input');
-        input.type = 'text';
-        input.placeholder = optionDef.placeholder;
+        out = wizard.state.respondFrom;
     }
 
-    input.className = 'mllp-wizard-destination-option';
-    input.title = optionDef.label;
-
-    if(destination.options[optionDef.id]) {
-        input.value = destination.options[optionDef.id];
-    }
-
-    // A select shows a value from the start, so the destination carries it
-    // right away - a text input starts out empty and only counts once typed in
-    if(isSelect) {
-        destination.options[optionDef.id] = input.value;
-    }
-
-    // A select settles on change, free text as it is typed
-    input.addEventListener(isSelect ? 'change' : 'input', function() {
-        if(input.value) {
-            destination.options[optionDef.id] = input.value;
-        }
-        else {
-            delete destination.options[optionDef.id];
-        }
-        destinations.refreshRespondFrom();
-    });
-
-    var out = input;
     return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Rebuilds the inputs for the options the destination's type has - the
-// type is what decides which ones there are, so a new type brings new ones.
-destinations._fillOptions = function(optionBox, destination) {
-
-    optionBox.textContent = '';
-
-    var optionDefs = $.fn.zato.destinations.config.optionList[destination.type];
-
-    for(var optionIdx = 0; optionIdx < optionDefs.length; optionIdx++) {
-        optionBox.appendChild(destinations._buildOptionInput(destination, optionDefs[optionIdx]));
-    }
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// The switch at the end of a row - an inactive destination is skipped
-// when messages are delivered.
-destinations._buildActiveToggle = function(destination) {
-
-    var toggle = document.createElement('input');
-    toggle.type = 'checkbox';
-    toggle.className = 'mllp-wizard-destination-active';
-    toggle.title = destinations.config.activeTitle;
-    toggle.checked = destination.isActive;
-
-    toggle.addEventListener('change', function() {
-        destination.isActive = toggle.checked;
-    });
-
-    var out = toggle;
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// Appends the row of one destination to the list on step 2.
-destinations._appendRow = function(destination) {
-
-    var list = document.getElementById(destinations.config.rowsId);
-
-    var buildContent = function(row) {
-
-        var typeSelect = destinations._buildTypeSelect(destination);
-        row.appendChild(typeSelect);
-
-        var connectionSelect = document.createElement('select');
-        connectionSelect.className = 'mllp-wizard-destination-connection';
-        connectionSelect.title = destinations.config.connectionTitle;
-        destinations._fillConnectionSelect(connectionSelect, destination);
-        row.appendChild(connectionSelect);
-
-        var optionBox = document.createElement('div');
-        optionBox.className = 'mllp-wizard-destination-options';
-        destinations._fillOptions(optionBox, destination);
-        row.appendChild(optionBox);
-
-        // A new type comes with connections and options of its own,
-        // so neither the old connection nor the old options survive it
-        typeSelect.addEventListener('change', function() {
-            destination.type = typeSelect.value;
-            destination.connection = '';
-            destination.options = {};
-
-            destinations._fillConnectionSelect(connectionSelect, destination);
-            destinations._fillOptions(optionBox, destination);
-            destinations.refreshRespondFrom();
-        });
-
-        connectionSelect.addEventListener('change', function() {
-            destination.connection = connectionSelect.value;
-            destinations.refreshRespondFrom();
-        });
-
-        row.appendChild(destinations._buildActiveToggle(destination));
-    };
-
-    var onRemove = function() {
-        var destinationIndex = wizard.state.destinationList.indexOf(destination);
-        wizard.state.destinationList.splice(destinationIndex, 1);
-        destinations.refreshRespondFrom();
-    };
-
-    $.fn.zato.wizard_kit.selectRows.appendRow(list, buildContent, onRemove);
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// Rebuilds the "Respond from" select - the service plus one entry per row.
-destinations.refreshRespondFrom = function() {
-
-    var config = destinations.config;
-
-    var select = $('#mllp-wizard-respond-from');
-    var current = select.val();
-
-    select.empty();
-
-    var serviceOption = document.createElement('option');
-    serviceOption.value = config.respondFromService;
-    serviceOption.textContent = config.respondFromServiceLabel;
-    select.append(serviceOption);
-
-    var names = [];
-
-    for(var destinationIdx = 0; destinationIdx < wizard.state.destinationList.length; destinationIdx++) {
-        var destination = wizard.state.destinationList[destinationIdx];
-        if(destination.connection) {
-            names.push(destination.connection);
-
-            var nameOption = document.createElement('option');
-            nameOption.value = destination.connection;
-            nameOption.textContent = destination.connection;
-            select.append(nameOption);
-        }
-    }
-
-    // Keep the previous answer if its destination still exists
-    if(current) {
-        if(names.indexOf(current) > -1) {
-            select.val(current);
-        }
-        else {
-            select.val(config.respondFromService);
-        }
-    }
-
-    wizard.field('respond_from').val(select.val());
-
-    // The question only makes sense once there is at least one destination
-    $('#mllp-wizard-respond-from-row').prop('hidden', !names.length);
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// Writes the rows into the form's hidden JSON fields before submit.
+// Writes the answers into the form's hidden fields before submit.
 destinations.serialize = function() {
 
     var serialized = [];
 
     for(var destinationIdx = 0; destinationIdx < wizard.state.destinationList.length; destinationIdx++) {
-        var destination = wizard.state.destinationList[destinationIdx];
 
-        if(!destination.connection) {
-            continue;
-        }
+        var destination = wizard.state.destinationList[destinationIdx];
 
         serialized.push({
             'name': destination.connection,
@@ -390,7 +326,8 @@ destinations.serialize = function() {
     }
 
     wizard.field('destinations').val(serialized.length ? JSON.stringify(serialized) : '');
-    wizard.field('respond_from').val($('#mllp-wizard-respond-from').val());
+    wizard.field('respond_from').val(wizard.state.respondFrom);
+    wizard.field('delivery_mode').val(wizard.state.delivery);
 };
 
 // ////////////////////////////////////////////////////////////////////////

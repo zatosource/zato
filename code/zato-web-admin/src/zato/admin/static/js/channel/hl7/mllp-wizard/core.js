@@ -17,8 +17,17 @@ var wizard = $.fn.zato.channel.hl7.mllp.wizard;
 // The instance's own state - the kit adds its keys on top
 wizard.state = {
 
-    // Destination rows - {type, connection, isActive, options}
+    // Where messages go, in the order they were picked -
+    // {type, connection, isActive, options}
     destinationList: [],
+
+    // How the destinations receive a message - all at once, one after
+    // another, or whenever the service hands them one
+    delivery: 'same-time',
+
+    // Which of them produces the reply the caller waits for - either the
+    // literal 'service' or the name of one destination
+    respondFrom: 'service',
 
     // The security definitions picked for the REST bridge, in row order -
     // each entry is a sec_type/id value of the Django security select
@@ -43,7 +52,7 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
     // header with the wizard-wide overview, then anything on a step
     // body holding a labeled field
     helpRowSelector: '.dashboard-card-header, .wizard-name-row, .wizard-toggle-row, ' +
-        '.wizard-section-title, .wizard-respond-from-row, .mllp-wizard-tolerance-grid',
+        '.wizard-section-title, .wizard-line, .mllp-wizard-tolerance-grid',
 
     // Fields that must not be empty on submit - the same list the editor uses
     requiredFields: [
@@ -74,12 +83,9 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         // The transport, REST and routing cards on step 1 ..
         wizard.forms.initCards();
 
-        // .. the destination rows and the option cards on step 2 ..
+        // .. the decision lines and the option cards on step 2 ..
         wizard.destinations.init();
         wizard.review.initOptionCards();
-
-        // .. the searchable select for services ..
-        $.fn.zato.turn_selects_into_chosen('#mllp-wizard-service-row');
 
         // .. a live uniqueness indicator for the REST URL path - the name
         // has its own check through the kit config above ..
@@ -140,10 +146,11 @@ wizard.helpDescriptions = function() {
     out['mllp-wizard-toggle-rest'] = shared['id_use_rest'];
     out['mllp-wizard-edit-routing'] = 'Which incoming messages this channel will accept.<br>With no matchers, every message will be accepted -<br>matchers filter by MSH header fields,<br>e.g. sending application or message type.';
 
-    // .. and the step 2 destination rows, each of them a connection every
-    // message is delivered to once the service has run.
-    out['mllp-wizard-respond-from'] = shared['destinations-respond-from-create'];
-    out['mllp-wizard-destination-add'] = 'Where each message goes after the service runs.<br>A row picks the kind of the outgoing connection,<br>the connection itself and the options that kind has,<br>e.g. the HTTP method of a REST call.<br>The switch at the end of a row decides whether<br>the destination receives messages at all.';
+    // .. and the four decisions of step 2.
+    out['mllp-wizard-slot-destinations-chip'] = 'The outgoing connections every message reaches<br>once the service has run.<br>Each of them carries the options its kind has,<br>e.g. the HTTP method of a REST call,<br>and a switch deciding whether it receives messages at all.';
+    out['mllp-wizard-slot-service-chip'] = shared['id_service'];
+    out['mllp-wizard-slot-delivery'] = 'All the destinations at once, one after another<br>in the order they were picked, or one at a time<br>as the service hands each of them a message<br>through self.destination[name].';
+    out['mllp-wizard-slot-reply-chip'] = shared['destinations-respond-from-create'];
 
     return out;
 };

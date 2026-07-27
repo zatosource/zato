@@ -18,6 +18,7 @@ Two instances exist today:
 | `review.js` | `kit.review` | Card summaries with the fade replay and the review step's grouped-rows renderer with Edit links |
 | `choices.js` | `kit.choices` | Pick-one choice cards - a radio group wearing the wizard card look, the selected card unfolds its inline fields |
 | `select-rows.js` | `kit.selectRows` | A column of rows, each with its own selects and a delete link, plus the add link under the list |
+| `lines.js` | `kit.lines` | Decision lines - a step body written as sentences, each line one label and one value, the value a chip opening a panel or a strip of options |
 
 An instance uses whichever modules its config declares - MLLP uses toggle rows and popovers, the schedule wizard uses choice cards and the context badge, both use the name badge, the help badges and the review renderer from the same code.
 
@@ -114,6 +115,30 @@ $.fn.zato.wizard_kit.selectRows.appendRow(list,
 list.after($.fn.zato.wizard_kit.selectRows.buildAddLink('Add security', function() { ... }));
 ```
 
+## Decision lines
+
+A step whose answers are few but consequential reads better as sentences than as a form. A line is a label and one value, the value either a chip that opens a panel or a strip of options with the picked one in the accent:
+
+```javascript
+$.fn.zato.wizard_kit.lines.setChip('mllp-wizard-slot-destinations', {
+    text: '3 destinations',
+    note: '1 paused',
+    isBlank: false,
+    isWarning: false,
+    panel: {title: 'destinations', width: 660, build: buildDestinationsPanel}
+});
+
+$.fn.zato.wizard_kit.lines.setSegments('mllp-wizard-slot-delivery', modeList, currentMode, onPick);
+```
+
+The template holds the labels and one empty slot per line, the instance fills the slots on every render. A blank chip is drawn as a dashed outline instead of a value, a warning chip in the error color.
+
+A panel wears the shared popup chrome of `shared/popup.css` - the dark header with the grip, the sandy body, the buttons row with OK - so it is the same popup the micro-forms and the IDE menus open, and `$.fn.zato.popup.install_drag` makes its header the handle. One panel is open at a time, a press outside it or Escape closes it.
+
+The `build` function fills the body and may return a function to run when the panel closes, which is how a panel that edits the DOM directly - a badge picker, say - writes its answers back into the state. Inside a panel the kit offers `buildFilter`, `buildColumns`, `buildPickRow` and `setPanelCount`, so a panel is a filter above one or two columns of lists, with the count of what it holds next to OK.
+
+A list in a panel keeps one height with the scrollbar always in view, which is what makes a filter over hundreds of entries feel steady - nothing resizes as the matches narrow.
+
 ## Review groups
 
 The review step renders from a list of groups - each group is `{label, step, rows}`, each row a `[key, value]` pair. The value is usually text but may also be a ready DOM Node, e.g. a badge. Each group carries an Edit link that jumps back to the step the answers came from.
@@ -138,7 +163,7 @@ Clicks inside the unfolded body do not re-select, so typing into the card's own 
 
 ## CSS
 
-The shared stylesheet is `static/css/shared/wizard-kit.css` - the card, the step strip, the badges, the name row, sections, toggle rows, select rows, the service picker, option cards, choice cards, the review, the popover micro-forms (tippy theme `wizard`), the footer and the status area. An instance stylesheet adds only what is truly its own, e.g. the MLLP tolerance grid.
+The shared stylesheet is `static/css/shared/wizard-kit.css` - the card, the step strip, the badges, the name row, sections, toggle rows, select rows, the service picker, option cards, choice cards, the review, the popover micro-forms (tippy theme `wizard`), the footer and the status area. The decision lines have one of their own, `static/css/shared/wizard-lines.css` - the lines, the chips, the options strip and the panels, including how a badge picker sits inside a panel. An instance stylesheet adds only what is truly its own, e.g. the MLLP tolerance grid.
 
 Parameterization runs through the `--wizard-*` tokens, declared with defaults on `:root` because the popover micro-forms are appended to `document.body`, outside any page container. An instance recolors itself by overriding the tokens in its own stylesheet, also on `:root`, since one page carries one wizard.
 
