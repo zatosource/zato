@@ -25,7 +25,7 @@ from zato.common.hl7.mllp.ack import build_ack, Condition_Data_Type_Error, Error
 from zato.common.hl7.mllp.codec import FrameReader, frame_encode
 from zato.common.hl7.mllp.dedup import extract_control_id
 from zato.common.hl7.mllp.preprocess import BatchPayload, preprocess_message
-from zato.common.hl7.mllp.proxy_protocol import read_proxy_header
+from zato.common.hl7.mllp.proxy_protocol import read_optional_proxy_header
 from zato.common.hl7.mllp.router import HL7MessageRouter
 from zato.common.hl7.mllp.settings import ListenerConfig, RouteSettings, is_address_allowed
 from zato.common.hl7.mllp.state import ChannelState
@@ -244,17 +244,29 @@ class HL7MLLPServer:
 
 # ################################################################################################################################
 
-    def _read_connection_identity(self, client_socket:'socket.socket') -> 'ConnectionContext':
-        """ Reads who is on the connection from the header the load balancer prefixes it with.
+    def _read_connection_identity(self, client_socket:'socket.socket', peer_address:'tuple[str, int]') -> 'tuple':
+        """ Reads who is on the connection, along with whatever of its first message had to be
+        read to find that out.
+
+        A connection that came through the load balancer is announced by the header it is
+        prefixed with, and one made straight to this socket is whoever the socket says it is.
         """
 
-        # A header that has not arrived within the listener's own deadline is not going to
+        # An opening that has not arrived within the listener's own deadline is not going to
         client_socket.settimeout(self.config.first_line_timeout)
 
-        proxy_header = read_proxy_header(client_socket)
+        proxy_header, initial_bytes = read_optional_proxy_header(client_socket)
 
-        out = ConnectionContext(proxy_header.client_ip, proxy_header.client_port, proxy_header.client_common_name)
-        return out
+        # The load balancer reports the sender it accepted the connection from ..
+        if proxy_header:
+            out = ConnectionContext(proxy_header.client_ip, proxy_header.client_port, proxy_header.client_common_name)
+
+        # .. and without one the sender is the peer of this socket, with no certificate to name
+        # .. because there was no load balancer to verify one.
+        else:
+            out = ConnectionContext(peer_address[0], peer_address[1], '')
+
+        return out, initial_bytes
 
 # ################################################################################################################################
 
@@ -314,12 +326,23 @@ class HL7MLLPServer:
         after it down the same connection.
         """
 
-        connection_context = self._read_connection_identity(client_socket)
+        try:
+            connection_context, initial_bytes = self._read_connection_identity(client_socket, peer_address)
+
+        # A connection that ends before it opens is a health check on the port rather than a fault
+        except HL7Exception as exception:
+            logger.info('HL7 MLLP connection from %s:%s ended before it opened - %s',
+                peer_address[0], peer_address[1], exception)
+            client_socket.close()
+            return
 
         logger.info('HL7 MLLP connection from %s', connection_context.endpoint)
 
         config = self.config
-        reader = FrameReader(client_socket, self.router.get_start_sequences(), config.read_buffer_size)
+
+        # Whatever was read while identifying the sender belongs to its first message,
+        # so the reader starts with it rather than with an empty buffer
+        reader = FrameReader(client_socket, self.router.get_start_sequences(), config.read_buffer_size, initial_bytes)
 
         # Fallback settings for a frame that matched nothing, whose channel is by definition unknown
         unmatched_settings = RouteSettings()

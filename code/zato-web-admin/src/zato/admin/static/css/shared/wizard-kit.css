@@ -891,6 +891,10 @@ a.wizard-select-delete:hover::before {
 .wizard-review-group {
     max-width: 640px;
 
+    /* The honey in a review is square - a group is a block of rows read as one,
+       so what marks it stands square with them, unlike the badge in a table */
+    --zato-highlight-badge-radius: 0;
+
     /* The room under the last row is where the wash ends, so it belongs to the
        group as padding - what is left of the space to the next group is margin */
     padding-bottom: var(--wizard-review-wash-fade);
@@ -970,7 +974,6 @@ a.wizard-select-delete:hover::before {
    outside the text the way the highlight badge is, so nothing moves. */
 .wizard-review-group:hover .wizard-review-edit {
     background: linear-gradient(to bottom, var(--zato-highlight-badge-top), var(--zato-highlight-badge-bottom));
-    border-radius: var(--zato-highlight-badge-radius);
     box-shadow: 0 0 0 var(--zato-highlight-badge-spread) var(--zato-highlight-badge-bottom);
     outline: 1px dashed var(--zato-highlight-badge-edge);
     outline-offset: var(--zato-highlight-badge-spread);

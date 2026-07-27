@@ -180,7 +180,13 @@ class FrameReader:
     the channel it matched.
     """
 
-    def __init__(self, sock:'socket.socket', start_sequences:'list', read_buffer_size:'int') -> 'None':
+    def __init__(
+        self,
+        sock:'socket.socket',
+        start_sequences:'list',
+        read_buffer_size:'int',
+        initial_bytes:'bytes' = b'',
+        ) -> 'None':
 
         self.socket = sock
 
@@ -190,8 +196,9 @@ class FrameReader:
         self.read_buffer_size = read_buffer_size
 
         # One buffer for the life of the connection, consumed through an offset rather than
-        # resliced, so a large message arriving in small reads is not copied over and over
-        self._buffer = bytearray()
+        # resliced, so a large message arriving in small reads is not copied over and over.
+        # It opens with whatever the caller already read off the connection.
+        self._buffer = bytearray(initial_bytes)
         self._offset = 0
 
         # Where the payload of the frame being read starts, once its opening sequence is behind us

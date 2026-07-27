@@ -47,6 +47,9 @@ kit.review.config = {
     editTooltipTheme: 'dark',
     editTooltipPlacement: 'right',
 
+    // How far off the link the tooltip stands
+    editTooltipOffset: [0, 13],
+
     // How many rows of a group's leading list are on screen before the
     // list scrolls - an instance that wants more or fewer sets this
     listScrollAfter: 2,
@@ -157,6 +160,7 @@ kit.review.setup = function(wizard) {
             allowHTML: false,
             theme: reviewConfig.editTooltipTheme,
             placement: reviewConfig.editTooltipPlacement,
+            offset: reviewConfig.editTooltipOffset,
             arrow: true
         });
     };
