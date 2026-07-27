@@ -1,0 +1,388 @@
+/*
+ * Config tables - the file browser on the left, the file being looked at on the
+ * right. The panel, the info rows and the buttons are the settings page's own,
+ * so what is here is the browser column, the editor around the textarea, the
+ * strip that runs a value through the file and the upload dialog.
+ */
+
+:root {
+    --config-tables-font-mono: 'Ubuntu Mono', 'DejaVu Sans Mono', 'Menlo', 'Consolas', monospace;
+
+    /* How wide the browser column is and how tall the editor opens */
+    --config-tables-browser-width: 250px;
+    --config-tables-editor-height: 320px;
+
+    /* The rule between the browser and the file, in the panel's own weight */
+    --config-tables-divider: 3px solid var(--primary-dark);
+
+    --config-tables-border: #d9dee3;
+    --config-tables-text: #1a1a2e;
+    --config-tables-accent: var(--zato-seablue-light2);
+    --config-tables-accent-soft: #e6f3f8;
+    --config-tables-ok: #28a745;
+    --config-tables-error: #dc3545;
+}
+
+/* ------------------------------------------------------------ */
+/* Config tables - the panel header                              */
+/* ------------------------------------------------------------ */
+
+.config-tables-panel-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 12px 20px;
+    border-bottom: var(--config-tables-divider);
+}
+
+.config-tables-panel-header h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--primary-dark);
+    letter-spacing: 0.5px;
+}
+
+.config-tables-root {
+    font-family: var(--config-tables-font-mono);
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+/* ------------------------------------------------------------ */
+/* Config tables - the browser                                   */
+/* ------------------------------------------------------------ */
+
+.config-tables-browser {
+    flex: 0 0 var(--config-tables-browser-width);
+    padding: 15px 16px 20px 16px;
+    border-right: var(--config-tables-divider);
+    background: var(--background-light);
+}
+
+.config-tables-browser h3 {
+    margin: 0 0 10px 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary-dark);
+}
+
+.config-tables-file-list {
+    margin: 0 0 14px 0;
+    padding: 0;
+    font-family: var(--config-tables-font-mono);
+    font-size: 12px;
+    list-style: none;
+}
+
+.config-tables-file-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 7px;
+    border-radius: 3px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.config-tables-file-list li:hover {
+    background: var(--config-tables-accent-soft);
+}
+
+.config-tables-file-list li.config-tables-file-selected {
+    color: #fff;
+    background: var(--config-tables-accent);
+}
+
+.config-tables-file-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.config-tables-file-count {
+    color: var(--text-muted);
+}
+
+.config-tables-file-selected .config-tables-file-count {
+    color: var(--config-tables-accent-soft);
+}
+
+/* The directory a run of files sits in, when they are not all in one */
+.config-tables-file-list li.config-tables-file-group {
+    padding: 10px 0 3px 0;
+    font-family: inherit;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    cursor: default;
+}
+
+.config-tables-file-list li.config-tables-file-group:hover {
+    background: transparent;
+}
+
+.config-tables-browser-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* ------------------------------------------------------------ */
+/* Config tables - the file being looked at                      */
+/* ------------------------------------------------------------ */
+
+.config-tables-empty {
+    padding: 24px 0;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.config-tables-editor-header {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.config-tables-editor-header h3 {
+    margin: 0;
+    padding: 0;
+    font-family: var(--config-tables-font-mono);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--primary-dark);
+}
+
+.config-tables-kind {
+    padding: 1px 8px;
+    border: 1px solid var(--config-tables-accent);
+    border-radius: 9px;
+    font-size: 11px;
+    color: var(--config-tables-accent);
+    background: var(--config-tables-accent-soft);
+}
+
+.config-tables-header-actions {
+    display: flex;
+    gap: 12px;
+    margin-left: auto;
+    font-size: 12px;
+}
+
+#config-tables-content {
+    box-sizing: border-box;
+    width: 100%;
+    height: var(--config-tables-editor-height);
+    padding: 10px;
+    border: 1px solid var(--config-tables-border);
+    border-radius: 3px;
+    font-family: var(--config-tables-font-mono);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--config-tables-text);
+    white-space: pre;
+    overflow: auto;
+    resize: vertical;
+}
+
+#config-tables-content[readonly] {
+    color: var(--text-muted);
+    background: var(--background-light);
+}
+
+.config-tables-status {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.config-tables-status-ok {
+    color: var(--config-tables-ok);
+}
+
+.config-tables-status-error {
+    color: var(--config-tables-error);
+}
+
+/* ------------------------------------------------------------ */
+/* Config tables - renaming and deleting                         */
+/* ------------------------------------------------------------ */
+
+.config-tables-inline-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.config-tables-inline-row input[type="text"] {
+    flex: 1;
+    padding: 5px 7px;
+    border: 1px solid var(--config-tables-border);
+    border-radius: 3px;
+    font-family: var(--config-tables-font-mono);
+    font-size: 12px;
+}
+
+.config-tables-question {
+    flex: 1;
+    font-size: 12px;
+    color: var(--config-tables-error);
+}
+
+/* ------------------------------------------------------------ */
+/* Config tables - a file too large for the browser              */
+/* ------------------------------------------------------------ */
+
+.config-tables-outside {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    border: 1px solid var(--config-tables-border);
+    border-radius: 3px;
+    background: var(--background-light);
+}
+
+.config-tables-outside-text {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.config-tables-outside-buttons {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+}
+
+/* ------------------------------------------------------------ */
+/* Config tables - running a value through the file              */
+/* ------------------------------------------------------------ */
+
+.config-tables-try {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--config-tables-border);
+}
+
+.config-tables-try h3 {
+    margin: 0 0 10px 0;
+    padding: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary-dark);
+}
+
+.config-tables-field {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.config-tables-field > span {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.config-tables-field input[type="text"] {
+    padding: 5px 7px;
+    border: 1px solid var(--config-tables-border);
+    border-radius: 3px;
+    font-family: var(--config-tables-font-mono);
+    font-size: 12px;
+}
+
+.config-tables-call {
+    display: block;
+    margin-bottom: 6px;
+    font-family: var(--config-tables-font-mono);
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.config-tables-result {
+    min-height: 17px;
+    padding: 8px 10px;
+    border: 1px solid var(--config-tables-border);
+    border-radius: 3px;
+    font-family: var(--config-tables-font-mono);
+    font-size: 12px;
+    color: var(--config-tables-ok);
+    background: var(--background-light);
+}
+
+.config-tables-result-missing {
+    color: var(--config-tables-error);
+}
+
+/* ------------------------------------------------------------ */
+/* Config tables - the upload dialog                             */
+/* ------------------------------------------------------------ */
+
+.config-tables-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(1, 40, 69, 0.35);
+    z-index: 100;
+}
+
+/* Without this the display above wins over the hidden attribute */
+.config-tables-overlay[hidden] {
+    display: none;
+}
+
+.config-tables-dialog {
+    width: 480px;
+    max-width: 90vw;
+    border: var(--config-tables-divider);
+    background: var(--white);
+}
+
+.config-tables-dialog-header {
+    padding: 12px 16px;
+    border-bottom: var(--config-tables-divider);
+}
+
+.config-tables-dialog-header h3 {
+    margin: 0;
+    padding: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--primary-dark);
+}
+
+.config-tables-dialog-body {
+    padding: 16px;
+}
+
+.config-tables-dialog .button-container {
+    padding: 0 16px 14px 16px;
+}
+
+.config-tables-dialog-field {
+    display: block;
+    margin-bottom: 12px;
+}
+
+.config-tables-dialog-field > span {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.config-tables-dialog-field input[type="file"],
+.config-tables-dialog-field select {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 5px 7px;
+    border: 1px solid var(--config-tables-border);
+    border-radius: 3px;
+    font-size: 12px;
+}
