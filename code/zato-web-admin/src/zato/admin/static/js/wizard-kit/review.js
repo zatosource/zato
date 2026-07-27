@@ -42,8 +42,7 @@ kit.review.config = {
     // The word every group's link into its step is written with
     editLabel: 'Edit',
 
-    // The pointer on a link is answered with that word and the group's own
-    // label, shown the way the rest of the pages show a tooltip
+    // How the tooltip on a link is shown
     editTooltipTheme: 'dark',
     editTooltipPlacement: 'right',
 
@@ -115,9 +114,8 @@ kit.review.setup = function(wizard) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The rows of one repeating kind a group opens with - a handful of them
-    // read as a list, fifty of them would push the rest of the review off
-    // the page, so past the configured count the list scrolls instead.
+    // The rows of one repeating kind a group opens with - past the configured
+    // count they go into a box that scrolls.
     review._buildRowList = function(listRows) {
 
         var reviewConfig = kit.review.config;
@@ -139,8 +137,7 @@ kit.review.setup = function(wizard) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The label of a group, which is what the group marks while the pointer
-    // is anywhere on it.
+    // The label of a group, which is what wears the badge.
     review._getGroupLabel = function(groupElement) {
 
         var out = $(groupElement).find('.wizard-review-group-label');
@@ -149,8 +146,7 @@ kit.review.setup = function(wizard) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Says on the link what it goes to - the label reads as a heading over the
-    // group, so in a sentence it goes on in the lower case it is spoken in.
+    // The tooltip on a link - Edit and the group the link goes to.
     review._addEditTooltip = function(editLink, groupLabel) {
 
         var reviewConfig = kit.review.config;
@@ -180,8 +176,7 @@ kit.review.setup = function(wizard) {
 
         var container = $('#' + idPrefix + '-review');
 
-        // The step re-renders whenever it is entered, so the tooltips of the
-        // links about to be thrown out go with them
+        // The step re-renders on entry, so the old links take their tooltips out
         container.find('.wizard-review-edit').each(function() {
             this._tippy.destroy();
         });
@@ -223,10 +218,8 @@ kit.review.setup = function(wizard) {
             container.append(groupElement);
         }
 
-        // The pointer anywhere on a group marks that group's label with the
-        // same badge the data tables put on the row an inline form belongs to.
-        // What the honey behind the group does is in the stylesheet - only the
-        // badge needs the wrapping a script does.
+        // The pointer anywhere on a group marks its label with the same badge
+        // the data tables use - the rest of the marking is in the stylesheet
         container.find('.wizard-review-group').on('mouseenter', function() {
             $.fn.zato.highlight_badge.on(review._getGroupLabel(this));
         });
@@ -236,8 +229,7 @@ kit.review.setup = function(wizard) {
         });
 
         // An Edit link goes to the step its group came from and opens
-        // whatever the group named, so the answer is there to be changed
-        // rather than to be looked for
+        // whatever the group named
         container.find('.wizard-review-edit').on('click', function() {
 
             var group = groups[parseInt(this.getAttribute('data-group'))];

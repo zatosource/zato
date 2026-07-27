@@ -129,11 +129,30 @@ def get_current_state() -> 'anylist':
 
 def get_internal_port() -> 'int':
     """ Returns the internal port the shared MLLP listener is bound to in this process -
-    zero when no listener has started yet, i.e. when no MLLP channel exists.
+    zero when no listener is running, i.e. when no MLLP channel exists.
     """
     with _shared_state.lock:
         out = _shared_state.internal_port
 
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def is_channel_routed(channel_name:'str') -> 'bool':
+    """ Returns whether the named channel is routed by a running listener, which is what a sender
+    needs before its messages reach that channel - one that arrives while the listener is up but
+    the route is not yet registered matches nothing and is turned away.
+    """
+    with _shared_state.lock:
+
+        # Without a listener there is nothing routing anything anywhere
+        if not _shared_state.server:
+            return False
+
+        channel_names = _shared_state.router.get_channel_names()
+
+    out = channel_name in channel_names
     return out
 
 # ################################################################################################################################
@@ -290,17 +309,18 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
 # ################################################################################################################################
 
-    def _ensure_shared_server_started(self) -> 'None':
-        """ Starts the shared MLLP server if this is the first channel being created in this process.
+    def _ensure_shared_server_built(self) -> 'int':
+        """ Builds the shared MLLP server if this is the first channel being created in this
+        process, without letting it accept anything yet. Returns the port it is to bind, or
+        zero when another channel had already built it and so nothing here has to start it.
         """
 
         if _shared_state.server:
-            return
+            return 0
 
         # The internal port follows from the server's own port, so every worker process of one
         # server binds the same one and HAProxy has a line for it before any channel exists
         internal_port = resolve_internal_port(self.parallel_server.port)
-        _shared_state.internal_port = internal_port
 
         # What one socket can have one of comes from the server's environment rather than
         # from whichever channel happened to be created first
@@ -313,11 +333,25 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
         _shared_state.server = HL7MLLPServer(listener_config, _shared_state.router, audit_log=audit_log)
 
-        _ = spawn_greenlet(_shared_state.server.start)
+        return internal_port
+
+# ################################################################################################################################
+
+    def _start_shared_listener(self, internal_port:'int') -> 'None':
+        """ Puts the shared listener on its port. This is the last thing the channel that built
+        it does, so that the first message to arrive finds the channel the listener exists for
+        already routed rather than nothing to be matched against.
+        """
+        server = cast_('HL7MLLPServer', _shared_state.server)
+
+        _ = spawn_greenlet(server.start)
+
+        # The port is only worth reporting once there is something behind it
+        _shared_state.internal_port = internal_port
 
         self._ensure_haproxy_backend_line(internal_port)
 
-        logger.info('Started shared MLLP server on %s', listener_config.address)
+        logger.info('Started shared MLLP server on %s', _shared_state.listener_config.address)
 
 # ################################################################################################################################
 
@@ -354,6 +388,10 @@ class ChannelHL7MLLPWrapper(Wrapper):
         _shared_state.server.stop()
         _shared_state.server = None
 
+        # With the listener gone there is no port to report - a sender that asks now is told
+        # there is nothing to send to rather than handed a port that nothing is behind
+        _shared_state.internal_port = 0
+
         logger.info('Stopped shared MLLP server')
 
 # ################################################################################################################################
@@ -370,7 +408,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
                 return
 
             # .. the listener has to exist before a route can be built against its bounds ..
-            self._ensure_shared_server_started()
+            internal_port = self._ensure_shared_server_built()
 
             # .. register this channel's routing rule only if the channel is active ..
             if self.config.is_active:
@@ -390,6 +428,10 @@ class ChannelHL7MLLPWrapper(Wrapper):
                     is_audit_log_active=asbool(self.config.is_audit_log_active),
                     settings=self._build_route_settings(),
                 )
+
+            # .. a listener this channel built starts accepting only now, with its own route in place ..
+            if internal_port:
+                self._start_shared_listener(internal_port)
 
             _shared_state.listener_channel_count += 1
             self.is_connected = True
