@@ -12,7 +12,7 @@ import subprocess
 
 # Zato
 from _certs import Java_Client_Subject_DN
-from _services import Plain_Service_Name, TLS_Service_Name
+from _services import Channels
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -23,16 +23,6 @@ _Zato_Binary = os.path.join(os.environ['ZATO_TEST_BASE_DIR'], 'code', 'bin', 'za
 # The security definition the channel taking verified connections accepts a sender against
 Security_Name = 'test.mllp.languages.mtls'
 
-# The channels one test run creates
-Plain_Channel_Name = 'test.mllp.languages.plain'
-TLS_Channel_Name   = 'test.mllp.languages.tls'
-
-# What a sender puts in MSH-3 to reach each of the two channels. Routing is by the sending
-# application rather than by the port, so both channels are reachable over either bind and a
-# message that arrives on the wrong one is turned away by the channel rather than by HAProxy.
-Plain_Sending_Application = 'ZATO-TEST-PLAIN'
-TLS_Sending_Application   = 'ZATO-TEST-TLS'
-
 # How long enmasse waits for an object a definition refers to but has not seen yet
 _Missing_Wait_Time = '15'
 
@@ -42,9 +32,13 @@ _Import_Timeout = 120
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The environment the tests operate on. Both channels take the raw message rather than a parsed one,
-# because what the service records is compared against what the client sent, character for character.
-_Definitions = f"""
+def _build_definitions() -> 'str':
+    """ Builds what is imported - one channel for each of the ones a run operates on, and the
+    security definition the one that requires a certificate names. Every channel takes the raw
+    message rather than a parsed one, because what its service records is compared against what
+    the client sent, character for character.
+    """
+    out = f"""
 security:
 
   - name: {Security_Name}
@@ -52,20 +46,28 @@ security:
     client_cert_subject_dn: {Java_Client_Subject_DN}
 
 channel_hl7_mllp:
-
-  - name: {Plain_Channel_Name}
-    service: {Plain_Service_Name}
-    msh3_sending_app: {Plain_Sending_Application}
-    should_parse_on_input: false
-    should_log_messages: true
-
-  - name: {TLS_Channel_Name}
-    service: {TLS_Service_Name}
-    security: {Security_Name}
-    msh3_sending_app: {TLS_Sending_Application}
-    should_parse_on_input: false
-    should_log_messages: true
 """
+
+    for channel in Channels:
+
+        lines = [
+            f'  - name: {channel.service_name}',
+            f'    service: {channel.service_name}',
+            f'    msh3_sending_app: {channel.sending_application}',
+            '    should_parse_on_input: false',
+            '    should_log_messages: true',
+        ]
+
+        if channel.needs_certificate:
+            lines.append(f'    security: {Security_Name}')
+
+        out += '\n' + '\n'.join(lines) + '\n'
+
+    return out
+
+# ################################################################################################################################
+
+_Definitions = _build_definitions()
 
 # ################################################################################################################################
 # ################################################################################################################################

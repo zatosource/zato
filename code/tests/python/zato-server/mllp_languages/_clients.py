@@ -11,7 +11,7 @@ import os
 import shutil
 import subprocess
 import tempfile
-from base64 import b64decode
+from base64 import b64decode, b64encode
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,8 +37,11 @@ _Java_Class_Path = os.path.join(_Java_Build_Directory, 'MllpClient.class')
 # The class the Java client is entered through
 _Java_Main_Class = 'MllpClient'
 
-# What the clients of every language report the acknowledgment they read back with
+# What the clients of every language report each acknowledgment they read back with
 _Ack_Prefix = 'ACK_BASE64: '
+
+# How many connections one send travels over when the caller has no reason to ask for more
+_Default_Connection_Count = 1
 
 # How long compiling is given
 _Build_Timeout = 120
@@ -94,15 +97,20 @@ def build_java() -> 'None':
 
 # ################################################################################################################################
 
-def _parse_ack(output:'str') -> 'bytes':
-    """ Takes the acknowledgment out of what a client wrote to standard output.
+def _parse_acks(output:'str') -> 'list':
+    """ Takes the acknowledgments out of what a client wrote to standard output, in the order
+    the client reported them.
     """
+    out = []
+
     for line in output.splitlines():
         if line.startswith(_Ack_Prefix):
-            out = b64decode(line[len(_Ack_Prefix):])
-            return out
+            out.append(b64decode(line[len(_Ack_Prefix):]))
 
-    raise Exception(f'No acknowledgment in the client output:\n{output}')
+    if not out:
+        raise Exception(f'No acknowledgment in the client output:\n{output}')
+
+    return out
 
 # ################################################################################################################################
 
@@ -115,20 +123,41 @@ def send_with_java(
     """ Sends one HL7 message with the Java client and returns the acknowledgment it read back,
     exactly as it arrived. Certificates turn the connection into a TLS one that presents them.
     """
+    acks = send_many_with_java(host, port, [message], _Default_Connection_Count, certificates)
 
-    # The message travels by file because the carriage returns it separates its segments with
-    # would not survive being passed on a command line
+    out = acks[0]
+    return out
+
+# ################################################################################################################################
+
+def send_many_with_java(
+    host:'str',
+    port:'int',
+    messages:'list',
+    connection_count:'int',
+    certificates:'TestCertificates | None'=None,
+) -> 'list':
+    """ Sends every message with the Java client, spread over as many connections as asked for and
+    all of them open at once, and returns the acknowledgments read back. What came back for which
+    message is not said by the order, so a caller tells them apart by what each of them echoes.
+    """
+
+    # The messages travel by file because the carriage returns they separate their segments with
+    # would not survive being passed on a command line, and base64 keeps one message to one line
     handle, message_path = tempfile.mkstemp(prefix='zato-mllp-java-', suffix='.hl7')
 
     try:
         with os.fdopen(handle, 'w') as message_file:
-            _ = message_file.write(message)
+            for message in messages:
+                encoded = b64encode(message.encode('utf8')).decode('ascii')
+                _ = message_file.write(encoded + '\n')
 
         command = [
             'java', '-cp', _Java_Build_Directory, _Java_Main_Class,
             '--host', host,
             '--port', str(port),
             '--message-file', message_path,
+            '--connections', str(connection_count),
         ]
 
         if certificates:
@@ -144,7 +173,11 @@ def send_with_java(
         if result.returncode != 0:
             raise Exception(f'The Java client failed:\nstdout: {result.stdout}\nstderr: {result.stderr}')
 
-        out = _parse_ack(result.stdout)
+        out = _parse_acks(result.stdout)
+
+        if len(out) != len(messages):
+            raise Exception(f'Expected {len(messages)} acknowledgments, got {len(out)}:\n{result.stdout}')
+
         return out
 
     finally:
