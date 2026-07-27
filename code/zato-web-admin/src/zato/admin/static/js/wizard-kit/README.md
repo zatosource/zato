@@ -89,7 +89,9 @@ The namespace must provide:
 
 Each micro-form is described by a descriptor - `{title, width, pages}`, each page a list of entries. An entry is either one field spec, shown on its own line, or a list of field specs, shown side by side in one row. A field spec points at one of the hidden Django form inputs by name, so opening a micro-form seeds its inputs from the form and pressing OK writes the answers back. Selects clone their choices from the underlying Django select, which keeps the wizard and the matching full-page editor on the same single list of options.
 
-A spec's keys: `field` (the Django form field name), `label`, `kind` - one of `text`, `select`, `checkbox` or a kind the instance registered - plus the optional `unitField`, `width`, `placeholder` and `hint`.
+A spec's keys: `field` (the Django form field name), `label`, `kind` - one of `text`, `number`, `select`, `checkbox` or a kind the instance registered - plus the optional `unitField`, `width`, `placeholder` and `hint`.
+
+A `number` field is stepped with the arrows the browser draws on it and is only as wide as a count needs, whatever the label above it says. A `checkbox` puts its switch at the end of the line its label takes, so a page of them reads as one column of switches rather than as one switch per length of text.
 
 Field kinds beyond the built-in ones come from the instance:
 
@@ -123,19 +125,19 @@ A step whose answers are few but consequential reads better as sentences than as
 $.fn.zato.wizard_kit.lines.setChip('mllp-wizard-slot-destinations', {
     text: '3 destinations',
     note: '1 paused',
-    isBlank: false,
-    isWarning: false,
     panel: {title: 'destinations', width: 980, minWidth: 700, build: buildDestinationsPanel}
 });
 
 $.fn.zato.wizard_kit.lines.setSegments('mllp-wizard-slot-delivery', modeList, currentMode, onPick);
 ```
 
-The template holds the labels and one empty slot per line, the instance fills the slots on every render. A blank chip is drawn as a dashed outline instead of a value, a warning chip in the error color.
+The template holds the labels and one empty slot per line, the instance fills the slots on every render. A chip is solid once its line has an answer and dashed while it is still waiting for one, which is the only difference between them - an unanswered line reads as unanswered, never as a fault.
 
-A panel wears the shared popup chrome of `shared/popup.css` - the dark header with the grip, the sandy body, the buttons row with OK - so it is the same popup the micro-forms and the IDE menus open, and `$.fn.zato.popup.install_drag` makes its header the handle. `$.fn.zato.popup.install_resize` adds the grip in each bottom corner, so a panel is dragged wider and taller from either side, never below the `minWidth` its own spec names by the kit's `panelMinHeight`. One panel is open at a time, a press outside it or Escape closes it.
+A strip of options is the shared tab component of `shared/tabs.css`, the same one the step headers use, with its tokens repointed - no border, nothing rounded, no capitals, and the picked option in the lighter of the two dashboard blues so a strip inside a step never reads as the step strip above it.
 
-The `build` function fills the body and may return a function to run when the panel closes, which is how a panel that edits the DOM directly - a badge picker, say - writes its answers back into the state. Inside a panel the kit offers `buildFilter`, `buildColumns` and `buildPickRow`, so a panel is a filter above one or two columns of lists, and the row under them holds nothing but OK.
+A panel wears the shared popup chrome of `shared/popup.css` - the dark header with the grip, the sandy body, the buttons row with OK - so it is the same popup the micro-forms and the IDE menus open, and `$.fn.zato.popup.install_drag` makes its header the handle. `$.fn.zato.popup.install_resize` adds the grip in each bottom corner, so a panel is dragged wider and taller from either side, never below the `minWidth` its own spec names by the kit's `panelMinHeight`. Where a panel is left is where it opens next time - `save_geometry` writes it under the chip's id when a drag or a resize ends and `restore_geometry` reads it back, clamped to the window in case the window is smaller now, and only a panel that was never moved hangs under its chip. One panel is open at a time, a press outside it or Escape closes it.
+
+The `build` function fills the body and may return a function to run when the panel closes, which is how a panel that edits the DOM directly - a badge picker, say - writes its answers back into the state. It runs while the panel is still on the page, so it can read the answers out of it. Inside a panel the kit offers `buildFilter` and `buildPickRow`, so a panel is a filter above a list of rows, and the row under it holds nothing but OK.
 
 A list in a panel keeps its height with the scrollbar always in view, which is what makes a filter over hundreds of entries feel steady - nothing resizes as the matches narrow. The panel runs one flex column from itself down to the lists, so the room a corner adds or takes away lands on the lists alone and the filter, the headings and the buttons row stay exactly where they are.
 

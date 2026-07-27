@@ -58,6 +58,9 @@ kit.forms.defaults = {
     // How wide a popover may grow
     maxWidth: 480,
 
+    // The lowest a number field goes - none of them counts down to nothing
+    numberMin: 1,
+
     // Button labels inside the popovers
     backLabel: 'Back',
     nextLabel: 'Next',
@@ -325,7 +328,8 @@ kit.forms.setup = function(wizard, config) {
         var formField = wizard.field(fieldSpec.field);
         var inputId = forms.inputId(fieldSpec.field);
 
-        // A checkbox carries its slider after the label it acts on ..
+        // A checkbox carries its slider at the end of the line the label
+        // takes, so a column of switches lines up whatever the labels say ..
         if(fieldSpec.kind === 'checkbox') {
             var checkboxLabel = document.createElement('label');
             checkboxLabel.className = 'wizard-tippy-checkbox';
@@ -336,7 +340,11 @@ kit.forms.setup = function(wizard, config) {
             checkbox.id = inputId;
             checkbox.checked = formField.prop('checked');
 
-            checkboxLabel.appendChild(document.createTextNode(fieldSpec.label + ' '));
+            var checkboxText = document.createElement('span');
+            checkboxText.className = 'wizard-tippy-checkbox-text';
+            checkboxText.textContent = fieldSpec.label;
+
+            checkboxLabel.appendChild(checkboxText);
             checkboxLabel.appendChild(checkbox);
             row.appendChild(checkboxLabel);
 
@@ -369,9 +377,19 @@ kit.forms.setup = function(wizard, config) {
         }
         else {
             input = document.createElement('input');
-            input.type = 'text';
             input.id = inputId;
             input.value = formField.val();
+
+            // A count is stepped with the arrows the browser puts on a
+            // number field, and it is only ever as wide as a count needs
+            if(fieldSpec.kind === 'number') {
+                input.type = 'number';
+                input.className = 'wizard-tippy-number';
+                input.min = forms.config.numberMin;
+            }
+            else {
+                input.type = 'text';
+            }
 
             if(fieldSpec.placeholder) {
                 input.placeholder = fieldSpec.placeholder;

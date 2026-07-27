@@ -27,7 +27,7 @@ The step is four sentences, one decision each:
 
 The delivery line only appears once there is a destination - with nothing to deliver to, the order they are delivered in is not a question. "The service decides" is the mode where the service hands each destination its own message through `self.destination[name]`.
 
-The reply follows the list on its own: when the destination that was to produce it is paused or removed, the reply goes back to the service.
+The reply panel is one list of everything that could answer the caller - the service first, then every destination messages go to, in the order they were picked in. The reply follows the list on its own: when the destination that was to produce it is taken off the list, the reply goes back to the service.
 
 ### The state
 
@@ -42,6 +42,10 @@ The right zone is the order of one-after-another delivery, so what the panel is 
 A destination badge carries the switch that pauses it and the options its kind has, e.g. the method a REST call is made with. They come from the type and option definitions of `shared/destinations.js`, the same ones the editor uses, and they show only in the right zone, since a connection nothing is sent to has nothing to configure.
 
 A row is read left to right: the kind comes first in a column of its own, so every name below starts at the same place, then the name, then the options held against the right edge where they line up as a column too. The options grow into whatever the name leaves and give way first when a name is long - past that the name is the one that gives way, with an ellipsis, and the switch at the end never gives way at all.
+
+### The option cards
+
+Under the lines are the three option cards. Tolerance opens in place and holds the fixups, each of its two groups opening on its own, so what is read is one group of switches and not eleven at once. Deduplication and logging open their micro-forms of the kit.
 
 ## Help texts
 

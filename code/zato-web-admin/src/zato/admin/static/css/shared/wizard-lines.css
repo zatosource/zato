@@ -39,8 +39,8 @@
 /* Wizard lines - the chip a line's value wears                  */
 /* ------------------------------------------------------------ */
 
-/* The face of a select, since that is what a chip stands for - and no more
-   than a dashed outline of one while the line has no value yet */
+/* The face of a select, since that is what a chip stands for - solid once
+   the line has an answer, dashed while it is still waiting for one */
 .wizard-chip {
     display: inline-flex;
     align-items: center;
@@ -56,39 +56,31 @@
     cursor: pointer;
 }
 
+.wizard-chip-blank {
+    color: var(--wizard-text-faint);
+    border-style: dashed;
+}
+
 .wizard-chip:hover {
     border-color: var(--wizard-accent);
 }
 
-/* A chip and a segment are <button> elements, so formalize.css hands them
-   its own grey 3D button - a gradient at rest, a lighter one on hover, a
-   darker one plus an inset shadow while pressed, bold Helvetica and a white
-   text shadow. Each of those is named back here, in each state formalize
-   writes one for, which is what makes this a plain override and not a
-   blanket !important. The order of the sheets settles the ties. */
+/* A chip is a <button>, so formalize.css hands it its own grey 3D button -
+   a gradient at rest, a lighter one on hover, a darker one plus an inset
+   shadow while pressed, bold Helvetica and a white text shadow. Each of
+   those is named back here, in each state formalize writes one for, which
+   is what makes this a plain override and not a blanket !important. The
+   order of the sheets settles the ties. The options strip needs none of
+   this, the shared tab rules already undo it. */
 .wizard-chip,
 .wizard-chip:hover,
 .wizard-chip:focus,
-.wizard-chip:active,
-.wizard-segment,
-.wizard-segment:hover,
-.wizard-segment:focus,
-.wizard-segment:active {
+.wizard-chip:active {
     background-image: none;
     box-shadow: none;
     text-shadow: none;
     font-weight: 400;
     outline: none;
-}
-
-.wizard-chip-blank {
-    color: var(--wizard-text-faint);
-    background: none;
-    border-style: dashed;
-}
-
-.wizard-chip-warning {
-    color: var(--wizard-error);
 }
 
 .wizard-chip-note {
@@ -105,35 +97,57 @@
 /* Wizard lines - the options strip                              */
 /* ------------------------------------------------------------ */
 
+/* A strip of options is the shared tab component of shared/tabs.css with
+   its tokens repointed - the same faint panel and the same white face on
+   the picked one, in the lighter blue rather than the step strip's, and
+   written the way the rest of a line is: no border, nothing rounded, no
+   capitals */
 .wizard-segments {
-    display: inline-flex;
-    border: 1px solid var(--wizard-border-strong);
+
+    /* What an option not picked stands on, and what it stands on once the
+       pointer is there - the two the other way around from a step tab,
+       which is clear at rest and lights up under the pointer */
+    --wizard-segment-bg: rgba(255, 255, 255, 0.55);
+    --wizard-segment-hover-bg: transparent;
+
+    --tabs-gap: 4px;
+    --tabs-radius: 0;
+    --tabs-border: transparent;
+    --tab-radius: 0;
+    --tab-padding: 5px 14px;
+    --tab-font-size: 12px;
+    --tab-font-weight: 400;
+    --tab-text-transform: none;
+    --tab-letter-spacing: normal;
+
+    /* The one picked is the one written in black, and it sits a touch above
+       the strip - just enough of a shadow to be seen, not to be noticed */
+    --tab-active-color: #000;
+    --tab-active-shadow: 0 1px 4px rgba(0, 0, 0, 0.13), 0 1px 2px rgba(0, 0, 0, 0.08);
+
+    margin-bottom: 0;
 }
 
-.wizard-segment {
-    height: 24px;
-    padding: 0 11px;
-    font-family: inherit;
-    font-size: 12px;
-    color: var(--wizard-text);
-    background: #fff;
+.wizard-segments > .dashboard-tab:not(.dashboard-tab-active) {
+    background: var(--wizard-segment-bg);
+}
+
+.wizard-segments > .dashboard-tab:not(.dashboard-tab-active):hover {
+    background: var(--wizard-segment-hover-bg);
+}
+
+/* A tab's frame is written into the shared rules rather than into a token,
+   so the states name it away here */
+.wizard-segments > .dashboard-tab,
+.wizard-segments > .dashboard-tab:hover,
+.wizard-segments > .dashboard-tab:focus,
+.wizard-segments > .dashboard-tab:active,
+.wizard-segments > .dashboard-tab-active,
+.wizard-segments > .dashboard-tab-active:hover,
+.wizard-segments > .dashboard-tab-active:focus,
+.wizard-segments > .dashboard-tab-active:active {
     border: none;
-    border-right: 1px solid var(--wizard-border);
-    cursor: pointer;
-}
-
-.wizard-segment:last-child {
-    border-right: none;
-}
-
-.wizard-segment:hover {
-    background: var(--wizard-hover);
-}
-
-.wizard-segment-active,
-.wizard-segment-active:hover {
-    color: #fff;
-    background: var(--wizard-accent-soft);
+    border-radius: 0;
 }
 
 /* ------------------------------------------------------------ */
@@ -164,24 +178,29 @@
     min-height: 0;
 }
 
-/* A filter, a column heading and the buttons keep their height, so the
-   lists are the only thing a resize actually grows */
+/* A popup is unselectable as a whole, the IDE menus being what the chrome
+   was written for, and so are the zones and the badges of a picker - here
+   every word of a body is a word to be read and copied, so all of it is
+   text again, headings and rows alike. Only the popup's own header is left
+   out, since that one is the drag handle. */
+.wizard-panel .wizard-tippy-body,
+.wizard-panel .wizard-tippy-body * {
+    user-select: text;
+}
+
+/* A heading names the list under it, so it stands away from the one above */
+.wizard-panel-content > .wizard-tippy-label {
+    margin-top: 4px;
+    margin-bottom: 6px;
+}
+
+/* A filter, a heading and the buttons keep their height, so the lists are
+   the only thing a resize actually grows */
 .wizard-panel-content > .wizard-tippy-field,
 .wizard-panel-content > .wizard-tippy-label,
 .wizard-panel-content > .badge-picker-filter,
 .wizard-panel > .wizard-tippy-body > .wizard-tippy-buttons {
     flex: 0 0 auto;
-}
-
-/* The buttons row clears the two corner grips */
-.wizard-panel .wizard-tippy-buttons {
-    padding-left: 16px;
-    padding-right: 16px;
-}
-
-.wizard-panel .wizard-tippy-row {
-    flex: 1 1 auto;
-    min-height: 0;
 }
 
 /* A panel is appended to document.body, so the card's own reset of the
@@ -192,15 +211,6 @@
 .wizard-panel button:focus {
     outline: none;
     box-shadow: none;
-}
-
-.wizard-panel-column {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    flex: 1 1 0;
-    min-width: 0;
-    min-height: 0;
 }
 
 /* One height for every list a panel shows, with the bar always in view, so
@@ -275,10 +285,14 @@
     min-height: 0;
 }
 
+/* The bar stays in view whatever the filter leaves behind, in the thin
+   variant - at 11px the standard one took more room from the end of a row
+   than the row's own padding did */
 .wizard-panel .badge-zone-body {
     min-height: 0;
     max-height: none;
     overflow-y: scroll;
+    scrollbar-width: thin;
 }
 
 .wizard-panel .badge-picker-filter {

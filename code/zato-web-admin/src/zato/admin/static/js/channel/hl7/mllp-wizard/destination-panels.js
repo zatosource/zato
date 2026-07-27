@@ -28,9 +28,9 @@ panels.config = {
     pickerAction: 'mllp-wizard-destinations',
 
     titles: {
-        destinations: 'destinations',
-        service: 'service',
-        reply: 'reply'
+        destinations: 'Destinations',
+        service: 'Service',
+        reply: 'Reply'
     },
 
     widths: {
@@ -60,9 +60,8 @@ panels.config = {
         filterLabel: 'Filter',
         clear: 'Clear',
         services: 'Services',
-        replyService: 'The service',
-        replyDestinations: 'The destinations',
-        noneActive: 'Nothing is active',
+        replyFrom: 'The reply comes from',
+        nothingToReply: 'There is nothing to reply yet',
         active: 'Active'
     }
 };
@@ -494,8 +493,18 @@ panels._buildService = function(body) {
     label.textContent = labels.services;
     body.appendChild(label);
 
-    fill('');
+    var picked = fill('');
     body.appendChild(list);
+
+    // The list opens on the service the channel already runs, halfway down
+    // the view, so the ones around it are read as its neighbours. The panel
+    // takes its place and its remembered size right after this build, hence
+    // the wait for the frame that has the list at its final height.
+    if(picked) {
+        window.requestAnimationFrame(function() {
+            list.scrollTop = picked.offsetTop - (list.clientHeight - picked.offsetHeight) / 2;
+        });
+    }
 
     var out = null;
     return out;
@@ -503,10 +512,13 @@ panels._buildService = function(body) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// Returns the row of the service the channel runs, when the filter leaves
+// it in the list, so the caller can bring it into view.
 panels._fillServiceList = function(list, nameList, filterText) {
 
     var lines = $.fn.zato.wizard_kit.lines;
     var current = wizard.field('service').val();
+    var picked = null;
 
     list.textContent = '';
 
@@ -518,8 +530,15 @@ panels._fillServiceList = function(list, nameList, filterText) {
             continue;
         }
 
-        list.appendChild(lines.buildPickRow(name, name === current, panels._pickService(name)));
+        var row = lines.buildPickRow(name, name === current, panels._pickService(name));
+        list.appendChild(row);
+
+        if(name === current) {
+            picked = row;
+        }
     }
+
+    return picked;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -564,50 +583,55 @@ panels.replyPanel = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The reply comes from the service or from one of the destinations that are
-// active, so the panel is those two groups side by side.
+// One list of everything that could reply - the service first, then every
+// destination messages go to, in the order they were picked in.
 panels._buildReply = function(body) {
 
     var lines = $.fn.zato.wizard_kit.lines;
     var labels = panels.config.labels;
     var destinationsConfig = destinations.config;
 
-    var columns = lines.buildColumns([labels.replyService, labels.replyDestinations]);
-    body.appendChild(columns.row);
+    var label = document.createElement('span');
+    label.className = 'wizard-tippy-label';
+    label.textContent = labels.replyFrom;
+    body.appendChild(label);
 
-    var serviceList = document.createElement('div');
-    serviceList.className = 'wizard-panel-list';
+    var list = document.createElement('div');
+    list.className = 'wizard-panel-list';
 
     var serviceName = wizard.field('service').val();
-    var isService = wizard.state.respondFrom === destinationsConfig.respondFromService;
 
-    serviceList.appendChild(lines.buildPickRow(serviceName, isService,
-        panels._pickReply(destinationsConfig.respondFromService)));
+    if(serviceName) {
 
-    columns.columnList[0].appendChild(serviceList);
+        var isService = wizard.state.respondFrom === destinationsConfig.respondFromService;
+        var serviceLabel = destinationsConfig.serviceKindLabel + ' - ' + serviceName;
 
-    var destinationList = document.createElement('div');
-    destinationList.className = 'wizard-panel-list';
+        list.appendChild(lines.buildPickRow(serviceLabel, isService,
+            panels._pickReply(destinationsConfig.respondFromService)));
+    }
 
-    var activeList = destinations.activeList();
+    var destinationList = wizard.state.destinationList;
+    var typeLabelMap = destinations._getTypeLabelMap();
 
-    if(!activeList.length) {
+    for(var destinationIdx = 0; destinationIdx < destinationList.length; destinationIdx++) {
+
+        var destination = destinationList[destinationIdx];
+        var connection = destination.connection;
+        var isPicked = wizard.state.respondFrom === connection;
+        var rowLabel = typeLabelMap[destination.type] + ' - ' + connection;
+
+        list.appendChild(lines.buildPickRow(rowLabel, isPicked, panels._pickReply(connection)));
+    }
+
+    if(!list.childNodes.length) {
 
         var empty = document.createElement('div');
         empty.className = 'wizard-panel-empty';
-        empty.textContent = labels.noneActive;
-        destinationList.appendChild(empty);
+        empty.textContent = labels.nothingToReply;
+        list.appendChild(empty);
     }
 
-    for(var activeIdx = 0; activeIdx < activeList.length; activeIdx++) {
-
-        var connection = activeList[activeIdx].connection;
-        var isPicked = wizard.state.respondFrom === connection;
-
-        destinationList.appendChild(lines.buildPickRow(connection, isPicked, panels._pickReply(connection)));
-    }
-
-    columns.columnList[1].appendChild(destinationList);
+    body.appendChild(list);
 
     var out = null;
     return out;

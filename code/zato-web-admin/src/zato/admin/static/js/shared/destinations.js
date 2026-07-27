@@ -42,7 +42,7 @@ $.fn.zato.destinations.config = {
     defaultType: 'rest',
     typeList: [
         {id: 'rest',     label: 'REST'},
-        {id: 'hl7-mllp', label: 'HL7 MLLP'},
+        {id: 'hl7-mllp', label: 'MLLP'},
         {id: 'hl7-fhir', label: 'FHIR'},
         {id: 'smtp',     label: 'Email'}
     ],

@@ -22,7 +22,10 @@ destinations.config = {
 
     // What the caller's response defaults to
     respondFromService: 'service',
-    respondFromServiceLabel: 'The service',
+
+    // What a service is called where it is listed next to destinations, so
+    // that both read the same way - the kind first, then the name
+    serviceKindLabel: 'Service',
 
     // The slots on the step the four values are written into
     slots: {
@@ -116,19 +119,19 @@ destinations.pausedCount = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The reply comes from one active thing - a destination that was paused or
-// removed hands the reply back to the service.
+// A destination taken off the list cannot be the one replying any more, so
+// the reply falls back to the service.
 destinations.settle = function() {
 
     if(wizard.state.respondFrom === destinations.config.respondFromService) {
         return;
     }
 
-    var activeList = destinations.activeList();
+    var destinationList = wizard.state.destinationList;
     var names = [];
 
-    for(var activeIdx = 0; activeIdx < activeList.length; activeIdx++) {
-        names.push(activeList[activeIdx].connection);
+    for(var destinationIdx = 0; destinationIdx < destinationList.length; destinationIdx++) {
+        names.push(destinationList[destinationIdx].connection);
     }
 
     if(names.indexOf(wizard.state.respondFrom) === -1) {
@@ -186,7 +189,6 @@ destinations._destinationChip = function() {
         text: text,
         note: paused ? paused + destinationsConfig.pausedLabel : '',
         isBlank: count === 0,
-        isWarning: false,
         panel: destinations.panels.destinationsPanel()
     };
 
@@ -203,7 +205,6 @@ destinations._serviceChip = function() {
         text: name ? name : destinations.config.noServiceLabel,
         note: '',
         isBlank: !name,
-        isWarning: false,
         panel: destinations.panels.servicePanel()
     };
 
@@ -214,19 +215,12 @@ destinations._serviceChip = function() {
 
 destinations._replyChip = function() {
 
-    var destinationsConfig = destinations.config;
-    var name = wizard.state.respondFrom;
-    var isService = name === destinationsConfig.respondFromService;
-
-    if(isService) {
-        name = wizard.field('service').val();
-    }
+    var text = destinations.replyLabel();
 
     var out = {
-        text: name ? name : destinationsConfig.noReplyLabel,
+        text: text,
         note: '',
-        isBlank: false,
-        isWarning: !name,
+        isBlank: text === destinations.config.noReplyLabel,
         panel: destinations.panels.replyPanel()
     };
 
@@ -290,16 +284,35 @@ destinations.deliveryLabel = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// What the review says about where the reply comes from.
+// What replies to the caller, named the way the reply panel names it - the
+// kind first, then the name, whether that is the service or a destination.
 destinations.replyLabel = function() {
 
     var destinationsConfig = destinations.config;
+    var name = wizard.state.respondFrom;
 
-    if(wizard.state.respondFrom === destinationsConfig.respondFromService) {
-        var out = destinationsConfig.respondFromServiceLabel;
+    if(name === destinationsConfig.respondFromService) {
+
+        var serviceName = wizard.field('service').val();
+
+        if(!serviceName) {
+            return destinationsConfig.noReplyLabel;
+        }
+
+        var out = destinationsConfig.serviceKindLabel + ' - ' + serviceName;
+        return out;
     }
-    else {
-        out = wizard.state.respondFrom;
+
+    var typeLabelMap = destinations._getTypeLabelMap();
+    var destinationList = wizard.state.destinationList;
+
+    for(var destinationIdx = 0; destinationIdx < destinationList.length; destinationIdx++) {
+
+        var destination = destinationList[destinationIdx];
+
+        if(destination.connection === name) {
+            out = typeLabelMap[destination.type] + ' - ' + name;
+        }
     }
 
     return out;

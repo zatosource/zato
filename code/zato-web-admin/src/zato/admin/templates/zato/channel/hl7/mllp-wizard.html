@@ -162,7 +162,13 @@ $(document).ready(function() {
                     </div>
 
                     <div class="wizard-section">
-                        <div class="wizard-section-title">Options</div>
+
+                        <div class="wizard-toggle-row" id="mllp-wizard-row-options">
+                            <label class="wizard-toggle-label" for="mllp-wizard-edit-options">Options</label>
+                            <a href="javascript:void(0)" class="wizard-toggle-edit" id="mllp-wizard-edit-options"><span class="zato-link-face wizard-toggle-summary" id="mllp-wizard-summary-options"></span><span class="zato-soft-hint" id="mllp-wizard-hint-options"></span></a>
+                        </div>
+
+                        <div class="mllp-wizard-options-body" id="mllp-wizard-options-body" hidden>
 
                         <div class="wizard-option-card" id="mllp-wizard-card-tolerance">
                             <div class="wizard-option-header" id="mllp-wizard-tolerance-header">
@@ -172,23 +178,33 @@ $(document).ready(function() {
                             </div>
                             <div class="wizard-option-body" id="mllp-wizard-tolerance-body">
 
-                                <div class="mllp-wizard-tolerance-group-title">Wire-level fixups</div>
-                                <div class="mllp-wizard-tolerance-grid">
-                                    <label for="id_normalize_line_endings">Normalize line endings {{ form.normalize_line_endings }}</label>
-                                    <label for="id_force_standard_delimiters">Force standard delimiters {{ form.force_standard_delimiters }}</label>
-                                    <label for="id_repair_truncated_msh">Repair truncated MSH {{ form.repair_truncated_msh }}</label>
-                                    <label for="id_split_concatenated_messages">Split concatenated messages {{ form.split_concatenated_messages }}</label>
+                                <div class="mllp-wizard-tolerance-group">
+                                    <div class="mllp-wizard-tolerance-group-title" data-tolerance-group="wire">
+                                        <svg class="wizard-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                        Wire-level fixups
+                                    </div>
+                                    <div class="mllp-wizard-tolerance-grid" hidden>
+                                        <label for="id_normalize_line_endings">Normalize line endings {{ form.normalize_line_endings }}</label>
+                                        <label for="id_force_standard_delimiters">Force standard delimiters {{ form.force_standard_delimiters }}</label>
+                                        <label for="id_repair_truncated_msh">Repair truncated MSH {{ form.repair_truncated_msh }}</label>
+                                        <label for="id_split_concatenated_messages">Split concatenated messages {{ form.split_concatenated_messages }}</label>
+                                    </div>
                                 </div>
 
-                                <div class="mllp-wizard-tolerance-group-title">Content-level fixups</div>
-                                <div class="mllp-wizard-tolerance-grid">
-                                    <label for="id_normalize_obx2_value_type">Fill empty OBX-2 value type {{ form.normalize_obx2_value_type }}</label>
-                                    <label for="id_replace_invalid_obx2_value_type">Replace invalid OBX-2 value type {{ form.replace_invalid_obx2_value_type }}</label>
-                                    <label for="id_normalize_invalid_escape_sequences">Strip orphan escape characters {{ form.normalize_invalid_escape_sequences }}</label>
-                                    <label for="id_normalize_obx8_abnormal_flags">Clear OBX-8 literal null {{ form.normalize_obx8_abnormal_flags }}</label>
-                                    <label for="id_normalize_quadruple_quoted_empty">Strip multi-quote sequences {{ form.normalize_quadruple_quoted_empty }}</label>
-                                    <label for="id_allow_short_encoding_characters">Pad short encoding characters {{ form.allow_short_encoding_characters }}</label>
-                                    <label for="id_fix_off_by_one_field_index">Fix off-by-one field index {{ form.fix_off_by_one_field_index }}</label>
+                                <div class="mllp-wizard-tolerance-group">
+                                    <div class="mllp-wizard-tolerance-group-title" data-tolerance-group="content">
+                                        <svg class="wizard-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                        Content-level fixups
+                                    </div>
+                                    <div class="mllp-wizard-tolerance-grid" hidden>
+                                        <label for="id_normalize_obx2_value_type">Fill empty OBX-2 value type {{ form.normalize_obx2_value_type }}</label>
+                                        <label for="id_replace_invalid_obx2_value_type">Replace invalid OBX-2 value type {{ form.replace_invalid_obx2_value_type }}</label>
+                                        <label for="id_normalize_invalid_escape_sequences">Strip orphan escape characters {{ form.normalize_invalid_escape_sequences }}</label>
+                                        <label for="id_normalize_obx8_abnormal_flags">Clear OBX-8 literal null {{ form.normalize_obx8_abnormal_flags }}</label>
+                                        <label for="id_normalize_quadruple_quoted_empty">Strip multi-quote sequences {{ form.normalize_quadruple_quoted_empty }}</label>
+                                        <label for="id_allow_short_encoding_characters">Pad short encoding characters {{ form.allow_short_encoding_characters }}</label>
+                                        <label for="id_fix_off_by_one_field_index">Fix off-by-one field index {{ form.fix_off_by_one_field_index }}</label>
+                                    </div>
                                 </div>
 
                             </div>

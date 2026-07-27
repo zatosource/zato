@@ -50,12 +50,9 @@
 
 :root {
     --wizard-accent: var(--zato-seablue-light2);
-    /* The accent as a picked option wears it - the same blue, softened, so a
-       strip of options reads as a choice made and not as an alarm */
-    --wizard-accent-soft: color-mix(in srgb, var(--wizard-accent) 78%, #fff);
-
-    /* What anything clickable turns while the pointer is on it */
-    --wizard-hover: #eef0f2;
+    /* What a picked option wears - the lighter of the two dashboard blues,
+       so a choice made reads as a choice made and not as an alarm */
+    --wizard-accent-soft: var(--zato-seablue-light3);
     --wizard-done: #28a745;
     --wizard-error: #dc3545;
     --wizard-border: #d9dee3;
@@ -973,6 +970,7 @@ a.wizard-select-delete:hover::before {
 
 /* One explicit height keeps rows mixing inputs and selects even */
 .wizard-tippy-field input[type="text"],
+.wizard-tippy-field input[type="number"],
 .wizard-tippy-field select {
     width: 100%;
     box-sizing: border-box;
@@ -997,6 +995,7 @@ a.wizard-select-delete:hover::before {
 }
 
 .wizard-tippy-field input[type="text"]:focus,
+.wizard-tippy-field input[type="number"]:focus,
 .wizard-tippy-field select:focus {
     border-color: var(--wizard-accent);
     outline: none;
@@ -1013,13 +1012,27 @@ a.wizard-select-delete:hover::before {
     flex-shrink: 0;
 }
 
+/* The switch ends the line the label takes, so a page of them reads as one
+   column of switches rather than as one switch per length of text */
 .wizard-tippy-checkbox {
     display: flex;
     align-items: center;
-    gap: 7px;
+    gap: 12px;
     font-size: 12px;
     color: var(--wizard-text);
     cursor: pointer;
+}
+
+.wizard-tippy-checkbox-text {
+    flex: 1;
+}
+
+/* A count is entered with the arrows the browser draws on a number field,
+   so the field is only as wide as the arrows and a few digits need */
+.wizard-tippy-field input.wizard-tippy-number {
+    width: 5.5em;
+    flex: 0 0 auto;
+    padding-right: 2px;
 }
 
 /* The site-wide tippy link colors are meant for dark tooltips - this

@@ -28,6 +28,10 @@ review.config = {
     // What the tolerance review says when nothing differs from the defaults
     allStandardFixupsLabel: 'All standard fixups enabled',
 
+    // How many fixups a row of the tolerance grid holds - which column a
+    // fixup is in is what decides the side its help opens on
+    toleranceColumnCount: 2,
+
     // The matcher fields and their labels, in MSH order
     matcherFields: [
         {field: 'msh3_sending_app',        label: 'MSH-3 sending application'},
@@ -88,6 +92,23 @@ review.initOptionCards = function() {
         $('#mllp-wizard-tolerance-chevron').toggleClass('wizard-chevron-open');
     });
 
+    // .. one group of fixups is read at a time, so opening one closes the
+    // other and the card never turns into a wall of switches ..
+    $('[data-tolerance-group]').on('click', function() {
+
+        var title = $(this);
+        var grid = title.next('.mllp-wizard-tolerance-grid');
+        var isOpening = grid.prop('hidden');
+
+        $('.mllp-wizard-tolerance-grid').prop('hidden', true);
+        $('[data-tolerance-group] .wizard-chevron').removeClass('wizard-chevron-open');
+
+        grid.prop('hidden', !isOpening);
+        title.find('.wizard-chevron').toggleClass('wizard-chevron-open', isOpening);
+    });
+
+    review._placeToleranceHelp();
+
     // .. its summary follows the checkboxes as they are toggled ..
     $('#mllp-wizard-tolerance-body input[type="checkbox"]').on('change', function() {
         review.refreshSummaries();
@@ -100,6 +121,31 @@ review.initOptionCards = function() {
 
     $('#mllp-wizard-card-logging').on('click', function() {
         wizard.forms.open('logging', this);
+    });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// A fixup is a label with its switch at the end of it, laid out two to a
+// row, so a tooltip beside the switch would sit on the label it explains.
+// The left column sends its tooltip further left, past the label, the right
+// column sends it right, past the switch, and both anchor on the label so
+// that "past" is measured from the whole row and not from the switch.
+review._placeToleranceHelp = function() {
+
+    var config = review.config;
+
+    $('.mllp-wizard-tolerance-grid').each(function() {
+
+        var labels = $(this).find('label[for]');
+
+        labels.each(function(labelIdx) {
+
+            var isLeftColumn = labelIdx % config.toleranceColumnCount === 0;
+
+            $(this).attr('data-help-anchor', 'label');
+            $(this).attr('data-help-placement', isLeftColumn ? 'left' : 'right');
+        });
     });
 };
 

@@ -11,25 +11,49 @@
 /* MLLP wizard - tolerance grid                                  */
 /* ------------------------------------------------------------ */
 
+/* Each group is its own header and its own body, and one group is open at
+   a time, so the card is read a handful of switches at a time */
+.mllp-wizard-tolerance-group + .mllp-wizard-tolerance-group {
+    margin-top: 14px;
+}
+
 .mllp-wizard-tolerance-group-title {
-    margin: 8px 0 6px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--wizard-text-muted);
+    color: var(--wizard-text);
+    cursor: pointer;
+    user-select: none;
 }
 
+/* A closed group is gone rather than clipped - a body sliding out of a
+   card that is itself sliding open is what made the opening jerk */
+.mllp-wizard-tolerance-grid[hidden] {
+    display: none;
+}
+
+/* Each column is as wide as its longest fixup, so the switches line up
+   right after the labels instead of out at the edge of the card. The body
+   starts under the title's own text, past the chevron in front of it. */
 .mllp-wizard-tolerance-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 5px 16px;
+    grid-template-columns: max-content max-content;
+    gap: 5px 28px;
+    margin-top: 7px;
+    padding-left: 18px;
 }
 
+/* The switch is held against the right edge of its column, so a column of
+   them lines up however long or short the labels next to them are */
 .mllp-wizard-tolerance-grid label {
     display: flex;
     align-items: center;
-    gap: 7px;
+    justify-content: space-between;
+    gap: 12px;
     font-size: 12px;
     color: var(--wizard-text);
     cursor: pointer;
@@ -74,6 +98,13 @@
 /* MLLP wizard - destination badges                              */
 /* ------------------------------------------------------------ */
 
+/* The switch ends the row, so the row ends right after it - all that stands
+   between it and the edge is the zone's scrollbar, which the measurements
+   put at 11px of the 16px the switch stood away from the border */
+.wizard-destination-badge {
+    padding-right: 2px;
+}
+
 /* The name takes what it needs and no more, and it is the one part that
    gives way when a name is longer than the row, hence the ellipsis */
 .wizard-destination-badge .security-badge-name {
@@ -88,7 +119,7 @@
    the width of the longest kind there is, so the names line up down the
    zone instead of starting wherever the kind before them ended */
 .wizard-destination-kind {
-    flex: 0 0 6.4em;
+    flex: 0 0 3.6em;
     margin-right: 8px;
     font-size: 9.5px;
     letter-spacing: 0.05em;
