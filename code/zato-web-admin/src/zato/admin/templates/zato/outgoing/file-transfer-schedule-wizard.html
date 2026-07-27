@@ -244,7 +244,9 @@ $(document).ready(function() {
                 <div class="wizard-footer">
                     <span class="how-it-works-badge" id="file-transfer-wizard-how-it-works">How does it work?</span>
                     <div class="wizard-footer-center">
-                        <button type="button" class="secondary-button" id="file-transfer-wizard-back">Back</button>
+                        <!-- The page opens on the first step, where there is nothing
+                             to go back to, so Back starts out disabled -->
+                        <button type="button" class="secondary-button" id="file-transfer-wizard-back" disabled>Back</button>
                         <button type="button" class="action-button" id="file-transfer-wizard-next">Next</button>
                     </div>
                     <div class="wizard-footer-right">

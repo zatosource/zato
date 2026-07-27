@@ -105,7 +105,8 @@ kit.lines.setChip = function(slotId, spec) {
 // the accent color. Every option is one word the reader chooses between,
 // so the whole answer is visible without opening anything.
 //
-// optionList - [{name, label}], currentName - which one is picked
+// optionList - [{name, label, is_active}], currentName - which one is picked.
+// An option that is off keeps its place in the list but is not put on screen.
 kit.lines.setSegments = function(slotId, optionList, currentName, onPick) {
 
     var slot = document.getElementById(slotId);
@@ -116,7 +117,12 @@ kit.lines.setSegments = function(slotId, optionList, currentName, onPick) {
     strip.className = 'wizard-segments dashboard-tabs';
 
     for(var optionIdx = 0; optionIdx < optionList.length; optionIdx++) {
-        strip.appendChild(kit.lines._buildSegment(optionList[optionIdx], currentName, onPick));
+
+        var option = optionList[optionIdx];
+
+        if(option.is_active) {
+            strip.appendChild(kit.lines._buildSegment(option, currentName, onPick));
+        }
     }
 
     slot.appendChild(strip);

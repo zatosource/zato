@@ -48,6 +48,9 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
     // How many steps the wizard has
     stepCount: 3,
 
+    // The last step ends in the action itself, so the button says what it does
+    finishLabel: 'Create',
+
     // The rows the "How does it work?" badge walks through - the card
     // header with the wizard-wide overview, then anything on a step
     // body holding a labeled field
@@ -149,7 +152,7 @@ wizard.helpDescriptions = function() {
     // .. and the four decisions of step 2.
     out['mllp-wizard-slot-destinations-chip'] = 'The outgoing connections every message reaches<br>once the service has run.<br>Each of them carries the options its kind has,<br>e.g. the HTTP method of a REST call,<br>and a switch deciding whether it receives messages at all.';
     out['mllp-wizard-slot-service-chip'] = shared['id_service'];
-    out['mllp-wizard-slot-delivery'] = 'All the destinations at once, one after another<br>in the order they were picked, or one at a time<br>as the service hands each of them a message<br>through self.destination[name].';
+    out['mllp-wizard-slot-delivery'] = 'All the destinations at once,<br>or one after another in the order<br>they were picked.';
     out['mllp-wizard-slot-reply-chip'] = shared['destinations-respond-from-create'];
 
     // .. and the options folded away under the four decisions.

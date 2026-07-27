@@ -62,7 +62,8 @@ The page then calls `wizard.init({list_url: ...})` when the DOM is ready.
 | `nameUnique` | Optional, a live uniqueness check for the name - `{source, field, filterName, filterValue}` |
 | `onInit` | Optional, instance wiring run during init |
 | `beforeSave` | Optional, runs before validation on Finish, e.g. to serialize rows into hidden fields |
-| `savedMessage`, `saveErrorMessage`, `redirectDelayMs`, `finishLabel`, `nextLabel` | Optional, the defaults in `kit.core.defaults` cover them |
+| `finishLabel` | Optional, what the button on the last step says - named after the action the wizard ends in, `Create` or `Edit` |
+| `savedMessage`, `saveErrorMessage`, `redirectDelayMs`, `nextLabel` | Optional, the defaults in `kit.core.defaults` cover them |
 
 `core.setup` installs on the namespace: `config`, `state`, `field`, `init`, `goToStep`, `save`, `updateNameBadge`, `initNameBadge`, `onNameCheckResult`. The `wizard.field(name)` accessor resolves `#id_<fieldPrefix><name>` and is the one way into the rendered Django form.
 
@@ -74,7 +75,7 @@ All ids derive from `idPrefix` and all are required:
 - `#<idPrefix>-steps` - the step strip, tabs carry `.wizard-step` and a `data-step` attribute
 - `#<idPrefix>-step-body-N` - one body per step, N counted from 0
 - `#<idPrefix>-name-badge` - the header badge mirroring the name
-- `#<idPrefix>-back`, `-next`, `-cancel`, `-status` - the footer
+- `#<idPrefix>-back`, `-next`, `-cancel`, `-status` - the footer. Back is rendered `disabled`, since a page opens on its first step and there is nothing behind it - the step walking takes it from there
 - `#<idPrefix>-how-it-works` - the page-wide help badge
 - `#<idPrefix>-review` - where the review step renders
 
@@ -136,6 +137,8 @@ The template holds the labels and one empty slot per line, the instance fills th
 
 A strip of options is the shared tab component of `shared/tabs.css`, the same one the step headers use, with its tokens repointed - no border, nothing rounded, no capitals, and the picked option in the lighter of the two dashboard blues so a strip inside a step never reads as the step strip above it.
 
+Every option carries `is_active`, and one that is off is not put on screen. An option not yet ready to be offered is turned off rather than deleted, so turning it back on is all it takes to have it again.
+
 A panel wears the shared popup chrome of `shared/popup.css` - the dark header with the grip, the sandy body, the buttons row with OK - so it is the same popup the micro-forms and the IDE menus open, and `$.fn.zato.popup.install_drag` makes its header the handle. `$.fn.zato.popup.install_resize` adds the grip in each bottom corner, so a panel is dragged wider and taller from either side, never below the `minWidth` its own spec names by the kit's `panelMinHeight`. Where a panel is left is where it opens next time - `save_geometry` writes it under the chip's id when a drag or a resize ends and `restore_geometry` reads it back, clamped to the window in case the window is smaller now, and only a panel that was never moved hangs under its chip. One panel is open at a time, a press outside it or Escape closes it.
 
 The `build` function fills the body and may return a function to run when the panel closes, which is how a panel that edits the DOM directly - a badge picker, say - writes its answers back into the state. It runs while the panel is still on the page, so it can read the answers out of it. Inside a panel the kit offers `buildFilter` and `buildPickRow`, so a panel is a filter above a list of rows, and the row under it holds nothing but OK.
@@ -162,9 +165,16 @@ Both hide with the `hidden` attribute rather than with a height that animates - 
 
 ## Review groups
 
-The review step renders from a list of groups - each group is `{label, step, rows}`, each row a `[key, value]` pair. The value is usually text but may also be a ready DOM Node, e.g. a badge. Each group carries an Edit link that jumps back to the step the answers came from.
+The review step renders from a list of groups - each group is `{label, step, rows}`, each row a `[key, value]` pair. The value is usually text but may also be a ready DOM Node, e.g. a badge. Each group carries an Edit link that goes to the step the answers came from.
+
+A group may also carry:
+
+- `listRows` - rows of one repeating kind, one per destination say, shown before the rest of the group. Once there are more of them than `kit.review.config.listScrollAfter`, they go into a box that scrolls, so a long list never pushes the rest of the review off the page. The box is given its height as a count of rows, which is why a review row is one line tall.
+- `edit` - what to open on the step the Edit link goes to, for a group whose answers are given in a micro-form, a panel or a folded card rather than on the step itself. A group whose answers are on the step needs none.
 
 Card summaries go through `review.setSummary(elementId, text)`, which replays the fade-in when the text changed.
+
+Every question a step asks has a row of its own, whether it has been answered or not - a row left out is a question the reader cannot check. A row states what is set, never what not setting it would mean, so an unanswered one reads as `Not set` or as the plain absence it is, e.g. `No service`.
 
 ## Choice cards
 
