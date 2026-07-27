@@ -172,9 +172,9 @@ A group may also carry:
 - `listRows` - rows of one repeating kind, one per destination say, shown before the rest of the group. Once there are more of them than `kit.review.config.listScrollAfter`, they go into a box that scrolls, so a long list never pushes the rest of the review off the page. The box is given its height as a count of rows, which is why a review row is one line tall.
 - `edit` - what to open on the step the Edit link goes to, for a group whose answers are given in a micro-form, a panel or a folded card rather than on the step itself. A group whose answers are on the step needs none.
 
-The pointer anywhere on a group says which group its Edit link would take the reader to - the label wears `$.fn.zato.highlight_badge`, the honey badge the data tables put on the name cell of the row an inline form or a tooltip is open for, and the group's own rule and rows take the honey up in the stylesheet. The badge is the same class and the same pair of calls the tables use, so the two never drift apart.
+The pointer anywhere on a group marks the whole group - the label wears `$.fn.zato.highlight_badge`, the same class and the same pair of calls the data tables use on the name cell of a row with an inline form open, and the group's rule and rows take the honey up in the stylesheet.
 
-The pointer on the link itself is answered by a tooltip naming what the link goes to, the group's label in the lower case a sentence puts it in, e.g. `Edit tolerance`. The link's own text does not change color - what is to be clicked has already been said by the honey the group is in.
+The pointer on the link itself shows a tooltip naming where the link goes, the group's label in lower case, e.g. `Edit tolerance`. The link's own text keeps its color.
 
 Card summaries go through `review.setSummary(elementId, text)`, which replays the fade-in when the text changed.
 

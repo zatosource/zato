@@ -29,7 +29,7 @@ from zato.common.json_internal import dumps
 from zato.common.odb.model import GenericConn
 from zato.common.odb.query.generic import GenericObjectWrapper
 from zato.common.util.api import hex_sequence_to_bytes
-from zato.server.generic.api.channel_hl7_mllp import get_internal_port
+from zato.server.generic.api.channel_hl7_mllp import get_internal_port, is_channel_routed
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -192,26 +192,41 @@ def store_demo_rules(server:'ParallelServer') -> 'strlist':
 
 # ################################################################################################################################
 
+def _wait_for_main_channel() -> 'int':
+    """ Waits for the listener the burst sends through and for the main demo channel's own
+    route in it, returning the port to send to - zero when neither came up in time. A message
+    that arrives before the route is registered matches no channel and is turned away.
+    """
+    steps_left = _listener_wait_steps
+
+    while steps_left:
+
+        port = get_internal_port()
+
+        if port:
+            if is_channel_routed(Channel_Main):
+                return port
+
+        sleep(_listener_wait_step_seconds)
+        steps_left -= 1
+
+    return 0
+
+# ################################################################################################################################
+
 def send_demo_burst() -> 'int':
     """ Sends a short burst of live messages through the main demo channel
     so the in-process counters and the last-message times show current life,
     not just the seeded history. Returns how many messages went out.
     """
 
-    # The channel wrappers start asynchronously after their connections
-    # are created - the listener is given a moment to come up.
-    port = get_internal_port()
-    steps_left = _listener_wait_steps
+    # The channel wrappers start asynchronously after their connections are created
+    port = _wait_for_main_channel()
 
-    while not port and steps_left:
-        sleep(_listener_wait_step_seconds)
-        port = get_internal_port()
-        steps_left -= 1
-
-    # With no listener there is nothing to send through - the seeded history
+    # With no channel to receive them there is nothing to send - the seeded history
     # is still complete, only the live counters stay at zero.
     if not port:
-        logger.info('No MLLP listener came up, skipping the live demo burst')
+        logger.info('The main demo channel did not come up, skipping the live demo burst')
         return 0
 
     start_sequence = hex_sequence_to_bytes(HL7.Default.start_seq)
