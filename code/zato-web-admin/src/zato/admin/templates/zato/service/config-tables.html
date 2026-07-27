@@ -1,0 +1,215 @@
+{% extends "zato/index.html" %}
+
+{% comment %}
+Config tables - the config files a service reads through self.config, browsed and
+edited from the dashboard. The files are listed on the left and the one being
+looked at fills the rest of the page - what it is called, how a service reaches
+it, what it holds, the file itself and a strip that runs a value through it. The
+view provides:
+
+* cluster_id           - the current cluster
+* table_list_json      - every file with its contents
+* directory_list_json  - the directories a file may be uploaded into
+* user_conf_directory  - where the files live
+* max_editable_size    - how large a file may be before it is edited outside the browser
+{% endcomment %}
+
+{% block html_title %}Config tables{% endblock %}
+
+{% block "extra_css" %}
+<link rel="stylesheet" type="text/css" href="/static/css/settings.css">
+<link rel="stylesheet" type="text/css" href="/static/css/service/config-tables.css">
+{% endblock %}
+
+{% block "extra_js" %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/text.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/parse.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/invoker.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/files.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/core.js"></script>
+
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.service.config_tables.init({
+        table_list: {{ table_list_json|safe }},
+        directory_list: {{ directory_list_json|safe }},
+        user_conf_directory: '{{ user_conf_directory }}',
+        max_editable_size: {{ max_editable_size }}
+    });
+});
+</script>
+{% endblock %}
+
+{% block "content" %}
+
+<div class="settings-container">
+<div class="settings-panel">
+
+    <div class="config-tables-panel-header">
+        <h2>Config tables</h2>
+        <span class="config-tables-root" id="config-tables-root"></span>
+    </div>
+
+    <div class="settings-content">
+
+        <!-- The browser -->
+        <div class="config-tables-browser">
+
+            <h3>Files</h3>
+            <ul class="config-tables-file-list" id="config-tables-file-list"></ul>
+
+            <div class="config-tables-browser-buttons">
+                <button type="button" class="secondary-button" id="config-tables-new">New file</button>
+                <button type="button" class="secondary-button" id="config-tables-upload">Upload file</button>
+            </div>
+
+        </div>
+
+        <!-- The file being looked at -->
+        <div class="settings-main">
+
+            <div class="config-tables-empty" id="config-tables-empty" hidden></div>
+
+            <div id="config-tables-editor">
+
+                <div class="config-tables-editor-header">
+                    <h3 id="config-tables-file-name"></h3>
+                    <span class="config-tables-kind" id="config-tables-kind"></span>
+                    <span class="config-tables-header-actions">
+                        <a href="javascript:void(0)" id="config-tables-rename">Rename</a>
+                        <a href="javascript:void(0)" id="config-tables-delete">Delete</a>
+                    </span>
+                </div>
+
+                <div class="config-tables-inline-row" id="config-tables-rename-row" hidden>
+                    <input type="text" id="config-tables-rename-input" autocomplete="off">
+                    <button type="button" class="secondary-button" id="config-tables-rename-cancel">Cancel</button>
+                    <button type="button" class="action-button" id="config-tables-rename-apply">Rename</button>
+                </div>
+
+                <div class="config-tables-inline-row" id="config-tables-delete-row" hidden>
+                    <span class="config-tables-question" id="config-tables-delete-question"></span>
+                    <button type="button" class="secondary-button" id="config-tables-delete-cancel">Keep it</button>
+                    <button type="button" class="action-button" id="config-tables-delete-confirm">Delete</button>
+                </div>
+
+                <div class="info-container">
+
+                    <div class="info-row">
+                        <div class="info-label">In a service</div>
+                        <div class="info-value"><code id="config-tables-reference"></code></div>
+                    </div>
+
+                    <div class="info-row">
+                        <div class="info-label">Holds</div>
+                        <div class="info-value" id="config-tables-holds"></div>
+                    </div>
+
+                    <div class="info-row">
+                        <div class="info-label">File</div>
+                        <div class="info-value" id="config-tables-path"></div>
+                    </div>
+
+                </div>
+
+                <!-- Shown in place of the editor buttons for a file too large for the browser -->
+                <div class="config-tables-outside" id="config-tables-outside" hidden>
+                    <span class="config-tables-outside-text" id="config-tables-outside-text"></span>
+                    <span class="config-tables-outside-buttons">
+                        <button type="button" class="secondary-button" id="config-tables-download">Download</button>
+                        <button type="button" class="action-button" id="config-tables-replace">Upload a new version</button>
+                    </span>
+                </div>
+
+                <textarea id="config-tables-content" spellcheck="false"></textarea>
+
+                <div class="button-container" id="config-tables-editor-buttons">
+                    <div class="button-left-options">
+                        <a href="javascript:void(0)" id="config-tables-restore">Restore initial values</a>
+                    </div>
+                    <div class="button-wrapper">
+                        <span class="config-tables-status" id="config-tables-status"></span>
+                        <button type="button" class="secondary-button" id="config-tables-check">Check</button>
+                    </div>
+                    <button type="button" class="action-button" id="config-tables-save">Save</button>
+                </div>
+
+                <!-- Runs against the file on screen, which is what makes the answer
+                     the one a service reading the same file gets -->
+                <div class="config-tables-try">
+
+                    <h3>Try it</h3>
+
+                    <div class="config-tables-inline-row">
+                        <label class="config-tables-field" id="config-tables-try-from-field">
+                            <span>Coming from</span>
+                            <input type="text" id="config-tables-try-from" autocomplete="off">
+                        </label>
+                        <label class="config-tables-field">
+                            <span>Value</span>
+                            <input type="text" id="config-tables-try-code" autocomplete="off">
+                        </label>
+                        <button type="button" class="secondary-button" id="config-tables-try-run">Run</button>
+                    </div>
+
+                    <code class="config-tables-call" id="config-tables-call"></code>
+                    <div class="config-tables-result" id="config-tables-result"></div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+</div>
+
+<!-- Uploading a file - the one question that matters is where it goes -->
+<div class="config-tables-overlay" id="config-tables-overlay" hidden>
+    <div class="config-tables-dialog">
+
+        <div class="config-tables-dialog-header">
+            <h3 id="config-tables-dialog-title">Upload a file</h3>
+        </div>
+
+        <div class="config-tables-dialog-body">
+
+            <label class="config-tables-dialog-field">
+                <span>File</span>
+                <input type="file" id="config-tables-dialog-file">
+            </label>
+
+            <label class="config-tables-dialog-field" id="config-tables-dialog-directory-field">
+                <span>Goes into</span>
+                <select id="config-tables-dialog-directory"></select>
+            </label>
+
+            <div class="info-container">
+                <div class="info-row">
+                    <div class="info-label">Will be at</div>
+                    <div class="info-value"><code id="config-tables-dialog-path"></code></div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">In a service</div>
+                    <div class="info-value"><code id="config-tables-dialog-reference"></code></div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="button-container">
+            <div class="button-left-options">
+                <span class="config-tables-status" id="config-tables-dialog-status"></span>
+            </div>
+            <div class="button-wrapper">
+                <button type="button" class="secondary-button" id="config-tables-dialog-cancel">Cancel</button>
+            </div>
+            <button type="button" class="action-button" id="config-tables-dialog-upload">Upload</button>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

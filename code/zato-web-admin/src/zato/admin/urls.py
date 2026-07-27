@@ -59,6 +59,7 @@ from zato.admin.web.views.outgoing import sftp as out_sftp
 from zato.admin.web.views.outgoing import smb as out_smb
 from zato.admin.web.views.outgoing import soap as out_soap
 from zato.admin.web.views.outgoing import sql as out_sql
+from zato.admin.web.views.service import config_tables as service_config_tables
 from zato.admin.web.views.service import ide as service_ide
 from zato.admin.web.views.security import apikey, basic_auth, mtls, ntlm, spnego, wss
 from zato.admin.web.views.security import posture as security_posture
@@ -136,6 +137,8 @@ urlpatterns += [
         login_required(service.overview), name='service-overview'),
     url(r'^zato/service/invoke/(?P<name>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(service.invoke), name='service-invoke'),
+    url(r'^zato/service/config-tables/$',
+        login_required(service_config_tables.index), name='service-config-tables'),
     url(r'^zato/service/ide/get-service/(?P<service_name>.*)/$',
         login_required(service_ide.get_service), name='service-ide-get-service'),
     url(r'^zato/service/ide/parse-payload/$',
