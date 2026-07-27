@@ -775,6 +775,9 @@ test-microsoft-cloud: ## Microsoft 365 connection tests through a live Zato serv
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_microsoft_cloud_live -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
+# The mllp_languages suite runs in a pytest session of its own because it and mllp_integration
+# each have their own conftest and _services modules - one session would hold only one of the two.
+# Zato_Test_HL7_Languages is not set here, so a machine without a JDK or haproxy skips rather than fails.
 test-hl7: ## HL7v2 parsing and MLLP tests.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/mllp/ \
@@ -786,8 +789,11 @@ test-hl7: ## HL7v2 parsing and MLLP tests.
 		$(CURDIR)/code/tests/python/zato-server/destinations/ \
 		$(CURDIR)/code/tests/python/zato-common/demo_seed/ \
 		$(CURDIR)/code/tests/python/zato-server/mllp_integration/ \
-		$(CURDIR)/code/tests/python/zato-server/mllp_languages/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7 -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/mllp_languages/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7_languages -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-hl7-languages: ## MLLP channels proven from other languages, through real HAProxy - Linux only, needs a JDK and haproxy.
