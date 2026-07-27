@@ -22,11 +22,9 @@ review.config = {
     // The routing summary when no matcher is filled in
     anyMessageLabel: 'All messages',
 
-    // What the review says when no destination is configured
-    noDestinationsLabel: 'None - the service handles everything',
-
-    // What the review says when the channel runs no service at all
-    noServiceLabel: 'None - the destinations do the work',
+    // What the review says about a decision not made yet
+    notSetLabel: 'Not set',
+    noServiceLabel: 'No service',
 
     // What the tolerance review says when nothing differs from the defaults
     allStandardFixupsLabel: 'All standard fixups enabled',
@@ -400,6 +398,71 @@ review._toleranceReviewRows = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// What a group's Edit link opens once the step it belongs to is on screen,
+// so the answer is there to be changed rather than to be looked for. The
+// Basics group has none - its answers are the name row of step 1 itself.
+
+review._editTransport = function() {
+    wizard.forms.open('transport', document.getElementById('mllp-wizard-edit-transport'));
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+review._editRouting = function() {
+    wizard.forms.open('routing', document.getElementById('mllp-wizard-edit-routing'));
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+review._editDestinations = function() {
+
+    var lines = $.fn.zato.wizard_kit.lines;
+    var chip = document.getElementById('mllp-wizard-slot-destinations-chip');
+
+    lines.closePanel();
+    lines.openPanel(chip, wizard.destinations.panels.destinationsPanel());
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The three option cards are folded away behind the More options line, so
+// that line goes first - a card inside a closed body has nothing to open on.
+review._openOptions = function() {
+
+    if($('#mllp-wizard-options-body').prop('hidden')) {
+        $('#mllp-wizard-edit-options').trigger('click');
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+review._editTolerance = function() {
+
+    review._openOptions();
+
+    if(!$('#mllp-wizard-tolerance-body').hasClass('wizard-option-body-open')) {
+        $('#mllp-wizard-tolerance-header').trigger('click');
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+review._editDedup = function() {
+
+    review._openOptions();
+    wizard.forms.open('dedup', document.getElementById('mllp-wizard-card-dedup'));
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+review._editLogging = function() {
+
+    review._openOptions();
+    wizard.forms.open('logging', document.getElementById('mllp-wizard-card-logging'));
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 // Renders the review step from the current form state.
 review.render = function() {
 
@@ -450,9 +513,9 @@ review.render = function() {
 
     // Destinations and service, in the order the four lines of step 2 ask
     // the questions - where messages go, who handles them, in what order
-    // the destinations receive them and which one replies
-    var serviceRows = [];
-    var destinationCount = 0;
+    // the destinations receive them and which one replies. The destinations
+    // are a list of their own, which is what lets a long one scroll.
+    var destinationRows = [];
 
     // The type list is read once for the whole summary rather than once per destination
     var typeLabelMap = wizard.destinations._getTypeLabelMap();
@@ -460,36 +523,37 @@ review.render = function() {
     for(var destinationIdx = 0; destinationIdx < wizard.state.destinationList.length; destinationIdx++) {
         var destination = wizard.state.destinationList[destinationIdx];
         if(destination.connection) {
-            destinationCount++;
             var rowLabel = wizard.destinations._rowLabel(destination, typeLabelMap);
             if(!destination.isActive) {
                 rowLabel += ' (paused)';
             }
-            serviceRows.push(['Destination', rowLabel]);
+            destinationRows.push(['Destination', rowLabel]);
         }
     }
 
-    if(!destinationCount) {
-        serviceRows.push(['Destinations', config.noDestinationsLabel]);
+    // Every question of step 2 is answered here, the ones not yet decided
+    // included - a row left out is a question the reader cannot check
+    var serviceRows = [];
+
+    if(!destinationRows.length) {
+        serviceRows.push(['Destinations', config.notSetLabel]);
     }
 
     var serviceName = wizard.field('service').val();
     serviceRows.push(['Service', serviceName ? serviceName : config.noServiceLabel]);
 
-    if(destinationCount) {
-        serviceRows.push(['Delivery', wizard.destinations.deliveryLabel()]);
-    }
-
+    serviceRows.push(['Delivery', wizard.destinations.deliveryLabel()]);
     serviceRows.push(['Reply from', wizard.destinations.replyLabel()]);
 
     review.renderGroups([
         {label: 'Basics',       step: 0, rows: basicsRows},
-        {label: 'Transport',    step: 0, rows: transportRows},
-        {label: 'Routing',      step: 0, rows: routingRows},
-        {label: 'Destinations and service', step: 1, rows: serviceRows},
-        {label: 'Tolerance',    step: 1, rows: review._toleranceReviewRows()},
-        {label: 'Deduplication', step: 1, rows: [['Window', review._dedupSummary()]]},
-        {label: 'Logging',      step: 1, rows: [['Behavior', review._loggingSummary()]]}
+        {label: 'Transport',    step: 0, rows: transportRows, edit: review._editTransport},
+        {label: 'Routing',      step: 0, rows: routingRows, edit: review._editRouting},
+        {label: 'Destinations and service', step: 1, listRows: destinationRows, rows: serviceRows,
+            edit: review._editDestinations},
+        {label: 'Tolerance',    step: 1, rows: review._toleranceReviewRows(), edit: review._editTolerance},
+        {label: 'Deduplication', step: 1, rows: [['Window', review._dedupSummary()]], edit: review._editDedup},
+        {label: 'Logging',      step: 1, rows: [['Behavior', review._loggingSummary()]], edit: review._editLogging}
     ]);
 };
 

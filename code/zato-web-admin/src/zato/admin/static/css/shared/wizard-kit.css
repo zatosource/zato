@@ -61,6 +61,10 @@
     --wizard-text-muted: #71717a;
     --wizard-text-faint: #9ca3af;
 
+    /* One line of the review, which is the unit a scrolling list of its
+       rows is given its height in */
+    --wizard-review-row-height: 26px;
+
     /* What a label reads as while the switch it names is off - the text
        stepped back a notch, never so far as to read as disabled */
     --wizard-text-off: color-mix(in srgb, var(--wizard-text) 68%, #fff);
@@ -888,6 +892,20 @@ a.wizard-select-delete:hover::before {
     display: flex;
     padding: 4px 0;
     font-size: 13px;
+
+    /* A row is one line tall, which is what lets a list of them be given a
+       height counted in rows. A row with something taller than text in it,
+       e.g. a badge, still takes the room it needs. */
+    min-height: var(--wizard-review-row-height);
+    box-sizing: border-box;
+}
+
+/* The rows of one repeating kind a group opens with. How many are on screen
+   is the renderer's, written onto the box as a count of rows, and a partly
+   visible row at the fold is what says there is more below. */
+.wizard-review-list {
+    overflow-y: auto;
+    max-height: calc(var(--wizard-review-visible-rows) * var(--wizard-review-row-height));
 }
 
 .wizard-review-key {

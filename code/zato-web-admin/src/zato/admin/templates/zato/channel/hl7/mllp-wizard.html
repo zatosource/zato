@@ -149,7 +149,7 @@ $(document).ready(function() {
                                 <span class="wizard-line-slot" id="mllp-wizard-slot-service"></span>
                             </div>
 
-                            <div class="wizard-line" id="mllp-wizard-line-delivery" hidden>
+                            <div class="wizard-line" id="mllp-wizard-line-delivery">
                                 <label class="wizard-line-label" for="mllp-wizard-slot-delivery">The destinations receive it</label>
                                 <span class="wizard-line-slot" id="mllp-wizard-slot-delivery"></span>
                             </div>
@@ -240,7 +240,9 @@ $(document).ready(function() {
                 <div class="wizard-footer">
                     <span class="how-it-works-badge" id="mllp-wizard-how-it-works">How does it work?</span>
                     <div class="wizard-footer-center">
-                        <button type="button" class="secondary-button" id="mllp-wizard-back">Back</button>
+                        <!-- The page opens on the first step, where there is nothing
+                             to go back to, so Back starts out disabled -->
+                        <button type="button" class="secondary-button" id="mllp-wizard-back" disabled>Back</button>
                         <button type="button" class="action-button" id="mllp-wizard-next">Next</button>
                     </div>
                     <div class="wizard-footer-right">

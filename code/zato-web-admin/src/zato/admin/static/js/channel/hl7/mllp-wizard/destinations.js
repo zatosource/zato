@@ -35,24 +35,22 @@ destinations.config = {
         reply: 'mllp-wizard-slot-reply'
     },
 
-    // The line that only makes sense once there is a destination
-    deliveryLineId: 'mllp-wizard-line-delivery',
-
-    // How the destinations reach their messages - the last one is the
-    // service's own call, made through self.destination[name]
+    // How the destinations reach their messages. The last one is the
+    // service's own call, made through self.destination[name], and it is
+    // off for now.
     deliveryModeList: [
-        {name: 'same-time', label: 'At the same time'},
-        {name: 'in-order', label: 'One after another'},
-        {name: 'service-decides', label: 'The service decides'}
+        {name: 'same-time', label: 'At the same time', is_active: true},
+        {name: 'in-order', label: 'One after another', is_active: true},
+        {name: 'service-decides', label: 'The service decides', is_active: false}
     ],
 
     // What a chip says
-    noDestinationsLabel: 'none yet',
+    noDestinationsLabel: 'Not set',
     oneDestinationLabel: '1 destination',
     manyDestinationsLabel: ' destinations',
     pausedLabel: ' paused',
-    noServiceLabel: 'none',
-    noReplyLabel: 'nothing replies'
+    noServiceLabel: 'No service',
+    noReplyLabel: 'Nothing replies'
 };
 
 // Connections grouped by destination type, loaded once per page
@@ -152,10 +150,6 @@ destinations.render = function() {
 
     lines.setSegments(destinationsConfig.slots.delivery, destinationsConfig.deliveryModeList,
         wizard.state.delivery, destinations._pickDelivery);
-
-    // The order they receive messages in is a question only a list can raise
-    var hasDestinations = wizard.state.destinationList.length > 0;
-    $('#' + destinationsConfig.deliveryLineId).prop('hidden', !hasDestinations);
 
     wizard.review.refreshSummaries();
 };

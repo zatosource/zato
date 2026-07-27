@@ -61,7 +61,7 @@ panels.config = {
         clear: 'Clear',
         services: 'Services',
         replyFrom: 'The reply comes from',
-        nothingToReply: 'There is nothing to reply yet',
+        nothingToReply: 'Pick a service or a destination first',
         active: 'Active'
     }
 };

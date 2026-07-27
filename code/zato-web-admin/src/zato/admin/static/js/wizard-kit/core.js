@@ -46,7 +46,9 @@
 //      onInit         - optional, instance wiring run during init
 //      beforeSave     - optional, runs before validation on Finish, e.g. to
 //                       serialize rows into hidden fields
-//      savedMessage, saveErrorMessage, redirectDelayMs, finishLabel,
+//      finishLabel    - optional, what the button on the last step says,
+//                       named after the action - Create or Edit
+//      savedMessage, saveErrorMessage, redirectDelayMs,
 //      nextLabel      - optional, the defaults below cover them
 //
 // The element contract - ids derived from idPrefix, all required:
@@ -56,7 +58,9 @@
 //                                 and a data-step attribute
 //      #<idPrefix>-step-body-N  - one body per step, N counted from 0
 //      #<idPrefix>-name-badge   - the header badge mirroring the name
-//      #<idPrefix>-back, -next, -cancel, -status - the footer
+//      #<idPrefix>-back, -next, -cancel, -status - the footer, with Back
+//                       rendered disabled, the first step having nothing
+//                       behind it
 //      #<idPrefix>-how-it-works - the page-wide help badge
 //      #<idPrefix>-review       - where the review step renders
 //
@@ -89,7 +93,8 @@ kit.core.defaults = {
     // How long the success message stays on screen before the redirect
     redirectDelayMs: 750,
 
-    // The footer button labels
+    // The footer button labels. The last step is where the wizard does what
+    // it was opened for, so an instance names that - Create or Edit.
     finishLabel: 'Finish',
     nextLabel: 'Next',
 

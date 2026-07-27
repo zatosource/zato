@@ -37,6 +37,21 @@ kit.review = {};
 
 // ////////////////////////////////////////////////////////////////////////
 
+kit.review.config = {
+
+    // The word every group's link into its step is written with
+    editLabel: 'Edit',
+
+    // How many rows of a group's leading list are on screen before the
+    // list scrolls - an instance that wants more or fewer sets this
+    listScrollAfter: 2,
+
+    // What the scroll box's height is counted in rows with
+    visibleRowsProperty: '--wizard-review-visible-rows'
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 kit.review.setup = function(wizard) {
 
     var review = wizard.review;
@@ -63,8 +78,68 @@ kit.review.setup = function(wizard) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Renders the review step from a list of groups - each group is
-    // {label, step, rows}, each row a [key, value] pair.
+    // One [key, value] pair as a row.
+    review._buildRow = function(row) {
+
+        var out = document.createElement('div');
+        out.className = 'wizard-review-row';
+
+        var key = document.createElement('span');
+        key.className = 'wizard-review-key';
+        key.textContent = row[0];
+        out.appendChild(key);
+
+        var value = document.createElement('span');
+        value.className = 'wizard-review-value';
+
+        // A value is usually text, but rows like a badge
+        // bring a ready element of their own
+        if(row[1] instanceof Node) {
+            value.appendChild(row[1]);
+        }
+        else {
+            value.textContent = row[1];
+        }
+        out.appendChild(value);
+
+        return out;
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // The rows of one repeating kind a group opens with - a handful of them
+    // read as a list, fifty of them would push the rest of the review off
+    // the page, so past the configured count the list scrolls instead.
+    review._buildRowList = function(listRows) {
+
+        var reviewConfig = kit.review.config;
+        var visibleCount = reviewConfig.listScrollAfter;
+
+        var out = document.createElement('div');
+
+        if(listRows.length > visibleCount) {
+            out.className = 'wizard-review-list';
+            out.style.setProperty(reviewConfig.visibleRowsProperty, visibleCount);
+        }
+
+        for(var rowIdx = 0; rowIdx < listRows.length; rowIdx++) {
+            out.appendChild(review._buildRow(listRows[rowIdx]));
+        }
+
+        return out;
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // Renders the review step from a list of groups. A group is
+    // {label, step, rows}, each row a [key, value] pair, and may also carry:
+    //
+    //   listRows - rows of one repeating kind, e.g. one per destination,
+    //              shown before the rest of the group and scrolling once
+    //              there are more of them than the config shows at once
+    //   edit     - what to open on the step the Edit link goes to, for a
+    //              group whose answers are given in a form rather than on
+    //              the step itself
     review.renderGroups = function(groups) {
 
         var container = $('#' + idPrefix + '-review');
@@ -86,45 +161,34 @@ kit.review.setup = function(wizard) {
 
             var editLink = document.createElement('span');
             editLink.className = 'wizard-review-edit';
-            editLink.textContent = 'Edit';
-            editLink.setAttribute('data-step', group.step);
+            editLink.textContent = kit.review.config.editLabel;
+            editLink.setAttribute('data-group', groupIdx);
             header.appendChild(editLink);
 
             groupElement.appendChild(header);
 
+            if(group.listRows && group.listRows.length) {
+                groupElement.appendChild(review._buildRowList(group.listRows));
+            }
+
             for(var rowIdx = 0; rowIdx < group.rows.length; rowIdx++) {
-                var row = group.rows[rowIdx];
-
-                var rowElement = document.createElement('div');
-                rowElement.className = 'wizard-review-row';
-
-                var key = document.createElement('span');
-                key.className = 'wizard-review-key';
-                key.textContent = row[0];
-                rowElement.appendChild(key);
-
-                var value = document.createElement('span');
-                value.className = 'wizard-review-value';
-
-                // A value is usually text, but rows like a badge
-                // bring a ready element of their own
-                if(row[1] instanceof Node) {
-                    value.appendChild(row[1]);
-                }
-                else {
-                    value.textContent = row[1];
-                }
-                rowElement.appendChild(value);
-
-                groupElement.appendChild(rowElement);
+                groupElement.appendChild(review._buildRow(group.rows[rowIdx]));
             }
 
             container.append(groupElement);
         }
 
-        // The Edit links jump back to the step their group came from
+        // An Edit link goes to the step its group came from and opens
+        // whatever the group named, so the answer is there to be changed
+        // rather than to be looked for
         container.find('.wizard-review-edit').on('click', function() {
-            wizard.goToStep(parseInt(this.getAttribute('data-step')));
+
+            var group = groups[parseInt(this.getAttribute('data-group'))];
+            wizard.goToStep(group.step);
+
+            if(group.edit) {
+                group.edit();
+            }
         });
     };
 

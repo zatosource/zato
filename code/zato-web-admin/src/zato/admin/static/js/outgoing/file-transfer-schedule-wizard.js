@@ -33,6 +33,9 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
     // How many steps the wizard has
     stepCount: 3,
 
+    // The last step ends in the action itself, so the button says what it does
+    finishLabel: 'Create',
+
     // The rows the "How does it work?" badge walks through - the card
     // header with the wizard-wide overview, then anything on a step
     // body holding a labeled field
