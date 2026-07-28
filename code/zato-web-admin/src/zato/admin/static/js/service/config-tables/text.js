@@ -72,7 +72,7 @@ tables.buildCallText = function(table, fromName, code) {
     var out = reference + '.validate(' + singleQuote + code + singleQuote + ')';
 
     if(tables.isMappingSet(table)) {
-        var from = 'from_=' + singleQuote + fromName + singleQuote;
+        var from = 'source=' + singleQuote + fromName + singleQuote;
         var value = 'code=' + singleQuote + code + singleQuote;
 
         out = reference + '.translate(' + from + ', ' + value + ')';
@@ -99,13 +99,12 @@ tables.buildMissingText = function(table, fromName, code) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// What a file too large for the browser says where the buttons that would save
-// it are.
+// What stands in the editor for a file too large to be edited in it - a comment,
+// so it reads as one line of the kind of file it stands for.
 tables.buildOutsideText = function(table) {
 
     var size = tables.formatSize(table.size);
-    var out = 'This file is ' + size + ', which is more than the browser edits in place - ' +
-        'download it, change it in your own tools and upload it back.';
+    var out = '# ' + size + ' - too large to edit here. Download it, change it, upload it back.';
 
     return out;
 };

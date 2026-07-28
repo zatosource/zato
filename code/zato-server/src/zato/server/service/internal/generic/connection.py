@@ -75,6 +75,14 @@ hook = {
 
 # ################################################################################################################################
 
+# The connection types whose clients send messages to a target rather than invoking a request as-is
+_chat_conn_types = frozenset({
+    COMMON_GENERIC.CONNECTION.TYPE.CHAT_MICROSOFT_TEAMS,
+    COMMON_GENERIC.CONNECTION.TYPE.CHAT_SLACK,
+})
+
+# ################################################################################################################################
+
 def instance_hook(service, input, instance, attrs):
     """ Called before delete commit. Cleans up the HTTPSOAP channel for MCP and Rule engine API connections.
     """
@@ -805,7 +813,7 @@ class Ping(_BaseService):
 class Invoke(AdminService):
     """ Invokes a generic connection by its name.
     """
-    input = 'conn_type', 'conn_name', '-request_data'
+    input = 'conn_type', 'conn_name', '-request_data', '-target'
     output = '-response_data'
 
     def handle(self) -> 'None':
@@ -817,12 +825,35 @@ class Invoke(AdminService):
 
         # Maps all known connection types to their implementation ..
         conn_type_to_container = {
+            COMMON_GENERIC.CONNECTION.TYPE.CHAT_MICROSOFT_TEAMS: self.server.config_manager.chat_microsoft_teams,
+            COMMON_GENERIC.CONNECTION.TYPE.CHAT_SLACK: self.server.config_manager.chat_slack,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: self.server.config_manager.outconn_hl7_fhir,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: self.server.config_manager.outconn_hl7_mllp,
         }
 
         # .. get the actual implementation ..
         container = conn_type_to_container[conn_type]
+
+        # .. chat connections send the request as a message to a target - a channel, a person or a group -
+        # .. rather than invoking a client with the request as-is, and their errors are reported to the caller
+        # .. instead of being turned into a response, which is why this path returns early ..
+        if conn_type in _chat_conn_types:
+
+            target = self.request.input.target
+            if not target:
+                raise Exception('No target provided')
+
+            if not request_data:
+                raise Exception('No message provided')
+
+            # All the chat clients take the target first and the message second.
+            client = container[self.request.input.conn_name].conn.shared_client
+            response = client.send(target, request_data)
+
+            # The response is JSON and the caller needs text
+            self.response.payload.response_data = dumps(response, indent=2)
+
+            return
 
         # .. and invoke it.
         with container[self.request.input.conn_name].conn.client() as client:

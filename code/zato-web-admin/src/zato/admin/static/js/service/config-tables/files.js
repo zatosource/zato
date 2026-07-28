@@ -1,12 +1,10 @@
 // Config tables - what is done to a file rather than to what is in it: adding
-// one, renaming it, taking a copy of it, putting a new version of it in place and
-// removing it.
+// one, renaming it, taking a copy of it and removing it. All of it is started from
+// the listing's menu in menu.js, and the two buttons under the listing start the
+// two that bring a file in. Bringing one in from your own machine is in upload.js.
 //
-// Renaming and deleting are asked about on the row they are started from, so the
-// answer is given where the question is. Uploading is the one thing with a
-// question of its own - where the file goes - so it is the one thing that opens a
-// dialog. Every change goes out through persist, which is the single place the
-// page talks to the server from.
+// A rename happens on the file's own row, in place of its name. Every change goes
+// out through persist, which is the single place the page talks to the server from.
 
 (function($) {
 
@@ -25,22 +23,7 @@ files.config = {
     suffix: '.ini',
 
     // What a downloaded copy is handed over as
-    downloadType: 'text/plain',
-
-    // What the dialog says while it has nothing to show yet
-    dialogBlank: '-',
-
-    // What the dialog is titled, by what it is opened for
-    uploadTitle: 'Upload a file',
-    replaceTitle: 'Upload a new version'
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-files.state = {
-
-    // The file the dialog replaces, '' when it uploads a new one
-    replacedName: ''
+    downloadType: 'text/plain'
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -48,27 +31,7 @@ files.state = {
 files.init = function() {
 
     tables.get('new').addEventListener('click', files.add);
-    tables.get('upload').addEventListener('click', files.openUpload);
-    tables.get('replace').addEventListener('click', files.openReplace);
     tables.get('download').addEventListener('click', files.download);
-
-    tables.get('rename').addEventListener('click', files.startRename);
-    tables.get('rename-cancel').addEventListener('click', files.hideInlineRows);
-    tables.get('rename-apply').addEventListener('click', files.applyRename);
-
-    tables.get('delete').addEventListener('click', files.startDelete);
-    tables.get('delete-cancel').addEventListener('click', files.hideInlineRows);
-    tables.get('delete-confirm').addEventListener('click', files.applyDelete);
-
-    files.initDialog();
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-files.hideInlineRows = function() {
-
-    tables.get('rename-row').hidden = true;
-    tables.get('delete-row').hidden = true;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -137,25 +100,67 @@ files.buildFreeName = function() {
 // Renaming
 // ////////////////////////////////////////////////////////////////////////
 
+// The name on the file's own row becomes the field the new one is typed into -
+// Enter is the answer and Escape leaves the file as it was called.
 files.startRename = function() {
 
     var table = tables.getCurrent();
+    var row = files.getRow(table.name);
+    var name = row.querySelector('.config-tables-file-name');
 
-    files.hideInlineRows();
-
-    var input = tables.get('rename-input');
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'config-tables-file-rename';
+    input.autocomplete = 'off';
     input.value = table.name;
 
-    tables.get('rename-row').hidden = false;
+    // The row opens the file it is of, which a press inside the field is not
+    input.addEventListener('mousedown', function(event) {
+        event.stopPropagation();
+    });
+
+    input.addEventListener('click', function(event) {
+        event.stopPropagation();
+    });
+
+    input.addEventListener('keydown', function(event) {
+
+        if(event.key === 'Enter') {
+            files.applyRename(input.value.trim());
+        }
+
+        if(event.key === 'Escape') {
+            tables.renderList();
+        }
+    });
+
+    // Leaving the field alone leaves the name alone
+    input.addEventListener('blur', function() {
+        tables.renderList();
+    });
+
+    row.replaceChild(input, name);
+
     input.focus();
+    input.select();
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-files.applyRename = function() {
+// The file's row as it is on screen now, which is what a rename types into.
+files.getRow = function(name) {
+
+    var selector = '.config-tables-file-row[data-name="' + name + '"]';
+    var out = tables.get('file-list').querySelector(selector);
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+files.applyRename = function(name) {
 
     var table = tables.getCurrent();
-    var name = tables.get('rename-input').value.trim();
 
     if(!name) {
         tables.setStatus('A file needs a name', true);
@@ -163,7 +168,7 @@ files.applyRename = function() {
     }
 
     if(name === table.name) {
-        files.hideInlineRows();
+        tables.renderList();
         return;
     }
 
@@ -182,7 +187,6 @@ files.applyRename = function() {
     tables.state.initialContent[name] = tables.state.initialContent[previousName];
 
     files.persist('rename', table, function() {
-        files.hideInlineRows();
         tables.select(name);
         tables.setStatus('Renamed ' + previousName + ' to ' + name);
     });
@@ -208,19 +212,7 @@ files.getSuffix = function(fileName) {
 // Deleting
 // ////////////////////////////////////////////////////////////////////////
 
-files.startDelete = function() {
-
-    var table = tables.getCurrent();
-
-    files.hideInlineRows();
-
-    tables.get('delete-question').textContent = 'Delete ' + table.path + '?';
-    tables.get('delete-row').hidden = false;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-files.applyDelete = function() {
+files.remove = function() {
 
     var table = tables.getCurrent();
     var tableList = tables.state.tableList;
@@ -230,7 +222,6 @@ files.applyDelete = function() {
 
     files.persist('delete', table, function() {
 
-        files.hideInlineRows();
         tables.state.currentName = '';
         tables.renderList();
 
@@ -271,214 +262,6 @@ files.download = function() {
 
     anchor.remove();
     URL.revokeObjectURL(url);
-};
-
-// ////////////////////////////////////////////////////////////////////////
-// Uploading
-// ////////////////////////////////////////////////////////////////////////
-
-files.initDialog = function() {
-
-    var directory = tables.get('dialog-directory');
-    var directoryList = tables.state.directoryList;
-
-    for(var directoryIdx = 0; directoryIdx < directoryList.length; directoryIdx++) {
-
-        var option = document.createElement('option');
-        option.value = directoryList[directoryIdx];
-        option.textContent = directoryList[directoryIdx];
-        directory.appendChild(option);
-    }
-
-    // There is nothing to pick while the server reports the one directory
-    var hasChoice = directoryList.length > 1;
-    tables.get('dialog-directory-field').hidden = !hasChoice;
-
-    tables.get('dialog-file').addEventListener('change', files.refreshDialog);
-    directory.addEventListener('change', files.refreshDialog);
-    tables.get('dialog-cancel').addEventListener('click', files.closeDialog);
-    tables.get('dialog-upload').addEventListener('click', files.applyUpload);
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-files.openUpload = function() {
-
-    files.state.replacedName = '';
-    files.openDialog(files.config.uploadTitle);
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// The same dialog, opened for the file already open - what comes out of it takes
-// that file's place instead of being added next to it.
-files.openReplace = function() {
-
-    var table = tables.getCurrent();
-
-    files.state.replacedName = table.name;
-    files.openDialog(files.config.replaceTitle);
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-files.openDialog = function(title) {
-
-    tables.get('dialog-title').textContent = title;
-    tables.get('dialog-file').value = '';
-    tables.get('dialog-status').textContent = '';
-
-    files.refreshDialog();
-    tables.get('overlay').hidden = false;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-files.closeDialog = function() {
-
-    tables.get('overlay').hidden = true;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// Where the file would end up and what a service would read it as, kept up with
-// what has been picked so far.
-files.refreshDialog = function() {
-
-    var blank = files.config.dialogBlank;
-    var uploaded = files.getPickedFile();
-    var path = blank;
-    var reference = blank;
-
-    if(uploaded) {
-        var directory = files.getPickedDirectory();
-        var name = files.buildNameFromFile(uploaded.name);
-
-        path = directory + uploaded.name;
-        reference = tables.buildReference(name);
-    }
-
-    tables.get('dialog-path').textContent = path;
-    tables.get('dialog-reference').textContent = reference;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-files.getPickedFile = function() {
-
-    var out = null;
-    var fileList = tables.get('dialog-file').files;
-    var hasFile = fileList.length > 0;
-
-    if(hasFile) {
-        out = fileList[0];
-    }
-
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-files.getPickedDirectory = function() {
-
-    var out = tables.get('dialog-directory').value;
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// The name a service reads the file under - the file name without what it is
-// written in.
-files.buildNameFromFile = function(fileName) {
-
-    var out = fileName;
-    var dotIdx = fileName.lastIndexOf('.');
-
-    if(dotIdx > 0) {
-        out = fileName.substring(0, dotIdx);
-    }
-
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-files.applyUpload = function() {
-
-    var uploaded = files.getPickedFile();
-
-    if(!uploaded) {
-        tables.get('dialog-status').textContent = 'Pick a file first';
-        return;
-    }
-
-    var reader = new FileReader();
-
-    reader.addEventListener('load', function() {
-        files.readUploaded(uploaded.name, reader.result);
-    });
-
-    reader.readAsText(uploaded);
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// What was uploaded, once it has been read - a file that does not parse is not
-// put anywhere and the dialog stays open saying why.
-files.readUploaded = function(fileName, content) {
-
-    var parsed = parse.read(content);
-
-    if(parsed.errorText) {
-        tables.get('dialog-status').textContent = tables.buildErrorText(parsed);
-        return;
-    }
-
-    if(files.state.replacedName) {
-        files.replaceContents(fileName, content, parsed);
-    }
-    else {
-        files.addUploaded(fileName, content);
-    }
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-files.replaceContents = function(fileName, content, parsed) {
-
-    var table = tables.getByName(files.state.replacedName);
-
-    tables.applyContents(table, content, parsed);
-
-    files.persist('upload', table, function() {
-        files.closeDialog();
-        tables.select(table.name);
-        tables.setStatus('Uploaded ' + fileName + ' over ' + table.file_name);
-    });
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-files.addUploaded = function(fileName, content) {
-
-    var name = files.buildNameFromFile(fileName);
-
-    if(tables.getByName(name)) {
-        tables.get('dialog-status').textContent = 'There is a file called ' + name + ' already';
-        return;
-    }
-
-    var directory = files.getPickedDirectory();
-    var table = files.buildTable(name, fileName, directory, content);
-
-    tables.state.tableList.push(table);
-    tables.state.initialContent[name] = content;
-
-    files.persist('upload', table, function() {
-        files.closeDialog();
-        tables.select(name);
-        tables.setStatus('Uploaded ' + fileName);
-    });
 };
 
 // ////////////////////////////////////////////////////////////////////////

@@ -582,6 +582,12 @@
     display: none;
 }
 
+/* This block is the first element in the body, above the request pane, so its spacing goes below it. */
+#invoker-extra-fields {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
 .invoker-more-options-row {
     display: flex;
     align-items: center;

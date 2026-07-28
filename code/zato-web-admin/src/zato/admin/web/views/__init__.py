@@ -12,14 +12,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 from base64 import b64encode
 from datetime import datetime, timedelta
+from http import HTTPStatus
 from itertools import chain
+from time import perf_counter
 from traceback import format_exc
 
 # bunch
 from zato.common.ext.bunch import Bunch
 
 # Django
-from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseServerError
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseServerError, JsonResponse
 
 # pytz
 from pytz import UTC
@@ -28,6 +30,7 @@ from pytz import UTC
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.util import get_template_response
 from zato.common.api import CONNECTION, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, URL_TYPE, ZATO_NONE
+from zato.common.content_type import format_content, get_content_type
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
 from zato.common.util.api import validate_python_syntax
@@ -761,6 +764,61 @@ def ping_connection(req, service, connection_id, connection_type='{}', ping_path
             info = 'Ping OK'
 
         return response_class(info)
+
+# ################################################################################################################################
+
+def _build_chat_message_error(error_message:'str') -> 'any_':
+    """ Reports a message that could not be sent, in the shape the invoker overlay expects.
+    """
+    out = JsonResponse({
+        'data': error_message,
+        'response_time_human': '',
+        'content_type': 'text/plain',
+    }, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+
+    return out
+
+# ################################################################################################################################
+
+def send_chat_message(req:'any_', conn_type:'str') -> 'any_':
+    """ Sends a message through a chat connection, answering in the shape the invoker overlay expects.
+    """
+    try:
+        request = {
+            'conn_type': conn_type,
+            'conn_name': req.POST['conn_name'],
+            'target': req.POST['target'],
+            'request_data': req.POST['data-request'],
+        }
+
+        # The generic invoke service does not report a response time of its own, so it is measured here ..
+        start = perf_counter()
+        response = req.zato.client.invoke('zato.generic.connection.invoke', request)
+        elapsed = perf_counter() - start
+
+        # .. the message never left if the service did not succeed ..
+        if not response.ok:
+            out = _build_chat_message_error(str(response.details))
+            return out
+
+        # .. otherwise, the chat API's own response is what the caller is shown.
+        response_data = response.data.response_data
+        content_type = get_content_type(response_data)
+        formatted_data = format_content(response_data, content_type)
+        response_time = f'{elapsed:.3f}s'
+
+        out = JsonResponse({
+            'data': formatted_data,
+            'response_time_human': response_time,
+            'content_type': content_type,
+        })
+
+        return out
+
+    except Exception as e:
+        logger.error('Could not send a chat message, e:`%s`', format_exc())
+        out = _build_chat_message_error(str(e))
+        return out
 
 # ################################################################################################################################
 
