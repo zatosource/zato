@@ -141,6 +141,42 @@ tables.formatSize = function(size) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// What a branch of the drawing is about - the system the value goes out to, with how
+// many codes of its own it turned out to keep it under.
+tables.buildTargetLabel = function(targetName, keyCount) {
+
+    var out = targetName;
+    var hasOneKey = keyCount === 1;
+
+    if(!hasOneKey) {
+        out = out + ', ' + tables.pluralize(keyCount, 'code');
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The branch that stands for the rest of the file - who else has this value, which is
+// what says how far it reaches when no target was asked about.
+tables.buildAlsoLabel = function(sectionCount) {
+
+    var out = 'Also in ' + tables.pluralize(sectionCount, 'system');
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The last branch of a run that was cut short, so a file of a hundred systems draws as
+// a few of them and a count.
+tables.buildRestLabel = function(restCount) {
+
+    var out = restCount + ' more';
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 tables.pluralize = function(count, noun) {
 
     var out = count + ' ' + noun;
