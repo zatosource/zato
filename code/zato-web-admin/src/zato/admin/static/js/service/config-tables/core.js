@@ -8,8 +8,9 @@
 // the reading of a file in parse.js, the words the page puts on screen in text.js,
 // the Translate column in invoker.js, the drawing it answers a mapping set with in
 // flow.js, the line of the file a part of that drawing stands for in trace.js, where
-// the reader is in url.js, the listing's menu in menu.js, what is done to the file
-// itself in files.js and the bringing in of one in upload.js.
+// the reader is in url.js, what a file has been typed into but not saved in draft.js, the
+// keys an editor is worked with in edit.js, the listing's menu in menu.js, what is done to
+// the file itself in files.js and the bringing in of one in upload.js.
 
 (function($) {
 
@@ -17,6 +18,7 @@
 
 var tables = $.fn.zato.service.config_tables;
 var parse = tables.parse;
+var log = tables.log;
 
 // ////////////////////////////////////////////////////////////////////////
 
@@ -111,6 +113,10 @@ tables.init = function(inputConfig) {
 
     tables.rememberInitialContent();
 
+    // What was typed into a file and not saved comes back with the page, so the drafts are
+    // read before anything is put on screen
+    tables.draft.init();
+
     // Only ever says why the files could not be read, and says nothing at all when they could
     tables.get('empty').textContent = inputConfig.error;
 
@@ -120,6 +126,16 @@ tables.init = function(inputConfig) {
     tables.invoker.init();
     tables.menu.init();
     tables.url.init();
+
+    log.say('tables.init', {
+        tableCount: state.tableList.length,
+        directoryList: JSON.stringify(state.directoryList),
+        userConfDirectory: state.userConfDirectory,
+        maxEditableSize: state.maxEditableSize,
+        persistUrl: state.persistUrl,
+        error: inputConfig.error,
+        fragment: window.location.hash
+    });
 
     tables.renderList();
     tables.open();
@@ -161,8 +177,9 @@ tables.wire = function() {
     // what takes it away
     tables.get('status').addEventListener('click', tables.clearStatus);
 
-    // The star that says the file on screen is not the file on disk follows the typing
-    tables.get('content').addEventListener('input', tables.renderModified);
+    // Typing is kept beside the file it is in, so it is there again after another file has
+    // been read or the page has been opened again, and the star follows it
+    tables.get('content').addEventListener('input', tables.onContentInput);
 
     // The keys an editor is saved with anywhere else save this file too
     document.addEventListener('keydown', tables.onKeyDown);
@@ -174,6 +191,7 @@ tables.wire = function() {
     tables.gutter.init();
     tables.flow.init();
     tables.trace.init();
+    tables.edit.init();
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -187,6 +205,12 @@ tables.onKeyDown = function(event) {
     if(!isSave) {
         return;
     }
+
+    var data = log.buildKey(event);
+
+    data.currentName = tables.state.currentName;
+
+    log.say('tables.onKeyDown save', data);
 
     event.preventDefault();
 
@@ -279,7 +303,15 @@ tables.deriveKind = function(parsed) {
 
 tables.select = function(name) {
 
+    var previousName = tables.state.currentName;
+
     tables.state.currentName = name;
+
+    log.say('tables.select', {
+        previousName: previousName,
+        name: name,
+        isFound: tables.getByName(name) !== null
+    });
 
     tables.url.writeFile(name);
     tables.setStatus('');
@@ -298,36 +330,67 @@ tables.renderRoot = function(path) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Whether the file on screen says something other than the file on disk does, which is what
-// the star after its name stands for. Only the file being looked at is typed into, so it is
-// the only one there can be anything to say about.
-tables.isModified = function() {
+// Everything typed into the file on screen, kept beside that file. A file is only left with a
+// draft while what was typed says something other than the file on disk does.
+tables.onContentInput = function() {
 
     var table = tables.getCurrent();
+    var content = tables.get('content').value;
 
-    if(table === null) {
-        return false;
-    }
+    tables.draft.remember(table, content);
+    tables.edit.remember(table, content);
+    tables.renderModified();
 
-    var out = tables.get('content').value !== table.content;
-    return out;
+    log.say('tables.onContentInput', {
+        path: table.path,
+        length: content.length,
+        diskLength: table.content.length,
+        isModified: content !== table.content
+    });
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The star after the file's name, in the heading and on the file's own row.
+// The star after the file's name, in the heading for the file being read and on the row of
+// every file with something unsaved in it - a file is not typed into while another one is being
+// read, but what was typed into it stays with it.
 tables.renderModified = function() {
 
-    var isModified = tables.isModified();
+    var table = tables.getCurrent();
+    var isModified = table !== null && tables.draft.has(table);
 
     tables.get('root-modified').hidden = !isModified;
 
-    var star = tables.get('file-list').querySelector('.config-tables-file-selected .config-tables-file-modified');
+    var rowList = tables.get('file-list').querySelectorAll('.config-tables-file-row');
+    var starredList = [];
 
-    // The listing has no row of a file being looked at while there is no file open
-    if(star) {
-        star.hidden = !isModified;
+    for(var rowIdx = 0; rowIdx < rowList.length; rowIdx++) {
+
+        var row = rowList[rowIdx];
+        var star = row.querySelector('.config-tables-file-modified');
+        var rowTable = tables.getByName(row.dataset.name);
+
+        // A row being renamed has the field where its name and star were, and a row of a file
+        // that has just been deleted is on screen until the listing is drawn again
+        if(star === null || rowTable === null) {
+            continue;
+        }
+
+        var isRowModified = tables.draft.has(rowTable);
+
+        star.hidden = !isRowModified;
+
+        if(isRowModified) {
+            starredList.push(rowTable.name);
+        }
     }
+
+    log.say('tables.renderModified', {
+        currentName: tables.state.currentName,
+        isModified: isModified,
+        rowCount: rowList.length,
+        starredList: JSON.stringify(starredList)
+    });
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -371,7 +434,7 @@ tables.renderEditor = function() {
     // in your own tools - so what stands in for it on screen is the line that says as
     // much, and neither Check nor Save has anything to work on
     if(table.is_editable) {
-        content.value = table.content;
+        content.value = tables.draft.get(table);
     }
     else {
         content.value = tables.buildOutsideText(table);
@@ -389,7 +452,20 @@ tables.renderEditor = function() {
     tables.renderModified();
     content.previousElementSibling.classList.toggle(tables.config.backdropReadOnly, content.readOnly);
 
+    // The file was left at a step of its own and with the caret somewhere, and it is opened
+    // at both. A file too large to edit here is read rather than worked on, so it has neither.
+    if(table.is_editable) {
+        tables.edit.open(table);
+    }
+
     tables.invoker.render(table);
+
+    var data = log.buildTable(table);
+
+    data.screenLength = content.value.length;
+    data.readOnly = content.readOnly;
+
+    log.say('tables.renderEditor', data);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -419,6 +495,14 @@ tables.save = function() {
     var content = tables.get('content').value;
     var parsed = parse.read(content);
 
+    log.say('tables.save', {
+        path: table.path,
+        length: content.length,
+        diskLength: table.content.length,
+        errorLine: parsed.errorLine,
+        errorText: parsed.errorText
+    });
+
     if(parsed.errorText) {
         tables.setStatus(tables.buildErrorText(parsed), true);
         return;
@@ -427,8 +511,16 @@ tables.save = function() {
     tables.applyContents(table, content, parsed);
 
     tables.files.persist('save', table, function() {
+
+        // The file on disk now says what the file on screen does, so there is nothing left
+        // unsaved about it
+        tables.draft.forget(table);
+
+        log.say('tables.save done', {path: table.path, diskLength: table.content.length});
+
         tables.setStatus(tables.config.savedMessage);
         tables.renderList();
+        tables.renderModified();
         tables.invoker.refresh(table);
     });
 };
@@ -446,6 +538,11 @@ tables.restore = function() {
 
     $.fn.zato.highlight.refresh(content);
     tables.gutter.refresh();
+    tables.draft.remember(table, content.value);
+
+    // Going back to what the file held is a step like any other, so it can be taken back too
+    tables.edit.remember(table, content.value);
+
     tables.renderModified();
     tables.setStatus('');
 };
