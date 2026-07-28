@@ -27,10 +27,11 @@
     /* A copy button pointed at - the badge wash one shade deeper */
     --config-tables-copy-hover: #cbe4f9;
 
-    /* The room the file keeps before its first character - what the copy button for
-       a line reaches over, point included, so it is wide enough for that button to
-       stand on even beside a file whose numbers are a single digit wide */
-    --config-tables-file-inset: 26px;
+    /* The room the file keeps before its first character - what the copy button for a
+       line reaches over. It is half of what the button needs, so the button hangs by
+       its point just short of the text and takes the rest of its room from the air the
+       column of the file keeps to its left. */
+    --config-tables-file-inset: 13px;
 
     /* The point that says which line the copy button is on - how far it comes out of
        the button and how much of its side it takes up */
@@ -340,8 +341,12 @@
    text itself is never covered. */
 .config-tables-gutter-copy {
     position: absolute;
-    left: 0;
     z-index: 2;
+
+    /* Hung by the tip of its point, one hair short of the first character of the file,
+       so it keeps that distance whether the numbers are one digit wide or four, and
+       grows leftwards over the air the column keeps on that side */
+    right: calc(100% - var(--config-tables-gutter-width) - var(--config-tables-file-inset) + var(--config-tables-point-length));
     display: inline-flex;
     align-items: center;
     height: 18px;

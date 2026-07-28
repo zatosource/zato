@@ -229,12 +229,14 @@ gutter.follow = function(event) {
 
     var state = gutter.state;
     var bodyRect = gutter.getBody().getBoundingClientRect();
-    var offsetX = event.clientX - bodyRect.left;
     var offsetY = event.clientY - bodyRect.top;
 
-    // The point counts as part of the button, otherwise the cursor resting on it would
-    // be taken for a cursor in the file
-    if(offsetX > gutter.button.offsetWidth + state.pointLength) {
+    // The tip of the point is where the numbers end and the file begins. The point
+    // counts as part of the button, otherwise the cursor resting on it would be taken
+    // for a cursor in the file.
+    var buttonRight = gutter.button.getBoundingClientRect().right + state.pointLength;
+
+    if(event.clientX > buttonRight) {
         gutter.hide();
         return;
     }
