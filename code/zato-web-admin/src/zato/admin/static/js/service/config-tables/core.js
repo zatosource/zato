@@ -42,17 +42,14 @@ tables.config = {
     // What the right-hand side says while no file is open
     emptyMessage: 'Pick a file on the left, or add one.',
 
-    // What the drawing says where the codes of a table would be when the target has
-    // nothing on its side of it - the few words a chip has room for, while the answer as
-    // text says it in full
-    flowNoTargetMessage: 'Not a table in this file',
-    flowNoCodeMessage: 'No code for this value',
+    // What the drawing says where the codes of a table would be when there is no mapping
+    // to draw - the few words a chip has room for, while the answer as text says which
+    // of the two ways it came about
+    flowNoMapMessage: 'No such map in this file',
 
-    // The words that go with each drop of the drawing, which is what makes it read as
-    // one sentence rather than as three pictures
+    // The words that go with every drop of the drawing, since every one of them is the
+    // same thing happening again
     flowMapsToLabel: 'maps to',
-    flowSentAsLabel: 'sent as',
-    flowAlsoInLabel: 'also in',
 
     // The class the status line wears - plain, once something went through, and
     // once something did not

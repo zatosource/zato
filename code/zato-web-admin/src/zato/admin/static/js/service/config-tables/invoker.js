@@ -7,8 +7,8 @@
 // is colored the same way, edited the same way and copied the same way.
 //
 // A source names the system a value came from and a target the system it is going to.
-// The value under the source is what the file maps it to, and the target sends that
-// under a key of its own, which is the same file read the other way round. A target
+// The value under the source is what the file maps it to, and the target maps that
+// on to a key of its own, which is the same file read the other way round. A target
 // may keep the value under several keys, and then the answer is all of them - a
 // service asking for one of them is told to keep one instead.
 
@@ -41,7 +41,7 @@ invoker.config = {
 
 invoker.init = function() {
 
-    tables.get('try-run').addEventListener('click', invoker.run);
+    tables.get('translate').addEventListener('click', invoker.translate);
 
     // The answer reads as lines of the kind of file it came out of, so it is colored
     // the way that file is
@@ -113,11 +113,11 @@ invoker.readFrom = function(table) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// What the call answers - the value found and what a target sends it as, or the plain
-// fact that there is none, which is put down as a note about the value rather than as one.
-// A mapping set is a file of systems, so its answer is also drawn as one, while the text
-// stays underneath it as what Copy takes.
-invoker.run = function() {
+// What the call answers - the value the code maps to and what the target maps it to, or
+// the plain fact that there is none, which is put down as a note about the value rather
+// than as one. A mapping set is a file of tables, so its answer is also drawn as one,
+// while the text stays underneath it as what Copy takes.
+invoker.translate = function() {
 
     var table = tables.getCurrent();
     var content = tables.get('content').value;
@@ -172,13 +172,15 @@ invoker.buildModel = function(content, fromName, code, found) {
 
     var keyList = parse.findTargetKeys(content, targetName, found);
 
+    // A name that is no table of the file and a table with no code for the value are the
+    // same thing to look at - there is no mapping to draw either way
     if(keyList === null) {
-        out.targetNote = tables.config.flowNoTargetMessage;
+        out.targetNote = tables.config.flowNoMapMessage;
         return out;
     }
 
     if(!keyList.length) {
-        out.targetNote = tables.config.flowNoCodeMessage;
+        out.targetNote = tables.config.flowNoMapMessage;
         return out;
     }
 
@@ -229,7 +231,7 @@ invoker.dropTable = function(spread, tableName) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The value that was found, and under it what the target sends it as when one was
+// The value that was found, and under it what the target maps it to when one was
 // asked for.
 invoker.buildAnswer = function(table, content, found) {
 
