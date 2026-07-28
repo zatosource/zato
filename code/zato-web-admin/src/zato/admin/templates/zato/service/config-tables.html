@@ -128,8 +128,8 @@ $(document).ready(function() {
              comes off the file as it is on disk -->
         <div class="config-tables-try" id="config-tables-try">
 
-            <!-- Both fields offer what the file on disk holds and take anything
-                 else that is typed into them -->
+            <!-- Every field offers what the file on disk holds and takes anything
+                 else that is typed into it -->
             <div class="config-tables-field" id="config-tables-try-from-field">
                 <label for="config-tables-try-from">Source</label>
                 <div class="config-tables-input-row">
@@ -143,6 +143,16 @@ $(document).ready(function() {
                 <div class="config-tables-input-row">
                     <input type="text" id="config-tables-try-code" autocomplete="off">
                     <button type="button" class="zato-badge zato-badge-blue config-tables-copy config-tables-copy-small config-tables-inline-copy" id="config-tables-try-code-copy">Copy</button>
+                </div>
+            </div>
+
+            <!-- Fill it in and the answer says what that system sends the value as,
+                 leave it empty and the answer is the value itself -->
+            <div class="config-tables-field" id="config-tables-try-target-field">
+                <label for="config-tables-try-target">Target</label>
+                <div class="config-tables-input-row">
+                    <input type="text" id="config-tables-try-target" autocomplete="off">
+                    <button type="button" class="zato-badge zato-badge-blue config-tables-copy config-tables-copy-small config-tables-inline-copy" id="config-tables-try-target-copy">Copy</button>
                 </div>
             </div>
 

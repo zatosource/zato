@@ -182,32 +182,6 @@ $.fn.zato.highlight.ini_value_to_html = function(value) {
 };
 
 // ////////////////////////////////////////////////////////////////////////
-
-// A value on each line and nothing else, the way the right-hand side of an ini
-// file reads - which is what a value taken out of one is on its own.
-$.fn.zato.highlight.ini_values_to_html = function(text) {
-
-    var html_lines = [];
-    var lineList = text.split('\n');
-
-    for(var lineIdx = 0; lineIdx < lineList.length; lineIdx++) {
-
-        var line = lineList[lineIdx];
-
-        // A note about the value rather than a value, so it reads as one
-        if($.fn.zato.highlight.config.comment_pattern.test(line)) {
-            html_lines.push($.fn.zato.highlight.wrap('highlight-comment', line));
-            continue;
-        }
-
-        html_lines.push($.fn.zato.highlight.ini_value_to_html(line));
-    }
-
-    var out = html_lines.join('\n');
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
 // The overlay
 // ////////////////////////////////////////////////////////////////////////
 

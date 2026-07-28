@@ -159,6 +159,46 @@ parse.findValue = function(section, code) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// What a target sends one value as - every key it keeps that value under, since a
+// target may well keep it under more than one. A name that is no section of the file
+// comes back as null, which is not the same answer as a target that has no key for
+// the value.
+parse.findTargetKeys = function(content, targetName, value) {
+
+    var parsed = parse.read(content);
+    var section = parse.findSection(parsed, targetName);
+
+    if(section === null) {
+        return null;
+    }
+
+    var out = parse.findKeys(section, value);
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Read the other way round - the keys a value is under rather than the value a key
+// holds, in name order, so what comes back reads the same way every time.
+parse.findKeys = function(section, value) {
+
+    var out = [];
+
+    for(var entryIdx = 0; entryIdx < section.entryList.length; entryIdx++) {
+
+        var entry = section.entryList[entryIdx];
+
+        if(entry.value === value) {
+            out.push(entry.key);
+        }
+    }
+
+    out.sort();
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 // The first value the file holds, which is what the Try it strip starts from -
 // the section it is under and the key it goes by. An empty file has neither.
 parse.getFirstEntry = function(content) {

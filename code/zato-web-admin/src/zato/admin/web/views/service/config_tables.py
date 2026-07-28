@@ -64,6 +64,7 @@ HR = 8867-4
 
 [CHECKUP_KIOSK]
 HEIGHT = 8302-2
+BODY_HEIGHT = 8302-2
 WEIGHT = 29463-7
 """
 
@@ -110,7 +111,7 @@ def _get_table_list() -> 'anylist':
 
     out.append(_build_table('loinc', 'loinc.ini', _user_conf_directory, 'codes', _loinc_content, 1, 5))
     out.append(_build_table('error-codes', 'error-codes.ini', _user_conf_directory, 'codes', _error_codes_content, 1, 6))
-    out.append(_build_table('wellness', 'wellness.ini', _user_conf_directory, 'mappings', _wellness_content, 2, 6))
+    out.append(_build_table('wellness', 'wellness.ini', _user_conf_directory, 'mappings', _wellness_content, 2, 7))
 
     return out
 

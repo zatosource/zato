@@ -45,6 +45,7 @@ from zato.common.rate_limiting.common import client_address_headers
 from zato.common.rate_limiting.manager import RateLimitingManager
 from zato.common.rule_engine.api import RulesManager
 from zato.common.typing_ import cast_, intnone, optional, tuple_
+from zato.common.user_config import UserConfigFile
 from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_user_config_name, \
     fs_safe_name, invoke_startup_services as _invoke_startup_services, make_list_from_string_list, new_cid_server, \
     parse_extra_into_dict, register_diag_handlers, spawn_greenlet, StaticConfig, utcnow
@@ -658,7 +659,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                 # Not used at all in this type of configuration
                 _:'any_' = conf.pop('user_config_items', None)
 
-                self.user_config[user_config_name] = conf
+                # The file reads as it always did, with translate and validate on top of it
+                self.user_config[user_config_name] = UserConfigFile(file_name, self.user_config, conf)
 
                 logger.info('Read user config `%s` from `%s` (dir:%s)', user_config_name, file_name, dir_name)
 
