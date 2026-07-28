@@ -41,6 +41,11 @@ gutter.config = {
     copyPlacement: 'left',
     copyGap: 6,
 
+    // What it says it took - one line, or the table that line names along with everything
+    // under it
+    copyLineMessage: 'Line copied to clipboard',
+    copyTableMessage: 'Table copied to clipboard',
+
     // The classes the parts of the column wear
     rowClass: 'config-tables-gutter-line',
     rowAtClass: 'config-tables-gutter-line-at',
@@ -543,14 +548,19 @@ gutter.press = function(event) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// What a press takes is the very block the wash is over, and it is said beside what was pressed.
+// What a press takes is the very block the wash is over, and it is said beside what was pressed -
+// as the line it was, or as the table it was, which is what the line it was taken from names.
 gutter.copy = function(offset) {
 
+    var config = gutter.config;
     var lineList = gutter.getLineList();
     var block = gutter.state.block;
     var text = lineList.slice(block.start, block.start + block.count).join('\n');
 
-    $.fn.zato.copy.to_clipboard(gutter.button, text, gutter.config.copyPlacement, offset);
+    var isTable = gutter.getSectionDepth(lineList[block.start]) > 0;
+    var message = isTable ? config.copyTableMessage : config.copyLineMessage;
+
+    $.fn.zato.copy.to_clipboard(gutter.button, text, config.copyPlacement, offset, message);
 };
 
 // ////////////////////////////////////////////////////////////////////////

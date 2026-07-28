@@ -231,13 +231,17 @@ def _read_content_info(content:'str') -> 'ContentInfo':
     """ What a file holds, that is, the kind of file it is, how many sections it has and how many
     entries there are under them. Counting stops at the first line that reads as neither, just as
     the reader of the file stops at it. A section written in double brackets belongs to the one
-    above it, and a file is a code list when its codes section holds entries of its own.
+    above it. A file with a codes section is a code list, whether the codes are in it yet or not,
+    unless that section is there only to group other sections under it.
     """
     section_count = 0
     entry_count = 0
-    has_codes = False
+    has_codes_section = False
+    codes_has_entries = False
+    codes_has_children = False
     is_in_codes = False
     has_section = False
+    top_name = ''
 
     for line in content.splitlines():
 
@@ -262,8 +266,19 @@ def _read_content_info(content:'str') -> 'ContentInfo':
             section_count += 1
             has_section = True
 
+            if depth == 1:
+                top_name = name
+
             # Only the file's own codes section counts, not one that another section keeps
             is_in_codes = depth == 1 and name == _codes_section
+
+            if is_in_codes:
+                has_codes_section = True
+
+            # A section nested under codes makes codes a group of sections rather than a
+            # section of codes
+            if depth > 1 and top_name == _codes_section:
+                codes_has_children = True
 
             continue
 
@@ -278,9 +293,11 @@ def _read_content_info(content:'str') -> 'ContentInfo':
         entry_count += 1
 
         if is_in_codes:
-            has_codes = True
+            codes_has_entries = True
 
-    if has_codes:
+    is_codes_group = codes_has_children and not codes_has_entries
+
+    if has_codes_section and not is_codes_group:
         kind = _kind_codes
     else:
         kind = _kind_mappings
@@ -471,7 +488,6 @@ def index(req:'any_') -> 'TemplateResponse':
     return_data = {
         'cluster_id': req.zato.cluster_id,
         'table_list_json': dumps(table_list),
-        'directory_list_json': dumps(directory_list),
         'user_conf_directory': directory_list[0],
         'max_editable_size': _max_editable_size,
         'error': error,

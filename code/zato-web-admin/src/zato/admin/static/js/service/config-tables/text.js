@@ -49,6 +49,16 @@ tables.buildErrorText = function(parsed) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// The file is on disk, and it still does not read - both facts at once, since the file was
+// written whatever state it is in and a service reading it gets nothing past that line.
+tables.buildSavedErrorText = function(parsed) {
+
+    var out = tables.config.savedMessage + ', ' + tables.buildErrorText(parsed).toLowerCase();
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 // A value the file has nothing for, said as the plain fact that it is.
 tables.buildMissingText = function(table, fromName, code) {
 

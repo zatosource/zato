@@ -27,15 +27,20 @@ menu.config = {
     // What the header says when the menu is not about any one file
     rootTitle: 'Files',
 
-    // The keys the actions answer to - a file's own actions first, so the two
-    // that bring a file in keep their key whether a file was right-clicked or not.
-    // Taking a copy of a file goes by the letter of its own name, since the row of
-    // keys is where the other four are.
+    // The keys the actions answer to, which follow the left hand down its own rows the
+    // way the IDE's menu does - Q W E across the top for what is done to the file
+    // right-clicked, A S on the row below for what brings another file in. The second
+    // group starts its own row, so those two keep their key whether a file was
+    // right-clicked or not.
     renameKey: 'Q',
-    deleteKey: 'W',
-    addKey: 'E',
-    uploadKey: 'R',
-    downloadKey: 'D'
+    downloadKey: 'W',
+    deleteKey: 'E',
+    addKey: 'A',
+    uploadKey: 'S',
+
+    // Delete answers to the key of its own name as well, that being the key a listing's own
+    // pick is taken away by. The cap on the row still shows the letter, one key per cap.
+    deleteAlsoKey: 'DELETE'
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -182,6 +187,7 @@ menu.buildItemList = function(name) {
 
         out.push({
             key: config.deleteKey,
+            alsoKey: config.deleteAlsoKey,
             label: 'Delete',
             isDestructive: true,
             action: tables.files.remove,
@@ -432,7 +438,7 @@ menu.installDismiss = function(elem, itemList) {
 
             var item = itemList[itemIdx];
 
-            if(item !== null && item.key === pressed) {
+            if(item !== null && (item.key === pressed || item.alsoKey === pressed)) {
 
                 // The key belongs to the menu, not to the element that the action
                 // brings up and focuses next

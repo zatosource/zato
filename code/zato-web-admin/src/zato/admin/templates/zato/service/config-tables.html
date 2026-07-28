@@ -9,7 +9,6 @@ to what is in it comes off the listing's own menu. The view provides:
 
 * cluster_id           - the current cluster
 * table_list_json      - every file with its contents
-* directory_list_json  - the directories a file may be uploaded into
 * user_conf_directory  - where the files live
 * max_editable_size    - how large a file may be before it is edited outside the browser
 * error                - why the files could not be read, empty when they could
@@ -58,7 +57,6 @@ to what is in it comes off the listing's own menu. The view provides:
 $(document).ready(function() {
     $.fn.zato.service.config_tables.init({
         table_list: {{ table_list_json|safe }},
-        directory_list: {{ directory_list_json|safe }},
         user_conf_directory: '{{ user_conf_directory }}',
         max_editable_size: {{ max_editable_size }},
         persist_url: '{% url "service-config-tables-persist" %}',
@@ -197,47 +195,7 @@ $(document).ready(function() {
 </div>
 </div>
 
-<!-- Uploading a file - the one question that matters is where it goes. The popup
-     is dragged by its header, and Escape or a press outside it puts it away. -->
-<div class="config-tables-overlay" id="config-tables-overlay" hidden>
-    <div class="zato-popup config-tables-dialog" id="config-tables-dialog">
-
-        <div class="zato-popup-header" id="config-tables-dialog-header">
-            <span id="config-tables-dialog-title">Upload a file</span>
-        </div>
-
-        <div class="config-tables-dialog-body">
-
-            <label class="config-tables-dialog-field">
-                <span>File</span>
-                <input type="file" id="config-tables-dialog-file">
-            </label>
-
-            <label class="config-tables-dialog-field" id="config-tables-dialog-directory-field">
-                <span>Goes into</span>
-                <select id="config-tables-dialog-directory"></select>
-            </label>
-
-            <div class="info-container">
-                <div class="info-row">
-                    <div class="info-label">Will be at</div>
-                    <div class="info-value"><code id="config-tables-dialog-path"></code></div>
-                </div>
-            </div>
-
-        </div>
-
-        <div class="button-container">
-            <div class="config-tables-dialog-note">
-                <span class="config-tables-status" id="config-tables-dialog-status"></span>
-            </div>
-            <div class="button-wrapper">
-                <button type="button" class="secondary-button" id="config-tables-dialog-cancel">Cancel</button>
-            </div>
-            <button type="button" class="action-button" id="config-tables-dialog-upload">Upload</button>
-        </div>
-
-    </div>
-</div>
+<!-- What Upload file opens is the browser's own file picker, which is what this is -->
+<input type="file" id="config-tables-upload-file" hidden>
 
 {% endblock %}

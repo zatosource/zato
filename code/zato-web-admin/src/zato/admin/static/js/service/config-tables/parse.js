@@ -222,6 +222,28 @@ parse.findSection = function(parsed, sectionName) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// Whether the table has tables of its own under it, a table nested inside another going by both
+// names with a dot between them.
+parse.hasChildSections = function(parsed, sectionName) {
+
+    var out = false;
+    var prefix = sectionName + parse.config.pathSeparator;
+
+    for(var sectionIdx = 0; sectionIdx < parsed.sectionList.length; sectionIdx++) {
+
+        var section = parsed.sectionList[sectionIdx];
+
+        if(section.name.indexOf(prefix) === 0) {
+            out = true;
+            break;
+        }
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 parse.findValue = function(section, code) {
 
     var out = null;
