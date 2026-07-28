@@ -207,6 +207,7 @@ $.namespace('zato.service.config_tables.split');
 $.namespace('zato.service.config_tables.trace');
 $.namespace('zato.service.config_tables.upload');
 $.namespace('zato.service.config_tables.url');
+$.namespace('zato.service.config_tables.wash');
 $.namespace('zato.settings');
 $.namespace('zato.sms');
 $.namespace('zato.stats');

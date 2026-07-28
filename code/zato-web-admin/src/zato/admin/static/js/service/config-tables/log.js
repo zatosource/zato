@@ -1,10 +1,11 @@
 // Config tables - what the page did, on the console.
 //
-// Everything the page does to a file is logged and stays logged - the keys pressed, the steps
-// a file goes through, what is unsaved, where the caret is, which file is opened and what is
-// written to the server. A key that does nothing and a key that does the wrong thing read
-// differently here, which is what makes this worth having on all the time rather than
-// something to be put back in once something has gone wrong.
+// Everything the page does to a file is logged - the keys pressed, the steps a file goes
+// through, what is unsaved, where the caret is, which file is opened and what is written to the
+// server. A key that does nothing and a key that does the wrong thing read differently here,
+// which is what makes this worth keeping rather than something to be put back in once something
+// has gone wrong. The whole of it is on the one switch below, isEnabled, and nothing anywhere
+// else on the page decides what is said or whether anything is.
 //
 // One fact per line, both sides of it in JSON, since a console cuts a long line short and a
 // line that has been cut is a fact that has been lost.
@@ -20,6 +21,10 @@ var log = tables.log;
 
 log.config = {
 
+    // The one switch the whole page's logging is on, since every part of the page logs through
+    // here - false and nothing at all is said on the console
+    isEnabled: true,
+
     // What every line of the log is headed by
     prefix: 'config-tables',
 
@@ -34,6 +39,10 @@ log.config = {
 log.say = function(topic, data) {
 
     var config = log.config;
+
+    if(!config.isEnabled) {
+        return;
+    }
 
     console.log(JSON.stringify(config.prefix + ' | ' + topic));
 
