@@ -146,27 +146,27 @@ invoker.run = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// What the drawing is of - who sent the value, what the file holds for it, and what is
-// on the other side, which is the target when one was asked about and the rest of the
-// file's systems when none was.
+// What the drawing is of - the table the value came in from, what the file holds for it,
+// and what is on the other side, which is the target when one was asked about and every
+// other table of the file when none was.
 invoker.buildModel = function(content, fromName, code, found) {
 
     var spread = parse.findValueSpread(content, found);
     var targetName = tables.get('try-target').value.trim();
 
     var out = {
-        sourceName: fromName,
+        sourceTable: fromName,
         code: code,
         value: found,
         sourceKeyList: invoker.readSpreadKeys(spread, fromName),
-        targetName: targetName,
+        targetTable: targetName,
         targetKeyList: [],
         targetNote: '',
         otherList: []
     };
 
     if(!targetName) {
-        out.otherList = invoker.dropSection(spread, fromName);
+        out.otherList = invoker.dropTable(spread, fromName);
         return out;
     }
 
@@ -188,9 +188,9 @@ invoker.buildModel = function(content, fromName, code, found) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The keys one section holds the value under, read off what the whole file holds it
-// under. A section that holds it under none of them is not in there at all.
-invoker.readSpreadKeys = function(spread, sectionName) {
+// The codes one table holds the value under, read off what the whole file holds it under.
+// A table that holds it under none of them is not in there at all.
+invoker.readSpreadKeys = function(spread, tableName) {
 
     var out = [];
 
@@ -198,7 +198,7 @@ invoker.readSpreadKeys = function(spread, sectionName) {
 
         var entry = spread[spreadIdx];
 
-        if(entry.name === sectionName) {
+        if(entry.name === tableName) {
             out = entry.keyList;
             break;
         }
@@ -209,9 +209,9 @@ invoker.readSpreadKeys = function(spread, sectionName) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The file's other systems - the one the value came from is where the drawing starts,
-// so it is not also one of the places it reaches.
-invoker.dropSection = function(spread, sectionName) {
+// The file's other tables - the one the value came from is where the drawing starts, so
+// it is not also one of the places it reaches.
+invoker.dropTable = function(spread, tableName) {
 
     var out = [];
 
@@ -219,7 +219,7 @@ invoker.dropSection = function(spread, sectionName) {
 
         var entry = spread[spreadIdx];
 
-        if(entry.name !== sectionName) {
+        if(entry.name !== tableName) {
             out.push(entry);
         }
     }

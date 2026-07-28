@@ -21,7 +21,7 @@ tables.buildHolds = function(kind, entryCount, sectionCount) {
     var out = tables.pluralize(entryCount, noun);
 
     if(kind === 'mappings') {
-        out = out + ' in ' + tables.pluralize(sectionCount, 'section');
+        out = out + ' in ' + tables.pluralize(sectionCount, 'table');
     }
 
     return out;
@@ -85,7 +85,7 @@ tables.buildMissingText = function(table, fromName, code) {
 // that knows nothing about the value.
 tables.buildUnknownTargetText = function(targetName) {
 
-    var out = singleQuote + targetName + singleQuote + ' is not a section of this file';
+    var out = singleQuote + targetName + singleQuote + ' is not a table in this file';
     return out;
 };
 
@@ -141,37 +141,17 @@ tables.formatSize = function(size) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// What a branch of the drawing is about - the system the value goes out to, with how
-// many codes of its own it turned out to keep it under.
-tables.buildTargetLabel = function(targetName, keyCount) {
+// The name over one group of the drawing - the table the codes in it belong to, and how
+// many of them there turned out to be once there is more than the one.
+tables.buildGroupCaption = function(tableName, keyCount) {
 
-    var out = targetName;
-    var hasOneKey = keyCount === 1;
+    var out = tableName;
+    var hasSeveral = keyCount > 1;
 
-    if(!hasOneKey) {
+    if(hasSeveral) {
         out = out + ', ' + tables.pluralize(keyCount, 'code');
     }
 
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// The branch that stands for the rest of the file - who else has this value, which is
-// what says how far it reaches when no target was asked about.
-tables.buildAlsoLabel = function(sectionCount) {
-
-    var out = 'Also in ' + tables.pluralize(sectionCount, 'system');
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// The last branch of a run that was cut short, so a file of a hundred systems draws as
-// a few of them and a count.
-tables.buildRestLabel = function(restCount) {
-
-    var out = restCount + ' more';
     return out;
 };
 

@@ -42,7 +42,7 @@ parse.read = function(content) {
 
             if(line.charAt(line.length - 1) !== ']') {
                 out.errorLine = lineNumber;
-                out.errorText = 'a section name is missing its closing bracket';
+                out.errorText = 'a table name is missing its closing bracket';
                 return out;
             }
 
@@ -61,7 +61,7 @@ parse.read = function(content) {
 
         if(!section) {
             out.errorLine = lineNumber;
-            out.errorText = 'this value is not under any section';
+            out.errorText = 'this value is not under any table';
             return out;
         }
 

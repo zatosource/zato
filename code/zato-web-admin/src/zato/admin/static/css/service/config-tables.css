@@ -45,11 +45,8 @@
     /* The rules that split the page up, in the panel's own weight */
     --config-tables-divider: 3px solid var(--primary-dark);
 
-    /* The drawing a mapping set answers with - the lines it hangs off, and the borders
-       of the two kinds of node that carry a color of their own */
+    /* The drops of the drawing a mapping set answers with */
     --config-tables-flow-line: #9aa7b4;
-    --config-tables-flow-value-border: #e0b070;
-    --config-tables-flow-branch-border: #9cc4e4;
 
     --config-tables-border: #d9dee3;
     --config-tables-text: #1a1a2e;
@@ -672,68 +669,71 @@
     height: auto;
 }
 
-/* A node is a card the weight of the badges in the listing, and the one the whole
-   drawing turns on wears the color a mapping set wears there */
-.config-tables-flow-node {
-    fill: white;
+/* One table of the file, with its name over the codes it holds - a box that only says
+   where they end, so it is drawn and nothing more */
+.config-tables-flow-group {
+    fill: none;
     stroke: var(--config-tables-border);
+    stroke-width: 1;
+    stroke-dasharray: 4 3;
+}
+
+/* A code is the badge the listing gives a file, at the size the drawing has room for */
+.config-tables-flow-chip {
+    fill: var(--zato-badge-blue-background);
+    stroke: none;
+}
+
+/* The code that was asked about, found again among the ones that came along with it */
+.config-tables-flow-chip-marked {
+    stroke: var(--zato-badge-blue-color);
     stroke-width: 1;
 }
 
-.config-tables-flow-node-value {
-    fill: var(--zato-badge-amber-background);
-    stroke: var(--config-tables-flow-value-border);
-}
-
-.config-tables-flow-node-branch {
-    fill: var(--zato-badge-blue-background);
-    stroke: var(--config-tables-flow-branch-border);
-}
-
-/* What the file has nothing for, and the systems a cut-short run stands for */
-.config-tables-flow-node-muted {
+/* What the file has nothing for, so there is no code to put here */
+.config-tables-flow-chip-note {
     fill: none;
     stroke: var(--config-tables-border);
+    stroke-width: 1;
     stroke-dasharray: 3 3;
 }
 
-/* The spine and the elbows, dashed the way a drawing of a plan is dashed */
+/* What the file maps the code to, in the color it gives a mapping set */
+.config-tables-flow-value {
+    fill: var(--zato-badge-amber-background);
+    stroke: none;
+}
+
+/* The drop from one part of the story to the next, dashed the way a plan is dashed */
 .config-tables-flow-line {
     stroke: var(--config-tables-flow-line);
     stroke-width: 1;
     stroke-dasharray: 3 3;
 }
 
-.config-tables-flow-arrow,
-.config-tables-flow-joint {
+.config-tables-flow-arrow {
     fill: var(--config-tables-flow-line);
     stroke: none;
 }
 
-/* Where the value turns out to have more than one way out of it */
-.config-tables-flow-gate {
-    fill: white;
-    stroke: var(--config-tables-flow-line);
-    stroke-width: 1;
-}
-
-.config-tables-flow-name,
+.config-tables-flow-caption,
 .config-tables-flow-label,
-.config-tables-flow-count {
+.config-tables-flow-note-text {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 9px;
     fill: var(--text-muted);
 }
 
-.config-tables-flow-code,
-.config-tables-flow-value {
+.config-tables-flow-chip-text {
     font-family: var(--config-tables-font-mono);
     font-size: 12px;
-    fill: var(--config-tables-text);
+    fill: var(--zato-badge-blue-color);
 }
 
-.config-tables-flow-value {
+.config-tables-flow-value-text {
+    font-family: var(--config-tables-font-mono);
     font-size: 13px;
+    fill: var(--zato-badge-amber-color);
 }
 
 /* ------------------------------------------------------------ */
