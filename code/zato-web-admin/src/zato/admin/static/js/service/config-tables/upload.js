@@ -1,11 +1,8 @@
 // Config tables - bringing a file in from your own machine.
 //
 // Uploading is the one thing with a question of its own - where the file goes -
-// so it is the one thing that opens a dialog. The same dialog puts a new version
-// of a file in place, which is how a file too large for the browser is changed,
-// and then what comes out of it takes that file's place instead of being added
-// next to it. A file that does not parse is not put anywhere and the dialog stays
-// open saying which line stopped it.
+// so it is the one thing that opens a dialog. A file that does not parse is not
+// put anywhere and the dialog stays open saying which line stopped it.
 
 (function($) {
 
@@ -22,23 +19,14 @@ upload.config = {
     // What the dialog says while it has nothing to show yet
     blank: '-',
 
-    // What the dialog is titled, by what it is opened for
+    // What the dialog is titled
     uploadTitle: 'Upload a file',
-    replaceTitle: 'Upload a new version',
 
     // How far down the window the dialog opens, before it is dragged anywhere
     openTopPercent: 12,
 
     // The key that puts the dialog away
     closeKey: 'Escape'
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-upload.state = {
-
-    // The file the dialog replaces, '' when it brings a new one in
-    replacedName: ''
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -61,7 +49,6 @@ upload.init = function() {
     tables.get('dialog-directory-field').hidden = !hasChoice;
 
     tables.get('upload').addEventListener('click', upload.open);
-    tables.get('replace').addEventListener('click', upload.openReplace);
 
     tables.get('dialog-file').addEventListener('change', upload.refresh);
     directory.addEventListener('change', upload.refresh);
@@ -125,26 +112,7 @@ upload.onKeyDown = function(event) {
 
 upload.open = function() {
 
-    upload.state.replacedName = '';
-    upload.openDialog(upload.config.uploadTitle);
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// The same dialog, opened for the file already open.
-upload.openReplace = function() {
-
-    var table = tables.getCurrent();
-
-    upload.state.replacedName = table.name;
-    upload.openDialog(upload.config.replaceTitle);
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-upload.openDialog = function(title) {
-
-    tables.get('dialog-title').textContent = title;
+    tables.get('dialog-title').textContent = upload.config.uploadTitle;
     tables.get('dialog-file').value = '';
     tables.get('dialog-status').textContent = '';
 
@@ -268,27 +236,7 @@ upload.readUploaded = function(fileName, content) {
         return;
     }
 
-    if(upload.state.replacedName) {
-        upload.replaceContents(fileName, content, parsed);
-    }
-    else {
-        upload.addUploaded(fileName, content);
-    }
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-upload.replaceContents = function(fileName, content, parsed) {
-
-    var table = tables.getByName(upload.state.replacedName);
-
-    tables.applyContents(table, content, parsed);
-
-    tables.files.persist('upload', table, function() {
-        upload.close();
-        tables.select(table.name);
-        tables.setStatus('Uploaded ' + fileName + ' over ' + table.file_name);
-    });
+    upload.addUploaded(fileName, content);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -305,10 +253,11 @@ upload.addUploaded = function(fileName, content) {
     var directory = upload.getPickedDirectory();
     var table = tables.files.buildTable(name, fileName, directory, content);
 
-    tables.state.tableList.push(table);
-    tables.state.initialContent[name] = content;
-
     tables.files.persist('upload', table, function() {
+
+        tables.state.tableList.push(table);
+        tables.state.initialContent[name] = content;
+
         upload.close();
         tables.select(name);
         tables.setStatus('Uploaded ' + fileName);

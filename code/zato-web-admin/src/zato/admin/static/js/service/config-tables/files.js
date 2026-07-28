@@ -23,7 +23,10 @@ files.config = {
     suffix: '.ini',
 
     // What a downloaded copy is handed over as
-    downloadType: 'text/plain'
+    downloadType: 'text/plain',
+
+    // What is said when the server could not be reached at all
+    persistErrorText: 'The server could not be reached'
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -44,10 +47,12 @@ files.add = function() {
     var name = files.buildFreeName();
     var table = files.buildTable(name, name + files.config.suffix, tables.state.userConfDirectory, '');
 
-    tables.state.tableList.push(table);
-    tables.state.initialContent[name] = '';
-
+    // The listing gets the file once the server has it, so a file on screen is a file on disk
     files.persist('add', table, function() {
+
+        tables.state.tableList.push(table);
+        tables.state.initialContent[name] = '';
+
         tables.select(name);
         tables.setStatus('Added ' + table.file_name);
     });
@@ -177,18 +182,28 @@ files.applyRename = function(name) {
     }
 
     var previousName = table.name;
-    var suffix = files.getSuffix(table.file_name);
+    var previousFileName = table.file_name;
+    var suffix = files.getSuffix(previousFileName);
+    var fileName = name + suffix;
 
-    table.name = name;
-    table.file_name = name + suffix;
-    table.path = table.directory + table.file_name;
+    var extra = {
+        file_name: previousFileName,
+        new_file_name: fileName
+    };
 
-    tables.state.initialContent[name] = tables.state.initialContent[previousName];
-
+    // The file is renamed on disk first, so what the listing says a file is called is
+    // what it is called there
     files.persist('rename', table, function() {
+
+        table.name = name;
+        table.file_name = fileName;
+        table.path = table.directory + fileName;
+
+        tables.state.initialContent[name] = tables.state.initialContent[previousName];
+
         tables.select(name);
         tables.setStatus('Renamed ' + previousName + ' to ' + name);
-    });
+    }, extra);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -215,11 +230,11 @@ files.remove = function() {
 
     var table = tables.getCurrent();
     var tableList = tables.state.tableList;
-    var tableIdx = tableList.indexOf(table);
-
-    tableList.splice(tableIdx, 1);
 
     files.persist('delete', table, function() {
+
+        var tableIdx = tableList.indexOf(table);
+        tableList.splice(tableIdx, 1);
 
         tables.state.currentName = '';
         tables.renderList();
@@ -245,8 +260,7 @@ files.remove = function() {
 // ////////////////////////////////////////////////////////////////////////
 
 // A copy of the file as it is, taken from the listing's own menu, which is how a
-// file too large for the browser is worked on - taken away, changed and uploaded
-// again.
+// file too large for the browser is worked on - taken away and changed elsewhere.
 files.download = function() {
 
     var table = tables.getCurrent();
@@ -267,10 +281,59 @@ files.download = function() {
 // ////////////////////////////////////////////////////////////////////////
 
 // Every change the page makes goes out through here, which is the one place a
-// round trip to the server is made from.
-files.persist = function(action, table, onDone) {
+// round trip to the server is made from. The page catches up with the server only
+// once the server says the change is on disk, so what is on screen after that is
+// what a service reading the same file gets.
+files.persist = function(action, table, onDone, extra) {
 
-    onDone();
+    var data = {
+        directory: table.directory,
+        file_name: table.file_name,
+        data: table.content
+    };
+
+    if(extra) {
+        for(var key in extra) {
+            data[key] = extra[key];
+        }
+    }
+
+    $.ajax({
+        url: tables.state.persistUrl,
+        type: 'POST',
+        headers: {'X-CSRFToken': $.cookie('csrftoken')},
+        data: JSON.stringify({action: action, data: data}),
+        contentType: 'application/json',
+
+        success: function(response) {
+
+            if(response.success) {
+                onDone();
+            }
+            else {
+                tables.setStatus(response.error, true);
+            }
+        },
+
+        error: function(request) {
+            tables.setStatus(files.buildErrorText(request), true);
+        }
+    });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// What the server said went wrong. It answers with what it has to say about it, and
+// a request that never got that far is said as the plain fact that it did not.
+files.buildErrorText = function(request) {
+
+    var out = files.config.persistErrorText;
+
+    if(request.responseJSON) {
+        out = request.responseJSON.error;
+    }
+
+    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////

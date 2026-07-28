@@ -129,7 +129,11 @@
 /* Config tables - the browser                                   */
 /* ------------------------------------------------------------ */
 
+/* The width a column is dragged to counts its own padding in, otherwise the width it
+   is given and the width it then has on screen are two different numbers and a column
+   that is kept and reopened creeps wider every time */
 .config-tables-browser {
+    box-sizing: border-box;
     flex: 0 0 var(--config-tables-browser-width);
     min-width: 0;
     padding: 15px 16px 20px 16px;
@@ -457,29 +461,13 @@
 /* Config tables - what sits under the editor                    */
 /* ------------------------------------------------------------ */
 
-/* Away from the editor, and the same small face the settings pages give the
-   options on the left of their own button rows. The row steps in by the width of the
-   numbers, so what is at either end of it lines up with the file's own two edges. */
+/* Away from the editor, and stepped in by the width of the numbers, so the row ends
+   where the file itself ends. */
 #config-tables-editor-buttons {
     margin-top: 16px;
     margin-bottom: 0;
     padding-left: var(--config-tables-gutter-width);
     align-items: center;
-}
-
-.config-tables-options {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    margin-right: auto;
-    font-size: 12px;
-    font-weight: 600;
-}
-
-.config-tables-options .options-separator {
-    color: #ccc;
-    font-weight: 400;
-    user-select: none;
 }
 
 /* The link that puts the file back as it was, in the same face and right next to
@@ -510,6 +498,7 @@
 /* The third column, on the same quiet background as the listing on the other side
    of the file, with the answer taking whatever room the fields above it leave */
 .config-tables-translate-panel {
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     flex: 0 0 var(--config-tables-translate-width);
@@ -766,6 +755,13 @@
     margin-bottom: 0;
     padding: 0 16px 14px 16px;
     align-items: center;
+}
+
+/* Whatever the dialog has to say sits on the left of its own button row */
+.config-tables-dialog-note {
+    display: inline-flex;
+    align-items: center;
+    margin-right: auto;
 }
 
 .config-tables-dialog-field {

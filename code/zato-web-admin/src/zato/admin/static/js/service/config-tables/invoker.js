@@ -29,10 +29,8 @@ invoker.config = {
     resultCopyPlacement: 'left',
     fieldCopyPlacement: 'top',
 
-    // The answer reads as lines of the kind of file it came out of. The value the file
-    // holds is what it is and nothing more, so that is what its line is called, while
-    // a target's lines are named by the target itself.
-    valueKey: 'value',
+    // The answer reads as lines of the kind of file it came out of - the value under the
+    // very code it was looked up by, and a target's lines under the target's own name
     keySeparator: ' = ',
     commentPrefix: '# '
 };
@@ -171,7 +169,7 @@ invoker.translate = function() {
         return;
     }
 
-    var answer = invoker.buildAnswer(table, content, found);
+    var answer = invoker.buildAnswer(table, content, code, found);
     invoker.setResult(answer);
 
     if(!tables.isMappingSet(table)) {
@@ -301,12 +299,12 @@ invoker.dropTable = function(spread, tableName) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The value that was found, and under it what the target maps it to when one was
-// asked for.
-invoker.buildAnswer = function(table, content, found) {
+// The value that was found, under the code it was looked up by, and under that what the
+// target maps it to when one was asked for.
+invoker.buildAnswer = function(table, content, code, found) {
 
     var config = invoker.config;
-    var lineList = [config.valueKey + config.keySeparator + found];
+    var lineList = [code + config.keySeparator + found];
 
     // A code list has no system on either end, so there is no target to ask about
     if(!tables.isMappingSet(table)) {

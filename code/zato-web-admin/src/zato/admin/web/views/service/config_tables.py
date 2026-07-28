@@ -7,9 +7,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from json import dumps
+from json import dumps, loads
+from logging import getLogger
+from traceback import format_exc
 
 # Django
+from django.http import HttpResponse
+from django.http.response import HttpResponseServerError
 from django.template.response import TemplateResponse
 
 # Zato
@@ -27,101 +31,39 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+logger = getLogger(__name__)
+
 _template_name = 'zato/service/config-tables.html'
 
-# A table whose file is bigger than this is worked on outside the dashboard - downloaded,
-# changed and uploaded again - rather than in the browser.
+# A file bigger than this is worked on outside the dashboard - downloaded and changed
+# in your own tools - rather than in the browser, so the server does not even send it here.
 _max_editable_size = 256 * 1024
 
-# Where the files live
-_user_conf_directory = './config/repo/user-conf/'
+# The services the page reads the files through and writes them back with
+_service_get_list = 'zato.user-conf.get-list'
+_service_save = 'zato.user-conf.save'
+_service_create = 'zato.user-conf.create'
+_service_rename = 'zato.user-conf.rename'
+_service_delete = 'zato.user-conf.delete'
+
+# What each action the page takes invokes
+_action_service = {
+    'save': _service_save,
+    'add': _service_create,
+    'upload': _service_create,
+    'rename': _service_rename,
+    'delete': _service_delete,
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-_loinc_content = """[codes]
-8302-2 = Body height
-29463-7 = Body weight
-39156-5 = Body mass index
-8867-4 = Heart rate
-8310-5 = Body temperature
-"""
+def _json_response(data:'anydict', is_ok:'bool'=True) -> 'HttpResponse':
 
-_error_codes_content = """[codes]
-100 = Segment sequence error
-101 = Required field missing
-102 = Data type error
-103 = Table value not found
-200 = Unsupported message type
-207 = Application internal error
-"""
+    payload = dumps(data).encode('utf-8')
+    response_class = HttpResponse if is_ok else HttpResponseServerError
 
-_wellness_content = """[WELLNESS_APP]
-HT = 8302-2
-WT = 29463-7
-BMI = 39156-5
-HR = 8867-4
-
-[CHECKUP_KIOSK]
-HEIGHT = 8302-2
-BODY_HEIGHT = 8302-2
-WEIGHT = 29463-7
-"""
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _build_table(
-    name:'str',
-    file_name:'str',
-    directory:'str',
-    kind:'str',
-    content:'str',
-    section_count:'int',
-    entry_count:'int',
-    ) -> 'anydict':
-    """ One config table as the page reads it - what it is called, where its file is
-    and what it holds, plus the file itself when it is small enough to be edited in place.
-    """
-    size = len(content)
-    is_editable = size <= _max_editable_size
-
-    out = {
-        'name': name,
-        'file_name': file_name,
-        'directory': directory,
-        'path': directory + file_name,
-        'kind': kind,
-        'section_count': section_count,
-        'entry_count': entry_count,
-        'size': size,
-        'is_editable': is_editable,
-        'content': content,
-    }
-
-    return out
-
-# ################################################################################################################################
-
-def _get_table_list() -> 'anylist':
-    """ The tables the page shows. The shape is what the service behind the page will answer with,
-    so only where the list comes from changes once that service is in place.
-    """
-    out:'anylist' = []
-
-    out.append(_build_table('loinc', 'loinc.ini', _user_conf_directory, 'codes', _loinc_content, 1, 5))
-    out.append(_build_table('error-codes', 'error-codes.ini', _user_conf_directory, 'codes', _error_codes_content, 1, 6))
-    out.append(_build_table('wellness', 'wellness.ini', _user_conf_directory, 'mappings', _wellness_content, 2, 7))
-
-    return out
-
-# ################################################################################################################################
-
-def _get_directory_list() -> 'anylist':
-    """ The directories a file may be put into, as the server reports them - a file is
-    uploaded into one of these and into nothing else.
-    """
-    out:'anylist' = [_user_conf_directory]
+    out = response_class(payload, content_type='application/json')
     return out
 
 # ################################################################################################################################
@@ -129,24 +71,74 @@ def _get_directory_list() -> 'anylist':
 
 @method_allowed('GET')
 def index(req:'any_') -> 'TemplateResponse':
-    """ The config tables of the current cluster - one is picked at a time and everything
+    """ The config files of the current cluster - one is picked at a time and everything
     about it reads off its own line.
     """
-    table_list = _get_table_list()
-    directory_list = _get_directory_list()
+    table_list:'anylist' = []
+    directory_list:'anylist' = []
+    error = ''
+
+    try:
+        response = req.zato.client.invoke(_service_get_list, {'max_size': _max_editable_size})
+
+        if response.ok:
+            table_list = response.data['file_list']
+            directory_list = response.data['directory_list']
+        else:
+            error = response.details
+            logger.error('Config tables: could not read the files: %s', response.details)
+
+    except Exception as e:
+        error = str(e)
+        logger.error('Config tables: could not read the files: %s', format_exc())
+
+    # The header says where the files are, which is the first directory the server reads them from
+    if directory_list:
+        user_conf_directory = directory_list[0]
+    else:
+        user_conf_directory = ''
 
     return_data = {
         'cluster_id': req.zato.cluster_id,
         'table_list_json': dumps(table_list),
         'directory_list_json': dumps(directory_list),
-        'user_conf_directory': _user_conf_directory,
+        'user_conf_directory': user_conf_directory,
         'max_editable_size': _max_editable_size,
+        'error': error,
         'zato_clusters': True,
         'zato_template_name': _template_name,
     }
 
     out = TemplateResponse(req, _template_name, return_data)
     return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def persist(req:'any_') -> 'HttpResponse':
+    """ One change the page has made to a file, carried out where the server reads its files from.
+    """
+    try:
+        body = req.body.decode('utf-8')
+        request_data = loads(body)
+
+        action = request_data['action']
+
+        if action not in _action_service:
+            raise Exception(f'Unknown action `{action}`')
+
+        service_name = _action_service[action]
+        response = req.zato.client.invoke(service_name, request_data['data'])
+
+        if response.ok:
+            return _json_response({'success': True, 'data': response.data})
+        else:
+            return _json_response({'success': False, 'error': response.details}, False)
+
+    except Exception as e:
+        logger.error('Config tables: %s', format_exc())
+        return _json_response({'success': False, 'error': str(e)}, False)
 
 # ################################################################################################################################
 # ################################################################################################################################
