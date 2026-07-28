@@ -188,6 +188,10 @@ tables.wire = function() {
     $.fn.zato.highlight.attach(tables.get('content'), $.fn.zato.highlight.ini_to_html);
 
     tables.split.init();
+
+    // The wash goes in behind the file before the numbers beside it do, the numbers being
+    // measured against a file that is already laid out as it will be read
+    tables.wash.init();
     tables.gutter.init();
     tables.flow.init();
     tables.trace.init();

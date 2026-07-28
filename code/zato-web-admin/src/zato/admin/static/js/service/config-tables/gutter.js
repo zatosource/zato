@@ -13,10 +13,16 @@
 // the box the numbers are in, so the box around the editor is what listens, and which line
 // the cursor is level with is read off the rows themselves.
 //
+// The button waits for the cursor to have meant to be on that strip before it appears, the strip
+// lying between the file and the list of files and a cursor on its way from one to the other
+// being through it rather than on it. Once it is up it follows the cursor from line to line with
+// no wait at all, and it goes the moment the cursor is off the strip.
+//
 // A line that names a section is a line that holds others, so copying it takes the
 // whole section - its name and everything under it down to the next name of the same
 // depth or above it. What that comes to is washed over in the file itself while the
-// cursor is on the number, so what a press would take is read before it is taken.
+// cursor is on the number, so what a press would take is read before it is taken - the
+// wash itself is in wash.js.
 
 (function($) {
 
@@ -43,10 +49,6 @@ gutter.config = {
     buttonClass: 'zato-badge zato-badge-blue config-tables-copy config-tables-copy-small config-tables-gutter-copy',
     buttonVisibleClass: 'config-tables-gutter-copy-visible',
 
-    // The wash over what a press would take, and the class that brings it on
-    washClass: 'config-tables-copy-target',
-    washVisibleClass: 'config-tables-copy-target-visible',
-
     // The button is the one thing here that a tooltip is anchored by, so it is the
     // one thing here with an id
     buttonId: 'config-tables-gutter-copy',
@@ -64,7 +66,13 @@ gutter.config = {
     fileInsetProperty: '--config-tables-file-inset',
 
     // What a row says about the line it counts
-    lineAttribute: 'data-line'
+    lineAttribute: 'data-line',
+
+    // How long the cursor is on the strip before the button appears - the same wait the mega
+    // menu of the website opens on, which is what a pointer crossing something on its way
+    // somewhere else takes to be through it. Once the button is up it follows the cursor from
+    // line to line with no wait at all, and it goes the moment the cursor leaves the strip.
+    dwellMS: 100
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -86,14 +94,18 @@ gutter.state = {
     block: null,
     blockLine: 0,
 
-    // What the wash is over, so it can be put back where it belongs once the file is
-    // scrolled, and whether something other than the cursor on a number is holding it
-    // there - the drawing points at lines of the file with it as well
-    washBlock: null,
-    washHeld: false,
+    // The wait for the cursor to settle on the strip, 0 while there is none, and the row it is
+    // on while that wait runs - the cursor moves on during it, so what the button appears on is
+    // whichever row the cursor is on when the wait is up. Whether the cursor is on the strip at
+    // all is what says whether that wait is due, so running down the file past a line with
+    // nothing on it does not start it again.
+    dwellTimer: 0,
+    dwellRow: null,
+    isOnStrip: false,
 
     // The geometry of the file and of the column beside it, read off them once per build
-    // rather than per movement of the cursor
+    // rather than per movement of the cursor. The wash and the scrolling in wash.js go by
+    // the same figures, this being the one place the file is measured in.
     lineHeight: 0,
     contentPadding: 0,
     paddingTop: 0,
@@ -108,7 +120,6 @@ gutter.init = function() {
     var content = tables.get('content');
 
     gutter.buildButton();
-    gutter.buildWash();
     gutter.buildReach();
 
     // Typing adds and removes lines, and the numbers follow the file as it moves
@@ -160,22 +171,6 @@ gutter.buildReach = function() {
 
     gutter.getBody().appendChild(reach);
     gutter.reach = reach;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// The wash is the first thing in the box the file is read in, which leaves the overlay
-// the file is colored on where it was - the one right in front of the textarea, since
-// that is the one the textarea is found by.
-gutter.buildWash = function() {
-
-    var wash = document.createElement('div');
-    wash.className = gutter.config.washClass;
-
-    var wrapper = tables.get('content').parentNode;
-    wrapper.insertBefore(wash, wrapper.firstChild);
-
-    gutter.wash = wash;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -293,8 +288,8 @@ gutter.followScroll = function() {
 
     // A wash the drawing put there is about a line rather than about where the cursor is,
     // so it travels with the file instead of going out
-    if(gutter.state.washHeld) {
-        gutter.positionWash();
+    if(tables.wash.state.isHeld) {
+        tables.wash.position();
         return;
     }
 
@@ -307,6 +302,7 @@ gutter.followScroll = function() {
 
 gutter.point = function(event) {
 
+    var state = gutter.state;
     var row = gutter.getRowAt(event);
 
     // Away from the strip altogether, or level with no line of the file
@@ -315,7 +311,40 @@ gutter.point = function(event) {
         return;
     }
 
-    gutter.follow(row);
+    var wasOnStrip = state.isOnStrip;
+
+    state.isOnStrip = true;
+    state.dwellRow = row;
+
+    // The cursor is on its way to settling, and the row it settles on is read when the wait is
+    // up rather than now
+    if(state.dwellTimer) {
+        return;
+    }
+
+    // It has settled already, so the button goes to the line the cursor has reached without
+    // further ado - the wait is for the cursor arriving on the strip, not for it running along it
+    if(wasOnStrip) {
+        gutter.follow(row);
+        return;
+    }
+
+    state.dwellTimer = window.setTimeout(gutter.settle, gutter.config.dwellMS);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The cursor has been on the strip long enough to have meant it, so the button appears on
+// whichever line it is on now.
+gutter.settle = function() {
+
+    var state = gutter.state;
+
+    state.dwellTimer = 0;
+
+    if(state.dwellRow !== null) {
+        gutter.follow(state.dwellRow);
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -375,9 +404,10 @@ gutter.follow = function(row) {
     }
 
     // A line with nothing on it at all is nothing to take a copy of - one with only
-    // spaces on it is still something
+    // spaces on it is still something. The cursor is still on the strip, so running on to the
+    // next line brings the button back with no further wait.
     if(state.block === null) {
-        gutter.hide();
+        gutter.clearButton();
         return;
     }
 
@@ -389,7 +419,7 @@ gutter.follow = function(row) {
     gutter.button.classList.add(gutter.config.buttonVisibleClass);
 
     gutter.markRow(row);
-    gutter.showWash(state.block, false);
+    tables.wash.show(state.block, false);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -432,82 +462,28 @@ gutter.readBlock = function(lineIdx) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The wash over a block of the file, level with the first line of it. Held, it stays until
-// whoever put it there takes it away - that is the drawing pointing at a line rather than
-// the cursor resting on a number, and the cursor is elsewhere on the page by then.
-gutter.showWash = function(block, held) {
-
-    var state = gutter.state;
-    var height = block.count * state.lineHeight;
-
-    state.washBlock = block;
-    state.washHeld = held;
-
-    gutter.wash.style.height = height + 'px';
-    gutter.wash.classList.add(gutter.config.washVisibleClass);
-
-    gutter.positionWash();
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// Where the wash goes is where the first line of its block is, which moves as the file is
-// scrolled under it.
-gutter.positionWash = function() {
-
-    var state = gutter.state;
-    var scrollTop = tables.get('content').scrollTop;
-    var top = state.paddingTop + state.washBlock.start * state.lineHeight - scrollTop;
-
-    gutter.wash.style.top = top + 'px';
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// The file is scrolled only as far as it takes for a line to be on screen, so a line that
-// is there already is left where it is.
-gutter.scrollToLine = function(lineIdx) {
-
-    var state = gutter.state;
-    var content = tables.get('content');
-
-    // Where the line is inside the file's own box, the room it keeps above its first
-    // line counted in
-    var top = state.contentPadding + lineIdx * state.lineHeight;
-    var bottom = top + state.lineHeight;
-
-    if(top < content.scrollTop) {
-        content.scrollTop = top;
-        return;
-    }
-
-    if(bottom > content.scrollTop + content.clientHeight) {
-        content.scrollTop = bottom - content.clientHeight;
-    }
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// A block is brought on screen from its start, so a table taller than the room there is for
-// it is read from its name down rather than from its last line up.
-gutter.scrollToBlock = function(block) {
-
-    gutter.scrollToLine(block.start + block.count - 1);
-    gutter.scrollToLine(block.start);
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-gutter.hideWash = function() {
-
-    gutter.state.washBlock = null;
-    gutter.state.washHeld = false;
-    gutter.wash.classList.remove(gutter.config.washVisibleClass);
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
+// The cursor is off the strip, so there is no line it is on and nothing on its way to appearing
+// on one either - a pointer passing through on its way elsewhere leaves no button behind it.
 gutter.hide = function() {
+
+    var state = gutter.state;
+
+    if(state.dwellTimer) {
+        window.clearTimeout(state.dwellTimer);
+        state.dwellTimer = 0;
+    }
+
+    state.dwellRow = null;
+    state.isOnStrip = false;
+
+    gutter.clearButton();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The button off the line it was on, the cursor being wherever it is - which line it is on is
+// the button's own business, so this says nothing about the strip.
+gutter.clearButton = function() {
 
     gutter.state.lineNumber = 0;
     gutter.button.classList.remove(gutter.config.buttonVisibleClass);
@@ -515,11 +491,11 @@ gutter.hide = function() {
     gutter.markRow(null);
 
     // What the drawing is pointing at is not the cursor's to take away
-    if(gutter.state.washHeld) {
+    if(tables.wash.state.isHeld) {
         return;
     }
 
-    gutter.hideWash();
+    tables.wash.hide();
 };
 
 // ////////////////////////////////////////////////////////////////////////

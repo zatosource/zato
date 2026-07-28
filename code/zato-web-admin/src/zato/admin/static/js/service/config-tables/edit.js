@@ -27,9 +27,13 @@ var log = tables.log;
 
 edit.config = {
 
-    // Typing that goes on with no more than this long between two keystrokes is one step of
-    // the history, so Ctrl-Z takes back a word or a line rather than a letter
+    // What holds a run of typing together as one step of the history, so Ctrl-Z takes back a
+    // word rather than a letter and rather than everything typed since the file was opened.
+    // The run is broken by a pause, by as many characters as a long word, by the caret moving
+    // off where it was, by typing turning into deleting, and by anything that is not part of a
+    // word, whitespace included - which is why a word is what a step usually holds.
     coalesceMS: 500,
+    runLength: 24,
 
     // How many steps back a file keeps
     depth: 200,
@@ -99,10 +103,19 @@ edit.open = function(table) {
         edit.state.historyByPath[table.path] = history;
     }
 
+    var wasActiveId = document.activeElement === null ? '' : document.activeElement.id;
+
+    // The file is what the page is about, so it is what the keyboard is on. Without this the
+    // caret is put back where it was and shows nowhere, the cursor being on the listing the
+    // file was picked from, and the first press in the file moves it somewhere else.
+    tables.get('content').focus({preventScroll: true});
+
     edit.applyCaret(table);
 
     var data = log.buildTable(table);
 
+    data.wasActiveId = wasActiveId;
+    data.activeId = document.activeElement.id;
     data.isNewHistory = isNew;
     data.stepCount = history.stepList.length;
     data.stepIdx = history.stepIdx;
@@ -116,25 +129,38 @@ edit.open = function(table) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// A file starts with one step, which is what it says now - there is nothing before it to go
-// back to and nothing after it to go forward to.
+// A file starts at the file on disk, which is the one step there always is - going back all
+// the way is going back to what a service reading it would get. A file left with something
+// unsaved from an earlier visit starts one step on from that, so the typing of that visit is
+// still a step that can be taken back.
 edit.buildHistory = function(table) {
 
-    var content = tables.draft.get(table);
+    var disk = table.content;
+    var screen = tables.draft.get(table);
 
     var out = {
-        stepList: [{content: content, start: content.length, end: content.length}],
+        stepList: [{content: disk, start: disk.length, end: disk.length}],
         stepIdx: 0,
-        stepTime: 0
+        stepTime: 0,
+
+        // What the run of typing at the top of the history stands at - how much of it there is
+        // and which way it went, both of which say whether the next keystroke joins it
+        runCount: 0,
+        runDelta: 0
     };
+
+    if(screen !== disk) {
+        out.stepList.push({content: screen, start: screen.length, end: screen.length});
+        out.stepIdx = 1;
+    }
 
     return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// One more step of the file, taken as it is typed into. A run of typing is one step, so the
-// step at the top grows for as long as the typing goes on, and anything that had been taken
+// One more step of the file, taken as it is typed into. A run of typing goes into the step at
+// the top for as long as it reads as one word being written, and anything that had been taken
 // back is now gone, since the file has gone another way from here.
 edit.remember = function(table, content) {
 
@@ -149,19 +175,32 @@ edit.remember = function(table, content) {
         end: box.selectionEnd
     };
 
-    var isRun = now - history.stepTime < config.coalesceMS;
+    var previous = history.stepList[history.stepIdx];
+    var delta = content.length - previous.content.length;
     var sinceMS = history.stepTime === 0 ? -1 : now - history.stepTime;
+
+    // Every one of these has to hold for the keystroke to join the run at the top
+    var isSoonEnough = history.stepTime !== 0 && now - history.stepTime < config.coalesceMS;
+    var isSameWay = delta !== 0 && (delta > 0) === (history.runDelta > 0);
+    var isAdjacent = step.start === previous.start + delta;
+    var isShortEnough = history.runCount + Math.abs(delta) <= config.runLength;
+
+    var isRun = isSoonEnough && isSameWay && isAdjacent && isShortEnough;
     var droppedCount = history.stepList.length - (history.stepIdx + 1);
 
     history.stepTime = now;
+    history.runDelta = delta;
 
     if(isRun) {
+
         history.stepList[history.stepIdx] = step;
+        history.runCount = history.runCount + Math.abs(delta);
     }
     else {
 
         history.stepList.length = history.stepIdx + 1;
         history.stepList.push(step);
+        history.runCount = Math.abs(delta);
 
         // The oldest step goes once the file has more of them than it keeps
         if(history.stepList.length > config.depth) {
@@ -171,10 +210,24 @@ edit.remember = function(table, content) {
         history.stepIdx = history.stepList.length - 1;
     }
 
+    // A word just ended, so the run ends with it and the next keystroke is a step of its own
+    var isWordEnd = delta > 0 && edit.isBreak(content.charAt(step.start - 1));
+
+    if(isWordEnd) {
+        history.stepTime = 0;
+    }
+
     log.say('edit.remember', {
         path: table.path,
         isRun: isRun,
+        isSoonEnough: isSoonEnough,
+        isSameWay: isSameWay,
+        isAdjacent: isAdjacent,
+        isShortEnough: isShortEnough,
+        isWordEnd: isWordEnd,
         sinceMS: sinceMS,
+        delta: delta,
+        runCount: history.runCount,
         stepIdx: history.stepIdx,
         stepCount: history.stepList.length,
         droppedCount: isRun ? 0 : droppedCount,
@@ -183,6 +236,16 @@ edit.remember = function(table, content) {
         selectionStart: step.start,
         selectionEnd: step.end
     });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Whether the character ends a word, which is where one step of the history ends and the
+// next one starts.
+edit.isBreak = function(character) {
+
+    var out = /\s/.test(character);
+    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -262,6 +325,8 @@ edit.step = function(direction) {
 
     // A step landed on is not a step taken, so the next keystroke starts a run of its own
     history.stepTime = 0;
+    history.runCount = 0;
+    history.runDelta = 0;
 
     edit.apply(table, step);
 };
@@ -271,17 +336,22 @@ edit.step = function(direction) {
 edit.apply = function(table, step) {
 
     var content = tables.get('content');
-    var previousLength = content.value.length;
+    var previousContent = content.value;
+
+    // The caret goes to the end of what this step changed rather than to where it stood when the
+    // step was taken - a step taken back is read at the change it took back, and the end of the
+    // file, which is where the caret of a step out of storage stands, is nowhere near it
+    var at = edit.getChangeEnd(previousContent, step.content);
 
     content.value = step.content;
-    content.setSelectionRange(step.start, step.end);
+    content.setSelectionRange(at, at);
 
     log.say('edit.apply', {
         path: table.path,
-        lengthFrom: previousLength,
+        lengthFrom: previousContent.length,
         lengthTo: step.content.length,
-        selectionStart: step.start,
-        selectionEnd: step.end,
+        stepStart: step.start,
+        changeEnd: at,
         isDraft: step.content !== table.content
     });
 
@@ -292,7 +362,41 @@ edit.apply = function(table, step) {
     tables.draft.remember(table, step.content);
     tables.renderModified();
 
+    // A step taken back somewhere else in the file is one the reader is brought to, since a
+    // change that cannot be seen reads as no change at all
+    tables.wash.showLine(edit.getLineIdx(step.content, at));
+
     edit.rememberCaret();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Where the change between two states of the file ends - what the two have in common at the
+// start and at the end is not the change, so what is left between the two is, and the end of it
+// is where the caret belongs. Two states that say the same thing have no change and no end to
+// it, so the caret stays where the two part company, which is the end of the file.
+edit.getChangeEnd = function(previousContent, content) {
+
+    var shortest = Math.min(previousContent.length, content.length);
+    var prefix = 0;
+
+    while(prefix < shortest && previousContent.charAt(prefix) === content.charAt(prefix)) {
+        prefix++;
+    }
+
+    var suffix = 0;
+    var room = shortest - prefix;
+
+    while(suffix < room &&
+        previousContent.charAt(previousContent.length - 1 - suffix) ===
+        content.charAt(content.length - 1 - suffix)) {
+
+        suffix++;
+    }
+
+    var out = content.length - suffix;
+
+    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -350,6 +454,14 @@ edit.applyCaret = function(table) {
 
     content.setSelectionRange(start, end);
 
+    // Setting the caret does not bring it on screen, and a caret off screen is a caret that
+    // has not come back as far as the reader is concerned. The line lands in the middle of the
+    // view rather than at its edge, since a line at the bottom of the view is a line with no
+    // file under it to read.
+    var lineIdx = edit.getLineIdx(content.value, start);
+
+    tables.wash.showLine(lineIdx);
+
     log.say('edit.applyCaret', {
         path: table.path,
         hasCaret: true,
@@ -357,8 +469,20 @@ edit.applyCaret = function(table) {
         selectionStart: start,
         selectionEnd: end,
         length: last,
+        lineIdx: lineIdx,
         scrollTop: content.scrollTop
     });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Which line of the file an offset into it is on, counted from the first.
+edit.getLineIdx = function(content, offset) {
+
+    var before = content.substring(0, offset);
+    var out = before.split('\n').length - 1;
+
+    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////

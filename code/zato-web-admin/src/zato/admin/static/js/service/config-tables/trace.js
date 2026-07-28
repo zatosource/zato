@@ -25,6 +25,7 @@
 var tables = $.fn.zato.service.config_tables;
 var trace = tables.trace;
 var gutter = tables.gutter;
+var wash = tables.wash;
 
 // ////////////////////////////////////////////////////////////////////////
 
@@ -136,8 +137,8 @@ trace.startTable = function(mark, tableMark) {
 
     var block = gutter.getBlock(lineList, lineIdx);
 
-    gutter.scrollToBlock(block);
-    gutter.showWash(block, true);
+    wash.scrollToBlock(block);
+    wash.show(block, true);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -185,7 +186,7 @@ trace.stop = function() {
     state.lineList = [];
     state.lineIdx = 0;
 
-    gutter.hideWash();
+    wash.hide();
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -197,8 +198,8 @@ trace.show = function() {
     var state = trace.state;
     var lineIdx = state.lineList[state.lineIdx];
 
-    gutter.scrollToLine(lineIdx);
-    gutter.showWash({start: lineIdx, count: 1}, true);
+    wash.scrollToLine(lineIdx);
+    wash.show({start: lineIdx, count: 1}, true);
 };
 
 // ////////////////////////////////////////////////////////////////////////
