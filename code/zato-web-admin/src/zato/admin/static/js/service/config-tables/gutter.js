@@ -60,6 +60,12 @@ gutter.state = {
     // The line the button is currently on, 0 while it is off screen
     lineNumber: 0,
 
+    // What a press on that line would take, and the line it was worked out for - both
+    // kept so that the file is only read again once the cursor reaches another line.
+    // A block of null means the line has nothing on it to copy.
+    block: null,
+    blockLine: 0,
+
     // The geometry of the column and of the button on it, read off them once per build
     // rather than per movement of the cursor
     lineHeight: 0,
@@ -137,6 +143,8 @@ gutter.refresh = function() {
         gutter.build(lineCount);
     }
 
+    // The file reads differently now, so what was worked out off it no longer holds
+    gutter.state.blockLine = 0;
     gutter.followScroll();
 };
 
@@ -250,19 +258,44 @@ gutter.follow = function(event) {
         return;
     }
 
+    // What a press would take is read off the file, so it is worked out again only once
+    // the cursor has reached another line
+    if(state.blockLine !== lineIdx + 1) {
+        state.blockLine = lineIdx + 1;
+        state.block = gutter.readBlock(lineIdx);
+    }
+
+    // A line with nothing on it at all is nothing to take a copy of - one with only
+    // spaces on it is still something
+    if(state.block === null) {
+        gutter.hide();
+        return;
+    }
+
     var top = state.paddingTop + lineIdx * state.lineHeight - scrollTop;
+
+    state.lineNumber = lineIdx + 1;
 
     gutter.button.style.top = top + 'px';
     gutter.button.classList.add(gutter.config.buttonVisibleClass);
 
-    // What a press would take is read off the file, so it is worked out again only
-    // once the cursor has reached another line
-    if(state.lineNumber !== lineIdx + 1) {
-        state.lineNumber = lineIdx + 1;
-        gutter.showWash(gutter.getBlock(gutter.getLineList(), lineIdx));
+    gutter.showWash(state.block);
+    gutter.positionWash(top);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// What a press on one line would take, or null when that line holds nothing at all.
+gutter.readBlock = function(lineIdx) {
+
+    var lineList = gutter.getLineList();
+
+    if(!lineList[lineIdx].length) {
+        return null;
     }
 
-    gutter.positionWash(top);
+    var out = gutter.getBlock(lineList, lineIdx);
+    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -294,11 +327,11 @@ gutter.hide = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// What the button copies is what the wash is over, which is what one place decides.
+// What the button copies is the very block the wash is over.
 gutter.copy = function() {
 
     var lineList = gutter.getLineList();
-    var block = gutter.getBlock(lineList, gutter.state.lineNumber - 1);
+    var block = gutter.state.block;
     var text = lineList.slice(block.start, block.start + block.count).join('\n');
 
     $.fn.zato.copy.to_clipboard(gutter.button, text, gutter.config.copyPlacement);
