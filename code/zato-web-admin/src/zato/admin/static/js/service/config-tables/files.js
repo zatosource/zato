@@ -114,7 +114,9 @@ files.buildFreeName = function() {
 // ////////////////////////////////////////////////////////////////////////
 
 // The name on the file's own row becomes the field the new one is typed into -
-// Enter is the answer and Escape leaves the file as it was called.
+// Enter is the answer and Escape leaves the file as it was called. The field carries what the file
+// is called on disk, suffix included, so a file that came in as one kind of file is renamed into
+// another by typing the suffix it should have had.
 files.startRename = function() {
 
     var table = tables.getCurrent();
@@ -125,7 +127,7 @@ files.startRename = function() {
     input.type = 'text';
     input.className = 'config-tables-file-rename';
     input.autocomplete = 'off';
-    input.value = table.name;
+    input.value = table.file_name;
 
     // The row opens the file it is of, which a press inside the field is not
     input.addEventListener('mousedown', function(event) {
@@ -171,16 +173,21 @@ files.getRow = function(name) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-files.applyRename = function(name) {
+files.applyRename = function(typed) {
 
     var table = tables.getCurrent();
 
-    if(!name) {
+    if(!typed) {
         tables.setStatus('A file needs a name', true);
         return;
     }
 
-    if(name === table.name) {
+    var previousName = table.name;
+    var previousFileName = table.file_name;
+    var fileName = files.buildFileName(typed, previousFileName);
+    var name = files.getStem(fileName);
+
+    if(fileName === previousFileName) {
         tables.renderList();
         return;
     }
@@ -189,10 +196,6 @@ files.applyRename = function(name) {
         tables.setStatus('There is a file called ' + name + ' already', true);
         return;
     }
-
-    var previousName = table.name;
-    var previousFileName = table.file_name;
-    var fileName = name + files.getSuffix(previousFileName);
 
     files.moveTable(table, name, fileName, function() {
 
@@ -243,18 +246,46 @@ files.moveTable = function(table, name, fileName, onDone, onFail) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The suffix a file keeps through a rename - what a file is written in does not
-// change just because it is called something else.
+// What the file is called on disk after a rename - the text as typed when it carries a suffix of
+// its own, and the suffix the file already had when it does not.
+files.buildFileName = function(typed, previousFileName) {
+
+    if(files.getSuffix(typed)) {
+        return typed;
+    }
+
+    return typed + files.getSuffix(previousFileName);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The suffix a file is written in, if it says one.
 files.getSuffix = function(fileName) {
 
     var out = '';
     var dotIdx = fileName.lastIndexOf('.');
 
-    if(dotIdx !== -1) {
+    // A name that begins with a dot says nothing about what is in the file
+    if(dotIdx > 0) {
         out = fileName.substring(dotIdx);
     }
 
     return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// What a service reaches the file by, which is what the file is called up to its first dot,
+// that being what the server reads the name as too.
+files.getStem = function(fileName) {
+
+    var dotIdx = fileName.indexOf('.');
+
+    if(dotIdx < 1) {
+        return fileName;
+    }
+
+    return fileName.substring(0, dotIdx);
 };
 
 // ////////////////////////////////////////////////////////////////////////
