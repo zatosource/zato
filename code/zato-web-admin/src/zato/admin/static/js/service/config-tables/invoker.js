@@ -37,6 +37,12 @@ invoker.config = {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// Every copy button of the column and the field or the answer it takes its copy from, which
+// is what says whether there is anything to take
+invoker.copyList = [];
+
+// ////////////////////////////////////////////////////////////////////////
+
 invoker.init = function() {
 
     tables.get('translate').addEventListener('click', invoker.translate);
@@ -50,6 +56,8 @@ invoker.init = function() {
     invoker.wireCopy('translate-value-copy', 'translate-value', invoker.config.fieldCopyPlacement);
     invoker.wireCopy('translate-target-copy', 'translate-target', invoker.config.fieldCopyPlacement);
 
+    invoker.refreshCopy();
+
     // There is nothing to translate until the fields say what, so the button says as much.
     // A value picked out of what a field offers arrives with the menu closing rather than
     // with a keypress, which is why that is listened for too.
@@ -61,14 +69,33 @@ invoker.init = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// One copy button and what it takes a copy of.
+// One copy button and what it takes a copy of. An empty field or an empty answer is nothing
+// to copy, so the button beside it says as much for as long as it stays empty.
 invoker.wireCopy = function(buttonName, sourceName, placement) {
 
     var button = tables.get(buttonName);
+    var source = tables.get(sourceName);
 
     button.addEventListener('click', function() {
-        $.fn.zato.copy.to_clipboard(button, tables.get(sourceName).value, placement, $.fn.zato.copy.config.offset);
+        $.fn.zato.copy.to_clipboard(button, source.value, placement, $.fn.zato.copy.config.offset);
     });
+
+    // A value picked out of what a field offers arrives with the menu closing rather than with
+    // a keypress, so that is listened for as well
+    $(source).on('input autocompleteclose', invoker.refreshCopy);
+
+    invoker.copyList.push({button: button, source: source});
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+invoker.refreshCopy = function() {
+
+    for(var copyIdx = 0; copyIdx < invoker.copyList.length; copyIdx++) {
+
+        var copy = invoker.copyList[copyIdx];
+        copy.button.disabled = !copy.source.value;
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -361,8 +388,10 @@ invoker.setResult = function(text) {
     var result = tables.get('result');
     result.value = text;
 
-    // Nothing typed it, so the colors are repainted by hand
+    // Nothing typed it, so the colors are repainted by hand and the button under it is told
+    // whether there is now an answer to copy
     $.fn.zato.highlight.refresh(result);
+    invoker.refreshCopy();
 };
 
 // ////////////////////////////////////////////////////////////////////////

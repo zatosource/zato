@@ -164,11 +164,8 @@ menu.buildItemList = function(name) {
             label: 'Rename',
             isDestructive: false,
             action: tables.files.startRename,
-            description: 'The new name is typed on the file\'s own line. Enter takes it, ' +
-                'Escape keeps the current one.',
             details: [
-                ['Called', table.file_name],
-                ['In a service', tables.buildReference(table.name)]
+                ['File', table.path]
             ]
         });
 
@@ -177,9 +174,8 @@ menu.buildItemList = function(name) {
             label: 'Download',
             isDestructive: false,
             action: tables.files.download,
-            description: 'A copy of the file as it is, onto your own machine.',
             details: [
-                ['Called', table.file_name],
+                ['File', table.path],
                 ['Size', tables.formatSize(table.size)]
             ]
         });
@@ -189,7 +185,6 @@ menu.buildItemList = function(name) {
             label: 'Delete',
             isDestructive: true,
             action: tables.files.remove,
-            description: 'The file is removed.',
             details: [
                 ['File', table.path],
                 ['Holds', holds]
@@ -204,7 +199,6 @@ menu.buildItemList = function(name) {
         label: 'New file',
         isDestructive: false,
         action: tables.files.add,
-        description: 'An empty file, opened for editing right away.',
         details: [
             ['Goes into', tables.state.userConfDirectory]
         ]
@@ -215,7 +209,6 @@ menu.buildItemList = function(name) {
         label: 'Upload file',
         isDestructive: false,
         action: tables.upload.open,
-        description: 'A file from your own machine, checked before it is put in place.',
         details: [
             ['Goes into', tables.state.userConfDirectory]
         ]
@@ -226,8 +219,8 @@ menu.buildItemList = function(name) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The action list on the left and the pane on the right that tells the story of
-// whichever action the cursor is on, the first one from the start.
+// The action list on the left and the pane on the right that says what whichever action
+// the cursor is on would act on, the first one from the start.
 menu.fillList = function(list, info, itemList) {
 
     for(var itemIdx = 0; itemIdx < itemList.length; itemIdx++) {
@@ -284,7 +277,7 @@ menu.buildEntry = function(list, info, item) {
 // ////////////////////////////////////////////////////////////////////////
 
 // The action the cursor or a hotkey has landed on - the row it is on and the
-// pane that describes it move together.
+// pane beside it move together.
 menu.highlight = function(list, info, item) {
 
     var entryList = list.querySelectorAll('.grid-panel-item');
@@ -303,11 +296,6 @@ menu.highlight = function(list, info, item) {
     title.className = 'grid-panel-info-title';
     title.textContent = item.label;
     info.appendChild(title);
-
-    var description = document.createElement('div');
-    description.className = 'grid-panel-info-desc';
-    description.textContent = item.description;
-    info.appendChild(description);
 
     for(var detailIdx = 0; detailIdx < item.details.length; detailIdx++) {
 

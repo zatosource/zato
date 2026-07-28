@@ -41,6 +41,14 @@
     --config-tables-point-height: 5px;
     --config-tables-point-gap: 2px;
 
+    /* How far the whole button, point and all, stands off the file over and above that air */
+    --config-tables-copy-shift: 3px;
+
+    /* The room the settings column keeps on either side of what is in it. On the left that room
+       is what the copy button for a line grows into, so it is part of the strip that line is
+       copied from and the two are laid out by the one measure. */
+    --config-tables-side-room: 16px;
+
     /* What a copy would take, or what a part of the drawing stands for, washed over in the
        file - see through, since it is over the text rather than under it */
     --config-tables-copy-target: rgba(238, 194, 74, 0.2);
@@ -101,7 +109,7 @@
 .config-tables-panel .settings-main {
     display: flex;
     flex-direction: column;
-    padding: 15px 16px 11px 16px;
+    padding: 15px var(--config-tables-side-room) 11px var(--config-tables-side-room);
     overflow: hidden;
 }
 
@@ -138,6 +146,12 @@
 .config-tables-file-modified {
     color: var(--config-tables-error);
     font-weight: 600;
+}
+
+/* On a row of the listing the star stands off the name it follows, so the two are read as
+   the name and a mark about it rather than as one word */
+.config-tables-file-modified {
+    margin-left: 5px;
 }
 
 /* ------------------------------------------------------------ */
@@ -247,6 +261,7 @@
 
 .config-tables-file-name {
     flex: 1;
+    line-height: 16px;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -255,15 +270,22 @@
     color: var(--text-muted);
 }
 
-/* A rename happens on the row itself, in place of the name */
-.config-tables-file-rename {
+/* A rename happens on the row itself, in place of the name - as tall as the name it stands
+   in for, border and all, so nothing about the row moves. The type is named along with the
+   class, since formalize.css gives every text field a height of its own by the type alone
+   and that outweighs a class on its own. */
+input[type="text"].config-tables-file-rename {
     flex: 1;
+    box-sizing: border-box;
+    height: 16px;
     min-width: 0;
-    padding: 1px 4px;
+    margin: 0;
+    padding: 0 3px;
     border: 1px solid var(--config-tables-accent);
     border-radius: 2px;
     font-family: var(--config-tables-font-mono);
     font-size: 12px;
+    line-height: normal;
     color: var(--config-tables-text);
     background: var(--white);
 }
@@ -372,6 +394,24 @@
     color: var(--config-tables-gutter-number);
 }
 
+/* The number of the line the cursor is level with, read plainly while the rest of them
+   stay in the background */
+.config-tables-gutter-line-at .config-tables-gutter-number {
+    color: var(--config-tables-text);
+}
+
+/* The room to the left of the numbers is part of the strip a line is copied from, which it
+   says by wearing the same cursor - it stands beside the numbers, level with the file, over
+   nothing but the room the settings column keeps on that side */
+.config-tables-gutter-reach {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 100%;
+    width: var(--config-tables-side-room);
+    cursor: pointer;
+}
+
 /* The one button the whole column has, level with the line the cursor is on and as
    tall as that line, which is what covers the number it stands in for.
 
@@ -385,7 +425,7 @@
     /* Hung by the tip of its point, short of the first character of the file by the air
        that tip keeps, so it stands the same distance off whether the numbers are one digit
        wide or four, and grows leftwards over the room the column keeps on that side */
-    right: calc(100% - var(--config-tables-gutter-width) - var(--config-tables-file-inset) + var(--config-tables-point-length) + var(--config-tables-point-gap));
+    right: calc(100% - var(--config-tables-gutter-width) - var(--config-tables-file-inset) + var(--config-tables-point-length) + var(--config-tables-point-gap) + var(--config-tables-copy-shift));
     display: inline-flex;
     align-items: center;
     height: 18px;
@@ -609,6 +649,15 @@
 /* Pointed at, the wash goes one shade deeper and nothing else moves */
 .config-tables-copy:hover {
     background-color: var(--config-tables-copy-hover);
+}
+
+/* An empty field, or an answer that is not there yet, is nothing to copy, and the button
+   beside it says so rather than handing over nothing */
+.config-tables-copy:disabled,
+.config-tables-copy:disabled:hover {
+    background-color: var(--background-light);
+    color: var(--text-muted);
+    cursor: default;
 }
 
 /* The one beside a line number is on screen only while the cursor is on that line, so

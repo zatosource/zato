@@ -49,22 +49,6 @@ tables.buildErrorText = function(parsed) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// How a service reaches the file - by name when the name is one Python reads as
-// an attribute, by key when it is not.
-tables.buildReference = function(name) {
-
-    var isAttribute = /^[A-Za-z_][A-Za-z0-9_]*$/.test(name);
-    var out = 'self.config[' + singleQuote + name + singleQuote + ']';
-
-    if(isAttribute) {
-        out = 'self.config.' + name;
-    }
-
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
 // A value the file has nothing for, said as the plain fact that it is.
 tables.buildMissingText = function(table, fromName, code) {
 
