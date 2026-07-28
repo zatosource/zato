@@ -34,6 +34,7 @@ to what is in it comes off the listing's own menu. The view provides:
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/text.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/split.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/combo.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/flow.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/gutter.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/listing.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/parse.js"></script>
@@ -158,9 +159,12 @@ $(document).ready(function() {
 
             <button type="button" class="secondary-button" id="config-tables-try-run">Run</button>
 
-            <!-- The answer is text like any other, so it is edited and taken away
-                 the way the file itself is -->
-            <div class="config-tables-result-area">
+            <!-- A mapping set answers as a drawing of what maps to what, everything else
+                 as text that is edited and taken away the way the file itself is. The
+                 text is what Copy takes either way. -->
+            <div class="config-tables-result-area" id="config-tables-result-area">
+
+                <div class="config-tables-flow" id="config-tables-flow"></div>
 
                 <textarea id="config-tables-result" spellcheck="false"></textarea>
 

@@ -81,6 +81,7 @@ invoker.render = function(table) {
     tables.get('try-target').value = '';
 
     invoker.setResult('');
+    tables.flow.clear();
     invoker.refresh(table);
 };
 
@@ -114,6 +115,8 @@ invoker.readFrom = function(table) {
 
 // What the call answers - the value found and what a target sends it as, or the plain
 // fact that there is none, which is put down as a note about the value rather than as one.
+// A mapping set is a file of systems, so its answer is also drawn as one, while the text
+// stays underneath it as what Copy takes.
 invoker.run = function() {
 
     var table = tables.getCurrent();
@@ -125,11 +128,103 @@ invoker.run = function() {
     if(found === null) {
         var missingText = tables.buildMissingText(table, fromName, code);
         invoker.setResult(invoker.buildComment(missingText));
+        tables.flow.clear();
         return;
     }
 
     var answer = invoker.buildAnswer(table, content, found);
     invoker.setResult(answer);
+
+    if(!tables.isMappingSet(table)) {
+        tables.flow.clear();
+        return;
+    }
+
+    var model = invoker.buildModel(content, fromName, code, found);
+    tables.flow.render(model);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// What the drawing is of - who sent the value, what the file holds for it, and what is
+// on the other side, which is the target when one was asked about and the rest of the
+// file's systems when none was.
+invoker.buildModel = function(content, fromName, code, found) {
+
+    var spread = parse.findValueSpread(content, found);
+    var targetName = tables.get('try-target').value.trim();
+
+    var out = {
+        sourceName: fromName,
+        code: code,
+        value: found,
+        sourceKeyList: invoker.readSpreadKeys(spread, fromName),
+        targetName: targetName,
+        targetKeyList: [],
+        targetNote: '',
+        otherList: []
+    };
+
+    if(!targetName) {
+        out.otherList = invoker.dropSection(spread, fromName);
+        return out;
+    }
+
+    var keyList = parse.findTargetKeys(content, targetName, found);
+
+    if(keyList === null) {
+        out.targetNote = tables.config.flowNoTargetMessage;
+        return out;
+    }
+
+    if(!keyList.length) {
+        out.targetNote = tables.config.flowNoCodeMessage;
+        return out;
+    }
+
+    out.targetKeyList = keyList;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The keys one section holds the value under, read off what the whole file holds it
+// under. A section that holds it under none of them is not in there at all.
+invoker.readSpreadKeys = function(spread, sectionName) {
+
+    var out = [];
+
+    for(var spreadIdx = 0; spreadIdx < spread.length; spreadIdx++) {
+
+        var entry = spread[spreadIdx];
+
+        if(entry.name === sectionName) {
+            out = entry.keyList;
+            break;
+        }
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The file's other systems - the one the value came from is where the drawing starts,
+// so it is not also one of the places it reaches.
+invoker.dropSection = function(spread, sectionName) {
+
+    var out = [];
+
+    for(var spreadIdx = 0; spreadIdx < spread.length; spreadIdx++) {
+
+        var entry = spread[spreadIdx];
+
+        if(entry.name !== sectionName) {
+            out.push(entry);
+        }
+    }
+
+    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////

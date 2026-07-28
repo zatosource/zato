@@ -178,6 +178,29 @@ parse.findTargetKeys = function(content, targetName, value) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// Which sections hold the value and under which keys each of them holds it, which is
+// what says whether a value is one that only one system knows or one that most of the
+// file agrees on. Sections that do not hold it are left out.
+parse.findValueSpread = function(content, value) {
+
+    var parsed = parse.read(content);
+    var out = [];
+
+    for(var sectionIdx = 0; sectionIdx < parsed.sectionList.length; sectionIdx++) {
+
+        var section = parsed.sectionList[sectionIdx];
+        var keyList = parse.findKeys(section, value);
+
+        if(keyList.length) {
+            out.push({name: section.name, keyList: keyList});
+        }
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 // Read the other way round - the keys a value is under rather than the value a key
 // holds, in name order, so what comes back reads the same way every time.
 parse.findKeys = function(section, value) {

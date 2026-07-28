@@ -6,8 +6,9 @@
 // the right. This file holds the state and the editor around the textarea. The
 // listing itself is in listing.js, the two lines that size the columns in split.js,
 // the reading of a file in parse.js, the words the page puts on screen in text.js,
-// the Try it column in invoker.js, the listing's menu in menu.js, what is done to
-// the file itself in files.js and the bringing in of one in upload.js.
+// the Try it column in invoker.js, the drawing it answers a mapping set with in
+// flow.js, the listing's menu in menu.js, what is done to the file itself in files.js
+// and the bringing in of one in upload.js.
 
 (function($) {
 
@@ -40,6 +41,12 @@ tables.config = {
 
     // What the right-hand side says while no file is open
     emptyMessage: 'Pick a file on the left, or add one.',
+
+    // What the drawing puts where a branch would be when the target has nothing on its
+    // side of it - the few words a node has room for, while the answer as text says it
+    // in full
+    flowNoTargetMessage: 'Not a section of this file',
+    flowNoCodeMessage: 'No code for this value',
 
     // The class the status line wears - plain, once something went through, and
     // once something did not

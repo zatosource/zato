@@ -195,6 +195,7 @@ $.namespace('zato.service');
 $.namespace('zato.service.config_tables');
 $.namespace('zato.service.config_tables.combo');
 $.namespace('zato.service.config_tables.files');
+$.namespace('zato.service.config_tables.flow');
 $.namespace('zato.service.config_tables.gutter');
 $.namespace('zato.service.config_tables.invoker');
 $.namespace('zato.service.config_tables.menu');
