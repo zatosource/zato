@@ -41,8 +41,8 @@
     --config-tables-point-height: 5px;
     --config-tables-point-gap: 2px;
 
-    /* What a copy would take, washed over in the file while the cursor is on the
-       number beside it - see through, since it is over the text rather than under it */
+    /* What a copy would take, or what a part of the drawing stands for, washed over in the
+       file - see through, since it is over the text rather than under it */
     --config-tables-copy-target: rgba(238, 194, 74, 0.2);
 
     /* The rules that split the page up, in the panel's own weight */
@@ -386,13 +386,14 @@
 }
 
 /* ------------------------------------------------------------ */
-/* Config tables - what a copy would take                        */
+/* Config tables - the line the file is pointed at by             */
 /* ------------------------------------------------------------ */
 
-/* The wash over the line, or the whole section, the button beside a number would take.
-   The overlay the file is read off is opaque, so the wash goes over it and is see
-   through, the way a marker over paper is - the caret and the file's own border stay
-   above it either way. */
+/* The wash over the line, or the whole section, the button beside a number would take -
+   and over the line a part of the drawing in the Try it column stands for, which is the
+   same thing said from the other side. The overlay the file is read off is opaque, so the
+   wash goes over it and is see through, the way a marker over paper is - the caret and the
+   file's own border stay above it either way. */
 .config-tables-copy-target {
     position: absolute;
     left: 1px;

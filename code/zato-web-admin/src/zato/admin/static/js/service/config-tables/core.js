@@ -7,8 +7,9 @@
 // listing itself is in listing.js, the two lines that size the columns in split.js,
 // the reading of a file in parse.js, the words the page puts on screen in text.js,
 // the Try it column in invoker.js, the drawing it answers a mapping set with in
-// flow.js, the listing's menu in menu.js, what is done to the file itself in files.js
-// and the bringing in of one in upload.js.
+// flow.js, the line of the file a part of that drawing stands for in trace.js, the
+// listing's menu in menu.js, what is done to the file itself in files.js and the
+// bringing in of one in upload.js.
 
 (function($) {
 
@@ -139,6 +140,7 @@ tables.wire = function() {
 
     tables.split.init();
     tables.gutter.init();
+    tables.trace.init();
 };
 
 // ////////////////////////////////////////////////////////////////////////

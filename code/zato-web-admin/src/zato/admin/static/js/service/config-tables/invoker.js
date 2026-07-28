@@ -158,9 +158,10 @@ invoker.buildModel = function(content, fromName, code, found) {
         sourceTable: fromName,
         code: code,
         value: found,
-        sourceKeyList: invoker.readSpreadKeys(spread, fromName),
+        valueLineList: invoker.readSpreadLines(spread),
+        sourceEntryList: invoker.readSpreadEntries(spread, fromName),
         targetTable: targetName,
-        targetKeyList: [],
+        targetEntryList: [],
         targetNote: '',
         otherList: []
     };
@@ -170,21 +171,21 @@ invoker.buildModel = function(content, fromName, code, found) {
         return out;
     }
 
-    var keyList = parse.findTargetKeys(content, targetName, found);
+    var entryList = parse.findTargetEntries(content, targetName, found);
 
     // A name that is no table of the file and a table with no code for the value are the
     // same thing to look at - there is no mapping to draw either way
-    if(keyList === null) {
+    if(entryList === null) {
         out.targetNote = tables.config.flowNoMapMessage;
         return out;
     }
 
-    if(!keyList.length) {
+    if(!entryList.length) {
         out.targetNote = tables.config.flowNoMapMessage;
         return out;
     }
 
-    out.targetKeyList = keyList;
+    out.targetEntryList = entryList;
     return out;
 };
 
@@ -192,20 +193,50 @@ invoker.buildModel = function(content, fromName, code, found) {
 
 // The codes one table holds the value under, read off what the whole file holds it under.
 // A table that holds it under none of them is not in there at all.
-invoker.readSpreadKeys = function(spread, tableName) {
+invoker.readSpreadEntries = function(spread, tableName) {
 
     var out = [];
 
     for(var spreadIdx = 0; spreadIdx < spread.length; spreadIdx++) {
 
-        var entry = spread[spreadIdx];
+        var table = spread[spreadIdx];
 
-        if(entry.name === tableName) {
-            out = entry.keyList;
+        if(table.name === tableName) {
+            out = table.entryList;
             break;
         }
     }
 
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Every line of the file that holds the value, whichever table it is under - what the value
+// itself stands for, as against one code standing for the one line it came off.
+invoker.readSpreadLines = function(spread) {
+
+    var out = [];
+
+    for(var spreadIdx = 0; spreadIdx < spread.length; spreadIdx++) {
+
+        var entryList = spread[spreadIdx].entryList;
+
+        for(var entryIdx = 0; entryIdx < entryList.length; entryIdx++) {
+            out.push(entryList[entryIdx].lineIdx);
+        }
+    }
+
+    out.sort(invoker.byLine);
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Down the file, since that is the order they are washed over in.
+invoker.byLine = function(left, right) {
+
+    var out = left - right;
     return out;
 };
 
@@ -219,10 +250,10 @@ invoker.dropTable = function(spread, tableName) {
 
     for(var spreadIdx = 0; spreadIdx < spread.length; spreadIdx++) {
 
-        var entry = spread[spreadIdx];
+        var table = spread[spreadIdx];
 
-        if(entry.name !== tableName) {
-            out.push(entry);
+        if(table.name !== tableName) {
+            out.push(table);
         }
     }
 
@@ -262,22 +293,22 @@ invoker.buildAnswer = function(table, content, found) {
 invoker.buildTargetLineList = function(content, targetName, found) {
 
     var config = invoker.config;
-    var keyList = parse.findTargetKeys(content, targetName, found);
+    var entryList = parse.findTargetEntries(content, targetName, found);
 
-    if(keyList === null) {
+    if(entryList === null) {
         var unknownText = tables.buildUnknownTargetText(targetName);
         return [invoker.buildComment(unknownText)];
     }
 
-    if(!keyList.length) {
+    if(!entryList.length) {
         var missingText = tables.buildTargetMissingText(targetName, found);
         return [invoker.buildComment(missingText)];
     }
 
     var out = [];
 
-    for(var keyIdx = 0; keyIdx < keyList.length; keyIdx++) {
-        out.push(targetName + config.keySeparator + keyList[keyIdx]);
+    for(var entryIdx = 0; entryIdx < entryList.length; entryIdx++) {
+        out.push(targetName + config.keySeparator + entryList[entryIdx].key);
     }
 
     return out;
