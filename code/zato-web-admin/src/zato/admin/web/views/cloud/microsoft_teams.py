@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.admin.web.views import method_allowed, ping_connection
+from zato.admin.web.views import method_allowed, ping_connection, send_chat_message
 from zato.admin.web.views.cloud import microsoft_365
 from zato.common.api import GENERIC
 
@@ -52,6 +52,13 @@ change_password = microsoft_365.change_password
 @method_allowed('POST')
 def ping(req, id, cluster_id):
     out = ping_connection(req, 'zato.generic.connection.ping', id, 'Microsoft Teams connection')
+    return out
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def send_message(req):
+    out = send_chat_message(req, GENERIC.CONNECTION.TYPE.CHAT_MICROSOFT_TEAMS)
     return out
 
 # ################################################################################################################################

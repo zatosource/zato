@@ -8,6 +8,7 @@
     <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
     <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
     <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/zato_highlight_pane.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
 {% endblock %}
 
@@ -24,6 +25,10 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/ace.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_ui_helpers.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_highlight_pane.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/invoker.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/chat/microsoft-teams.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
@@ -44,6 +49,7 @@
             '_delete',
 
             {% comment %} 3 {% endcomment %}
+            '_send_message',
             '_ping',
             'scopes',
 
@@ -94,6 +100,7 @@
 
                         {% comment %} 3 {% endcomment %}
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
                         {% comment %} 4 {% endcomment %}
@@ -121,6 +128,7 @@
                         <td><a href="javascript:$.fn.zato.chat.microsoft_teams.delete_('{{ item.id }}')">Delete</a></td>
 
                         {% comment %} 3 {% endcomment %}
+                        <td><a href="javascript:$.fn.zato.chat.microsoft_teams.send_message('{{ item.id }}')">Send message</a></td>
                         <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)">Ping</a></td>
                         <td class='ignore'>{{ item.scopes }}</td>
 
