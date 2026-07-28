@@ -13,13 +13,11 @@ from pathlib import PurePath
 from time import sleep
 from traceback import format_exc
 
-# Bunch
-from zato.common.ext.bunch import Bunch
-
 # Zato
 from zato.common.api import EnvFile
 from zato.common.broker_message import ValueConstant, HOT_DEPLOY, MESSAGE_TYPE
 from zato.common.typing_ import cast_, dataclass, from_dict, optional
+from zato.common.user_config import UserConfigFile
 from zato.common.util.api import get_config, get_user_config_name
 from zato.common.util.open_ import open_r
 from zato.server.service import Service
@@ -313,7 +311,17 @@ class OnUpdateUserConf(_OnUpdate):
             conf = get_config(conf_base_dir, conf_key, raise_on_error=True, log_exception=False)
 
             user_config_name = get_user_config_name(conf_key)
-            entry:'Bunch' = self.server.user_config.setdefault(user_config_name, Bunch())
+            user_config = self.server.user_config
+
+            # A file that was not there when the server started has nothing to update yet,
+            # and it is read the same way as the ones that were
+            if user_config_name not in user_config:
+                user_config[user_config_name] = UserConfigFile(conf_key, user_config, conf)
+                return
+
+            # The file itself is kept and only what it holds is replaced, so anything
+            # already pointing to it keeps pointing to the file that was reloaded
+            entry:'UserConfigFile' = user_config[user_config_name]
             _ = entry.clear()
             _ = entry.update(conf)
 

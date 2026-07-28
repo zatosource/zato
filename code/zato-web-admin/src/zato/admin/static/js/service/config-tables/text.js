@@ -81,6 +81,28 @@ tables.buildMissingText = function(table, fromName, code) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// A target the file knows nothing about, which is a different thing from a target
+// that knows nothing about the value.
+tables.buildUnknownTargetText = function(targetName) {
+
+    var out = singleQuote + targetName + singleQuote + ' is not a section of this file';
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// A target that has no code of its own for the value.
+tables.buildTargetMissingText = function(targetName, value) {
+
+    var quotedTarget = singleQuote + targetName + singleQuote;
+    var quotedValue = singleQuote + value + singleQuote;
+    var out = 'Nothing under ' + quotedTarget + ' maps ' + quotedValue;
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 // What stands in the editor for a file too large to be edited in it - a comment,
 // so it reads as one line of the kind of file it stands for.
 tables.buildOutsideText = function(table) {

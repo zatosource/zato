@@ -57,6 +57,9 @@ combo.init = function() {
 
     // And the keys of the section named by the field above are what it can be
     combo.attach(tables.get('try-code'), combo.getValueList);
+
+    // A target is a system like a source, so it is the same sections again
+    combo.attach(tables.get('try-target'), combo.getSourceList);
 };
 
 // ////////////////////////////////////////////////////////////////////////
