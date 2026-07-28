@@ -82,8 +82,8 @@ combo.attach = function(input, getItemList) {
         }
     });
 
-    // Pressing the field is enough to see everything it offers, whatever is in it
-    // already - the arrow keys open it the same way, which the widget does itself
+    // Pressing the field is enough to see everything it offers, no matter what it already
+    // holds - the arrow keys open it the same way, which the widget does itself
     $(input).on('click', function() {
         $(input).autocomplete('search', '');
     });
@@ -226,7 +226,7 @@ combo.getValueList = function() {
     var out = [];
 
     // A name that is not a section of the file has nothing to offer, which is an
-    // answer of its own - the field still takes whatever is typed into it
+    // answer of its own - the field still takes any text that is typed into it
     if(section === null) {
         return out;
     }

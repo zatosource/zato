@@ -74,8 +74,8 @@ split.init = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// How tall the page is - what the window has left under whatever sits above the
-// page, which is where the navigation and the page's own heading are. How much of
+// How tall the page is - what the window has left under the navigation and the
+// page's own heading, both of which sit above the panel. How much of
 // that the columns themselves get is then the panel's own business.
 split.fitHeight = function() {
 

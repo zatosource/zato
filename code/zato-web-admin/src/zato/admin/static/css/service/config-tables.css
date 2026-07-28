@@ -496,7 +496,7 @@
 /* ------------------------------------------------------------ */
 
 /* The third column, on the same quiet background as the listing on the other side
-   of the file, with the answer taking whatever room the fields above it leave */
+   of the file, with the answer taking the room that the fields above it leave */
 .config-tables-translate-panel {
     box-sizing: border-box;
     display: flex;
