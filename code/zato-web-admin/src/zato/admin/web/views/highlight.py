@@ -29,7 +29,9 @@ if 0:
 
 _Lexer_Whitelist = frozenset({
     'graphql',
+    'html',
     'json',
+    'markdown',
     'pytb',
 })
 

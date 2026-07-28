@@ -1,8 +1,10 @@
 /*
  * Config tables - the file browser on the left, the file being looked at on the
- * right. The panel, the info rows and the buttons are the settings page's own,
- * so what is here is the browser column, the editor around the textarea, the
- * strip that runs a value through the file and the upload dialog.
+ * right. The panel and the buttons are the settings page's own, the listing's menu
+ * is the shared panel menu and the colors of the file itself are the shared
+ * highlighting, so what is here is the browser column, the line between it and the
+ * file, the editor around the textarea, the strip that runs a value through the
+ * file and the upload dialog.
  */
 
 :root {
@@ -12,15 +14,24 @@
     --config-tables-browser-width: 250px;
     --config-tables-editor-height: 320px;
 
-    /* The rule between the browser and the file, in the panel's own weight */
+    /* The rules that split the page up, in the panel's own weight */
     --config-tables-divider: 3px solid var(--primary-dark);
 
     --config-tables-border: #d9dee3;
     --config-tables-text: #1a1a2e;
     --config-tables-accent: var(--zato-seablue-light2);
-    --config-tables-accent-soft: #e6f3f8;
     --config-tables-ok: #28a745;
     --config-tables-error: #dc3545;
+}
+
+/* ------------------------------------------------------------ */
+/* Config tables - the panel                                     */
+/* ------------------------------------------------------------ */
+
+/* Wider than a settings panel - a listing and a file being edited next to each
+   other need the room */
+.config-tables-panel {
+    max-width: 1320px;
 }
 
 /* ------------------------------------------------------------ */
@@ -55,9 +66,44 @@
 
 .config-tables-browser {
     flex: 0 0 var(--config-tables-browser-width);
+    min-width: 0;
     padding: 15px 16px 20px 16px;
-    border-right: var(--config-tables-divider);
     background: var(--background-light);
+}
+
+/* Dragged shut, the column gives up its padding as well, otherwise its own
+   spacing would keep a sliver of it on screen */
+.config-tables-browser-collapsed {
+    padding: 0;
+    overflow: hidden;
+}
+
+/* The line between the listing and the file is the handle that moves it - an
+   invisible gutter with the line drawn down its middle, and the line takes the
+   accent while it is being dragged or has the keyboard */
+.config-tables-splitter {
+    position: relative;
+    flex: none;
+    width: 9px;
+    cursor: col-resize;
+    touch-action: none;
+    outline: none;
+}
+
+.config-tables-splitter::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 3px;
+    width: 3px;
+    background: var(--primary-dark);
+}
+
+.config-tables-splitter:hover::before,
+.config-tables-splitter:focus::before,
+.config-tables-splitter-active::before {
+    background: var(--config-tables-accent);
 }
 
 .config-tables-browser h3 {
@@ -77,24 +123,34 @@
 
 .config-tables-file-list li {
     display: flex;
-    justify-content: space-between;
+    align-items: center;
     gap: 8px;
-    padding: 4px 7px;
-    border-radius: 3px;
+    padding: 3px 0;
     white-space: nowrap;
     cursor: pointer;
 }
 
-.config-tables-file-list li:hover {
-    background: var(--config-tables-accent-soft);
+/* The file being looked at is the one in bold and underlined, the same way the
+   editor's own file listing marks it - no line ever changes color underneath */
+.config-tables-file-list li:hover .config-tables-file-name,
+.config-tables-file-selected .config-tables-file-name {
+    text-decoration: underline;
 }
 
-.config-tables-file-list li.config-tables-file-selected {
-    color: #fff;
-    background: var(--config-tables-accent);
+.config-tables-file-selected .config-tables-file-name {
+    font-weight: 600;
+}
+
+/* Every badge is as wide as the widest of them, so the names line up */
+.config-tables-file-badge {
+    flex: 0 0 auto;
+    width: 62px;
+    box-sizing: border-box;
+    text-align: center;
 }
 
 .config-tables-file-name {
+    flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -103,8 +159,17 @@
     color: var(--text-muted);
 }
 
-.config-tables-file-selected .config-tables-file-count {
-    color: var(--config-tables-accent-soft);
+/* A rename happens on the row itself, in place of the name */
+.config-tables-file-rename {
+    flex: 1;
+    min-width: 0;
+    padding: 1px 4px;
+    border: 1px solid var(--config-tables-accent);
+    border-radius: 2px;
+    font-family: var(--config-tables-font-mono);
+    font-size: 12px;
+    color: var(--config-tables-text);
+    background: var(--white);
 }
 
 /* The directory a run of files sits in, when they are not all in one */
@@ -116,10 +181,6 @@
     letter-spacing: 0.5px;
     text-transform: uppercase;
     cursor: default;
-}
-
-.config-tables-file-list li.config-tables-file-group:hover {
-    background: transparent;
 }
 
 .config-tables-browser-buttons {
@@ -138,38 +199,9 @@
     color: var(--text-muted);
 }
 
-.config-tables-editor-header {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-    margin-bottom: 12px;
-}
-
-.config-tables-editor-header h3 {
-    margin: 0;
-    padding: 0;
-    font-family: var(--config-tables-font-mono);
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--primary-dark);
-}
-
-.config-tables-kind {
-    padding: 1px 8px;
-    border: 1px solid var(--config-tables-accent);
-    border-radius: 9px;
-    font-size: 11px;
-    color: var(--config-tables-accent);
-    background: var(--config-tables-accent-soft);
-}
-
-.config-tables-header-actions {
-    display: flex;
-    gap: 12px;
-    margin-left: auto;
-    font-size: 12px;
-}
-
+/* The file's own glyphs are transparent - what is read on screen is the colored
+   copy of them on the overlay right behind the caret, which is why the two carry
+   the very same type and the very same box */
 #config-tables-content {
     box-sizing: border-box;
     width: 100%;
@@ -180,15 +212,59 @@
     font-family: var(--config-tables-font-mono);
     font-size: 12px;
     line-height: 1.5;
-    color: var(--config-tables-text);
     white-space: pre;
     overflow: auto;
     resize: vertical;
 }
 
-#config-tables-content[readonly] {
-    color: var(--text-muted);
+/* The textarea's own height is what the wrapper takes, which is what lets the
+   corner of the editor still be dragged */
+#config-tables-editor .highlight-wrapper {
+    height: auto;
+}
+
+/* The transparent border stands in for the textarea's own, so the first glyph of
+   each starts at the same place */
+#config-tables-editor .highlight-backdrop {
+    padding: 10px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    font-family: var(--config-tables-font-mono);
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: pre;
+}
+
+/* A file the browser does not edit is read off the overlay like any other, on the
+   quiet background that says it is not being edited */
+#config-tables-editor .highlight-backdrop-readonly {
     background: var(--background-light);
+}
+
+/* ------------------------------------------------------------ */
+/* Config tables - what sits under the editor                    */
+/* ------------------------------------------------------------ */
+
+/* Away from the editor, and the same small face the settings pages give the
+   options on the left of their own button rows */
+#config-tables-editor-buttons {
+    margin-top: 16px;
+    align-items: center;
+}
+
+.config-tables-options {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: auto;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.config-tables-options .options-separator {
+    color: #ccc;
+    font-weight: 400;
+    user-select: none;
 }
 
 .config-tables-status {
@@ -202,59 +278,6 @@
 
 .config-tables-status-error {
     color: var(--config-tables-error);
-}
-
-/* ------------------------------------------------------------ */
-/* Config tables - renaming and deleting                         */
-/* ------------------------------------------------------------ */
-
-.config-tables-inline-row {
-    display: flex;
-    align-items: flex-end;
-    gap: 8px;
-    margin-bottom: 12px;
-}
-
-.config-tables-inline-row input[type="text"] {
-    flex: 1;
-    padding: 5px 7px;
-    border: 1px solid var(--config-tables-border);
-    border-radius: 3px;
-    font-family: var(--config-tables-font-mono);
-    font-size: 12px;
-}
-
-.config-tables-question {
-    flex: 1;
-    font-size: 12px;
-    color: var(--config-tables-error);
-}
-
-/* ------------------------------------------------------------ */
-/* Config tables - a file too large for the browser              */
-/* ------------------------------------------------------------ */
-
-.config-tables-outside {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    flex-wrap: wrap;
-    padding: 10px 12px;
-    margin-bottom: 12px;
-    border: 1px solid var(--config-tables-border);
-    border-radius: 3px;
-    background: var(--background-light);
-}
-
-.config-tables-outside-text {
-    font-size: 12px;
-    color: var(--text-muted);
-}
-
-.config-tables-outside-buttons {
-    display: flex;
-    gap: 8px;
-    margin-left: auto;
 }
 
 /* ------------------------------------------------------------ */
@@ -273,6 +296,13 @@
     font-size: 13px;
     font-weight: 600;
     color: var(--primary-dark);
+}
+
+.config-tables-try-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    margin-bottom: 12px;
 }
 
 .config-tables-field {
@@ -322,39 +352,21 @@
 /* Config tables - the upload dialog                             */
 /* ------------------------------------------------------------ */
 
+/* The dim behind the popup, which is also what a press outside it lands on. The
+   popup itself is placed within it, so where it is dragged to is where it stays. */
 .config-tables-overlay {
     position: fixed;
     inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     background: rgba(1, 40, 69, 0.35);
     z-index: 100;
 }
 
-/* Without this the display above wins over the hidden attribute */
-.config-tables-overlay[hidden] {
-    display: none;
-}
-
+/* The surface and the dark header that drags it are the shared popup chrome, so
+   what is set here is how much room the questions inside need */
 .config-tables-dialog {
+    position: absolute;
     width: 480px;
     max-width: 90vw;
-    border: var(--config-tables-divider);
-    background: var(--white);
-}
-
-.config-tables-dialog-header {
-    padding: 12px 16px;
-    border-bottom: var(--config-tables-divider);
-}
-
-.config-tables-dialog-header h3 {
-    margin: 0;
-    padding: 0;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--primary-dark);
 }
 
 .config-tables-dialog-body {
@@ -362,7 +374,9 @@
 }
 
 .config-tables-dialog .button-container {
+    margin-bottom: 0;
     padding: 0 16px 14px 16px;
+    align-items: center;
 }
 
 .config-tables-dialog-field {

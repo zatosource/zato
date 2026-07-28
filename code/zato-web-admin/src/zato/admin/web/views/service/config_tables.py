@@ -40,11 +40,11 @@ _user_conf_directory = './config/repo/user-conf/'
 # ################################################################################################################################
 
 _loinc_content = """[codes]
-2951-2 = Sodium [Moles/volume] in Serum or Plasma
-2823-3 = Potassium [Moles/volume] in Serum or Plasma
-1988-5 = C reactive protein [Mass/volume] in Serum or Plasma
-718-7 = Hemoglobin [Mass/volume] in Blood
-789-8 = Erythrocytes [#/volume] in Blood by Automated count
+8302-2 = Body height
+29463-7 = Body weight
+39156-5 = Body mass index
+8867-4 = Heart rate
+8310-5 = Body temperature
 """
 
 _error_codes_content = """[codes]
@@ -56,15 +56,15 @@ _error_codes_content = """[codes]
 207 = Application internal error
 """
 
-_acme_lab_content = """[ACME_LAB]
-CRP = 1988-5
-NA = 2951-2
-K = 2823-3
-HGB = 718-7
+_wellness_content = """[WELLNESS_APP]
+HT = 8302-2
+WT = 29463-7
+BMI = 39156-5
+HR = 8867-4
 
-[CITY_HOSPITAL]
-SODIUM = 2951-2
-POTASSIUM = 2823-3
+[CHECKUP_KIOSK]
+HEIGHT = 8302-2
+WEIGHT = 29463-7
 """
 
 # ################################################################################################################################
@@ -110,7 +110,7 @@ def _get_table_list() -> 'anylist':
 
     out.append(_build_table('loinc', 'loinc.ini', _user_conf_directory, 'codes', _loinc_content, 1, 5))
     out.append(_build_table('error-codes', 'error-codes.ini', _user_conf_directory, 'codes', _error_codes_content, 1, 6))
-    out.append(_build_table('acme-lab', 'acme-lab.ini', _user_conf_directory, 'mappings', _acme_lab_content, 2, 6))
+    out.append(_build_table('wellness', 'wellness.ini', _user_conf_directory, 'mappings', _wellness_content, 2, 6))
 
     return out
 

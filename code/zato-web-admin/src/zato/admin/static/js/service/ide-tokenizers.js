@@ -58,37 +58,11 @@ $.fn.zato.ide.tokenizers.config = {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-// The characters that must not reach the overlay as markup.
-$.fn.zato.ide.tokenizers.escape = function(text) {
-    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-/* ---------------------------------------------------------------------------------------------------------------------------- */
-
-// Runs one token pattern over raw text and builds HTML out of it - each token
-// goes through the given wrapper and everything in between is escaped plain text.
-$.fn.zato.ide.tokenizers.replace_tokens = function(text, pattern, wrap_match) {
-
-    let out = "";
-    let last_index = 0;
-
-    // The pattern is shared, so each run starts from the top
-    pattern.lastIndex = 0;
-
-    var match;
-
-    while((match = pattern.exec(text)) !== null) {
-
-        let plain = text.slice(last_index, match.index);
-        out += $.fn.zato.ide.tokenizers.escape(plain);
-        out += wrap_match(match);
-
-        last_index = match.index + match[0].length;
-    }
-
-    out += $.fn.zato.ide.tokenizers.escape(text.slice(last_index));
-    return out;
-}
+// The plumbing every tokenizer is built on is the shared one from
+// js/shared/highlight.js - escaping what must not reach the overlay as markup,
+// and running a token pattern over raw text to build HTML out of it.
+$.fn.zato.ide.tokenizers.escape = $.fn.zato.highlight.escape;
+$.fn.zato.ide.tokenizers.replace_tokens = $.fn.zato.highlight.replace_tokens;
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 

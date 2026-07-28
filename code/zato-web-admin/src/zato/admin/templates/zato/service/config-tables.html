@@ -2,10 +2,10 @@
 
 {% comment %}
 Config tables - the config files a service reads through self.config, browsed and
-edited from the dashboard. The files are listed on the left and the one being
-looked at fills the rest of the page - what it is called, how a service reaches
-it, what it holds, the file itself and a strip that runs a value through it. The
-view provides:
+edited from the dashboard. The files are listed on the left, each with a badge for
+what it is, and the one being looked at fills the rest of the page - the file
+itself and a strip that runs a value through it. What is done to a file rather
+than to what is in it comes off the listing's own menu. The view provides:
 
 * cluster_id           - the current cluster
 * table_list_json      - every file with its contents
@@ -18,14 +18,24 @@ view provides:
 
 {% block "extra_css" %}
 <link rel="stylesheet" type="text/css" href="/static/css/settings.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/panel-menu.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/badge.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/highlight.css">
 <link rel="stylesheet" type="text/css" href="/static/css/service/config-tables.css">
 {% endblock %}
 
 {% block "extra_js" %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/highlight.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/resizer.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/text.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/listing.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/parse.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/invoker.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/files.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/upload.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/menu.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/core.js"></script>
 
 <script nonce="{{ CSP_NONCE }}">
@@ -43,17 +53,17 @@ $(document).ready(function() {
 {% block "content" %}
 
 <div class="settings-container">
-<div class="settings-panel">
+<div class="settings-panel config-tables-panel">
 
     <div class="config-tables-panel-header">
         <h2>Config tables</h2>
         <span class="config-tables-root" id="config-tables-root"></span>
     </div>
 
-    <div class="settings-content">
+    <div class="settings-content" id="config-tables-content-area">
 
-        <!-- The browser -->
-        <div class="config-tables-browser">
+        <!-- The browser - a right click anywhere in it opens its menu -->
+        <div class="config-tables-browser" id="config-tables-browser">
 
             <h3>Files</h3>
             <ul class="config-tables-file-list" id="config-tables-file-list"></ul>
@@ -65,6 +75,10 @@ $(document).ready(function() {
 
         </div>
 
+        <!-- The line between the two, which is also what moves it -->
+        <div class="config-tables-splitter" id="config-tables-splitter" tabindex="0"
+            role="separator" aria-orientation="vertical" aria-label="Resize the listing"></div>
+
         <!-- The file being looked at -->
         <div class="settings-main">
 
@@ -72,60 +86,15 @@ $(document).ready(function() {
 
             <div id="config-tables-editor">
 
-                <div class="config-tables-editor-header">
-                    <h3 id="config-tables-file-name"></h3>
-                    <span class="config-tables-kind" id="config-tables-kind"></span>
-                    <span class="config-tables-header-actions">
-                        <a href="javascript:void(0)" id="config-tables-rename">Rename</a>
-                        <a href="javascript:void(0)" id="config-tables-delete">Delete</a>
-                    </span>
-                </div>
-
-                <div class="config-tables-inline-row" id="config-tables-rename-row" hidden>
-                    <input type="text" id="config-tables-rename-input" autocomplete="off">
-                    <button type="button" class="secondary-button" id="config-tables-rename-cancel">Cancel</button>
-                    <button type="button" class="action-button" id="config-tables-rename-apply">Rename</button>
-                </div>
-
-                <div class="config-tables-inline-row" id="config-tables-delete-row" hidden>
-                    <span class="config-tables-question" id="config-tables-delete-question"></span>
-                    <button type="button" class="secondary-button" id="config-tables-delete-cancel">Keep it</button>
-                    <button type="button" class="action-button" id="config-tables-delete-confirm">Delete</button>
-                </div>
-
-                <div class="info-container">
-
-                    <div class="info-row">
-                        <div class="info-label">In a service</div>
-                        <div class="info-value"><code id="config-tables-reference"></code></div>
-                    </div>
-
-                    <div class="info-row">
-                        <div class="info-label">Holds</div>
-                        <div class="info-value" id="config-tables-holds"></div>
-                    </div>
-
-                    <div class="info-row">
-                        <div class="info-label">File</div>
-                        <div class="info-value" id="config-tables-path"></div>
-                    </div>
-
-                </div>
-
-                <!-- Shown in place of the editor buttons for a file too large for the browser -->
-                <div class="config-tables-outside" id="config-tables-outside" hidden>
-                    <span class="config-tables-outside-text" id="config-tables-outside-text"></span>
-                    <span class="config-tables-outside-buttons">
-                        <button type="button" class="secondary-button" id="config-tables-download">Download</button>
-                        <button type="button" class="action-button" id="config-tables-replace">Upload a new version</button>
-                    </span>
-                </div>
-
                 <textarea id="config-tables-content" spellcheck="false"></textarea>
 
                 <div class="button-container" id="config-tables-editor-buttons">
-                    <div class="button-left-options">
+                    <div class="config-tables-options">
                         <a href="javascript:void(0)" id="config-tables-restore">Restore initial values</a>
+                        <span class="options-separator">|</span>
+                        <a href="javascript:void(0)" id="config-tables-download">Download</a>
+                        <span class="options-separator">|</span>
+                        <a href="javascript:void(0)" id="config-tables-replace">Upload a new version</a>
                     </div>
                     <div class="button-wrapper">
                         <span class="config-tables-status" id="config-tables-status"></span>
@@ -140,7 +109,7 @@ $(document).ready(function() {
 
                     <h3>Try it</h3>
 
-                    <div class="config-tables-inline-row">
+                    <div class="config-tables-try-row">
                         <label class="config-tables-field" id="config-tables-try-from-field">
                             <span>Coming from</span>
                             <input type="text" id="config-tables-try-from" autocomplete="off">
@@ -166,12 +135,13 @@ $(document).ready(function() {
 </div>
 </div>
 
-<!-- Uploading a file - the one question that matters is where it goes -->
+<!-- Uploading a file - the one question that matters is where it goes. The popup
+     is dragged by its header, and Escape or a press outside it puts it away. -->
 <div class="config-tables-overlay" id="config-tables-overlay" hidden>
-    <div class="config-tables-dialog">
+    <div class="zato-popup config-tables-dialog" id="config-tables-dialog">
 
-        <div class="config-tables-dialog-header">
-            <h3 id="config-tables-dialog-title">Upload a file</h3>
+        <div class="zato-popup-header" id="config-tables-dialog-header">
+            <span id="config-tables-dialog-title">Upload a file</span>
         </div>
 
         <div class="config-tables-dialog-body">
@@ -200,7 +170,7 @@ $(document).ready(function() {
         </div>
 
         <div class="button-container">
-            <div class="button-left-options">
+            <div class="config-tables-options">
                 <span class="config-tables-status" id="config-tables-dialog-status"></span>
             </div>
             <div class="button-wrapper">

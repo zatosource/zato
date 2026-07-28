@@ -1,0 +1,153 @@
+/* The action menu a page opens at the cursor - an action list on the left, a live
+   information pane on the right describing the action under the cursor. The surface,
+   the dark header and the drag cursors come from the shared popup chrome
+   in shared/popup.css. */
+
+/* No overflow clipping here - the nested flyouts may reach beyond the menu's own box.
+   The menu fades in briefly instead of popping onto the screen. Any of its own surface
+   drags it around, so the whole thing shows the grab hand - the items and the badges
+   override it with their own pointer. */
+.zato-panel-menu {
+    position: absolute;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    transition: opacity 0.08s ease;
+    cursor: grab;
+}
+
+.zato-panel-menu-visible {
+    opacity: 1;
+}
+
+.grid-panel-header-actions {
+    display: flex;
+    gap: 6px;
+    margin-left: auto;
+}
+
+/* The copy badges - quiet chips that light up under the cursor */
+.grid-panel-header-badge {
+    padding: 2px 9px;
+    font-size: 10.5px;
+    letter-spacing: normal;
+    color: #cdd5e0;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid #46516a;
+    border-radius: 3px;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.grid-panel-header-badge:hover {
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+}
+
+/* The action list and the information pane, side by side under the header */
+.grid-panel-body {
+    display: flex;
+    flex: 1;
+}
+
+.grid-panel-list {
+    min-width: 155px;
+    padding: 5px 0;
+    background: var(--zato-popup-sand);
+    border-right: 1px solid var(--zato-popup-sand-line);
+    border-radius: 0 0 0 6px;
+}
+
+/* The line between groups of actions */
+.grid-panel-separator {
+    height: 1px;
+    margin: 4px 10px;
+    background: var(--zato-popup-sand-separator);
+}
+
+.grid-panel-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px 6px 10px;
+    cursor: pointer;
+}
+
+/* The hotkey badge in front of every action - a dark key cap
+   with a fixed width so the labels line up in one column */
+.grid-panel-item-key {
+    width: 16px;
+    padding: 1px 3px;
+    text-align: center;
+    font-family: "Ubuntu Mono", "DejaVu Sans Mono", "Menlo", "Consolas", monospace;
+    font-size: 11px;
+    font-weight: 600;
+    color: #e8ebf0;
+    background: #2e333c;
+    border: 1px solid #46516a;
+    border-radius: 3px;
+}
+
+/* The arrow marking an item that opens a submenu, pushed to the far right */
+.grid-panel-item-more {
+    margin-left: auto;
+    color: #999;
+    font-size: 14px;
+    line-height: 1;
+}
+
+/* A submenu - the same look as the main list, laid over the information
+   pane at its parent's height */
+.grid-panel-submenu {
+    position: absolute;
+    min-width: 140px;
+    padding: 5px 0;
+    background: var(--zato-popup-sand);
+    border: 1px solid var(--zato-popup-border);
+    border-radius: 0 6px 6px 0;
+    box-shadow: var(--zato-popup-shadow);
+}
+
+/* The highlight is a background change only - a heavier face would widen
+   the label and make the whole menu shift around */
+.grid-panel-item.current {
+    background: var(--zato-popup-sand-highlight);
+}
+
+.grid-panel-item-destructive {
+    color: #a3261f;
+}
+
+.grid-panel-info {
+    width: 250px;
+    padding: 12px 14px;
+}
+
+.grid-panel-info-title {
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.grid-panel-info-desc {
+    color: #555;
+    line-height: 1.45;
+    margin-bottom: 10px;
+}
+
+.grid-panel-detail {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 3px 0;
+    border-top: 1px dashed var(--zato-popup-sand-separator);
+}
+
+.grid-panel-detail-name {
+    color: #777;
+}
+
+.grid-panel-detail-value {
+    text-align: right;
+}

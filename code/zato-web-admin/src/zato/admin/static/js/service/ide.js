@@ -1320,7 +1320,7 @@ $.fn.zato.ide.show_grid_panel_menu = function(node, node_elem, x, y, full_path) 
 
     $.fn.zato.ide.close_grid_menus();
 
-    let menu = $("<div>").attr("id", "grid-panel-menu").addClass("zato-popup");
+    let menu = $("<div>").attr("id", "grid-panel-menu").addClass("zato-popup zato-panel-menu");
 
     // The header names the node the menu is about, by its full path,
     // with a drag grip in front of it and the copy badges on its right
@@ -1630,7 +1630,7 @@ $.fn.zato.ide.show_grid_panel_menu = function(node, node_elem, x, y, full_path) 
 
     // The visible class lands one frame later so the fade-in transition runs
     requestAnimationFrame(function() {
-        menu.addClass("grid-menu-visible");
+        menu.addClass("zato-panel-menu-visible");
     });
 
     $.fn.zato.ide.install_grid_menu_dismiss("#grid-panel-menu");

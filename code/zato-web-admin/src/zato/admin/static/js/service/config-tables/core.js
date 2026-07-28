@@ -2,10 +2,11 @@
 // reads through self.config are browsed and changed.
 //
 // The page is rendered by zato/service/config-tables.html. The files are listed
-// on the left, the one being looked at fills the rest of the page. This file
-// holds the state, the list and the editor around the textarea. The reading of a
-// file is in parse.js, the words the page puts on screen in text.js, the Try it
-// strip in invoker.js and what is done to the file itself in files.js.
+// on the left, the one being looked at fills the rest of the page. This file holds
+// the state and the editor around the textarea. The listing itself is in
+// listing.js, the reading of a file in parse.js, the words the page puts on screen
+// in text.js, the Try it strip in invoker.js, the listing's menu in menu.js, what
+// is done to the file itself in files.js and the bringing in of one in upload.js.
 
 (function($) {
 
@@ -25,8 +26,11 @@ tables.config = {
     // code list, a file with any other section is a mapping set
     codesSection: 'codes',
 
-    // What a file of each kind is called on screen, and what one entry of it is
+    // What a file of each kind is called on screen, what its badge in the listing
+    // says and which of the shared badge colors it wears, and what one entry of it is
     kindLabel: {codes: 'code list', mappings: 'mapping set'},
+    kindBadge: {codes: 'codes', mappings: 'maps'},
+    kindBadgeClass: {codes: 'zato-badge-blue', mappings: 'zato-badge-amber'},
     entryNoun: {codes: 'code', mappings: 'mapping'},
 
     // What the status line says once something went through
@@ -44,7 +48,24 @@ tables.config = {
 
     // The units a file size is given in, smallest first, and what each step is
     sizeUnits: ['B', 'KB', 'MB', 'GB'],
-    sizeStep: 1024
+    sizeStep: 1024,
+
+    // The class the overlay behind the editor wears for a file the browser does
+    // not edit in place
+    backdropReadOnly: 'highlight-backdrop-readonly',
+
+    // Where the listing ends and the file begins, as a share of the panel. It goes
+    // anywhere between the two edges, and a drag that ends up this close to the
+    // left one shuts the listing altogether. The rest is how far one arrow key
+    // press moves the split, the class the handle wears mid-drag, the class the
+    // listing wears while it is shut and where the split is kept between visits.
+    splitMinPercent: 0,
+    splitMaxPercent: 100,
+    splitCollapseAtPercent: 8,
+    splitKeyboardStepPercent: 2,
+    splitActiveClass: 'config-tables-splitter-active',
+    splitCollapsedClass: 'config-tables-browser-collapsed',
+    splitStorageKey: 'zato.config-tables.split'
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -89,7 +110,9 @@ tables.init = function(inputConfig) {
 
     tables.wire();
     tables.files.init();
+    tables.upload.init();
     tables.invoker.init();
+    tables.menu.init();
 
     tables.renderList();
 
@@ -112,6 +135,68 @@ tables.wire = function() {
     tables.get('check').addEventListener('click', tables.check);
     tables.get('save').addEventListener('click', tables.save);
     tables.get('restore').addEventListener('click', tables.restore);
+
+    // The file is an ini file, so it is read on screen the way one is
+    $.fn.zato.highlight.attach(tables.get('content'), $.fn.zato.highlight.ini_to_html);
+
+    tables.wireSplit();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The line between the listing and the file, which is dragged to give either
+// side more room. Where it was left is where it opens the next time.
+tables.wireSplit = function() {
+
+    var config = tables.config;
+
+    $.fn.zato.resizer.init({
+
+        container: tables.get('content-area'),
+        first: tables.get('browser'),
+        handles: [tables.get('splitter')],
+        axis: 'x',
+
+        minPercent: config.splitMinPercent,
+        maxPercent: config.splitMaxPercent,
+        keyboardStepPercent: config.splitKeyboardStepPercent,
+        activeClass: config.splitActiveClass,
+
+        // Browser storage is an external boundary, so an empty one is answered
+        // explicitly - the listing then opens at the width its styles give it
+        read: function() {
+
+            var saved = localStorage.getItem(config.splitStorageKey);
+
+            if(saved === null) {
+                return null;
+            }
+
+            return parseFloat(saved);
+        },
+
+        write: function(percent) {
+            localStorage.setItem(config.splitStorageKey, String(percent));
+        },
+
+        // A drag that comes near the left edge is pulled the rest of the way, so
+        // the listing shuts on its own rather than being left as a sliver. Keys
+        // step where they are told, which is how the listing is opened again.
+        snap: function(percent, isDragging) {
+
+            if(isDragging && percent < config.splitCollapseAtPercent) {
+                return 0;
+            }
+
+            return percent;
+        },
+
+        applied: function(percent) {
+
+            var isCollapsed = percent === 0;
+            tables.get('browser').classList.toggle(config.splitCollapsedClass, isCollapsed);
+        }
+    });
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -189,102 +274,6 @@ tables.deriveKind = function(parsed) {
 };
 
 // ////////////////////////////////////////////////////////////////////////
-// The browser
-// ////////////////////////////////////////////////////////////////////////
-
-// Every file, in the order the server reports them, with the directory named
-// above each run of them when they are not all in the same one.
-tables.renderList = function() {
-
-    var list = tables.get('file-list');
-    var tableList = tables.state.tableList;
-    var showDirectories = tables.hasSeveralDirectories();
-    var lastDirectory = '';
-
-    list.textContent = '';
-
-    for(var tableIdx = 0; tableIdx < tableList.length; tableIdx++) {
-
-        var table = tableList[tableIdx];
-
-        if(showDirectories) {
-
-            if(table.directory !== lastDirectory) {
-                list.appendChild(tables.buildGroupRow(table.directory));
-                lastDirectory = table.directory;
-            }
-        }
-
-        list.appendChild(tables.buildFileRow(table));
-    }
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-tables.hasSeveralDirectories = function() {
-
-    var out = false;
-    var tableList = tables.state.tableList;
-    var hasTable = tableList.length > 0;
-
-    if(hasTable) {
-
-        var first = tableList[0];
-
-        for(var tableIdx = 1; tableIdx < tableList.length; tableIdx++) {
-
-            var table = tableList[tableIdx];
-
-            if(table.directory !== first.directory) {
-                out = true;
-                break;
-            }
-        }
-    }
-
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-tables.buildGroupRow = function(directory) {
-
-    var row = document.createElement('li');
-    row.className = 'config-tables-file-group';
-    row.textContent = directory;
-
-    return row;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-tables.buildFileRow = function(table) {
-
-    var row = document.createElement('li');
-    row.className = 'config-tables-file-row';
-
-    if(table.name === tables.state.currentName) {
-        row.className = 'config-tables-file-row config-tables-file-selected';
-    }
-
-    var name = document.createElement('span');
-    name.className = 'config-tables-file-name';
-    name.textContent = table.file_name;
-    row.appendChild(name);
-
-    var count = document.createElement('span');
-    count.className = 'config-tables-file-count';
-    count.textContent = table.entry_count;
-    row.appendChild(count);
-
-    row.addEventListener('click', function() {
-        tables.select(table.name);
-    });
-
-    return row;
-};
-
-// ////////////////////////////////////////////////////////////////////////
 // The file being looked at
 // ////////////////////////////////////////////////////////////////////////
 
@@ -292,7 +281,6 @@ tables.select = function(name) {
 
     tables.state.currentName = name;
 
-    tables.files.hideInlineRows();
     tables.setStatus('');
     tables.renderList();
     tables.renderEditor();
@@ -315,32 +303,29 @@ tables.renderEditor = function() {
     tables.get('empty').hidden = true;
     tables.get('editor').hidden = false;
 
-    tables.get('file-name').textContent = table.file_name;
-    tables.renderInfo(table);
-
     var content = tables.get('content');
-    content.value = table.content;
+
+    // A file too large for the browser is worked on the other way round - taken
+    // away, changed and uploaded again - so what stands in for it on screen is the
+    // line that says as much, and neither Check nor Save has anything to work on
+    if(table.is_editable) {
+        content.value = table.content;
+    }
+    else {
+        content.value = tables.buildOutsideText(table);
+    }
+
     content.readOnly = !table.is_editable;
 
-    // A file too large for the browser is taken away, changed and brought back,
-    // so it says so where the buttons that would save it are
-    tables.get('outside-text').textContent = tables.buildOutsideText(table);
-    tables.get('outside').hidden = table.is_editable;
-    tables.get('editor-buttons').hidden = !table.is_editable;
+    tables.get('check').disabled = !table.is_editable;
+    tables.get('save').disabled = !table.is_editable;
+
+    // Setting the value from here fires no input event, so the colors are
+    // repainted by hand
+    $.fn.zato.highlight.refresh(content);
+    content.previousElementSibling.classList.toggle(tables.config.backdropReadOnly, content.readOnly);
 
     tables.invoker.render(table);
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// The three lines above the file - how a service reaches it, what it holds and
-// where it is.
-tables.renderInfo = function(table) {
-
-    tables.get('kind').textContent = tables.config.kindLabel[table.kind];
-    tables.get('reference').textContent = tables.buildReference(table.name);
-    tables.get('holds').textContent = tables.buildHolds(table.kind, table.entry_count, table.section_count);
-    tables.get('path').textContent = table.path + ', ' + tables.formatSize(table.size);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -379,7 +364,6 @@ tables.save = function() {
 
     tables.files.persist('save', table, function() {
         tables.setStatus(tables.config.savedMessage);
-        tables.renderInfo(table);
         tables.renderList();
         tables.invoker.refresh(table);
     });
@@ -392,8 +376,11 @@ tables.save = function() {
 tables.restore = function() {
 
     var table = tables.getCurrent();
+    var content = tables.get('content');
 
-    tables.get('content').value = tables.state.initialContent[table.name];
+    content.value = tables.state.initialContent[table.name];
+
+    $.fn.zato.highlight.refresh(content);
     tables.setStatus('');
 };
 

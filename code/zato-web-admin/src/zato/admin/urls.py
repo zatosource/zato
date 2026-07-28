@@ -1279,6 +1279,8 @@ urlpatterns += [
         login_required(chat_microsoft_teams.ping), name='chat-microsoft-teams-ping'),
     url(r'^zato/chat/microsoft-teams/change-password/$',
         login_required(chat_microsoft_teams.change_password), name='chat-microsoft-teams-change-password'),
+    url(r'^zato/chat/microsoft-teams/send-message/$',
+        login_required(chat_microsoft_teams.send_message), name='chat-microsoft-teams-send-message'),
     ]
 
 urlpatterns += [
@@ -1297,6 +1299,8 @@ urlpatterns += [
         login_required(chat_slack.ping), name='chat-slack-ping'),
     url(r'^zato/chat/slack/change-password/$',
         login_required(chat_slack.change_password), name='chat-slack-change-password'),
+    url(r'^zato/chat/slack/send-message/$',
+        login_required(chat_slack.send_message), name='chat-slack-send-message'),
     ]
 
 urlpatterns += [
