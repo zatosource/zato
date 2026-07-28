@@ -10,6 +10,10 @@
 //                          that receives the explicit size
 //   handles              - the handle elements, one per draggable border
 //   axis                 - 'x' for a left/right split, 'y' for a top/bottom one
+//   edge                 - which edge of that panel the handle sits on, 'end' for a
+//                          panel that grows as the handle is dragged away from the
+//                          container's start, 'start' for one at the far side that
+//                          grows as the handle is dragged towards it
 //   minPercent           - how small the first panel may be dragged
 //   maxPercent           - how large the first panel may be dragged
 //   keyboardStepPercent  - how far one arrow key press moves the split
@@ -36,6 +40,7 @@ $.fn.zato.resizer.init = function(options) {
     var container = options.container;
     var first = options.first;
     var isVertical = options.axis === 'y';
+    var isHandleAtStart = options.edge === 'start';
 
     var clamp = function(percent) {
 
@@ -84,16 +89,40 @@ $.fn.zato.resizer.init = function(options) {
         return event.clientX;
     };
 
-    // The first panel's trailing edge along the split axis
-    var firstEdge = function() {
+    // The panel edge the handle sits on, along the split axis
+    var handleEdge = function() {
 
         var bounds = first.getBoundingClientRect();
 
         if(isVertical) {
-            return bounds.bottom;
+            return isHandleAtStart ? bounds.top : bounds.bottom;
         }
 
-        return bounds.right;
+        return isHandleAtStart ? bounds.left : bounds.right;
+    };
+
+    // The panel edge that stands still while the handle travels, which is the one
+    // the panel's size is measured back from
+    var anchorEdge = function() {
+
+        var bounds = first.getBoundingClientRect();
+
+        if(isVertical) {
+            return isHandleAtStart ? bounds.bottom : bounds.top;
+        }
+
+        return isHandleAtStart ? bounds.right : bounds.left;
+    };
+
+    // What the panel's share of the container is with its handle edge at the given
+    // position - the distance between that position and the edge standing still
+    var percentAt = function(position) {
+
+        var containerBounds = container.getBoundingClientRect();
+        var size = isVertical ? containerBounds.height : containerBounds.width;
+        var span = isHandleAtStart ? anchorEdge() - position : position - anchorEdge();
+
+        return span / size * 100;
     };
 
     // The first panel's share of the container along the split axis
@@ -121,6 +150,10 @@ $.fn.zato.resizer.init = function(options) {
         var backwardKey = isVertical ? 'ArrowUp' : 'ArrowLeft';
         var forwardKey = isVertical ? 'ArrowDown' : 'ArrowRight';
 
+        // A panel at the far side grows as its handle goes the other way, so the
+        // two keys mean to it the opposite of what they mean to the near one
+        var growSign = isHandleAtStart ? -1 : 1;
+
         // The handle captures the pointer, so the drag keeps working even when
         // the pointer leaves the handle itself
         $(handle).on('pointerdown', function(event) {
@@ -129,7 +162,7 @@ $.fn.zato.resizer.init = function(options) {
             handle.setPointerCapture(event.originalEvent.pointerId);
             handle.classList.add(options.activeClass);
 
-            grabOffset = pointerPosition(event) - firstEdge();
+            grabOffset = pointerPosition(event) - handleEdge();
         });
 
         $(handle).on('pointermove', function(event) {
@@ -138,11 +171,7 @@ $.fn.zato.resizer.init = function(options) {
                 return;
             }
 
-            var bounds = container.getBoundingClientRect();
-            var start = isVertical ? bounds.top : bounds.left;
-            var size = isVertical ? bounds.height : bounds.width;
-
-            var percent = clamp((pointerPosition(event) - grabOffset - start) / size * 100);
+            var percent = clamp(percentAt(pointerPosition(event) - grabOffset));
             apply(percent, true);
         });
 
@@ -165,10 +194,10 @@ $.fn.zato.resizer.init = function(options) {
             var step = 0;
 
             if(event.key === backwardKey) {
-                step = -options.keyboardStepPercent;
+                step = -options.keyboardStepPercent * growSign;
             }
             else if(event.key === forwardKey) {
-                step = options.keyboardStepPercent;
+                step = options.keyboardStepPercent * growSign;
             }
             else {
                 return;

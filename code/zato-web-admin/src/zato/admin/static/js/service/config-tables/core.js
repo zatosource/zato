@@ -1,12 +1,13 @@
 // Config tables - the page under Services, where the config files a service
 // reads through self.config are browsed and changed.
 //
-// The page is rendered by zato/service/config-tables.html. The files are listed
-// on the left, the one being looked at fills the rest of the page. This file holds
-// the state and the editor around the textarea. The listing itself is in
-// listing.js, the reading of a file in parse.js, the words the page puts on screen
-// in text.js, the Try it strip in invoker.js, the listing's menu in menu.js, what
-// is done to the file itself in files.js and the bringing in of one in upload.js.
+// The page is rendered by zato/service/config-tables.html - the files on the left,
+// the one being looked at in the middle, the column that runs a value through it on
+// the right. This file holds the state and the editor around the textarea. The
+// listing itself is in listing.js, the two lines that size the columns in split.js,
+// the reading of a file in parse.js, the words the page puts on screen in text.js,
+// the Try it column in invoker.js, the listing's menu in menu.js, what is done to
+// the file itself in files.js and the bringing in of one in upload.js.
 
 (function($) {
 
@@ -30,7 +31,7 @@ tables.config = {
     // says and which of the shared badge colors it wears, and what one entry of it is
     kindLabel: {codes: 'code list', mappings: 'mapping set'},
     kindBadge: {codes: 'codes', mappings: 'maps'},
-    kindBadgeClass: {codes: 'zato-badge-blue', mappings: 'zato-badge-amber'},
+    kindBadgeClass: {codes: 'zato-badge-green', mappings: 'zato-badge-amber'},
     entryNoun: {codes: 'code', mappings: 'mapping'},
 
     // What the status line says once something went through
@@ -52,20 +53,7 @@ tables.config = {
 
     // The class the overlay behind the editor wears for a file the browser does
     // not edit in place
-    backdropReadOnly: 'highlight-backdrop-readonly',
-
-    // Where the listing ends and the file begins, as a share of the panel. It goes
-    // anywhere between the two edges, and a drag that ends up this close to the
-    // left one shuts the listing altogether. The rest is how far one arrow key
-    // press moves the split, the class the handle wears mid-drag, the class the
-    // listing wears while it is shut and where the split is kept between visits.
-    splitMinPercent: 0,
-    splitMaxPercent: 100,
-    splitCollapseAtPercent: 8,
-    splitKeyboardStepPercent: 2,
-    splitActiveClass: 'config-tables-splitter-active',
-    splitCollapsedClass: 'config-tables-browser-collapsed',
-    splitStorageKey: 'zato.config-tables.split'
+    backdropReadOnly: 'highlight-backdrop-readonly'
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -139,64 +127,7 @@ tables.wire = function() {
     // The file is an ini file, so it is read on screen the way one is
     $.fn.zato.highlight.attach(tables.get('content'), $.fn.zato.highlight.ini_to_html);
 
-    tables.wireSplit();
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// The line between the listing and the file, which is dragged to give either
-// side more room. Where it was left is where it opens the next time.
-tables.wireSplit = function() {
-
-    var config = tables.config;
-
-    $.fn.zato.resizer.init({
-
-        container: tables.get('content-area'),
-        first: tables.get('browser'),
-        handles: [tables.get('splitter')],
-        axis: 'x',
-
-        minPercent: config.splitMinPercent,
-        maxPercent: config.splitMaxPercent,
-        keyboardStepPercent: config.splitKeyboardStepPercent,
-        activeClass: config.splitActiveClass,
-
-        // Browser storage is an external boundary, so an empty one is answered
-        // explicitly - the listing then opens at the width its styles give it
-        read: function() {
-
-            var saved = localStorage.getItem(config.splitStorageKey);
-
-            if(saved === null) {
-                return null;
-            }
-
-            return parseFloat(saved);
-        },
-
-        write: function(percent) {
-            localStorage.setItem(config.splitStorageKey, String(percent));
-        },
-
-        // A drag that comes near the left edge is pulled the rest of the way, so
-        // the listing shuts on its own rather than being left as a sliver. Keys
-        // step where they are told, which is how the listing is opened again.
-        snap: function(percent, isDragging) {
-
-            if(isDragging && percent < config.splitCollapseAtPercent) {
-                return 0;
-            }
-
-            return percent;
-        },
-
-        applied: function(percent) {
-
-            var isCollapsed = percent === 0;
-            tables.get('browser').classList.toggle(config.splitCollapsedClass, isCollapsed);
-        }
-    });
+    tables.split.init();
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -292,6 +223,18 @@ tables.renderEmpty = function() {
 
     tables.get('empty').hidden = false;
     tables.get('editor').hidden = true;
+
+    // With no file open there is nothing to run a value through
+    tables.showTry(false);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The Try it column and the line that sizes it, which come and go together.
+tables.showTry = function(isShown) {
+
+    tables.get('try').hidden = !isShown;
+    tables.get('try-splitter').hidden = !isShown;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -302,6 +245,7 @@ tables.renderEditor = function() {
 
     tables.get('empty').hidden = true;
     tables.get('editor').hidden = false;
+    tables.showTry(true);
 
     var content = tables.get('content');
 
