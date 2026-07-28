@@ -81,9 +81,11 @@ flow.config = {
     corner: 2,
 
     // What a shape of the drawing says about the lines of the file it stands for, which is
-    // what trace.js reads it by
+    // what trace.js reads it by - a code and the value stand for lines of their own, while
+    // a group stands for the whole table, said as the line its name is on
     lineMark: 'data-flow-lines',
     lineMarkSeparator: ',',
+    tableMark: 'data-flow-table',
 
     // What a shape says it stands for, in full, which is what a press on it copies, and the
     // id the shape being copied from wears while it says that it was copied
@@ -185,6 +187,7 @@ flow.render = function(model) {
     flow.addGroup(cursor, {
         caption: tables.buildGroupCaption(model.sourceTable, model.sourceEntryList.length),
         entryList: model.sourceEntryList,
+        tableLine: model.sourceTableLine,
         note: ''
     });
 
@@ -340,6 +343,7 @@ flow.addTargetGroups = function(cursor, model) {
         flow.addGroup(cursor, {
             caption: tables.buildGroupCaption(model.targetTable, model.targetEntryList.length),
             entryList: model.targetEntryList,
+            tableLine: model.targetTableLine,
             note: model.targetNote
         });
 
@@ -364,6 +368,7 @@ flow.addTargetGroups = function(cursor, model) {
         flow.addGroup(cursor, {
             caption: tables.buildGroupCaption(other.name, other.entryList.length),
             entryList: other.entryList,
+            tableLine: other.lineIdx,
             note: ''
         });
     }
@@ -386,10 +391,14 @@ flow.addGroup = function(cursor, group) {
     var rowList = flow.buildRows(group);
     var height = flow.getGroupHeight(captionHeight, rowList);
 
-    flow.addRect(cursor.svg, config.groupX, top, layout.groupWidth, height, config.groupClass);
+    var box = flow.addRect(cursor.svg, config.groupX, top, layout.groupWidth, height, config.groupClass);
 
-    flow.addTextLines(cursor.svg, layout.center, top + config.captionBaseline, captionLineList,
+    var captionList = flow.addTextLines(cursor.svg, layout.center, top + config.captionBaseline, captionLineList,
         config.captionClass, config.captionLineHeight);
+
+    // The box and the name on it are the table itself, so resting on either of them points
+    // at the whole of that table in the file
+    flow.markTable([box].concat(captionList), group.tableLine);
 
     var rowTop = top + captionHeight;
 
@@ -483,9 +492,15 @@ flow.buildChips = function(group) {
     var out = [];
 
     // A table with nothing for the value stands for itself, said in the few words a chip
-    // has room for. There is no line in the file behind it, so it points at none.
+    // has room for. There is no line of its own behind it, so it points at the table it is
+    // said about, the same way the box around it does.
     if(group.note) {
-        out.push(flow.buildChip(group.note, config.chipNoteClass, config.noteTextClass, config.wordCharWidth, []));
+
+        var note = flow.buildChip(group.note, config.chipNoteClass, config.noteTextClass, config.wordCharWidth, []);
+
+        note.tableLine = group.tableLine;
+        out.push(note);
+
         return out;
     }
 
@@ -520,7 +535,10 @@ flow.buildChip = function(text, className, textClass, charWidth, lineList) {
         lineHeight: config.chipLineHeight,
         className: className,
         textClass: textClass,
-        lineList: lineList
+        lineList: lineList,
+
+        // A code stands for a line of its own rather than for the whole table it is in
+        tableLine: tables.parse.config.noSectionLine
     };
 
     return out;
@@ -552,7 +570,10 @@ flow.addRow = function(svg, row, top) {
 
         // Every part of a chip says the same thing, so the same line is pointed at and the
         // same text is copied wherever on it the cursor is
-        flow.markAll([rect].concat(textList), chip.lineList, chip.text);
+        var partList = [rect].concat(textList);
+
+        flow.markAll(partList, chip.lineList, chip.text);
+        flow.markTable(partList, chip.tableLine);
 
         left = left + chip.width + config.chipGap;
     }
@@ -678,6 +699,22 @@ flow.mark = function(element, lineList) {
     }
 
     element.setAttribute(flow.config.lineMark, lineList.join(flow.config.lineMarkSeparator));
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The shapes a group is drawn out of, told which table they are of, said as the line that
+// table's name is on. A group of a name that is no table of the file stands for nothing in
+// it, so it is told nothing.
+flow.markTable = function(elementList, tableLine) {
+
+    if(tableLine === tables.parse.config.noSectionLine) {
+        return;
+    }
+
+    for(var elementIdx = 0; elementIdx < elementList.length; elementIdx++) {
+        elementList[elementIdx].setAttribute(flow.config.tableMark, tableLine);
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////

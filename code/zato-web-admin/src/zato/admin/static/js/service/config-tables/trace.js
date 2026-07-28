@@ -6,6 +6,10 @@
 // a table that holds the same key twice is drawn as two codes that point at a line each,
 // while the value carries every line that holds it.
 //
+// A group of the drawing is a table of the file, so resting on the box or on the name over
+// it washes the whole of that table over, exactly as resting on the number of the line its
+// name is on does.
+//
 // Several lines are washed one at a time, each in its turn, since one wash over half a
 // file says nothing about which line is which. Whatever is washed is brought on screen
 // first, so a line further down the file is seen rather than only counted.
@@ -27,7 +31,11 @@ var gutter = tables.gutter;
 trace.config = {
 
     // How long one of several lines is washed for before the next one has its turn
-    stepMs: 900
+    stepMs: 900,
+
+    // What a whole table being pointed at is remembered as, so that it is never taken for
+    // the lines of a code
+    tablePrefix: 'table '
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -77,23 +85,59 @@ trace.isShape = function(event) {
 
 trace.enter = function(event) {
 
-    var mark = event.target.getAttribute(tables.flow.config.lineMark);
+    var config = tables.flow.config;
+    var element = event.target;
 
-    // The box a group of codes stands in, the words beside a drop, the drawing's own air -
-    // none of them stands for a line of the file, so resting on one is resting on nothing
-    if(mark === null) {
+    var tableMark = element.getAttribute(config.tableMark);
+    var lineMark = element.getAttribute(config.lineMark);
+    var isTable = tableMark !== null;
+
+    // The words beside a drop and the drawing's own air stand for nothing in the file, so
+    // resting on either of them is resting on nothing
+    if(!isTable && lineMark === null) {
         trace.stop();
         return;
     }
 
-    // A chip is a box with a name on it, and the cursor crossing from the one to the other
-    // is still the cursor on the same code
+    // A chip is a box with a name on it, and a group is a box with a name over it - the
+    // cursor crossing from the one to the other is still the cursor on the same thing
+    var mark = isTable ? trace.config.tablePrefix + tableMark : lineMark;
+
     if(mark === trace.state.mark) {
         return;
     }
 
     trace.stop();
-    trace.start(mark);
+
+    if(isTable) {
+        trace.startTable(mark, tableMark);
+    }
+    else {
+        trace.start(mark);
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// A whole table washed over at once, which is the block of the file that a copy taken from
+// the number of its own line would take.
+trace.startTable = function(mark, tableMark) {
+
+    var lineIdx = parseInt(tableMark, 10);
+    var lineList = gutter.getLineList();
+
+    // The file on screen may have been cut short since the answer was drawn, and then there
+    // is no table left to point at
+    if(lineIdx >= lineList.length) {
+        return;
+    }
+
+    trace.state.mark = mark;
+
+    var block = gutter.getBlock(lineList, lineIdx);
+
+    gutter.scrollToBlock(block);
+    gutter.showWash(block, true);
 };
 
 // ////////////////////////////////////////////////////////////////////////

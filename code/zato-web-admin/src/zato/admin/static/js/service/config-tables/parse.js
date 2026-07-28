@@ -23,7 +23,10 @@ parse.config = {
 
     // What the name of a nested table is written behind the names of the tables it is
     // under, which is how a service reads it as well
-    pathSeparator: '.'
+    pathSeparator: '.',
+
+    // What stands for the line of a table the file does not have
+    noSectionLine: -1
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -76,7 +79,9 @@ parse.read = function(content) {
             nameList.length = depth - 1;
             nameList.push(line.substring(depth, line.length - depth).trim());
 
-            section = {name: nameList.join(parse.config.pathSeparator), entryList: []};
+            // The line the name is on is what the table itself is pointed at by, the same
+            // way each of its values is pointed at by its own line
+            section = {name: nameList.join(parse.config.pathSeparator), lineIdx: lineIdx, entryList: []};
             out.sectionList.push(section);
             continue;
         }
@@ -182,6 +187,22 @@ parse.lookup = function(table, content, fromName, code) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// The line a table's name is on, or the line that stands for no table at all when the file
+// has no table of that name - a name typed into a field may well be one.
+parse.findSectionLine = function(content, sectionName) {
+
+    var section = parse.findSection(parse.read(content), sectionName);
+
+    if(section === null) {
+        return parse.config.noSectionLine;
+    }
+
+    var out = section.lineIdx;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 parse.findSection = function(parsed, sectionName) {
 
     var out = null;
@@ -252,7 +273,7 @@ parse.findValueSpread = function(content, value) {
         var entryList = parse.findEntries(section, value);
 
         if(entryList.length) {
-            out.push({name: section.name, entryList: entryList});
+            out.push({name: section.name, lineIdx: section.lineIdx, entryList: entryList});
         }
     }
 

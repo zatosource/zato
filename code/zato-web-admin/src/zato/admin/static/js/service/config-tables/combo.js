@@ -6,10 +6,10 @@
 // editor may hold changes that were never saved. A field only ever offers what makes
 // sense in it, which is why a target is offered every system but the source's own.
 //
-// A file can hold thousands of values, so nothing is read until a field is opened,
-// the reading is kept until the file changes underneath it, and only as much of it
-// as is worth putting on screen at once is handed to the menu - the rest is said as
-// a count that typing narrows down.
+// A file can hold thousands of values, so nothing is read until a field is opened and the
+// reading is kept until the file changes underneath it. What is offered is offered in full
+// and in order, by name, and the menu is as tall as the stylesheet lets it be - past that
+// it is scrolled, so a file of hundreds of tables is gone through rather than guessed at.
 
 (function($) {
 
@@ -23,15 +23,6 @@ var parse = tables.parse;
 
 combo.config = {
 
-    // How many of the matches go on screen at once
-    maxShown: 100,
-
-    // What the menu says about the matches that did not fit, and the class it
-    // says it in
-    restClass: 'zato-autocomplete-rest',
-    restPrefix: '\u2026 ',
-    restSuffix: ' more, keep typing',
-
     // The widget opens on nothing being typed, and it answers as it is typed into
     minLength: 0,
     delay: 0
@@ -43,10 +34,7 @@ combo.state = {
 
     // The file as it is on disk, read once and kept until that content changes
     parsed: null,
-    parsedContent: null,
-
-    // How many matches the last answer left out
-    restCount: 0
+    parsedContent: null
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -75,10 +63,6 @@ combo.attach = function(input, getItemList) {
 
         source: function(request, response) {
             response(combo.answer(getItemList(), request.term));
-        },
-
-        open: function() {
-            combo.showRest($(input).autocomplete('widget'));
         }
     });
 
@@ -91,21 +75,22 @@ combo.attach = function(input, getItemList) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// What the menu is given - the matches, cut down to what fits on screen, with the
-// count of the ones left out kept for the note under them.
+// What the menu is given - every match there is, by name, since a name is looked for in a
+// list by where it falls in it
 combo.answer = function(itemList, term) {
 
-    var config = combo.config;
-    var matchList = combo.filter(itemList, term);
+    var out = combo.filter(itemList, term);
 
-    combo.state.restCount = matchList.length - config.maxShown;
+    out.sort(combo.byName);
+    return out;
+};
 
-    if(combo.state.restCount > 0) {
-        return matchList.slice(0, config.maxShown);
-    }
+// ////////////////////////////////////////////////////////////////////////
 
-    combo.state.restCount = 0;
-    return matchList;
+combo.byName = function(left, right) {
+
+    var out = left.localeCompare(right);
+    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -116,8 +101,10 @@ combo.filter = function(itemList, term) {
 
     var wanted = term.trim().toLowerCase();
 
+    // The answer is put in order by whoever asked for it, so it is never the very list
+    // that was handed in
     if(!wanted) {
-        return itemList;
+        return itemList.slice();
     }
 
     var out = [];
@@ -132,27 +119,6 @@ combo.filter = function(itemList, term) {
     }
 
     return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// The last line of the menu, there only while the file has more to offer than the
-// menu shows.
-combo.showRest = function(menu) {
-
-    var config = combo.config;
-
-    menu.find('.' + config.restClass).remove();
-
-    if(combo.state.restCount === 0) {
-        return;
-    }
-
-    var rest = $('<li>')
-        .addClass(config.restClass)
-        .text(config.restPrefix + combo.state.restCount + config.restSuffix);
-
-    menu.append(rest);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -174,13 +140,21 @@ combo.getParsed = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// The tables a value can be looked up in, which are the ones holding values of their own -
+// a table that holds nothing but other tables has nothing to look up in it, and each of
+// those tables is offered under its own name anyway.
 combo.getSourceList = function() {
 
     var parsed = combo.getParsed();
     var out = [];
 
     for(var sectionIdx = 0; sectionIdx < parsed.sectionList.length; sectionIdx++) {
-        out.push(parsed.sectionList[sectionIdx].name);
+
+        var section = parsed.sectionList[sectionIdx];
+
+        if(section.entryList.length) {
+            out.push(section.name);
+        }
     }
 
     return out;

@@ -2161,7 +2161,12 @@ class ConfigManager(_ConfigManagerBase):
         }
 
         if zato_ctx:
-            wsgi_environ['zato.channel_item'] = zato_ctx.get('zato.channel_item')
+
+            # Only channels that have one give us a channel item, e.g. the scheduler has none
+            channel_item = zato_ctx.get('zato.channel_item')
+            if channel_item is not None:
+                wsgi_environ['zato.channel_item'] = channel_item
+
             wsgi_environ['zato.zato_ctx'] = zato_ctx
 
         # Extra WSGI environ keys given by the caller, e.g. queue bridge message headers
