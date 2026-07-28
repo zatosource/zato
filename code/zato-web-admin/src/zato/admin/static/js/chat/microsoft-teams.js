@@ -96,6 +96,8 @@ $.fn.zato.chat.microsoft_teams.data_table.new_row = function(item, data, include
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.chat.microsoft_teams.delete_('{0}');\">Delete</a>", item.id));
 
     // 3
+    row += String.format('<td>{0}</td>',
+        String.format("<a href=\"javascript:$.fn.zato.chat.microsoft_teams.send_message('{0}')\">Send message</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:void(0)\" onclick=\"$.fn.zato.data_table.ping('{0}', this)\">Ping</a>", item.id));
     row += String.format("<td class='ignore'>{0}</td>", item.scopes);
 
@@ -117,6 +119,61 @@ $.fn.zato.chat.microsoft_teams.delete_ = function(id) {
         'Microsoft Teams connection `{0}` deleted',
         'Are you sure you want to delete Microsoft Teams connection `{0}`?',
         true);
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.chat.microsoft_teams.get_send_message_url = function() {
+    var out = '/zato/chat/microsoft-teams/send-message/';
+    return out;
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.chat.microsoft_teams.send_message = function(id) {
+    var item = $.fn.zato.data_table.data[id];
+
+    var historyKey = 'zato.chat.microsoft-teams.send-message.' + id;
+
+    $.fn.zato.invoker.open_overlay({
+        id: id,
+        name: item.name,
+        title_prefix: 'Send a message',
+        action_label: 'Send',
+        show_more_options: false,
+        history_key: historyKey,
+        highlight_lexer: 'html',
+        extra_fields_html: '<div class="invoker-more-options-row invoker-more-options-row-compact">'
+            + '<label>Send to</label>'
+            + '<input type="text" id="invoker-modal-target" placeholder="My Team/General or a chat ID" />'
+            + '</div>',
+        get_invoke_url_func: $.fn.zato.chat.microsoft_teams.get_send_message_url,
+        collect_form_data_func: $.fn.zato.chat.microsoft_teams.collect_form_data(item)
+    });
+
+    // Teams messages are sent as HTML, which is how rich content reaches the Graph API ..
+    $.fn.zato.invoker._request_ace_mode = 'ace/mode/html';
+
+    // .. and the pane that was just mounted needs to be switched over to it.
+    var editor = $.fn.zato.invoker._request_pane.getEditor();
+    editor.session.setMode('ace/mode/html');
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.chat.microsoft_teams.collect_form_data = function(item) {
+    return function() {
+        var message = $.fn.zato.invoker._request_pane.getValue();
+        var target = $('#invoker-modal-target').val();
+
+        var out = {
+            'data-request': message,
+            'conn_name': item.name,
+            'target': target
+        };
+
+        return out;
+    };
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

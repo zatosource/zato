@@ -88,6 +88,7 @@ $.fn.zato.chat.slack.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.chat.slack.delete_('{0}');\">Delete</a>", item.id));
 
     // 3
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.chat.slack.send_message('{0}')\">Send message</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:void(0)\" onclick=\"$.fn.zato.data_table.ping('{0}', this)\">Ping</a>", item.id));
 
     // 4
@@ -108,6 +109,61 @@ $.fn.zato.chat.slack.delete_ = function(id) {
         'Slack connection `{0}` deleted',
         'Are you sure you want to delete Slack connection `{0}`?',
         true);
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.chat.slack.get_send_message_url = function() {
+    var out = '/zato/chat/slack/send-message/';
+    return out;
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.chat.slack.send_message = function(id) {
+    var item = $.fn.zato.data_table.data[id];
+
+    var historyKey = 'zato.chat.slack.send-message.' + id;
+
+    $.fn.zato.invoker.open_overlay({
+        id: id,
+        name: item.name,
+        title_prefix: 'Send a message',
+        action_label: 'Send',
+        show_more_options: false,
+        history_key: historyKey,
+        highlight_lexer: 'markdown',
+        extra_fields_html: '<div class="invoker-more-options-row invoker-more-options-row-compact">'
+            + '<label>Send to</label>'
+            + '<input type="text" id="invoker-modal-target" placeholder="#general, @user or C0123456789" />'
+            + '</div>',
+        get_invoke_url_func: $.fn.zato.chat.slack.get_send_message_url,
+        collect_form_data_func: $.fn.zato.chat.slack.collect_form_data(item)
+    });
+
+    // Slack messages are written in mrkdwn, which Markdown highlighting renders closely enough ..
+    $.fn.zato.invoker._request_ace_mode = 'ace/mode/markdown';
+
+    // .. and the pane that was just mounted needs to be switched over to it.
+    var editor = $.fn.zato.invoker._request_pane.getEditor();
+    editor.session.setMode('ace/mode/markdown');
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.chat.slack.collect_form_data = function(item) {
+    return function() {
+        var message = $.fn.zato.invoker._request_pane.getValue();
+        var target = $('#invoker-modal-target').val();
+
+        var out = {
+            'data-request': message,
+            'conn_name': item.name,
+            'target': target
+        };
+
+        return out;
+    };
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

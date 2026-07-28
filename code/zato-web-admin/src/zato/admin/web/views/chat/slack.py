@@ -14,7 +14,7 @@ from json import loads
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.chat.slack import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
-    method_allowed, ping_connection
+    method_allowed, ping_connection, send_chat_message
 from zato.common.api import GENERIC, generic_attrs
 from zato.common.model.slack import SlackConfigObject
 
@@ -123,6 +123,13 @@ def change_password(req):
 @method_allowed('POST')
 def ping(req, id, cluster_id):
     out = ping_connection(req, 'zato.generic.connection.ping', id, 'Slack connection')
+    return out
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def send_message(req):
+    out = send_chat_message(req, GENERIC.CONNECTION.TYPE.CHAT_SLACK)
     return out
 
 # ################################################################################################################################
