@@ -1,9 +1,10 @@
-// Config tables - the two fields of the Try it column offer what the file holds.
+// Config tables - the fields of the Try it column offer what the file holds.
 //
-// Both are editable, so anything at all may be typed into them, and pressing one
+// All of them are editable, so anything at all may be typed into them, and pressing one
 // opens what the file has to offer without a letter being typed first. What is
 // offered comes off the file as it is on disk rather than off the editor, since the
-// editor may hold changes that were never saved.
+// editor may hold changes that were never saved. A field only ever offers what makes
+// sense in it, which is why a target is offered every system but the source's own.
 //
 // A file can hold thousands of values, so nothing is read until a field is opened,
 // the reading is kept until the file changes underneath it, and only as much of it
@@ -58,8 +59,9 @@ combo.init = function() {
     // And the keys of the section named by the field above are what it can be
     combo.attach(tables.get('try-code'), combo.getValueList);
 
-    // A target is a system like a source, so it is the same sections again
-    combo.attach(tables.get('try-target'), combo.getSourceList);
+    // A target is a system like a source, so it is the same sections again, less the one
+    // the value is already coming from
+    combo.attach(tables.get('try-target'), combo.getTargetList);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -179,6 +181,28 @@ combo.getSourceList = function() {
 
     for(var sectionIdx = 0; sectionIdx < parsed.sectionList.length; sectionIdx++) {
         out.push(parsed.sectionList[sectionIdx].name);
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The same systems a source is picked from, without the one the field above already names
+// - a value going back to where it came from is no translation at all.
+combo.getTargetList = function() {
+
+    var fromName = tables.get('try-from').value.trim();
+    var sourceList = combo.getSourceList();
+    var out = [];
+
+    for(var nameIdx = 0; nameIdx < sourceList.length; nameIdx++) {
+
+        var name = sourceList[nameIdx];
+
+        if(name !== fromName) {
+            out.push(name);
+        }
     }
 
     return out;

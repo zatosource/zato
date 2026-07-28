@@ -159,7 +159,7 @@ parse.findValue = function(section, code) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// What a target sends one value as - every key it keeps that value under, since a
+// What a target maps one value to - every key it keeps that value under, since a
 // target may well keep it under more than one. A name that is no section of the file
 // comes back as null, which is not the same answer as a target that has no key for
 // the value.

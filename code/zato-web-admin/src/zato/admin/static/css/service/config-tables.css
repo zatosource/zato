@@ -34,9 +34,12 @@
     --config-tables-file-inset: 13px;
 
     /* The point that says which line the copy button is on - how far it comes out of
-       the button and how much of its side it takes up */
+       the button, how much of its side it takes up, and the air it keeps between its tip
+       and the first character of the file. That air is part of the button's own room, so
+       the cursor in it is still on the line the button is for. */
     --config-tables-point-length: 5px;
     --config-tables-point-height: 5px;
+    --config-tables-point-gap: 2px;
 
     /* What a copy would take, washed over in the file while the cursor is on the
        number beside it - see through, since it is over the text rather than under it */
@@ -45,8 +48,11 @@
     /* The rules that split the page up, in the panel's own weight */
     --config-tables-divider: 3px solid var(--primary-dark);
 
-    /* The drops of the drawing a mapping set answers with */
+    /* The drops of the drawing a mapping set answers with, and the words about them -
+       grey, since they are what the drawing is read by rather than what it says, but not
+       so pale that they are read twice */
     --config-tables-flow-line: #9aa7b4;
+    --config-tables-flow-word: #59636e;
 
     --config-tables-border: #d9dee3;
     --config-tables-text: #1a1a2e;
@@ -346,10 +352,10 @@
     position: absolute;
     z-index: 2;
 
-    /* Hung by the tip of its point, one hair short of the first character of the file,
-       so it keeps that distance whether the numbers are one digit wide or four, and
-       grows leftwards over the air the column keeps on that side */
-    right: calc(100% - var(--config-tables-gutter-width) - var(--config-tables-file-inset) + var(--config-tables-point-length));
+    /* Hung by the tip of its point, short of the first character of the file by the air
+       that tip keeps, so it stands the same distance off whether the numbers are one digit
+       wide or four, and grows leftwards over the room the column keeps on that side */
+    right: calc(100% - var(--config-tables-gutter-width) - var(--config-tables-file-inset) + var(--config-tables-point-length) + var(--config-tables-point-gap));
     display: inline-flex;
     align-items: center;
     height: 18px;
@@ -609,8 +615,8 @@
     transform: translateY(-50%);
 }
 
-/* As wide as the word on it, at the end of the column, under the fields it runs */
-#config-tables-try-run {
+/* As wide as the word on it, at the end of the column, under the fields it reads */
+#config-tables-translate {
     align-self: flex-end;
 }
 
@@ -654,19 +660,19 @@
 }
 
 .config-tables-result-drawn .config-tables-flow {
-    display: block;
+    display: flex;
 }
 
 .config-tables-result-drawn .highlight-wrapper {
     display: none;
 }
 
-/* The drawing is drawn at its own size and only ever shrinks to the column, since text
-   blown up past the size it was set in reads as a mistake */
+/* The drawing stands in the middle of the room the answer has and is drawn at the size it
+   was laid out at, so a column too narrow for a drawing of long names scrolls rather than
+   shrinking what is there to be read. The margin is what centers it, since a box that
+   scrolls cuts off what is centered by alignment alone. */
 .config-tables-flow svg {
-    display: block;
-    max-width: 100%;
-    height: auto;
+    margin: auto;
 }
 
 /* One table of the file, with its name over the codes it holds - a box that only says
@@ -682,12 +688,6 @@
 .config-tables-flow-chip {
     fill: var(--zato-badge-blue-background);
     stroke: none;
-}
-
-/* The code that was asked about, found again among the ones that came along with it */
-.config-tables-flow-chip-marked {
-    stroke: var(--zato-badge-blue-color);
-    stroke-width: 1;
 }
 
 /* What the file has nothing for, so there is no code to put here */
@@ -720,19 +720,19 @@
 .config-tables-flow-label,
 .config-tables-flow-note-text {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-size: 9px;
-    fill: var(--text-muted);
+    font-size: 11px;
+    fill: var(--config-tables-flow-word);
 }
 
 .config-tables-flow-chip-text {
     font-family: var(--config-tables-font-mono);
-    font-size: 12px;
+    font-size: 14px;
     fill: var(--zato-badge-blue-color);
 }
 
 .config-tables-flow-value-text {
     font-family: var(--config-tables-font-mono);
-    font-size: 13px;
+    font-size: 16px;
     fill: var(--zato-badge-amber-color);
 }
 

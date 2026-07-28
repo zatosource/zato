@@ -46,7 +46,11 @@ gutter.config = {
     widthExtra: 8,
 
     // The name of the width the stylesheet lays the column out by
-    widthProperty: '--config-tables-gutter-width'
+    widthProperty: '--config-tables-gutter-width',
+
+    // The name of the air the stylesheet keeps between the tip of the button's point and
+    // the first character of the file
+    pointGapProperty: '--config-tables-point-gap'
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -70,7 +74,8 @@ gutter.state = {
     // rather than per movement of the cursor
     lineHeight: 0,
     paddingTop: 0,
-    pointLength: 0
+    pointLength: 0,
+    pointGap: 0
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -199,18 +204,21 @@ gutter.setWidth = function(lineCount) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// How tall a line is, where the first one starts and how far the button's point comes
-// out of it, all as the stylesheet has them, which is what a cursor's position is
-// turned into a line number by.
+// How tall a line is, where the first one starts, how far the button's point comes out of
+// it and what that point keeps ahead of itself, all as the stylesheet has them - which is
+// what a cursor's position is turned into a line number by.
 gutter.measure = function() {
 
     var element = tables.get('gutter');
     var row = element.firstElementChild.firstElementChild;
+    var elementStyle = window.getComputedStyle(element);
     var pointStyle = window.getComputedStyle(gutter.button, '::after');
+    var pointGap = elementStyle.getPropertyValue(gutter.config.pointGapProperty);
 
     gutter.state.lineHeight = row.offsetHeight;
-    gutter.state.paddingTop = parseFloat(window.getComputedStyle(element).paddingTop);
+    gutter.state.paddingTop = parseFloat(elementStyle.paddingTop);
     gutter.state.pointLength = parseFloat(pointStyle.borderLeftWidth);
+    gutter.state.pointGap = parseFloat(pointGap);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -239,10 +247,10 @@ gutter.follow = function(event) {
     var bodyRect = gutter.getBody().getBoundingClientRect();
     var offsetY = event.clientY - bodyRect.top;
 
-    // The tip of the point is where the numbers end and the file begins. The point
-    // counts as part of the button, otherwise the cursor resting on it would be taken
+    // The file begins where the air ahead of the point ends. Both the point and that air
+    // count as part of the button, otherwise the cursor resting on either would be taken
     // for a cursor in the file.
-    var buttonRight = gutter.button.getBoundingClientRect().right + state.pointLength;
+    var buttonRight = gutter.button.getBoundingClientRect().right + state.pointLength + state.pointGap;
 
     if(event.clientX > buttonRight) {
         gutter.hide();
