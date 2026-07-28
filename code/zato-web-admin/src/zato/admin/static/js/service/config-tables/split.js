@@ -1,6 +1,6 @@
 // Config tables - the room the three columns get, across and down.
 //
-// Across: the listing, the file and the Try it column each take as much of the
+// Across: the listing, the file and the Translate column each take as much of the
 // panel as the line next to it is dragged to, either line goes all the way across,
 // and a line dragged near the edge it belongs to pulls its own column shut rather
 // than leaving a sliver of it. Where each line was left is where it opens the next
@@ -34,11 +34,11 @@ split.config = {
 
     // The class a column wears while it is shut
     browserCollapsedClass: 'config-tables-browser-collapsed',
-    tryCollapsedClass: 'config-tables-try-collapsed',
+    translateCollapsedClass: 'config-tables-translate-collapsed',
 
     // Where each of the two splits is kept between visits
     browserStorageKey: 'zato.config-tables.split',
-    tryStorageKey: 'zato.config-tables.split-try'
+    translateStorageKey: 'zato.config-tables.split-translate'
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -62,13 +62,13 @@ split.init = function() {
         collapsedClass: config.browserCollapsedClass
     });
 
-    // The Try it column sits at the end of it, so its line is on its near side
+    // The Translate column sits at the end of it, so its line is on its near side
     split.wire({
-        panel: tables.get('try'),
-        handle: tables.get('try-splitter'),
+        panel: tables.get('translate-panel'),
+        handle: tables.get('translate-splitter'),
         edge: 'start',
-        storageKey: config.tryStorageKey,
-        collapsedClass: config.tryCollapsedClass
+        storageKey: config.translateStorageKey,
+        collapsedClass: config.translateCollapsedClass
     });
 };
 

@@ -37,23 +37,23 @@ flow.config = {
     groupX: 6,
     groupWidth: 198,
     groupInset: 10,
-    captionHeight: 26,
-    captionBaseline: 18,
+    captionHeight: 25,
+    captionBaseline: 17,
 
     // How far apart two groups stand when the value reaches more than one table
     groupGap: 9,
 
     // One code of a table
-    chipHeight: 26,
+    chipHeight: 24,
     chipGap: 8,
     chipInset: 11,
-    chipBaseline: 18,
+    chipBaseline: 17,
     rowGap: 8,
 
     // The value the whole drawing turns on
-    valueHeight: 30,
+    valueHeight: 28,
     valueInset: 13,
-    valueBaseline: 21,
+    valueBaseline: 20,
 
     // The drop from one part of the story to the next, and where the words that go with
     // that drop stand
@@ -66,9 +66,9 @@ flow.config = {
     // How wide one character of each face is, which is what says how much room a name
     // asks for. The words about the drawing are set in a face of their own, and a narrower
     // one, so they are measured against a width of their own as well.
-    charWidth: 8.4,
-    valueCharWidth: 9.6,
-    wordCharWidth: 6,
+    charWidth: 7.8,
+    valueCharWidth: 9,
+    wordCharWidth: 5.5,
     ellipsis: '\u2026',
 
     // The corners are kept as tight as the ones the badges in the listing wear
@@ -274,7 +274,7 @@ flow.addTargetGroups = function(cursor, model) {
 
     if(model.targetTable) {
 
-        flow.addConnector(cursor, words.flowMapsToLabel);
+        flow.addConnector(cursor, words.flowUsedByLabel);
 
         flow.addGroup(cursor, {
             caption: tables.buildGroupCaption(model.targetTable, model.targetEntryList.length),
@@ -289,7 +289,7 @@ flow.addTargetGroups = function(cursor, model) {
         return;
     }
 
-    flow.addConnector(cursor, words.flowMapsToLabel);
+    flow.addConnector(cursor, words.flowUsedByLabel);
 
     for(var otherIdx = 0; otherIdx < model.otherList.length; otherIdx++) {
 

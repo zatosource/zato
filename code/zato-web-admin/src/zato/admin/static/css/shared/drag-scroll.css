@@ -1,0 +1,14 @@
+/*
+ * The shared drag to scroll - a box that says it may be taken hold of, and says as much
+ * again while it is being held. The behaviour itself is js/shared/drag-scroll.js.
+ */
+
+.zato-drag-scroll {
+    cursor: grab;
+}
+
+/* Nothing inside a box being dragged is being selected, so the drag is not read as one */
+.zato-drag-scrolling {
+    cursor: grabbing;
+    user-select: none;
+}

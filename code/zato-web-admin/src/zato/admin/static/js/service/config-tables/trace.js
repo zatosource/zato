@@ -9,6 +9,10 @@
 // Several lines are washed one at a time, each in its turn, since one wash over half a
 // file says nothing about which line is which. Whatever is washed is brought on screen
 // first, so a line further down the file is seen rather than only counted.
+//
+// The drawing is also the box it is drawn in, and a drawing of a file that most systems
+// agree on is taller than that box, so it is taken hold of and moved as well - anywhere
+// but on a shape, which is there to be pointed at.
 
 (function($) {
 
@@ -52,6 +56,21 @@ trace.init = function() {
     // what listens rather than each shape of it
     host.addEventListener('mouseover', trace.enter);
     host.addEventListener('mouseleave', trace.stop);
+
+    // A drawing taller than the room it has is taken hold of and moved, and what stands for
+    // a line of the file is left to be pointed at rather than grabbed
+    $.fn.zato.drag_scroll.attach({
+        element: host,
+        skip: trace.isShape
+    });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+trace.isShape = function(event) {
+
+    var out = event.target.getAttribute(tables.flow.config.lineMark) !== null;
+    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////

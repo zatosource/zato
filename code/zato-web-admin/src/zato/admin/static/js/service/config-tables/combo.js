@@ -1,4 +1,4 @@
-// Config tables - the fields of the Try it column offer what the file holds.
+// Config tables - the fields of the Translate column offer what the file holds.
 //
 // All of them are editable, so anything at all may be typed into them, and pressing one
 // opens what the file has to offer without a letter being typed first. What is
@@ -54,14 +54,14 @@ combo.state = {
 combo.init = function() {
 
     // The sections of a mapping set are what a value can come from
-    combo.attach(tables.get('try-from'), combo.getSourceList);
+    combo.attach(tables.get('translate-source'), combo.getSourceList);
 
     // And the keys of the section named by the field above are what it can be
-    combo.attach(tables.get('try-code'), combo.getValueList);
+    combo.attach(tables.get('translate-value'), combo.getValueList);
 
     // A target is a system like a source, so it is the same sections again, less the one
     // the value is already coming from
-    combo.attach(tables.get('try-target'), combo.getTargetList);
+    combo.attach(tables.get('translate-target'), combo.getTargetList);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -192,7 +192,7 @@ combo.getSourceList = function() {
 // - a value going back to where it came from is no translation at all.
 combo.getTargetList = function() {
 
-    var fromName = tables.get('try-from').value.trim();
+    var fromName = tables.get('translate-source').value.trim();
     var sourceList = combo.getSourceList();
     var out = [];
 
@@ -219,7 +219,7 @@ combo.getValueList = function() {
     var sectionName = tables.config.codesSection;
 
     if(tables.isMappingSet(table)) {
-        sectionName = tables.get('try-from').value.trim();
+        sectionName = tables.get('translate-source').value.trim();
     }
 
     var section = parse.findSection(combo.getParsed(), sectionName);

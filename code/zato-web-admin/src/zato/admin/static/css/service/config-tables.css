@@ -14,7 +14,7 @@
        file itself start at the room two of them need, and gutter.js sets that to what
        the file in front of the reader actually asks for. */
     --config-tables-browser-width: 250px;
-    --config-tables-try-width: 250px;
+    --config-tables-translate-width: 250px;
     --config-tables-gutter-width: 22px;
 
     /* The listing's rows - the one being looked at, and the one under the cursor */
@@ -390,7 +390,7 @@
 /* ------------------------------------------------------------ */
 
 /* The wash over the line, or the whole section, the button beside a number would take -
-   and over the line a part of the drawing in the Try it column stands for, which is the
+   and over the line a part of the drawing in the Translate column stands for, which is the
    same thing said from the other side. The overlay the file is read off is opaque, so the
    wash goes over it and is see through, the way a marker over paper is - the caret and the
    file's own border stay above it either way. */
@@ -411,7 +411,7 @@
 /* The file's own glyphs are transparent - what is read on screen is the colored
    copy of them on the overlay right behind the caret, which is why the two carry
    the very same type and the very same box. The same goes for the answer in the
-   Try it column, which is a value of the same kind. */
+   Translate column, which is a value of the same kind. */
 #config-tables-content,
 #config-tables-result {
     box-sizing: border-box;
@@ -504,15 +504,15 @@
 }
 
 /* ------------------------------------------------------------ */
-/* Config tables - the column that runs a value through the file */
+/* Config tables - the Translate column                          */
 /* ------------------------------------------------------------ */
 
 /* The third column, on the same quiet background as the listing on the other side
    of the file, with the answer taking whatever room the fields above it leave */
-.config-tables-try {
+.config-tables-translate-panel {
     display: flex;
     flex-direction: column;
-    flex: 0 0 var(--config-tables-try-width);
+    flex: 0 0 var(--config-tables-translate-width);
     min-width: 0;
     padding: 15px 16px 20px 16px;
     background: var(--background-light);
@@ -521,7 +521,7 @@
 
 /* Dragged shut, the column gives up its padding as well, otherwise its own
    spacing would keep a sliver of it on screen */
-.config-tables-try-collapsed {
+.config-tables-translate-collapsed {
     padding: 0;
     overflow: hidden;
 }
@@ -721,19 +721,19 @@
 .config-tables-flow-label,
 .config-tables-flow-note-text {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-size: 11px;
+    font-size: 10px;
     fill: var(--config-tables-flow-word);
 }
 
 .config-tables-flow-chip-text {
     font-family: var(--config-tables-font-mono);
-    font-size: 14px;
+    font-size: 13px;
     fill: var(--zato-badge-blue-color);
 }
 
 .config-tables-flow-value-text {
     font-family: var(--config-tables-font-mono);
-    font-size: 16px;
+    font-size: 15px;
     fill: var(--zato-badge-amber-color);
 }
 

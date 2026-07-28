@@ -28,11 +28,14 @@ menu.config = {
     rootTitle: 'Files',
 
     // The keys the actions answer to - a file's own actions first, so the two
-    // that bring a file in keep their key whether a file was right-clicked or not
+    // that bring a file in keep their key whether a file was right-clicked or not.
+    // Taking a copy of a file goes by the letter of its own name, since the row of
+    // keys is where the other four are.
     renameKey: 'Q',
     deleteKey: 'W',
     addKey: 'E',
-    uploadKey: 'R'
+    uploadKey: 'R',
+    downloadKey: 'D'
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -166,6 +169,18 @@ menu.buildItemList = function(name) {
             details: [
                 ['Called', table.file_name],
                 ['In a service', tables.buildReference(table.name)]
+            ]
+        });
+
+        out.push({
+            key: config.downloadKey,
+            label: 'Download',
+            isDestructive: false,
+            action: tables.files.download,
+            description: 'A copy of the file as it is, onto your own machine.',
+            details: [
+                ['Called', table.file_name],
+                ['Size', tables.formatSize(table.size)]
             ]
         });
 
