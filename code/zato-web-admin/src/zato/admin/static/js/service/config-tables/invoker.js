@@ -193,11 +193,13 @@ invoker.buildModel = function(content, fromName, code, found) {
 
     var out = {
         sourceTable: fromName,
+        sourceTableLine: parse.findSectionLine(content, fromName),
         code: code,
         value: found,
         valueLineList: invoker.readSpreadLines(spread),
         sourceEntryList: invoker.readSourceEntries(content, fromName, code),
         targetTable: targetName,
+        targetTableLine: parse.findSectionLine(content, targetName),
         targetEntryList: [],
         targetNote: '',
         otherList: []

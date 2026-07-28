@@ -188,6 +188,12 @@ $.fn.zato.highlight.ini_value_to_html = function(value) {
 // Puts the overlay behind one textarea and keeps the two in step - typing
 // repaints it and scrolling drags it along. The tokenizer is whichever format
 // the textarea holds.
+//
+// The colored copy is held in a box of its own inside the overlay and that box is
+// moved, rather than the overlay being scrolled. A textarea with a long line in it
+// keeps a scrollbar along its foot and so has more room to scroll than the overlay
+// behind it does, and an overlay that was scrolled would stop short of the last lines
+// of such a file while the textarea went on.
 $.fn.zato.highlight.attach = function(textarea, to_html) {
 
     var wrapper = document.createElement('div');
@@ -195,6 +201,11 @@ $.fn.zato.highlight.attach = function(textarea, to_html) {
 
     var backdrop = document.createElement('pre');
     backdrop.className = 'highlight-backdrop';
+
+    var text = document.createElement('div');
+    text.className = 'highlight-backdrop-text';
+
+    backdrop.appendChild(text);
 
     textarea.parentNode.insertBefore(wrapper, textarea);
     wrapper.appendChild(backdrop);
@@ -223,12 +234,12 @@ $.fn.zato.highlight.attach = function(textarea, to_html) {
 // that sets its value from code calls this, since no input event is fired for it.
 $.fn.zato.highlight.refresh = function(textarea) {
 
-    var backdrop = textarea.previousElementSibling;
+    var text = $.fn.zato.highlight.get_text(textarea);
     var html = textarea.zato_to_html(textarea.value);
 
     // The trailing newline keeps the overlay as tall as the textarea when the
     // text ends with an empty line
-    backdrop.innerHTML = html + '\n';
+    text.innerHTML = html + '\n';
 
     $.fn.zato.highlight.follow_scroll(textarea);
 };
@@ -238,10 +249,20 @@ $.fn.zato.highlight.refresh = function(textarea) {
 // The overlay follows wherever its textarea has scrolled to.
 $.fn.zato.highlight.follow_scroll = function(textarea) {
 
-    var backdrop = textarea.previousElementSibling;
+    var text = $.fn.zato.highlight.get_text(textarea);
+    var left = -textarea.scrollLeft;
+    var top = -textarea.scrollTop;
 
-    backdrop.scrollTop = textarea.scrollTop;
-    backdrop.scrollLeft = textarea.scrollLeft;
+    text.style.transform = 'translate(' + left + 'px, ' + top + 'px)';
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The box the colored copy is held in, which is the one thing in the overlay that moves.
+$.fn.zato.highlight.get_text = function(textarea) {
+
+    var out = textarea.previousElementSibling.firstElementChild;
+    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////

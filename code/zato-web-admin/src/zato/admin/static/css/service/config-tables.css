@@ -125,10 +125,11 @@
     letter-spacing: 0.5px;
 }
 
+/* Where the file on screen is on disk, which is read as often as its name is */
 .config-tables-root {
     font-family: var(--config-tables-font-mono);
     font-size: 12px;
-    color: var(--text-muted);
+    color: var(--config-tables-text);
 }
 
 /* The file on screen says something other than the file on disk does, which is said
@@ -702,8 +703,11 @@
 
 /* One table of the file, with its name over the codes it holds - a box that only says
    where they end, so it is drawn and nothing more */
+/* The whole of the box is the table it stands for, the air in it as much as its border,
+   so resting anywhere inside it points at that table in the file */
 .config-tables-flow-group {
     fill: none;
+    pointer-events: all;
     stroke: var(--config-tables-border);
     stroke-width: 1;
     stroke-dasharray: 4 3;

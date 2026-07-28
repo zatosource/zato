@@ -7,11 +7,20 @@
    ".ui-widget .ui-widget" from jquery.ui.custom.css matches it at (0,2,0) - the
    extra .ui-menu class keeps these selectors above that. */
 
+/* A list of hundreds is as tall as this many of its rows, and scrolled from there on */
 ul.ui-menu.ui-autocomplete {
+    --zato-autocomplete-row-height: 22px;
+    --zato-autocomplete-row-count: 15;
+    --zato-autocomplete-padding: 2px;
+
     position: absolute;
     z-index: 1010;
     margin: 0;
-    padding: 2px 0;
+    padding: var(--zato-autocomplete-padding) 0;
+    max-height: calc(var(--zato-autocomplete-row-count) * var(--zato-autocomplete-row-height)
+        + var(--zato-autocomplete-padding) * 2);
+    overflow-y: auto;
+    overflow-x: hidden;
     list-style: none;
     background-color: #fff;
     border: 1px solid #dde3ea;
@@ -21,24 +30,18 @@ ul.ui-menu.ui-autocomplete {
     font-size: 12px;
 }
 
+/* The row height the menu is measured in - padding and line taken together */
 ul.ui-menu.ui-autocomplete .ui-menu-item-wrapper {
     display: block;
     padding: 3px 6px;
+    line-height: 16px;
     border: none;
     margin: 0;
     background-image: none;
     color: #333;
+    white-space: nowrap;
 }
 
 ul.ui-menu.ui-autocomplete .ui-menu-item-wrapper.ui-state-active {
     background-color: #f6f8fa;
-}
-
-/* A list too long to be put on screen in one piece shows what it can and says how
-   much of it is left, which typing narrows down */
-ul.ui-menu.ui-autocomplete .zato-autocomplete-rest {
-    padding: 3px 6px;
-    color: #8a8a8a;
-    font-style: italic;
-    cursor: default;
 }

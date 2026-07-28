@@ -6,6 +6,11 @@
 // itself and reaching into the room the file leaves before its first character, which
 // is what lets the numbers stay narrow.
 //
+// The cursor anywhere in a row of the column is the cursor on the line that row counts,
+// the number itself and the room around it alike, so a line is copied without the number
+// being aimed at. Which line that is comes off the row the cursor is over rather than off
+// where the cursor is, so it is the very row that answers for itself.
+//
 // A line that names a section is a line that holds others, so copying it takes the
 // whole section - its name and everything under it down to the next name of the same
 // depth or above it. What that comes to is washed over in the file itself while the
@@ -48,9 +53,12 @@ gutter.config = {
     // The name of the width the stylesheet lays the column out by
     widthProperty: '--config-tables-gutter-width',
 
-    // The name of the air the stylesheet keeps between the tip of the button's point and
-    // the first character of the file
-    pointGapProperty: '--config-tables-point-gap'
+    // The name of the room the file keeps before its first character, which is what the
+    // button reaches over and how far past the numbers the cursor is still on a line
+    fileInsetProperty: '--config-tables-file-inset',
+
+    // What a row says about the line it counts
+    lineAttribute: 'data-line'
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -76,12 +84,12 @@ gutter.state = {
     washBlock: null,
     washHeld: false,
 
-    // The geometry of the column and of the button on it, read off them once per build
+    // The geometry of the file and of the column beside it, read off them once per build
     // rather than per movement of the cursor
     lineHeight: 0,
+    contentPadding: 0,
     paddingTop: 0,
-    pointLength: 0,
-    pointGap: 0
+    fileInset: 0
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -97,11 +105,11 @@ gutter.init = function() {
     content.addEventListener('input', gutter.refresh);
     content.addEventListener('scroll', gutter.followScroll);
 
-    // Which line the button is on comes off where the cursor is rather than off what
-    // it is over, since the button itself is over the numbers it stands in for
+    // Which line the button is on comes off the row the cursor is over, and the button
+    // itself stands over the row it is for
     var body = gutter.getBody();
 
-    body.addEventListener('mousemove', gutter.follow);
+    body.addEventListener('mousemove', gutter.point);
     body.addEventListener('mouseleave', gutter.hide);
 
     gutter.refresh();
@@ -185,6 +193,10 @@ gutter.buildRow = function(lineNumber) {
     var row = document.createElement('div');
     row.className = gutter.config.rowClass;
 
+    // The row is what says which line it is for, so the cursor being anywhere on it is
+    // enough - nothing is worked out from where the cursor is
+    row.setAttribute(gutter.config.lineAttribute, lineNumber - 1);
+
     var number = document.createElement('span');
     number.className = gutter.config.numberClass;
     number.textContent = lineNumber;
@@ -210,21 +222,26 @@ gutter.setWidth = function(lineCount) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// How tall a line is, where the first one starts, how far the button's point comes out of
-// it and what that point keeps ahead of itself, all as the stylesheet has them - which is
-// what a cursor's position is turned into a line number by.
+// How tall a line is, how much room the file keeps above its first one and how much it
+// keeps before its first character - the file itself is asked for all of it, so what the
+// wash is placed by is what the file is actually laid out as.
 gutter.measure = function() {
 
+    var state = gutter.state;
     var element = tables.get('gutter');
     var row = element.firstElementChild.firstElementChild;
     var elementStyle = window.getComputedStyle(element);
-    var pointStyle = window.getComputedStyle(gutter.button, '::after');
-    var pointGap = elementStyle.getPropertyValue(gutter.config.pointGapProperty);
+    var contentStyle = window.getComputedStyle(tables.get('content'));
+    var fileInset = elementStyle.getPropertyValue(gutter.config.fileInsetProperty);
 
-    gutter.state.lineHeight = row.offsetHeight;
-    gutter.state.paddingTop = parseFloat(elementStyle.paddingTop);
-    gutter.state.pointLength = parseFloat(pointStyle.borderLeftWidth);
-    gutter.state.pointGap = parseFloat(pointGap);
+    state.lineHeight = row.offsetHeight;
+
+    // The room above the first line as a scroll counts it, which is from the inside of the
+    // file's box, and as the wash and the button are placed, which is from the outside of it
+    state.contentPadding = parseFloat(contentStyle.paddingTop);
+    state.paddingTop = state.contentPadding + parseFloat(contentStyle.borderTopWidth);
+
+    state.fileInset = parseFloat(fileInset);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -252,32 +269,53 @@ gutter.followScroll = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The button onto the line the cursor is level with, or off screen once the cursor is
-// past the button's own right-hand edge, which is where the text of the file starts.
-gutter.follow = function(event) {
+// What the cursor has reached - a row of the column, the button that stands on one, or the
+// file itself, which is where the button is away.
+gutter.point = function(event) {
+
+    var button = gutter.button;
+    var target = event.target;
+
+    // The button covers the very row it is for, its point included, so reaching it is
+    // reaching that row again
+    if(target === button || button.contains(target)) {
+        return;
+    }
+
+    var row = target.closest('.' + gutter.config.rowClass);
+
+    if(row !== null) {
+        gutter.follow(row);
+        return;
+    }
+
+    // The point stops short of the first character of the file by a little air, and that air
+    // is the button's own room rather than the file's, so the cursor in it holds the button
+    // where it is
+    if(gutter.state.lineNumber && event.clientX <= gutter.getReach()) {
+        return;
+    }
+
+    gutter.hide();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// How far to the right of the column the button still counts as being pointed at.
+gutter.getReach = function() {
+
+    var out = tables.get('gutter').getBoundingClientRect().right + gutter.state.fileInset;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The button onto the row the cursor is on, level with it, since that row is where the line
+// it counts is on screen.
+gutter.follow = function(row) {
 
     var state = gutter.state;
-    var bodyRect = gutter.getBody().getBoundingClientRect();
-    var offsetY = event.clientY - bodyRect.top;
-
-    // The file begins where the air ahead of the point ends. Both the point and that air
-    // count as part of the button, otherwise the cursor resting on either would be taken
-    // for a cursor in the file.
-    var buttonRight = gutter.button.getBoundingClientRect().right + state.pointLength + state.pointGap;
-
-    if(event.clientX > buttonRight) {
-        gutter.hide();
-        return;
-    }
-
-    var scrollTop = tables.get('content').scrollTop;
-    var lineIdx = Math.floor((offsetY - state.paddingTop + scrollTop) / state.lineHeight);
-
-    // Above the first line and below the last one there is no line to copy
-    if(lineIdx < 0 || lineIdx >= state.lineCount) {
-        gutter.hide();
-        return;
-    }
+    var lineIdx = parseInt(row.getAttribute(gutter.config.lineAttribute), 10);
 
     // What a press would take is read off the file, so it is worked out again only once
     // the cursor has reached another line
@@ -293,7 +331,7 @@ gutter.follow = function(event) {
         return;
     }
 
-    var top = state.paddingTop + lineIdx * state.lineHeight - scrollTop;
+    var top = row.getBoundingClientRect().top - gutter.getBody().getBoundingClientRect().top;
 
     state.lineNumber = lineIdx + 1;
 
@@ -358,7 +396,10 @@ gutter.scrollToLine = function(lineIdx) {
 
     var state = gutter.state;
     var content = tables.get('content');
-    var top = lineIdx * state.lineHeight;
+
+    // Where the line is inside the file's own box, the room it keeps above its first
+    // line counted in
+    var top = state.contentPadding + lineIdx * state.lineHeight;
     var bottom = top + state.lineHeight;
 
     if(top < content.scrollTop) {
@@ -366,11 +407,19 @@ gutter.scrollToLine = function(lineIdx) {
         return;
     }
 
-    var room = content.clientHeight - state.paddingTop;
-
-    if(bottom > content.scrollTop + room) {
-        content.scrollTop = bottom - room;
+    if(bottom > content.scrollTop + content.clientHeight) {
+        content.scrollTop = bottom - content.clientHeight;
     }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// A block is brought on screen from its start, so a table taller than the room there is for
+// it is read from its name down rather than from its last line up.
+gutter.scrollToBlock = function(block) {
+
+    gutter.scrollToLine(block.start + block.count - 1);
+    gutter.scrollToLine(block.start);
 };
 
 // ////////////////////////////////////////////////////////////////////////

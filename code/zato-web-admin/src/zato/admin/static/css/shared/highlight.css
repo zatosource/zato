@@ -102,6 +102,12 @@
     pointer-events: none;
 }
 
+/* The colored copy itself, which is what is moved to follow the textarea's scrolling -
+   it keeps the overlay's own type and is never clipped by anything but the overlay */
+.highlight-backdrop-text {
+    display: block;
+}
+
 /* The textarea stays on top - its glyphs go transparent,
    its caret and placeholder do not */
 textarea.highlight-source {
