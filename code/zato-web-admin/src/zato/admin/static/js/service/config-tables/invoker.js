@@ -1,4 +1,4 @@
-// Config tables - the Try it column.
+// Config tables - the Translate column.
 //
 // It runs against the file on screen rather than the one on the server, which is
 // what makes the answer the one a service reading the same file would get, and
@@ -48,9 +48,15 @@ invoker.init = function() {
     $.fn.zato.highlight.attach(tables.get('result'), $.fn.zato.highlight.ini_to_html);
 
     invoker.wireCopy('result-copy', 'result', invoker.config.resultCopyPlacement);
-    invoker.wireCopy('try-from-copy', 'try-from', invoker.config.fieldCopyPlacement);
-    invoker.wireCopy('try-code-copy', 'try-code', invoker.config.fieldCopyPlacement);
-    invoker.wireCopy('try-target-copy', 'try-target', invoker.config.fieldCopyPlacement);
+    invoker.wireCopy('translate-source-copy', 'translate-source', invoker.config.fieldCopyPlacement);
+    invoker.wireCopy('translate-value-copy', 'translate-value', invoker.config.fieldCopyPlacement);
+    invoker.wireCopy('translate-target-copy', 'translate-target', invoker.config.fieldCopyPlacement);
+
+    // There is nothing to translate until the fields say what, so the button says as much.
+    // A value picked out of what a field offers arrives with the menu closing rather than
+    // with a keypress, which is why that is listened for too.
+    $('#config-tables-translate-source, #config-tables-translate-value')
+        .on('input autocompleteclose', invoker.refreshTranslate);
 
     tables.combo.init();
 };
@@ -76,9 +82,9 @@ invoker.render = function(table) {
 
     var first = parse.getFirstEntry(table.content);
 
-    tables.get('try-from').value = first.sectionName;
-    tables.get('try-code').value = first.key;
-    tables.get('try-target').value = '';
+    tables.get('translate-source').value = first.sectionName;
+    tables.get('translate-value').value = first.key;
+    tables.get('translate-target').value = '';
 
     invoker.setResult('');
     tables.flow.clear();
@@ -94,8 +100,37 @@ invoker.refresh = function(table) {
 
     var isMappingSet = tables.isMappingSet(table);
 
-    tables.get('try-from-field').hidden = !isMappingSet;
-    tables.get('try-target-field').hidden = !isMappingSet;
+    tables.get('translate-source-field').hidden = !isMappingSet;
+    tables.get('translate-target-field').hidden = !isMappingSet;
+
+    invoker.refreshTranslate();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Whether there is anything to translate - a value to look up, and the system it comes from
+// when the file keeps one table per system. Without those two there is no question to ask,
+// so the button is not there to be pressed.
+invoker.refreshTranslate = function() {
+
+    var table = tables.getCurrent();
+    var button = tables.get('translate');
+
+    // No file is open, which is a state of its own - the whole column is away then
+    if(table === null) {
+        button.disabled = true;
+        return;
+    }
+
+    var hasCode = Boolean(tables.get('translate-value').value.trim());
+    var isReady = hasCode;
+
+    if(tables.isMappingSet(table)) {
+        var hasFrom = Boolean(tables.get('translate-source').value.trim());
+        isReady = hasCode && hasFrom;
+    }
+
+    button.disabled = !isReady;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -105,7 +140,7 @@ invoker.readFrom = function(table) {
     var out = '';
 
     if(tables.isMappingSet(table)) {
-        out = tables.get('try-from').value.trim();
+        out = tables.get('translate-source').value.trim();
     }
 
     return out;
@@ -122,8 +157,12 @@ invoker.translate = function() {
     var table = tables.getCurrent();
     var content = tables.get('content').value;
     var fromName = invoker.readFrom(table);
-    var code = tables.get('try-code').value.trim();
+    var code = tables.get('translate-value').value.trim();
     var found = parse.lookup(table, content, fromName, code);
+
+    // Asking is part of where the reader is, so the address says as much and the answer is
+    // there again after a reload
+    tables.url.writeAnswered();
 
     if(found === null) {
         var missingText = tables.buildMissingText(table, fromName, code);
@@ -152,7 +191,7 @@ invoker.translate = function() {
 invoker.buildModel = function(content, fromName, code, found) {
 
     var spread = parse.findValueSpread(content, found);
-    var targetName = tables.get('try-target').value.trim();
+    var targetName = tables.get('translate-target').value.trim();
 
     var out = {
         sourceTable: fromName,
@@ -274,7 +313,7 @@ invoker.buildAnswer = function(table, content, found) {
         return lineList[0];
     }
 
-    var targetName = tables.get('try-target').value.trim();
+    var targetName = tables.get('translate-target').value.trim();
 
     if(targetName) {
         var targetLineList = invoker.buildTargetLineList(content, targetName, found);

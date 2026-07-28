@@ -6,10 +6,10 @@
 // the right. This file holds the state and the editor around the textarea. The
 // listing itself is in listing.js, the two lines that size the columns in split.js,
 // the reading of a file in parse.js, the words the page puts on screen in text.js,
-// the Try it column in invoker.js, the drawing it answers a mapping set with in
-// flow.js, the line of the file a part of that drawing stands for in trace.js, the
-// listing's menu in menu.js, what is done to the file itself in files.js and the
-// bringing in of one in upload.js.
+// the Translate column in invoker.js, the drawing it answers a mapping set with in
+// flow.js, the line of the file a part of that drawing stands for in trace.js, where
+// the reader is in url.js, the listing's menu in menu.js, what is done to the file
+// itself in files.js and the bringing in of one in upload.js.
 
 (function($) {
 
@@ -48,9 +48,10 @@ tables.config = {
     // of the two ways it came about
     flowNoMapMessage: 'No such map in this file',
 
-    // The words that go with every drop of the drawing, since every one of them is the
-    // same thing happening again
+    // The words that go with the two drops of the drawing - the file maps what came in to
+    // the value it holds, and the tables on the other side are the ones using that value
     flowMapsToLabel: 'maps to',
+    flowUsedByLabel: 'used by',
 
     // The class the status line wears - plain, once something went through, and
     // once something did not
@@ -112,19 +113,34 @@ tables.init = function(inputConfig) {
     tables.upload.init();
     tables.invoker.init();
     tables.menu.init();
+    tables.url.init();
 
     tables.renderList();
+    tables.open();
+};
 
-    // The page opens on something to read rather than on an empty right-hand side
-    var hasTable = state.tableList.length > 0;
+// ////////////////////////////////////////////////////////////////////////
 
-    if(hasTable) {
-        var first = state.tableList[0];
-        tables.select(first.name);
+// The file the page opens on - the one the address names, so a reload lands where the
+// reader left off, and otherwise the first one there is. What was being translated and how
+// far each column was scrolled come back with it.
+tables.open = function() {
+
+    var state = tables.state;
+    var name = tables.url.readFileName();
+
+    if(!name && state.tableList.length) {
+        name = state.tableList[0].name;
     }
-    else {
+
+    if(!name) {
         tables.renderEmpty();
+        return;
     }
+
+    tables.select(name);
+    tables.url.applyTranslate();
+    tables.url.applyScroll();
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -225,6 +241,7 @@ tables.select = function(name) {
 
     tables.state.currentName = name;
 
+    tables.url.writeFile(name);
     tables.setStatus('');
     tables.renderList();
     tables.renderEditor();
@@ -238,16 +255,17 @@ tables.renderEmpty = function() {
     tables.get('editor').hidden = true;
 
     // With no file open there is nothing to run a value through
-    tables.showTry(false);
+    tables.showTranslate(false);
+    tables.invoker.refreshTranslate();
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The Try it column and the line that sizes it, which come and go together.
-tables.showTry = function(isShown) {
+// The Translate column and the line that sizes it, which come and go together.
+tables.showTranslate = function(isShown) {
 
-    tables.get('try').hidden = !isShown;
-    tables.get('try-splitter').hidden = !isShown;
+    tables.get('translate-panel').hidden = !isShown;
+    tables.get('translate-splitter').hidden = !isShown;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -258,7 +276,7 @@ tables.renderEditor = function() {
 
     tables.get('empty').hidden = true;
     tables.get('editor').hidden = false;
-    tables.showTry(true);
+    tables.showTranslate(true);
 
     var content = tables.get('content');
 

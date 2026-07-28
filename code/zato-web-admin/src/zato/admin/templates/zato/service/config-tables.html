@@ -23,6 +23,7 @@ to what is in it comes off the listing's own menu. The view provides:
 <link rel="stylesheet" type="text/css" href="/static/css/shared/badge.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/autocomplete.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/highlight.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/drag-scroll.css">
 <link rel="stylesheet" type="text/css" href="/static/css/service/config-tables.css">
 {% endblock %}
 
@@ -31,6 +32,8 @@ to what is in it comes off the listing's own menu. The view provides:
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/highlight.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/resizer.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/copy.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/drag-scroll.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/url.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/text.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/split.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/combo.js"></script>
@@ -105,8 +108,6 @@ $(document).ready(function() {
 
                 <div class="button-container" id="config-tables-editor-buttons">
                     <div class="config-tables-options">
-                        <a href="javascript:void(0)" id="config-tables-download">Download</a>
-                        <span class="options-separator">|</span>
                         <a href="javascript:void(0)" id="config-tables-replace">Upload a new version</a>
                     </div>
                     <div class="button-wrapper">
@@ -121,40 +122,40 @@ $(document).ready(function() {
 
         </div>
 
-        <!-- The line between the file and the Try it column -->
-        <div class="config-tables-splitter" id="config-tables-try-splitter" tabindex="0"
-            role="separator" aria-orientation="vertical" aria-label="Resize the Try it column"></div>
+        <!-- The line between the file and the Translate column -->
+        <div class="config-tables-splitter" id="config-tables-translate-splitter" tabindex="0"
+            role="separator" aria-orientation="vertical" aria-label="Resize the Translate column"></div>
 
         <!-- Runs against the file on screen, which is what makes the answer the one
              a service reading the same file gets, while what the two fields offer
              comes off the file as it is on disk -->
-        <div class="config-tables-try" id="config-tables-try">
+        <div class="config-tables-translate-panel" id="config-tables-translate-panel">
 
             <!-- Every field offers what the file on disk holds and takes anything
                  else that is typed into it -->
-            <div class="config-tables-field" id="config-tables-try-from-field">
-                <label for="config-tables-try-from">Source</label>
+            <div class="config-tables-field" id="config-tables-translate-source-field">
+                <label for="config-tables-translate-source">Source</label>
                 <div class="config-tables-input-row">
-                    <input type="text" id="config-tables-try-from" autocomplete="off">
-                    <button type="button" class="zato-badge zato-badge-blue config-tables-copy config-tables-copy-small config-tables-inline-copy" id="config-tables-try-from-copy">Copy</button>
+                    <input type="text" id="config-tables-translate-source" autocomplete="off">
+                    <button type="button" class="zato-badge zato-badge-blue config-tables-copy config-tables-copy-small config-tables-inline-copy" id="config-tables-translate-source-copy">Copy</button>
                 </div>
             </div>
 
             <div class="config-tables-field">
-                <label for="config-tables-try-code">Value</label>
+                <label for="config-tables-translate-value">Value</label>
                 <div class="config-tables-input-row">
-                    <input type="text" id="config-tables-try-code" autocomplete="off">
-                    <button type="button" class="zato-badge zato-badge-blue config-tables-copy config-tables-copy-small config-tables-inline-copy" id="config-tables-try-code-copy">Copy</button>
+                    <input type="text" id="config-tables-translate-value" autocomplete="off">
+                    <button type="button" class="zato-badge zato-badge-blue config-tables-copy config-tables-copy-small config-tables-inline-copy" id="config-tables-translate-value-copy">Copy</button>
                 </div>
             </div>
 
-            <!-- Fill it in and the answer says what that system sends the value as,
+            <!-- Fill it in and the answer says what that system maps the value to,
                  leave it empty and the answer is the value itself -->
-            <div class="config-tables-field" id="config-tables-try-target-field">
-                <label for="config-tables-try-target">Target</label>
+            <div class="config-tables-field" id="config-tables-translate-target-field">
+                <label for="config-tables-translate-target">Target</label>
                 <div class="config-tables-input-row">
-                    <input type="text" id="config-tables-try-target" autocomplete="off">
-                    <button type="button" class="zato-badge zato-badge-blue config-tables-copy config-tables-copy-small config-tables-inline-copy" id="config-tables-try-target-copy">Copy</button>
+                    <input type="text" id="config-tables-translate-target" autocomplete="off">
+                    <button type="button" class="zato-badge zato-badge-blue config-tables-copy config-tables-copy-small config-tables-inline-copy" id="config-tables-translate-target-copy">Copy</button>
                 </div>
             </div>
 
@@ -165,7 +166,7 @@ $(document).ready(function() {
                  text is what Copy takes either way. -->
             <div class="config-tables-result-area" id="config-tables-result-area">
 
-                <div class="config-tables-flow" id="config-tables-flow"></div>
+                <div class="config-tables-flow zato-drag-scroll" id="config-tables-flow"></div>
 
                 <textarea id="config-tables-result" spellcheck="false"></textarea>
 

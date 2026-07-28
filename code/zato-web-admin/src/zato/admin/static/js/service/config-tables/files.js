@@ -31,7 +31,6 @@ files.config = {
 files.init = function() {
 
     tables.get('new').addEventListener('click', files.add);
-    tables.get('download').addEventListener('click', files.download);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -245,8 +244,9 @@ files.remove = function() {
 // Downloading
 // ////////////////////////////////////////////////////////////////////////
 
-// A copy of the file as it is, which is how a file too large for the browser is
-// worked on - taken away, changed and uploaded again.
+// A copy of the file as it is, taken from the listing's own menu, which is how a
+// file too large for the browser is worked on - taken away, changed and uploaded
+// again.
 files.download = function() {
 
     var table = tables.getCurrent();

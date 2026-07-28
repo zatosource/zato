@@ -3,8 +3,8 @@
 // A file is sections of key and value pairs. A code list keeps every code under
 // the one section, a mapping set keeps one section per name the values come
 // from. Nothing here touches the page - it only says what a file holds, which is
-// what the editor reports while it is typed in and what the Try it strip answers
-// from.
+// what the editor reports while it is typed in and what the Translate column
+// answers from.
 
 (function($) {
 
@@ -239,7 +239,7 @@ parse.byKey = function(left, right) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The first value the file holds, which is what the Try it strip starts from -
+// The first value the file holds, which is what the Translate column starts from -
 // the section it is under and the key it goes by. An empty file has neither.
 parse.getFirstEntry = function(content) {
 

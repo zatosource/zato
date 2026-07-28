@@ -1,6 +1,6 @@
 // Config tables - the words the page puts on screen.
 //
-// Everything a line, a status or the Try it strip reads is built here, so what
+// Everything a line, a status or the Translate column reads is built here, so what
 // the page says is in one place and the rest of it only decides when to say it.
 
 (function($) {
