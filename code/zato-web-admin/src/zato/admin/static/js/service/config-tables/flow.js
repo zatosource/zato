@@ -1,13 +1,13 @@
 // Config tables - the answer for a mapping set, drawn rather than written.
 //
-// A mapping set is a file of systems, so its answer reads as a small process: what came
-// in, what this file holds for it, and what a system on the other side sends it as.
-// Everything hangs off one spine down the left, dashed the way a drawing of a plan is
-// dashed, and a value that a system keeps under more than one code opens as a gateway
-// with a branch per code - which is how a conflict of that kind is seen rather than read.
+// A mapping set holds a table per party, so its answer reads as a story down the middle of
+// the column: the table the value came in from, what that table maps it to, and what the
+// table on the other side sends it as. The codes of one table stand together inside a
+// dashed group of its own, so a value that several codes of the same table map to is seen
+// as exactly that, and every table the value reaches is drawn rather than counted.
 //
-// The drawing is laid out in units of its own and scaled to the column it sits in, so
-// what is below reads as a plan of it rather than as pixels on a screen.
+// The drawing is laid out in units of its own and only ever scaled down to the column it
+// sits in, so what is below reads as a plan of it rather than as pixels on a screen.
 
 (function($) {
 
@@ -22,106 +22,103 @@ var svgNamespace = 'http://www.w3.org/2000/svg';
 
 flow.config = {
 
-    // How wide the drawing is and how much of that is kept clear around it
+    // How wide the drawing is, how much of that is kept clear around it, and the line
+    // everything stands on
     width: 240,
     padding: 10,
+    center: 120,
 
-    // A node on the spine, and one a branch leads out to
-    nodeX: 8,
-    nodeWidth: 224,
-    branchX: 56,
-    branchWidth: 176,
+    // A group of codes - the box they stand in, the room it keeps inside itself, and
+    // where the name of the table goes
+    groupX: 8,
+    groupWidth: 224,
+    groupInset: 10,
+    captionHeight: 22,
+    captionBaseline: 15,
 
-    // How tall a node is with one line in it and with two
-    nodeHeight: 26,
-    nodeHeightTall: 40,
+    // How far apart two groups stand when the value reaches more than one table
+    groupGap: 8,
 
-    // Where the text inside a node starts, where the one line of a node sits, and where
-    // the two lines of a node that has two sit
-    textInset: 12,
-    linePlain: 17,
-    lineTallFirst: 16,
-    lineTallSecond: 32,
+    // One code of a table
+    chipHeight: 20,
+    chipGap: 6,
+    chipInset: 9,
+    chipBaseline: 14,
+    rowGap: 6,
 
-    // The spine every connector runs down, the room a connector takes between one node
-    // and the next, and how far apart the branches are
-    spineX: 28,
+    // The value the whole drawing turns on
+    valueHeight: 24,
+    valueInset: 11,
+    valueBaseline: 17,
+
+    // The drop from one part of the story to the next, and where the words that go with
+    // that drop stand
     connectorLength: 26,
-    branchGap: 9,
-
-    // The gateway a value under more than one code opens as
-    gateSize: 9,
-
-    // A label goes beside the spine rather than on it, clear of the gateway that may
-    // stand where it starts
-    labelX: 42,
-    labelOffset: 5,
-
-    // The arrow head at the end of a connector
+    labelOffset: 8,
+    labelBaseline: 4,
     arrowLength: 6,
     arrowWidth: 4,
 
-    // Where the spine meets a node
-    jointRadius: 2,
-
-    // How wide one character of the monospace face is, which is what says how much of a
-    // long name fits into a node
+    // How wide one character of each face is, which is what says how much of a long name
+    // fits into a chip
     charWidth: 6.7,
+    valueCharWidth: 7.3,
     ellipsis: '\u2026',
 
     // The corners are kept as tight as the ones the badges in the listing wear
     corner: 2,
 
-    // How many systems the drawing names before it says the rest as a count
-    maxBranches: 3,
-
     // The classes the parts of the drawing wear, so what they look like stays in the
     // stylesheet
-    nodeClass: 'config-tables-flow-node',
-    nodeValueClass: 'config-tables-flow-node config-tables-flow-node-value',
-    nodeBranchClass: 'config-tables-flow-node config-tables-flow-node-branch',
-    nodeMutedClass: 'config-tables-flow-node config-tables-flow-node-muted',
-    nameClass: 'config-tables-flow-name',
-    codeClass: 'config-tables-flow-code',
+    groupClass: 'config-tables-flow-group',
+    captionClass: 'config-tables-flow-caption',
+    chipClass: 'config-tables-flow-chip',
+    chipMarkedClass: 'config-tables-flow-chip config-tables-flow-chip-marked',
+    chipNoteClass: 'config-tables-flow-chip-note',
+    chipTextClass: 'config-tables-flow-chip-text',
+    noteTextClass: 'config-tables-flow-note-text',
     valueClass: 'config-tables-flow-value',
-    countClass: 'config-tables-flow-count',
+    valueTextClass: 'config-tables-flow-value-text',
     labelClass: 'config-tables-flow-label',
     lineClass: 'config-tables-flow-line',
-    gateClass: 'config-tables-flow-gate',
     arrowClass: 'config-tables-flow-arrow',
-    jointClass: 'config-tables-flow-joint',
     drawnClass: 'config-tables-result-drawn'
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The whole drawing, from the top down. What is being drawn is worked out first, so
-// the height is known before anything is put on screen.
+// The whole story, from the top down. Nothing goes on screen until the last part of it
+// is laid out, since that is what says how tall the drawing turned out to be.
 flow.render = function(model) {
 
     var config = flow.config;
-    var host = tables.get('flow');
-
+    var words = tables.config;
     var svg = flow.createElement('svg');
     var cursor = {y: config.padding, svg: svg};
 
-    // Who sent the value, and what they call it ..
-    flow.addTallNode(cursor, model.sourceName, model.code, config.nodeClass);
+    // The table the value came in from, with every code of it that maps to the same
+    // value and the one that was asked about marked out among them ..
+    flow.addGroup(cursor, {
+        caption: tables.buildGroupCaption(model.sourceTable, model.sourceKeyList.length),
+        chipList: model.sourceKeyList,
+        marked: model.code,
+        note: ''
+    });
 
-    // .. down to what this file holds for it, with a note of how many of that system's
-    // own codes end up here as well ..
-    var sourceCount = model.sourceKeyList.length;
-    flow.addConnector(cursor, flow.buildCountText(sourceCount));
-    flow.addValueNode(cursor, model.value);
+    // .. what the file maps it to ..
+    flow.addConnector(cursor, words.flowMapsToLabel);
+    flow.addValue(cursor, model.value);
 
-    // .. and out to the systems on the other side.
-    flow.addBranches(cursor, model);
+    // .. and where it goes from there.
+    flow.addTargetGroups(cursor, model);
 
     var height = cursor.y + config.padding;
 
     svg.setAttribute('viewBox', '0 0 ' + config.width + ' ' + height);
     svg.setAttribute('width', config.width);
     svg.setAttribute('height', height);
+
+    var host = tables.get('flow');
 
     host.textContent = '';
     host.appendChild(svg);
@@ -141,197 +138,244 @@ flow.clear = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The system the value came from - its name over the code it came in as.
-flow.addTallNode = function(cursor, name, code, className) {
+// Where the value goes - the table that was asked about, and otherwise every other table
+// of the file that maps to the same value.
+flow.addTargetGroups = function(cursor, model) {
 
-    var config = flow.config;
-    var top = cursor.y;
+    var words = tables.config;
 
-    flow.addRect(cursor.svg, config.nodeX, top, config.nodeWidth, config.nodeHeightTall, className);
+    if(model.targetTable) {
 
-    var textX = config.nodeX + config.textInset;
-    var nameText = flow.fit(name, config.nodeWidth);
-    var codeText = flow.fit(code, config.nodeWidth);
+        flow.addConnector(cursor, words.flowSentAsLabel);
 
-    flow.addText(cursor.svg, textX, top + config.lineTallFirst, nameText, config.nameClass, 'start');
-    flow.addText(cursor.svg, textX, top + config.lineTallSecond, codeText, config.codeClass, 'start');
+        flow.addGroup(cursor, {
+            caption: tables.buildGroupCaption(model.targetTable, model.targetKeyList.length),
+            chipList: model.targetKeyList,
+            marked: '',
+            note: model.targetNote
+        });
 
-    cursor.y = top + config.nodeHeightTall;
+        return;
+    }
+
+    if(!model.otherList.length) {
+        return;
+    }
+
+    flow.addConnector(cursor, words.flowAlsoInLabel);
+
+    for(var otherIdx = 0; otherIdx < model.otherList.length; otherIdx++) {
+
+        var other = model.otherList[otherIdx];
+
+        // The drop leads into the first group, and the rest stand under it
+        if(otherIdx) {
+            cursor.y = cursor.y + flow.config.groupGap;
+        }
+
+        flow.addGroup(cursor, {
+            caption: tables.buildGroupCaption(other.name, other.keyList.length),
+            chipList: other.keyList,
+            marked: '',
+            note: ''
+        });
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// What the file holds for it, which is the one node the whole drawing turns on.
-flow.addValueNode = function(cursor, value) {
+// One table - its name over the codes it holds the value under, all of them inside a box
+// of its own.
+flow.addGroup = function(cursor, group) {
 
     var config = flow.config;
     var top = cursor.y;
+    var rowList = flow.buildRows(group);
+    var height = flow.getGroupHeight(rowList);
 
-    flow.addRect(cursor.svg, config.nodeX, top, config.nodeWidth, config.nodeHeight, config.nodeValueClass);
+    flow.addRect(cursor.svg, config.groupX, top, config.groupWidth, height, config.groupClass);
 
-    var textX = config.nodeX + config.textInset;
-    var valueText = flow.fit(value, config.nodeWidth);
+    var captionRoom = config.groupWidth - config.groupInset * 2;
+    var caption = flow.fit(group.caption, captionRoom, config.charWidth);
 
-    flow.addText(cursor.svg, textX, top + config.linePlain, valueText, config.valueClass, 'start');
+    flow.addText(cursor.svg, config.center, top + config.captionBaseline, caption, config.captionClass, 'middle');
 
-    cursor.y = top + config.nodeHeight;
+    var rowTop = top + config.captionHeight;
+
+    for(var rowIdx = 0; rowIdx < rowList.length; rowIdx++) {
+        flow.addRow(cursor.svg, rowList[rowIdx], rowTop);
+        rowTop = rowTop + config.chipHeight + config.rowGap;
+    }
+
+    cursor.y = top + height;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// A dashed drop down the spine into whatever comes next, with what it is about beside it.
+flow.getGroupHeight = function(rowList) {
+
+    var config = flow.config;
+    var rowCount = rowList.length;
+    var rows = rowCount * config.chipHeight + (rowCount - 1) * config.rowGap;
+
+    var out = config.captionHeight + rows + config.groupInset;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The codes of one table, in as many rows as they take - a table of a dozen codes reads
+// as a block of them rather than as a column running off the screen.
+flow.buildRows = function(group) {
+
+    var config = flow.config;
+    var chipList = flow.buildChips(group);
+    var room = config.groupWidth - config.groupInset * 2;
+
+    var out = [];
+    var row = [];
+    var used = 0;
+
+    for(var chipIdx = 0; chipIdx < chipList.length; chipIdx++) {
+
+        var chip = chipList[chipIdx];
+        var needed = chip.width;
+
+        if(row.length) {
+            needed = needed + config.chipGap;
+        }
+
+        // A row with no room left for the next code hands over to another one
+        if(used + needed > room) {
+            out.push(row);
+            row = [];
+            used = 0;
+            needed = chip.width;
+        }
+
+        row.push(chip);
+        used = used + needed;
+    }
+
+    if(row.length) {
+        out.push(row);
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+flow.buildChips = function(group) {
+
+    var config = flow.config;
+    var out = [];
+
+    // A table with nothing for the value stands for itself, said in the few words a chip
+    // has room for
+    if(group.note) {
+        out.push(flow.buildChip(group.note, config.chipNoteClass, config.noteTextClass));
+        return out;
+    }
+
+    for(var textIdx = 0; textIdx < group.chipList.length; textIdx++) {
+
+        var text = group.chipList[textIdx];
+        var className = config.chipClass;
+
+        // The code that was asked about wears a line around it, so it is found again among
+        // the ones that came along with it
+        if(text === group.marked) {
+            className = config.chipMarkedClass;
+        }
+
+        out.push(flow.buildChip(text, className, config.chipTextClass));
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+flow.buildChip = function(text, className, textClass) {
+
+    var config = flow.config;
+    var room = config.groupWidth - config.groupInset * 2 - config.chipInset * 2;
+
+    text = flow.fit(text, room, config.charWidth);
+
+    var out = {
+        text: text,
+        width: text.length * config.charWidth + config.chipInset * 2,
+        className: className,
+        textClass: textClass
+    };
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// One row of codes, laid out about the line everything else stands on.
+flow.addRow = function(svg, row, top) {
+
+    var config = flow.config;
+    var total = (row.length - 1) * config.chipGap;
+
+    for(var widthIdx = 0; widthIdx < row.length; widthIdx++) {
+        total = total + row[widthIdx].width;
+    }
+
+    var left = config.center - total / 2;
+
+    for(var chipIdx = 0; chipIdx < row.length; chipIdx++) {
+
+        var chip = row[chipIdx];
+        var middle = left + chip.width / 2;
+
+        flow.addRect(svg, left, top, chip.width, config.chipHeight, chip.className);
+        flow.addText(svg, middle, top + config.chipBaseline, chip.text, chip.textClass, 'middle');
+
+        left = left + chip.width + config.chipGap;
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// What the file holds for the code, which is the one thing in the drawing that stands on
+// its own rather than inside a table.
+flow.addValue = function(cursor, value) {
+
+    var config = flow.config;
+    var top = cursor.y;
+    var room = config.groupWidth - config.valueInset * 2;
+    var text = flow.fit(value, room, config.valueCharWidth);
+
+    var width = text.length * config.valueCharWidth + config.valueInset * 2;
+    var left = config.center - width / 2;
+
+    flow.addRect(cursor.svg, left, top, width, config.valueHeight, config.valueClass);
+    flow.addText(cursor.svg, config.center, top + config.valueBaseline, text, config.valueTextClass, 'middle');
+
+    cursor.y = top + config.valueHeight;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The drop from one part of the story to the next, with the words that say what it is.
 flow.addConnector = function(cursor, labelText) {
 
     var config = flow.config;
     var top = cursor.y;
     var bottom = top + config.connectorLength;
+    var middle = top + config.connectorLength / 2 + config.labelBaseline;
+    var labelX = config.center + config.labelOffset;
 
-    flow.addLine(cursor.svg, config.spineX, top, config.spineX, bottom);
-    flow.addArrow(cursor.svg, config.spineX, bottom, 'down');
-
-    if(labelText) {
-        var middle = top + config.connectorLength / 2 + config.labelOffset;
-        flow.addText(cursor.svg, config.labelX, middle, labelText, config.labelClass, 'start');
-    }
+    flow.addLine(cursor.svg, config.center, top, config.center, bottom);
+    flow.addArrow(cursor.svg, config.center, bottom);
+    flow.addText(cursor.svg, labelX, middle, labelText, config.labelClass, 'start');
 
     cursor.y = bottom;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// Everything the value goes out to - the codes the target keeps it under when one was
-// asked about, and otherwise the other systems of the file that know it too.
-flow.addBranches = function(cursor, model) {
-
-    if(model.targetName) {
-
-        // A target the file has nothing under is named on its own, since there is no
-        // count of codes to give for it
-        if(model.targetNote) {
-            flow.addBranchGroup(cursor, model.targetName, [], model.targetNote);
-            return;
-        }
-
-        var targetLabel = tables.buildTargetLabel(model.targetName, model.targetKeyList.length);
-        flow.addBranchGroup(cursor, targetLabel, model.targetKeyList, '');
-        return;
-    }
-
-    var alsoCount = model.otherList.length;
-
-    if(!alsoCount) {
-        return;
-    }
-
-    var nameList = [];
-
-    for(var otherIdx = 0; otherIdx < model.otherList.length; otherIdx++) {
-        nameList.push(model.otherList[otherIdx].name);
-    }
-
-    var alsoLabel = tables.buildAlsoLabel(alsoCount);
-    flow.addBranchGroup(cursor, alsoLabel, nameList, '');
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// One fan of branches - the label it goes by, a gateway when there is more than one way
-// out of it, and a node per branch hanging off the spine.
-flow.addBranchGroup = function(cursor, labelText, textList, note) {
-
-    var config = flow.config;
-
-    // A target that has nothing for the value is a branch of its own, so the drawing says
-    // as much rather than stopping at the value
-    if(note) {
-        flow.addConnector(cursor, labelText);
-        flow.addNoteNode(cursor, note);
-        return;
-    }
-
-    var shownList = textList.slice(0, config.maxBranches);
-    var restCount = textList.length - shownList.length;
-    var hasChoice = textList.length > 1;
-
-    flow.addLine(cursor.svg, config.spineX, cursor.y, config.spineX, cursor.y + config.connectorLength);
-    cursor.y = cursor.y + config.connectorLength;
-
-    // More than one way out is what a gateway is for, and the label says how many
-    if(hasChoice) {
-        flow.addGate(cursor.svg, config.spineX, cursor.y);
-    }
-
-    var labelY = cursor.y + config.labelOffset;
-    flow.addText(cursor.svg, config.labelX, labelY, labelText, config.labelClass, 'start');
-
-    cursor.y = cursor.y + config.gateSize;
-
-    for(var textIdx = 0; textIdx < shownList.length; textIdx++) {
-        flow.addBranchNode(cursor, shownList[textIdx], config.nodeBranchClass);
-    }
-
-    if(restCount) {
-        var restText = tables.buildRestLabel(restCount);
-        flow.addBranchNode(cursor, restText, config.nodeMutedClass);
-    }
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// One branch - the spine drops to it and an elbow leads in from the side.
-flow.addBranchNode = function(cursor, text, className) {
-
-    var config = flow.config;
-    var top = cursor.y + config.branchGap;
-    var middle = top + config.nodeHeight / 2;
-
-    flow.addLine(cursor.svg, config.spineX, cursor.y, config.spineX, middle);
-    flow.addLine(cursor.svg, config.spineX, middle, config.branchX, middle);
-    flow.addArrow(cursor.svg, config.branchX, middle, 'right');
-    flow.addJoint(cursor.svg, config.spineX, middle);
-
-    flow.addRect(cursor.svg, config.branchX, top, config.branchWidth, config.nodeHeight, className);
-
-    var textX = config.branchX + config.textInset;
-    var nodeText = flow.fit(text, config.branchWidth);
-
-    flow.addText(cursor.svg, textX, top + config.linePlain, nodeText, config.codeClass, 'start');
-
-    cursor.y = top + config.nodeHeight;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// What stands where a branch would be when there is nothing on the other side.
-flow.addNoteNode = function(cursor, note) {
-
-    var config = flow.config;
-    var top = cursor.y;
-
-    flow.addRect(cursor.svg, config.nodeX, top, config.nodeWidth, config.nodeHeight, config.nodeMutedClass);
-
-    var textX = config.nodeX + config.textInset;
-    var noteText = flow.fit(note, config.nodeWidth);
-
-    flow.addText(cursor.svg, textX, top + config.linePlain, noteText, config.countClass, 'start');
-
-    cursor.y = top + config.nodeHeight;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// How many codes of the system the value came from end up on the same value, said only
-// when there is more than the one that was asked about.
-flow.buildCountText = function(count) {
-
-    var out = '';
-    var hasOne = count === 1;
-
-    if(!hasOne) {
-        out = tables.pluralize(count, 'code');
-    }
-
-    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -392,21 +436,15 @@ flow.addLine = function(svg, x1, y1, x2, y2) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The head a connector arrives with, pointing the way the connector runs.
-flow.addArrow = function(svg, x, y, direction) {
+// The head the drop arrives with.
+flow.addArrow = function(svg, x, y) {
 
     var config = flow.config;
+    var top = y - config.arrowLength;
     var arrow = flow.createElement('polygon');
-    var points = '';
 
-    if(direction === 'down') {
-        var top = y - config.arrowLength;
-        points = (x - config.arrowWidth) + ',' + top + ' ' + (x + config.arrowWidth) + ',' + top + ' ' + x + ',' + y;
-    }
-    else {
-        var left = x - config.arrowLength;
-        points = left + ',' + (y - config.arrowWidth) + ' ' + left + ',' + (y + config.arrowWidth) + ' ' + x + ',' + y;
-    }
+    var points = (x - config.arrowWidth) + ',' + top + ' ' +
+        (x + config.arrowWidth) + ',' + top + ' ' + x + ',' + y;
 
     arrow.setAttribute('points', points);
     arrow.setAttribute('class', config.arrowClass);
@@ -416,53 +454,17 @@ flow.addArrow = function(svg, x, y, direction) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The gateway, which stands on the spine where the value turns out to have more than
-// one way out of it.
-flow.addGate = function(svg, x, y) {
-
-    var config = flow.config;
-    var size = config.gateSize;
-    var middle = y + size / 2;
-
-    var gate = flow.createElement('polygon');
-    var points = x + ',' + y + ' ' + (x + size) + ',' + middle + ' ' + x + ',' + (y + size) + ' ' + (x - size) + ',' + middle;
-
-    gate.setAttribute('points', points);
-    gate.setAttribute('class', config.gateClass);
-
-    svg.appendChild(gate);
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// Where a branch leaves the spine.
-flow.addJoint = function(svg, x, y) {
-
-    var joint = flow.createElement('circle');
-
-    joint.setAttribute('cx', x);
-    joint.setAttribute('cy', y);
-    joint.setAttribute('r', flow.config.jointRadius);
-    joint.setAttribute('class', flow.config.jointClass);
-
-    svg.appendChild(joint);
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// A name too long for the node it goes into is cut where the node ends, since a drawing
+// A name too long for the room it goes into is cut where that room ends, since a drawing
 // that grows with the longest name in a file is no drawing at all.
-flow.fit = function(text, width) {
+flow.fit = function(text, room, charWidth) {
 
-    var config = flow.config;
-    var room = width - config.textInset * 2;
-    var maxLength = Math.floor(room / config.charWidth);
+    var maxLength = Math.floor(room / charWidth);
 
     if(text.length <= maxLength) {
         return text;
     }
 
-    var out = text.slice(0, maxLength - 1) + config.ellipsis;
+    var out = text.slice(0, maxLength - 1) + flow.config.ellipsis;
     return out;
 };
 
