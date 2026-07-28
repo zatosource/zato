@@ -183,6 +183,7 @@ files.applyRename = function(name) {
 
     var previousName = table.name;
     var previousFileName = table.file_name;
+    var previousPath = table.path;
     var suffix = files.getSuffix(previousFileName);
     var fileName = name + suffix;
 
@@ -200,6 +201,11 @@ files.applyRename = function(name) {
         table.path = table.directory + fileName;
 
         tables.state.initialContent[name] = tables.state.initialContent[previousName];
+
+        // Anything unsaved in the file is still unsaved, and the steps it went through and where
+        // its caret was are still its own, all of it now under the name the file goes by
+        tables.draft.rename(previousPath, table);
+        tables.edit.rename(previousPath, table);
 
         tables.select(name);
         tables.setStatus('Renamed ' + previousName + ' to ' + name);
@@ -235,6 +241,10 @@ files.remove = function() {
 
         var tableIdx = tableList.indexOf(table);
         tableList.splice(tableIdx, 1);
+
+        // The file is gone, so what was typed into it has nowhere to go back to
+        tables.draft.forget(table);
+        tables.edit.forget(table);
 
         tables.state.currentName = '';
         tables.renderList();
@@ -298,6 +308,14 @@ files.persist = function(action, table, onDone, extra) {
         }
     }
 
+    tables.log.say('files.persist', {
+        action: action,
+        directory: data.directory,
+        file_name: data.file_name,
+        length: data.data.length,
+        extra: JSON.stringify(extra === undefined ? {} : extra)
+    });
+
     $.ajax({
         url: tables.state.persistUrl,
         type: 'POST',
@@ -306,6 +324,13 @@ files.persist = function(action, table, onDone, extra) {
         contentType: 'application/json',
 
         success: function(response) {
+
+            tables.log.say('files.persist answered', {
+                action: action,
+                file_name: data.file_name,
+                success: response.success,
+                error: response.error
+            });
 
             if(response.success) {
                 onDone();
@@ -316,6 +341,14 @@ files.persist = function(action, table, onDone, extra) {
         },
 
         error: function(request) {
+
+            tables.log.say('files.persist failed', {
+                action: action,
+                file_name: data.file_name,
+                status: request.status,
+                error: files.buildErrorText(request)
+            });
+
             tables.setStatus(files.buildErrorText(request), true);
         }
     });
