@@ -9,6 +9,9 @@
 // Down: the panel takes what the window has left under the navigation, less the
 // same air below it as there is above it, so each column scrolls inside itself
 // instead of the page scrolling as a whole.
+//
+// A listing narrowed towards nothing gives up what is around the file names before it gives
+// up the names themselves, so what is left of it is still a listing of files.
 
 (function($) {
 
@@ -36,6 +39,19 @@ split.config = {
     browserCollapsedClass: 'config-tables-browser-collapsed',
     translateCollapsedClass: 'config-tables-translate-collapsed',
 
+    // How narrow the listing has to be before it gives up each part of itself, in pixels,
+    // and the class it wears once it has - what a file holds goes first and the badge
+    // saying what kind of file it is goes last, so the name is on screen the longest
+    hideCountAtPx: 230,
+    hideButtonsAtPx: 210,
+    hideHeadingAtPx: 170,
+    hideBadgeAtPx: 130,
+
+    hideCountClass: 'config-tables-browser-hide-count',
+    hideButtonsClass: 'config-tables-browser-hide-buttons',
+    hideHeadingClass: 'config-tables-browser-hide-heading',
+    hideBadgeClass: 'config-tables-browser-hide-badge',
+
     // Where each of the two splits is kept between visits
     browserStorageKey: 'zato.config-tables.split',
     translateStorageKey: 'zato.config-tables.split-translate'
@@ -51,7 +67,7 @@ split.init = function() {
 
     // The window is the only thing that says how much room there is, so it is
     // asked again every time it changes
-    $(window).on('resize', split.fitHeight);
+    $(window).on('resize', split.onWindowResize);
 
     // The listing sits at the start of the row, so its line is on its far side
     split.wire({
@@ -59,7 +75,7 @@ split.init = function() {
         handle: tables.get('splitter'),
         edge: 'end',
         storageKey: config.browserStorageKey,
-        collapsedClass: config.browserCollapsedClass
+        applied: split.applyBrowser
     });
 
     // The Translate column sits at the end of it, so its line is on its near side
@@ -68,8 +84,59 @@ split.init = function() {
         handle: tables.get('translate-splitter'),
         edge: 'start',
         storageKey: config.translateStorageKey,
-        collapsedClass: config.translateCollapsedClass
+        applied: split.applyTranslate
     });
+
+    // The listing opens at the width it was left at, which says as much about what it has
+    // room for as a drag of it does
+    split.applyListing();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+split.onWindowResize = function() {
+
+    split.fitHeight();
+
+    // Each column is as wide a share of the panel as it was, and the panel follows the
+    // window, so the listing may have room for more or for less of itself than it had
+    split.applyListing();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+split.applyBrowser = function(percent) {
+
+    var panel = tables.get('browser');
+
+    panel.classList.toggle(split.config.browserCollapsedClass, percent === 0);
+    split.applyListing();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+split.applyTranslate = function(percent) {
+
+    var panel = tables.get('translate-panel');
+
+    panel.classList.toggle(split.config.translateCollapsedClass, percent === 0);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// What the listing has room for at the width it is now. Everything around the names goes
+// before the names do, each part of it at its own width, so the listing thins out rather
+// than being cut off at the side.
+split.applyListing = function() {
+
+    var config = split.config;
+    var panel = tables.get('browser');
+    var width = panel.getBoundingClientRect().width;
+
+    panel.classList.toggle(config.hideCountClass, width < config.hideCountAtPx);
+    panel.classList.toggle(config.hideButtonsClass, width < config.hideButtonsAtPx);
+    panel.classList.toggle(config.hideHeadingClass, width < config.hideHeadingAtPx);
+    panel.classList.toggle(config.hideBadgeClass, width < config.hideBadgeAtPx);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -134,9 +201,7 @@ split.wire = function(inputConfig) {
         },
 
         applied: function(percent) {
-
-            var isCollapsed = percent === 0;
-            inputConfig.panel.classList.toggle(inputConfig.collapsedClass, isCollapsed);
+            inputConfig.applied(percent);
         }
     });
 };

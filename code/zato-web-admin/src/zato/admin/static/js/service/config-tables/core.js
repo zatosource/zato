@@ -25,8 +25,8 @@ tables.config = {
     // Every element id on the page starts with this
     idPrefix: 'config-tables-',
 
-    // The section a code list keeps its codes under - a file having it is a
-    // code list, a file with any other section is a mapping set
+    // The table a code list keeps its codes under - a file that holds codes under it is a
+    // code list, and every other file is a mapping set
     codesSection: 'codes',
 
     // What a file of each kind is called on screen, what its badge in the listing
@@ -36,9 +36,11 @@ tables.config = {
     kindBadgeClass: {codes: 'zato-badge-green', mappings: 'zato-badge-amber'},
     entryNoun: {codes: 'code', mappings: 'mapping'},
 
-    // What the status line says once something went through
+    // What the status line says once something went through, and how long it says it for -
+    // what went through is done with, while what did not stays until it is cleared
     savedMessage: 'Saved',
-    checkedMessage: 'Reads fine',
+    checkedMessage: 'OK',
+    statusShownMS: 2600,
 
     // What the drawing says where the codes of a table would be when there is no mapping
     // to draw - the few words a chip has room for, while the answer as text says which
@@ -89,7 +91,10 @@ tables.state = {
 
     // What every file held when the page was opened, which is what Restore
     // goes back to
-    initialContent: {}
+    initialContent: {},
+
+    // What takes the status line away again, 0 while there is nothing on it to take away
+    statusTimer: 0
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -105,8 +110,6 @@ tables.init = function(inputConfig) {
     state.persistUrl = inputConfig.persist_url;
 
     tables.rememberInitialContent();
-
-    tables.get('root').textContent = state.userConfDirectory;
 
     // Only ever says why the files could not be read, and says nothing at all when they could
     tables.get('empty').textContent = inputConfig.error;
@@ -154,11 +157,19 @@ tables.wire = function() {
     tables.get('save').addEventListener('click', tables.save);
     tables.get('restore').addEventListener('click', tables.restore);
 
+    // What did not go through stays on screen until it is read, so a press on it is
+    // what takes it away
+    tables.get('status').addEventListener('click', tables.clearStatus);
+
+    // The star that says the file on screen is not the file on disk follows the typing
+    tables.get('content').addEventListener('input', tables.renderModified);
+
     // The file is an ini file, so it is read on screen the way one is
     $.fn.zato.highlight.attach(tables.get('content'), $.fn.zato.highlight.ini_to_html);
 
     tables.split.init();
     tables.gutter.init();
+    tables.flow.init();
     tables.trace.init();
 };
 
@@ -222,14 +233,15 @@ tables.isMappingSet = function(table) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// What the file turns out to be, read off the file itself - the section the
-// codes go under is what tells a code list from a mapping set.
+// What the file turns out to be, read off the file itself - a code list is a file whose
+// codes table holds the codes themselves, so a file that only groups other tables under
+// that name, as a file of settings may well do, is not one.
 tables.deriveKind = function(parsed) {
 
     var out = 'mappings';
     var section = parse.findSection(parsed, tables.config.codesSection);
 
-    if(section) {
+    if(section && section.entryList.length) {
         out = 'codes';
     }
 
@@ -252,7 +264,52 @@ tables.select = function(name) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// Where the file being read is, said in full in the heading - the file's own path while one
+// is open, and the directory the files come from while none is.
+tables.renderRoot = function(path) {
+
+    tables.get('root-path').textContent = path;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Whether the file on screen says something other than the file on disk does, which is what
+// the star after its name stands for. Only the file being looked at is typed into, so it is
+// the only one there can be anything to say about.
+tables.isModified = function() {
+
+    var table = tables.getCurrent();
+
+    if(table === null) {
+        return false;
+    }
+
+    var out = tables.get('content').value !== table.content;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The star after the file's name, in the heading and on the file's own row.
+tables.renderModified = function() {
+
+    var isModified = tables.isModified();
+
+    tables.get('root-modified').hidden = !isModified;
+
+    var star = tables.get('file-list').querySelector('.config-tables-file-selected .config-tables-file-modified');
+
+    // The listing has no row of a file being looked at while there is no file open
+    if(star) {
+        star.hidden = !isModified;
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 tables.renderEmpty = function() {
+
+    tables.renderRoot(tables.state.userConfDirectory);
 
     tables.get('empty').hidden = false;
     tables.get('editor').hidden = true;
@@ -276,6 +333,8 @@ tables.showTranslate = function(isShown) {
 tables.renderEditor = function() {
 
     var table = tables.getCurrent();
+
+    tables.renderRoot(table.path);
 
     tables.get('empty').hidden = true;
     tables.get('editor').hidden = false;
@@ -302,6 +361,7 @@ tables.renderEditor = function() {
     // numbers down the left are brought up to date by hand
     $.fn.zato.highlight.refresh(content);
     tables.gutter.refresh();
+    tables.renderModified();
     content.previousElementSibling.classList.toggle(tables.config.backdropReadOnly, content.readOnly);
 
     tables.invoker.render(table);
@@ -309,8 +369,8 @@ tables.renderEditor = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// What the file on screen reads as, without saving it - the count of what is in
-// it, or the first line that does not parse.
+// Whether the file on screen reads at all, without saving it - a file that does says so
+// in a word, and one that does not says which line stopped it.
 tables.check = function() {
 
     var content = tables.get('content').value;
@@ -321,7 +381,7 @@ tables.check = function() {
         return;
     }
 
-    tables.setStatus(tables.config.checkedMessage + ', ' + tables.buildHoldsText(parsed));
+    tables.setStatus(tables.config.checkedMessage);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -361,6 +421,7 @@ tables.restore = function() {
 
     $.fn.zato.highlight.refresh(content);
     tables.gutter.refresh();
+    tables.renderModified();
     tables.setStatus('');
 };
 
@@ -380,25 +441,42 @@ tables.applyContents = function(table, content, parsed) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The line under the editor, which says what has just happened and nothing else.
+// The line under the editor, which says what has just happened and nothing else. What went
+// through says so for a moment and is then gone, while what did not stays until it is read
+// and cleared, since a line that goes away on its own is a line that is missed.
 tables.setStatus = function(text, isError) {
 
     var status = tables.get('status');
     var config = tables.config;
+    var state = tables.state;
+
+    // A message from a moment ago is not left to go away on the new one's time
+    if(state.statusTimer) {
+        window.clearTimeout(state.statusTimer);
+        state.statusTimer = 0;
+    }
 
     status.textContent = text;
 
     if(isError) {
         status.className = config.statusError;
+        return;
     }
-    else {
-        if(text) {
-            status.className = config.statusOK;
-        }
-        else {
-            status.className = config.statusPlain;
-        }
+
+    if(!text) {
+        status.className = config.statusPlain;
+        return;
     }
+
+    status.className = config.statusOK;
+    state.statusTimer = window.setTimeout(tables.clearStatus, config.statusShownMS);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+tables.clearStatus = function() {
+
+    tables.setStatus('');
 };
 
 // ////////////////////////////////////////////////////////////////////////

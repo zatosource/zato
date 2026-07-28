@@ -10,6 +10,10 @@
 // The drawing is drawn at the size it is laid out at rather than shrunk to the column it
 // sits in, since a name is there to be read. It is as wide as the longest name in it asks
 // for, up to the limit it may grow to, and a column too narrow for that is scrolled.
+//
+// Nothing in it is ever cut short. A name or a value longer than the room the drawing grew
+// to runs on over as many lines as it takes, so a file of long values is read in full, and
+// a press on any of them takes a copy of the whole of it rather than of what is on screen.
 
 (function($) {
 
@@ -39,21 +43,24 @@ flow.config = {
     groupInset: 10,
     captionHeight: 25,
     captionBaseline: 17,
+    captionLineHeight: 13,
 
     // How far apart two groups stand when the value reaches more than one table
     groupGap: 9,
 
-    // One code of a table
+    // One code of a table, and how much taller it stands for every line its name runs on to
     chipHeight: 24,
     chipGap: 8,
     chipInset: 11,
     chipBaseline: 17,
+    chipLineHeight: 16,
     rowGap: 8,
 
     // The value the whole drawing turns on
     valueHeight: 28,
     valueInset: 13,
     valueBaseline: 20,
+    valueLineHeight: 18,
 
     // The drop from one part of the story to the next, and where the words that go with
     // that drop stand
@@ -69,7 +76,6 @@ flow.config = {
     charWidth: 7.8,
     valueCharWidth: 9,
     wordCharWidth: 5.5,
-    ellipsis: '\u2026',
 
     // The corners are kept as tight as the ones the badges in the listing wear
     corner: 2,
@@ -78,6 +84,16 @@ flow.config = {
     // what trace.js reads it by
     lineMark: 'data-flow-lines',
     lineMarkSeparator: ',',
+
+    // What a shape says it stands for, in full, which is what a press on it copies, and the
+    // id the shape being copied from wears while it says that it was copied
+    textMark: 'data-flow-text',
+    copyAnchorId: 'config-tables-flow-copy-anchor',
+
+    // Where the words that say so stand - beside the shape, close enough to be reading
+    // off it rather than off the drawing
+    copyPlacement: 'left',
+    copyOffset: [0, 3],
 
     // The classes the parts of the drawing wear, so what they look like stays in the
     // stylesheet
@@ -104,6 +120,51 @@ flow.layout = {
     width: 0,
     center: 0,
     groupWidth: 0
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+flow.state = {
+
+    // The shape the last copy was taken from, which wears the id the words are anchored by
+    // until another shape is pressed
+    anchor: null
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+flow.init = function() {
+
+    // The shapes come and go with every answer, so the drawing itself is what listens
+    tables.get('flow').addEventListener('click', flow.copy);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// A press on a code or on the value takes a copy of what it stands for, whole, and says so
+// beside the very shape that was pressed.
+flow.copy = function(event) {
+
+    var config = flow.config;
+    var element = event.target;
+    var text = element.getAttribute(config.textMark);
+
+    // The box a group stands in, the words beside a drop, the drawing's own air - a press
+    // on any of them is a press on nothing to copy
+    if(text === null) {
+        return;
+    }
+
+    // The words are anchored by an id, and one id belongs to one shape, so the shape that
+    // held it before hands it over
+    if(flow.state.anchor) {
+        flow.state.anchor.removeAttribute('id');
+    }
+
+    element.id = config.copyAnchorId;
+    flow.state.anchor = element;
+
+    $.fn.zato.copy.to_clipboard(element, text, config.copyPlacement, config.copyOffset);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -317,21 +378,27 @@ flow.addGroup = function(cursor, group) {
     var config = flow.config;
     var layout = flow.layout;
     var top = cursor.y;
+
+    var captionRoom = layout.groupWidth - config.groupInset * 2;
+    var captionLineList = flow.wrap(group.caption, captionRoom, config.wordCharWidth);
+    var captionHeight = config.captionHeight + (captionLineList.length - 1) * config.captionLineHeight;
+
     var rowList = flow.buildRows(group);
-    var height = flow.getGroupHeight(rowList);
+    var height = flow.getGroupHeight(captionHeight, rowList);
 
     flow.addRect(cursor.svg, config.groupX, top, layout.groupWidth, height, config.groupClass);
 
-    var captionRoom = layout.groupWidth - config.groupInset * 2;
-    var caption = flow.fit(group.caption, captionRoom, config.wordCharWidth);
+    flow.addTextLines(cursor.svg, layout.center, top + config.captionBaseline, captionLineList,
+        config.captionClass, config.captionLineHeight);
 
-    flow.addText(cursor.svg, layout.center, top + config.captionBaseline, caption, config.captionClass, 'middle');
-
-    var rowTop = top + config.captionHeight;
+    var rowTop = top + captionHeight;
 
     for(var rowIdx = 0; rowIdx < rowList.length; rowIdx++) {
-        flow.addRow(cursor.svg, rowList[rowIdx], rowTop);
-        rowTop = rowTop + config.chipHeight + config.rowGap;
+
+        var row = rowList[rowIdx];
+
+        flow.addRow(cursor.svg, row, rowTop);
+        rowTop = rowTop + flow.getRowHeight(row) + config.rowGap;
     }
 
     cursor.y = top + height;
@@ -339,13 +406,30 @@ flow.addGroup = function(cursor, group) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-flow.getGroupHeight = function(rowList) {
+// A row is as tall as the code in it whose name runs on over the most lines.
+flow.getRowHeight = function(row) {
+
+    var out = 0;
+
+    for(var chipIdx = 0; chipIdx < row.length; chipIdx++) {
+        out = Math.max(out, row[chipIdx].height);
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+flow.getGroupHeight = function(captionHeight, rowList) {
 
     var config = flow.config;
-    var rowCount = rowList.length;
-    var rows = rowCount * config.chipHeight + (rowCount - 1) * config.rowGap;
+    var rows = (rowList.length - 1) * config.rowGap;
 
-    var out = config.captionHeight + rows + config.groupInset;
+    for(var rowIdx = 0; rowIdx < rowList.length; rowIdx++) {
+        rows = rows + flow.getRowHeight(rowList[rowIdx]);
+    }
+
+    var out = captionHeight + rows + config.groupInset;
     return out;
 };
 
@@ -419,17 +503,21 @@ flow.buildChips = function(group) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// A chip is as wide as the text it ends up carrying, and it carries the lines of the file
-// it stands for - a name cut short still points at the line it was read off.
+// A chip is as wide as the text it ends up carrying and as tall as the lines that text runs
+// on to, and it carries both the lines of the file it stands for and the whole of what it
+// says - a name that runs on over several lines is still copied as the one name.
 flow.buildChip = function(text, className, textClass, charWidth, lineList) {
 
     var config = flow.config;
     var room = flow.getChipRoom(flow.layout.groupWidth);
-    var shown = flow.fit(text, room, charWidth);
+    var textLineList = flow.wrap(text, room, charWidth);
 
     var out = {
-        text: shown,
-        width: shown.length * charWidth + config.chipInset * 2,
+        text: text,
+        textLineList: textLineList,
+        width: flow.getLongest(textLineList) * charWidth + config.chipInset * 2,
+        height: config.chipHeight + (textLineList.length - 1) * config.chipLineHeight,
+        lineHeight: config.chipLineHeight,
         className: className,
         textClass: textClass,
         lineList: lineList
@@ -457,13 +545,14 @@ flow.addRow = function(svg, row, top) {
         var chip = row[chipIdx];
         var middle = left + chip.width / 2;
 
-        var rect = flow.addRect(svg, left, top, chip.width, config.chipHeight, chip.className);
-        var text = flow.addText(svg, middle, top + config.chipBaseline, chip.text, chip.textClass, 'middle');
+        var rect = flow.addRect(svg, left, top, chip.width, chip.height, chip.className);
 
-        // Both halves of a chip say the same thing, so the cursor points at the same line
-        // whether it is over the box or over the name in it
-        flow.mark(rect, chip.lineList);
-        flow.mark(text, chip.lineList);
+        var textList = flow.addTextLines(svg, middle, top + config.chipBaseline, chip.textLineList,
+            chip.textClass, chip.lineHeight);
+
+        // Every part of a chip says the same thing, so the same line is pointed at and the
+        // same text is copied wherever on it the cursor is
+        flow.markAll([rect].concat(textList), chip.lineList, chip.text);
 
         left = left + chip.width + config.chipGap;
     }
@@ -480,18 +569,20 @@ flow.addValue = function(cursor, value, lineList) {
     var layout = flow.layout;
     var top = cursor.y;
     var room = layout.groupWidth - config.valueInset * 2;
-    var text = flow.fit(value, room, config.valueCharWidth);
+    var textLineList = flow.wrap(value, room, config.valueCharWidth);
 
-    var width = text.length * config.valueCharWidth + config.valueInset * 2;
+    var width = flow.getLongest(textLineList) * config.valueCharWidth + config.valueInset * 2;
+    var height = config.valueHeight + (textLineList.length - 1) * config.valueLineHeight;
     var left = layout.center - width / 2;
 
-    var rect = flow.addRect(cursor.svg, left, top, width, config.valueHeight, config.valueClass);
-    var element = flow.addText(cursor.svg, layout.center, top + config.valueBaseline, text, config.valueTextClass, 'middle');
+    var rect = flow.addRect(cursor.svg, left, top, width, height, config.valueClass);
 
-    flow.mark(rect, lineList);
-    flow.mark(element, lineList);
+    var textList = flow.addTextLines(cursor.svg, layout.center, top + config.valueBaseline, textLineList,
+        config.valueTextClass, config.valueLineHeight);
 
-    cursor.y = top + config.valueHeight;
+    flow.markAll([rect].concat(textList), lineList, value);
+
+    cursor.y = top + height;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -558,6 +649,24 @@ flow.addText = function(svg, x, y, text, className, anchor) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// Text that runs on over several lines, one line under the other, all of them about the
+// same middle. The line the text starts on is where a single line would have stood, so a
+// name of one line is set exactly where it always was.
+flow.addTextLines = function(svg, x, baseline, textLineList, className, lineHeight) {
+
+    var out = [];
+
+    for(var lineIdx = 0; lineIdx < textLineList.length; lineIdx++) {
+
+        var y = baseline + lineIdx * lineHeight;
+        out.push(flow.addText(svg, x, y, textLineList[lineIdx], className, 'middle'));
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 // The lines of the file a shape of the drawing stands for, put onto the shape itself - one
 // for a code, every line that holds the value for the value. That is all trace.js has to
 // read to point at them, so what is pointed at is the very thing that was drawn.
@@ -569,6 +678,25 @@ flow.mark = function(element, lineList) {
     }
 
     element.setAttribute(flow.config.lineMark, lineList.join(flow.config.lineMarkSeparator));
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Every shape one code or the value is drawn out of, told what it stands for - the lines of
+// the file it came off and the whole of what it says, which is what a press on it copies.
+flow.markAll = function(elementList, lineList, text) {
+
+    for(var elementIdx = 0; elementIdx < elementList.length; elementIdx++) {
+
+        var element = elementList[elementIdx];
+
+        flow.mark(element, lineList);
+
+        // A note stands for nothing in the file, so there is nothing to copy off it either
+        if(lineList.length) {
+            element.setAttribute(flow.config.textMark, text);
+        }
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -606,17 +734,47 @@ flow.addArrow = function(svg, x, y) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// A name too long even for the room the drawing grew to is cut where that room ends,
-// since a drawing as wide as the longest line of a file is no drawing at all.
-flow.fit = function(text, room, charWidth) {
+// Text longer than the room the drawing grew to, laid out over as many lines as it takes -
+// nothing is ever left out, since a value is there to be read whole. The break falls on the
+// last space that still fits, and text with no space in it is broken where the room ends.
+flow.wrap = function(text, room, charWidth) {
 
-    var maxLength = Math.floor(room / charWidth);
+    var maxLength = Math.max(1, Math.floor(room / charWidth));
+    var out = [];
+    var rest = text;
 
-    if(text.length <= maxLength) {
-        return text;
+    while(rest.length > maxLength) {
+
+        var cutIdx = maxLength;
+        var skipCount = 0;
+        var spaceIdx = rest.lastIndexOf(' ', maxLength);
+
+        if(spaceIdx > 0) {
+            cutIdx = spaceIdx;
+            skipCount = 1;
+        }
+
+        out.push(rest.slice(0, cutIdx));
+        rest = rest.slice(cutIdx + skipCount);
     }
 
-    var out = text.slice(0, maxLength - 1) + flow.config.ellipsis;
+    out.push(rest);
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// How long the longest of the lines is, which is what says how wide the shape they go into
+// has to be.
+flow.getLongest = function(textLineList) {
+
+    var out = 0;
+
+    for(var lineIdx = 0; lineIdx < textLineList.length; lineIdx++) {
+        out = Math.max(out, textLineList[lineIdx].length);
+    }
+
     return out;
 };
 

@@ -36,6 +36,10 @@ tables.renderList = function() {
 
         list.appendChild(tables.buildFileRow(table));
     }
+
+    // The rows are new, so what the previous ones said about the file being looked at
+    // is said again
+    tables.renderModified();
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -98,6 +102,16 @@ tables.buildFileRow = function(table) {
     var name = document.createElement('span');
     name.className = 'config-tables-file-name';
     name.textContent = table.file_name;
+
+    // The star that says the file on screen is not the file on disk. It reads as part of
+    // the name, so it goes inside it rather than beside it, and core.js is what brings it
+    // out once the file has been typed into.
+    var modified = document.createElement('span');
+    modified.className = 'config-tables-file-modified';
+    modified.textContent = '*';
+    modified.hidden = true;
+    name.appendChild(modified);
+
     row.appendChild(name);
 
     var count = document.createElement('span');

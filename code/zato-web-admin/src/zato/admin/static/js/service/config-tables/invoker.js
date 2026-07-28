@@ -67,7 +67,7 @@ invoker.wireCopy = function(buttonName, sourceName, placement) {
     var button = tables.get(buttonName);
 
     button.addEventListener('click', function() {
-        $.fn.zato.copy.to_clipboard(button, tables.get(sourceName).value, placement);
+        $.fn.zato.copy.to_clipboard(button, tables.get(sourceName).value, placement, $.fn.zato.copy.config.offset);
     });
 };
 
@@ -196,7 +196,7 @@ invoker.buildModel = function(content, fromName, code, found) {
         code: code,
         value: found,
         valueLineList: invoker.readSpreadLines(spread),
-        sourceEntryList: invoker.readSpreadEntries(spread, fromName),
+        sourceEntryList: invoker.readSourceEntries(content, fromName, code),
         targetTable: targetName,
         targetEntryList: [],
         targetNote: '',
@@ -228,22 +228,15 @@ invoker.buildModel = function(content, fromName, code, found) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The codes one table holds the value under, read off what the whole file holds it under.
-// A table that holds it under none of them is not in there at all.
-invoker.readSpreadEntries = function(spread, tableName) {
+// The code the question was about, and nothing else - a table may well map another code of
+// its own to the same value, and that is no part of the answer to what this one code means.
+// The same code written twice in the one table is two lines, so both of them are there.
+invoker.readSourceEntries = function(content, fromName, code) {
 
-    var out = [];
+    var parsed = parse.read(content);
+    var section = parse.findSection(parsed, fromName);
 
-    for(var spreadIdx = 0; spreadIdx < spread.length; spreadIdx++) {
-
-        var table = spread[spreadIdx];
-
-        if(table.name === tableName) {
-            out = table.entryList;
-            break;
-        }
-    }
-
+    var out = parse.findKeyEntries(section, code);
     return out;
 };
 
