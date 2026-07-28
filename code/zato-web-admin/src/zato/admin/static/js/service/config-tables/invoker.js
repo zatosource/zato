@@ -29,11 +29,10 @@ invoker.config = {
     resultCopyPlacement: 'left',
     fieldCopyPlacement: 'top',
 
-    // The answer reads as lines of the kind of file it came out of, and these name
-    // what each line holds - what a code list keeps under a code, and what a mapping
-    // set maps one to. A target names its own lines itself.
-    nameKey: 'name',
-    canonicalKey: 'canonical',
+    // The answer reads as lines of the kind of file it came out of. The value the file
+    // holds is what it is and nothing more, so that is what its line is called, while
+    // a target's lines are named by the target itself.
+    valueKey: 'value',
     keySeparator: ' = ',
     commentPrefix: '# '
 };
@@ -140,13 +139,13 @@ invoker.run = function() {
 invoker.buildAnswer = function(table, content, found) {
 
     var config = invoker.config;
+    var lineList = [config.valueKey + config.keySeparator + found];
 
-    // A code list has no system on either end - what it keeps under a code is a name
+    // A code list has no system on either end, so there is no target to ask about
     if(!tables.isMappingSet(table)) {
-        return config.nameKey + config.keySeparator + found;
+        return lineList[0];
     }
 
-    var lineList = [config.canonicalKey + config.keySeparator + found];
     var targetName = tables.get('try-target').value.trim();
 
     if(targetName) {
