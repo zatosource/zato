@@ -5,6 +5,11 @@
 //
 // A rename happens on the file's own row, in place of its name. Every change goes
 // out through persist, which is the single place the page talks to the server from.
+//
+// Each of these goes onto the row of events in stream.js, so Ctrl-Z takes back a file added,
+// renamed or deleted as readily as it takes back a word typed into one. The two moves a file
+// makes - out of the listing and back into it - are here as well, since going back through the
+// row of events makes those moves too.
 
 (function($) {
 
@@ -52,6 +57,10 @@ files.add = function() {
 
         tables.state.tableList.push(table);
         tables.state.initialContent[name] = '';
+
+        // Adding a file is one more thing the page did, so it is taken back by the same key
+        // that takes back the typing that follows it
+        tables.stream.rememberAdd(table);
 
         tables.select(name);
         tables.setStatus('Added ' + table.file_name);
@@ -183,12 +192,30 @@ files.applyRename = function(name) {
 
     var previousName = table.name;
     var previousFileName = table.file_name;
+    var fileName = name + files.getSuffix(previousFileName);
+
+    files.moveTable(table, name, fileName, function() {
+
+        // Renaming a file is one more thing the page did, so it is taken back by the same key
+        // the typing around it is
+        tables.stream.rememberRename(table, previousName, previousFileName);
+
+        tables.setStatus('Renamed ' + previousName + ' to ' + name);
+    });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The file under another name, on disk and in the listing. The name is checked over before this
+// is reached, whether it was typed on the row or is the one the file was called before a rename
+// that has been taken back.
+files.moveTable = function(table, name, fileName, onDone, onFail) {
+
+    var previousName = table.name;
     var previousPath = table.path;
-    var suffix = files.getSuffix(previousFileName);
-    var fileName = name + suffix;
 
     var extra = {
-        file_name: previousFileName,
+        file_name: table.file_name,
         new_file_name: fileName
     };
 
@@ -202,14 +229,16 @@ files.applyRename = function(name) {
 
         tables.state.initialContent[name] = tables.state.initialContent[previousName];
 
-        // Anything unsaved in the file is still unsaved, and the steps it went through and where
-        // its caret was are still its own, all of it now under the name the file goes by
+        // Anything unsaved in the file is still unsaved, and what it held and where its caret
+        // was are still its own, all of it now under the name the file goes by
         tables.draft.rename(previousPath, table);
         tables.edit.rename(previousPath, table);
 
         tables.select(name);
-        tables.setStatus('Renamed ' + previousName + ' to ' + name);
-    }, extra);
+
+        onDone();
+
+    }, extra, onFail);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -235,34 +264,52 @@ files.getSuffix = function(fileName) {
 files.remove = function() {
 
     var table = tables.getCurrent();
-    var tableList = tables.state.tableList;
+
+    // Everything the file amounts to, read before it goes - it is all that is left of the file
+    // once it is off disk, and it is what brings the file back as it stood
+    var content = table.content;
+    var draft = tables.draft.get(table);
+    var caret = tables.edit.getCaret(table);
 
     files.persist('delete', table, function() {
 
-        var tableIdx = tableList.indexOf(table);
-        tableList.splice(tableIdx, 1);
+        files.dropTable(table);
 
-        // The file is gone, so what was typed into it has nowhere to go back to
-        tables.draft.forget(table);
-        tables.edit.forget(table);
-
-        tables.state.currentName = '';
-        tables.renderList();
-
-        // Whatever is now first takes the deleted file's place, and an empty
-        // list leaves the right-hand side saying so
-        var hasTable = tableList.length > 0;
-
-        if(hasTable) {
-            var first = tableList[0];
-            tables.select(first.name);
-        }
-        else {
-            tables.renderEmpty();
-        }
+        // Deleting a file is one more thing the page did, and the one thing on the row that
+        // carries the whole file with it
+        tables.stream.rememberRemove(table, content, draft, caret);
 
         tables.setStatus('Deleted ' + table.path);
     });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The file out of the listing, whatever took it off disk. What was typed into it and where its
+// caret was go with it, both of those being about a file at that path, and there is none now.
+files.dropTable = function(table) {
+
+    var tableList = tables.state.tableList;
+    var tableIdx = tableList.indexOf(table);
+
+    tableList.splice(tableIdx, 1);
+
+    tables.draft.forget(table);
+    tables.edit.forget(table);
+
+    tables.state.currentName = '';
+    tables.renderList();
+
+    // Whatever is now first takes the deleted file's place, and an empty
+    // list leaves the right-hand side saying so
+    var hasTable = tableList.length > 0;
+
+    if(hasTable) {
+        tables.select(tableList[0].name);
+    }
+    else {
+        tables.renderEmpty();
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -293,8 +340,10 @@ files.download = function() {
 // Every change the page makes goes out through here, which is the one place a
 // round trip to the server is made from. The page catches up with the server only
 // once the server says the change is on disk, so what is on screen after that is
-// what a service reading the same file gets.
-files.persist = function(action, table, onDone, extra) {
+// what a service reading the same file gets. A change that did not go through says
+// so on the line under the editor, and onFail is for whoever asked for it to hear
+// that too - going back through the row of events waits on the answer either way.
+files.persist = function(action, table, onDone, extra, onFail) {
 
     var data = {
         directory: table.directory,
@@ -334,10 +383,11 @@ files.persist = function(action, table, onDone, extra) {
 
             if(response.success) {
                 onDone();
+                return;
             }
-            else {
-                tables.setStatus(response.error, true);
-            }
+
+            tables.setStatus(response.error, true);
+            files.reportFailure(onFail);
         },
 
         error: function(request) {
@@ -350,8 +400,20 @@ files.persist = function(action, table, onDone, extra) {
             });
 
             tables.setStatus(files.buildErrorText(request), true);
+            files.reportFailure(onFail);
         }
     });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Most changes have nothing to say beyond the line the reader is shown, so a failure is only
+// passed on to whoever asked to hear about it.
+files.reportFailure = function(onFail) {
+
+    if(onFail !== undefined) {
+        onFail();
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////

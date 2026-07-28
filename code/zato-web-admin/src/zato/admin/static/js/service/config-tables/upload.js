@@ -252,9 +252,13 @@ upload.addUploaded = function(fileName, content) {
         tables.state.initialContent[name] = content;
 
         // What is at that path now is what was brought in, so anything a file of the same name
-        // once had unsaved, went through or had its caret at is no longer about this file
+        // once had unsaved or had its caret at is no longer about this file
         tables.draft.forget(table);
         tables.edit.forget(table);
+
+        // Bringing a file in is one more thing the page did, taken back the same way an empty
+        // file added from the listing is
+        tables.stream.rememberAdd(table);
 
         upload.close();
         tables.select(name);
