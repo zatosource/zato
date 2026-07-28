@@ -108,7 +108,7 @@ tables.buildTargetMissingText = function(targetName, value) {
 tables.buildOutsideText = function(table) {
 
     var size = tables.formatSize(table.size);
-    var out = '# ' + size + ' - too large to edit here. Download it, change it, upload it back.';
+    var out = '# ' + size + ' - too large to edit here. Download it and change it in your own tools.';
 
     return out;
 };

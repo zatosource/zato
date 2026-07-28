@@ -40,9 +40,6 @@ tables.config = {
     savedMessage: 'Saved',
     checkedMessage: 'Reads fine',
 
-    // What the right-hand side says while no file is open
-    emptyMessage: 'Pick a file on the left, or add one.',
-
     // What the drawing says where the codes of a table would be when there is no mapping
     // to draw - the few words a chip has room for, while the answer as text says which
     // of the two ways it came about
@@ -81,6 +78,9 @@ tables.state = {
     // Where the files live
     userConfDirectory: '',
 
+    // Where a change to a file is sent
+    persistUrl: '',
+
     // The file the page is currently about, '' while none is open
     currentName: '',
 
@@ -102,11 +102,14 @@ tables.init = function(inputConfig) {
     state.directoryList = inputConfig.directory_list;
     state.userConfDirectory = inputConfig.user_conf_directory;
     state.maxEditableSize = inputConfig.max_editable_size;
+    state.persistUrl = inputConfig.persist_url;
 
     tables.rememberInitialContent();
 
     tables.get('root').textContent = state.userConfDirectory;
-    tables.get('empty').textContent = tables.config.emptyMessage;
+
+    // Only ever says why the files could not be read, and says nothing at all when they could
+    tables.get('empty').textContent = inputConfig.error;
 
     tables.wire();
     tables.files.init();
@@ -280,9 +283,9 @@ tables.renderEditor = function() {
 
     var content = tables.get('content');
 
-    // A file too large for the browser is worked on the other way round - taken
-    // away, changed and uploaded again - so what stands in for it on screen is the
-    // line that says as much, and neither Check nor Save has anything to work on
+    // A file too large for the browser is worked on elsewhere - taken away and changed
+    // in your own tools - so what stands in for it on screen is the line that says as
+    // much, and neither Check nor Save has anything to work on
     if(table.is_editable) {
         content.value = table.content;
     }

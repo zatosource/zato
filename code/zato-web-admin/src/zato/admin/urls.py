@@ -139,6 +139,8 @@ urlpatterns += [
         login_required(service.invoke), name='service-invoke'),
     url(r'^zato/service/config-tables/$',
         login_required(service_config_tables.index), name='service-config-tables'),
+    url(r'^zato/service/config-tables/persist/$',
+        login_required(service_config_tables.persist), name='service-config-tables-persist'),
     url(r'^zato/service/ide/get-service/(?P<service_name>.*)/$',
         login_required(service_ide.get_service), name='service-ide-get-service'),
     url(r'^zato/service/ide/parse-payload/$',

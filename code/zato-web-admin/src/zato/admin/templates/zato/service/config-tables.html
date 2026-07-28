@@ -54,7 +54,9 @@ $(document).ready(function() {
         table_list: {{ table_list_json|safe }},
         directory_list: {{ directory_list_json|safe }},
         user_conf_directory: '{{ user_conf_directory }}',
-        max_editable_size: {{ max_editable_size }}
+        max_editable_size: {{ max_editable_size }},
+        persist_url: '{% url "service-config-tables-persist" %}',
+        error: '{{ error|escapejs }}'
     });
 });
 </script>
@@ -107,9 +109,6 @@ $(document).ready(function() {
                 </div>
 
                 <div class="button-container" id="config-tables-editor-buttons">
-                    <div class="config-tables-options">
-                        <a href="javascript:void(0)" id="config-tables-replace">Upload a new version</a>
-                    </div>
                     <div class="button-wrapper">
                         <span class="config-tables-status" id="config-tables-status"></span>
                         <a href="javascript:void(0)" id="config-tables-restore">Restore initial values</a>
@@ -218,7 +217,7 @@ $(document).ready(function() {
         </div>
 
         <div class="button-container">
-            <div class="config-tables-options">
+            <div class="config-tables-dialog-note">
                 <span class="config-tables-status" id="config-tables-dialog-status"></span>
             </div>
             <div class="button-wrapper">
