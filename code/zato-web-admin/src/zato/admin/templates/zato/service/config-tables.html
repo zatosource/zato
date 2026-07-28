@@ -50,6 +50,7 @@ to what is in it comes off the listing's own menu. The view provides:
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/invoker.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/files.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/upload.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/convert.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/menu.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/core.js"></script>
 
@@ -125,6 +126,7 @@ $(document).ready(function() {
                     <a href="javascript:void(0)" id="config-tables-restore">Restore initial values</a>
                     <div class="button-wrapper">
                         <span class="config-tables-status" id="config-tables-status"></span>
+                        <a href="javascript:void(0)" id="config-tables-convert" hidden>Convert to .ini</a>
                         <button type="button" class="secondary-button" id="config-tables-check">Check</button>
                         <button type="button" class="action-button" id="config-tables-save">Save</button>
                     </div>

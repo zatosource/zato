@@ -542,9 +542,10 @@ input[type="text"].config-tables-file-rename {
     gap: 8px;
 }
 
-/* The link that puts the file back as it was, in the plain face of a link, since it is
-   the quietest thing in the row */
-#config-tables-restore {
+/* The link that puts the file back as it was, and the one that makes an ini file of a csv one,
+   both in the plain face of a link, since they are the quietest things in the row */
+#config-tables-restore,
+#config-tables-convert {
     font-size: 12px;
 }
 

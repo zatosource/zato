@@ -15,6 +15,16 @@ var parse = tables.parse;
 
 // ////////////////////////////////////////////////////////////////////////
 
+upload.config = {
+
+    // What is said once a file is in, and what is said when it is in but does not read yet -
+    // which line stopped it is what Check is for
+    doneMessage: 'Uploaded ',
+    doneErrorSuffix: ', with errors'
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 upload.init = function() {
 
     tables.get('upload').addEventListener('click', upload.open);
@@ -70,25 +80,9 @@ upload.getPickedFile = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The name a service reads the file under - the file name without what it is
-// written in.
-upload.buildNameFromFile = function(fileName) {
-
-    var out = fileName;
-    var dotIdx = fileName.lastIndexOf('.');
-
-    if(dotIdx > 0) {
-        out = fileName.substring(0, dotIdx);
-    }
-
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
 upload.addUploaded = function(fileName, content) {
 
-    var name = upload.buildNameFromFile(fileName);
+    var name = tables.files.getStem(fileName);
 
     if(tables.getByName(name)) {
         tables.setStatus('There is a file called ' + name + ' already', true);
@@ -116,13 +110,13 @@ upload.addUploaded = function(fileName, content) {
         tables.select(name);
 
         // A file that does not read as an ini file yet is brought in all the same, that being
-        // what the editor is for, and what is wrong with it is said rather than acted on
+        // what the editor is for
         if(parsed.errorText) {
-            tables.setStatus(tables.buildErrorText(parsed), true);
+            tables.setStatus(upload.config.doneMessage + fileName + upload.config.doneErrorSuffix, true);
             return;
         }
 
-        tables.setStatus('Uploaded ' + fileName);
+        tables.setStatus(upload.config.doneMessage + fileName);
     });
 };
 

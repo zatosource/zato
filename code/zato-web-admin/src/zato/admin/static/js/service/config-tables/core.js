@@ -10,8 +10,8 @@
 // flow.js, the line of the file a part of that drawing stands for in trace.js, where
 // the reader is in url.js, what a file has been typed into but not saved in draft.js, the
 // row of everything the page did in stream.js, the keys an editor is worked with in edit.js,
-// the listing's menu in menu.js, what is done to the file itself in files.js and the bringing
-// in of one in upload.js.
+// the listing's menu in menu.js, what is done to the file itself in files.js, the bringing
+// in of one in upload.js and the making of an ini file out of a csv one in convert.js.
 
 (function($) {
 
@@ -33,15 +33,18 @@ tables.config = {
     codesSection: 'codes',
 
     // What a file of each kind is called on screen, what its badge in the listing
-    // says and which of the shared badge colors it wears, and what one entry of it is
-    kindLabel: {codes: 'code list', mappings: 'mapping set'},
-    kindBadge: {codes: 'codes', mappings: 'maps'},
-    kindBadgeClass: {codes: 'zato-badge-green', mappings: 'zato-badge-amber'},
-    entryNoun: {codes: 'code', mappings: 'mapping'},
+    // says and which of the shared badge colors it wears, and what one entry of it is.
+    // A file that does not read as an ini file is of no kind at all until it does, and
+    // says so where the others say what they are.
+    kindLabel: {codes: 'code list', mappings: 'mapping set', error: 'does not read as an ini file'},
+    kindBadge: {codes: 'codes', mappings: 'maps', error: 'Error'},
+    kindBadgeClass: {codes: 'zato-badge-green', mappings: 'zato-badge-amber', error: 'zato-badge-red'},
+    entryNoun: {codes: 'code', mappings: 'mapping', error: 'entry'},
 
     // What the status line says once something went through, and how long it says it for -
     // what went through is done with, while what did not stays until it is cleared
     savedMessage: 'Saved',
+    savedErrorMessage: 'Saved with errors',
     checkedMessage: 'OK',
     statusShownMS: 2600,
 
@@ -123,6 +126,7 @@ tables.init = function(inputConfig) {
     tables.wire();
     tables.files.init();
     tables.upload.init();
+    tables.convert.init();
     tables.invoker.init();
     tables.menu.init();
     tables.url.init();
@@ -324,8 +328,13 @@ tables.isMappingSet = function(table) {
 
 // What the file turns out to be, read off the file itself - a file with a codes table is a code
 // list, whether the codes are in it yet or not, unless that table is there only to group other
-// tables under it, as a file of settings may well do.
+// tables under it, as a file of settings may well do. A file that does not read at all is neither
+// of those until it does, whatever it is called.
 tables.deriveKind = function(parsed) {
+
+    if(parsed.errorText) {
+        return 'error';
+    }
 
     var out = 'mappings';
     var name = tables.config.codesSection;
@@ -511,6 +520,9 @@ tables.renderEditor = function() {
     tables.get('check').disabled = !table.is_editable;
     tables.get('save').disabled = !table.is_editable;
 
+    // A csv file is offered the one thing that makes it into a file a service can read
+    tables.convert.render(table);
+
     // Setting the value from here fires no input event, so the colors and the
     // numbers down the left are brought up to date by hand
     $.fn.zato.highlight.refresh(content);
@@ -585,9 +597,10 @@ tables.save = function() {
         tables.invoker.refresh(table);
 
         // What is on disk is what is on screen either way, so what is left to say is whether a
-        // service reading it now would get anything out of it
+        // service reading it now would get anything out of it. Which line stopped it is what
+        // Check is for, so it is not said twice.
         if(parsed.errorText) {
-            tables.setStatus(tables.buildSavedErrorText(parsed), true);
+            tables.setStatus(tables.config.savedErrorMessage, true);
             return;
         }
 
@@ -602,25 +615,37 @@ tables.save = function() {
 tables.restore = function() {
 
     var table = tables.getCurrent();
-    var content = tables.get('content');
     var wanted = tables.state.initialContent[table.name];
 
     // The file already says what it said when the page was opened, which the link says as well
-    if(content.value === wanted) {
+    if(tables.get('content').value === wanted) {
         return;
     }
+
+    tables.putContent(table, wanted);
+    tables.setStatus('');
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The file on screen replaced whole by something the page worked out rather than typed - what the
+// file held when the page was opened, or an ini file made of a csv one. Nothing is saved by this,
+// and it is one more thing the page did, so Ctrl-Z takes it back like any other.
+tables.putContent = function(table, wanted) {
+
+    var content = tables.get('content');
 
     content.value = wanted;
 
     $.fn.zato.highlight.refresh(content);
     tables.gutter.refresh();
-    tables.draft.remember(table, content.value);
+    tables.draft.remember(table, wanted);
 
-    // Going back to what the file held is a step like any other, so it can be taken back too
-    tables.edit.remember(table, content.value);
+    // The whole file at once is a step of its own on the row, not the tail of the typing before it
+    tables.edit.breakRun();
+    tables.edit.remember(table, wanted);
 
     tables.renderModified();
-    tables.setStatus('');
 };
 
 // ////////////////////////////////////////////////////////////////////////

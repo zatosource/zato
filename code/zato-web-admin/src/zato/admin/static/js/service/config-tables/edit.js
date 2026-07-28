@@ -233,6 +233,20 @@ edit.remember = function(table, content) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// The run of typing at the end of the row ends here, so what comes next is an event of its own.
+// What the page puts in the editor whole - the file as it was opened, an ini file made of a csv
+// one - is not a keystroke to be joined onto the typing before it.
+edit.breakRun = function() {
+
+    var tail = stream.getTail();
+
+    if(tail !== null) {
+        tail.time = 0;
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 // What the file held as of the last thing the page did to it, which is where the typing that
 // comes next starts from. A file the browser does not edit in place is read rather than opened,
 // so what it holds is what a service reading it gets.

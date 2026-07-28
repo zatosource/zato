@@ -21,6 +21,9 @@
 
     --zato-badge-green-background: #daf0e0;
     --zato-badge-green-color: #08331c;
+
+    --zato-badge-red-background: #ffdede;
+    --zato-badge-red-color: #5a1111;
 }
 
 .zato-badge {
@@ -49,4 +52,9 @@
 .zato-badge-green {
     color: var(--zato-badge-green-color);
     background: var(--zato-badge-green-background);
+}
+
+.zato-badge-red {
+    color: var(--zato-badge-red-color);
+    background: var(--zato-badge-red-background);
 }

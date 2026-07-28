@@ -194,6 +194,7 @@ $.namespace('zato.security.wss.data_table');
 $.namespace('zato.service');
 $.namespace('zato.service.config_tables');
 $.namespace('zato.service.config_tables.combo');
+$.namespace('zato.service.config_tables.convert');
 $.namespace('zato.service.config_tables.draft');
 $.namespace('zato.service.config_tables.edit');
 $.namespace('zato.service.config_tables.files');

@@ -47,9 +47,6 @@ _template_name = 'zato/service/config-tables.html'
 # A file larger than this is edited outside the dashboard so its contents are not sent to the browser
 _max_editable_size = 256 * 1024
 
-# The suffixes of the files that services read through self.config
-_suffixes_supported = ('.ini', '.conf')
-
 # Where a server directory keeps user configuration
 _user_conf_path = os.path.join('config', 'repo', 'user-conf')
 
@@ -80,6 +77,9 @@ _codes_section = UserConfigCtx.Codes_Section
 
 _kind_codes = 'codes'
 _kind_mappings = 'mappings'
+
+# What a file is of until it reads as user configuration at all
+_kind_error = 'error'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -204,16 +204,14 @@ def _get_server_directory() -> 'str':
 # ################################################################################################################################
 
 def _get_full_path(directory:'str', file_name:'str') -> 'str':
-    """ The full path to the file that the request names. A file name names a file and nothing
-    else, it uses one of the suffixes read through self.config, and the directory it is in
-    is one of the directories that user configuration is kept in.
+    """ The full path to the file that the request names. A file name names a file and nothing else,
+    and the directory it is in is one of the directories that user configuration is kept in. What
+    the file is called beyond that is not this function's business, a file brought in to be worked
+    on here being a file that does not read as user configuration yet.
     """
     base_name = os.path.basename(file_name)
 
     if base_name != file_name:
-        raise Exception(f'Invalid file name `{file_name}`')
-
-    if not base_name.lower().endswith(_suffixes_supported):
         raise Exception(f'Invalid file name `{file_name}`')
 
     directory = _to_directory(directory)
@@ -230,9 +228,10 @@ def _get_full_path(directory:'str', file_name:'str') -> 'str':
 def _read_content_info(content:'str') -> 'ContentInfo':
     """ What a file holds, that is, the kind of file it is, how many sections it has and how many
     entries there are under them. Counting stops at the first line that reads as neither, just as
-    the reader of the file stops at it. A section written in double brackets belongs to the one
-    above it. A file with a codes section is a code list, whether the codes are in it yet or not,
-    unless that section is there only to group other sections under it.
+    the reader of the file stops at it, and such a file is of no kind at all until that line is
+    seen to. A section written in double brackets belongs to the one above it. A file with a codes
+    section is a code list, whether the codes are in it yet or not, unless that section is there
+    only to group other sections under it.
     """
     section_count = 0
     entry_count = 0
@@ -241,6 +240,7 @@ def _read_content_info(content:'str') -> 'ContentInfo':
     codes_has_children = False
     is_in_codes = False
     has_section = False
+    is_readable = True
     top_name = ''
 
     for line in content.splitlines():
@@ -260,6 +260,7 @@ def _read_content_info(content:'str') -> 'ContentInfo':
             depth = len(line) - len(line.lstrip('['))
 
             if len(line) - len(line.rstrip(']')) != depth:
+                is_readable = False
                 break
 
             name = line[depth:-depth].strip()
@@ -285,9 +286,11 @@ def _read_content_info(content:'str') -> 'ContentInfo':
         # .. and everything else is an entry, which needs both a section above it
         # .. and a sign that says what it maps to.
         if '=' not in line:
+            is_readable = False
             break
 
         if not has_section:
+            is_readable = False
             break
 
         entry_count += 1
@@ -297,8 +300,12 @@ def _read_content_info(content:'str') -> 'ContentInfo':
 
     is_codes_group = codes_has_children and not codes_has_entries
 
-    if has_codes_section and not is_codes_group:
+    if not is_readable:
+        kind = _kind_error
+
+    elif has_codes_section and not is_codes_group:
         kind = _kind_codes
+
     else:
         kind = _kind_mappings
 
@@ -309,16 +316,19 @@ def _read_content_info(content:'str') -> 'ContentInfo':
 
 def _build_file_item(directory:'str', file_name:'str', full_path:'str') -> 'anydict':
     """ One file as the page reads it. A file larger than the browser edits in place is reported
-    without its contents because they would not be used.
+    without its contents because they would not be used, and so is one that is not text at all,
+    a directory holding whatever the user put in it.
     """
     size = os.path.getsize(full_path)
     is_editable = size <= _max_editable_size
+    content = ''
 
     if is_editable:
-        with open_r(full_path) as opened:
-            content = opened.read()
-    else:
-        content = ''
+        try:
+            with open_r(full_path) as opened:
+                content = opened.read()
+        except UnicodeDecodeError:
+            is_editable = False
 
     info = _read_content_info(content)
 
@@ -350,15 +360,16 @@ def _get_file_list(directory_list:'strlist') -> 'anylist':
         if not os.path.exists(directory):
             continue
 
-        # .. and what is in one may be a file of another kind, e.g. rules or enmasse definitions.
+        # .. and everything in one is a file the page lists, whether it reads as user configuration
+        # yet or not, the one exception being the environment file, which keeps secrets.
         for file_name in sorted(os.listdir(directory)):
 
             file_name_lower = file_name.lower()
 
-            if not file_name_lower.endswith(_suffixes_supported):
+            if file_name_lower == EnvFile.Default:
                 continue
 
-            if file_name_lower == EnvFile.Default:
+            if file_name.startswith('.'):
                 continue
 
             full_path = os.path.join(directory, file_name)
