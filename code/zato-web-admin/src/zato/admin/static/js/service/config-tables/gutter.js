@@ -70,6 +70,12 @@ gutter.state = {
     block: null,
     blockLine: 0,
 
+    // What the wash is over, so it can be put back where it belongs once the file is
+    // scrolled, and whether something other than the cursor on a number is holding it
+    // there - the drawing points at lines of the file with it as well
+    washBlock: null,
+    washHeld: false,
+
     // The geometry of the column and of the button on it, read off them once per build
     // rather than per movement of the cursor
     lineHeight: 0,
@@ -232,6 +238,13 @@ gutter.followScroll = function() {
 
     lines.style.transform = 'translateY(' + (-scrollTop) + 'px)';
 
+    // A wash the drawing put there is about a line rather than about where the cursor is,
+    // so it travels with the file instead of going out
+    if(gutter.state.washHeld) {
+        gutter.positionWash();
+        return;
+    }
+
     // The line under the cursor is another one now, and where the cursor is will not
     // be known again until it moves
     gutter.hide();
@@ -287,8 +300,7 @@ gutter.follow = function(event) {
     gutter.button.style.top = top + 'px';
     gutter.button.classList.add(gutter.config.buttonVisibleClass);
 
-    gutter.showWash(state.block);
-    gutter.positionWash(top);
+    gutter.showWash(state.block, false);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -308,20 +320,66 @@ gutter.readBlock = function(lineIdx) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The wash over as many lines as a press would take, level with the first of them.
-gutter.showWash = function(block) {
+// The wash over a block of the file, level with the first line of it. Held, it stays until
+// whoever put it there takes it away - that is the drawing pointing at a line rather than
+// the cursor resting on a number, and the cursor is elsewhere on the page by then.
+gutter.showWash = function(block, held) {
 
-    var height = block.count * gutter.state.lineHeight;
+    var state = gutter.state;
+    var height = block.count * state.lineHeight;
+
+    state.washBlock = block;
+    state.washHeld = held;
 
     gutter.wash.style.height = height + 'px';
     gutter.wash.classList.add(gutter.config.washVisibleClass);
+
+    gutter.positionWash();
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-gutter.positionWash = function(top) {
+// Where the wash goes is where the first line of its block is, which moves as the file is
+// scrolled under it.
+gutter.positionWash = function() {
+
+    var state = gutter.state;
+    var scrollTop = tables.get('content').scrollTop;
+    var top = state.paddingTop + state.washBlock.start * state.lineHeight - scrollTop;
 
     gutter.wash.style.top = top + 'px';
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The file is scrolled only as far as it takes for a line to be on screen, so a line that
+// is there already is left where it is.
+gutter.scrollToLine = function(lineIdx) {
+
+    var state = gutter.state;
+    var content = tables.get('content');
+    var top = lineIdx * state.lineHeight;
+    var bottom = top + state.lineHeight;
+
+    if(top < content.scrollTop) {
+        content.scrollTop = top;
+        return;
+    }
+
+    var room = content.clientHeight - state.paddingTop;
+
+    if(bottom > content.scrollTop + room) {
+        content.scrollTop = bottom - room;
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+gutter.hideWash = function() {
+
+    gutter.state.washBlock = null;
+    gutter.state.washHeld = false;
+    gutter.wash.classList.remove(gutter.config.washVisibleClass);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -330,7 +388,13 @@ gutter.hide = function() {
 
     gutter.state.lineNumber = 0;
     gutter.button.classList.remove(gutter.config.buttonVisibleClass);
-    gutter.wash.classList.remove(gutter.config.washVisibleClass);
+
+    // What the drawing is pointing at is not the cursor's to take away
+    if(gutter.state.washHeld) {
+        return;
+    }
+
+    gutter.hideWash();
 };
 
 // ////////////////////////////////////////////////////////////////////////

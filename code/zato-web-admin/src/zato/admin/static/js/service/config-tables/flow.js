@@ -74,6 +74,11 @@ flow.config = {
     // The corners are kept as tight as the ones the badges in the listing wear
     corner: 2,
 
+    // What a shape of the drawing says about the lines of the file it stands for, which is
+    // what trace.js reads it by
+    lineMark: 'data-flow-lines',
+    lineMarkSeparator: ',',
+
     // The classes the parts of the drawing wear, so what they look like stays in the
     // stylesheet
     groupClass: 'config-tables-flow-group',
@@ -117,14 +122,14 @@ flow.render = function(model) {
     // The table the value came in from, with every code of it that maps to the same
     // value ..
     flow.addGroup(cursor, {
-        caption: tables.buildGroupCaption(model.sourceTable, model.sourceKeyList.length),
-        chipList: model.sourceKeyList,
+        caption: tables.buildGroupCaption(model.sourceTable, model.sourceEntryList.length),
+        entryList: model.sourceEntryList,
         note: ''
     });
 
     // .. what the file maps it to ..
     flow.addConnector(cursor, words.flowMapsToLabel);
-    flow.addValue(cursor, model.value);
+    flow.addValue(cursor, model.value, model.valueLineList);
 
     // .. and where it goes from there.
     flow.addTargetGroups(cursor, model);
@@ -138,6 +143,9 @@ flow.render = function(model) {
 
     var host = tables.get('flow');
 
+    // The shapes that were being pointed at are about to be gone
+    tables.trace.stop();
+
     host.textContent = '';
     host.appendChild(svg);
 
@@ -149,6 +157,8 @@ flow.render = function(model) {
 // The answer as text again, which is what a code list gets and what anything the file
 // has nothing for gets.
 flow.clear = function() {
+
+    tables.trace.stop();
 
     tables.get('flow').textContent = '';
     tables.get('result-area').classList.remove(flow.config.drawnClass);
@@ -185,8 +195,8 @@ flow.getNeeded = function(model) {
     var valueRoom = model.value.length * config.valueCharWidth + (config.valueInset - config.chipInset) * 2;
 
     var out = Math.max(
-        flow.getCaptionNeeded(model.sourceTable, model.sourceKeyList.length),
-        flow.getChipListNeeded(model.sourceKeyList),
+        flow.getCaptionNeeded(model.sourceTable, model.sourceEntryList.length),
+        flow.getEntryListNeeded(model.sourceEntryList),
         valueRoom
     );
 
@@ -196,8 +206,8 @@ flow.getNeeded = function(model) {
 
         out = Math.max(
             out,
-            flow.getCaptionNeeded(model.targetTable, model.targetKeyList.length),
-            flow.getChipListNeeded(model.targetKeyList),
+            flow.getCaptionNeeded(model.targetTable, model.targetEntryList.length),
+            flow.getEntryListNeeded(model.targetEntryList),
             noteRoom
         );
     }
@@ -208,8 +218,8 @@ flow.getNeeded = function(model) {
 
         out = Math.max(
             out,
-            flow.getCaptionNeeded(other.name, other.keyList.length),
-            flow.getChipListNeeded(other.keyList)
+            flow.getCaptionNeeded(other.name, other.entryList.length),
+            flow.getEntryListNeeded(other.entryList)
         );
     }
 
@@ -231,13 +241,13 @@ flow.getCaptionNeeded = function(tableName, keyCount) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-flow.getChipListNeeded = function(textList) {
+flow.getEntryListNeeded = function(entryList) {
 
     var config = flow.config;
     var out = 0;
 
-    for(var textIdx = 0; textIdx < textList.length; textIdx++) {
-        out = Math.max(out, textList[textIdx].length * config.charWidth);
+    for(var entryIdx = 0; entryIdx < entryList.length; entryIdx++) {
+        out = Math.max(out, entryList[entryIdx].key.length * config.charWidth);
     }
 
     return out;
@@ -267,8 +277,8 @@ flow.addTargetGroups = function(cursor, model) {
         flow.addConnector(cursor, words.flowMapsToLabel);
 
         flow.addGroup(cursor, {
-            caption: tables.buildGroupCaption(model.targetTable, model.targetKeyList.length),
-            chipList: model.targetKeyList,
+            caption: tables.buildGroupCaption(model.targetTable, model.targetEntryList.length),
+            entryList: model.targetEntryList,
             note: model.targetNote
         });
 
@@ -291,8 +301,8 @@ flow.addTargetGroups = function(cursor, model) {
         }
 
         flow.addGroup(cursor, {
-            caption: tables.buildGroupCaption(other.name, other.keyList.length),
-            chipList: other.keyList,
+            caption: tables.buildGroupCaption(other.name, other.entryList.length),
+            entryList: other.entryList,
             note: ''
         });
     }
@@ -389,14 +399,19 @@ flow.buildChips = function(group) {
     var out = [];
 
     // A table with nothing for the value stands for itself, said in the few words a chip
-    // has room for
+    // has room for. There is no line in the file behind it, so it points at none.
     if(group.note) {
-        out.push(flow.buildChip(group.note, config.chipNoteClass, config.noteTextClass, config.wordCharWidth));
+        out.push(flow.buildChip(group.note, config.chipNoteClass, config.noteTextClass, config.wordCharWidth, []));
         return out;
     }
 
-    for(var textIdx = 0; textIdx < group.chipList.length; textIdx++) {
-        out.push(flow.buildChip(group.chipList[textIdx], config.chipClass, config.chipTextClass, config.charWidth));
+    // One chip per line the table holds the value on, each of them pointing back at its own
+    // line - two lines that say the same thing are two chips that point at one line each
+    for(var entryIdx = 0; entryIdx < group.entryList.length; entryIdx++) {
+
+        var entry = group.entryList[entryIdx];
+
+        out.push(flow.buildChip(entry.key, config.chipClass, config.chipTextClass, config.charWidth, [entry.lineIdx]));
     }
 
     return out;
@@ -404,18 +419,20 @@ flow.buildChips = function(group) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-flow.buildChip = function(text, className, textClass, charWidth) {
+// A chip is as wide as the text it ends up carrying, and it carries the lines of the file
+// it stands for - a name cut short still points at the line it was read off.
+flow.buildChip = function(text, className, textClass, charWidth, lineList) {
 
     var config = flow.config;
     var room = flow.getChipRoom(flow.layout.groupWidth);
-
-    text = flow.fit(text, room, charWidth);
+    var shown = flow.fit(text, room, charWidth);
 
     var out = {
-        text: text,
-        width: text.length * charWidth + config.chipInset * 2,
+        text: shown,
+        width: shown.length * charWidth + config.chipInset * 2,
         className: className,
-        textClass: textClass
+        textClass: textClass,
+        lineList: lineList
     };
 
     return out;
@@ -440,8 +457,13 @@ flow.addRow = function(svg, row, top) {
         var chip = row[chipIdx];
         var middle = left + chip.width / 2;
 
-        flow.addRect(svg, left, top, chip.width, config.chipHeight, chip.className);
-        flow.addText(svg, middle, top + config.chipBaseline, chip.text, chip.textClass, 'middle');
+        var rect = flow.addRect(svg, left, top, chip.width, config.chipHeight, chip.className);
+        var text = flow.addText(svg, middle, top + config.chipBaseline, chip.text, chip.textClass, 'middle');
+
+        // Both halves of a chip say the same thing, so the cursor points at the same line
+        // whether it is over the box or over the name in it
+        flow.mark(rect, chip.lineList);
+        flow.mark(text, chip.lineList);
 
         left = left + chip.width + config.chipGap;
     }
@@ -450,8 +472,9 @@ flow.addRow = function(svg, row, top) {
 // ////////////////////////////////////////////////////////////////////////
 
 // What the file holds for the code, which is the one thing in the drawing that stands on
-// its own rather than inside a table.
-flow.addValue = function(cursor, value) {
+// its own rather than inside a table - and it stands for every line of the file that holds
+// it rather than for one of them.
+flow.addValue = function(cursor, value, lineList) {
 
     var config = flow.config;
     var layout = flow.layout;
@@ -462,8 +485,11 @@ flow.addValue = function(cursor, value) {
     var width = text.length * config.valueCharWidth + config.valueInset * 2;
     var left = layout.center - width / 2;
 
-    flow.addRect(cursor.svg, left, top, width, config.valueHeight, config.valueClass);
-    flow.addText(cursor.svg, layout.center, top + config.valueBaseline, text, config.valueTextClass, 'middle');
+    var rect = flow.addRect(cursor.svg, left, top, width, config.valueHeight, config.valueClass);
+    var element = flow.addText(cursor.svg, layout.center, top + config.valueBaseline, text, config.valueTextClass, 'middle');
+
+    flow.mark(rect, lineList);
+    flow.mark(element, lineList);
 
     cursor.y = top + config.valueHeight;
 };
@@ -511,6 +537,7 @@ flow.addRect = function(svg, x, y, width, height, className) {
     rect.setAttribute('class', className);
 
     svg.appendChild(rect);
+    return rect;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -526,6 +553,22 @@ flow.addText = function(svg, x, y, text, className, anchor) {
     element.textContent = text;
 
     svg.appendChild(element);
+    return element;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The lines of the file a shape of the drawing stands for, put onto the shape itself - one
+// for a code, every line that holds the value for the value. That is all trace.js has to
+// read to point at them, so what is pointed at is the very thing that was drawn.
+flow.mark = function(element, lineList) {
+
+    // A shape that stands for nothing in the file, which is what a note is
+    if(!lineList.length) {
+        return;
+    }
+
+    element.setAttribute(flow.config.lineMark, lineList.join(flow.config.lineMarkSeparator));
 };
 
 // ////////////////////////////////////////////////////////////////////////

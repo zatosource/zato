@@ -201,6 +201,7 @@ $.namespace('zato.service.config_tables.invoker');
 $.namespace('zato.service.config_tables.menu');
 $.namespace('zato.service.config_tables.parse');
 $.namespace('zato.service.config_tables.split');
+$.namespace('zato.service.config_tables.trace');
 $.namespace('zato.service.config_tables.upload');
 $.namespace('zato.settings');
 $.namespace('zato.sms');

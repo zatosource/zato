@@ -68,7 +68,10 @@ parse.read = function(content) {
         var key = line.substring(0, separatorIdx).trim();
         var value = line.substring(separatorIdx + 1).trim();
 
-        section.entryList.push({key: key, value: value});
+        // Which line it came off is kept, so what is read out of the file can be pointed
+        // back at the very line it was read from - two lines that say the same thing are
+        // then still two lines
+        section.entryList.push({key: key, value: value, lineIdx: lineIdx});
         out.entryCount++;
     }
 
@@ -159,11 +162,10 @@ parse.findValue = function(section, code) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// What a target maps one value to - every key it keeps that value under, since a
-// target may well keep it under more than one. A name that is no section of the file
-// comes back as null, which is not the same answer as a target that has no key for
-// the value.
-parse.findTargetKeys = function(content, targetName, value) {
+// What a target maps one value to - every line it keeps that value on, since a target may
+// well keep it under more than one key. A name that is no section of the file comes back as
+// null, which is not the same answer as a target that has no key for the value.
+parse.findTargetEntries = function(content, targetName, value) {
 
     var parsed = parse.read(content);
     var section = parse.findSection(parsed, targetName);
@@ -172,15 +174,15 @@ parse.findTargetKeys = function(content, targetName, value) {
         return null;
     }
 
-    var out = parse.findKeys(section, value);
+    var out = parse.findEntries(section, value);
     return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Which sections hold the value and under which keys each of them holds it, which is
-// what says whether a value is one that only one system knows or one that most of the
-// file agrees on. Sections that do not hold it are left out.
+// Which sections hold the value and on which lines each of them holds it, which is what
+// says whether a value is one that only one system knows or one that most of the file
+// agrees on. Sections that do not hold it are left out.
 parse.findValueSpread = function(content, value) {
 
     var parsed = parse.read(content);
@@ -189,10 +191,10 @@ parse.findValueSpread = function(content, value) {
     for(var sectionIdx = 0; sectionIdx < parsed.sectionList.length; sectionIdx++) {
 
         var section = parsed.sectionList[sectionIdx];
-        var keyList = parse.findKeys(section, value);
+        var entryList = parse.findEntries(section, value);
 
-        if(keyList.length) {
-            out.push({name: section.name, keyList: keyList});
+        if(entryList.length) {
+            out.push({name: section.name, entryList: entryList});
         }
     }
 
@@ -201,9 +203,10 @@ parse.findValueSpread = function(content, value) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Read the other way round - the keys a value is under rather than the value a key
-// holds, in name order, so what comes back reads the same way every time.
-parse.findKeys = function(section, value) {
+// Read the other way round - the lines a value is held on rather than the value a key
+// holds, in the order of the keys they go under, so what comes back reads the same way
+// every time. Two lines under the same key stay two lines.
+parse.findEntries = function(section, value) {
 
     var out = [];
 
@@ -212,11 +215,25 @@ parse.findKeys = function(section, value) {
         var entry = section.entryList[entryIdx];
 
         if(entry.value === value) {
-            out.push(entry.key);
+            out.push({key: entry.key, lineIdx: entry.lineIdx});
         }
     }
 
-    out.sort();
+    out.sort(parse.byKey);
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Two entries under the same key are left in the order the file has them, which is what
+// the sort does of its own accord once the keys come out equal.
+parse.byKey = function(left, right) {
+
+    if(left.key === right.key) {
+        return 0;
+    }
+
+    var out = left.key < right.key ? -1 : 1;
     return out;
 };
 
