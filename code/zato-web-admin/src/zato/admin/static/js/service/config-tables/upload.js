@@ -145,25 +145,18 @@ upload.close = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Where the file would end up and what a service would read it as, kept up with
-// what has been picked so far.
+// Where the file would end up, kept up with what has been picked so far.
 upload.refresh = function() {
 
-    var blank = upload.config.blank;
     var uploaded = upload.getPickedFile();
-    var path = blank;
-    var reference = blank;
+    var path = upload.config.blank;
 
     if(uploaded) {
         var directory = upload.getPickedDirectory();
-        var name = upload.buildNameFromFile(uploaded.name);
-
         path = directory + uploaded.name;
-        reference = tables.buildReference(name);
     }
 
     tables.get('dialog-path').textContent = path;
-    tables.get('dialog-reference').textContent = reference;
 };
 
 // ////////////////////////////////////////////////////////////////////////

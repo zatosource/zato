@@ -164,6 +164,9 @@ tables.wire = function() {
     // The star that says the file on screen is not the file on disk follows the typing
     tables.get('content').addEventListener('input', tables.renderModified);
 
+    // The keys an editor is saved with anywhere else save this file too
+    document.addEventListener('keydown', tables.onKeyDown);
+
     // The file is an ini file, so it is read on screen the way one is
     $.fn.zato.highlight.attach(tables.get('content'), $.fn.zato.highlight.ini_to_html);
 
@@ -171,6 +174,28 @@ tables.wire = function() {
     tables.gutter.init();
     tables.flow.init();
     tables.trace.init();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Ctrl-S and Cmd-S save the file on screen, which is what those keys do in an editor. The
+// browser's own answer to them is to save the page, so it is turned down.
+tables.onKeyDown = function(event) {
+
+    var isSave = event.key === 's' && (event.ctrlKey || event.metaKey);
+
+    if(!isSave) {
+        return;
+    }
+
+    event.preventDefault();
+
+    // Nothing is open, so there is nothing to save
+    if(!tables.state.currentName) {
+        return;
+    }
+
+    tables.save();
 };
 
 // ////////////////////////////////////////////////////////////////////////

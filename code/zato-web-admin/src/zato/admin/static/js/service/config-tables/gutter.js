@@ -6,10 +6,12 @@
 // itself and reaching into the room the file leaves before its first character, which
 // is what lets the numbers stay narrow.
 //
-// The cursor anywhere in a row of the column is the cursor on the line that row counts,
-// the number itself and the room around it alike, so a line is copied without the number
-// being aimed at. Which line that is comes off the row the cursor is over rather than off
-// where the cursor is, so it is the very row that answers for itself.
+// The cursor is on a line whenever it is level with it, anywhere from the room the settings
+// column keeps to the left of the numbers - which is what the button grows into - across the
+// numbers themselves and up to the room the file keeps before its first character, which the
+// button's point reaches over. The number is never aimed at. That whole strip is wider than
+// the box the numbers are in, so the box around the editor is what listens, and which line
+// the cursor is level with is read off the rows themselves.
 //
 // A line that names a section is a line that holds others, so copying it takes the
 // whole section - its name and everything under it down to the next name of the same
@@ -27,13 +29,17 @@ var gutter = tables.gutter;
 
 gutter.config = {
 
-    // What the button says, and where it says that it copied
+    // What the button says, where it says that it copied, and the air it leaves between those
+    // words and the strip they are said beside
     copyLabel: 'Copy',
     copyPlacement: 'left',
+    copyGap: 6,
 
     // The classes the parts of the column wear
     rowClass: 'config-tables-gutter-line',
+    rowAtClass: 'config-tables-gutter-line-at',
     numberClass: 'config-tables-gutter-number',
+    reachClass: 'config-tables-gutter-reach',
     buttonClass: 'zato-badge zato-badge-blue config-tables-copy config-tables-copy-small config-tables-gutter-copy',
     buttonVisibleClass: 'config-tables-gutter-copy-visible',
 
@@ -69,8 +75,10 @@ gutter.state = {
     // right ones
     lineCount: 0,
 
-    // The line the button is currently on, 0 while it is off screen
+    // The line the button is currently on, 0 while it is off screen, and the row of that
+    // line, which wears the cursor being level with it
     lineNumber: 0,
+    row: null,
 
     // What a press on that line would take, and the line it was worked out for - both
     // kept so that the file is only read again once the cursor reaches another line.
@@ -89,7 +97,8 @@ gutter.state = {
     lineHeight: 0,
     contentPadding: 0,
     paddingTop: 0,
-    fileInset: 0
+    fileInset: 0,
+    roomLeft: 0
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -100,17 +109,23 @@ gutter.init = function() {
 
     gutter.buildButton();
     gutter.buildWash();
+    gutter.buildReach();
 
     // Typing adds and removes lines, and the numbers follow the file as it moves
     content.addEventListener('input', gutter.refresh);
     content.addEventListener('scroll', gutter.followScroll);
 
-    // Which line the button is on comes off the row the cursor is over, and the button
-    // itself stands over the row it is for
-    var body = gutter.getBody();
+    // The strip the button answers for runs from the room to the left of the numbers to the
+    // room the file keeps before its first character, and both of those are outside the box
+    // the numbers are in, so the box around the whole editor is what listens
+    var zone = gutter.getZone();
 
-    body.addEventListener('mousemove', gutter.point);
-    body.addEventListener('mouseleave', gutter.hide);
+    zone.addEventListener('mousemove', gutter.point);
+    zone.addEventListener('mouseleave', gutter.hide);
+
+    // A press anywhere on that strip takes the copy the button standing there would take, so the
+    // button is what says a press will do something rather than what has to be aimed at
+    zone.addEventListener('click', gutter.press);
 
     gutter.refresh();
 };
@@ -127,10 +142,24 @@ gutter.buildButton = function() {
     button.className = config.buttonClass;
     button.textContent = config.copyLabel;
 
-    button.addEventListener('click', gutter.copy);
+    button.addEventListener('click', gutter.pressButton);
 
     gutter.getBody().appendChild(button);
     gutter.button = button;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The room to the left of the numbers is part of the strip a line is copied from, so it says as
+// much by the cursor it wears. It stands beside the box the numbers are in, level with the file
+// and no further, so it is over nothing but the room the settings column keeps there.
+gutter.buildReach = function() {
+
+    var reach = document.createElement('div');
+    reach.className = gutter.config.reachClass;
+
+    gutter.getBody().appendChild(reach);
+    gutter.reach = reach;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -181,6 +210,9 @@ gutter.build = function(lineCount) {
     var element = tables.get('gutter');
     element.textContent = '';
     element.appendChild(lines);
+
+    // The row the cursor was level with is gone along with the rest of them
+    gutter.state.row = null;
 
     gutter.setWidth(lineCount);
     gutter.measure();
@@ -242,6 +274,10 @@ gutter.measure = function() {
     state.paddingTop = state.contentPadding + parseFloat(contentStyle.borderTopWidth);
 
     state.fileInset = parseFloat(fileInset);
+
+    // How far to the left of the numbers the strip runs, which is the room the settings column
+    // keeps on that side and what the button grows into
+    state.roomLeft = parseFloat(window.getComputedStyle(gutter.getZone()).paddingLeft);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -269,43 +305,57 @@ gutter.followScroll = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// What the cursor has reached - a row of the column, the button that stands on one, or the
-// file itself, which is where the button is away.
 gutter.point = function(event) {
 
-    var button = gutter.button;
-    var target = event.target;
+    var row = gutter.getRowAt(event);
 
-    // The button covers the very row it is for, its point included, so reaching it is
-    // reaching that row again
-    if(target === button || button.contains(target)) {
+    // Away from the strip altogether, or level with no line of the file
+    if(row === null) {
+        gutter.hide();
         return;
     }
 
-    var row = target.closest('.' + gutter.config.rowClass);
-
-    if(row !== null) {
-        gutter.follow(row);
-        return;
-    }
-
-    // The point stops short of the first character of the file by a little air, and that air
-    // is the button's own room rather than the file's, so the cursor in it holds the button
-    // where it is
-    if(gutter.state.lineNumber && event.clientX <= gutter.getReach()) {
-        return;
-    }
-
-    gutter.hide();
+    gutter.follow(row);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// How far to the right of the column the button still counts as being pointed at.
-gutter.getReach = function() {
+// The row the cursor is level with, or none. Nothing is asked about what the cursor is over,
+// so the room to the left of the numbers, the whitespace of a cell, the number in it and the
+// button standing over the lot all point at the one line, and nothing that happens to be laid
+// over the column comes into it.
+gutter.getRowAt = function(event) {
 
-    var out = tables.get('gutter').getBoundingClientRect().right + gutter.state.fileInset;
-    return out;
+    var state = gutter.state;
+    var element = tables.get('gutter');
+    var columnRect = element.getBoundingClientRect();
+
+    // The room the settings column keeps on the left, and the room the file keeps before its
+    // first character on the right - past either of those the cursor is elsewhere
+    if(event.clientX < columnRect.left - state.roomLeft) {
+        return null;
+    }
+
+    if(event.clientX > columnRect.right + state.fileInset) {
+        return null;
+    }
+
+    // Above the file and below it there is nothing to point at, the row of buttons under the
+    // file included
+    if(event.clientY < columnRect.top || event.clientY > columnRect.bottom) {
+        return null;
+    }
+
+    var lines = element.firstElementChild;
+    var lineIdx = Math.floor((event.clientY - lines.getBoundingClientRect().top) / state.lineHeight);
+
+    if(lineIdx < 0) {
+        return null;
+    }
+
+    // Past the last line of the file there is no cell, so there is nothing to copy either
+    var out = lines.children[lineIdx];
+    return out === undefined ? null : out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -338,7 +388,31 @@ gutter.follow = function(row) {
     gutter.button.style.top = top + 'px';
     gutter.button.classList.add(gutter.config.buttonVisibleClass);
 
+    gutter.markRow(row);
     gutter.showWash(state.block, false);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The row the cursor is level with, and only that one, so its number is read plainly while the
+// rest of them stay in the background.
+gutter.markRow = function(row) {
+
+    var state = gutter.state;
+
+    if(state.row === row) {
+        return;
+    }
+
+    if(state.row !== null) {
+        state.row.classList.remove(gutter.config.rowAtClass);
+    }
+
+    state.row = row;
+
+    if(row !== null) {
+        row.classList.add(gutter.config.rowAtClass);
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -438,6 +512,8 @@ gutter.hide = function() {
     gutter.state.lineNumber = 0;
     gutter.button.classList.remove(gutter.config.buttonVisibleClass);
 
+    gutter.markRow(null);
+
     // What the drawing is pointing at is not the cursor's to take away
     if(gutter.state.washHeld) {
         return;
@@ -448,14 +524,69 @@ gutter.hide = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// What the button copies is the very block the wash is over.
-gutter.copy = function() {
+// A press on the button, which says so beside the button, that being where it was pressed.
+gutter.pressButton = function() {
+
+    gutter.copy($.fn.zato.copy.config.offset);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// A press on the strip beside a line, which takes the same copy a press on the button does. The
+// button takes care of itself, and the file takes care of what is pressed inside it.
+gutter.press = function(event) {
+
+    var button = gutter.button;
+
+    if(event.target === button || button.contains(event.target)) {
+        return;
+    }
+
+    var row = gutter.getRowAt(event);
+
+    if(row === null) {
+        return;
+    }
+
+    // Only up to where the numbers end - past that the press is in the file, where it belongs to
+    // the file and puts the caret where it was made
+    if(event.clientX > tables.get('gutter').getBoundingClientRect().right) {
+        return;
+    }
+
+    gutter.follow(row);
+
+    // A line with nothing on it is nothing to copy
+    if(gutter.state.block === null) {
+        return;
+    }
+
+    // Pressed beside the button rather than on it, so the words go clear of the whole strip
+    gutter.copy([0, gutter.getStripDistance()]);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// What a press takes is the very block the wash is over, and it is said beside what was pressed.
+gutter.copy = function(offset) {
 
     var lineList = gutter.getLineList();
     var block = gutter.state.block;
     var text = lineList.slice(block.start, block.start + block.count).join('\n');
 
-    $.fn.zato.copy.to_clipboard(gutter.button, text, gutter.config.copyPlacement, $.fn.zato.copy.config.offset);
+    $.fn.zato.copy.to_clipboard(gutter.button, text, gutter.config.copyPlacement, offset);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// How far off the button the words have to stand to be clear of the strip, which is what a press
+// anywhere but on the button was on.
+gutter.getStripDistance = function() {
+
+    var strip = tables.get('gutter').getBoundingClientRect().left - gutter.state.roomLeft;
+    var out = gutter.button.getBoundingClientRect().left - strip + gutter.config.copyGap;
+
+    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -524,6 +655,16 @@ gutter.getLineList = function() {
 gutter.getBody = function() {
 
     var out = tables.get('gutter').parentNode;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The box the strip is listened for on - the one around the whole editor, since the strip runs
+// past the numbers on both sides.
+gutter.getZone = function() {
+
+    var out = tables.get('editor').parentNode;
     return out;
 };
 
