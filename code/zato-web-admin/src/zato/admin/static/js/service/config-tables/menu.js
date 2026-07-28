@@ -28,15 +28,17 @@ menu.config = {
     rootTitle: 'Files',
 
     // The keys the actions answer to, which follow the left hand down its own rows the
-    // way the IDE's menu does - Q W E across the top for what is done to the file
-    // right-clicked, A S on the row below for what brings another file in. The second
-    // group starts its own row, so those two keep their key whether a file was
-    // right-clicked or not.
+    // way the IDE's menu does - Q W E R across the top for what is done to the file
+    // right-clicked, A S D on the row below for what brings another file in and for how
+    // much of the directory is listed. The second group starts its own row, so those keep
+    // their key whether a file was right-clicked or not.
     renameKey: 'Q',
     downloadKey: 'W',
     deleteKey: 'E',
+    convertKey: 'R',
     addKey: 'A',
     uploadKey: 'S',
+    showAllKey: 'D',
 
     // Delete answers to the key of its own name as well, that being the key a listing's own
     // pick is taken away by. The cap on the row still shows the letter, one key per cap.
@@ -197,6 +199,22 @@ menu.buildItemList = function(name) {
             ]
         });
 
+        // A csv file is offered the one thing that makes it into a file a service can read, the
+        // same offer the row of links under the file itself carries
+        if(tables.convert.isOffered(table)) {
+
+            out.push({
+                key: config.convertKey,
+                label: 'Convert to .ini',
+                isDestructive: false,
+                action: tables.convert.run,
+                details: [
+                    ['File', table.path],
+                    ['Saves', 'No']
+                ]
+            });
+        }
+
         out.push(null);
     }
 
@@ -220,6 +238,27 @@ menu.buildItemList = function(name) {
         ]
     });
 
+    out.push({
+        key: config.showAllKey,
+        label: 'Show all',
+        isDestructive: false,
+        isToggle: true,
+        isOn: menu.isShowingAll,
+        action: tables.toggleShowAll,
+        details: [
+            ['On', 'All files'],
+            ['Off', 'Only .ini files']
+        ]
+    });
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+menu.isShowingAll = function() {
+
+    var out = tables.state.isShowingAll;
     return out;
 };
 
@@ -269,6 +308,10 @@ menu.buildEntry = function(list, info, item) {
     label.textContent = item.label;
     entry.appendChild(label);
 
+    if(item.isToggle) {
+        entry.appendChild(menu.buildToggle(item));
+    }
+
     entry.addEventListener('mouseenter', function() {
         menu.highlight(list, info, item);
     });
@@ -278,6 +321,41 @@ menu.buildEntry = function(list, info, item) {
     });
 
     return entry;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The slider at the end of a row that names something the page is either doing or not, in the size
+// the wizards use in their own popovers. The whole row answers to a press, so the switch itself
+// only shows how things stand.
+menu.buildToggle = function(item) {
+
+    var out = document.createElement('input');
+
+    out.type = 'checkbox';
+    out.className = 'config-tables-menu-toggle';
+    out.checked = item.isOn();
+    out.tabIndex = -1;
+
+    // The row is what flips the switch, so a press that lands on the switch is left to reach it
+    // rather than counted twice
+    out.addEventListener('click', function(event) {
+        event.preventDefault();
+    });
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The switch on screen says what the page is doing now, whether it was the row or the hotkey
+// that flipped it.
+menu.syncToggle = function(item) {
+
+    var selector = '.grid-panel-item[data-key="' + item.key + '"] .config-tables-menu-toggle';
+    var elem = document.getElementById(menu.config.elemId).querySelector(selector);
+
+    elem.checked = item.isOn();
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -346,8 +424,15 @@ menu.getFirstItem = function(itemList) {
 // ////////////////////////////////////////////////////////////////////////
 
 // An action closes the menu before it runs, so what the action opens on the page is
-// what is left on screen.
+// what is left on screen. A switch is flipped where it stands, the menu staying open, since it
+// says how the page reads rather than doing something to a file.
 menu.run = function(item) {
+
+    if(item.isToggle) {
+        item.action();
+        menu.syncToggle(item);
+        return;
+    }
 
     menu.close();
     item.action();

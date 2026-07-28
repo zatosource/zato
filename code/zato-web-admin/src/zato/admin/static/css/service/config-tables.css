@@ -64,6 +64,9 @@
 
     --config-tables-border: #d9dee3;
     --config-tables-text: #1a1a2e;
+
+    /* A link with nothing to do - read as far back as a link may go while still being read */
+    --config-tables-link-off: #a8afb6;
     --config-tables-accent: var(--zato-seablue-light2);
     --config-tables-ok: #28a745;
     --config-tables-error: #dc3545;
@@ -324,6 +327,21 @@ input[type="text"].config-tables-file-rename {
     display: none;
 }
 
+/* The switch on the listing's menu that says how much of the directory is listed - at the end of
+   its row, in the size the wizards use for the sliders in their own popovers, and quiet enough
+   to read as part of the row rather than as a form put in it */
+.config-tables-menu-toggle {
+    --toggle-width: 27.2px;
+    --toggle-height: 15.2px;
+    --toggle-knob-size: 12px;
+    --toggle-knob-offset: 1.6px;
+    --toggle-travel: 12px;
+    --toggle-off-background: var(--config-tables-border);
+    --toggle-on-background: var(--config-tables-accent);
+
+    margin-left: auto;
+}
+
 /* ------------------------------------------------------------ */
 /* Config tables - the file being looked at                      */
 /* ------------------------------------------------------------ */
@@ -542,11 +560,23 @@ input[type="text"].config-tables-file-rename {
     gap: 8px;
 }
 
-/* The link that puts the file back as it was, and the one that makes an ini file of a csv one,
-   both in the plain face of a link, since they are the quietest things in the row */
+/* The two links at the near end of the row - putting the file back as it was, and making an ini
+   file of a csv one - in the plain face of a link, since they are the quietest things in the row,
+   with a bar between them while both are there */
+.config-tables-editor-options {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 #config-tables-restore,
 #config-tables-convert {
     font-size: 12px;
+}
+
+.config-tables-option-bar {
+    font-size: 12px;
+    color: var(--config-tables-border);
 }
 
 .config-tables-status {
@@ -828,11 +858,13 @@ input[type="text"].config-tables-file-rename {
 /* Config tables - a link with nothing to do                     */
 /* ------------------------------------------------------------ */
 
-/* Restore is a link only while the file has something to go back to. With nothing to go back to
-   it reads as the words it is rather than as somewhere to press, and a press does nothing. */
-.config-tables-link-off,
-.config-tables-link-off:hover {
-    color: var(--text-muted);
+/* Restore is a link only while the file has something to go back to. With nothing to go back to it
+   reads as the words it is rather than as somewhere to press, and a press does nothing. The panel
+   is named along with the class, since the site gives every link a colour by the element itself
+   and that outweighs a class on its own. */
+#config-tables-editor-buttons a.config-tables-link-off,
+#config-tables-editor-buttons a.config-tables-link-off:hover {
+    color: var(--config-tables-link-off);
     text-decoration: none;
     pointer-events: none;
     cursor: default;

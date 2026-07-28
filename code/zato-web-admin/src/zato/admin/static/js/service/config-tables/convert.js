@@ -57,10 +57,14 @@ convert.init = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The offer stands for a csv file the browser edits in place, and for nothing else.
+// The offer stands for a csv file the browser edits in place, and for nothing else - the link and
+// the bar that sets it apart from Restore come and go together.
 convert.render = function(table) {
 
-    tables.get('convert').hidden = !convert.isOffered(table);
+    var isOffered = convert.isOffered(table);
+
+    tables.get('convert').hidden = !isOffered;
+    tables.get('convert-bar').hidden = !isOffered;
 };
 
 // ////////////////////////////////////////////////////////////////////////

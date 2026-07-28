@@ -123,10 +123,13 @@ $(document).ready(function() {
                      two buttons that act on it, and what has just happened is said beside
                      them - a press on that clears it -->
                 <div class="button-container" id="config-tables-editor-buttons">
-                    <a href="javascript:void(0)" id="config-tables-restore">Restore initial values</a>
+                    <div class="config-tables-editor-options">
+                        <a href="javascript:void(0)" id="config-tables-restore">Restore initial values</a>
+                        <span class="config-tables-option-bar" id="config-tables-convert-bar" hidden>|</span>
+                        <a href="javascript:void(0)" id="config-tables-convert" hidden>Convert to .ini</a>
+                    </div>
                     <div class="button-wrapper">
                         <span class="config-tables-status" id="config-tables-status"></span>
-                        <a href="javascript:void(0)" id="config-tables-convert" hidden>Convert to .ini</a>
                         <button type="button" class="secondary-button" id="config-tables-check">Check</button>
                         <button type="button" class="action-button" id="config-tables-save">Save</button>
                     </div>
