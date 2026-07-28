@@ -361,8 +361,8 @@
     visibility: visible;
 }
 
-/* The point at the line the button is on, in the button's own wash - which is also
-   why it deepens along with it when the button is pointed at */
+/* The point at the line the button is on, in the button's own wash, which is why the
+   two deepen together */
 .config-tables-gutter-copy::after {
     content: '';
     position: absolute;
@@ -374,10 +374,6 @@
     border-bottom: var(--config-tables-point-height) solid transparent;
     border-left: var(--config-tables-point-length) solid var(--zato-badge-blue-background);
     transform: translateY(-50%);
-}
-
-.config-tables-gutter-copy:hover::after {
-    border-left-color: var(--config-tables-copy-hover);
 }
 
 /* ------------------------------------------------------------ */
@@ -572,6 +568,17 @@
 /* Pointed at, the wash goes one shade deeper and nothing else moves */
 .config-tables-copy:hover {
     background-color: var(--config-tables-copy-hover);
+}
+
+/* The one beside a line number is on screen only while the cursor is on that line, so
+   it wears the deeper wash for as long as it is there. The cursor may well be in the
+   room beside it rather than on it, and it is still that line's own button. */
+.config-tables-gutter-copy-visible {
+    background-color: var(--config-tables-copy-hover);
+}
+
+.config-tables-gutter-copy-visible::after {
+    border-left-color: var(--config-tables-copy-hover);
 }
 
 /* The same button where there is less room for it - inside a text field and beside
