@@ -1,10 +1,14 @@
-// Config tables - the two lines that give the three columns their room.
+// Config tables - the room the three columns get, across and down.
 //
-// The listing, the file and the Try it column each take as much of the panel as
-// the line next to it is dragged to, either line goes all the way across, and a
-// line dragged near the edge it belongs to pulls its own column shut rather than
-// leaving a sliver of it. Where each line was left is where it opens the next
+// Across: the listing, the file and the Try it column each take as much of the
+// panel as the line next to it is dragged to, either line goes all the way across,
+// and a line dragged near the edge it belongs to pulls its own column shut rather
+// than leaving a sliver of it. Where each line was left is where it opens the next
 // time. The dragging itself is the shared resizer in js/shared/resizer.js.
+//
+// Down: the panel takes what the window has left under the navigation, less the
+// same air below it as there is above it, so each column scrolls inside itself
+// instead of the page scrolling as a whole.
 
 (function($) {
 
@@ -43,6 +47,12 @@ split.init = function() {
 
     var config = split.config;
 
+    split.fitHeight();
+
+    // The window is the only thing that says how much room there is, so it is
+    // asked again every time it changes
+    $(window).on('resize', split.fitHeight);
+
     // The listing sits at the start of the row, so its line is on its far side
     split.wire({
         panel: tables.get('browser'),
@@ -60,6 +70,19 @@ split.init = function() {
         storageKey: config.tryStorageKey,
         collapsedClass: config.tryCollapsedClass
     });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// How tall the page is - what the window has left under whatever sits above the
+// page, which is where the navigation and the page's own heading are. How much of
+// that the columns themselves get is then the panel's own business.
+split.fitHeight = function() {
+
+    var container = tables.get('container');
+    var top = container.getBoundingClientRect().top;
+
+    container.style.height = (window.innerHeight - top) + 'px';
 };
 
 // ////////////////////////////////////////////////////////////////////////

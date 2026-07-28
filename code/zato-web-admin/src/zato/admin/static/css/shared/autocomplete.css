@@ -1,0 +1,44 @@
+/* ------------------------------------------------------------ */
+/* The autocomplete menu - what an editable field offers         */
+/* ------------------------------------------------------------ */
+
+/* The jQuery UI theme stylesheet is not loaded, so the menu the autocomplete
+   widget builds is dressed here. The menu can end up inside a dialog, where
+   ".ui-widget .ui-widget" from jquery.ui.custom.css matches it at (0,2,0) - the
+   extra .ui-menu class keeps these selectors above that. */
+
+ul.ui-menu.ui-autocomplete {
+    position: absolute;
+    z-index: 1010;
+    margin: 0;
+    padding: 2px 0;
+    list-style: none;
+    background-color: #fff;
+    border: 1px solid #dde3ea;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+    font-family: sans-serif;
+    font-size: 12px;
+}
+
+ul.ui-menu.ui-autocomplete .ui-menu-item-wrapper {
+    display: block;
+    padding: 3px 6px;
+    border: none;
+    margin: 0;
+    background-image: none;
+    color: #333;
+}
+
+ul.ui-menu.ui-autocomplete .ui-menu-item-wrapper.ui-state-active {
+    background-color: #f6f8fa;
+}
+
+/* A list too long to be put on screen in one piece shows what it can and says how
+   much of it is left, which typing narrows down */
+ul.ui-menu.ui-autocomplete .zato-autocomplete-rest {
+    padding: 3px 6px;
+    color: #8a8a8a;
+    font-style: italic;
+    cursor: default;
+}

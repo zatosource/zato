@@ -2,7 +2,9 @@
 //
 // It runs against the file on screen rather than the one on the server, which is
 // what makes the answer the one a service reading the same file would get, and
-// what lets a change be tried before it is saved.
+// what lets a change be tried before it is saved. What the two fields offer is the
+// file as it is on disk, which is combo.js. The answer is text like the file's own,
+// so it is colored the same way, edited the same way and copied the same way.
 
 (function($) {
 
@@ -18,9 +20,10 @@ var singleQuote = "'";
 
 invoker.config = {
 
-    // The class the answer wears - one that was found, and one that was not
-    resultFound: 'config-tables-result',
-    resultMissing: 'config-tables-result config-tables-result-missing'
+    // Where each copy button says that it copied - beside the one under the answer,
+    // above the ones the fields hold
+    resultCopyPlacement: 'left',
+    fieldCopyPlacement: 'top'
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -28,6 +31,27 @@ invoker.config = {
 invoker.init = function() {
 
     tables.get('try-run').addEventListener('click', invoker.run);
+
+    // The answer is a value like the ones in the file, so it is colored like one
+    $.fn.zato.highlight.attach(tables.get('result'), $.fn.zato.highlight.ini_values_to_html);
+
+    invoker.wireCopy('result-copy', 'result', invoker.config.resultCopyPlacement);
+    invoker.wireCopy('try-from-copy', 'try-from', invoker.config.fieldCopyPlacement);
+    invoker.wireCopy('try-code-copy', 'try-code', invoker.config.fieldCopyPlacement);
+
+    tables.combo.init();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// One copy button and what it takes a copy of.
+invoker.wireCopy = function(buttonName, sourceName, placement) {
+
+    var button = tables.get(buttonName);
+
+    button.addEventListener('click', function() {
+        $.fn.zato.copy.to_clipboard(button, tables.get(sourceName).value, placement);
+    });
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -41,8 +65,8 @@ invoker.render = function(table) {
 
     tables.get('try-from').value = first.sectionName;
     tables.get('try-code').value = first.key;
-    tables.get('result').textContent = '';
 
+    invoker.setResult('');
     invoker.refresh(table);
 };
 
@@ -72,7 +96,8 @@ invoker.readFrom = function(table) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// What the call answers - the value found, or the plain fact that there is none.
+// What the call answers - the value found, or the plain fact that there is none,
+// which is put down as a note about the value rather than as one.
 invoker.run = function() {
 
     var table = tables.getCurrent();
@@ -80,16 +105,24 @@ invoker.run = function() {
     var fromName = invoker.readFrom(table);
     var code = tables.get('try-code').value.trim();
     var found = parse.lookup(table, content, fromName, code);
-    var result = tables.get('result');
 
     if(found === null) {
-        result.className = invoker.config.resultMissing;
-        result.textContent = tables.buildMissingText(table, fromName, code);
+        invoker.setResult('# ' + tables.buildMissingText(table, fromName, code));
+        return;
     }
-    else {
-        result.className = invoker.config.resultFound;
-        result.textContent = singleQuote + found + singleQuote;
-    }
+
+    invoker.setResult(singleQuote + found + singleQuote);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+invoker.setResult = function(text) {
+
+    var result = tables.get('result');
+    result.value = text;
+
+    // Nothing typed it, so the colors are repainted by hand
+    $.fn.zato.highlight.refresh(result);
 };
 
 // ////////////////////////////////////////////////////////////////////////

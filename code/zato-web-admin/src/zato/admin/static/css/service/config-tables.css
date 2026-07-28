@@ -10,14 +10,36 @@
 :root {
     --config-tables-font-mono: 'Ubuntu Mono', 'DejaVu Sans Mono', 'Menlo', 'Consolas', monospace;
 
-    /* How wide the two columns beside the file are and how tall the editor opens */
+    /* How wide the two columns beside the file are. The numbers down the left of the
+       file itself start at the room two of them need, and gutter.js sets that to what
+       the file in front of the reader actually asks for. */
     --config-tables-browser-width: 250px;
     --config-tables-try-width: 250px;
-    --config-tables-editor-height: 320px;
+    --config-tables-gutter-width: 22px;
 
     /* The listing's rows - the one being looked at, and the one under the cursor */
     --config-tables-row-selected: #eaf4ff;
     --config-tables-row-hover: #f5f9fd;
+
+    /* The line numbers, which count the file without competing with it */
+    --config-tables-gutter-number: #a8b3bd;
+
+    /* A copy button pointed at - the badge wash one shade deeper */
+    --config-tables-copy-hover: #cbe4f9;
+
+    /* The room the file keeps before its first character - what the copy button for
+       a line reaches over, point included, so it is wide enough for that button to
+       stand on even beside a file whose numbers are a single digit wide */
+    --config-tables-file-inset: 26px;
+
+    /* The point that says which line the copy button is on - how far it comes out of
+       the button and how much of its side it takes up */
+    --config-tables-point-length: 5px;
+    --config-tables-point-height: 5px;
+
+    /* What a copy would take, washed over in the file while the cursor is on the
+       number beside it - see through, since it is over the text rather than under it */
+    --config-tables-copy-target: rgba(238, 194, 74, 0.2);
 
     /* The rules that split the page up, in the panel's own weight */
     --config-tables-divider: 3px solid var(--primary-dark);
@@ -33,10 +55,38 @@
 /* Config tables - the panel                                     */
 /* ------------------------------------------------------------ */
 
+/* The page is as tall as the window has left for it, which split.js measures, and
+   it keeps the air below the panel that the container's padding gives it above */
+.config-tables-container {
+    box-sizing: border-box;
+    min-height: 0;
+    overflow: hidden;
+}
+
 /* Wider than a settings panel - a listing and a file being edited next to each
-   other need the room */
+   other need the room - and as tall as the page, so each column scrolls inside
+   itself rather than the page scrolling as a whole */
 .config-tables-panel {
+    display: flex;
+    flex-direction: column;
     max-width: 1452px;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.config-tables-panel .settings-content {
+    flex: 1;
+    min-height: 0;
+}
+
+/* The settings pages give this column 40px of air on either side, which is room for
+   a form to breathe in. What is in it here is a file, and the two columns beside it
+   already keep their own spacing, so it is brought in to match theirs. */
+.config-tables-panel .settings-main {
+    display: flex;
+    flex-direction: column;
+    padding: 15px 16px 11px 16px;
+    overflow: hidden;
 }
 
 /* ------------------------------------------------------------ */
@@ -74,6 +124,7 @@
     min-width: 0;
     padding: 15px 16px 20px 16px;
     background: var(--background-light);
+    overflow: auto;
 }
 
 /* Dragged shut, the column gives up its padding as well, otherwise its own
@@ -111,8 +162,17 @@
     background: var(--config-tables-accent);
 }
 
+/* The heading and the two actions share one row, the actions at its end */
+.config-tables-browser-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
 .config-tables-browser h3 {
-    margin: 0 0 10px 0;
+    margin: 0;
     font-size: 13px;
     font-weight: 600;
     color: var(--primary-dark);
@@ -192,8 +252,14 @@
 
 .config-tables-browser-buttons {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
+    gap: 5px;
+}
+
+/* A heading's row is a shorter thing than a footer's, so what rides along it is
+   the small version of the Check button */
+.config-tables-button-small {
+    padding: 2px 6px;
+    font-size: 10px;
 }
 
 /* ------------------------------------------------------------ */
@@ -206,13 +272,140 @@
     color: var(--text-muted);
 }
 
+/* The file fills its column, with the buttons under it */
+#config-tables-editor {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+/* The numbers to the left of the file, the file itself taking the rest. The copy
+   button is placed on it rather than in the column, so that it may be wider than
+   the column is. */
+.config-tables-editor-body {
+    position: relative;
+    display: flex;
+    flex: 1;
+    min-height: 0;
+}
+
+/* Nothing reaches past the file's box - the wash over what a copy would take may well
+   be over a section that runs past the foot of it */
+#config-tables-editor .highlight-wrapper {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* ------------------------------------------------------------ */
+/* Config tables - the numbers down the left of the file         */
+/* ------------------------------------------------------------ */
+
+/* The numbers are cut off at the top and the bottom of the file rather than
+   scrolling on their own, since it is the file they follow. A row is as tall as a
+   line of the file, which is what keeps each number level with the line it counts. */
+.config-tables-gutter {
+    position: relative;
+    flex: 0 0 var(--config-tables-gutter-width);
+
+    /* The file's own padding plus the border above it, so the first number is level
+       with the first line */
+    padding: 11px 0 0 0;
+    overflow: hidden;
+    font-family: var(--config-tables-font-mono);
+    user-select: none;
+}
+
+.config-tables-gutter-line {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    height: 18px;
+    padding-right: 4px;
+    cursor: pointer;
+}
+
+.config-tables-gutter-number {
+    font-size: 11px;
+    color: var(--config-tables-gutter-number);
+}
+
+/* The one button the whole column has, level with the line the cursor is on and as
+   tall as that line, which is what covers the number it stands in for.
+
+   It is wider than the numbers are, and what it reaches over is the room the file
+   keeps before its first character, which is why that room is as wide as it is. The
+   text itself is never covered. */
+.config-tables-gutter-copy {
+    position: absolute;
+    left: 0;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    height: 18px;
+
+    /* The corners on the side the point comes out of are squared off, so the two read
+       as one shape rather than as a triangle laid over a box */
+    border-radius: var(--zato-badge-radius) 0 0 var(--zato-badge-radius);
+    visibility: hidden;
+}
+
+.config-tables-gutter-copy-visible {
+    visibility: visible;
+}
+
+/* The point at the line the button is on, in the button's own wash - which is also
+   why it deepens along with it when the button is pointed at */
+.config-tables-gutter-copy::after {
+    content: '';
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    width: 0;
+    height: 0;
+    border-top: var(--config-tables-point-height) solid transparent;
+    border-bottom: var(--config-tables-point-height) solid transparent;
+    border-left: var(--config-tables-point-length) solid var(--zato-badge-blue-background);
+    transform: translateY(-50%);
+}
+
+.config-tables-gutter-copy:hover::after {
+    border-left-color: var(--config-tables-copy-hover);
+}
+
+/* ------------------------------------------------------------ */
+/* Config tables - what a copy would take                        */
+/* ------------------------------------------------------------ */
+
+/* The wash over the line, or the whole section, the button beside a number would take.
+   The overlay the file is read off is opaque, so the wash goes over it and is see
+   through, the way a marker over paper is - the caret and the file's own border stay
+   above it either way. */
+.config-tables-copy-target {
+    position: absolute;
+    left: 1px;
+    right: 1px;
+    z-index: 1;
+    background: var(--config-tables-copy-target);
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.config-tables-copy-target-visible {
+    visibility: visible;
+}
+
 /* The file's own glyphs are transparent - what is read on screen is the colored
    copy of them on the overlay right behind the caret, which is why the two carry
-   the very same type and the very same box */
-#config-tables-content {
+   the very same type and the very same box. The same goes for the answer in the
+   Try it column, which is a value of the same kind. */
+#config-tables-content,
+#config-tables-result {
     box-sizing: border-box;
     width: 100%;
-    height: var(--config-tables-editor-height);
+    height: 100%;
     padding: 10px;
     border: 1px solid var(--config-tables-border);
     border-radius: 3px;
@@ -221,18 +414,19 @@
     line-height: 1.5;
     white-space: pre;
     overflow: auto;
-    resize: vertical;
+    resize: none;
 }
 
-/* The textarea's own height is what the wrapper takes, which is what lets the
-   corner of the editor still be dragged */
-#config-tables-editor .highlight-wrapper {
-    height: auto;
+/* The file keeps more room before its first character than the answer does, since
+   that is the room the copy button beside a line number reaches over */
+#config-tables-content,
+#config-tables-editor .highlight-backdrop {
+    padding-left: var(--config-tables-file-inset);
 }
 
 /* The transparent border stands in for the textarea's own, so the first glyph of
    each starts at the same place */
-#config-tables-editor .highlight-backdrop {
+.config-tables-panel .highlight-backdrop {
     padding: 10px;
     border: 1px solid transparent;
     border-radius: 3px;
@@ -253,9 +447,12 @@
 /* ------------------------------------------------------------ */
 
 /* Away from the editor, and the same small face the settings pages give the
-   options on the left of their own button rows */
+   options on the left of their own button rows. The row steps in by the width of the
+   numbers, so what is at either end of it lines up with the file's own two edges. */
 #config-tables-editor-buttons {
     margin-top: 16px;
+    margin-bottom: 0;
+    padding-left: var(--config-tables-gutter-width);
     align-items: center;
 }
 
@@ -300,12 +497,15 @@
 /* ------------------------------------------------------------ */
 
 /* The third column, on the same quiet background as the listing on the other side
-   of the file */
+   of the file, with the answer taking whatever room the fields above it leave */
 .config-tables-try {
+    display: flex;
+    flex-direction: column;
     flex: 0 0 var(--config-tables-try-width);
     min-width: 0;
     padding: 15px 16px 20px 16px;
     background: var(--background-light);
+    overflow: auto;
 }
 
 /* Dragged shut, the column gives up its padding as well, otherwise its own
@@ -313,14 +513,6 @@
 .config-tables-try-collapsed {
     padding: 0;
     overflow: hidden;
-}
-
-.config-tables-try h3 {
-    margin: 0 0 10px 0;
-    padding: 0;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--primary-dark);
 }
 
 /* One under the other, since the column is as narrow as the listing is */
@@ -331,36 +523,98 @@
     margin-bottom: 10px;
 }
 
-.config-tables-field > span {
+.config-tables-field > label {
     font-size: 11px;
     color: var(--text-muted);
+}
+
+/* The copy button sits inside the field, on the room the padding below leaves for
+   it at the right-hand end */
+.config-tables-input-row {
+    position: relative;
+    display: flex;
 }
 
 .config-tables-field input[type="text"] {
     box-sizing: border-box;
     width: 100%;
-    padding: 5px 7px;
+    padding: 5px 40px 5px 7px;
     border: 1px solid var(--config-tables-border);
     border-radius: 3px;
     font-family: var(--config-tables-font-mono);
     font-size: 12px;
 }
 
-.config-tables-result {
-    min-height: 17px;
+/* A copy button wears the pale face the listing gives its badges, in the ink the
+   Save and Check buttons are in - so it reads as a badge and presses as a button.
+   The site-wide button chrome - a grey gradient, a border and a white text shadow -
+   arrives again on hover and on press, and the one in a gutter is only ever seen
+   while hovered, so every state says the same thing here. */
+.config-tables-copy,
+.config-tables-copy:hover,
+.config-tables-copy:active,
+.config-tables-copy:focus {
+    flex: none;
+    border: none;
+    outline: none;
+    background-image: none;
+    background-color: var(--zato-badge-blue-background);
+    text-shadow: none;
+    box-shadow: none;
+    cursor: pointer;
+}
+
+/* Pointed at, the wash goes one shade deeper and nothing else moves */
+.config-tables-copy:hover {
+    background-color: var(--config-tables-copy-hover);
+}
+
+/* The same button where there is less room for it - inside a text field and beside
+   a line number, both of which are shorter than a line of the page */
+.config-tables-copy-small {
+    padding: 1px 4px;
+    font-size: 9px;
+    letter-spacing: normal;
+}
+
+/* Riding inside the field, on the room its right-hand padding leaves. It is as
+   short as its own text, which is what keeps it clear of the field's lines above
+   and below it. */
+.config-tables-inline-copy {
+    position: absolute;
+    top: 50%;
+    right: 4px;
+    margin: 0;
+    transform: translateY(-50%);
+}
+
+/* As wide as the word on it, at the end of the column, under the fields it runs */
+#config-tables-try-run {
+    align-self: flex-end;
+}
+
+/* ------------------------------------------------------------ */
+/* Config tables - the answer                                    */
+/* ------------------------------------------------------------ */
+
+.config-tables-result-area {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
     margin-top: 12px;
-    padding: 8px 10px;
-    border: 1px solid var(--config-tables-border);
-    border-radius: 3px;
-    font-family: var(--config-tables-font-mono);
-    font-size: 12px;
-    color: var(--config-tables-ok);
-    background: var(--white);
-    overflow-wrap: break-word;
 }
 
-.config-tables-result-missing {
-    color: var(--config-tables-error);
+.config-tables-result-area .highlight-wrapper {
+    flex: 1;
+    min-height: 0;
+}
+
+/* Under the answer and at its right-hand end, where a hand reaching for it is */
+.config-tables-result-buttons {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 6px;
 }
 
 /* ------------------------------------------------------------ */

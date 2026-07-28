@@ -128,6 +128,7 @@ tables.wire = function() {
     $.fn.zato.highlight.attach(tables.get('content'), $.fn.zato.highlight.ini_to_html);
 
     tables.split.init();
+    tables.gutter.init();
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -264,9 +265,10 @@ tables.renderEditor = function() {
     tables.get('check').disabled = !table.is_editable;
     tables.get('save').disabled = !table.is_editable;
 
-    // Setting the value from here fires no input event, so the colors are
-    // repainted by hand
+    // Setting the value from here fires no input event, so the colors and the
+    // numbers down the left are brought up to date by hand
     $.fn.zato.highlight.refresh(content);
+    tables.gutter.refresh();
     content.previousElementSibling.classList.toggle(tables.config.backdropReadOnly, content.readOnly);
 
     tables.invoker.render(table);
@@ -325,6 +327,7 @@ tables.restore = function() {
     content.value = tables.state.initialContent[table.name];
 
     $.fn.zato.highlight.refresh(content);
+    tables.gutter.refresh();
     tables.setStatus('');
 };
 

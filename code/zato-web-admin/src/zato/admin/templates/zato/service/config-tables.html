@@ -21,6 +21,7 @@ to what is in it comes off the listing's own menu. The view provides:
 <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/panel-menu.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/badge.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/autocomplete.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/highlight.css">
 <link rel="stylesheet" type="text/css" href="/static/css/service/config-tables.css">
 {% endblock %}
@@ -29,8 +30,11 @@ to what is in it comes off the listing's own menu. The view provides:
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/highlight.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/resizer.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/copy.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/text.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/split.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/combo.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/gutter.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/listing.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/parse.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/service/config-tables/invoker.js"></script>
@@ -53,7 +57,7 @@ $(document).ready(function() {
 
 {% block "content" %}
 
-<div class="settings-container">
+<div class="settings-container config-tables-container" id="config-tables-container">
 <div class="settings-panel config-tables-panel">
 
     <div class="config-tables-panel-header">
@@ -66,13 +70,16 @@ $(document).ready(function() {
         <!-- The browser - a right click anywhere in it opens its menu -->
         <div class="config-tables-browser" id="config-tables-browser">
 
-            <h3>Files</h3>
-            <ul class="config-tables-file-list" id="config-tables-file-list"></ul>
-
-            <div class="config-tables-browser-buttons">
-                <button type="button" class="secondary-button" id="config-tables-new">New file</button>
-                <button type="button" class="secondary-button" id="config-tables-upload">Upload file</button>
+            <!-- The two actions ride along the heading, at the end of its row -->
+            <div class="config-tables-browser-header">
+                <h3>Files</h3>
+                <div class="config-tables-browser-buttons">
+                    <button type="button" class="secondary-button config-tables-button-small" id="config-tables-new">New file</button>
+                    <button type="button" class="secondary-button config-tables-button-small" id="config-tables-upload">Upload file</button>
+                </div>
             </div>
+
+            <ul class="config-tables-file-list" id="config-tables-file-list"></ul>
 
         </div>
 
@@ -87,7 +94,12 @@ $(document).ready(function() {
 
             <div id="config-tables-editor">
 
-                <textarea id="config-tables-content" spellcheck="false"></textarea>
+                <!-- The numbers down the left of the file are also how a line, or a
+                     whole section of them, is taken a copy of -->
+                <div class="config-tables-editor-body">
+                    <div class="config-tables-gutter" id="config-tables-gutter"></div>
+                    <textarea id="config-tables-content" spellcheck="false"></textarea>
+                </div>
 
                 <div class="button-container" id="config-tables-editor-buttons">
                     <div class="config-tables-options">
@@ -112,24 +124,41 @@ $(document).ready(function() {
             role="separator" aria-orientation="vertical" aria-label="Resize the Try it column"></div>
 
         <!-- Runs against the file on screen, which is what makes the answer the one
-             a service reading the same file gets -->
+             a service reading the same file gets, while what the two fields offer
+             comes off the file as it is on disk -->
         <div class="config-tables-try" id="config-tables-try">
 
-            <h3>Try it</h3>
+            <!-- Both fields offer what the file on disk holds and take anything
+                 else that is typed into them -->
+            <div class="config-tables-field" id="config-tables-try-from-field">
+                <label for="config-tables-try-from">Source</label>
+                <div class="config-tables-input-row">
+                    <input type="text" id="config-tables-try-from" autocomplete="off">
+                    <button type="button" class="zato-badge zato-badge-blue config-tables-copy config-tables-copy-small config-tables-inline-copy" id="config-tables-try-from-copy">Copy</button>
+                </div>
+            </div>
 
-            <label class="config-tables-field" id="config-tables-try-from-field">
-                <span>Source</span>
-                <input type="text" id="config-tables-try-from" autocomplete="off">
-            </label>
-
-            <label class="config-tables-field">
-                <span>Value</span>
-                <input type="text" id="config-tables-try-code" autocomplete="off">
-            </label>
+            <div class="config-tables-field">
+                <label for="config-tables-try-code">Value</label>
+                <div class="config-tables-input-row">
+                    <input type="text" id="config-tables-try-code" autocomplete="off">
+                    <button type="button" class="zato-badge zato-badge-blue config-tables-copy config-tables-copy-small config-tables-inline-copy" id="config-tables-try-code-copy">Copy</button>
+                </div>
+            </div>
 
             <button type="button" class="secondary-button" id="config-tables-try-run">Run</button>
 
-            <div class="config-tables-result" id="config-tables-result"></div>
+            <!-- The answer is text like any other, so it is edited and taken away
+                 the way the file itself is -->
+            <div class="config-tables-result-area">
+
+                <textarea id="config-tables-result" spellcheck="false"></textarea>
+
+                <div class="config-tables-result-buttons">
+                    <button type="button" class="zato-badge zato-badge-blue config-tables-copy" id="config-tables-result-copy">Copy</button>
+                </div>
+
+            </div>
 
         </div>
 
