@@ -32,6 +32,11 @@ tables.config = {
     // code list, and every other file is a mapping set
     codesSection: 'codes',
 
+    // What a file a service reads through self.config is written in, and where the browser keeps
+    // the answer to whether the listing has a line for the other files in the directory too
+    configSuffixList: ['.ini', '.conf'],
+    showAllStorageKey: 'zato.config-tables.show-all',
+
     // What a file of each kind is called on screen, what its badge in the listing
     // says and which of the shared badge colors it wears, and what one entry of it is.
     // A file that does not read as an ini file is of no kind at all until it does, and
@@ -99,6 +104,10 @@ tables.state = {
     // goes back to
     initialContent: {},
 
+    // Whether the listing has a line for every file in the directory or only for the ones a
+    // service reads, which is what it has when the page is opened for the first time
+    isShowingAll: false,
+
     // What takes the status line away again, 0 while there is nothing on it to take away
     statusTimer: 0
 };
@@ -117,8 +126,10 @@ tables.init = function(inputConfig) {
     tables.rememberInitialContent();
 
     // What was typed into a file and not saved comes back with the page, so the drafts are
-    // read before anything is put on screen
+    // read before anything is put on screen, and so does the switch that says how much of the
+    // directory the listing has a line for
     tables.draft.init();
+    state.isShowingAll = tables.readShowAll();
 
     // Only ever says why the files could not be read, and says nothing at all when they could
     tables.get('empty').textContent = inputConfig.error;
@@ -151,11 +162,17 @@ tables.init = function(inputConfig) {
 // far each column was scrolled come back with it.
 tables.open = function() {
 
-    var state = tables.state;
     var name = tables.url.readFileName();
 
-    if(!name && state.tableList.length) {
-        name = state.tableList[0].name;
+    // Nothing in the address says which file to open, so the listing's own first line does -
+    // the first file a service reads, not the first thing in the directory
+    if(!name) {
+
+        var shownList = tables.getShownList();
+
+        if(shownList.length) {
+            name = shownList[0].name;
+        }
     }
 
     if(!name) {
