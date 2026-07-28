@@ -188,7 +188,7 @@ class UserConfigFile(Bunch):
 
     def _zato_as_text(self, value:'any_') -> 'str':
         """ The value as the file itself spells it - the config reader turns what looks like
-        a number into one, while a code is text whatever it looks like.
+        a number into one, while a code is always text, digits included.
         """
         if isinstance(value, str):
             out = value

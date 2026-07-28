@@ -4,7 +4,7 @@
 // into the fragment of the address, so the page is the same page after a reload, however
 // hard that reload is, and the address itself is worth sending to somebody else. The
 // fragment is used rather than the query, since none of it is the server's business - the
-// page is asked for the same way whatever the reader is looking at.
+// page is asked for in the same way no matter which file is open.
 //
 // A name out of an address is not trusted with anything. The file named in a fragment is
 // only ever looked up among the files the server itself reported, and nothing is built into
@@ -152,8 +152,8 @@ url.write = function(key, value) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The file that is open, which is also the end of whatever was being translated in the one
-// before it - another file has its own values, its own answer and its own place to be
+// The file that is open, which also ends the translation that the previous file was in the
+// middle of - another file has its own values, its own answer and its own place to be
 // scrolled to.
 url.writeFile = function(name) {
 

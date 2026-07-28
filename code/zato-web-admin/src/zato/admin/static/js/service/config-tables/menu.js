@@ -351,7 +351,7 @@ menu.getFirstItem = function(itemList) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// An action closes the menu before it runs, so whatever it opens on the page is
+// An action closes the menu before it runs, so what the action opens on the page is
 // what is left on screen.
 menu.run = function(item) {
 
@@ -446,7 +446,7 @@ menu.installDismiss = function(elem, itemList) {
 
             if(item !== null && item.key === pressed) {
 
-                // The key belongs to the menu, not to whatever the action
+                // The key belongs to the menu, not to the element that the action
                 // brings up and focuses next
                 event.preventDefault();
 
