@@ -31,6 +31,9 @@
             handles: resizerConfig.handles,
             axis: resizerConfig.axis,
 
+            // The mapper always sizes the panel nearer the container's start
+            edge: 'end',
+
             minPercent: config.splitMinPercent,
             maxPercent: config.splitMaxPercent,
             keyboardStepPercent: config.splitKeyboardStepPercent,

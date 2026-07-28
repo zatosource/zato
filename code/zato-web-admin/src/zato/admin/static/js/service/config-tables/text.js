@@ -65,24 +65,6 @@ tables.buildReference = function(name) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The call the Try it strip makes, written the way a service writes it.
-tables.buildCallText = function(table, fromName, code) {
-
-    var reference = tables.buildReference(table.name);
-    var out = reference + '.validate(' + singleQuote + code + singleQuote + ')';
-
-    if(tables.isMappingSet(table)) {
-        var from = 'source=' + singleQuote + fromName + singleQuote;
-        var value = 'code=' + singleQuote + code + singleQuote;
-
-        out = reference + '.translate(' + from + ', ' + value + ')';
-    }
-
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
 // A value the file has nothing for, said as the plain fact that it is.
 tables.buildMissingText = function(table, fromName, code) {
 

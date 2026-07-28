@@ -1,9 +1,8 @@
-// Config tables - the Try it strip.
+// Config tables - the Try it column.
 //
 // It runs against the file on screen rather than the one on the server, which is
 // what makes the answer the one a service reading the same file would get, and
-// what lets a change be tried before it is saved. The call is shown as a service
-// writes it, so what is read here is the same thing that is written there.
+// what lets a change be tried before it is saved.
 
 (function($) {
 
@@ -28,16 +27,14 @@ invoker.config = {
 
 invoker.init = function() {
 
-    tables.get('try-from').addEventListener('input', invoker.refreshCall);
-    tables.get('try-code').addEventListener('input', invoker.refreshCall);
     tables.get('try-run').addEventListener('click', invoker.run);
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The strip as the file it belongs to has it - a code list has nothing to come
-// from, so that field is not there for one, and the fields start on the first
-// value the file holds.
+// The column as the file it belongs to has it - a code list has no source, so that
+// field is not there for one, and the fields start on the first value the file
+// holds.
 invoker.render = function(table) {
 
     var first = parse.getFirstEntry(table.content);
@@ -51,27 +48,13 @@ invoker.render = function(table) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The strip after the file itself has changed - what a code list has no field
-// for and what the call reads follow the file, while what was typed into the
+// The column after the file itself has changed - a code list has no source to
+// give, so the field for one follows the file, while what was typed into the
 // fields stays as it is.
 invoker.refresh = function(table) {
 
     var isMappingSet = tables.isMappingSet(table);
-
     tables.get('try-from-field').hidden = !isMappingSet;
-
-    invoker.refreshCall();
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-invoker.refreshCall = function() {
-
-    var table = tables.getCurrent();
-    var fromName = invoker.readFrom(table);
-    var code = tables.get('try-code').value.trim();
-
-    tables.get('call').textContent = tables.buildCallText(table, fromName, code);
 };
 
 // ////////////////////////////////////////////////////////////////////////
