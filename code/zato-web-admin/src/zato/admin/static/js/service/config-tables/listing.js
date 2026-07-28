@@ -17,6 +17,9 @@ tables.renderList = function() {
 
     var list = tables.get('file-list');
     var tableList = tables.state.tableList;
+
+    tables.sortList();
+
     var showDirectories = tables.hasSeveralDirectories();
     var lastDirectory = '';
 
@@ -40,6 +43,24 @@ tables.renderList = function() {
     // The rows are new, so what the previous ones said about the file being looked at
     // is said again
     tables.renderModified();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The files stand in the order a listing is read in - the directory they are in, then their own
+// name - rather than in the order the server happened to report them. This is where the order is
+// settled, so a file added, renamed, uploaded or brought back by going back through what the page
+// did is on the line its name puts it on, without anything that moves a file having to say so.
+tables.sortList = function() {
+
+    tables.state.tableList.sort(function(left, right) {
+
+        if(left.directory !== right.directory) {
+            return left.directory.localeCompare(right.directory);
+        }
+
+        return left.file_name.localeCompare(right.file_name);
+    });
 };
 
 // ////////////////////////////////////////////////////////////////////////

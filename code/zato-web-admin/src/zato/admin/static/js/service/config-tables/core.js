@@ -67,7 +67,10 @@ tables.config = {
 
     // The class the overlay behind the editor wears for a file the browser does
     // not edit in place
-    backdropReadOnly: 'highlight-backdrop-readonly'
+    backdropReadOnly: 'highlight-backdrop-readonly',
+
+    // The class a link wears while there is nothing for it to do
+    linkOff: 'config-tables-link-off'
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -76,9 +79,6 @@ tables.state = {
 
     // Every file on the server, in the order it reports them
     tableList: [],
-
-    // The directories a file may be uploaded into
-    directoryList: [],
 
     // Where the files live
     userConfDirectory: '',
@@ -107,7 +107,6 @@ tables.init = function(inputConfig) {
     var state = tables.state;
 
     state.tableList = inputConfig.table_list;
-    state.directoryList = inputConfig.directory_list;
     state.userConfDirectory = inputConfig.user_conf_directory;
     state.maxEditableSize = inputConfig.max_editable_size;
     state.persistUrl = inputConfig.persist_url;
@@ -130,7 +129,6 @@ tables.init = function(inputConfig) {
 
     log.say('tables.init', {
         tableCount: state.tableList.length,
-        directoryList: JSON.stringify(state.directoryList),
         userConfDirectory: state.userConfDirectory,
         maxEditableSize: state.maxEditableSize,
         persistUrl: state.persistUrl,
@@ -205,30 +203,63 @@ tables.wire = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Ctrl-S and Cmd-S save the file on screen, which is what those keys do in an editor. The
-// browser's own answer to them is to save the page, so it is turned down.
+// Ctrl-S and Cmd-S save the file on screen, which is what those keys do in an editor, and Delete
+// takes the file away, which is what it does to whatever a listing has picked out. The browser's
+// own answer to Ctrl-S is to save the page, so it is turned down.
 tables.onKeyDown = function(event) {
 
     var isSave = event.key === 's' && (event.ctrlKey || event.metaKey);
+    var isDelete = event.key === 'Delete' && !event.ctrlKey && !event.metaKey && !event.altKey;
 
-    if(!isSave) {
+    if(!isSave && !isDelete) {
         return;
     }
 
     var data = log.buildKey(event);
 
     data.currentName = tables.state.currentName;
+    data.isSave = isSave;
+    data.isDelete = isDelete;
 
-    log.say('tables.onKeyDown save', data);
+    if(isSave) {
 
-    event.preventDefault();
+        log.say('tables.onKeyDown save', data);
 
-    // Nothing is open, so there is nothing to save
-    if(!tables.state.currentName) {
+        event.preventDefault();
+
+        // Nothing is open, so there is nothing to save
+        if(tables.state.currentName) {
+            tables.save();
+        }
+
         return;
     }
 
-    tables.save();
+    // Delete inside anything being written in is the key that takes a character out, and it
+    // belongs to whatever is being written in rather than to the file it is part of
+    var isTyping = tables.isTyping(event.target);
+
+    data.isTyping = isTyping;
+
+    log.say('tables.onKeyDown delete', data);
+
+    if(isTyping || !tables.state.currentName) {
+        return;
+    }
+
+    tables.files.remove();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Whether the key was pressed into something that takes text - the file itself, a field of the
+// Translate column, or the name a file is being renamed to.
+tables.isTyping = function(target) {
+
+    var tag = target.tagName;
+    var out = tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT';
+
+    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -291,15 +322,22 @@ tables.isMappingSet = function(table) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// What the file turns out to be, read off the file itself - a code list is a file whose
-// codes table holds the codes themselves, so a file that only groups other tables under
-// that name, as a file of settings may well do, is not one.
+// What the file turns out to be, read off the file itself - a file with a codes table is a code
+// list, whether the codes are in it yet or not, unless that table is there only to group other
+// tables under it, as a file of settings may well do.
 tables.deriveKind = function(parsed) {
 
     var out = 'mappings';
-    var section = parse.findSection(parsed, tables.config.codesSection);
+    var name = tables.config.codesSection;
+    var section = parse.findSection(parsed, name);
 
-    if(section && section.entryList.length) {
+    if(section === null) {
+        return out;
+    }
+
+    var isGroup = section.entryList.length === 0 && parse.hasChildSections(parsed, name);
+
+    if(!isGroup) {
         out = 'codes';
     }
 
@@ -400,6 +438,25 @@ tables.renderModified = function() {
         rowCount: rowList.length,
         starredList: JSON.stringify(starredList)
     });
+
+    tables.renderRestore();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Restore puts the file back as it was when the page was opened, so a file that already says
+// that has nothing to restore and says so rather than sitting there as a link that does nothing.
+tables.renderRestore = function() {
+
+    var table = tables.getCurrent();
+    var restore = tables.get('restore');
+    var isOff = true;
+
+    if(table !== null && table.is_editable) {
+        isOff = tables.get('content').value === tables.state.initialContent[table.name];
+    }
+
+    restore.classList.toggle(tables.config.linkOff, isOff);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -496,8 +553,9 @@ tables.check = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The file on screen, saved. A file that does not parse is not written anywhere
-// and the line says which line stopped it.
+// The file on screen, saved as it stands. A file that does not read as an ini file is written
+// all the same - a file being fixed up here is a file that does not read yet, and it has to be
+// saved along the way - and the line says what is still wrong with it.
 tables.save = function() {
 
     var table = tables.getCurrent();
@@ -512,11 +570,6 @@ tables.save = function() {
         errorText: parsed.errorText
     });
 
-    if(parsed.errorText) {
-        tables.setStatus(tables.buildErrorText(parsed), true);
-        return;
-    }
-
     tables.applyContents(table, content, parsed);
 
     tables.files.persist('save', table, function() {
@@ -527,10 +580,18 @@ tables.save = function() {
 
         log.say('tables.save done', {path: table.path, diskLength: table.content.length});
 
-        tables.setStatus(tables.config.savedMessage);
         tables.renderList();
         tables.renderModified();
         tables.invoker.refresh(table);
+
+        // What is on disk is what is on screen either way, so what is left to say is whether a
+        // service reading it now would get anything out of it
+        if(parsed.errorText) {
+            tables.setStatus(tables.buildSavedErrorText(parsed), true);
+            return;
+        }
+
+        tables.setStatus(tables.config.savedMessage);
     });
 };
 
@@ -542,8 +603,14 @@ tables.restore = function() {
 
     var table = tables.getCurrent();
     var content = tables.get('content');
+    var wanted = tables.state.initialContent[table.name];
 
-    content.value = tables.state.initialContent[table.name];
+    // The file already says what it said when the page was opened, which the link says as well
+    if(content.value === wanted) {
+        return;
+    }
+
+    content.value = wanted;
 
     $.fn.zato.highlight.refresh(content);
     tables.gutter.refresh();

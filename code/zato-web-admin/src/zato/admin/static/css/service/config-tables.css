@@ -4,7 +4,7 @@
  * page's own, the badges are the shared badges, the listing's menu is the shared
  * panel menu and the colors of the file itself are the shared highlighting, so what
  * is here is the three columns, the two lines between them, the editor around the
- * textarea and the upload dialog.
+ * textarea.
  */
 
 :root {
@@ -824,61 +824,15 @@ input[type="text"].config-tables-file-rename {
 }
 
 /* ------------------------------------------------------------ */
-/* Config tables - the upload dialog                             */
+/* Config tables - a link with nothing to do                     */
 /* ------------------------------------------------------------ */
 
-/* The dim behind the popup, which is also what a press outside it lands on. The
-   popup itself is placed within it, so where it is dragged to is where it stays. */
-.config-tables-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(1, 40, 69, 0.35);
-    z-index: 100;
-}
-
-/* The surface and the dark header that drags it are the shared popup chrome, so
-   what is set here is how much room the questions inside need */
-.config-tables-dialog {
-    position: absolute;
-    width: 480px;
-    max-width: 90vw;
-}
-
-.config-tables-dialog-body {
-    padding: 16px;
-}
-
-.config-tables-dialog .button-container {
-    margin-bottom: 0;
-    padding: 0 16px 14px 16px;
-    align-items: center;
-}
-
-/* Whatever the dialog has to say sits on the left of its own button row */
-.config-tables-dialog-note {
-    display: inline-flex;
-    align-items: center;
-    margin-right: auto;
-}
-
-.config-tables-dialog-field {
-    display: block;
-    margin-bottom: 12px;
-}
-
-.config-tables-dialog-field > span {
-    display: block;
-    margin-bottom: 4px;
-    font-size: 12px;
+/* Restore is a link only while the file has something to go back to. With nothing to go back to
+   it reads as the words it is rather than as somewhere to press, and a press does nothing. */
+.config-tables-link-off,
+.config-tables-link-off:hover {
     color: var(--text-muted);
-}
-
-.config-tables-dialog-field input[type="file"],
-.config-tables-dialog-field select {
-    box-sizing: border-box;
-    width: 100%;
-    padding: 5px 7px;
-    border: 1px solid var(--config-tables-border);
-    border-radius: 3px;
-    font-size: 12px;
+    text-decoration: none;
+    pointer-events: none;
+    cursor: default;
 }
