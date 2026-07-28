@@ -9,8 +9,9 @@
 // the Translate column in invoker.js, the drawing it answers a mapping set with in
 // flow.js, the line of the file a part of that drawing stands for in trace.js, where
 // the reader is in url.js, what a file has been typed into but not saved in draft.js, the
-// keys an editor is worked with in edit.js, the listing's menu in menu.js, what is done to
-// the file itself in files.js and the bringing in of one in upload.js.
+// row of everything the page did in stream.js, the keys an editor is worked with in edit.js,
+// the listing's menu in menu.js, what is done to the file itself in files.js and the bringing
+// in of one in upload.js.
 
 (function($) {
 
@@ -195,6 +196,10 @@ tables.wire = function() {
     tables.gutter.init();
     tables.flow.init();
     tables.trace.init();
+
+    // Everything the page does goes on the one row of events, whether it was done to a file or
+    // to what is in it, and the keys that walk that row reach the whole page
+    tables.stream.init();
     tables.edit.init();
 };
 
