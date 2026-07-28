@@ -5,6 +5,10 @@
 // from. Nothing here touches the page - it only says what a file holds, which is
 // what the editor reports while it is typed in and what the Translate column
 // answers from.
+//
+// A section written in double brackets belongs to the one above it, as deep as the
+// brackets say, and it is known by its own name behind the names of the sections it
+// is under, joined with dots - the same path a service reads it by.
 
 (function($) {
 
@@ -12,6 +16,15 @@
 
 var tables = $.fn.zato.service.config_tables;
 var parse = tables.parse;
+
+// ////////////////////////////////////////////////////////////////////////
+
+parse.config = {
+
+    // What the name of a nested table is written behind the names of the tables it is
+    // under, which is how a service reads it as well
+    pathSeparator: '.'
+};
 
 // ////////////////////////////////////////////////////////////////////////
 
@@ -23,6 +36,10 @@ parse.read = function(content) {
     var out = {sectionList: [], entryCount: 0, errorLine: 0, errorText: ''};
     var lineList = content.split('\n');
     var section = null;
+
+    // The names of the sections the reading is currently inside of, the outermost first,
+    // which is what a nested section is named after
+    var nameList = [];
 
     for(var lineIdx = 0; lineIdx < lineList.length; lineIdx++) {
 
@@ -40,13 +57,26 @@ parse.read = function(content) {
 
         if(line.charAt(0) === '[') {
 
-            if(line.charAt(line.length - 1) !== ']') {
+            var depth = parse.countLeading(line, '[');
+
+            if(parse.countTrailing(line, ']') !== depth) {
                 out.errorLine = lineNumber;
-                out.errorText = 'a table name is missing its closing bracket';
+                out.errorText = 'a table name is not closed by as many brackets as it is opened with';
                 return out;
             }
 
-            section = {name: line.substring(1, line.length - 1).trim(), entryList: []};
+            // A table two brackets deep goes under the one before it, so there has to be
+            // one before it to go under
+            if(depth > nameList.length + 1) {
+                out.errorLine = lineNumber;
+                out.errorText = 'this table is nested deeper than the table above it';
+                return out;
+            }
+
+            nameList.length = depth - 1;
+            nameList.push(line.substring(depth, line.length - depth).trim());
+
+            section = {name: nameList.join(parse.config.pathSeparator), entryList: []};
             out.sectionList.push(section);
             continue;
         }
@@ -73,6 +103,34 @@ parse.read = function(content) {
         // then still two lines
         section.entryList.push({key: key, value: value, lineIdx: lineIdx});
         out.entryCount++;
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// How deep a table is written - the brackets it opens with, which is how many tables
+// it is inside of, itself counted.
+parse.countLeading = function(line, character) {
+
+    var out = 0;
+
+    while(out < line.length && line.charAt(out) === character) {
+        out++;
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+parse.countTrailing = function(line, character) {
+
+    var out = 0;
+
+    while(out < line.length && line.charAt(line.length - 1 - out) === character) {
+        out++;
     }
 
     return out;
@@ -195,6 +253,27 @@ parse.findValueSpread = function(content, value) {
 
         if(entryList.length) {
             out.push({name: section.name, entryList: entryList});
+        }
+    }
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Every line of the table the key is written on. A table that has the same key twice holds
+// it on two lines, and each of them is one line of its own, which is what says a file
+// repeats itself rather than hiding it.
+parse.findKeyEntries = function(section, key) {
+
+    var out = [];
+
+    for(var entryIdx = 0; entryIdx < section.entryList.length; entryIdx++) {
+
+        var entry = section.entryList[entryIdx];
+
+        if(entry.key === key) {
+            out.push({key: entry.key, lineIdx: entry.lineIdx});
         }
     }
 

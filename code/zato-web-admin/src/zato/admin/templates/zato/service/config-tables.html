@@ -12,6 +12,7 @@ to what is in it comes off the listing's own menu. The view provides:
 * directory_list_json  - the directories a file may be uploaded into
 * user_conf_directory  - where the files live
 * max_editable_size    - how large a file may be before it is edited outside the browser
+* error                - why the files could not be read, empty when they could
 {% endcomment %}
 
 {% block html_title %}Config tables{% endblock %}
@@ -69,7 +70,13 @@ $(document).ready(function() {
 
     <div class="config-tables-panel-header">
         <h2>Config tables</h2>
-        <span class="config-tables-root" id="config-tables-root"></span>
+
+        <!-- The file being read, in full, with the star that says it has been typed into
+             since it was last saved -->
+        <span class="config-tables-root">
+            <span id="config-tables-root-path"></span>
+            <span class="config-tables-modified" id="config-tables-root-modified" hidden>*</span>
+        </span>
     </div>
 
     <div class="settings-content" id="config-tables-content-area">
@@ -108,13 +115,16 @@ $(document).ready(function() {
                     <textarea id="config-tables-content" spellcheck="false"></textarea>
                 </div>
 
+                <!-- Putting the file back as it was is at the far end of the row from the
+                     two buttons that act on it, and what has just happened is said beside
+                     them - a press on that clears it -->
                 <div class="button-container" id="config-tables-editor-buttons">
+                    <a href="javascript:void(0)" id="config-tables-restore">Restore initial values</a>
                     <div class="button-wrapper">
                         <span class="config-tables-status" id="config-tables-status"></span>
-                        <a href="javascript:void(0)" id="config-tables-restore">Restore initial values</a>
                         <button type="button" class="secondary-button" id="config-tables-check">Check</button>
+                        <button type="button" class="action-button" id="config-tables-save">Save</button>
                     </div>
-                    <button type="button" class="action-button" id="config-tables-save">Save</button>
                 </div>
 
             </div>

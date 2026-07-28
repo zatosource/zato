@@ -406,7 +406,7 @@ gutter.copy = function() {
     var block = gutter.state.block;
     var text = lineList.slice(block.start, block.start + block.count).join('\n');
 
-    $.fn.zato.copy.to_clipboard(gutter.button, text, gutter.config.copyPlacement);
+    $.fn.zato.copy.to_clipboard(gutter.button, text, gutter.config.copyPlacement, $.fn.zato.copy.config.offset);
 };
 
 // ////////////////////////////////////////////////////////////////////////

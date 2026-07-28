@@ -230,11 +230,13 @@ def _get_full_path(directory:'str', file_name:'str') -> 'str':
 def _read_content_info(content:'str') -> 'ContentInfo':
     """ What a file holds, that is, the kind of file it is, how many sections it has and how many
     entries there are under them. Counting stops at the first line that reads as neither, just as
-    the reader of the file stops at it.
+    the reader of the file stops at it. A section written in double brackets belongs to the one
+    above it, and a file is a code list when its codes section holds entries of its own.
     """
     section_count = 0
     entry_count = 0
     has_codes = False
+    is_in_codes = False
     has_section = False
 
     for line in content.splitlines():
@@ -251,15 +253,17 @@ def _read_content_info(content:'str') -> 'ContentInfo':
         # .. a section is what the entries under it belong to ..
         if line.startswith('['):
 
-            if not line.endswith(']'):
+            depth = len(line) - len(line.lstrip('['))
+
+            if len(line) - len(line.rstrip(']')) != depth:
                 break
 
-            name = line[1:-1].strip()
+            name = line[depth:-depth].strip()
             section_count += 1
             has_section = True
 
-            if name == _codes_section:
-                has_codes = True
+            # Only the file's own codes section counts, not one that another section keeps
+            is_in_codes = depth == 1 and name == _codes_section
 
             continue
 
@@ -272,6 +276,9 @@ def _read_content_info(content:'str') -> 'ContentInfo':
             break
 
         entry_count += 1
+
+        if is_in_codes:
+            has_codes = True
 
     if has_codes:
         kind = _kind_codes

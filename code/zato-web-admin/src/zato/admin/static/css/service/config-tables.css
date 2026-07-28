@@ -66,20 +66,26 @@
 /* ------------------------------------------------------------ */
 
 /* The page is as tall as the window has left for it, which split.js measures, and
-   it keeps the air below the panel that the container's padding gives it above */
+   it keeps the air below the panel that the container's padding gives it above. The air
+   on either side is the panel's own, so that the panel is measured against the window
+   rather than against what is left of it. */
 .config-tables-container {
     box-sizing: border-box;
     min-height: 0;
+    padding-left: 0;
+    padding-right: 0;
     overflow: hidden;
 }
 
-/* Wider than a settings panel - a listing and a file being edited next to each
-   other need the room - and as tall as the page, so each column scrolls inside
-   itself rather than the page scrolling as a whole */
+/* As wide as the page bar the air on either side of it - a listing, a file being edited
+   and the column that runs a value through it need every bit of that room - and as tall
+   as the page, so each column scrolls inside itself rather than the page scrolling as
+   a whole */
 .config-tables-panel {
     display: flex;
     flex-direction: column;
-    max-width: 1452px;
+    width: 95%;
+    max-width: none;
     height: 100%;
     box-sizing: border-box;
 }
@@ -123,6 +129,14 @@
     font-family: var(--config-tables-font-mono);
     font-size: 12px;
     color: var(--text-muted);
+}
+
+/* The file on screen says something other than the file on disk does, which is said
+   the way an editor says it - one star, in the color of something to be seen to */
+.config-tables-modified,
+.config-tables-file-modified {
+    color: var(--config-tables-error);
+    font-weight: 600;
 }
 
 /* ------------------------------------------------------------ */
@@ -274,6 +288,17 @@
 .config-tables-button-small {
     padding: 2px 6px;
     font-size: 10px;
+}
+
+/* As the listing is narrowed, everything around the names goes before the names do - what
+   each file holds first, then the two actions, then the heading, and the badge last of all.
+   The name of the file is what the listing is for, so it is the last thing left on screen.
+   split.js says which of these the column has room for. */
+.config-tables-browser-hide-count .config-tables-file-count,
+.config-tables-browser-hide-buttons .config-tables-browser-buttons,
+.config-tables-browser-hide-heading h3,
+.config-tables-browser-hide-badge .config-tables-file-badge {
+    display: none;
 }
 
 /* ------------------------------------------------------------ */
@@ -461,26 +486,36 @@
 /* Config tables - what sits under the editor                    */
 /* ------------------------------------------------------------ */
 
-/* Away from the editor, and stepped in by the width of the numbers, so the row ends
-   where the file itself ends. */
+/* Away from the editor, and stepped in by the width of the numbers, so the row starts and
+   ends where the file itself does. What acts on the file is at one end of it and putting
+   the file back as it was is at the other. */
 #config-tables-editor-buttons {
     margin-top: 16px;
     margin-bottom: 0;
     padding-left: var(--config-tables-gutter-width);
     align-items: center;
+    justify-content: space-between;
 }
 
-/* The link that puts the file back as it was, in the same face and right next to
-   the button it belongs beside, as on the settings pages */
+#config-tables-editor-buttons .button-wrapper {
+    gap: 8px;
+}
+
+/* The link that puts the file back as it was, in the plain face of a link, since it is
+   the quietest thing in the row */
 #config-tables-restore {
-    margin-right: 4px;
     font-size: 12px;
-    font-weight: 600;
 }
 
 .config-tables-status {
     font-size: 12px;
     color: var(--text-muted);
+}
+
+/* What did not go through stays on screen until it is read, and a press on it is what
+   says it has been */
+.config-tables-status-error {
+    cursor: pointer;
 }
 
 .config-tables-status-ok {
@@ -678,6 +713,15 @@
 .config-tables-flow-chip {
     fill: var(--zato-badge-blue-background);
     stroke: none;
+}
+
+/* A code and the value are pressed to take a copy of them, so the cursor says as much
+   wherever on one of them it is */
+.config-tables-flow-chip,
+.config-tables-flow-chip-text,
+.config-tables-flow-value,
+.config-tables-flow-value-text {
+    cursor: pointer;
 }
 
 /* What the file has nothing for, so there is no code to put here */
