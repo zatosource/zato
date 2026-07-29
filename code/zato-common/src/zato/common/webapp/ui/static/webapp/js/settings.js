@@ -6,7 +6,7 @@ var settingsView = {
 
     config: {
         storageKey: 'ui-theme',
-        defaultTheme: 'zato-dark',
+        defaultTheme: window.themesDefault,
     },
 
     anchorButton: null,
