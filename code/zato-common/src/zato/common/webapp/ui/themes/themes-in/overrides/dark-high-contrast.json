@@ -5,6 +5,25 @@
 		"type": "dark"
 	},
 	"tokens": {
-		"--border": "#6fc3df"
+		"--chrome": "#000000",
+		"--panel": "#002b3a",
+		"--panel-raised": "#003b50",
+		"--border": "#6fc3df",
+		"--text2": "#ffffff",
+		"--text3": "#ffffff",
+		"--text4": "#ffffff",
+		"--text5": "#ffffff",
+		"--input-background": "#000000",
+		"--scrollbar-thumb": "#6fc3df",
+		"--scrollbar-thumb-hover": "#ffffff",
+		"--cell-hover": "#002b3a",
+		"--column-hover": "#003b50",
+		"--column-selected": "#004f6b",
+		"--filter-row-background": "#000000",
+		"--filter-span-background": "#000000",
+		"--sentence-bar-background": "#000000",
+		"--problems-background": "#001a24",
+		"--problems-border": "#6fc3df",
+		"--logo-opacity": "1"
 	}
 }

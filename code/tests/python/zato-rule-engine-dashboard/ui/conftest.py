@@ -42,6 +42,10 @@ _root_password = 'root-password-' + CryptoManager.generate_hex_string()
 os.environ['Zato_Rule_Engine_Dashboard_DB_URL'] = f'sqlite:///{_db_path}'
 os.environ['Zato_Rule_Engine_Dashboard_Admin_Password'] = _root_password
 
+# The screens under test open on the documents this suite seeds below, so the
+# demo definitions a new environment would get are turned off here
+os.environ['Zato_Rule_Engine_Dashboard_Skip_Demo_Data'] = '1'
+
 # ################################################################################################################################
 
 # The application boots at import time - Django, its tables, the root account and the rule

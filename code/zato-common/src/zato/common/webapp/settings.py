@@ -35,7 +35,7 @@ _base_middleware = [
 ]
 
 # Every application serves its assets from under this prefix
-_static_url = '/static/'
+static_url = '/static/'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,7 +73,7 @@ def build_settings(
         'SESSION_COOKIE_HTTPONLY': True,
         'SESSION_COOKIE_SAMESITE': 'Lax',
 
-        'STATIC_URL': _static_url,
+        'STATIC_URL': static_url,
 
         'LANGUAGE_CODE': 'en-us',
         'TIME_ZONE': 'UTC',

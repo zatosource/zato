@@ -28,7 +28,10 @@ svg{vertical-align:-2px}
 
 .navigation{width:210px;flex-shrink:0;display:flex;flex-direction:column;background:var(--chrome);transition:width 0.15s ease}
 .navigation-top{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px}
-.navigation-logo{width:74px;display:block;opacity:0.75}
+/* The logo comes from the theme, a light theme drawing a blue one where a
+   dark theme draws a white one, so it is painted as a background image */
+.navigation-logo{width:74px;height:35px;display:block;opacity:var(--logo-opacity);
+  background-image:var(--logo);background-repeat:no-repeat;background-size:contain;background-position:left center}
 .navigation-collapse{display:flex;align-items:center;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--text4);cursor:pointer;padding:3px 5px;font-family:var(--font)}
 .navigation-collapse:hover{color:var(--text)}
 .navigation.collapsed{width:46px}

@@ -11,7 +11,7 @@
 {% if request.user.is_authenticated %}
 <div class="navigation" id="navigation">
   <div class="navigation-top">
-    <img src="{% static 'webapp/assets/zato-logo.svg' %}" class="navigation-logo" alt="Zato">
+    <div class="navigation-logo" role="img" aria-label="Zato"></div>
     <button class="navigation-collapse" id="navigation-collapse-button" onclick="shared.toggleNavigation()"></button>
   </div>
   <div class="navigation-items">

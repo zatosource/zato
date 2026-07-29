@@ -12,7 +12,7 @@ var settingsView = {
 
     config: {
         storageKey: 'ui-theme',
-        defaultTheme: 'zato-default',
+        defaultTheme: 'zato-dark',
     },
 
     // The button is remembered so the panel can re-render in place when

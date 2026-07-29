@@ -4,13 +4,13 @@
    License: MIT */
 html[data-theme="dark-high-contrast"]{
   --background:#000000;
-  --chrome:#252526;
-  --panel:#252526;
+  --chrome:#000000;
+  --panel:#002b3a;
   --border:#6fc3df;
   --text:#ffffff;
-  --text2:#cccccc;
-  --text4:#9d9d9d;
-  --text5:#808080;
+  --text2:#ffffff;
+  --text4:#ffffff;
+  --text5:#ffffff;
   --blue:#3794ff;
   --blue-strong:#0e639c;
   --blue-strong-hover:#1177bb;
@@ -19,19 +19,19 @@ html[data-theme="dark-high-contrast"]{
   --red:#f14c4c;
   --amber:#cca700;
   --indigo:#b180d7;
-  --input-background:#3c3c3c;
-  --cell-hover:#2a2d2e;
-  --column-hover:#37373d;
-  --column-selected:#04395e;
-  --scrollbar-thumb:#303030;
-  --scrollbar-thumb-hover:#464646;
-  --panel-raised:#171718;
-  --text3:#a1a1a1;
-  --filter-row-background:#141415;
-  --filter-span-background:#0b0b0b;
-  --sentence-bar-background:#0f0f0f;
-  --problems-background:#141415;
-  --problems-border:#404040;
+  --input-background:#000000;
+  --cell-hover:#002b3a;
+  --column-hover:#003b50;
+  --column-selected:#004f6b;
+  --scrollbar-thumb:#6fc3df;
+  --scrollbar-thumb-hover:#ffffff;
+  --panel-raised:#003b50;
+  --text3:#ffffff;
+  --filter-row-background:#000000;
+  --filter-span-background:#000000;
+  --sentence-bar-background:#000000;
+  --problems-background:#001a24;
+  --problems-border:#6fc3df;
   --blue-tint-05:rgba(55,148,255,0.05);
   --blue-tint-07:rgba(55,148,255,0.07);
   --blue-tint-10:rgba(55,148,255,0.10);
@@ -52,4 +52,6 @@ html[data-theme="dark-high-contrast"]{
   --indigo-tint-16:rgba(177,128,215,0.16);
   --shadow-strong:rgba(0,0,0,0.55);
   --shadow-soft:rgba(0,0,0,0.5);
+  --logo:url('/static/webapp/assets/zato-logo-white.svg');
+  --logo-opacity:1;
 }

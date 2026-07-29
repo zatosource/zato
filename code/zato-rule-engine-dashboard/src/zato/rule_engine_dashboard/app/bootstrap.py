@@ -34,6 +34,10 @@ if 0:
 
 Env_Admin_Password = 'Zato_Rule_Engine_Dashboard_Admin_Password'
 
+# Set in an environment that brings its own definitions, a test suite above all,
+# so that the screens open on that content alone and on nothing else.
+Env_Skip_Demo_Data = 'Zato_Rule_Engine_Dashboard_Skip_Demo_Data'
+
 # The Django settings module this application runs with
 _settings_module = 'zato.rule_engine_dashboard.app.settings'
 
@@ -111,6 +115,11 @@ def seed_demo() -> 'None':
     """ Fills a brand-new environment with the demo definitions. Idempotent - an environment
     that already holds definitions of its own is left alone.
     """
+    # An environment that says it brings its own definitions starts out empty
+    if Env_Skip_Demo_Data in os.environ:
+        logger.info('Demo data is turned off in %s, nothing to seed', Env_Skip_Demo_Data)
+        return
+
     seed_demo_definitions(get_backend(), get_manager())
 
 # ################################################################################################################################
