@@ -80,6 +80,19 @@ convert.isOffered = function(table) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// The listing's own menu offers this for a file that is not on screen, and what is made of the
+// file lands in the editor, so the file is opened first and then made over.
+convert.runOn = function(table) {
+
+    if(table.name !== tables.state.currentName) {
+        tables.select(table.name);
+    }
+
+    convert.run();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 convert.run = function() {
 
     var table = tables.getCurrent();

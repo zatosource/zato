@@ -43,6 +43,14 @@ invoker.copyList = [];
 
 // ////////////////////////////////////////////////////////////////////////
 
+invoker.state = {
+
+    // The table the value below it belongs to, so that naming another one is seen for what it is
+    sourceName: ''
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 invoker.init = function() {
 
     tables.get('translate').addEventListener('click', invoker.translate);
@@ -64,7 +72,52 @@ invoker.init = function() {
     $('#config-tables-translate-source, #config-tables-translate-value')
         .on('input autocompleteclose', invoker.refreshTranslate);
 
+    // A value is a key of the table above it, so naming another table is a question of its own.
+    // A name settled on is what counts, not every letter of one being typed, so this is read once
+    // the field is left or once something has been picked out of what it offers.
+    $('#config-tables-translate-source').on('change autocompleteclose', invoker.readSource);
+
     tables.combo.init();
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The table the value is looked up in, once it has been named. The value goes with the table it
+// belonged to, unless the table now named holds a key of that name as well, and a target that
+// has become the source itself goes too - a value going back where it came from is no
+// translation at all.
+invoker.readSource = function() {
+
+    var sourceName = tables.get('translate-source').value.trim();
+
+    if(sourceName === invoker.state.sourceName) {
+        return;
+    }
+
+    invoker.state.sourceName = sourceName;
+
+    var value = tables.get('translate-value');
+    var target = tables.get('translate-target');
+    var isStillThere = tables.combo.getValueList().indexOf(value.value.trim()) !== -1;
+
+    if(!isStillThere) {
+        value.value = '';
+    }
+
+    if(target.value.trim() === sourceName) {
+        target.value = '';
+    }
+
+    tables.log.say('invoker.readSource', {
+        sourceName: sourceName,
+        isStillThere: isStillThere,
+        value: value.value,
+        target: target.value
+    });
+
+    tables.url.writeFields();
+    invoker.refreshCopy();
+    invoker.refreshTranslate();
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -110,6 +163,9 @@ invoker.render = function(table) {
     tables.get('translate-source').value = first.sectionName;
     tables.get('translate-value').value = first.key;
     tables.get('translate-target').value = '';
+
+    // The two go together, the value being a key of that very table
+    invoker.state.sourceName = first.sectionName;
 
     invoker.setResult('');
     tables.flow.clear();

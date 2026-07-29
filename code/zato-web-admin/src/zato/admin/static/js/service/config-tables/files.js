@@ -117,9 +117,8 @@ files.buildFreeName = function() {
 // Enter is the answer and Escape leaves the file as it was called. The field carries what the file
 // is called on disk, suffix included, so a file that came in as one kind of file is renamed into
 // another by typing the suffix it should have had.
-files.startRename = function() {
+files.startRename = function(table) {
 
-    var table = tables.getCurrent();
     var row = files.getRow(table.name);
     var name = row.querySelector('.config-tables-file-name');
 
@@ -141,7 +140,7 @@ files.startRename = function() {
     input.addEventListener('keydown', function(event) {
 
         if(event.key === 'Enter') {
-            files.applyRename(input.value.trim());
+            files.applyRename(table, input.value.trim());
         }
 
         if(event.key === 'Escape') {
@@ -173,9 +172,7 @@ files.getRow = function(name) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-files.applyRename = function(typed) {
-
-    var table = tables.getCurrent();
+files.applyRename = function(table, typed) {
 
     if(!typed) {
         tables.setStatus('A file needs a name', true);
@@ -216,6 +213,7 @@ files.moveTable = function(table, name, fileName, onDone, onFail) {
 
     var previousName = table.name;
     var previousPath = table.path;
+    var isCurrent = previousName === tables.state.currentName;
 
     var extra = {
         file_name: table.file_name,
@@ -237,7 +235,14 @@ files.moveTable = function(table, name, fileName, onDone, onFail) {
         tables.draft.rename(previousPath, table);
         tables.edit.rename(previousPath, table);
 
-        tables.select(name);
+        // The file being read carries its new name into the heading and the address, while a file
+        // renamed from its own menu only changes the line it is on
+        if(isCurrent) {
+            tables.select(name);
+        }
+        else {
+            tables.renderList();
+        }
 
         onDone();
 
@@ -292,9 +297,7 @@ files.getStem = function(fileName) {
 // Deleting
 // ////////////////////////////////////////////////////////////////////////
 
-files.remove = function() {
-
-    var table = tables.getCurrent();
+files.remove = function(table) {
 
     // Everything the file amounts to, read before it goes - it is all that is left of the file
     // once it is off disk, and it is what brings the file back as it stood
@@ -322,11 +325,19 @@ files.dropTable = function(table) {
 
     var tableList = tables.state.tableList;
     var tableIdx = tableList.indexOf(table);
+    var wasCurrent = table.name === tables.state.currentName;
 
     tableList.splice(tableIdx, 1);
 
     tables.draft.forget(table);
     tables.edit.forget(table);
+
+    // A file taken off the listing from its own menu is not the file being read, so the reading
+    // goes on as it was, one line shorter
+    if(!wasCurrent) {
+        tables.renderList();
+        return;
+    }
 
     tables.state.currentName = '';
     tables.renderList();
@@ -349,9 +360,8 @@ files.dropTable = function(table) {
 
 // A copy of the file as it is, taken from the listing's own menu, which is how a
 // file too large for the browser is worked on - taken away and changed elsewhere.
-files.download = function() {
+files.download = function(table) {
 
-    var table = tables.getCurrent();
     var blob = new Blob([table.content], {type: files.config.downloadType});
     var url = URL.createObjectURL(blob);
 

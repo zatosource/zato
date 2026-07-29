@@ -594,6 +594,11 @@ input[type="text"].config-tables-file-rename {
     color: var(--config-tables-ok);
 }
 
+/* The answer to Check is one word, so it is set in bold to be taken in at a glance */
+.config-tables-status-strong {
+    font-weight: 600;
+}
+
 .config-tables-status-error {
     color: var(--config-tables-error);
 }
