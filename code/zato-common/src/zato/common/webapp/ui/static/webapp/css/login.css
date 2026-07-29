@@ -15,7 +15,7 @@
   background-color:var(--blue);opacity:0.5;
   transform-origin:0% 100%;
   transform:perspective(1800px) rotateX(28deg) rotateY(-8deg) rotateZ(-5deg);
-  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Cpath d='M0 0 H48 M0 0 V48' fill='none' stroke='%23fff' stroke-opacity='0.34' stroke-width='1' stroke-dasharray='5 7'/%3E%3Crect x='-0.9' y='-0.9' width='1.8' height='1.8' fill='%23fff'/%3E%3Crect x='47.1' y='-0.9' width='1.8' height='1.8' fill='%23fff'/%3E%3Crect x='-0.9' y='47.1' width='1.8' height='1.8' fill='%23fff'/%3E%3Crect x='47.1' y='47.1' width='1.8' height='1.8' fill='%23fff'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Cpath d='M0 0 H48 M0 0 V48' fill='none' stroke='%23fff' stroke-opacity='0.34' stroke-width='1' stroke-dasharray='5 7'/%3E%3Cg fill='%23fff' fill-opacity='0.5'%3E%3Crect x='-0.9' y='-0.9' width='1.8' height='1.8'/%3E%3Crect x='47.1' y='-0.9' width='1.8' height='1.8'/%3E%3Crect x='-0.9' y='47.1' width='1.8' height='1.8'/%3E%3Crect x='47.1' y='47.1' width='1.8' height='1.8'/%3E%3C/g%3E%3C/svg%3E");
   mask-size:48px 48px;mask-repeat:repeat}
 
 .auth-panel{width:290px;position:relative}
