@@ -8,7 +8,6 @@
 {% endblock %}
 
 {% block navigation %}
-{% if request.user.is_authenticated %}
 <div class="navigation" id="navigation">
   <div class="navigation-top">
     <div class="navigation-logo" role="img" aria-label="Zato"></div>
@@ -47,7 +46,6 @@
     </form>
   </div>
 </div>
-{% endif %}
 {% endblock %}
 
 {% block content %}

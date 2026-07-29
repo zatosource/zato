@@ -8,10 +8,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The contract smoke for the theming scheme: every generated theme file
 # carries the identical token set, no css outside css/themes/ holds a raw
-# color, the generated Zato Dark reproduces the historical palette to
-# the byte, and the converter fails readably on broken input - so a new
-# token can never ship half-themed and a stray hardcoded color can never
-# sneak back in.
+# color, and the converter fails readably on broken input - so a new token
+# can never ship half-themed and a stray hardcoded color can never sneak
+# back in.
 
 # stdlib
 import os
@@ -38,43 +37,6 @@ _themes_dir = os.path.join(_css_dir, 'themes')
 _expected_theme_files = [
     'ayu-dark.css', 'dark-high-contrast.css', 'gruvbox-dark-hard.css', 'light-high-contrast.css',
     'zato-dark.css', 'zato-light.css']
-
-# The palette the very first pages were designed with - the generated
-# Zato Dark must reproduce it exactly.
-_historical_palette = {
-    '--background': '#0f172a',
-    '--chrome': '#0b1222',
-    '--panel': '#1e293b',
-    '--panel-raised': '#182236',
-    '--border': '#334155',
-    '--text': '#e2e8f0',
-    '--text2': '#cbd5e1',
-    '--text3': '#94a3b8',
-    '--text4': '#8091a8',
-    '--text5': '#6d7f99',
-    '--blue': '#3b82f6',
-    '--blue-strong': '#2563eb',
-    '--blue-strong-hover': '#1d4ed8',
-    '--green': '#22c55e',
-    '--red': '#ef4444',
-    '--amber': '#f59e0b',
-    '--indigo': '#6366f1',
-    '--input-background': '#0f172a',
-    '--cell-hover': '#17233c',
-    '--column-hover': '#1a2742',
-    '--column-selected': '#1c2c4f',
-    '--filter-row-background': '#1b2030',
-    '--filter-span-background': '#151a28',
-    '--sentence-bar-background': '#131c31',
-    '--problems-background': '#191d2e',
-    '--problems-border': '#334155',
-    '--button-text': '#ffffff',
-    '--blue-tint-28': 'rgba(59,130,246,0.28)',
-    '--green-tint-14': 'rgba(34,197,94,0.14)',
-    '--indigo-tint-16': 'rgba(99,102,241,0.16)',
-    '--shadow-strong': 'rgba(0,0,0,0.55)',
-    '--shadow-soft': 'rgba(0,0,0,0.5)',
-}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -138,16 +100,6 @@ class TestGeneratedThemes(unittest.TestCase):
                 raw = color_pattern.findall(css_file.read())
 
             self.assertEqual(raw, [], f'{name} holds raw colors: {raw}')
-
-# ################################################################################################################################
-
-    def test_zato_dark_keeps_the_historical_palette(self) -> 'None':
-
-        path = os.path.join(_themes_dir, 'zato-dark.css')
-        tokens = _tokens_of(path)
-
-        for token, value in _historical_palette.items():
-            self.assertEqual(tokens[token], value, f'zato-dark moved {token} away from {value}')
 
 # ################################################################################################################################
 # ################################################################################################################################

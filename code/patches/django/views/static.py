@@ -47,11 +47,6 @@ def serve(request, path, document_root=None, show_indexes=False):
     content_type, encoding = mimetypes.guess_type(str(fullpath))
     content_type = content_type or "application/octet-stream"
 
-    # Explicitly set the content type for JSON resources.
-    # Note that this needs to be combined with SECURE_CONTENT_TYPE_NOSNIFF=False in settings.py
-    if fullpath.name.endswith('.js'):
-        content_type = 'application/json'
-
     response = FileResponse(fullpath.open("rb"), content_type=content_type)
     response.headers["Last-Modified"] = http_date(statobj.st_mtime)
     if encoding:

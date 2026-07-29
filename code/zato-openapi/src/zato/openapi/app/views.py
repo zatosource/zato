@@ -79,11 +79,27 @@ def _get_client() -> 'OpenAPIConsoleClient':
 
 # ################################################################################################################################
 
+def _is_signed_in(req):
+    """ Whether the session already carries an identity, of either kind.
+    """
+    if Session_Credentials_Key in req.session:
+        out = True
+    else:
+        out = Session_Entra_Key in req.session
+
+    return out
+
+# ################################################################################################################################
+
 def login_view(req):
     """ Renders the sign-in page and handles sign-in attempts. Credentials are validated by a Zato server
     and, once accepted, stored encrypted in the session cookie. With Entra ID enabled, a GET may go
     straight to Microsoft instead, the same way the Dashboard's login view does it.
     """
+    # Someone whose session already carries an identity has nothing to do on the sign-in page
+    if _is_signed_in(req):
+        return redirect('console')
+
     context = get_branding_context()
     context['entra_enabled'] = is_entra_enabled()
 
@@ -125,6 +141,10 @@ def login_callback_view(req):
     """ Completes an Entra ID sign-in - the identity confirmed by Microsoft is stored encrypted
     in the session cookie.
     """
+    # A callback that arrives for a session which already carries an identity changes nothing
+    if _is_signed_in(req):
+        return redirect('console')
+
     context = get_branding_context()
     context['entra_enabled'] = is_entra_enabled()
 
@@ -157,9 +177,8 @@ def logout_view(req):
 def console_view(req):
     """ Renders the console page - the actual document is loaded by the browser from the spec endpoint.
     """
-    if Session_Credentials_Key not in req.session:
-        if Session_Entra_Key not in req.session:
-            return redirect('login')
+    if not _is_signed_in(req):
+        return redirect('login')
 
     context = get_branding_context()
 

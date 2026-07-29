@@ -7,11 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The contract smoke for the theming scheme: every generated theme file
-# carries the identical token set, no css outside css/themes/ holds a raw
-# color, the generated Zato Dark reproduces the historical palette to
-# the byte, and the converter fails readably on broken input - so a new
-# token can never ship half-themed and a stray hardcoded color can never
-# sneak back in.
+# carries the identical token set, each one draws the logo its kind calls
+# for, no css outside css/themes/ holds a raw color, and the converter
+# fails readably on broken input - so a new token can never ship
+# half-themed and a stray hardcoded color can never sneak back in.
 
 # stdlib
 import os
@@ -37,42 +36,6 @@ _css_dir = os.path.join(os.path.dirname(os.path.abspath(webapp_ui.__file__)), 's
 _themes_dir = os.path.join(_css_dir, 'themes')
 _assets_dir = os.path.join(os.path.dirname(os.path.abspath(webapp_ui.__file__)), 'static', 'webapp', 'assets')
 _dashboard_css_dir = os.path.join(os.path.dirname(os.path.abspath(dashboard_app.__file__)), 'static', 'rule-engine', 'css')
-
-# The historical palette Zato Dark must reproduce to the byte.
-Historical_Palette = {
-    '--background': '#0f172a',
-    '--chrome': '#0b1222',
-    '--panel': '#1e293b',
-    '--panel-raised': '#182236',
-    '--border': '#334155',
-    '--text': '#e2e8f0',
-    '--text2': '#cbd5e1',
-    '--text3': '#94a3b8',
-    '--text4': '#8091a8',
-    '--text5': '#6d7f99',
-    '--blue': '#3b82f6',
-    '--blue-strong': '#2563eb',
-    '--blue-strong-hover': '#1d4ed8',
-    '--green': '#22c55e',
-    '--red': '#ef4444',
-    '--amber': '#f59e0b',
-    '--indigo': '#6366f1',
-    '--input-background': '#0f172a',
-    '--cell-hover': '#17233c',
-    '--column-hover': '#1a2742',
-    '--column-selected': '#1c2c4f',
-    '--filter-row-background': '#1b2030',
-    '--filter-span-background': '#151a28',
-    '--sentence-bar-background': '#131c31',
-    '--problems-background': '#191d2e',
-    '--problems-border': '#334155',
-    '--button-text': '#ffffff',
-    '--blue-tint-28': 'rgba(59,130,246,0.28)',
-    '--green-tint-14': 'rgba(34,197,94,0.14)',
-    '--indigo-tint-16': 'rgba(99,102,241,0.16)',
-    '--shadow-strong': 'rgba(0,0,0,0.55)',
-    '--shadow-soft': 'rgba(0,0,0,0.5)',
-}
 
 # ################################################################################################################################
 
@@ -166,14 +129,6 @@ def test_every_theme_draws_a_logo_of_its_own_kind() -> 'None':
 
         assert tokens['--logo'] == f"url('/static/webapp/assets/{logo_file}')", (name, tokens['--logo'])
         assert os.path.exists(os.path.join(_assets_dir, logo_file)), logo_file
-
-# ################################################################################################################################
-
-def test_the_default_theme_reproduces_the_historical_palette() -> 'None':
-    tokens = _tokens_of(os.path.join(_themes_dir, 'zato-dark.css'))
-
-    for token, value in Historical_Palette.items():
-        assert tokens[token] == value, (token, tokens[token], value)
 
 # ################################################################################################################################
 

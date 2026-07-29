@@ -132,6 +132,76 @@ class TestSignIn:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class TestSignInScreenWithASession:
+    """ The sign-in screen belongs to people without a session - anyone who has one is sent on,
+    however they arrived, and nobody is ever shown the sign-in form inside the application shell.
+    """
+
+    def test_a_signed_in_visitor_is_sent_to_the_path_they_were_headed_for(self:'any_') -> 'None':
+        user, _ = new_account(is_admin=True)
+        client = signed_in_client(user)
+
+        response:'any_' = client.get('/login/', {'next': '/events/'})
+
+        assert response.status_code == FOUND
+        assert response['Location'] == '/events/'
+
+# ################################################################################################################################
+
+    def test_a_signed_in_visitor_without_a_path_goes_to_the_default_screen(self:'any_') -> 'None':
+        user, _ = new_account()
+        client = signed_in_client(user)
+
+        response:'any_' = client.get('/login/')
+
+        assert response.status_code == FOUND
+        assert response['Location'] == '/rulesets/'
+
+# ################################################################################################################################
+
+    def test_a_signed_in_visitor_with_an_unsafe_path_goes_to_the_default_screen(self:'any_') -> 'None':
+        user, _ = new_account()
+        client = signed_in_client(user)
+
+        response:'any_' = client.get('/login/', {'next': 'https://example.com/elsewhere'})
+
+        assert response.status_code == FOUND
+        assert response['Location'] == '/rulesets/'
+
+# ################################################################################################################################
+
+    def test_a_signed_in_visitor_posting_the_form_is_not_authenticated_again(self:'any_') -> 'None':
+        user, _ = new_account()
+        other, other_password = new_account()
+        client = signed_in_client(user)
+
+        response:'any_' = client.post(
+            '/login/', {'username': other.username, 'password': other_password, 'next': ''})
+
+        assert response.status_code == FOUND
+        assert response['Location'] == '/rulesets/'
+
+        # The session still belongs to the person who had it
+        assert client.session['_auth_user_id'] == str(user.pk)
+
+# ################################################################################################################################
+
+    def test_the_sign_in_screen_carries_nothing_of_the_application_shell(self:'any_') -> 'None':
+        client = Client()
+
+        response:'any_' = client.get('/login/')
+        assert response.status_code == OK
+
+        content = response.content.decode('utf8')
+
+        shell_pieces = ['class="navigation"', 'action="/logout/"', 'href="/users/"']
+
+        for shell_piece in shell_pieces:
+            assert shell_piece not in content, shell_piece
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class TestAccessControl:
 
     def test_anonymous_goes_to_the_sign_in_screen(self:'any_') -> 'None':
