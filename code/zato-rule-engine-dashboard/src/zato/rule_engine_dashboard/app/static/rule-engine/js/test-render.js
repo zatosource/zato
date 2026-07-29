@@ -198,8 +198,7 @@ var testView = {
         var pane = document.getElementById('test-detail-pane');
 
         if (scenario === undefined) {
-            pane.innerHTML = '<div class="test-run-note">Add a scenario to start - the toolbar has the button, ' +
-                'or right-click one in the list to duplicate it.</div>';
+            pane.innerHTML = '<div class="test-run-note">No scenario yet.</div>';
             return;
         }
 

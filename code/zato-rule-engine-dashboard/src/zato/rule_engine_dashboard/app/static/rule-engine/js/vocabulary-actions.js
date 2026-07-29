@@ -100,7 +100,6 @@ vocabularyView.openRenamePopover = function(anchor) {
     var count = this.usage === null ? 0 : this.usage.count;
 
     shared.openPanel(anchor,
-        '<div class="test-trace-title">Rename ' + this.selectedPath + '</div>' +
         '<div class="floating-panel-line">' +
         '<input id="vocabulary-rename-input" type="text" value="' + attribute.name + '" ' +
             'onkeydown="vocabularyView.renameKeys(event)">' +
@@ -149,7 +148,6 @@ vocabularyView.deprecate = function(button) {
 
     var handlers = shared.inFlight(button, function() {
         self.render();
-        shared.popover(document.querySelector('.vocabulary-detail-name'), 'Deprecated.', 'green');
     }, function(message) {
         shared.popover(button, message, 'red');
     });
@@ -163,7 +161,6 @@ vocabularyView.restore = function(button) {
 
     var handlers = shared.inFlight(button, function() {
         self.render();
-        shared.popover(document.querySelector('.vocabulary-detail-name'), 'Restored into every picker.', 'green');
     }, function(message) {
         shared.popover(button, message, 'red');
     });
@@ -208,7 +205,6 @@ vocabularyView.openAddPanel = function(button) {
     entityOptions += '<option value="">new entity...</option>';
 
     shared.openPanel(button,
-        '<div class="test-trace-title">Add a term</div>' +
         '<div class="floating-panel-line">' +
         '<select id="vocabulary-add-entity" onchange="vocabularyView.onAddEntityChange(this)">' + entityOptions + '</select>' +
         '<input id="vocabulary-add-entity-name" type="text" placeholder="entity name" style="display:none">' +
@@ -247,7 +243,6 @@ vocabularyView.confirmAddTerm = function(anchor) {
         shared.closePanel();
         self.selectedPath = null;
         self.select(path);
-        shared.popover(document.querySelector('.vocabulary-detail-name'), 'Added.', 'green');
     }, function(message) {
         shared.popover(anchor, message, 'red');
     });
@@ -263,7 +258,6 @@ vocabularyView.openPayloadPanel = function(button) {
 
     var example = '{"applicant": {"age": 34, "employed": true, "city": "Boston"}, "requestedAmount": 25000}';
     shared.openPanel(button,
-        '<div class="test-trace-title">Add terms from an example payload</div>' +
         '<textarea id="vocabulary-payload-text" spellcheck="false">' + example + '</textarea>' +
         '<div class="floating-panel-actions">' +
         '<button class="button-primary button-mini" onclick="vocabularyView.previewPayload(this)">Preview terms</button>' +
@@ -333,7 +327,6 @@ vocabularyView.openRulesPanel = function(button) {
     if (shared.panelElement !== null) { shared.closePanel(); return; }
 
     shared.openPanel(button,
-        '<div class="test-trace-title">Add terms from typed rules</div>' +
         '<textarea id="vocabulary-rules-text" spellcheck="false" placeholder="rule&#10;    Name&#10;when&#10;    ...&#10;then&#10;    ..."></textarea>' +
         '<div class="floating-panel-actions">' +
         '<button class="button-primary button-mini" onclick="vocabularyView.previewRules(this)">Preview terms</button>' +

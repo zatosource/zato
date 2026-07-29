@@ -3,6 +3,7 @@
 		"origin": "https://github.com/microsoft/vscode, extensions/theme-defaults/themes/hc_light.json",
 		"license": "MIT",
 		"type": "light",
+		"name": "Zato light high contrast",
 		"logo": "zato-logo-black.svg"
 	},
 	"tokens": {

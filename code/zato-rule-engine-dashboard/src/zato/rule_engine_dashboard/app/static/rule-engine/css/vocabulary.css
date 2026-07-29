@@ -32,8 +32,6 @@
 .vocabulary-delete-blocked{opacity:0.55;cursor:not-allowed}
 .vocabulary-delete-enabled:hover{color:var(--red)}
 
-.vocabulary-definition-note{margin:8px 0;max-width:640px;font-size:11.5px;color:var(--text5);font-style:italic}
-
 /* ---------------------------------------------------------- */
 /* Vocabulary - where-used                                    */
 /* ---------------------------------------------------------- */

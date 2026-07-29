@@ -76,7 +76,7 @@ def _run_broken(theme_text:'str', overrides_text:'str | None', expected:'str') -
 def test_every_theme_carries_the_identical_token_set() -> 'None':
     theme_files = sorted(os.listdir(_themes_dir))
     theme_count = len(theme_files)
-    assert theme_count == 6, theme_files
+    assert theme_count == 4, theme_files
 
     token_sets = {}
     for name in theme_files:
@@ -115,9 +115,7 @@ def test_every_theme_draws_a_logo_of_its_own_kind() -> 'None':
     one, a light theme the blue one, and a light high contrast theme the black one.
     """
     expected_logo = {
-        'ayu-dark.css': 'zato-logo-white.svg',
         'dark-high-contrast.css': 'zato-logo-white.svg',
-        'gruvbox-dark-hard.css': 'zato-logo-white.svg',
         'zato-dark.css': 'zato-logo-white.svg',
         'zato-light.css': 'zato-logo-blue.svg',
         'light-high-contrast.css': 'zato-logo-black.svg',

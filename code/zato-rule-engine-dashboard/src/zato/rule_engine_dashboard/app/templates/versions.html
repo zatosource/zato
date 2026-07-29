@@ -20,21 +20,17 @@
 
   <div class="toolbar">
     <span class="versions-compare-label">Compare</span>
-    <select id="versions-from" class="versions-select" onchange="versionsView.setCompare()"
-      data-tippy-content="Older version"></select>
+    <select id="versions-from" class="versions-select" onchange="versionsView.setCompare()"></select>
     <span class="versions-compare-label">with</span>
-    <select id="versions-to" class="versions-select" onchange="versionsView.setCompare()"
-      data-tippy-content="Newer version"></select>
+    <select id="versions-to" class="versions-select" onchange="versionsView.setCompare()"></select>
     <span class="toolbar-separator"></span>
-    <button class="button-ghost" id="button-changes-only" onclick="versionsView.toggleChangesOnly()"
-      data-tippy-content="Changed rules only">Changes only</button>
-    <button class="button-ghost" id="button-split-view" onclick="versionsView.toggleSplit()"
-      data-tippy-content="Side by side">Split view</button>
+    <button class="button-ghost" id="button-changes-only" onclick="versionsView.toggleChangesOnly()">Changes only</button>
+    <button class="button-ghost" id="button-split-view" onclick="versionsView.toggleSplit()">Split view</button>
   </div>
 
   <div class="versions-body">
     <div class="versions-timeline-pane" id="versions-timeline-pane">
-      <div class="versions-timeline-head">History, linear, never branched</div>
+      <div class="versions-timeline-head">History</div>
       <div class="versions-timeline" id="versions-timeline"></div>
     </div>
     <div class="pane-resizer pane-resizer-vertical" id="versions-timeline-resizer"></div>

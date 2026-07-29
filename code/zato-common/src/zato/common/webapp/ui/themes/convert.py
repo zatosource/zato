@@ -35,7 +35,7 @@ from zato.common.typing_ import anydict, dictlist, strdict, strlist
 from zato.common.webapp.ui.themes.colors import channel_distance, composite, is_opaque, mix, parse_hex, rgb_tuple, to_hex
 from zato.common.webapp.ui.themes.jsonc import load_theme
 from zato.common.webapp.ui.themes.tokens import defaults, logo_directory, logo_opacity, logos, mapping, \
-    min_surface_distance, mixes, shadows, surface_wash_ratio, ThemeConversionError, tints, token_order
+    min_surface_distance, mixes, rule_names, shadows, surface_wash_ratio, ThemeConversionError, tints, token_order
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -149,12 +149,11 @@ def convert_one(theme_path:'str', overrides_dir:'str') -> 'anydict':
     if theme_type not in ('dark', 'light'):
         raise ThemeConversionError(f'{slug}: theme type must be dark or light, got {theme_type!r}')
 
-    theme_name = theme['name']
+    # The overrides meta names the theme when it wants to: an imported source
+    # keeps its upstream file untouched and is still listed under our own name.
+    theme_name = meta.get('name')
     if theme_name is None:
-
-        # Some sources carry no name either, VS Code reads it from the
-        # extension manifest then: the overrides meta must say it.
-        theme_name = meta.get('name')
+        theme_name = theme['name']
 
     if theme_name is None:
         raise ThemeConversionError(f'{slug}: neither the theme file nor the overrides meta has a name')
@@ -219,6 +218,9 @@ def convert_one(theme_path:'str', overrides_dir:'str') -> 'anydict':
         tokens[token] = f'rgba({red},{green},{blue},{alpha})'
 
     tokens.update(shadows[theme_type])
+
+    # .. the rule name color and its wash, the same yellow in every theme ..
+    tokens.update(rule_names[theme_type])
 
     # .. the logo the theme is drawn with, the one its type calls for
     # unless its overrides meta names another file ..

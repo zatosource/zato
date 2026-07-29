@@ -79,8 +79,7 @@ var versionsView = {
 
             var badges = '';
             if (version.number === versionsModel.liveVersion) {
-                badges += '<span class="versions-badge versions-badge-live" ' +
-                    'data-tippy-content="The live version">live</span>';
+                badges += '<span class="versions-badge versions-badge-live">live</span>';
             } else if (versionsModel.liveVersion === null || version.number > versionsModel.liveVersion) {
                 badges += '<span class="versions-badge versions-badge-draft">draft</span>';
             }
@@ -149,7 +148,7 @@ var versionsView = {
         var key = 'rule-' + name;
         var viewed = versionsModel.viewed[key] === true;
 
-        var viewedControl = '<label class="versions-viewed-toggle" data-tippy-content="Mark as viewed">' +
+        var viewedControl = '<label class="versions-viewed-toggle">' +
             '<input type="checkbox"' + (viewed ? ' checked' : '') +
             ' onchange="versionsView.toggleViewed(\'' + shared.escape(key) + '\', this.checked)"> viewed</label>';
 
@@ -311,7 +310,7 @@ var versionsView = {
         html += '<div class="versions-section-title">Decisions that would change</div>';
         html += this.outcomeDiffHtml();
 
-        html += '<div class="versions-section-title">Comments, anchored to the rules they are about</div>';
+        html += '<div class="versions-section-title">Comments</div>';
         html += this.commentsHtml();
 
         pane.innerHTML = html;

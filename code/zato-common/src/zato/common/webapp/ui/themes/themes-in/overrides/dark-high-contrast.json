@@ -2,7 +2,8 @@
 	"meta": {
 		"origin": "https://github.com/microsoft/vscode, extensions/theme-defaults/themes/hc_black.json",
 		"license": "MIT",
-		"type": "dark"
+		"type": "dark",
+		"name": "Zato dark high contrast"
 	},
 	"tokens": {
 		"--chrome": "#000000",

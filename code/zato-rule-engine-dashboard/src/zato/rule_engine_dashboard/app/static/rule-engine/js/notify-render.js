@@ -85,9 +85,7 @@ var notifyView = {
                     '<td class="notify-status-cell">' + self.statusHtml(record) + '</td>' +
                     '<td class="notify-author-cell">' + shared.escape(record.created_by) + '</td>' +
                     '<td class="notify-delete-cell"><button class="button-mini button-mini-danger" ' +
-                        'onclick="notifyView.deleteDestination(' + record.id + ')" ' +
-                        'data-tippy-content="Removes this destination - it stops hearing about the ruleset ' +
-                        'the moment it is gone.">Remove</button></td>' +
+                        'onclick="notifyView.deleteDestination(' + record.id + ')">Remove</button></td>' +
                     '</tr>';
             });
 
@@ -100,8 +98,7 @@ var notifyView = {
 
     addRowHtml: function() {
         var html = '<div class="notify-add-row">' +
-            '<select class="notify-select" id="notify-add-kind" onchange="notifyView.setAddKind(this)" ' +
-            'data-tippy-content="Platform">';
+            '<select class="notify-select" id="notify-add-kind" onchange="notifyView.setAddKind(this)">';
 
         html += '<option value=""' + (this.addKind === null ? ' selected' : '') + '>Platform...</option>';
         notifyModel.config.kinds.forEach(function(kind) {
@@ -111,8 +108,7 @@ var notifyView = {
         });
         html += '</select>';
 
-        html += '<select class="notify-select notify-target-select" id="notify-add-target" ' +
-            'data-tippy-content="Channel">';
+        html += '<select class="notify-select notify-target-select" id="notify-add-target">';
 
         if (this.isLoadingTargets) {
             html += '<option value="">Asking the platform...</option>';
@@ -163,8 +159,7 @@ var notifyView = {
             });
 
             html += '<div class="notify-card-actions">' +
-                '<button class="button-ghost" onclick="notifyView.saveCredentials(this, \'' + kind + '\')" ' +
-                'data-tippy-content="Save the destination">Save</button>' +
+                '<button class="button-ghost" onclick="notifyView.saveCredentials(this, \'' + kind + '\')">Save</button>' +
                 '</div>';
 
             if (entry.is_configured) {

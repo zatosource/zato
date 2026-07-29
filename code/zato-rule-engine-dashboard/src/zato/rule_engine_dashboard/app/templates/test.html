@@ -19,15 +19,12 @@
   </div>
 
   <div class="toolbar">
-    <button class="button-ghost toggled" id="button-view-scenarios" onclick="testView.showView('scenarios')"
-      data-tippy-content="Test set">Test scenarios</button>
+    <button class="button-ghost toggled" id="button-view-scenarios" onclick="testView.showView('scenarios')">Test scenarios</button>
     <button class="button-ghost" id="button-view-ab" onclick="testView.showView('ab')"
       data-tippy-content="Two versions over the same scenarios">A/B testing</button>
     <span class="toolbar-separator"></span>
-    <button class="button-ghost" id="button-run-all" onclick="testView.runAll(this)"
-      data-tippy-content="Run every scenario">Run all</button>
-    <button class="button-ghost" id="button-add-scenario" onclick="testView.addScenario()"
-      data-tippy-content="New scenario">Add scenario</button>
+    <button class="button-ghost" id="button-run-all" onclick="testView.runAll(this)">Run all</button>
+    <button class="button-ghost" id="button-add-scenario" onclick="testView.addScenario()">Add scenario</button>
     <span class="toolbar-separator"></span>
     <span class="keyboard-hint"><kbd>Arrows</kbd> move between cells, <kbd>Enter</kbd> edits a value, <kbd>Shift</kbd>+<kbd>Up</kbd>/<kbd>Down</kbd> reorders the selected scenario, right-click opens the menu</span>
     <button class="button-primary" onclick="testView.save(this)"

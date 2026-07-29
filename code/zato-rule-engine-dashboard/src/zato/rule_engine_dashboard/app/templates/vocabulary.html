@@ -20,24 +20,21 @@
   </div>
 
   <div class="toolbar">
-    <input class="log-search" id="vocabulary-filter" type="text" placeholder="Filter terms..."
-      data-tippy-content="Filter the terms">
+    <input class="log-search" id="vocabulary-filter" type="text" placeholder="Filter terms...">
     <span class="toolbar-separator"></span>
     <span class="keyboard-hint"><kbd>/</kbd> jumps to the filter, <kbd>Arrows</kbd> walk the terms, right-click a term for its menu</span>
     <button class="button-ghost" id="vocabulary-payload-button"
       onclick="vocabularyView.openPayloadPanel(this)"
       data-tippy-content="Add terms from a payload">Add from example</button>
     <button class="button-ghost" id="vocabulary-rules-button"
-      onclick="vocabularyView.openRulesPanel(this)"
-      data-tippy-content="Add terms from typed rules">Add from rules</button>
+      onclick="vocabularyView.openRulesPanel(this)">Add from rules</button>
   </div>
 
   <div class="vocabulary-split">
     <div class="vocabulary-tree-pane" id="vocabulary-tree-pane">
       <div class="vocabulary-tree-head">
         <span id="vocabulary-tree-count"></span>
-        <button class="button-mini" id="vocabulary-add-button" onclick="vocabularyView.openAddPanel(this)"
-          data-tippy-content="Add a term">Add term</button>
+        <button class="button-mini" id="vocabulary-add-button" onclick="vocabularyView.openAddPanel(this)">Add term</button>
       </div>
       <div class="vocabulary-tree-list" id="vocabulary-tree-list"></div>
     </div>

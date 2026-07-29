@@ -20,22 +20,17 @@
   </div>
 
   <div class="toolbar">
-    <input class="log-search" id="log-search" type="text" placeholder="Business key or decision id..."
-      data-tippy-content="Search by key or decision id">
-    <select class="log-range" id="log-range" onchange="logView.setRange(this)"
-      data-tippy-content="How far back the list reaches.">
+    <input class="log-search" id="log-search" type="text" placeholder="Business key or decision id...">
+    <select class="log-range" id="log-range" onchange="logView.setRange(this)">
       <option value="1">Today</option>
       <option value="3">Last 3 days</option>
       <option value="7" selected>Last 7 days</option>
     </select>
     <span class="toolbar-separator"></span>
     <span class="keyboard-hint"><kbd>/</kbd> jumps to the search box, <kbd>Arrows</kbd> and <kbd>Page</kbd> keys walk the list, right-click a decision for its menu</span>
-    <button class="button-ghost" onclick="window.location.href='/tests/'"
-      data-tippy-content="Open A/B testing">A/B testing</button>
-    <button class="button-ghost" id="log-rule-counts-button" onclick="logView.openRuleCounts(this)"
-      data-tippy-content="Which rules fire">Rule counts</button>
-    <button class="button-ghost" id="log-capture-button" onclick="logView.openCapturePanel(this)"
-      data-tippy-content="Capture and retention">Capture and retention</button>
+    <button class="button-ghost" onclick="window.location.href='/tests/'">A/B testing</button>
+    <button class="button-ghost" id="log-rule-counts-button" onclick="logView.openRuleCounts(this)">Rule counts</button>
+    <button class="button-ghost" id="log-capture-button" onclick="logView.openCapturePanel(this)">Capture and retention</button>
   </div>
 
   <div class="log-aggregates" id="log-aggregates"></div>
