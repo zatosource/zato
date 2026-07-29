@@ -11,6 +11,10 @@ var rulesetsView = {
         maxPreviewEvents: 5,
         maxSavedViews: 5,
         maxRenamedRules: 6,
+        maxRulesInPanel: 40,
+
+        loadingRulesText: 'Reading the rules of',
+        emptyRulesText: 'This set has no rules yet, open it to write the first one.',
 
         rulesetNamePattern: /^\w+(\.\w+)*$/,
 
@@ -49,6 +53,7 @@ var rulesetsView = {
     query: '',
     view: 'all',
     selectedId: null,
+    expanded: {},
 
 // ////////////////////////////////////////////////////////////////////////
 
@@ -133,27 +138,35 @@ var rulesetsView = {
 
         entries.forEach(function(entry) {
             if (shown >= cap) { return; }
-            shown += 1;
 
             var ruleset = entry.ruleset;
             var selected = ruleset.id === self.selectedId ? ' rulesets-row-selected' : '';
 
-            html += '<div class="rulesets-row' + selected + '" data-id="' + ruleset.id + '" ' +
+            // Every second row is tinted, counted here rather than in CSS because
+            // the rules of an expanded set sit between the rows as their own panels.
+            var stripe = shown % 2 === 1 ? ' rulesets-row-stripe' : '';
+            shown += 1;
+
+            var isExpanded = self.expanded[ruleset.id] === true;
+            var caret = '<span class="rulesets-caret">' +
+                shared.icon(isExpanded ? 'chevron-down' : 'chevron-right', 12) + '</span>';
+
+            html += '<div class="rulesets-row' + selected + stripe + '" data-id="' + ruleset.id + '" ' +
                 'onclick="rulesetsView.select(' + ruleset.id + ')" ' +
                 'ondblclick="rulesetsView.open(' + ruleset.id + ')">' +
                 '<div class="rulesets-row-main">' +
                 '<div class="rulesets-row-name">' + self.starHtml(ruleset) +
                 '<a class="rulesets-open-link" href="' + self.config.openUrls.editor + '?ruleset=' + ruleset.id + '" ' +
-                    'onclick="return rulesetsView.openFromLink(event, ' + ruleset.id + ')">' +
-                    self.markHtml(ruleset.name) + '</a>' +
+                    'onclick="return rulesetsView.toggleRules(event, ' + ruleset.id + ')">' +
+                    caret + self.markHtml(ruleset.name) + '</a>' +
                 self.statusHtml(ruleset) + '</div>' +
                 self.hitsHtml(entry.hits) +
                 '</div>' +
-                '<div class="rulesets-row-columns">' +
-                '<span class="rulesets-cell">v' + ruleset.current_version + ' stored</span>' +
-                '<span class="rulesets-cell rulesets-cell-change">updated ' + self.whenText(ruleset.updated_at) + '</span>' +
-                '</div>' +
                 '</div>';
+
+            if (isExpanded) {
+                html += self.rulesPanelHtml(ruleset);
+            }
         });
 
         if (html === '') {
@@ -166,6 +179,50 @@ var rulesetsView = {
 
         document.getElementById('rulesets-count').textContent = entries.length + ' rulesets';
         document.getElementById('rulesets-list').innerHTML = html;
+    },
+
+// ////////////////////////////////////////////////////////////////////////
+
+    rulesPanelHtml: function(ruleset) {
+        var self = this;
+        var rules = rulesetsModel.cachedRules(ruleset.id);
+
+        if (rules === null) {
+            return '<div class="rulesets-rules">' +
+                '<div class="rulesets-rules-loading"><span class="rulesets-spinner"></span>' +
+                this.config.loadingRulesText + ' ' + shared.escape(ruleset.name) + '</div>' +
+                '</div>';
+        }
+
+        var html = '<div class="rulesets-rules">';
+
+        if (rules.length === 0) {
+            html += '<div class="rulesets-rules-empty">' + this.config.emptyRulesText + '</div></div>';
+            return html;
+        }
+
+        html += '<div class="rulesets-rules-head">' + rules.length + ' rule' + (rules.length === 1 ? '' : 's') +
+            ' in ' + shared.escape(ruleset.name) + '</div>';
+
+        rules.slice(0, this.config.maxRulesInPanel).forEach(function(rule) {
+            html += '<a class="rulesets-rule" href="' + self.config.openUrls.editor + '?ruleset=' + ruleset.id +
+                '&amp;rule=' + encodeURIComponent(rule.key) + '" ' +
+                'onclick="event.stopPropagation()">' +
+                '<span class="rulesets-rule-name">' + self.markHtml(rule.name) + '</span>' +
+                '<span class="rulesets-rule-docs">' + shared.escape(rule.docs) + '</span>' +
+                '<span class="rulesets-rule-shape">' + rule.conditionCount + ' condition' +
+                    (rule.conditionCount === 1 ? '' : 's') + ', ' + rule.actionCount + ' action' +
+                    (rule.actionCount === 1 ? '' : 's') + '</span>' +
+                '</a>';
+        });
+
+        if (rules.length > this.config.maxRulesInPanel) {
+            html += '<div class="rulesets-match-overflow">and ' + (rules.length - this.config.maxRulesInPanel) +
+                ' more rules, the search above narrows this down.</div>';
+        }
+
+        html += '</div>';
+        return html;
     },
 
 // ////////////////////////////////////////////////////////////////////////
@@ -279,7 +336,7 @@ var rulesetsView = {
             followValue + '</td></tr>';
         html += '</tbody></table>';
 
-        html += '<div class="test-grid-title">Open</div>' +
+        html += '<div class="test-grid-title">Open in</div>' +
             '<div class="rulesets-preview-links">' +
             this.previewLinkHtml(ruleset.id, 'editor', 'Rules') +
             '<a class="rulesets-preview-link" href="' + this.config.openUrls.tables + '">Decision tables</a>' +
@@ -289,12 +346,28 @@ var rulesetsView = {
             this.previewLinkHtml(ruleset.id, 'vocabulary', 'Vocabulary') +
             '</div>';
 
-        if (preview.rendered !== null) {
-            var lines = preview.rendered.split('\n').filter(function(line) { return line.trim() !== ''; });
-            html += '<div class="test-grid-title">A few of its rules</div>';
-            lines.slice(0, this.config.maxPreviewRules).forEach(function(line) {
-                html += '<div class="rulesets-match">' + shared.escape(line) + '</div>';
+        var documents = preview.document.documents;
+
+        // A set stored before it ever got a rule carries no documents at all.
+        if (documents === undefined) { documents = {}; }
+
+        var keys = Object.keys(documents).sort(function(left, right) {
+            return documents[left].name.localeCompare(documents[right].name);
+        });
+
+        if (keys.length > 0) {
+            html += '<div class="test-grid-title">Rules, ' + keys.length + '</div>';
+
+            keys.slice(0, this.config.maxPreviewRules).forEach(function(key) {
+                html += '<a class="rulesets-preview-rule" href="' + self.config.openUrls.editor +
+                    '?ruleset=' + ruleset.id + '&amp;rule=' + encodeURIComponent(key) + '">' +
+                    shared.escape(documents[key].name) + '</a>';
             });
+
+            if (keys.length > this.config.maxPreviewRules) {
+                html += '<div class="rulesets-match-overflow">and ' + (keys.length - this.config.maxPreviewRules) +
+                    ' more, the row itself lists them all</div>';
+            }
         }
 
         if (preview.events.length > 0) {

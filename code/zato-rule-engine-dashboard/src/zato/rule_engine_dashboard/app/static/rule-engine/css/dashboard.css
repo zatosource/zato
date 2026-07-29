@@ -18,7 +18,7 @@ a.navigation-item{text-decoration:none}
 /* ---------------------------------------------------------- */
 
 .messages{margin:0 0 18px 0;padding:0;list-style:none}
-.messages li{padding:10px 14px;border-radius:6px;margin-bottom:8px;font-size:13px}
+.messages li{padding:10px 14px;border-radius:var(--radius-3);margin-bottom:8px;font-size:13px}
 .messages li.success{color:var(--green);background:var(--green-tint-14)}
 .messages li.error{color:var(--red);background:var(--red-tint-16)}
 .messages li.info{color:var(--blue);background:var(--blue-tint-12)}
@@ -27,7 +27,7 @@ a.navigation-item{text-decoration:none}
 /* Dashboard - list tables                                    */
 /* ---------------------------------------------------------- */
 
-table.list{width:100%;border-collapse:collapse;border:1px solid var(--border);border-radius:8px;background:var(--panel-raised);overflow:hidden}
+table.list{width:100%;border-collapse:collapse;border:1px solid var(--border);border-radius:var(--radius-3);background:var(--panel-raised);overflow:hidden}
 table.list th,table.list td{padding:10px 14px;border-bottom:1px solid var(--border);text-align:left;font-size:13px}
 table.list th{font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text4);background:var(--chrome)}
 table.list tr:last-child td{border-bottom:none}
@@ -36,7 +36,7 @@ table.list tr:last-child td{border-bottom:none}
 /* Dashboard - badges                                         */
 /* ---------------------------------------------------------- */
 
-.badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:11.5px;font-weight:600}
+.badge{display:inline-block;padding:2px 10px;border-radius:var(--radius-2);font-size:11.5px;font-weight:600}
 .badge.admin{color:var(--indigo);background:var(--indigo-tint-16)}
 .badge.user{color:var(--blue);background:var(--blue-tint-12)}
 .badge.active{color:var(--green);background:var(--green-tint-14)}
@@ -48,7 +48,7 @@ table.list tr:last-child td{border-bottom:none}
 
 .actions{display:flex;gap:8px}
 .actions form{margin:0}
-button.action,a.action{display:inline-block;padding:5px 12px;border:1px solid var(--border);border-radius:4px;font-size:12.5px;font-family:var(--font);color:var(--text3);text-decoration:none;background:transparent;cursor:pointer}
+button.action,a.action{display:inline-block;padding:5px 12px;border:1px solid var(--border);border-radius:var(--radius-2);font-size:12.5px;font-family:var(--font);color:var(--text3);text-decoration:none;background:transparent;cursor:pointer}
 button.action:hover,a.action:hover{color:var(--text);border-color:var(--text3)}
 button.action.danger{color:var(--red)}
 button.action.danger:hover{border-color:var(--red)}
@@ -59,20 +59,37 @@ button.action.danger:hover{border-color:var(--red)}
 /* Dashboard - forms                                          */
 /* ---------------------------------------------------------- */
 
-.form-card{max-width:460px;padding:20px 24px;margin-bottom:18px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text2);background:var(--panel-raised)}
+.form-card{max-width:460px;padding:20px 24px;margin-bottom:18px;border:1px solid var(--border);border-radius:var(--radius-3);font-size:13px;color:var(--text2);background:var(--panel-raised)}
 .form-row{margin-bottom:14px}
 .form-row label{display:block;margin-bottom:5px;font-size:12px;font-weight:600;color:var(--text4)}
-.form-row input[type=text],.form-row input[type=password]{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:5px;font-size:13px;font-family:var(--font);color:var(--text);background:var(--input-background);outline:none}
+.form-row input[type=text],.form-row input[type=password]{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-2);font-size:13px;font-family:var(--font);color:var(--text);background:var(--input-background);outline:none}
 .form-row input[type=text]:focus,.form-row input[type=password]:focus{border-color:var(--blue)}
 .form-row input:disabled{color:var(--text5)}
 .form-row-checkbox{display:flex;align-items:center;gap:8px;margin-bottom:14px}
 .form-row-checkbox label{font-size:13px;color:var(--text2)}
 
 /* ---------------------------------------------------------- */
+/* Dashboard - sign-in screen                                 */
+/* ---------------------------------------------------------- */
+
+.auth-screen{flex:1;display:flex;align-items:center;justify-content:center;padding:24px;overflow:auto}
+.auth-panel{width:290px}
+.auth-logo{width:84px;height:30px;margin:0 auto 18px;opacity:var(--logo-opacity);
+  background-image:var(--logo);background-repeat:no-repeat;background-size:contain;background-position:center}
+.auth-title{margin-bottom:12px;text-align:center;font-size:11px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:0.08em}
+.auth-panel .messages{margin-bottom:12px}
+.auth-panel .messages li{padding:7px 12px;font-size:12px;text-align:center}
+.auth-panel .form-card{max-width:none;margin-bottom:0;padding:16px 18px}
+.auth-panel .form-row{margin-bottom:11px}
+.auth-panel .form-row input[type=text],.auth-panel .form-row input[type=password]{padding:6px 9px;font-size:12.5px}
+.auth-submit{display:block;width:100%;text-align:center;text-decoration:none}
+.auth-alternative{margin-top:12px;padding-top:12px;border-top:1px dashed var(--border)}
+
+/* ---------------------------------------------------------- */
 /* Dashboard - filters and pagination                         */
 /* ---------------------------------------------------------- */
 
 form.filters{display:flex;gap:10px;margin-bottom:18px}
-form.filters input[type=text],form.filters select{padding:7px 10px;border:1px solid var(--border);border-radius:5px;font-size:12.5px;font-family:var(--font);color:var(--text);background:var(--input-background);outline:none}
+form.filters input[type=text],form.filters select{padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-2);font-size:12.5px;font-family:var(--font);color:var(--text);background:var(--input-background);outline:none}
 form.filters input[type=text]:focus,form.filters select:focus{border-color:var(--blue)}
 .pagination{display:flex;align-items:center;gap:14px;margin-top:16px}

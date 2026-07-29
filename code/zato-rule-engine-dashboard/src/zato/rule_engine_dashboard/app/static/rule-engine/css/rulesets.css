@@ -19,29 +19,34 @@
 .rulesets-recent-chip{padding:3px 11px;font-size:11.5px}
 
 .rulesets-split{flex:1;display:flex;overflow:hidden}
-.rulesets-list{flex:1;overflow:auto;padding:10px 0 16px}
-.rulesets-side{width:380px;flex-shrink:0;overflow:auto;background:var(--chrome);padding:14px 18px}
+.rulesets-list{flex:1;min-width:0;overflow:auto;padding:10px 0 16px}
+.rulesets-side{width:380px;min-width:0;flex-shrink:0;overflow:auto;background:var(--chrome);padding:14px 18px}
+
+/* Wide enough to grab without hunting for it. */
+#rulesets-side-resizer{width:6px}
 
 /* ---------------------------------------------------------- */
 /* Rulesets home - rows                                       */
 /* ---------------------------------------------------------- */
 
 .rulesets-row{display:flex;align-items:flex-start;gap:18px;padding:10px 24px;cursor:pointer}
-.rulesets-row:nth-child(even){background:var(--panel-raised)}
+.rulesets-row-stripe{background:var(--panel-raised)}
 .rulesets-row:hover{background:var(--cell-hover)}
-.rulesets-row-selected,.rulesets-row-selected:nth-child(even){background:var(--column-selected)}
+.rulesets-row-selected,.rulesets-row-selected.rulesets-row-stripe{background:var(--column-selected)}
 
 .rulesets-row-main{flex:1;min-width:0}
 .rulesets-row-name{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600}
-.rulesets-open-link{color:var(--text);text-decoration:none}
+.rulesets-open-link{display:inline-flex;align-items:center;gap:5px;color:var(--text);text-decoration:none}
 .rulesets-open-link:hover{color:var(--blue)}
+.rulesets-caret{display:inline-flex;color:var(--text5)}
+.rulesets-open-link:hover .rulesets-caret{color:var(--blue)}
 .rulesets-row-description{margin-top:2px;font-size:12px;color:var(--text4)}
 
 .rulesets-star{display:inline-flex;color:var(--text5);cursor:pointer}
 .rulesets-star-on{color:var(--amber)}
 .rulesets-star-on svg{fill:currentColor}
 
-.rulesets-badge{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;border-radius:3px;padding:1px 7px}
+.rulesets-badge{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;border-radius:var(--radius-1);padding:1px 7px}
 .rulesets-badge-live{background:var(--green-tint-14);color:var(--green)}
 .rulesets-badge-draft{background:var(--indigo-tint-16);color:var(--indigo)}
 .rulesets-badge-problems{border:1px dashed var(--amber);color:var(--amber)}
@@ -54,28 +59,55 @@
 .rulesets-rename{margin-left:9px}
 .rulesets-rename-line{padding:5px 14px;font-size:12.5px;color:var(--text3);line-height:1.45;max-width:440px}
 
-.rulesets-row-columns{display:flex;flex-direction:column;gap:3px;width:330px;flex-shrink:0;font-size:11.5px;color:var(--text4)}
-.rulesets-cell-change{color:var(--text5)}
-
 .rulesets-empty{padding:18px 24px;font-size:12.5px;color:var(--text5);font-style:italic}
 .rulesets-more{padding:10px 24px;font-size:11.5px;color:var(--text5);font-style:italic}
+
+/* ---------------------------------------------------------- */
+/* Rulesets home - the rules of an expanded set                */
+/* ---------------------------------------------------------- */
+
+/* The dashed spine sits under the caret of the row it belongs to - 24px of row padding,
+   13px of star, 8px of gap, half of the 12px caret. */
+.rulesets-rules{margin:0 24px 12px 51px;padding-left:20px;border-left:1px dashed var(--border)}
+.rulesets-rules-head{padding:7px 0 5px;font-size:10.5px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:0.08em}
+.rulesets-rules-empty{padding:8px 0;font-size:12px;color:var(--text5);font-style:italic}
+
+.rulesets-rule{position:relative;display:flex;align-items:baseline;gap:14px;margin-bottom:4px;padding:5px 11px;max-width:900px;
+  background:var(--panel);border-radius:var(--radius-2);text-decoration:none}
+.rulesets-rule:hover{background:var(--column-selected)}
+
+/* A node on the spine and a dashed run from it to the rule. */
+.rulesets-rule::after{content:'';position:absolute;left:-23px;top:50%;margin-top:-2px;width:5px;height:5px;
+  background:var(--border);border-radius:50%}
+.rulesets-rule::before{content:'';position:absolute;left:-18px;top:50%;width:18px;border-top:1px dashed var(--border)}
+
+.rulesets-rule-name{flex-shrink:0;font-family:var(--mono);font-size:12px;color:var(--text2)}
+.rulesets-rule:hover .rulesets-rule-name{color:var(--text)}
+.rulesets-rule-docs{flex:1;min-width:0;font-size:12px;color:var(--text4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rulesets-rule-shape{flex-shrink:0;font-size:10px;color:var(--text5);text-transform:uppercase;letter-spacing:0.05em}
+
+.rulesets-rules-loading{display:flex;align-items:center;gap:9px;padding:9px 0;font-size:12px;color:var(--text5)}
+.rulesets-spinner{width:13px;height:13px;flex-shrink:0;border:2px solid var(--border);border-top-color:var(--blue);
+  border-radius:50%;animation:rulesets-spin 0.7s linear infinite}
+
+@keyframes rulesets-spin{to{transform:rotate(360deg)}}
 
 /* ---------------------------------------------------------- */
 /* Rulesets home - full-text matches                          */
 /* ---------------------------------------------------------- */
 
-.rulesets-match{margin-top:5px;padding:4px 10px;background:var(--panel);border-radius:5px;font-size:12px;color:var(--text3);max-width:640px}
+.rulesets-match{margin-top:5px;padding:4px 10px;background:var(--panel);border-radius:var(--radius-2);font-size:12px;color:var(--text3);max-width:640px}
 .rulesets-match-where{margin-left:9px;font-size:10px;color:var(--text5);text-transform:uppercase;letter-spacing:0.05em}
 .rulesets-match-overflow{margin-top:4px;font-size:11.5px;color:var(--text5);font-style:italic}
-.rulesets-mark{background:var(--blue-tint-28);color:var(--text);border-radius:2px;padding:0 1px}
+.rulesets-mark{background:var(--blue-tint-28);color:var(--text);border-radius:var(--radius-1);padding:0 1px}
 
 /* ---------------------------------------------------------- */
 /* Rulesets home - term cross-references                      */
 /* ---------------------------------------------------------- */
 
-.rulesets-term-strip{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:2px 24px 8px;padding:7px 12px;background:var(--panel);border-radius:6px}
+.rulesets-term-strip{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:2px 24px 8px;padding:7px 12px;background:var(--panel);border-radius:var(--radius-3)}
 .rulesets-term-strip-label{font-size:11px;color:var(--text5);text-transform:uppercase;letter-spacing:0.05em}
-.rulesets-term-link{display:inline-flex;align-items:baseline;gap:7px;font-size:11.5px;font-family:var(--mono);color:var(--blue);text-decoration:none;background:var(--panel-raised);border-radius:5px;padding:3px 10px}
+.rulesets-term-link{display:inline-flex;align-items:baseline;gap:7px;font-size:11.5px;font-family:var(--mono);color:var(--blue);text-decoration:none;background:var(--panel-raised);border-radius:var(--radius-2);padding:3px 10px}
 .rulesets-term-link:hover{background:var(--column-selected);color:var(--text)}
 .rulesets-term-count{font-size:10px;font-family:var(--font);color:var(--text5)}
 .rulesets-term-deprecated{font-size:9.5px;font-family:var(--font);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--amber)}
@@ -93,6 +125,10 @@
 
 .rulesets-preview-description{margin-bottom:8px;font-size:12.5px;color:var(--text3)}
 .rulesets-preview-links{display:flex;flex-wrap:wrap;gap:8px}
-.rulesets-preview-link{font-size:12px;color:var(--blue);text-decoration:none;background:var(--panel);border-radius:5px;padding:4px 11px}
+.rulesets-preview-link{font-size:12px;color:var(--text2);text-decoration:none;background:var(--panel);border-radius:var(--radius-2);padding:4px 11px}
 .rulesets-preview-link:hover{background:var(--column-selected);color:var(--text)}
+
+.rulesets-preview-rule{display:block;margin-top:4px;padding:4px 10px;background:var(--panel);border-radius:var(--radius-2);
+  font-family:var(--mono);font-size:11.5px;color:var(--text2);text-decoration:none}
+.rulesets-preview-rule:hover{background:var(--column-selected);color:var(--text)}
 .rulesets-preview-note{font-size:11.5px;color:var(--text5);font-style:italic;margin:6px 0}

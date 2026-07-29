@@ -45,9 +45,43 @@ rulesetsView.pickRecent = function(id) {
     if (row !== null) { row.scrollIntoView({block: 'nearest'}); }
 };
 
-rulesetsView.openFromLink = function(event) {
+// Clicking the name of a set lists the rules it is made of, right under the row.
+// Nothing here walks into a rule, that is what the rules in the panel are for.
+rulesetsView.toggleRules = function(event, id) {
+
+    // A modified click keeps its plain meaning, the editor in a new tab or window.
+    if (event.ctrlKey || event.metaKey || event.shiftKey) { return true; }
+
+    event.preventDefault();
     event.stopPropagation();
-    return true;
+
+    this.showRules(id);
+    return false;
+};
+
+rulesetsView.showRules = function(id) {
+    var self = this;
+    this.selectedId = id;
+
+    if (this.expanded[id] === true) {
+        delete this.expanded[id];
+        this.renderList();
+        this.renderSide();
+        shared.initTips();
+        return;
+    }
+
+    this.expanded[id] = true;
+
+    // The panel appears at once, with its spinner, and fills in when the rules arrive.
+    this.renderList();
+    this.renderSide();
+    shared.initTips();
+
+    rulesetsModel.rules(id, function() {
+        self.renderList();
+        shared.initTips();
+    });
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -139,7 +173,6 @@ rulesetsView.openRenamePanel = function(id, anchor) {
     var ruleset = rulesetsModel.byId(id);
 
     shared.openPanel(anchor,
-        '<div class="test-trace-title">Rename ' + shared.escape(ruleset.name) + '</div>' +
         '<div class="floating-panel-line">' +
         '<input id="rulesets-rename-input" type="text" value="' + shared.escape(ruleset.name) + '" ' +
             'onkeydown="rulesetsView.renameKeys(event, ' + id + ')">' +
@@ -321,7 +354,7 @@ rulesetsView.onKeyDown = function(event) {
         return;
     }
     if (event.key === 'Enter' && !inField && this.selectedId !== null) {
-        this.open(this.selectedId);
+        this.showRules(this.selectedId);
         return;
     }
     if (inField || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) { return; }

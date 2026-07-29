@@ -50,6 +50,12 @@ rulesetsView.openRowMenu = function(event, id) {
             }});
     }
 
+    items.push({label: 'Rename', destructive: false,
+        action: function() {
+            self.openRenamePanel(id,
+                document.querySelector('.rulesets-row[data-id="' + id + '"] .rulesets-open-link'));
+        }});
+
     items.push({label: 'Copy name', destructive: false,
         action: function() {
             navigator.clipboard.writeText(ruleset.name);

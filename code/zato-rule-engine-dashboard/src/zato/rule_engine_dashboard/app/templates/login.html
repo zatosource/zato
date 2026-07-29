@@ -1,36 +1,52 @@
 {% extends 'base.html' %}
 
 {% block page_title %}Sign in{% endblock %}
-{% block screen_title %}Sign in{% endblock %}
 
 {% block navigation %}{% endblock %}
 
-{% block main %}
+{% block content %}
 
-{% if entra_error %}
-<ul class="messages">
-    <li class="error">{{ entra_error }}</li>
-</ul>
-{% endif %}
+<div class="auth-screen">
+  <div class="auth-panel">
 
-{% if entra_enabled %}
-<div class="form-card">
-    <a class="button-primary" href="{% url 'login' %}?auth=entra&next={{ next|urlencode }}">Sign in with Microsoft</a>
-</div>
-{% endif %}
+    <div class="auth-logo" role="img" aria-label="Zato"></div>
+    <div class="auth-title">Rule engine</div>
 
-<form method="post" action="{% url 'login' %}" class="form-card">
-    {% csrf_token %}
-    <input type="hidden" name="next" value="{{ next }}">
-    <div class="form-row">
+    {% if entra_error %}
+    <ul class="messages">
+      <li class="error">{{ entra_error }}</li>
+    </ul>
+    {% endif %}
+
+    {% if messages %}
+    <ul class="messages">
+      {% for message in messages %}
+      <li class="{{ message.tags }}">{{ message }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    <form method="post" action="{% url 'login' %}" class="form-card">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
+      <div class="form-row">
         <label for="id_username">Username</label>
         <input id="id_username" type="text" name="username" autofocus>
-    </div>
-    <div class="form-row">
+      </div>
+      <div class="form-row">
         <label for="id_password">Password</label>
         <input id="id_password" type="password" name="password">
-    </div>
-    <button class="button-primary" type="submit">Sign in</button>
-</form>
+      </div>
+      <button class="button-primary auth-submit" type="submit">Sign in</button>
+
+      {% if entra_enabled %}
+      <div class="auth-alternative">
+        <a class="button-ghost auth-submit" href="{% url 'login' %}?auth=entra&amp;next={{ next|urlencode }}">Sign in with Microsoft</a>
+      </div>
+      {% endif %}
+    </form>
+
+  </div>
+</div>
 
 {% endblock %}
