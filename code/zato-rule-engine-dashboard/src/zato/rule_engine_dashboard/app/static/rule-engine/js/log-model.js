@@ -1,34 +1,23 @@
 'use strict';
 
-// Data model for the decision log screen: the stored decisions of one
-// ruleset as the server pages them, the aggregate counts every card
-// drills down from, one decision opened into its full story, the draft
-// replay and the per-rule firing counts. No DOM access in this file.
-
 (function() {
 
 var logModel = {
 
     config: {
-        // How many decisions one page of the list shows
         pageSize: 200,
 
-        // The date ranges the toolbar offers, in days
         ranges: [1, 3, 7],
         defaultRangeDays: 7,
 
-        // How long the search waits after the last keystroke before it
-        // filters a full page of decisions again
         searchDelayMilliseconds: 120,
 
-        // Every promoted outcome as the label its card shows
         outcomeLabels: {
             'matched': 'matched',
             'no-match': 'no match',
             'error': 'errors',
         },
 
-        // What a scenario copied from the log is called and where it goes
         copiedSuiteName: 'Test set',
         copyComment: function(decisionId) { return 'Added decision ' + decisionId + ' as a scenario'; },
 
@@ -48,26 +37,19 @@ var logModel = {
         },
     },
 
-    // The ruleset whose decisions this screen shows
     rulesetId: null,
     rulesetName: '',
     currentVersion: null,
     liveVersion: null,
 
-    // What the server answered last: the current page of decisions and
-    // the aggregate counts over the same range
     items: [],
     aggregates: null,
 
-    // The opened decision joined to the version that made it, plus the
-    // optional draft replay of its input
     detail: null,
     replayResult: null,
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The screen opens on the ruleset the address names, or on the first
-    // stored one, with the vocabulary for readable attribute phrases
     load: function(onDone) {
         var self = this;
         var wanted = new URLSearchParams(window.location.search).get('ruleset');
@@ -112,8 +94,6 @@ var logModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The server-side filter every list and aggregate request shares:
-    // the ruleset, the date range and the outcome facet
     filterQuery: function(rangeDays, outcome) {
         var since = new Date(Date.now() - rangeDays * 24 * 60 * 60 * 1000);
         var parts = ['ruleset_id=' + this.rulesetId, 'start_time=' + since.toISOString()];
@@ -126,8 +106,6 @@ var logModel = {
         return out;
     },
 
-    // One refresh: the aggregates over the range and the page of
-    // decisions under the outcome facet, in one sequence
     refresh: function(rangeDays, outcome, onDone) {
         var self = this;
 
@@ -146,9 +124,6 @@ var logModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The client-side facets over the loaded page: the loose search over
-    // business keys and decision ids, and "everything for the value I
-    // clicked" over the stories the page carries
     filtered: function(search, valueFilter) {
         var needle = search.trim().toLowerCase();
 
@@ -164,7 +139,6 @@ var logModel = {
 
             if (needle === '') { return true; }
 
-            // An unkeyed decision still matches by its id
             var key = record.business_key === null ? '' : record.business_key;
             var haystack = (key + ' ' + record.decision_id).toLowerCase();
             return haystack.indexOf(needle) > -1;
@@ -180,8 +154,6 @@ var logModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Aggregate counts as the cards read them - every promoted outcome
-    // that occurred plus the total, over the searched range
     counts: function() {
         var self = this;
         var total = 0;
@@ -201,8 +173,6 @@ var logModel = {
         return out;
     },
 
-    // The capture readout: how many decisions of the loaded page kept
-    // their full story - errors always do, successes follow the dial
     captureReadout: function() {
         var successTotal = 0;
         var successKept = 0;
@@ -219,7 +189,6 @@ var logModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // A story input nests by entity while the screen reads dotted paths
     flatten: function(mapping) {
         var out = {};
 
@@ -237,8 +206,6 @@ var logModel = {
         return out;
     },
 
-    // The readable phrase of one path, or the path itself when the
-    // vocabulary does not know it
     phraseFor: function(path) {
         var parts = path.split('.');
         if (parts.length !== 2) { return path; }
@@ -262,8 +229,6 @@ var logModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // One decision opened into its story, joined to the exact version
-    // of the rules that made it
     open: function(decisionId, onDone) {
         var self = this;
         this.replayResult = null;
@@ -274,8 +239,6 @@ var logModel = {
         }, data.reportError);
     },
 
-    // The opened decision's input replayed against the newest stored
-    // version - what the draft would decide today
     replay: function(onDone, onError) {
         var self = this;
         var decisionId = this.detail.decision.decision_id;
@@ -288,10 +251,6 @@ var logModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // One click copies the opened decision into the first stored test
-    // set - the input as given, the outputs as the expectations - and
-    // stores the suite as a new version. Without a stored suite the
-    // scenario becomes the first one of a brand-new set.
     addToTestSet: function(onDone, onError) {
         var self = this;
         var decisionId = this.detail.decision.decision_id;
@@ -322,8 +281,6 @@ var logModel = {
             comment: this.config.copyComment(decisionId),
         };
 
-        // An existing suite gains a new optimistic version, a new one
-        // comes into being together with its first version
         if (suiteId !== null) {
             body.definition_id = suiteId;
             body.expected_current_version = suiteVersion;
@@ -337,14 +294,11 @@ var logModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Per-rule firing counts over the range, with the live rules that
-    // never fired at all - the quiet ones are the interesting ones
     ruleCounts: function(rangeDays, onDone, onError) {
         var since = new Date(Date.now() - rangeDays * 24 * 60 * 60 * 1000);
         var url = this.config.urls.ruleCounts(this.rulesetId) + '?start_time=' + since.toISOString();
 
         data.get(url, function(payload) {
-            // One total per rule across the daily buckets
             var totals = {};
             payload.fired.forEach(function(point) {
                 if (totals[point.rule_id] === undefined) { totals[point.rule_id] = 0; }

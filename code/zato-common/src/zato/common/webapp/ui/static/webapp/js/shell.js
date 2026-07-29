@@ -1,16 +1,7 @@
 'use strict';
 
-// The shell around every screen: the navigation pane, the problems
-// panel with its resize and collapse, pane and column resize handles,
-// drag ghosts and the highlight a term arrives with from a deep link.
-// Augments the shared namespace from shared.js.
-
 (function() {
 
-// The shell is built once per page. Both the base template and a screen's
-// own script may ask for it, and a second build would append a second
-// resize handle, a second chevron and a second collapse listener, which
-// would toggle the problems panel twice per click and so never at all.
 var shellReady = false;
 
 shared.initShell = function() {
@@ -18,8 +9,6 @@ shared.initShell = function() {
     if (shellReady) { return; }
     shellReady = true;
 
-    // A page without the navigation pane, the sign-in screen among
-    // them, has no collapse button to draw
     var collapseButton = document.getElementById('navigation-collapse-button');
     if (collapseButton !== null) { collapseButton.innerHTML = shared.icon('chevron-left', 14); }
 
@@ -32,9 +21,6 @@ shared.initShell = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Dragging a handle resizes the pane next to it. On the x axis the pane
-// grows to the right, on the y axis it grows upward, which is what the
-// bottom problems panel needs.
 shared.attachPaneResize = function(handle, pane, axis) {
     handle.addEventListener('mousedown', function(event) {
         event.preventDefault();
@@ -47,7 +33,6 @@ shared.attachPaneResize = function(handle, pane, axis) {
             if (axis === 'x') {
                 pane.style.width = Math.max(140, rectangle.width + moveEvent.clientX - startX) + 'px';
             } else if (axis === 'x-right') {
-                // A right-hand pane grows when its handle moves left
                 pane.style.width = Math.max(140, rectangle.width + startX - moveEvent.clientX) + 'px';
             } else {
                 pane.style.height = Math.max(60, rectangle.height + startY - moveEvent.clientY) + 'px';
@@ -66,7 +51,6 @@ shared.attachPaneResize = function(handle, pane, axis) {
     });
 };
 
-// Every page gets a resize handle on top of its problems panel
 shared.initProblemsResize = function() {
     var panel = document.querySelector('.problems-panel');
     if (panel === null) { return; }
@@ -79,14 +63,11 @@ shared.initProblemsResize = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The problems panel collapses to its head strip at the bottom on a
-// click of the head, and the state sticks across pages and visits
 shared.initProblemsCollapse = function() {
     var panel = document.querySelector('.problems-panel');
     var head = document.getElementById('problems-head');
     if (panel === null || head === null) { return; }
 
-    // The collapse indicator is an SVG chevron next to the head's label
     var indicator = document.createElement('span');
     indicator.className = 'problems-collapse-indicator';
     head.appendChild(indicator);
@@ -96,7 +77,6 @@ shared.initProblemsCollapse = function() {
         indicator.innerHTML = shared.icon(collapsed ? 'chevron-up' : 'chevron-down', 12);
     };
 
-    // localStorage is a boundary, a first visit has nothing stored
     var stored = window.localStorage.getItem('ui-problems-collapsed');
     if (stored === '1') { panel.classList.add('problems-collapsed'); }
     drawIndicator();
@@ -106,8 +86,6 @@ shared.initProblemsCollapse = function() {
         window.localStorage.setItem('ui-problems-collapsed', collapsed ? '1' : '0');
         drawIndicator();
 
-        // A hand-resized panel drops its inline height, otherwise the
-        // head strip would keep the full height it was dragged to
         panel.style.height = '';
         panel.style.maxHeight = '';
     });
@@ -115,9 +93,6 @@ shared.initProblemsCollapse = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// A grip on the right edge of a header cell resizes its whole column.
-// Widths are remembered by key in the caller's object and reapplied
-// after every re-render.
 shared.attachColumnResize = function(headerCell, key, widths) {
     if (widths[key] !== undefined) {
         headerCell.style.width = widths[key] + 'px';
@@ -129,7 +104,6 @@ shared.attachColumnResize = function(headerCell, key, widths) {
     grip.className = 'column-resize-grip';
     headerCell.appendChild(grip);
 
-    // Clicks on the grip must never select or drag the column
     grip.addEventListener('click', function(event) { event.stopPropagation(); });
 
     grip.addEventListener('mousedown', function(event) {
@@ -176,9 +150,6 @@ shared.toggleVocabulary = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// A ghost preview built from real values, attached off-viewport so the
-// browser uses it as the drag image following the cursor. One ghost at
-// a time, every screen shares this pair.
 shared.ghostElement = null;
 
 shared.makeGhost = function(cellTexts, isColumn) {
@@ -209,8 +180,6 @@ shared.removeGhost = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The floating dashed placeholder marking a drop landing spot without
-// shifting anything underneath. One at a time, every screen shares it.
 shared.dropPlaceholderElement = null;
 
 shared.showDropPlaceholder = function(left, top, width, height) {
@@ -236,16 +205,12 @@ shared.removeDropPlaceholder = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Screens linked from the vocabulary's where-used list arrive with
-// #term=entity.attribute in the URL
 shared.termFromHash = function() {
     var match = /#term=([A-Za-z0-9._]+)/.exec(window.location.hash);
     var out = match === null ? null : match[1];
     return out;
 };
 
-// Lights the elements up, scrolls the first one into view and lets
-// the glow fade once the eye has found them
 shared.applyTermHighlight = function(elements) {
     if (elements.length === 0) { return; }
 

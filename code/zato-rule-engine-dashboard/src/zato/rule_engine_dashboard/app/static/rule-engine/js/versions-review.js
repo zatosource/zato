@@ -1,9 +1,5 @@
 'use strict';
 
-// The review side of the versions screen: the anchored comments and the
-// approval card with the gate settings, the approve and the publish
-// actions. Augments the versionsView namespace from versions-render.js.
-
 (function() {
 
 // ////////////////////////////////////////////////////////////////////////
@@ -21,7 +17,6 @@ versionsView.commentsHtml = function() {
             '<div class="versions-comment-text">' + shared.escape(comment.text) + '</div></div>';
     });
 
-    // New comments anchor to one of the changed rules, never float free
     var keys = versionsModel.reviewableKeys();
     if (keys.length === 0) {
         return html;
@@ -42,10 +37,6 @@ versionsView.commentsHtml = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The approval card: the gate settings, the approval state of the
-// version under review and the approve and publish actions - the
-// approval binds to the exact version and its content hash, so
-// nothing else can slip through the gate
 versionsView.renderReview = function() {
     var card = document.getElementById('versions-review-card');
     var approval = versionsModel.approval;
@@ -64,13 +55,12 @@ versionsView.renderReview = function() {
         'bound to the exact content that was approved. The change itself is a logged event.">' +
         (approval.gate_enabled ? 'Turn off' : 'Turn on') + '</button></b></div>';
 
-    // The self-approval toggle only matters while the gate is on
     if (approval.gate_enabled) {
         var selfText = approval.allow_self_approval ? 'allowed' : 'not allowed';
         html += '<div class="versions-review-row"><span>Self-approval</span><b>' + selfText +
             ' <button class="button-mini" ' +
             'onclick="versionsView.setSelfApproval(this, ' + !approval.allow_self_approval + ')" ' +
-            'data-tippy-content="Whether an author may approve their own version. The change is a logged event.">' +
+            'data-tippy-content="Self-approval">' +
             (approval.allow_self_approval ? 'Forbid' : 'Allow') + '</button></b></div>';
     }
 
@@ -94,11 +84,10 @@ versionsView.renderReview = function() {
     }
 
     if (versionsModel.toNumber === versionsModel.liveVersion) {
-        html += '<div class="versions-note">Live. A snapshot was taken, going back is one click on any older version.</div>';
+        html += '<div class="versions-note">Live.</div>';
     } else {
         html += '<button class="button-primary versions-review-button" onclick="versionsView.publish(this)" ' +
-            'data-tippy-content="Makes v' + versionsModel.toNumber + ' live and hot-reloads it, no restart. ' +
-            'With the gate on this only works once the version is approved.">Publish v' +
+            'data-tippy-content="Make v' + versionsModel.toNumber + ' live">Publish v' +
             versionsModel.toNumber + '</button>';
     }
 

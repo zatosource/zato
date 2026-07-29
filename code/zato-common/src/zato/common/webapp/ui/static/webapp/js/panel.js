@@ -1,17 +1,9 @@
 'use strict';
 
-// The floating panel, one at a time, app-wide: rename panels, publish
-// confirmations, save-view panels, the settings panel. Always anchored
-// to the element that was interacted with. Augments the shared
-// namespace from shared.js.
-
 (function() {
 
 shared.panelElement = null;
 
-// The selectors of every control that opens a panel: clicks on them
-// toggle their panel instead of merely closing it, every other click
-// outside the panel closes it. Screens push their own selectors here.
 shared.panelToggles = ['#settings-button'];
 
 // ////////////////////////////////////////////////////////////////////////
@@ -43,9 +35,6 @@ shared.openPanel = function(anchor, html) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// One outside-click handler for the floating panel, app-wide: the
-// controls listed in panelToggles handle their own toggling, any other
-// click outside the panel closes it
 document.addEventListener('mousedown', function(event) {
     if (shared.panelElement === null) { return; }
 

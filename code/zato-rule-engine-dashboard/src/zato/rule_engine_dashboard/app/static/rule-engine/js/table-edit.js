@@ -1,10 +1,5 @@
 'use strict';
 
-// In-place editing on the decision table grid: cell values through typed
-// inputs and pick lists, the filter line, the plain-language statements,
-// their severity and the override declarations. Augments the tableView
-// namespace from table-render.js.
-
 (function() {
 
 // ////////////////////////////////////////////////////////////////////////
@@ -31,7 +26,7 @@ tableView.wireTextInput = function(input, commit, cancel) {
 tableView.editCell = function(cell, columnLabel, rowKey, kind) {
     if (this.editing) { return; }
     if (tableModel.hasUnfolded()) {
-        shared.popover(cell, 'The sub-rules are a read-only view of the same stored column. Fold them back to edit.');
+        shared.popover(cell, 'Fold the sub-rules back to edit.');
         return;
     }
 
@@ -42,14 +37,11 @@ tableView.editCell = function(cell, columnLabel, rowKey, kind) {
     var raw = kind === 'condition' ? column.cells[rowKey] : tableModel.actionCell(column, rowKey);
     this.editing = true;
 
-    // The editor takes the cell's exact box, so the grid never shifts
     cell.classList.add('cell-editing');
 
     var commit = function(value) {
         self.editing = false;
 
-        // A blank condition cell is the any dash, a blank action cell
-        // means the column leaves the target alone
         if (kind === 'condition') {
             column.cells[rowKey] = (value === '' ? '-' : value);
         } else if (value === '' || value === '-') {
@@ -58,7 +50,6 @@ tableView.editCell = function(cell, columnLabel, rowKey, kind) {
             column.actions[rowKey] = value;
         }
 
-        // A proposed column loses its completeness highlight once it has an action ..
         var highlightCleared = false;
         if (tableModel.generatedNumbers[columnLabel] === true && Object.keys(column.actions).length > 0) {
             delete tableModel.generatedNumbers[columnLabel];
@@ -67,7 +58,6 @@ tableView.editCell = function(cell, columnLabel, rowKey, kind) {
 
         self.render();
 
-        // .. and the message appears on that column's header, not in a corner.
         if (highlightCleared) {
             shared.popover(document.querySelector('th[data-column="' + columnLabel + '"]'),
                 'Rule ' + columnLabel + ' now has an action, the completeness highlight is cleared.', 'green');
@@ -75,7 +65,6 @@ tableView.editCell = function(cell, columnLabel, rowKey, kind) {
     };
     var cancel = function() { self.editing = false; self.render(); };
 
-    // Choices edit through a closed pick list, with an escape hatch for sets ..
     if (term !== null && term.type === 'choice' && kind === 'condition') {
         var options = '<option value="-">- any</option>';
         term.values.forEach(function(value) {
@@ -99,7 +88,6 @@ tableView.editCell = function(cell, columnLabel, rowKey, kind) {
         return;
     }
 
-    // .. yes/no values through a three-way pick list ..
     if (term !== null && term.type === 'yes/no') {
         var blank = kind === 'condition' ? '-' : '';
         var yesNoOptions = '<option value="' + blank + '"' + ((raw === '' || raw === '-') ? ' selected' : '') + '>-</option>' +
@@ -113,8 +101,6 @@ tableView.editCell = function(cell, columnLabel, rowKey, kind) {
         return;
     }
 
-    // .. and everything else through free typing, validated by the server
-    // as soon as the value lands.
     var placeholder = kind === 'condition' ? '18..65, in {A, B}, >= 10, or -' : 'value';
     cell.innerHTML = '<input type="text" value="' + shared.escape(raw === '-' ? '' : raw) + '" ' +
         'placeholder="' + placeholder + '">';
@@ -123,8 +109,6 @@ tableView.editCell = function(cell, columnLabel, rowKey, kind) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The filter edits as one line: its subject, then the cell in the same
-// syntax every condition cell uses
 tableView.editFilter = function(span) {
     if (this.phraseMode) {
         shared.popover(span, 'The phrase view keeps the logic closed. Switch back to edit the filter.');
@@ -136,8 +120,6 @@ tableView.editFilter = function(span) {
     var filter = tableModel.table.filter;
     this.editing = true;
 
-    // The input inherits the expression's own footprint, so the row
-    // keeps its size while the value is being typed
     var spanWidth = Math.max(tableModel.config.filterInputMinimumWidth, span.offsetWidth + 12);
     span.outerHTML = '<input type="text" id="filter-input" class="table-filter-input" ' +
         'style="width:' + spanWidth + 'px" value="' + shared.escape(filter.subject + ' ' + filter.cell) + '">';
@@ -184,8 +166,6 @@ tableView.editStatement = function(span, columnLabel) {
     var wrap = span.parentElement;
     this.editing = true;
 
-    // The textarea starts at the exact height of the text it replaces,
-    // so the row does not jump when editing begins
     var spanHeight = span.offsetHeight;
     span.outerHTML = '<textarea style="height:' + spanHeight + 'px">' + shared.escape(column.statement.text) + '</textarea>';
     var textarea = wrap.querySelector('textarea');
@@ -214,13 +194,10 @@ tableView.cycleSeverity = function(columnLabel) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// An override is a declaration in the document: the column carries the
-// numbers it wins over, never an execution ordering
 tableView.setOverride = function(columnLabel, value) {
     var column = tableModel.columnByLabel(columnLabel);
     column.overrides = value === '' ? [] : [parseInt(value)];
 
-    // A fresh conflict check answers whether the declaration resolved anything
     var anchor = document.querySelector('.table-override-cell[data-column="' + columnLabel + '"] select');
     var countBefore = tableModel.conflictLabels().length;
 

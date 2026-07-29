@@ -1,10 +1,5 @@
 'use strict';
 
-// The dashboard-wide data helpers: GET and POST against the JSON views,
-// with the CSRF token Django expects on every POST. A view answers a bad
-// request with {error: message} under a non-2xx status, and that message
-// goes to the caller's onError handler.
-
 (function() {
 
 var data = {
@@ -15,7 +10,6 @@ var data = {
             'the session may have expired - reloading the page signs you back in',
     },
 
-    // Every signed-in page carries a CSRF input in the sign-out form
     csrfToken: function() {
         return document.querySelector('[name=csrfmiddlewaretoken]').value;
     },
@@ -29,9 +23,6 @@ var data = {
             onError(payload.error);
         }, function() {
 
-            // A body that will not parse is never a decoded error message. An HTML error
-            // page or a redirect to the sign-in screen arrives here, and the caller is
-            // told so rather than left waiting for a callback that never comes.
             onError(self.config.notJsonMessage);
         });
     },
@@ -61,7 +52,6 @@ var data = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The report of last resort - a red popover on the screen's title line
     reportError: function(message) {
         shared.popover(document.querySelector('.main-topbar-line'), message, 'red');
     },

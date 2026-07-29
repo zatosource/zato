@@ -1,8 +1,5 @@
 'use strict';
 
-// The right-click menu of the decision list, the same menu machinery
-// as everywhere else. Augments the logView namespace.
-
 (function() {
 
 // ////////////////////////////////////////////////////////////////////////
@@ -14,14 +11,11 @@ logView.openRowMenu = function(event, decisionId) {
 
     var items = [
         {label: 'Open', destructive: false,
-            description: 'Opens this decision\'s full story in the pane on the right.',
             action: function() { self.select(decisionId); }},
     ];
 
-    // Only a decision that kept its story can be copied or replayed
     if (record.has_payload) {
         items.push({label: 'Add to test set', destructive: false,
-            description: 'Turns this stored decision into a scenario, what went out becomes the expectations.',
             action: function() {
                 self.select(decisionId);
                 var row = document.querySelector('.log-row-selected');
@@ -31,7 +25,6 @@ logView.openRowMenu = function(event, decisionId) {
             }});
 
         items.push({label: 'Replay against v' + logModel.currentVersion, destructive: false,
-            description: 'Runs this same input against the newest stored version and shows what would change.',
             action: function() {
                 self.select(decisionId);
                 var row = document.querySelector('.log-row-selected');
@@ -45,7 +38,6 @@ logView.openRowMenu = function(event, decisionId) {
     items.push(null);
 
     items.push({label: 'Copy decision id', destructive: false,
-        description: 'The id is the handle for support: paste it anywhere, search it here later.',
         action: function() {
             navigator.clipboard.writeText(decisionId);
             var row = document.querySelector('[data-decision="' + decisionId + '"]');
@@ -54,7 +46,6 @@ logView.openRowMenu = function(event, decisionId) {
 
     if (record.business_key !== null) {
         items.push({label: 'Everything for ' + record.business_key, destructive: false,
-            description: 'Filters the list to every decision keyed to ' + record.business_key + '.',
             action: function() {
                 document.getElementById('log-search').value = record.business_key;
                 self.setSearch(record.business_key);
@@ -62,7 +53,6 @@ logView.openRowMenu = function(event, decisionId) {
     }
 
     items.push({label: 'Everything ' + logModel.config.outcomeLabels[record.outcome], destructive: false,
-        description: 'Filters the list to every decision with this outcome, same as clicking its card above.',
         action: function() { self.toggleOutcome(record.outcome); }});
 
     var title = record.business_key === null
@@ -73,8 +63,6 @@ logView.openRowMenu = function(event, decisionId) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The menu of a value cell in the opened decision: "show me everything
-// for the value I clicked", plus the copy
 logView.openValueMenu = function(event, path, value) {
     event.preventDefault();
     var phrase = logModel.phraseFor(path);
@@ -82,11 +70,8 @@ logView.openValueMenu = function(event, path, value) {
 
     var items = [
         {label: 'Everything for ' + value, destructive: false,
-            description: 'Filters the list to every decision where ' + phrase + ' is ' + value +
-                ', coming in or going out.',
             action: function() { self.setValueFilter(path, value); }},
         {label: 'Copy value', destructive: false,
-            description: 'Copies ' + value + ' to the clipboard.',
             action: function() {
                 navigator.clipboard.writeText(value);
                 shared.popover(event.target, 'Copied ' + value + '.');

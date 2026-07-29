@@ -1,14 +1,7 @@
 'use strict';
 
-// Drag and drop for the rule editor: vocabulary attributes dropped onto the
-// if line become conditions, attributes dropped onto the then or else line
-// become actions. The dragged attribute travels as a ghost and the drop
-// areas light up while a drag is in flight.
-// Augments the editorView namespace from editor-render.js.
-
 (function() {
 
-// State of an in-flight vocabulary drag
 editorView.dragState = null;
 
 // ////////////////////////////////////////////////////////////////////////
@@ -20,8 +13,6 @@ editorView.clearDropMarks = function() {
     });
 };
 
-// While a drag is in flight, every drop area shows itself as a dashed box,
-// so the choice is visible before the pointer reaches it
 editorView.markPossibleDrops = function() {
     document.querySelectorAll('.editor-line, .editor-group').forEach(function(element) {
         element.classList.add('editor-drop-possible');
@@ -44,7 +35,6 @@ editorView.attachVocabularyDrag = function() {
             var path = element.getAttribute('data-path');
             self.dragState = {path: path};
 
-            // The ghost is the attribute's phrase, the same words the sentence will use
             var attribute = vocabulary.attribute(path);
             var ghost = shared.makeGhost([attribute.phrase], false);
             event.dataTransfer.setDragImage(ghost, 16, 12);
@@ -63,9 +53,6 @@ editorView.attachVocabularyDrag = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Dropping on the line itself appends at the end, dropping on one of its
-// conditions or actions inserts right after that item, whose right edge
-// lights up as the insertion point
 editorView.attachDropLines = function() {
     var self = this;
 
@@ -102,7 +89,6 @@ editorView.attachDropLines = function() {
         group.addEventListener('dragover', function(event) {
             if (self.dragState === null) { return; }
             event.preventDefault();
-            // The group mark wins over the whole-line mark
             event.stopPropagation();
             self.clearDropMarks();
             group.classList.add('editor-group-drop');
@@ -127,14 +113,10 @@ editorView.listLength = function(dropName) {
     return out;
 };
 
-// A dropped attribute lands at the given position: on the if line it starts
-// a condition whose comparator menu opens by itself, on the then and else
-// lines it becomes an action, yes/no attributes arriving already set to true
 editorView.dropAt = function(dropName, path, position) {
     if (dropName === 'conditions') {
         editorModel.rule.conditions.splice(position, 0, {subject: path, comparator: null, values: []});
 
-        // A new condition brings one new and-joiner with it
         if (editorModel.rule.conditions.length > 1) {
             var joinerIndex = position === 0 ? 0 : position - 1;
             editorModel.rule.joiners.splice(joinerIndex, 0, 'and');

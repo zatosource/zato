@@ -21,20 +21,17 @@
   <div class="toolbar">
     <span class="versions-compare-label">Compare</span>
     <select id="versions-from" class="versions-select" onchange="versionsView.setCompare()"
-      data-tippy-content="The older version, everything is shown as the change from here."></select>
+      data-tippy-content="Older version"></select>
     <span class="versions-compare-label">with</span>
     <select id="versions-to" class="versions-select" onchange="versionsView.setCompare()"
-      data-tippy-content="The newer version, usually the draft under review."></select>
+      data-tippy-content="Newer version"></select>
     <span class="toolbar-separator"></span>
     <button class="button-ghost" id="button-changes-only" onclick="versionsView.toggleChangesOnly()"
-      data-tippy-content="Hides every rule the two versions agree on, so a large ruleset reads as just its changes.">Changes only</button>
+      data-tippy-content="Changed rules only">Changes only</button>
     <button class="button-ghost" id="button-split-view" onclick="versionsView.toggleSplit()"
-      data-tippy-content="Updated rules side by side instead of one merged text.">Split view</button>
-    <span class="toolbar-separator"></span>
-    <span class="keyboard-hint">Mark each change as viewed, the bar counts down, comments anchor to the rule they are about</span>
+      data-tippy-content="Side by side">Split view</button>
   </div>
 
-  <!-- Timeline on the left, the rendered diff on the right -->
   <div class="versions-body">
     <div class="versions-timeline-pane" id="versions-timeline-pane">
       <div class="versions-timeline-head">History, linear, never branched</div>

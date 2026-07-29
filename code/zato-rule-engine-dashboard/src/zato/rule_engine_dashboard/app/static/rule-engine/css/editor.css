@@ -1,28 +1,24 @@
-/* ------------------------------------------------------------ */
-/* Editor - sentence area                                        */
-/* ------------------------------------------------------------ */
+/* ---------------------------------------------------------- */
+/* Editor - sentence area                                     */
+/* ---------------------------------------------------------- */
 
 .editor-area{flex:1;overflow:auto;padding:26px 30px}
 
 .editor-rule-sentence{max-width:860px;font-size:15px;line-height:2.3;color:var(--text2)}
 .editor-rule-sentence.editor-expression-mode{font-family:var(--mono);font-size:13.5px}
 
-/* One line per rule part, each a drop target for vocabulary attributes */
 .editor-line{border:1px dashed transparent;border-radius:6px;padding:2px 6px}
 .editor-line-drop{border-color:var(--blue);background:var(--blue-tint-07)}
 
-/* While a drag is in flight, every drop area shows itself as a dashed box */
 .editor-drop-possible{outline:1px dashed var(--text5);outline-offset:2px;border-radius:6px}
 
-/* The drop area under the pointer fills in, dropping there inserts after it */
 .editor-group-drop{outline:1px dashed var(--blue);outline-offset:2px;border-radius:6px;background:var(--blue-tint-14)}
 
-/* Sentence keywords, part of the fixed skeleton, never clickable */
 .editor-keyword{color:var(--blue);font-weight:600;margin:0 2px}
 
-/* ------------------------------------------------------------ */
-/* Editor - token chips                                          */
-/* ------------------------------------------------------------ */
+/* ---------------------------------------------------------- */
+/* Editor - token chips                                       */
+/* ---------------------------------------------------------- */
 
 .editor-token{display:inline-block;padding:1px 7px;border-radius:4px;cursor:pointer;margin:0 2px;border:1px solid transparent}
 .editor-token:hover{background:var(--panel);border-color:var(--border)}
@@ -32,38 +28,32 @@
 .editor-token-action{color:var(--text)}
 .editor-token-joiner{color:var(--blue);font-weight:600}
 
-/* Keyboard focus on any token */
 .editor-token-active{box-shadow:0 0 0 2px var(--blue)}
 
-/* A box around each and-group once any or is present, showing the precedence */
 .editor-and-group{display:inline-block;border:1px solid var(--border);border-radius:6px;padding:1px 5px;background:var(--blue-tint-05)}
 
-/* Typed placeholders for the unfinished parts of a sentence */
 .editor-token-placeholder{color:var(--indigo);font-family:var(--mono);font-size:0.88em;border:1px dashed var(--indigo);opacity:0.85}
 .editor-token-placeholder:hover{background:var(--indigo-tint-12)}
 
-/* Free typing that did not validate */
 .editor-token-invalid{border-bottom:2px solid var(--red);border-radius:4px 4px 0 0}
 
-/* Inline value input, same footprint as the token it replaces */
 .editor-token-input{background:var(--panel);border:1px solid var(--blue);border-radius:4px;color:var(--text);font-size:0.92em;font-family:var(--mono);padding:1px 7px;margin:0 2px;outline:none;width:110px}
 
-/* ------------------------------------------------------------ */
-/* Editor - condition and action groups                          */
-/* ------------------------------------------------------------ */
+/* ---------------------------------------------------------- */
+/* Editor - condition and action groups                       */
+/* ---------------------------------------------------------- */
 
 .editor-group{white-space:nowrap;display:inline-block}
 .editor-group-remove{color:var(--text5);cursor:pointer;padding:0 3px;border-radius:3px;opacity:0;transition:opacity 0.12s;vertical-align:1px}
 .editor-group:hover .editor-group-remove{opacity:1}
 .editor-group-remove:hover{color:var(--red);background:var(--panel)}
 
-/* Gentle add chips */
 .editor-add-chip{display:inline-flex;align-items:center;gap:3px;color:var(--text5);font-size:12px;border:1px dashed var(--border);border-radius:4px;padding:0 8px;cursor:pointer;margin:0 4px;line-height:1.9;vertical-align:1px}
 .editor-add-chip:hover{color:var(--text2);border-color:var(--text4)}
 
-/* ------------------------------------------------------------ */
-/* Editor - completion menu                                      */
-/* ------------------------------------------------------------ */
+/* ---------------------------------------------------------- */
+/* Editor - completion menu                                   */
+/* ---------------------------------------------------------- */
 
 .editor-completion-menu{position:fixed;z-index:1300;background:var(--panel);border:1px solid var(--blue);border-radius:8px;box-shadow:0 6px 24px var(--shadow-strong);min-width:190px;max-height:280px;overflow:auto;padding:4px 0}
 .editor-completion-title{padding:5px 12px 3px;font-size:10px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:0.08em}
@@ -72,9 +62,9 @@
 .editor-completion-hint{margin-left:auto;font-size:10px;color:var(--text5);font-family:var(--mono);padding-left:14px}
 .editor-completion-check{width:13px;flex-shrink:0;color:var(--blue);display:inline-flex}
 
-/* ------------------------------------------------------------ */
-/* Editor - view switcher                                        */
-/* ------------------------------------------------------------ */
+/* ---------------------------------------------------------- */
+/* Editor - view switcher                                     */
+/* ---------------------------------------------------------- */
 
 .view-switcher{display:inline-flex}
 .view-switcher .button-ghost{border-radius:0;margin-left:-1px}
@@ -82,13 +72,12 @@
 .view-switcher .button-ghost:last-child{border-radius:0 4px 4px 0}
 .view-switcher .button-ghost.toggled{position:relative;z-index:1}
 
-/* A short note above the table and document views */
 .editor-view-note{max-width:760px;font-size:12px;color:var(--text4);line-height:1.6;margin-bottom:16px}
 .editor-view-note a{color:var(--blue)}
 
-/* ------------------------------------------------------------ */
-/* Editor - table view, the same rule as a grid                  */
-/* ------------------------------------------------------------ */
+/* ---------------------------------------------------------- */
+/* Editor - table view                                        */
+/* ---------------------------------------------------------- */
 
 .editor-table{border-collapse:collapse;font-size:13px}
 .editor-table th{background:var(--panel);color:var(--text3);font-weight:600;font-size:11px;padding:6px 14px;border:1px solid var(--border);text-align:center;min-width:120px}
@@ -99,15 +88,15 @@
 .editor-table tr.editor-table-actions td{background:var(--filter-span-background)}
 .editor-table tr.editor-table-actions td.editor-table-label{color:var(--blue);font-weight:600;background:var(--panel-raised)}
 
-/* ------------------------------------------------------------ */
-/* Editor - document view, the stored artifact itself            */
-/* ------------------------------------------------------------ */
+/* ---------------------------------------------------------- */
+/* Editor - document view                                     */
+/* ---------------------------------------------------------- */
 
 .editor-document{background:var(--input-background);border:1px solid var(--border);border-radius:8px;padding:16px 20px;max-width:640px;font-family:var(--mono);font-size:12.5px;line-height:1.7;color:var(--text2);overflow:auto;margin:0 0 16px}
 
-/* ------------------------------------------------------------ */
-/* Editor - live outcomes, the test set in the editing loop      */
-/* ------------------------------------------------------------ */
+/* ---------------------------------------------------------- */
+/* Editor - live outcomes                                     */
+/* ---------------------------------------------------------- */
 
 .live-panel{border-top:1px solid var(--border);background:var(--sentence-bar-background);padding:10px 24px 12px}
 
@@ -115,7 +104,6 @@
 .live-head-hint{margin-left:10px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--text5);font-size:11px}
 .live-head-hint a{color:var(--blue)}
 
-/* The outcome distribution bar, its segments sized by share */
 .live-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--panel);max-width:560px;margin-bottom:7px}
 .live-bar-segment{display:block;height:100%}
 .live-bar-passed{background:var(--green)}
@@ -129,10 +117,8 @@
 .live-count-failed{color:var(--red)}
 .live-count-separator{margin:0 8px;color:var(--text5)}
 
-/* Readable errors, never a null that flows onward */
 .live-error{font-size:12px;color:var(--red);margin:3px 0}
 
-/* Every scenario as a chip with the status it came back with */
 .live-scenarios{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .live-scenario{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);border:1px solid var(--border);border-radius:4px;padding:2px 8px;background:var(--panel)}
 .live-scenario-badge{font-family:var(--mono);font-size:10px;font-weight:600}

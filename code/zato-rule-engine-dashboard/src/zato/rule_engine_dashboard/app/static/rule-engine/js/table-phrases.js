@@ -1,14 +1,9 @@
 'use strict';
 
-// The sentence bar of the decision table: one selected column read back
-// as a near-natural sentence, spoken from the server's reading of every
-// cell. Augments the tableView namespace from table-render.js.
-
 (function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// A number reads with its thousands separators, anything else as it stands
 tableView.readingValue = function(value) {
     if (typeof value === 'number') { return value.toLocaleString('en-US'); }
 
@@ -56,8 +51,6 @@ tableView.conditionPhrase = function(subject, reading) {
             shared.escape(this.readingValue(reading.value));
     }
 
-    // Text the cell grammar does not read is spoken back as it was typed, so
-    // the sentence says what the cell says while the problems panel says why
     var out = phrase + ' ' + shared.escape(reading.text);
     return out;
 };

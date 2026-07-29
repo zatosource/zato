@@ -1,13 +1,7 @@
 'use strict';
 
-// Drag and drop for the decision table: vocabulary attributes onto sections,
-// row reordering and column reordering, all with ghost previews of the thing
-// being dragged and a highlighted drop target.
-// Augments the tableView namespace from table-render.js.
-
 (function() {
 
-// State of an in-flight drag: vocabulary attribute, row or column
 tableView.dragState = null;
 
 // ////////////////////////////////////////////////////////////////////////
@@ -30,7 +24,6 @@ tableView.attachVocabularyDrag = function() {
             var path = element.getAttribute('data-path');
             self.dragState = {type: 'vocabulary', path: path};
 
-            // The ghost is the attribute path travelling with the cursor
             var ghost = shared.makeGhost([path], false);
             event.dataTransfer.setDragImage(ghost, 16, 12);
             event.dataTransfer.setData('text/plain', 'vocabulary');
@@ -45,7 +38,6 @@ tableView.attachVocabularyDrag = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// A row ghost shows the row's expression and every cell value
 tableView.startRowDrag = function(handle, event) {
     var kind = handle.getAttribute('data-kind');
     var rowKey = handle.getAttribute('data-row');
@@ -66,7 +58,6 @@ tableView.startRowDrag = function(handle, event) {
     event.dataTransfer.setDragImage(ghost, 20, 14);
     event.dataTransfer.setData('text/plain', 'row');
 
-    // The source row dims while its ghost travels with the cursor
     handle.closest('tr').classList.add('table-row-dragging');
 };
 
@@ -98,9 +89,6 @@ tableView.wireDropGroup = function(tableRows, kind) {
             event.preventDefault();
             self.clearDropMarks();
 
-            // A vocabulary drag highlights the whole section, a row drag
-            // gets the floating placeholder above the target row, so the
-            // table itself never shifts
             if (self.dragState.type === 'vocabulary') {
                 tableRows.forEach(function(target) { target.classList.add('table-drop-target'); });
             } else {
@@ -124,7 +112,6 @@ tableView.wireDropGroup = function(tableRows, kind) {
                 shared.popover(document.querySelector('tr[data-kind="' + kind + '"][data-row="' + newRowKey + '"] .table-expression-column'),
                     kindText + ' row was added for ' + self.dragState.path + '.' + startText);
             } else if (self.dragState.kind === kind) {
-                // Reordering is silent, the row visibly lands where it was dropped
                 if (self.dragState.key !== tableRow.getAttribute('data-row')) {
                     tableModel.moveRow(kind, self.dragState.key, tableRow.getAttribute('data-row'));
                     self.render();
@@ -137,7 +124,6 @@ tableView.wireDropGroup = function(tableRows, kind) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// A column ghost stacks the rule number and every cell of that column
 tableView.startColumnDrag = function(header, event) {
     var label = header.getAttribute('data-column');
     this.dragState = {type: 'column', label: label};
@@ -151,7 +137,6 @@ tableView.startColumnDrag = function(header, event) {
     event.dataTransfer.setDragImage(ghost, 30, 14);
     event.dataTransfer.setData('text/plain', 'column');
 
-    // The source column dims while its ghost travels with the cursor
     document.querySelectorAll('[data-column="' + label + '"]').forEach(function(element) {
         element.classList.add('table-column-dragging');
     });
@@ -174,8 +159,6 @@ tableView.attachColumnDrag = function() {
             event.preventDefault();
             self.clearDropMarks();
 
-            // The floating placeholder runs along the target column's left
-            // edge, from its header to its last cell, nothing shifts
             var targetLabel = header.getAttribute('data-column');
             var top = null;
             var bottom = null;

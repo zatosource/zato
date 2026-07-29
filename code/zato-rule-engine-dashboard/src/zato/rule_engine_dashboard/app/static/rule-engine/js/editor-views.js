@@ -1,24 +1,14 @@
 'use strict';
 
-// The rule editor's alternate skins over the same token structure: the
-// decision-table grid and the canonical document view. Augments the
-// editorView namespace from editor-render.js.
-
 (function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The same rule as a decision-table grid: each or-group of the sentence
-// is one rule column, the and-joined conditions inside it are the rows,
-// and the cells hold the exact same chips as the sentence, so an edit
-// in either view lands in the same stored document
 editorView.tableViewHtml = function() {
     var self = this;
     var rule = editorModel.rule;
     var groups = editorModel.conditionGroups();
 
-    // Rows in order of first appearance: one row per subject, plus one
-    // row per still-unfinished condition, which stays editable here too
     var rowKeys = [];
     var rowLabels = {};
     rule.conditions.forEach(function(condition, conditionIndex) {
@@ -62,8 +52,6 @@ editorView.tableViewHtml = function() {
         body += '</tr>';
     });
 
-    // The actions are shared by every column, then fires on the first
-    // matching column, else when no column matches
     var thenCells = rule.thenActions.map(function(action, actionIndex) {
         var out = self.actionHtml(action, 'thenActions', actionIndex);
         return out;
@@ -78,39 +66,25 @@ editorView.tableViewHtml = function() {
     body += '<tr class="editor-table-actions"><td class="editor-table-label">else</td>' +
         '<td colspan="' + columnCount + '">' + elseCells + '</td></tr>';
 
-    var note = '<div class="editor-view-note">The same stored rule drawn as a grid: each or-group of the ' +
-        'sentence is one numbered column, a column matches when all its cells do, and the rule fires its ' +
-        'then actions when any column matches. Every chip stays editable, an edit here is an edit of the sentence.</div>';
-
-    var out = note + '<table class="editor-table">' + header + body + '</table>';
+    var out = '<table class="editor-table">' + header + body + '</table>';
     return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The stored artifact itself: the canonical document the server parsed
-// out of the sentence, plus its readable text form. What export gives
-// out and what versions snapshot is exactly this.
 editorView.documentViewHtml = function() {
-    var note = '<div class="editor-view-note">The stored artifact itself: the canonical document the server ' +
-        'parses out of the sentence, and above it the readable text form the parser reads back in. ' +
-        'The sentence, the expression and the table are renderings of this document, export is this ' +
-        'document, and every version is a full snapshot of it.</div>';
 
     if (editorModel.serverDocuments === null || Object.keys(editorModel.serverDocuments).length === 0) {
-        var out = note + '<div class="editor-view-note">The rule needs at least one finished condition ' +
-            'and one then action before the server can parse it into a document.</div>';
+        var out = '<div class="editor-view-note">No finished rule yet.</div>';
         return out;
     }
 
-    var html = note + '<pre class="editor-document" id="editor-canonical-text"></pre>' +
+    var html = '<pre class="editor-document" id="editor-canonical-text"></pre>' +
         '<pre class="editor-document">' +
         shared.escape(JSON.stringify(editorModel.serverDocuments, null, 2)) + '</pre>';
     return html;
 };
 
-// The canonical text form comes from the server's own renderer, the
-// exact inverse of its parser
 editorView.fillCanonicalText = function() {
     var target = document.getElementById('editor-canonical-text');
     if (target === null) { return; }

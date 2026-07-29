@@ -1,9 +1,5 @@
 'use strict';
 
-// The right-click menu of the scenario list: run, duplicate, reorder and
-// delete, the same menu shape as the decision table grid. Augments the
-// testView namespace from test-render.js.
-
 (function() {
 
 // ////////////////////////////////////////////////////////////////////////
@@ -14,7 +10,6 @@ testView.scenarioMenuItems = function(index, anchor) {
     var items = [];
 
     items.push({label: 'Run this scenario', destructive: false,
-        description: 'Runs just this one, the rest of the suite keeps its previous results.',
         action: function() {
             testModel.runOne(scenario, function(entry) {
                 shared.popover(anchor, 'Ran "' + scenario.name + '", ' + self.statusLabels[entry.status] + '.');
@@ -25,7 +20,6 @@ testView.scenarioMenuItems = function(index, anchor) {
         }});
 
     items.push({label: 'Duplicate', destructive: false,
-        description: 'An exact copy right under this one, expectations included.',
         action: function() {
             testModel.duplicateScenario(index);
             self.selectScenario(index + 1);
@@ -33,7 +27,6 @@ testView.scenarioMenuItems = function(index, anchor) {
 
     items.push(null);
     items.push({label: 'Move up', destructive: false,
-        description: 'One step up in the suite. Scenarios also move with Shift and the arrow keys.',
         action: function() {
             if (testModel.moveScenario(index, -1)) {
                 if (self.selectedIndex === index) { self.selectedIndex -= 1; }
@@ -41,7 +34,6 @@ testView.scenarioMenuItems = function(index, anchor) {
             }
         }});
     items.push({label: 'Move down', destructive: false,
-        description: 'One step down in the suite. Scenarios also move with Shift and the arrow keys.',
         action: function() {
             if (testModel.moveScenario(index, 1)) {
                 if (self.selectedIndex === index) { self.selectedIndex += 1; }
@@ -51,7 +43,6 @@ testView.scenarioMenuItems = function(index, anchor) {
 
     items.push(null);
     items.push({label: 'Delete', destructive: true,
-        description: 'Removes the scenario from the suite, its inputs and expectations included.',
         action: function() {
             testModel.deleteScenario(index);
             if (self.selectedIndex >= testModel.suite.scenarios.length) {
@@ -81,7 +72,6 @@ testView.attachScenarioMenu = function() {
     });
 };
 
-// The list element itself survives re-renders, so one delegate is enough
 testView.attachScenarioMenu();
 
 })();

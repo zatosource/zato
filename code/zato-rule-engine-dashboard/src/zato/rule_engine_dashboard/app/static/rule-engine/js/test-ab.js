@@ -1,24 +1,14 @@
 'use strict';
 
-// The A/B view: two versions of the ruleset run against the suite's own
-// scenarios, KPI numbers side by side, and the decisions that change
-// under the challenger, each traced to the rules that explain it. The
-// same version picked on both sides runs a single simulation instead.
-// Augments the testView namespace from test-render.js.
-
 (function() {
 
-// The last comparison, kept so switching views does not recompute it
 testView.abResult = null;
 
-// The two versions under comparison, set once the ruleset is known
 testView.championVersion = null;
 testView.challengerVersion = null;
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The KPIs of a run: one breakdown per output the suite asserts on,
-// derived from the expectations rather than declared separately
 testView.abKpis = function() {
     var fields = [];
     testModel.suite.scenarios.forEach(function(scenario) {
@@ -57,8 +47,6 @@ testView.compare = function(button) {
     this.championVersion = parseInt(document.getElementById('ab-champion-version').value);
     this.challengerVersion = parseInt(document.getElementById('ab-challenger-version').value);
 
-    // A comparison runs both versions over every scenario, so the button stays
-    // disabled until the answer is in
     var handlers = shared.inFlight(button, function(payload) {
         self.abResult = payload;
         self.renderAb();
@@ -68,7 +56,6 @@ testView.compare = function(button) {
     });
     if (handlers === null) { return; }
 
-    // The same version on both sides is one simulation, not a comparison
     if (this.championVersion === this.challengerVersion) {
         var single = {
             ruleset_id: testModel.rulesetId,
@@ -94,7 +81,6 @@ testView.compare = function(button) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// One result line: label, value and a proportional bar
 testView.resultLineHtml = function(label, valueText, share) {
     var width = Math.round(share * 100);
     var out = '<div class="test-result-line">' +
@@ -117,7 +103,6 @@ testView.variantCardHtml = function(title, version, run) {
         html += this.resultLineHtml('Could not run', String(run.errors), run.errors / run.total);
     }
 
-    // Each KPI is a breakdown - one line per value the runs assigned
     run.kpis.forEach(function(kpi) {
         var buckets = kpi.value;
         Object.keys(buckets).sort().forEach(function(bucket) {
@@ -144,7 +129,6 @@ testView.changedRowHtml = function(entry) {
     var self = this;
     var changeParts = entry.changes.map(function(change) { return self.changeText(change); });
 
-    // The rules firing in one version only are the why behind the changes
     var ruleParts = [];
     entry.fired_only_old.forEach(function(name) { ruleParts.push(name + ' (champion only)'); });
     entry.fired_only_new.forEach(function(name) { ruleParts.push(name + ' (challenger only)'); });
@@ -179,8 +163,6 @@ testView.renderAb = function() {
         return;
     }
 
-    // The champion defaults to what runs today, the challenger to the
-    // newest version - the comparison of publishing's before and after
     if (this.championVersion === null) {
         this.championVersion = testModel.rulesetLiveVersion;
         if (this.championVersion === null) { this.championVersion = testModel.rulesetCurrentVersion; }
@@ -200,7 +182,6 @@ testView.renderAb = function() {
 
     if (this.abResult !== null) {
 
-        // A single simulation renders one card, a comparison two plus the diff
         html += '<div class="test-variant-row">';
         html += this.variantCardHtml('Champion', this.championVersion, this.abResult.champion);
         if (this.abResult.challenger !== null) {

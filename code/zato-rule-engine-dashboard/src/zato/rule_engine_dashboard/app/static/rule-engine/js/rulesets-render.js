@@ -1,36 +1,19 @@
 'use strict';
 
-// Rendering for the rulesets home: the list with status on every row,
-// full-text matches shown as readable sentences with the hit highlighted,
-// the recents strip, the saved view chips, and the side pane, which is
-// the change feed until a row is selected and that ruleset's preview
-// afterwards. Event handlers live in rulesets-actions.js, the right-click
-// menu in rulesets-menu.js.
-
 (function() {
 
 var rulesetsView = {
 
     config: {
-        // The list renders a capped window no matter how many rulesets
-        // exist, the filter is the way in past the cap
         maxVisibleRows: 200,
-        // A row shows at most this many matching sentences, the preview
-        // shows the rest
         maxRowMatches: 3,
-        // The preview shows at most this many rules and history entries
         maxPreviewRules: 6,
         maxPreviewEvents: 5,
-        // Views stay few and named, a long view list wastes more time
-        // than it saves
         maxSavedViews: 5,
-        // A rename impact lists this many renamed rules, the count covers the rest
         maxRenamedRules: 6,
 
-        // A ruleset name is dotted words, the same shape the server enforces
         rulesetNamePattern: /^\w+(\.\w+)*$/,
 
-        // Where a ruleset opens into, each screen reads the parameter
         openUrls: {
             tables: '/tables/',
             editor: '/editor/',
@@ -40,7 +23,6 @@ var rulesetsView = {
             vocabulary: '/vocabulary/',
         },
 
-        // Every history event type as the phrase the feed shows
         eventPhrases: {
             'definition.created': 'created this ruleset',
             'definition.renamed': 'renamed this ruleset',
@@ -64,7 +46,6 @@ var rulesetsView = {
         },
     },
 
-    // UI state
     query: '',
     view: 'all',
     selectedId: null,
@@ -82,8 +63,6 @@ var rulesetsView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Timestamps come from the views as ISO strings, the screen shows
-    // the readable date-and-minute part
     whenText: function(iso) {
         return iso.slice(0, 16).replace('T', ' ');
     },
@@ -93,7 +72,6 @@ var rulesetsView = {
     markHtml: function(text) {
         if (this.query.trim() === '') { return shared.escape(text); }
 
-        // The match is highlighted in place, case preserved
         var needle = this.query.trim().toLowerCase();
         var lower = text.toLowerCase();
         var out = '';
@@ -122,7 +100,7 @@ var rulesetsView = {
         }
         if (draft !== null) {
             out += '<span class="rulesets-badge rulesets-badge-draft" ' +
-                'data-tippy-content="A draft is in progress, the live version keeps answering until it is published.">draft v' + draft + '</span>';
+                'data-tippy-content="Unpublished draft">draft v' + draft + '</span>';
             out += '<button class="button-mini rulesets-publish" ' +
                 'onclick="event.stopPropagation(); rulesetsView.openPublishPanel(' + ruleset.id + ', this)" ' +
                 'data-tippy-content="Publish draft v' + draft +
@@ -192,8 +170,6 @@ var rulesetsView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // One full-text hit: the matching sentence itself, readable, with
-    // the hit marked at the exact place the search reported
     hitHtml: function(hit) {
         var line = hit.line;
         var out = '<div class="rulesets-match">' +
@@ -233,7 +209,6 @@ var rulesetsView = {
             pane.innerHTML = self.previewHtml(preview);
             shared.initTips();
 
-            // Opening a preview counts as a visit, the strip follows suit
             rulesetsModel.loadRecents(function() { self.renderRecents(); });
         });
     },
@@ -269,7 +244,6 @@ var rulesetsView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The preview answers "do I need to open it" without opening it
     previewHtml: function(preview) {
         var self = this;
         var ruleset = preview.definition;
@@ -315,8 +289,6 @@ var rulesetsView = {
             this.previewLinkHtml(ruleset.id, 'vocabulary', 'Vocabulary') +
             '</div>';
 
-        // The rendered rules are the sentences a person reads, the first
-        // few are enough to recognize the ruleset
         if (preview.rendered !== null) {
             var lines = preview.rendered.split('\n').filter(function(line) { return line.trim() !== ''; });
             html += '<div class="test-grid-title">A few of its rules</div>';
@@ -347,7 +319,6 @@ var rulesetsView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The recents strip: what was opened before, one click back into it
     renderRecents: function() {
         var strip = document.getElementById('rulesets-recents');
         var html = '';
@@ -355,13 +326,11 @@ var rulesetsView = {
         rulesetsModel.recents.forEach(function(recent) {
             var ruleset = rulesetsModel.byId(recent.definition_id);
 
-            // A recent visit may point past the list's window, the strip
-            // only shows what the list can select
             if (ruleset === undefined) { return; }
 
             html += '<button class="button-ghost rulesets-recent-chip" ' +
                 'onclick="rulesetsView.pickRecent(' + ruleset.id + ')" ' +
-                'data-tippy-content="Selects it in the list, double-click a row or press Enter to open it again.">' +
+                'data-tippy-content="Select it in the list">' +
                 shared.escape(ruleset.name) + '</button>';
         });
 
@@ -377,8 +346,6 @@ var rulesetsView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Saved views render as chips next to the fixed ones, each carrying
-    // its search and its view filter, with the x deleting it
     renderSavedViews: function() {
         var holder = document.getElementById('rulesets-saved-views');
         var self = this;
@@ -387,7 +354,7 @@ var rulesetsView = {
         rulesetsModel.savedViews().forEach(function(view) {
             html += '<button class="button-ghost rulesets-chip rulesets-saved-chip" data-saved-view="' + shared.escape(view.name) + '" ' +
                 'onclick="rulesetsView.applySavedView(this, \'' + shared.escape(view.name) + '\')" ' +
-                'data-tippy-content="A saved view: ' + self.describeView(view.payload) + '.">' + shared.escape(view.name) +
+                'data-tippy-content="' + self.describeView(view.payload) + '">' + shared.escape(view.name) +
                 '<span class="rulesets-view-x" onclick="event.stopPropagation(); rulesetsView.deleteSavedView(\'' +
                 shared.escape(view.name) + '\')" data-tippy-content="Deletes this view.">' + shared.icon('x', 10) + '</span></button>';
         });
@@ -396,8 +363,7 @@ var rulesetsView = {
     },
 
     describeView: function(payload) {
-        var out = 'the ' + payload.view + ' chip' +
-            (payload.query === '' ? ', no search' : ' with ' + shared.escape(payload.query) + ' in the search');
+        var out = payload.view + (payload.query === '' ? '' : ', search ' + shared.escape(payload.query));
         return out;
     },
 
@@ -405,8 +371,7 @@ var rulesetsView = {
 
     renderProblems: function() {
         var list = document.getElementById('problems-list');
-        list.innerHTML = '<div class="problem-item problem-none">Problems found by validation and the advisory checks ' +
-            'show up here on the editing screens.</div>';
+        list.innerHTML = '<div class="problem-item problem-none">No problems.</div>';
     },
 };
 

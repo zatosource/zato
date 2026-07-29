@@ -1,11 +1,5 @@
 'use strict';
 
-// The grid of the decision table editor as html: the column headers with
-// their unfold hints, the filter and section rows, and every condition,
-// action, override and message cell. Nothing here touches the DOM, which
-// is what lets the scale check measure a grid no browser is around for.
-// Augments the tableView namespace from table-render.js.
-
 (function() {
 
 var tableView = window.tableView;
@@ -41,7 +35,6 @@ tableView.cellClasses = function(column, raw, context, rowKey) {
     return out;
 };
 
-// Checkbox and drag handle in front of a row, hidden in the phrase view
 tableView.rowControls = function(kind, rowKey) {
     if (this.phraseMode) { return ''; }
 
@@ -67,16 +60,13 @@ tableView.columnHeadHtml = function(column, context) {
     var tooltip = '';
     if (column.number === 0) {
         subtitle = '<span class="table-column-subtitle">always, fires first</span>';
-        tooltip = ' data-tippy-content="The Base column has actions only. It always fires and it fires first."';
+        tooltip = ' data-tippy-content="Actions only, fires first"';
     }
 
-    // Rule columns can be reordered by dragging their headers, Base stays put
     var parentLabel = tableModel.parentLabel(column);
     var movable = column.number !== 0 && !this.phraseMode && parentLabel === '';
     var dragAttribute = movable ? ' draggable="true" data-movable="true"' : '';
 
-    // The hint sits in a wrapper of its own because it speaks from the
-    // server's reading of the cells, which lands after the header is drawn
     var hint = '<span class="table-column-hint" data-column="' + label + '">' +
         this.columnHintHtml(column) + '</span>';
 
@@ -87,8 +77,6 @@ tableView.columnHeadHtml = function(column, context) {
     return out;
 };
 
-// A gentle indicator when the column can unfold into sub-rules, or fold
-// back when it already is a sub-rule
 tableView.columnHintHtml = function(column) {
     var label = tableModel.label(column);
     var parentLabel = tableModel.parentLabel(column);
@@ -106,7 +94,7 @@ tableView.columnHintHtml = function(column) {
     var count = tableModel.reading(column, unfoldableRow.letter).items.length;
     var result = '<span class="table-unfold-hint" onclick="tableView.unfoldColumn(event, \'' + label + '\')" ' +
         'data-tippy-content="The ' + unfoldableRow.subject + ' cell holds ' + count + ' values. ' +
-        'Click to unfold into sub-rules, one per value, so nothing stays bundled in one cell.">' +
+        'Click to unfold into sub-rules">' +
         shared.icon('chevrons-up-down', 10) + count + '</span>';
 
     return result;
@@ -124,8 +112,7 @@ tableView.filterRowsHtml = function(columnCount) {
     }
 
     html += '<tr class="table-section-row"><td colspan="' + (columnCount + 1) + '">Filter' +
-        '<span class="table-section-hint">the filter narrows the data the whole table sees, ' +
-        'before any rule column runs</span>' + addFilterButton + '</td></tr>';
+        addFilterButton + '</td></tr>';
 
     var filter = tableModel.table.filter;
     if (filter !== undefined) {
@@ -141,7 +128,7 @@ tableView.filterRowsHtml = function(columnCount) {
 
         html += '<tr class="table-filter-row"><td class="table-expression-column">' +
             '<span class="' + displayClass + '" onclick="tableView.editFilter(this)" ' +
-            'data-tippy-content="The filter is not a rule, it fires no actions, it only narrows the data the table sees.">' +
+            'data-tippy-content="Edit the filter">' +
             shared.escape(display) + '</span>' + removeControl + '</td>';
 
         html += '<td class="table-filter-span" colspan="' + columnCount + '">applies to every rule column</td></tr>';
@@ -152,10 +139,9 @@ tableView.filterRowsHtml = function(columnCount) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-tableView.sectionRowHtml = function(columnCount, title, hint, kind) {
+tableView.sectionRowHtml = function(columnCount, title, kind) {
     var deleteButton = '';
 
-    // The delete control appears right where the checkboxes are, not in a toolbar
     if (!this.phraseMode && kind !== '') {
         var checkedCount = tableModel.checkedCount(kind);
         if (checkedCount > 0) {
@@ -165,14 +151,13 @@ tableView.sectionRowHtml = function(columnCount, title, hint, kind) {
     }
 
     var out = '<tr class="table-section-row"><td colspan="' + (columnCount + 1) + '">' + title +
-        '<span class="table-section-hint">' + hint + '</span>' + deleteButton + '</td></tr>';
+        deleteButton + '</td></tr>';
 
     return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The screen without a stored table yet
 tableView.emptyHtml = function() {
     var out = '<div class="table-empty-note">There is no decision table yet. ' +
         '<button class="button-ghost" onclick="tableView.startNew()">New table</button></div>';
@@ -181,24 +166,19 @@ tableView.emptyHtml = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The whole grid as html, out of the table document and one render context
 tableView.gridHtml = function(context) {
     var self = this;
 
     var columnCount = tableModel.table.columns.length;
     var html = '<table class="table-grid">';
 
-    // Column headers ..
     html += '<tr><th class="table-expression-column" style="background:var(--background);border:none"></th>';
     tableModel.table.columns.forEach(function(column) { html += self.columnHeadHtml(column, context); });
     html += '</tr>';
 
-    // .. the filter row ..
     html += this.filterRowsHtml(columnCount);
 
-    // .. condition rows, evaluated top to bottom because conditions short-circuit ..
-    html += this.sectionRowHtml(columnCount, 'Conditions',
-        'evaluated top to bottom, the first failing condition stops the rule', 'condition');
+    html += this.sectionRowHtml(columnCount, 'Conditions', 'condition');
     tableModel.table.conditions.forEach(function(row) {
         var label = self.phraseMode
             ? '<span class="table-expression-phrase">If ' + shared.escape(tableModel.phraseFor(row.subject)) + ' is &hellip;</span>'
@@ -222,9 +202,7 @@ tableView.gridHtml = function(context) {
         html += '</tr>';
     });
 
-    // .. action rows ..
-    html += this.sectionRowHtml(columnCount, 'Actions',
-        this.phraseMode ? '' : 'drag an attribute from the vocabulary to add a row', 'action');
+    html += this.sectionRowHtml(columnCount, 'Actions', 'action');
     tableModel.table.actions.forEach(function(row) {
         var label = self.phraseMode
             ? '<span class="table-expression-phrase">Then set ' + shared.escape(tableModel.phraseFor(row.target)) + ' to &hellip;</span>'
@@ -244,8 +222,7 @@ tableView.gridHtml = function(context) {
         html += '</tr>';
     });
 
-    // .. the overrides row ..
-    html += this.sectionRowHtml(columnCount, 'Overrides', '', '');
+    html += this.sectionRowHtml(columnCount, 'Overrides', '');
     html += '<tr><td class="table-expression-column">' +
         '<span class="' + (this.phraseMode ? 'table-expression-phrase' : 'table-expression') + '" style="color:var(--text4)">' +
         (this.phraseMode ? 'this rule wins over &hellip;' : 'overrides') + '</span></td>';
@@ -264,21 +241,19 @@ tableView.gridHtml = function(context) {
         });
         html += '<td class="table-override-cell" data-column="' + columnLabel + '">' +
             '<select class="' + (current !== '' ? 'table-has-override' : '') + '" ' +
-            'data-tippy-content="When both rules match the same data, only this one wins. An override never reorders anything." ' +
+            'data-tippy-content="This rule wins over the other" ' +
             'onchange="tableView.setOverride(\'' + columnLabel + '\', this.value)">' + options + '</select></td>';
     });
     html += '</tr>';
 
-    // .. and the decision messages row.
-    html += this.sectionRowHtml(columnCount, 'Decision messages',
-        'one plain sentence per rule, returned with every execution and shown in the decision log', '');
+    html += this.sectionRowHtml(columnCount, 'Decision messages', '');
     html += '<tr><td class="table-expression-column">' +
         '<span class="table-expression" style="color:var(--text4)">message</span></td>';
     tableModel.table.columns.forEach(function(column) {
         var columnLabel = tableModel.label(column);
         html += '<td class="table-statement-cell" data-column="' + columnLabel + '"><div class="table-statement-wrap">' +
             '<span class="table-statement-dot table-severity-' + column.statement.severity + '" ' +
-            'data-tippy-content="Severity: ' + column.statement.severity + '. Click to cycle info, warning, violation." ' +
+            'data-tippy-content="Severity: ' + column.statement.severity + '" ' +
             'onclick="tableView.cycleSeverity(\'' + columnLabel + '\')"></span>' +
             '<span class="table-statement-text" onclick="tableView.editStatement(this, \'' + columnLabel + '\')">' +
             self.statementHtml(column.statement.text) + '</span>' +

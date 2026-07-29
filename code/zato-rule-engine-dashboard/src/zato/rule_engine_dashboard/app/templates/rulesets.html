@@ -15,32 +15,30 @@
   <div class="main-topbar">
     <div class="main-topbar-line">
       <h2>Rulesets</h2>
-      <span class="main-subtitle">everything lives here, searched by what the rules say, not just their names</span>
+      <span class="main-subtitle" id="main-subtitle"></span>
     </div>
   </div>
 
   <div class="toolbar">
     <input class="log-search rulesets-search" id="rulesets-search" type="text"
       placeholder="Search rule text and names..."
-      data-tippy-content="Full text: typing score finds every rule mentioning it, anywhere.">
+      data-tippy-content="Search the rules">
     <button class="button-ghost rulesets-chip toggled" data-view="all" onclick="rulesetsView.setView(this, 'all')">All</button>
     <button class="button-ghost rulesets-chip" data-view="live" onclick="rulesetsView.setView(this, 'live')">Live</button>
     <button class="button-ghost rulesets-chip" data-view="drafts" onclick="rulesetsView.setView(this, 'drafts')">Drafts</button>
     <button class="button-ghost rulesets-chip" data-view="followed" onclick="rulesetsView.setView(this, 'followed')">Followed</button>
     <span id="rulesets-saved-views"></span>
     <button class="button-ghost" id="rulesets-save-view-button" onclick="rulesetsView.openSaveViewPanel(this)"
-      data-tippy-content="Saves the current search and view filter as a named chip here. Views stay few and named, there is a cap.">Save view</button>
+      data-tippy-content="Save this view">Save view</button>
     <span class="toolbar-separator"></span>
     <span id="rulesets-count" class="rulesets-count"></span>
     <button class="button-ghost" onclick="rulesetsView.newRuleset()"
-      data-tippy-content="One pasted example payload is enough to start, the vocabulary screen shows the whole path.">New ruleset</button>
+      data-tippy-content="New ruleset">New ruleset</button>
     <span class="keyboard-hint"><kbd>/</kbd> searches, <kbd>Arrows</kbd> walk the list, <kbd>Enter</kbd> opens, right-click a row for its menu</span>
   </div>
 
-  <!-- The recents strip, hidden until something was opened -->
   <div class="rulesets-recents" id="rulesets-recents"></div>
 
-  <!-- The list on the left, the feed or one ruleset's preview on the right -->
   <div class="rulesets-split">
     <div class="rulesets-list" id="rulesets-list"></div>
     <div class="pane-resizer pane-resizer-vertical" id="rulesets-side-resizer"></div>

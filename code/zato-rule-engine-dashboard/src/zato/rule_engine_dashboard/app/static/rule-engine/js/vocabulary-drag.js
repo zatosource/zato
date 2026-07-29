@@ -1,12 +1,5 @@
 'use strict';
 
-// Free drag and drop in the term tree: a ghost of the term follows the
-// pointer, dashed drop areas open up between rows for reordering, and an
-// entity heading is itself a drop area that moves the term into that
-// entity, which changes its path and propagates everywhere like a rename.
-// All listeners are delegated to the list container, so the cost never
-// depends on how many terms are on screen. Augments vocabularyView.
-
 (function() {
 
 vocabularyView.dragPath = null;
@@ -41,9 +34,6 @@ list.addEventListener('dragover', function(event) {
     event.preventDefault();
     clearDropMarks();
 
-    // Over a term: a floating dashed placeholder marks the landing spot
-    // above or below it, whichever half of the row the pointer is in,
-    // without shifting the rows underneath
     var item = event.target.closest('.vocabulary-tree-item');
     if (item !== null) {
         if (item.dataset.path === vocabularyView.dragPath) { shared.removeDropPlaceholder(); return; }
@@ -57,8 +47,6 @@ list.addEventListener('dragover', function(event) {
         return;
     }
 
-    // Over an entity heading: the whole heading is the drop area, the
-    // term joins that entity at its end
     shared.removeDropPlaceholder();
     var heading = event.target.closest('.vocabulary-entity');
     if (heading !== null) { heading.classList.add('vocabulary-drop-into'); }
@@ -103,14 +91,12 @@ list.addEventListener('drop', function(event) {
 
     vocabularyModel.moveTerm(dragPath, targetEntityName, targetIndex, function(newPath) {
 
-        // A selected term stays selected under its new path
         if (vocabularyView.selectedPath === dragPath) {
             vocabularyView.selectedPath = null;
             vocabularyView.select(newPath);
         }
         vocabularyView.render();
 
-        // Crossing entities changed the path, which landed everywhere at once
         if (entityChanged) {
             shared.popover(document.querySelector('[data-path="' + newPath + '"]'),
                 'Moved to ' + targetEntityName + '. The path is now ' + newPath +

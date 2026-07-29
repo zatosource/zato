@@ -20,21 +20,20 @@
 
   <div class="toolbar">
     <button class="button-ghost toggled" id="button-view-scenarios" onclick="testView.showView('scenarios')"
-      data-tippy-content="The test set: input, expected and actual side by side, with the fired rules under every run.">Test scenarios</button>
+      data-tippy-content="Test set">Test scenarios</button>
     <button class="button-ghost" id="button-view-ab" onclick="testView.showView('ab')"
-      data-tippy-content="Runs two versions of the ruleset over the suite's own scenarios side by side and lists which decisions would change.">A/B testing</button>
+      data-tippy-content="Two versions over the same scenarios">A/B testing</button>
     <span class="toolbar-separator"></span>
     <button class="button-ghost" id="button-run-all" onclick="testView.runAll(this)"
-      data-tippy-content="Runs every scenario and shows the pass and fail delta against the previous run.">Run all</button>
+      data-tippy-content="Run every scenario">Run all</button>
     <button class="button-ghost" id="button-add-scenario" onclick="testView.addScenario()"
-      data-tippy-content="A new scenario starts with no expectations yet: it runs anyway and its actual outcome can be promoted to the expected one.">Add scenario</button>
+      data-tippy-content="New scenario">Add scenario</button>
     <span class="toolbar-separator"></span>
     <span class="keyboard-hint"><kbd>Arrows</kbd> move between cells, <kbd>Enter</kbd> edits a value, <kbd>Shift</kbd>+<kbd>Up</kbd>/<kbd>Down</kbd> reorders the selected scenario, right-click opens the menu</span>
     <button class="button-primary" onclick="testView.save(this)"
       data-tippy-content="Stores the whole suite as a new version.">Save test set</button>
   </div>
 
-  <!-- Scenarios view: the suite on the left, one scenario's run on the right -->
   <div class="test-scenarios-view" id="test-scenarios-view">
     <div class="test-set-pane" id="test-set-pane">
       <div class="test-set-head" id="test-set-head"></div>
@@ -44,7 +43,6 @@
     <div class="test-detail-pane" id="test-detail-pane"></div>
   </div>
 
-  <!-- A/B view: two versions over the same scenarios -->
   <div class="test-ab-view" id="test-ab-view" style="display:none"></div>
 
   <div class="problems-panel">
@@ -59,7 +57,6 @@
     <span class="vocabulary-head-label">Vocabulary</span>
     <button class="vocabulary-collapse" id="vocabulary-collapse-button" onclick="shared.toggleVocabulary()"></button>
   </div>
-  <div class="vocabulary-hint">Drag an attribute onto the input grid to add it to the scenario, or click it. Scenarios are authored from the same vocabulary as the rules, never from raw JSON.</div>
   <div class="vocabulary-list" id="vocabulary-list"></div>
 </div>
 {% endblock %}

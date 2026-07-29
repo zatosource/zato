@@ -1,18 +1,11 @@
 'use strict';
 
-// Rendering for the notifications screen: one ruleset's destinations
-// with their delivery status, the add row with the live target picker,
-// and the per-platform credentials cards admins configure and test.
-// Event handlers live in notify-actions.js and augment this namespace.
-
 (function() {
 
 var notifyView = {
 
-    // The platform picked in the add row, null until the admin chooses
     addKind: null,
 
-    // Whether the picker's targets are being fetched right now
     isLoadingTargets: false,
 
 // ////////////////////////////////////////////////////////////////////////
@@ -47,27 +40,21 @@ var notifyView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Timestamps come from the views as ISO strings, the screen shows the
-    // readable date-and-minute part
     whenText: function(iso) {
         return iso.slice(0, 16).replace('T', ' ');
     },
 
-    // One destination's delivery status as a dot with its words
     statusHtml: function(record) {
-        // A destination that never delivered is a fact, not a failure ..
         if (record.last_status === null) {
             return '<span class="status-dot status-dot-information"></span>nothing delivered yet';
         }
 
-        // .. an error names itself right in the row ..
         if (record.last_status === 'error') {
             return '<span class="status-dot status-dot-error"></span>' +
                 '<span data-tippy-content="' + shared.escape(record.last_error) + '">failed at ' +
                 this.whenText(record.last_delivery_at) + '</span>';
         }
 
-        // .. and a delivery shows when it happened.
         return '<span class="status-dot status-dot-pass"></span>delivered at ' + this.whenText(record.last_delivery_at);
     },
 
@@ -111,12 +98,10 @@ var notifyView = {
         pane.innerHTML = html;
     },
 
-    // The add row: the platform first, then its live channels - the picker
-    // asks the platform itself, so only channels that exist can be chosen
     addRowHtml: function() {
         var html = '<div class="notify-add-row">' +
             '<select class="notify-select" id="notify-add-kind" onchange="notifyView.setAddKind(this)" ' +
-            'data-tippy-content="Which platform delivers to the new destination.">';
+            'data-tippy-content="Platform">';
 
         html += '<option value=""' + (this.addKind === null ? ' selected' : '') + '>Platform...</option>';
         notifyModel.config.kinds.forEach(function(kind) {
@@ -127,7 +112,7 @@ var notifyView = {
         html += '</select>';
 
         html += '<select class="notify-select notify-target-select" id="notify-add-target" ' +
-            'data-tippy-content="The channels the platform offers right now - the picker asks it live.">';
+            'data-tippy-content="Channel">';
 
         if (this.isLoadingTargets) {
             html += '<option value="">Asking the platform...</option>';
@@ -149,8 +134,6 @@ var notifyView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The credentials cards, admins only: what each platform needs, whether
-    // it is configured, and the test message that proves it works
     renderCredentials: function() {
         var pane = document.getElementById('notify-credentials-pane');
         if (pane === null) { return; }
@@ -164,15 +147,13 @@ var notifyView = {
             html += '<div class="notify-card">';
             html += '<div class="notify-card-title">' + shared.escape(label) + '</div>';
 
-            // The status line says who set the credentials and when -
-            // the credentials themselves never travel back
             if (entry.is_configured) {
                 html += '<div class="notify-card-status"><span class="status-dot status-dot-pass"></span>' +
                     'Configured by ' + shared.escape(entry.updated_by) + ' at ' +
-                    notifyView.whenText(entry.updated_at) + '. Saving below replaces the stored values.</div>';
+                    notifyView.whenText(entry.updated_at) + '.</div>';
             } else {
                 html += '<div class="notify-card-status"><span class="status-dot status-dot-information"></span>' +
-                    'Not configured - nothing can be delivered through ' + shared.escape(label) + ' yet.</div>';
+                    shared.escape(label) + ' is not configured.</div>';
             }
 
             notifyModel.config.credentialFields[kind].forEach(function(field) {
@@ -183,11 +164,9 @@ var notifyView = {
 
             html += '<div class="notify-card-actions">' +
                 '<button class="button-ghost" onclick="notifyView.saveCredentials(this, \'' + kind + '\')" ' +
-                'data-tippy-content="Stores the values above, encrypted in the rule engine database.">Save</button>' +
+                'data-tippy-content="Save the destination">Save</button>' +
                 '</div>';
 
-            // The test row proves the stored credentials before any
-            // ruleset depends on them
             if (entry.is_configured) {
                 html += '<div class="notify-test-row">' +
                     '<input type="text" id="notify-test-' + kind + '" placeholder="Channel to test against...">' +
@@ -211,7 +190,6 @@ var notifyView = {
         var items = [];
         var problemCount = 0;
 
-        // A destination whose last delivery failed names its error
         notifyModel.destinations.forEach(function(record) {
             if (record.last_status !== 'error') { return; }
             problemCount += 1;
@@ -221,23 +199,19 @@ var notifyView = {
                 shared.escape(record.last_error) + '</span></div>');
         });
 
-        // A destination on a platform without credentials cannot be
-        // delivered to - only admins see the credentials, so only they
-        // can be told
         notifyModel.unconfiguredKindsInUse().forEach(function(kind) {
             problemCount += 1;
             items.push('<div class="problem-item"><span class="status-dot status-dot-warning"></span>' +
                 '<span>Destinations use ' + shared.escape(notifyModel.config.kindLabels[kind]) +
                 ' but no ' + shared.escape(notifyModel.config.kindLabels[kind]) +
-                ' credentials are stored - nothing reaches them until the card on the right is filled in.</span></div>');
+                ' credentials are stored.</span></div>');
         });
 
-        // What the destinations hear about is a fact of the screen
-        items.push('<div class="problem-item"><span class="status-dot status-dot-information"></span>' +
-            '<span>Every destination is told about the same fixed set of events - the event matrix in ' +
-            'the toolbar names each one with an example.</span></div>');
-
         head.textContent = 'Problems (' + problemCount + ')';
+        if (items.length === 0) {
+            list.innerHTML = '<div class="problem-item problem-none">No problems.</div>';
+            return;
+        }
         list.innerHTML = items.join('');
     },
 };

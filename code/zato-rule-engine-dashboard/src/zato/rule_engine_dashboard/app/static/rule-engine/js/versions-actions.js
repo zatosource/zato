@@ -1,10 +1,5 @@
 'use strict';
 
-// Event handlers for the versions and changes screen: picking versions
-// to compare, the view toggles, viewed tracking, anchored comments,
-// restore, publish and the approval gate. Augments the versionsView
-// namespace from versions-render.js.
-
 (function() {
 
 // ////////////////////////////////////////////////////////////////////////
@@ -17,8 +12,6 @@ versionsView.setCompare = function() {
     versionsModel.compare(function() { self.render(); });
 };
 
-// Clicking a timeline entry makes it the older side of the comparison,
-// the newer side stays on the version under review
 versionsView.pickVersion = function(number) {
     if (number === versionsModel.toNumber) { return; }
     versionsModel.fromNumber = number;
@@ -54,8 +47,6 @@ versionsView.toggleViewed = function(key, isViewed) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// A new comment lands in the store as a review event and comes back
-// with the reloaded feed, anchored to the rule it is about
 versionsView.addComment = function(button) {
     var self = this;
     var anchor = document.getElementById('versions-comment-anchor').value;
@@ -77,15 +68,12 @@ versionsView.addComment = function(button) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// An approval is immutable and binds to this exact version and the
-// content hash of its stored snapshot
 versionsView.approve = function(button) {
     var self = this;
     var url = versionsModel.config.urls.approve(versionsModel.rulesetId, versionsModel.toNumber);
 
     var handlers = shared.inFlight(button, function(payload) {
-        shared.popover(button, 'v' + payload.version + ' is approved, bound to its exact content. ' +
-            'Publishing it is one click now.', 'green');
+        shared.popover(button, 'v' + payload.version + ' is approved.', 'green');
         versionsModel.loadTimeline(function() {
             versionsModel.loadApproval(function() { self.render(); });
         });
@@ -100,8 +88,7 @@ versionsView.publish = function(button) {
     var url = versionsModel.config.urls.publish(versionsModel.rulesetId);
 
     var handlers = shared.inFlight(button, function(payload) {
-        shared.popover(button, 'v' + payload.version + ' is live, hot-reloaded without a restart. ' +
-            'A snapshot exists, going back is one click on any older version.', 'green');
+        shared.popover(button, 'v' + payload.version + ' is live.', 'green');
         versionsModel.loadTimeline(function() {
             versionsModel.loadApproval(function() { self.render(); });
         });
@@ -143,8 +130,6 @@ versionsView.setSelfApproval = function(button, allowed) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Restore appends a new version built from the old state and publishes
-// it - the timeline only ever grows and no version is ever renumbered
 versionsView.restore = function(event, number, button) {
     event.stopPropagation();
     var self = this;
@@ -159,7 +144,6 @@ versionsView.restore = function(event, number, button) {
         shared.popover(button, 'Version ' + payload.version + ' was created from v' + number +
             ' and is live. The history stays linear.', 'green');
 
-        // The restored state becomes the newer side of the comparison
         versionsModel.toNumber = payload.version;
         versionsModel.fromNumber = number;
         versionsModel.loadTimeline(function() {

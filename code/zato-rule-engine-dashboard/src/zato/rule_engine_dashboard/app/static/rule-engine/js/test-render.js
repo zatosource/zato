@@ -1,23 +1,16 @@
 'use strict';
 
-// Rendering for the tests and simulation screen, scenarios view: the
-// suite list with pass and fail deltas, one scenario's input, expected
-// and actual side by side with difference coloring, and the fired rules
-// under the run. Event handlers live in test-actions.js, the A/B view in
-// test-ab.js, both augment this namespace.
-
 (function() {
 
 var testView = {
 
-    // UI state
     view: 'scenarios',
     selectedIndex: 0,
     editing: false,
-    cursor: null,        // {row, column} over the grids of the detail pane
-    lastDelta: null,     // the run-all summary, shown until the next run
-    columnWidths: {},    // dragged column widths of the outcome grid
-    checkTimer: null,    // the debounce behind the suite validation
+    cursor: null,
+    lastDelta: null,
+    columnWidths: {},
+    checkTimer: null,
 
 // ////////////////////////////////////////////////////////////////////////
 
@@ -75,7 +68,6 @@ var testView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Every edit re-runs the suite validation after a short pause
     scheduleServerCheck: function() {
         var self = this;
 
@@ -90,8 +82,6 @@ var testView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Grips on the outcome grid headers resize its columns, the widths
-    // survive re-renders
     attachColumnResizers: function() {
         var self = this;
         document.querySelectorAll('#test-detail-pane .test-grid thead th').forEach(function(cell, cellIndex) {
@@ -111,7 +101,6 @@ var testView = {
             var classes = 'test-set-item' + (index === self.selectedIndex ? ' test-set-item-selected' : '');
             var status = testModel.statusOf(scenario);
 
-            // The delta badge against the previous run, the one-glance regression signal
             var badge = '';
             if (self.lastDelta !== null) {
                 if (self.lastDelta.newFailures.indexOf(scenario.name) > -1) {
@@ -122,7 +111,6 @@ var testView = {
                 }
             }
 
-            // The play button runs just this scenario, visible on hover
             var play = '<span class="test-set-play" data-tippy-content="Run this scenario" ' +
                 'onclick="testView.runFromList(event, ' + index + ', this)">' + shared.icon('play', 10) + '</span>';
 
@@ -141,7 +129,6 @@ var testView = {
     inputRowHtml: function(scenario, path, inputErrors) {
         var flat = testModel.flatten(scenario.input);
 
-        // A domain error is marked on the offending value itself
         var isInvalid = inputErrors.some(function(error) { return error.path === path; });
         var cellClasses = 'test-value-cell' + (isInvalid ? ' test-cell-invalid' : '');
 
@@ -162,7 +149,6 @@ var testView = {
         var expected = scenario.expected[path];
         var actual = result === null ? undefined : result.actual[path];
 
-        // The expected cell, blank means no assertion on this value
         var expectedHtml;
         if (expected === undefined) {
             expectedHtml = '<span class="test-no-value">none</span>';
@@ -170,8 +156,6 @@ var testView = {
             expectedHtml = shared.escape(testModel.displayValue(expected));
         }
 
-        // The actual cell: bold when a rule wrote it, red when it differs
-        // from the expected value
         var actualHtml;
         var actualClasses = 'test-value-cell test-actual-cell';
         if (result === null) {
@@ -224,7 +208,6 @@ var testView = {
         var inputErrors = testModel.validateInput(scenario);
         var html = '';
 
-        // The scenario header with its editable name and its own run button
         html += '<div class="test-detail-head">' +
             '<span class="status-dot ' + this.statusDots[status] + '"></span>' +
             '<span class="test-detail-name" onclick="testView.editName(this)" ' +
@@ -232,27 +215,23 @@ var testView = {
             '<span class="test-detail-status">' + this.statusLabels[status] + '</span>' +
             '<button class="button-mini" onclick="testView.runOne(this)">' + shared.icon('play', 10) + ' Run</button>';
 
-        // Promotion turns exploration into assertion, whole outcome at once
         if (result !== null && Object.keys(result.actual).length > 0) {
             html += '<button class="button-mini" onclick="testView.promote(this)" ' +
-                'data-tippy-content="Declares the whole actual outcome as what has to keep happening.">' +
+                'data-tippy-content="Promote the actual outcome to expected">' +
                 'Promote actual to expected</button>';
         }
         html += '</div>';
 
-        // The input grid, a drop target for vocabulary attributes
         html += '<div class="test-grid-title">Input</div>';
         var inputRows = '';
         testModel.inputPaths(scenario).forEach(function(path) {
             inputRows += self.inputRowHtml(scenario, path, inputErrors);
         });
         if (inputRows === '') {
-            inputRows = '<tr><td class="test-empty-hint" colspan="2">Drag an attribute from the vocabulary here, ' +
-                'or click one, to give this scenario its first input.</td></tr>';
+            inputRows = '<tr><td class="test-empty-hint" colspan="2">No input yet</td></tr>';
         }
         html += '<table class="test-grid" id="test-input-grid"><tbody>' + inputRows + '</tbody></table>';
 
-        // The outcome grid: expected and actual side by side
         html += '<div class="test-grid-title">Outcome</div>';
         html += '<table class="test-grid"><thead><tr>' +
             '<th></th><th>Expected</th><th>Actual</th>' +
@@ -262,18 +241,14 @@ var testView = {
             html += self.outcomeRowHtml(scenario, path);
         });
         if (outputPaths.length === 0) {
-            html += '<tr><td class="test-empty-hint" colspan="3">No expectations yet - run the scenario and ' +
-                'promote its actual outcome, or declare expectations by hand once a run shows the outputs.</td></tr>';
+            html += '<tr><td class="test-empty-hint" colspan="3">No expectations yet</td></tr>';
         }
         html += '</tbody></table>';
 
-        // A run that could not evaluate explains itself in full
         if (result !== null && result.error !== '') {
             html += '<div class="test-run-note">' + shared.escape(result.error) + '</div>';
         }
 
-        // The fired rules as their plain-language statements, the
-        // reasoning of the run without any code
         if (result !== null) {
             html += '<div class="test-grid-title">Rules fired in this run (' + result.fired.length + ')</div>';
             if (result.fired.length === 0) {
@@ -294,7 +269,6 @@ var testView = {
         var list = document.getElementById('problems-list');
         var items = [];
 
-        // The suite's structural findings from the server come first ..
         testModel.serverErrors.forEach(function(error) {
             items.push('<div class="problem-item"><span class="status-dot status-dot-error"></span>' +
                 '<span>' + shared.escape(error.message) + '</span></div>');
@@ -303,14 +277,11 @@ var testView = {
         var scenario = testModel.scenarioAt(this.selectedIndex);
         if (scenario !== undefined) {
 
-            // .. then the selected scenario's domain errors ..
             testModel.validateInput(scenario).forEach(function(error) {
                 items.push('<div class="problem-item"><span class="status-dot status-dot-error"></span>' +
                     '<span>' + shared.escape(error.text) + '</span></div>');
             });
 
-            // .. and its expected-versus-actual detail, a failure is
-            // never a bare status.
             var result = testModel.resultOf(scenario);
             if (result !== null && result.status === 'failed') {
                 if (result.error !== '') {
@@ -322,22 +293,21 @@ var testView = {
                     var actualText = diff.actual === null ? 'no rule decided it' : testModel.displayValue(diff.actual);
                     items.push('<div class="problem-item"><span class="status-dot status-dot-error"></span>' +
                         '<span>' + shared.escape(testModel.phraseFor(diff.field)) + ': expected ' +
-                        shared.escape(testModel.displayValue(diff.expected)) + ', got ' + shared.escape(actualText) +
-                        '. The fired rules under the run explain it.</span></div>');
+                        shared.escape(testModel.displayValue(diff.expected)) + ', got ' +
+                        shared.escape(actualText) + '</span></div>');
                 });
             }
         }
 
-        // The suite delta of the last full run
         if (this.lastDelta !== null) {
             var counts = this.lastDelta.counts;
             var deltaText = counts.passed + ' passed, ' + counts.failed + ' failed, ' +
-                counts.explored + ' explored with no expectations yet.';
+                counts.explored + ' explored.';
             if (this.lastDelta.newFailures.length > 0) {
-                deltaText += ' New failures against the previous run: ' + this.lastDelta.newFailures.join(', ') + '.';
+                deltaText += ' New failures: ' + this.lastDelta.newFailures.join(', ') + '.';
             }
             if (this.lastDelta.fixed.length > 0) {
-                deltaText += ' Fixed since the previous run: ' + this.lastDelta.fixed.join(', ') + '.';
+                deltaText += ' Fixed: ' + this.lastDelta.fixed.join(', ') + '.';
             }
             items.push('<div class="problem-item"><span class="status-dot status-dot-information"></span>' +
                 '<span>' + shared.escape(deltaText) + '</span></div>');
@@ -363,7 +333,6 @@ var testView = {
             vocabulary.pickerAttributes(entity).forEach(function(attribute) {
                 var path = entity.name + '.' + attribute.name;
 
-                // Attributes already present in the scenario's input are dimmed
                 var isUsed = used.indexOf(path) > -1;
                 var classes = 'vocabulary-item' + (isUsed ? ' vocabulary-item-used' : ' vocabulary-item-clickable');
                 var draggable = isUsed ? 'false' : 'true';

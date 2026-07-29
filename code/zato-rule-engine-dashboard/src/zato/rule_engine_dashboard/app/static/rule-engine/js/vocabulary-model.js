@@ -1,19 +1,11 @@
 'use strict';
 
-// Data model for the vocabulary screen: loading the stored document,
-// the where-used index, rename with its impact preview, deprecate,
-// delete, the paste-a-payload bootstrap and infer-from-typing - all
-// against the JSON views, every document change stored as a new
-// optimistic version. No DOM access here.
-
 (function() {
 
 var vocabularyModel = {
 
     config: {
-        // The name a vocabulary created on this screen starts with
         newVocabularyName: 'Vocabulary',
-        // The ruleset name the parser needs when infer reads typed rules
         inferRulesetName: 'proposed',
 
         urls: {
@@ -28,18 +20,13 @@ var vocabularyModel = {
         },
     },
 
-    // The stored definition this screen edits - null until a vocabulary
-    // exists, the bootstrap panel creates the first one
     definitionId: null,
     currentVersion: null,
 
-    // Ruleset names by id, for the where-used groups
     rulesetNames: {},
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The screen opens on the vocabulary the address names, or on the
-    // first stored one
     load: function(onDone) {
         var self = this;
         var wanted = new URLSearchParams(window.location.search).get('vocabulary');
@@ -54,8 +41,6 @@ var vocabularyModel = {
                     records = records.filter(function(item) { return item.id === parseInt(wanted); });
                 }
 
-                // No vocabulary yet - the screen renders its empty state
-                // and the bootstrap panel creates the first one
                 if (records.length === 0) {
                     onDone();
                     return;
@@ -88,9 +73,6 @@ var vocabularyModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Every indexed place one term is referenced from, grouped by the
-    // ruleset the reference lives in. This is what a rename shows before
-    // it commits and what blocks a delete.
     whereUsed: function(path, onDone) {
         var self = this;
 
@@ -118,12 +100,9 @@ var vocabularyModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Every document change is stored as a new optimistic version, a
-    // brand-new vocabulary comes into being with its first one
     saveDocument: function(comment, onDone, onError) {
         var self = this;
 
-        // A vocabulary born on this screen starts under the default name
         if (this.definitionId === null && vocabulary.name === '') {
             vocabulary.name = this.config.newVocabularyName;
         }
@@ -147,9 +126,6 @@ var vocabularyModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // A rename lands everywhere at once, that is the whole point: the
-    // referencing rulesets are rewritten together with the vocabulary,
-    // so where-used reads the same after as before
     renamePreview: function(path, newPath, onDone, onError) {
         data.post(this.config.urls.rename, {old_term: path, new_term: newPath, dry_run: true}, onDone, onError);
     },
@@ -173,8 +149,6 @@ var vocabularyModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // A drag in the tree: reorder within an entity, or move to another
-    // entity, which is a path change and propagates like a rename does
     moveTerm: function(path, targetEntityName, targetIndex, onDone, onError) {
         var self = this;
         var sourceEntityName = path.split('.')[0];
@@ -184,7 +158,6 @@ var vocabularyModel = {
         var position = source.attributes.map(function(candidate) { return candidate.name; }).indexOf(attributeName);
         var attribute = source.attributes[position];
 
-        // Taking the term out first shifts later indexes in the same entity
         source.attributes.splice(position, 1);
         if (sourceEntityName === targetEntityName && targetIndex > position) { targetIndex -= 1; }
 
@@ -196,8 +169,6 @@ var vocabularyModel = {
             ? 'Reorder term ' + path
             : 'Move term ' + path + ' to ' + newPath;
 
-        // Crossing entities changes the path, which is a rename for every
-        // referencing ruleset
         if (newPath === path) {
             this.saveDocument(comment, function() { onDone(newPath); }, onError);
         } else {
@@ -221,15 +192,12 @@ var vocabularyModel = {
         this.saveDocument('Restore term ' + path, onDone, onError);
     },
 
-    // Deleting is only ever possible when nothing uses the term, the
-    // where-used index is the gate
     deleteTerm: function(path, onDone, onError) {
         var entityName = path.split('.')[0];
         var attributeName = path.split('.')[1];
         var entity = vocabulary.entities.filter(function(candidate) { return candidate.name === entityName; })[0];
         entity.attributes = entity.attributes.filter(function(candidate) { return candidate.name !== attributeName; });
 
-        // An entity without a single attribute left disappears with it
         vocabulary.entities = vocabulary.entities.filter(function(candidate) { return candidate.attributes.length > 0; });
 
         this.saveDocument('Delete term ' + path, onDone, onError);
@@ -237,9 +205,6 @@ var vocabularyModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The paste-a-payload bootstrap: one example JSON payload becomes
-    // terms, deterministically - names from the fields, types from the
-    // values - the server does the derivation
     inferFromPayload: function(payloadText, onDone, onError) {
         var payload;
         try {
@@ -272,8 +237,6 @@ var vocabularyModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Infer-from-typing: unknown terms in pasted rules come back as
-    // proposals with types inferred from how the rules use them
     inferFromRules: function(text, onDone, onError) {
         var known = this.allPaths();
 
@@ -290,8 +253,6 @@ var vocabularyModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // A term added by hand: the phrase and the type-specific defaults are
-    // filled in and curated in place afterwards
     addTerm: function(entityName, name, type, onDone, onError) {
         var entity = vocabulary.entities.filter(function(candidate) { return candidate.name === entityName; })[0];
         if (entity === undefined) {
@@ -310,8 +271,6 @@ var vocabularyModel = {
         this.saveDocument('Add term ' + path, function() { onDone(path); }, onError);
     },
 
-    // Terms from a payload preview or from infer proposals, known ones
-    // are skipped
     addTerms: function(terms, comment, onDone, onError) {
         var added = 0;
         var firstPath = null;

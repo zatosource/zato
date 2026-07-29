@@ -1,17 +1,9 @@
 'use strict';
 
-// Event handlers for the decision log screen: the business-key search,
-// the date range, the card facets, selection and keyboard movement,
-// the one-click copy into the test set, the draft replay and the
-// capture and rule-count panels. Augments the logView namespace from
-// log-render.js.
-
 (function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// A keystroke filters a whole page of decisions and re-initialises every
-// tooltip on the screen, so the typing is let finish first
 logView.setSearch = function(value) {
     var self = this;
 
@@ -24,24 +16,18 @@ logView.setSearch = function(value) {
     }, logModel.config.searchDelayMilliseconds);
 };
 
-// A range change reaches the server - the list and the aggregates both
-// cover exactly the chosen window
 logView.setRange = function(select) {
     var self = this;
     this.rangeDays = +select.value;
     logModel.refresh(this.rangeDays, this.outcome, function() { self.render(); });
 };
 
-// A card click filters the list to the decisions behind its number,
-// a second click on the same card clears the facet
 logView.toggleOutcome = function(outcome) {
     var self = this;
     this.outcome = this.outcome === outcome ? null : outcome;
     logModel.refresh(this.rangeDays, this.outcome, function() { self.render(); });
 };
 
-// "Everything for the value I clicked", the facet filter of any input
-// or output value, shown as a chip over the list until cleared
 logView.setValueFilter = function(path, value) {
     this.valueFilter = {path: path, value: value};
     this.render();
@@ -55,8 +41,6 @@ logView.clearValueFilter = function() {
 // ////////////////////////////////////////////////////////////////////////
 
 logView.select = function(decisionId) {
-    // Clicking the already open decision must not re-render, that is what
-    // keeps double-click text selection of keys and ids alive
     if (decisionId === this.selectedId) { return; }
 
     var self = this;
@@ -70,7 +54,6 @@ logView.toggleFold = function(sectionKey) {
     shared.initTips();
 };
 
-// One copy handler for ids and values everywhere on the screen
 logView.copyText = function(event, text) {
     event.stopPropagation();
     navigator.clipboard.writeText(text);
@@ -92,7 +75,6 @@ logView.addToTestSet = function(anchor) {
 logView.replay = function(anchor) {
     var self = this;
 
-    // A second click folds the replay away
     if (logModel.replayResult !== null) {
         logModel.replayResult = null;
         this.renderDetail();
@@ -111,8 +93,6 @@ logView.replay = function(anchor) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Arrows walk the filtered list, page keys jump by a screenful, Home and
-// End go to the edges, slash jumps to the search box
 logView.onKeyDown = function(event) {
     var target = event.target;
     var inField = target.tagName === 'INPUT' || target.tagName === 'SELECT';
@@ -137,7 +117,6 @@ logView.onKeyDown = function(event) {
     } else {
         var self = this;
         var position = records.findIndex(function(record) { return record.decision_id === self.selectedId; });
-        // Clamped at both ends, the selection never leaves the list
         next = Math.max(0, Math.min(records.length - 1, position + steps[event.key]));
     }
 
@@ -150,8 +129,6 @@ logView.onKeyDown = function(event) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The floating panels anchored to their toolbar buttons: the capture
-// readout and the per-rule firing counts
 logView.panelElement = null;
 
 logView.closePanel = function() {
@@ -174,8 +151,6 @@ logView.showPanel = function(button, html) {
     this.panelElement = panel;
 };
 
-// The capture and retention readout: what the log keeps and for how
-// long, read from the stored decisions themselves
 logView.openCapturePanel = function(button) {
     if (this.panelElement !== null) { this.closePanel(); return; }
 
@@ -184,16 +159,11 @@ logView.openCapturePanel = function(button) {
         '<div class="log-capture-row"><span>Searchable header of every decision</span><b>always kept</b></div>' +
         '<div class="log-capture-row"><span>Full story of every error</span><b>always kept</b></div>' +
         '<div class="log-capture-row"><span>Full stories of successes on this page</span><b>' +
-            readout.successKept + ' of ' + readout.successTotal + '</b></div>' +
-        '<div class="log-capture-hint">The full story is the input, the output and the rules that decided. ' +
-        'The success sample and the retention window are deliberate deployment settings of the capture dial ' +
-        'and the retention sweep, never hidden defaults.</div>';
+            readout.successKept + ' of ' + readout.successTotal + '</b></div>';
 
     this.showPanel(button, html);
 };
 
-// The per-rule firing counts over the range, with the live rules that
-// never fired at all - the quiet ones are the interesting ones
 logView.openRuleCounts = function(button) {
     if (this.panelElement !== null) { this.closePanel(); return; }
     var self = this;
@@ -209,9 +179,6 @@ logView.openRuleCounts = function(button) {
         counts.neverFired.forEach(function(rule) {
             html += '<div class="log-capture-row"><span>' + shared.escape(rule) + '</span><b>never fired</b></div>';
         });
-
-        html += '<div class="log-capture-hint">Counts over the selected range. A live rule that never fires ' +
-            'is either dead weight or waiting for traffic that has not come - either way worth a look.</div>';
 
         self.showPanel(button, html);
     }, function(message) { shared.popover(button, message, 'red'); });
@@ -236,8 +203,6 @@ document.addEventListener('keydown', function(event) {
     logView.onKeyDown(event);
 });
 
-// A click anywhere else closes the open panel, the buttons themselves
-// toggle their panels in their own click handlers
 document.addEventListener('mousedown', function(event) {
     if (logView.panelElement === null) { return; }
     if (event.target.closest('.toolbar .button-ghost') !== null) { return; }
