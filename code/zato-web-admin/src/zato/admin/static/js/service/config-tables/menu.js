@@ -69,8 +69,9 @@ menu.init = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// A right click on a file is about that file, which is also opened by it, and a
-// right click on anything else in the listing is about the listing.
+// A right click on a file is about that file, and a right click on anything else in the listing
+// is about the listing. The file the menu is about is not opened by it - what is on screen is
+// still the file that was being read, and the menu acts on the file it was opened over.
 menu.openFromEvent = function(event) {
 
     var row = event.target.closest('.config-tables-file-row');
@@ -78,7 +79,6 @@ menu.openFromEvent = function(event) {
 
     if(row) {
         name = row.dataset.name;
-        tables.select(name);
     }
 
     menu.show(name, event.pageX, event.pageY);
@@ -170,7 +170,7 @@ menu.buildItemList = function(name) {
             key: config.renameKey,
             label: 'Rename',
             isDestructive: false,
-            action: tables.files.startRename,
+            action: menu.buildAction(tables.files.startRename, table),
             details: [
                 ['File', table.path]
             ]
@@ -180,7 +180,7 @@ menu.buildItemList = function(name) {
             key: config.downloadKey,
             label: 'Download',
             isDestructive: false,
-            action: tables.files.download,
+            action: menu.buildAction(tables.files.download, table),
             details: [
                 ['File', table.path],
                 ['Size', tables.formatSize(table.size)]
@@ -192,7 +192,7 @@ menu.buildItemList = function(name) {
             alsoKey: config.deleteAlsoKey,
             label: 'Delete',
             isDestructive: true,
-            action: tables.files.remove,
+            action: menu.buildAction(tables.files.remove, table),
             details: [
                 ['File', table.path],
                 ['Holds', holds]
@@ -207,7 +207,7 @@ menu.buildItemList = function(name) {
                 key: config.convertKey,
                 label: 'Convert to .ini',
                 isDestructive: false,
-                action: tables.convert.run,
+                action: menu.buildAction(tables.convert.runOn, table),
                 details: [
                     ['File', table.path],
                     ['Saves', 'No']
@@ -259,6 +259,19 @@ menu.buildItemList = function(name) {
 menu.isShowingAll = function() {
 
     var out = tables.state.isShowingAll;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// What the menu does when the row is pressed - the file the menu was opened over, held onto here,
+// so that the action works on that file rather than on whichever one is on screen.
+menu.buildAction = function(action, table) {
+
+    var out = function() {
+        action(table);
+    };
+
     return out;
 };
 
@@ -534,6 +547,15 @@ menu.installDismiss = function(elem, itemList) {
             }
         }
     });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Whether the menu is on screen, which says whose the keys are for as long as it is.
+menu.isOpen = function() {
+
+    var out = document.getElementById(menu.config.elemId) !== null;
+    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////

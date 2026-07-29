@@ -50,8 +50,12 @@ tables.config = {
     // what went through is done with, while what did not stays until it is cleared
     savedMessage: 'Saved',
     savedErrorMessage: 'Saved with errors',
-    checkedMessage: 'OK',
     statusShownMS: 2600,
+
+    // The answer to Check - one word, read the moment it appears, so it stands out and stands for
+    // half the time a message about the file itself does
+    checkedMessage: 'OK',
+    checkedShownMS: 1300,
 
     // What the drawing says where the codes of a table would be when there is no mapping
     // to draw - the few words a chip has room for, while the answer as text says which
@@ -68,6 +72,7 @@ tables.config = {
     statusPlain: 'config-tables-status',
     statusOK: 'config-tables-status config-tables-status-ok',
     statusError: 'config-tables-status config-tables-status-error',
+    statusChecked: 'config-tables-status config-tables-status-ok config-tables-status-strong',
 
     // The units a file size is given in, smallest first, and what each step is
     sizeUnits: ['B', 'KB', 'MB', 'GB'],
@@ -260,15 +265,21 @@ tables.onKeyDown = function(event) {
     // belongs to whatever is being written in rather than to the file it is part of
     var isTyping = tables.isTyping(event.target);
 
+    // While the listing's menu is open the key belongs to it, that menu being about a file of its
+    // own choosing rather than about the one on screen
+    var isMenuOpen = tables.menu.isOpen();
+
     data.isTyping = isTyping;
+    data.isMenuOpen = isMenuOpen;
 
     log.say('tables.onKeyDown delete', data);
 
-    if(isTyping || !tables.state.currentName) {
+    if(isTyping || isMenuOpen || !tables.state.currentName) {
         return;
     }
 
-    tables.files.remove();
+    // The key is about the file being read, that being the listing's own pick
+    tables.files.remove(tables.getCurrent());
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -577,7 +588,7 @@ tables.check = function() {
         return;
     }
 
-    tables.setStatus(tables.config.checkedMessage);
+    tables.setChecked();
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -709,7 +720,32 @@ tables.setStatus = function(text, isError) {
     }
 
     status.className = config.statusOK;
-    state.statusTimer = window.setTimeout(tables.clearStatus, config.statusShownMS);
+    tables.holdStatus(config.statusShownMS);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The answer to Check, which is the one message on the line that is asked for rather than reported
+// - it is read at a glance, so it is set in bold and is gone in half the time.
+tables.setChecked = function() {
+
+    var config = tables.config;
+
+    tables.setStatus(config.checkedMessage);
+
+    tables.get('status').className = config.statusChecked;
+    tables.holdStatus(config.checkedShownMS);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// How long what is on the line stays there, whatever was on it before.
+tables.holdStatus = function(shownMS) {
+
+    var state = tables.state;
+
+    window.clearTimeout(state.statusTimer);
+    state.statusTimer = window.setTimeout(tables.clearStatus, shownMS);
 };
 
 // ////////////////////////////////////////////////////////////////////////

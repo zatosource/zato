@@ -186,12 +186,21 @@ url.writeFile = function(name) {
 // filled in from what it offers rather than typed into.
 url.writeAnswered = function() {
 
+    url.writeFields();
+    url.write(url.config.answeredKey, url.config.answeredValue);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The three fields as they stand, for when the page itself has changed one of them rather than
+// the reader typing into it.
+url.writeFields = function() {
+
     var config = url.config;
 
     url.write(config.sourceKey, tables.get('translate-source').value.trim());
     url.write(config.codeKey, tables.get('translate-value').value.trim());
     url.write(config.targetKey, tables.get('translate-target').value.trim());
-    url.write(config.answeredKey, config.answeredValue);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -265,6 +274,10 @@ url.applyTranslate = function() {
     url.applyField('translate-source', current[config.sourceKey]);
     url.applyField('translate-value', current[config.codeKey]);
     url.applyField('translate-target', current[config.targetKey]);
+
+    // The value in the address belongs to the table in the address, so the column takes the two
+    // as they came rather than as a table just named
+    tables.invoker.state.sourceName = tables.get('translate-source').value.trim();
 
     // The answer is worked out again rather than kept in the address, so what is on screen
     // is what the file on screen says right now

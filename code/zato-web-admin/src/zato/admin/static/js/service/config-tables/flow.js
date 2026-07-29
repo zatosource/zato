@@ -14,6 +14,9 @@
 // Nothing in it is ever cut short. A name or a value longer than the room the drawing grew
 // to runs on over as many lines as it takes, so a file of long values is read in full, and
 // a press on any of them takes a copy of the whole of it rather than of what is on screen.
+//
+// The drawing is laid out here and drawn at whatever size it is being looked at, which is
+// zoom.js - Ctrl and the wheel over the room the answer has is what says that size.
 
 (function($) {
 
@@ -87,15 +90,19 @@ flow.config = {
     lineMarkSeparator: ',',
     tableMark: 'data-flow-table',
 
-    // What a shape says it stands for, in full, which is what a press on it copies, and the
-    // id the shape being copied from wears while it says that it was copied
+    // What a shape says it stands for, in full, which is what a press on it copies, which of the
+    // drawing's boxes the shape belongs to, and the id the box being copied from wears while it
+    // says that it was copied
     textMark: 'data-flow-text',
+    boxMark: 'data-flow-box',
     copyAnchorId: 'config-tables-flow-copy-anchor',
 
-    // Where the words that say so stand - beside the shape, close enough to be reading
-    // off it rather than off the drawing
+    // Where the words that say so stand - beside the shape, close enough to be reading off it
+    // rather than off the drawing. The distance is measured to the box the words are in, and the
+    // point they wear pokes seven of it back towards the shape, so eight leaves the point just
+    // short of the shape's own edge rather than inside it
     copyPlacement: 'left',
-    copyOffset: [0, 3],
+    copyOffset: [0, 8],
 
     // The classes the parts of the drawing wear, so what they look like stays in the
     // stylesheet
@@ -130,7 +137,11 @@ flow.state = {
 
     // The shape the last copy was taken from, which wears the id the words are anchored by
     // until another shape is pressed
-    anchor: null
+    anchor: null,
+
+    // The box of every code and of the value, in the order they were drawn, which is what the
+    // parts of a shape name themselves by
+    boxList: []
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -139,6 +150,10 @@ flow.init = function() {
 
     // The shapes come and go with every answer, so the drawing itself is what listens
     tables.get('flow').addEventListener('click', flow.copy);
+
+    // How closely the drawing is looked at is its own affair, and the room it is in is what
+    // answers to the wheel
+    tables.zoom.init();
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -157,16 +172,21 @@ flow.copy = function(event) {
         return;
     }
 
+    // The words go beside the box the shape is drawn as, whether the press landed on the box or
+    // on the letters inside it - the letters stand well in from the edges, and words hung on them
+    // would read as being inside the shape rather than beside it
+    var box = flow.state.boxList[Number(element.getAttribute(config.boxMark))];
+
     // The words are anchored by an id, and one id belongs to one shape, so the shape that
     // held it before hands it over
     if(flow.state.anchor) {
         flow.state.anchor.removeAttribute('id');
     }
 
-    element.id = config.copyAnchorId;
-    flow.state.anchor = element;
+    box.id = config.copyAnchorId;
+    flow.state.anchor = box;
 
-    $.fn.zato.copy.to_clipboard(element, text, config.copyPlacement, config.copyOffset);
+    $.fn.zato.copy.to_clipboard(box, text, config.copyPlacement, config.copyOffset);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -179,6 +199,10 @@ flow.render = function(model) {
     var words = tables.config;
     var svg = flow.createElement('svg');
     var cursor = {y: config.padding, svg: svg};
+
+    // The shapes of the drawing before this one are gone, and so are the boxes they were hung on
+    flow.state.boxList = [];
+    flow.state.anchor = null;
 
     flow.measure(model);
 
@@ -205,6 +229,9 @@ flow.render = function(model) {
     svg.setAttribute('width', width);
     svg.setAttribute('height', height);
 
+    // The size it was laid out at, which is what how closely it is looked at is measured off
+    tables.zoom.remember(width, height);
+
     var host = tables.get('flow');
 
     // The shapes that were being pointed at are about to be gone
@@ -212,6 +239,9 @@ flow.render = function(model) {
 
     host.textContent = '';
     host.appendChild(svg);
+
+    // A drawing comes up as large as the last one was left
+    tables.zoom.apply();
 
     tables.get('result-area').classList.add(config.drawnClass);
 };
@@ -223,6 +253,9 @@ flow.render = function(model) {
 flow.clear = function() {
 
     tables.trace.stop();
+
+    flow.state.boxList = [];
+    flow.state.anchor = null;
 
     tables.get('flow').textContent = '';
     tables.get('result-area').classList.remove(flow.config.drawnClass);
@@ -723,16 +756,25 @@ flow.markTable = function(elementList, tableLine) {
 // the file it came off and the whole of what it says, which is what a press on it copies.
 flow.markAll = function(elementList, lineList, text) {
 
+    var config = flow.config;
+
+    // A note stands for nothing in the file, so there is nothing to copy off it either
+    if(!lineList.length) {
+        return;
+    }
+
+    // The box is the first of the parts, the letters inside it following, and every part of the
+    // shape names it, so that a press anywhere on the shape leads back to the box
+    var boxIdx = flow.state.boxList.length;
+    flow.state.boxList.push(elementList[0]);
+
     for(var elementIdx = 0; elementIdx < elementList.length; elementIdx++) {
 
         var element = elementList[elementIdx];
 
         flow.mark(element, lineList);
-
-        // A note stands for nothing in the file, so there is nothing to copy off it either
-        if(lineList.length) {
-            element.setAttribute(flow.config.textMark, text);
-        }
+        element.setAttribute(config.textMark, text);
+        element.setAttribute(config.boxMark, boxIdx);
     }
 };
 
