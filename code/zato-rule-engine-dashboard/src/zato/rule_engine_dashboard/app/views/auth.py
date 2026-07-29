@@ -19,7 +19,7 @@ from django.utils.http import url_has_allowed_host_and_scheme as is_safe_url
 # Zato
 from zato.common.webapp.auth.config import auth_config, AuthType
 from zato.common.webapp.auth.entra import EntraAuthError, get_authorize_url, handle_callback
-from zato.rule_engine_dashboard.app.views.common import default_screen
+from zato.rule_engine_dashboard.app.views.common import default_screen, signed_in_required
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,14 +35,39 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _get_next_path(req:'any_') -> 'str':
+    """ Where the person was headed before the sign-in screen - the path travels
+    in the form on POST and in the query string on GET.
+    """
+    if out := req.POST.get('next', ''):
+        pass
+    else:
+        out = req.GET.get('next', '')
+
+    return out
+
+# ################################################################################################################################
+
+def _redirect_signed_in(req:'any_') -> 'any_':
+    """ Where a person who already has a session goes instead of the sign-in screen.
+    """
+    next_path = _get_next_path(req)
+
+    # A path from outside this host is not one to follow
+    if not is_safe_url(url=next_path, allowed_hosts={req.get_host()}):
+        next_path = default_screen(req.user)
+
+    logger.info('User `%s` is signed in already, going to %s', req.user.username, next_path)
+
+    out = HttpResponseRedirect(next_path)
+    return out
+
+# ################################################################################################################################
+
 def _get_login_response(req:'any_', entra_error:'str'='') -> 'any_':
     """ Renders the sign-in form, keeping the post-login path across form round trips.
     """
-    # The path travels in the form on POST and in the query string on GET
-    if next_path := req.POST.get('next', ''):
-        pass
-    else:
-        next_path = req.GET.get('next', '')
+    next_path = _get_next_path(req)
 
     is_entra = auth_config.auth_type == AuthType.Entra
 
@@ -127,6 +152,12 @@ def _handle_login_post(req:'any_') -> 'any_':
 def login(req:'any_') -> 'any_':
     """ The sign-in screen - a local form plus the identity provider when one is configured.
     """
+    # Someone who is signed in already has nothing to do here, no matter how they arrived -
+    # a restored tab, a bookmark, the back button or a link that still carries a next path
+    if req.user.is_authenticated:
+        out = _redirect_signed_in(req)
+        return out
+
     if req.method == 'GET':
         out = _handle_login_get(req)
 
@@ -148,6 +179,11 @@ def login_callback(req:'any_') -> 'any_':
     if req.method != 'GET':
         return HttpResponseNotAllowed(['GET'])
 
+    # A callback that arrives for someone who is signed in already changes nothing
+    if req.user.is_authenticated:
+        out = _redirect_signed_in(req)
+        return out
+
     # The provider's response may report an error, which goes back onto the sign-in form ..
     try:
         next_path = handle_callback(req)
@@ -167,6 +203,7 @@ def login_callback(req:'any_') -> 'any_':
 
 # ################################################################################################################################
 
+@signed_in_required
 def logout(req:'any_') -> 'any_':
     """ Ends the session and returns to the sign-in screen.
     """
