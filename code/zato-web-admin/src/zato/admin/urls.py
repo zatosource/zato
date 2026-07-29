@@ -1741,6 +1741,10 @@ urlpatterns += [
 
 urlpatterns += [
     url(r'^static/(?P<path>.*)$', static_serve, {'document_root': settings.MEDIA_ROOT}),
+
+    # The icon browsers ask for at the root path on their own
+    url(r'^favicon\.ico$', static_serve,
+        {'document_root': settings.MEDIA_ROOT, 'path': 'favicon/favicon.ico'}, name='favicon'),
 ]
 
 # ################################################################################################################################

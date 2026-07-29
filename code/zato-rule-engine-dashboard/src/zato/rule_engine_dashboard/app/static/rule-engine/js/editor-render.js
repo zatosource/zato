@@ -215,7 +215,7 @@ var editorView = {
         }
 
         var out = '<div class="editor-view-note">No rules yet, see ' +
-            '<a href="/tables/?ruleset=' + editorModel.definitionId + '">its decision table</a>.</div>';
+            '<a href="/tables/">the decision tables</a>.</div>';
         return out;
     },
 

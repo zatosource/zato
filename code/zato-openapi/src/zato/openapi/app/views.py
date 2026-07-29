@@ -326,6 +326,16 @@ def relay_view(req, relay_path):
 
 # ################################################################################################################################
 
+def favicon_view(req):
+    """ Answers the icon request browsers make at the root path on their own, with whichever
+    icon the console is branded with.
+    """
+    branding = get_branding_context()
+    out = redirect(branding['favicon_url'])
+    return out
+
+# ################################################################################################################################
+
 def branding_view(req, file_name):
     """ Serves a user-provided branding file from the well-known branding directory.
     """

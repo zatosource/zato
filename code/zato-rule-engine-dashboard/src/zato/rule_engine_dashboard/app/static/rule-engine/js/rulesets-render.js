@@ -143,7 +143,7 @@ var rulesetsView = {
                 'ondblclick="rulesetsView.open(' + ruleset.id + ')">' +
                 '<div class="rulesets-row-main">' +
                 '<div class="rulesets-row-name">' + self.starHtml(ruleset) +
-                '<a class="rulesets-open-link" href="' + self.config.openUrls.tables + '?ruleset=' + ruleset.id + '" ' +
+                '<a class="rulesets-open-link" href="' + self.config.openUrls.editor + '?ruleset=' + ruleset.id + '" ' +
                     'onclick="return rulesetsView.openFromLink(event, ' + ruleset.id + ')">' +
                     self.markHtml(ruleset.name) + '</a>' +
                 self.statusHtml(ruleset) + '</div>' +
@@ -281,8 +281,8 @@ var rulesetsView = {
 
         html += '<div class="test-grid-title">Open</div>' +
             '<div class="rulesets-preview-links">' +
-            this.previewLinkHtml(ruleset.id, 'tables', 'Decision table') +
-            this.previewLinkHtml(ruleset.id, 'editor', 'Sentence rules') +
+            this.previewLinkHtml(ruleset.id, 'editor', 'Rules') +
+            '<a class="rulesets-preview-link" href="' + this.config.openUrls.tables + '">Decision tables</a>' +
             this.previewLinkHtml(ruleset.id, 'tests', 'Tests and A/B') +
             this.previewLinkHtml(ruleset.id, 'versions', 'Versions') +
             this.previewLinkHtml(ruleset.id, 'log', 'Decision log') +
