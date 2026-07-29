@@ -2,6 +2,8 @@
 
 {% block page_title %}Sign in{% endblock %}
 
+{% block styles %}{% endblock %}
+
 {% block navigation %}{% endblock %}
 
 {% block content %}
@@ -10,7 +12,6 @@
   <div class="auth-panel">
 
     <div class="auth-logo" role="img" aria-label="Zato"></div>
-    <div class="auth-title">Rule engine</div>
 
     {% if entra_error %}
     <ul class="messages">

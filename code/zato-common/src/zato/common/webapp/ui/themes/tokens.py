@@ -166,6 +166,14 @@ rule_names = {
 
 # ################################################################################################################################
 
+# The theme every page starts with: what an anonymous page is drawn in and what
+# a signed-in one falls back to before anybody has picked anything. Named here
+# once, from where the converter writes it into themes-index.js for the settings
+# panel and the context processor hands it to the templates.
+default_theme = 'zato-dark'
+
+# ################################################################################################################################
+
 # The logo file a theme is drawn with: a dark theme takes the white one,
 # a light theme the blue one, and a theme whose overrides meta names a
 # file takes that one - a light high contrast theme wants the black one.
