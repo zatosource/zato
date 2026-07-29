@@ -20,20 +20,20 @@
 
   <div class="toolbar">
     <span class="view-switcher"
-      data-tippy-content="Four renderings of the same stored document: the sentence, its expression form, the table geometry and the canonical artifact itself. Nothing is generated one-way and nothing can drift, an edit in any editable view lands in the one document.">
+      data-tippy-content="View">
       <button class="button-ghost toggled" id="view-sentence" onclick="editorView.setView('sentence')">Sentence</button>
       <button class="button-ghost" id="view-expression" onclick="editorView.setView('expression')">Expression</button>
       <button class="button-ghost" id="view-table" onclick="editorView.setView('table')">Table</button>
       <button class="button-ghost" id="view-document" onclick="editorView.setView('document')">Document</button>
     </span>
     <button class="button-ghost" onclick="editorView.openRuleMenu(event)"
-      data-tippy-content="Every rule of this ruleset, the editor works on one at a time.">Rules</button>
+      data-tippy-content="Rule">Rules</button>
     <span class="toolbar-separator"></span>
     <span class="keyboard-hint"><kbd>Arrows</kbd> walk the sentence, <kbd>Enter</kbd> opens the choices of the focused part</span>
     <button class="button-ghost" onclick="editorView.openTests()"
-      data-tippy-content="Opens the test set for this ruleset, testing lives one click away from authoring.">Test</button>
+      data-tippy-content="Open the tests screen">Test</button>
     <button class="button-primary" onclick="editorView.save(this)"
-      data-tippy-content="Stores the whole ruleset with this rule swapped in, as a new version. Publishing stays a separate, deliberate step.">Save</button>
+      data-tippy-content="Save as a new version">Save</button>
   </div>
 
   <div class="editor-area" id="editor-area"></div>
@@ -52,7 +52,6 @@
     <span class="vocabulary-head-label">Vocabulary</span>
     <button class="vocabulary-collapse" id="vocabulary-collapse-button" onclick="shared.toggleVocabulary()"></button>
   </div>
-  <div class="vocabulary-hint">Click an attribute to start a new condition for it, or drag it onto a line to append, or onto an existing condition or action to insert right after it.</div>
   <div class="vocabulary-list" id="vocabulary-list"></div>
 </div>
 {% endblock %}

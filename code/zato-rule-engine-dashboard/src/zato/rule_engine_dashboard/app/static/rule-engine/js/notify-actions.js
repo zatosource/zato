@@ -1,10 +1,5 @@
 'use strict';
 
-// Event handlers for the notifications screen: the ruleset switch, the
-// live target picker, adding and removing destinations, saving and
-// testing credentials, and the event matrix panel. Augments the
-// notifyView namespace from notify-render.js.
-
 (function() {
 
 // ////////////////////////////////////////////////////////////////////////
@@ -19,8 +14,6 @@ notifyView.setRuleset = function(select) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Choosing the platform asks it for its channels right away - the picker
-// only ever offers channels that exist right now
 notifyView.setAddKind = function(select) {
     var self = this;
 
@@ -73,8 +66,6 @@ notifyView.deleteDestination = function(destinationId) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Saving reads the card's inputs and clears them on success - the values
-// never linger on the screen once they are stored
 notifyView.saveCredentials = function(anchor, kind) {
     var self = this;
     var values = {};
@@ -111,8 +102,6 @@ notifyView.sendTest = function(anchor, kind) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The event matrix, a read-only panel anchored to its toolbar button:
-// every event a destination hears about, each with a lived-in example
 notifyView.panelElement = null;
 
 notifyView.closePanel = function() {
@@ -136,9 +125,6 @@ notifyView.openMatrix = function(button) {
                 '</div>';
         });
 
-        html += '<div class="log-capture-hint">The matrix is fixed - every destination of a ruleset hears ' +
-            'about every event here, there is nothing to subscribe to or opt out of.</div>';
-
         var panel = document.createElement('div');
         panel.className = 'log-capture-panel notify-matrix-panel';
         panel.innerHTML = html;
@@ -153,8 +139,6 @@ notifyView.openMatrix = function(button) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The credentials pane is rendered into the page for admins alone,
-// its presence is what tells the model who it works for
 notifyModel.isAdmin = document.getElementById('notify-credentials-pane') !== null;
 
 notifyModel.load(function() { notifyView.render(); });
@@ -163,8 +147,6 @@ document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape') { notifyView.closePanel(); }
 });
 
-// A click anywhere else closes the open panel, the button itself toggles
-// it in its own click handler
 document.addEventListener('mousedown', function(event) {
     if (notifyView.panelElement === null) { return; }
     if (event.target.closest('.toolbar .button-ghost') !== null) { return; }

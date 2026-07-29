@@ -1,26 +1,17 @@
 'use strict';
 
-// Rendering for the decision table editor: what one render reads out of
-// the screen, drawing the grid into it, the problems panel and the
-// vocabulary pane. The grid's own html lives in table-grid.js, the
-// sentence bar in table-phrases.js and the event handlers in
-// table-actions.js, all three augmenting the same namespace.
-
 (function() {
 
 var tableView = {
 
-    // UI state
     phraseMode: false,
     selectedColumn: null,
     editing: false,
-    columnWidths: {},    // dragged column widths, keyed by column label
-    checkTimer: null,    // the debounce behind the server validation
+    columnWidths: {},
+    checkTimer: null,
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // A grip on every rule column header resizes that column, the widths
-    // survive re-renders
     attachColumnResizers: function() {
         var self = this;
         document.querySelectorAll('th.table-column-head').forEach(function(cell) {
@@ -35,11 +26,6 @@ var tableView = {
         return out;
     },
 
-    // Everything every cell of one render needs to know, gathered once: the
-    // invalid cells as a lookup, the columns in conflict and the find term
-    // from the toolbar. Read per cell instead, this is what makes a grid of
-    // thousands of cells do thousands of DOM reads and rebuild both lists
-    // that many times over.
     renderContext: function() {
         var invalid = {};
         tableModel.invalidCells().forEach(function(cell) { invalid[cell.column + '|' + cell.row] = true; });
@@ -52,8 +38,6 @@ var tableView = {
         return out;
     },
 
-    // The hints and the sentence both speak from the server's reading of the
-    // cells, so they are drawn again when a validation answer brings a new one
     renderReadings: function() {
         var self = this;
 
@@ -92,10 +76,6 @@ var tableView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Every edit re-runs the server validation after a short pause: the
-    // structural errors land in the problems panel, the invalid cells shade
-    // red in the grid, and the sentence bar and the unfold hints speak from
-    // how the server read the cells back
     scheduleServerCheck: function() {
         var self = this;
 
@@ -103,8 +83,6 @@ var tableView = {
         this.checkTimer = setTimeout(function() {
             self.checkTimer = null;
 
-            // An unfolded table is a read-only view with dotted numbers
-            // the validator does not know, the fold restores checking
             if (tableModel.hasUnfolded()) { return; }
 
             tableModel.check(function() {
@@ -116,7 +94,6 @@ var tableView = {
         }, tableModel.config.checkDelayMilliseconds);
     },
 
-    // Re-shade the invalid cells in place, without a full re-render
     shadeInvalidCells: function() {
         var invalidList = tableModel.invalidCells();
 
@@ -151,8 +128,7 @@ var tableView = {
         head.textContent = 'Problems (' + problems.length + ')';
 
         if (problems.length === 0) {
-            list.innerHTML = '<div class="problem-item problem-none">No problems. Conflicts, completeness, coverage ' +
-                'and reachability are checked on demand from the toolbar, the cell syntax continuously.</div>';
+            list.innerHTML = '<div class="problem-item problem-none">No problems in this table.</div>';
             return;
         }
 

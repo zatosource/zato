@@ -1,17 +1,10 @@
 'use strict';
 
-// Data model for the rule editor in sentence form: loading one ruleset's
-// documents, converting one canonical rule document into the editable
-// sentence structure and back into rule text, server-side validation with
-// its structured errors, saving as a new optimistic version, and the local
-// checks with quick fixes. No DOM access in this file.
-
 (function() {
 
 var editorModel = {
 
     config: {
-        // How long an edit waits before the server checks run
         checkDelayMilliseconds: 300,
 
         urls: {
@@ -28,28 +21,20 @@ var editorModel = {
         },
     },
 
-    // The ruleset this screen edits and the one rule inside it
     definitionId: null,
     currentVersion: null,
     rulesetName: '',
     documents: {},
     ruleKey: null,
 
-    // The vocabulary and its completion payload - only legal continuations
-    // are ever offered, the server decides what is legal
     vocabularyId: null,
     completionTerms: {},
 
-    // The first stored test set, for the live outcomes panel
     testSet: null,
 
-    // What the server said about the rule as it stands right now
     serverDocuments: null,
     serverErrors: [],
 
-    // The editable structure behind every view. A null subject, comparator
-    // or target renders as a typed placeholder. Joiners sit between
-    // consecutive conditions, and binds tighter than or.
     rule: null,
 
     comparatorSymbols: {
@@ -67,8 +52,6 @@ var editorModel = {
         'is false': '== false',
     },
 
-    // Placeholder wording for the unfinished parts of a sentence, rendered
-    // as dashed chips, the dashes alone say "still empty"
     placeholders: {
         subject: 'pick a property',
         comparator: 'how it compares',
@@ -80,8 +63,6 @@ var editorModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The screen opens on the ruleset and rule the address names, or on
-    // the first stored ones
     load: function(onDone) {
         var self = this;
         var search = new URLSearchParams(window.location.search);
@@ -94,7 +75,6 @@ var editorModel = {
                 records = records.filter(function(item) { return item.id === parseInt(wantedRuleset); });
             }
 
-            // No ruleset yet - the screen renders its empty state
             if (records.length === 0) {
                 onDone();
                 return;
@@ -168,8 +148,6 @@ var editorModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // One value node of the canonical document as the editable string
-    // the chips show
     valueText: function(node) {
         if (node.kind === 'reference') { return node.term; }
         if (node.value === true) { return 'true'; }
@@ -178,7 +156,6 @@ var editorModel = {
         return out;
     },
 
-    // The canonical stored document as the editable sentence structure
     fromDocument: function(document) {
         var self = this;
 
@@ -209,8 +186,6 @@ var editorModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // How a typed value goes back into rule text: known terms stay bare
-    // references, choice and text values travel quoted, everything else raw
     valueSource: function(path, value) {
         if (this.completionTerms[value] !== undefined) { return value; }
 
@@ -245,8 +220,6 @@ var editorModel = {
         return out;
     },
 
-    // The whole rule as the text form the parser reads - only the finished
-    // parts go in, the unfinished ones stay local placeholders
     toText: function() {
         var self = this;
         var lines = ['rule', '    ' + this.rule.name];
@@ -266,7 +239,6 @@ var editorModel = {
         complete.forEach(function(conditionIndex, position) {
             var line = '    ' + self.conditionSource(self.rule.conditions[conditionIndex]);
 
-            // The joiner in front of the next finished condition closes this line
             if (position < complete.length - 1) {
                 line += ' ' + self.rule.joiners[complete[position + 1] - 1];
             }
@@ -319,8 +291,6 @@ var editorModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The server parses the text form and checks its semantics against the
-    // vocabulary - the canonical documents come back alongside the errors
     check: function(onDone, onError) {
         var self = this;
 
@@ -343,8 +313,6 @@ var editorModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The whole ruleset with the edited rule swapped in - what save stores
-    // and what the live outcomes run against
     mergedDocuments: function() {
         if (this.serverDocuments === null || Object.keys(this.serverDocuments).length === 0) { return null; }
 
@@ -364,7 +332,7 @@ var editorModel = {
         var merged = this.mergedDocuments();
 
         if (merged === null) {
-            onError('The rule needs at least one finished condition and one then action before it can be saved.');
+            onError('A rule needs a finished condition and a then action.');
             return;
         }
 
@@ -384,15 +352,11 @@ var editorModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Only the comparators the server offers for the term are ever shown,
-    // so unreachable phrases never appear in the completion menu
     comparatorsFor: function(path) {
         var out = this.completionTerms[path].comparators;
         return out;
     },
 
-    // How many value slots a comparator needs: 0 for yes/no phrases, 2 for
-    // between, -1 for any number (the one-of pair), 1 for everything else
     valueSlots: function(comparator) {
         if (comparator === 'is true' || comparator === 'is false') { return 0; }
         if (comparator === 'is between') { return 2; }
@@ -405,7 +369,6 @@ var editorModel = {
         return this.placeholders.value;
     },
 
-    // Keep whatever values still fit when the comparator changes
     coerceValues: function(condition) {
         var slots = this.valueSlots(condition.comparator);
 
@@ -421,8 +384,6 @@ var editorModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Consecutive and-joined conditions form one group, or separates groups,
-    // the standard precedence where and binds tighter than or
     conditionGroups: function() {
         var out = [];
         if (this.rule.conditions.length === 0) { return out; }
@@ -448,9 +409,6 @@ var editorModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Everything the "then" and "else" parts can do, derived from the
-    // vocabulary: yes/no attributes give their two settings, the rest a
-    // set phrase with an editable value
     actionChoices: function() {
         var out = [];
 
@@ -472,8 +430,6 @@ var editorModel = {
 // ////////////////////////////////////////////////////////////////////////
 };
 
-// The adoption of undeclared terms, the typed-value checks and the
-// problems list live in editor-checks.js, which augments this namespace.
 window.editorModel = editorModel;
 
 })();

@@ -1,11 +1,5 @@
 'use strict';
 
-// Live test data in the editing loop: every edit re-runs the whole ruleset,
-// with the rule being written swapped in, against the stored test set, and
-// a panel under the sentence shows the per-scenario outcomes live. This is
-// the mechanism that catches the rule that is syntactically perfect but
-// passes for nothing, or breaks a scenario that used to pass.
-
 (function() {
 
 var editorLive = {
@@ -47,16 +41,14 @@ var editorLive = {
         var parts = [];
         var total = result.total;
 
-        parts.push(this.headHtml(shared.escape(result.name) + ' re-run on every edit, ' +
+        parts.push(this.headHtml(shared.escape(result.name) + ', ' +
             total + ' scenario' + (total === 1 ? '' : 's')));
 
-        // The distribution bar: passed, failed and explored shares of the run
         parts.push('<div class="live-bar">' +
             this.barSegmentHtml('passed', result.passed, total) +
             this.barSegmentHtml('failed', result.failed, total) +
             this.barSegmentHtml('explored', result.explored, total) + '</div>');
 
-        // The counts in words
         var countParts = [];
         countParts.push('<span class="live-count live-count-passed">' + result.passed + ' passed</span>');
         countParts.push('<span class="live-count live-count-explored">' + result.explored + ' explored</span>');
@@ -65,7 +57,6 @@ var editorLive = {
         }
         parts.push('<div class="live-counts">' + countParts.join('<span class="live-count-separator">&#183;</span>') + '</div>');
 
-        // Errors are loud and readable, never a null that flows onward
         var errorLines = 0;
         result.scenarios.forEach(function(scenario) {
             if (scenario.error === '' || errorLines >= editorLive.config.maximumErrorLines) { return; }
@@ -74,7 +65,6 @@ var editorLive = {
                 shared.escape(scenario.error) + '</div>');
         });
 
-        // Every scenario as a chip with the status it came back with
         parts.push('<div class="live-scenarios">' + result.scenarios.map(function(scenario) {
             var out = editorLive.scenarioChipHtml(scenario);
             return out;
@@ -86,21 +76,18 @@ var editorLive = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Re-render the live panel, called after every server check
     update: function() {
         var self = this;
         var panel = document.getElementById('live-panel');
 
         if (editorModel.testSet === null) {
-            panel.innerHTML = this.headHtml('there is no test set yet, ' +
-                '<a href="/tests/">the tests screen</a> is where one starts');
+            panel.innerHTML = this.headHtml('no test set, see <a href="/tests/">tests</a>');
             return;
         }
 
         var documents = editorModel.mergedDocuments();
         if (documents === null) {
-            panel.innerHTML = this.headHtml('the outcomes appear once the rule has ' +
-                'a finished condition and a then action');
+            panel.innerHTML = this.headHtml('no finished rule yet');
             return;
         }
 

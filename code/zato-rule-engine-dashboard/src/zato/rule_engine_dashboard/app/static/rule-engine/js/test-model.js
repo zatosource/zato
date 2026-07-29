@@ -1,24 +1,15 @@
 'use strict';
 
-// Data model for the tests and simulation screen: the stored test suite,
-// the ruleset its scenarios run against, the run results the server
-// answers with, and the structure edits. Scenario inputs nest by entity
-// the way the engine reads them, expected outcomes stay flat by the
-// target path the rules assign. No DOM access in this file.
-
 (function() {
 
 var testModel = {
 
     config: {
-        // How long an edit waits before the server validation runs
         checkDelayMilliseconds: 300,
 
-        // What a brand-new suite and a brand-new scenario are called
         newSuiteName: 'Test set',
         newScenarioName: 'New scenario',
 
-        // What a run says when no ruleset exists to run against
         noRulesetMessage: 'There is no ruleset to run against yet. Author one in the editor first.',
 
         urls: {
@@ -37,34 +28,24 @@ var testModel = {
         },
     },
 
-    // The stored suite this screen edits - null until one exists
     suiteId: null,
     suiteVersion: null,
     suite: null,
 
-    // Whether the suite differs from its stored version - a modified
-    // suite runs through the outcomes feed, an unmodified one through
-    // the run endpoint that records the run in the ruleset's history
     modified: false,
 
-    // The ruleset the scenarios run against
     rulesetId: null,
     rulesetName: '',
     rulesetCurrentVersion: null,
     rulesetLiveVersion: null,
     documents: null,
 
-    // What the server said last: per-scenario run results by name,
-    // the statuses of the previous full run for the delta badges, and
-    // the structural findings of the suite validation
     results: {},
     previousStatuses: {},
     serverErrors: [],
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The screen opens on the suite the address names, or on the first
-    // stored one, and runs against the first stored ruleset
     load: function(onDone) {
         var self = this;
         var wanted = new URLSearchParams(window.location.search).get('suite');
@@ -130,7 +111,6 @@ var testModel = {
         }, data.reportError);
     },
 
-    // A suite that does not exist yet starts empty
     startNew: function() {
         this.suite = {name: this.config.newSuiteName, scenarios: []};
         this.modified = true;
@@ -138,9 +118,6 @@ var testModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // A scenario input nests by entity - customer.creditScore lives as
-    // input.customer.creditScore - while the screen reads and edits the
-    // dotted paths. These two convert between the forms.
     flatten: function(mapping) {
         var out = {};
 
@@ -180,7 +157,6 @@ var testModel = {
         var head = path.slice(0, separator);
         delete scenario.input[head][path.slice(separator + 1)];
 
-        // An entity with no attributes left disappears entirely
         if (Object.keys(scenario.input[head]).length === 0) {
             delete scenario.input[head];
         }
@@ -188,8 +164,6 @@ var testModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Values live typed in the document - numbers as numbers, yes/no as
-    // booleans - and read as text in the grids
     displayValue: function(value) {
         if (value === true) { return 'true'; }
         if (value === false) { return 'false'; }
@@ -212,8 +186,6 @@ var testModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // A term of the loaded vocabulary, or null for a path the vocabulary
-    // does not know - unknown paths stay editable as free text
     termFor: function(path) {
         var parts = path.split('.');
         if (parts.length !== 2) { return null; }
@@ -240,7 +212,6 @@ var testModel = {
         return out;
     },
 
-    // What the last run said about one scenario, or null before any run
     resultOf: function(scenario) {
         var out = this.results[scenario.name];
         if (out === undefined) { out = null; }
@@ -263,8 +234,6 @@ var testModel = {
         return out;
     },
 
-    // The output rows of one scenario: every expected path plus every
-    // path the last run actually assigned, each shown once
     outputPaths: function(scenario) {
         var out = Object.keys(scenario.expected);
 
@@ -281,7 +250,6 @@ var testModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // A unique name for a new or duplicated scenario
     uniqueName: function(base) {
         var names = this.suite.scenarios.map(function(scenario) { return scenario.name; });
         if (names.indexOf(base) === -1) { return base; }
@@ -300,7 +268,6 @@ var testModel = {
         return scenario;
     },
 
-    // Duplicate a scenario, the copy lands right under the original
     duplicateScenario: function(index) {
         var original = this.suite.scenarios[index];
         var copy = JSON.parse(JSON.stringify(original));
@@ -317,11 +284,9 @@ var testModel = {
         this.modified = true;
     },
 
-    // Move a scenario one step up or down in the suite
     moveScenario: function(index, offset) {
         var toIndex = index + offset;
 
-        // Clamped at the edges, the caller learns nothing moved
         if (toIndex < 0 || toIndex >= this.suite.scenarios.length) { return false; }
 
         var moved = this.suite.scenarios.splice(index, 1)[0];
@@ -332,8 +297,6 @@ var testModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Input validation in domain terms, marked on the offending value
-    // before the server ever sees it
     validateInput: function(scenario) {
         var self = this;
         var errors = [];
@@ -363,7 +326,6 @@ var testModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The server checks the suite structurally after every edit
     check: function(onDone, onError) {
         var self = this;
 
@@ -383,8 +345,6 @@ var testModel = {
             comment: 'Edited test set ' + this.suite.name,
         };
 
-        // An existing suite gains a new optimistic version, a new one
-        // comes into being together with its first version
         if (this.suiteId !== null) {
             body.definition_id = this.suiteId;
             body.expected_current_version = this.suiteVersion;

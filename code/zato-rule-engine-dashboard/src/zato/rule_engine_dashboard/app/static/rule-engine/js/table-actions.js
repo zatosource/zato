@@ -1,17 +1,9 @@
 'use strict';
 
-// Event handlers for the decision table editor: the on-demand server
-// checks, unfold, fold and compress, find and replace, the keyboard
-// cursor and the save that stores a new version. The in-place editing
-// handlers live in table-edit.js. Augments the tableView namespace
-// from table-render.js.
-
 (function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The on-demand checks only run over the stored, folded columns -
-// the dotted sub-rule numbers are a display artifact the server never stores
 tableView.checksBlocked = function(button) {
     if (tableModel.hasUnfolded()) {
         shared.popover(button, 'Fold the sub-rules back first, checks run over the stored columns.');
@@ -20,8 +12,6 @@ tableView.checksBlocked = function(button) {
     return false;
 };
 
-// A check refused for structural problems also refreshes the problems
-// panel, so the message and the list under it agree
 tableView.reportCheckFailure = function(button, message) {
     this.renderProblems();
     this.shadeInvalidCells();
@@ -63,8 +53,6 @@ tableView.checkCompleteness = function() {
         var completeness = payload.completeness;
         var proposed = completeness.proposed;
 
-        // A table whose rows multiply out past the ceiling is never swept, and saying
-        // so is the answer - narrowing the rows is what makes the check meaningful again
         if (completeness.too_large) {
             self.render();
             shared.popover(button, 'This table asks for ' + completeness.combinations +
@@ -79,8 +67,6 @@ tableView.checkCompleteness = function() {
             return;
         }
 
-        // Each gap arrives as a proposed column with the missing cells
-        // and deliberately empty actions - choosing them is the author's job
         var labels = [];
         proposed.forEach(function(proposal) {
             var cells = {};
@@ -107,9 +93,6 @@ tableView.checkCompleteness = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Unfolding asks the server to expand one column into its dotted
-// sub-rules, one per value a multi-value cell holds - a read-only view
-// of the same stored column
 tableView.unfoldColumn = function(event, label) {
     event.stopPropagation();
     var self = this;
@@ -154,14 +137,12 @@ tableView.toggleUnfoldAll = function() {
     var button = document.getElementById('button-unfold');
 
     if (tableModel.hasUnfolded()) {
-        // Fold every unfolded parent back into its original column ..
         Object.keys(tableModel.unfoldSnapshots).forEach(function(parentLabel) {
             tableView.foldColumn({stopPropagation: function() {}}, parentLabel);
         });
         return;
     }
 
-    // .. or unfold every column that holds more than one value.
     var unfoldable = [];
     tableModel.table.columns.forEach(function(column) {
         if (tableModel.unfoldableRow(column) !== null) { unfoldable.push(tableModel.label(column)); }
@@ -171,7 +152,6 @@ tableView.toggleUnfoldAll = function() {
         return;
     }
 
-    // One column at a time, so each keeps its own fold-back snapshot
     var next = function() {
         if (unfoldable.length === 0) { return; }
         var label = unfoldable.shift();
@@ -207,9 +187,6 @@ tableView.updateUnfoldAllButton = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Compression is the inverse of unfolding, done by the server on the
-// stored document itself: columns differing in one row merge into
-// membership cells and the survivors renumber
 tableView.compress = function() {
     var self = this;
     var button = document.getElementById('button-compress');
@@ -227,7 +204,7 @@ tableView.compress = function() {
 
             var merged = countBefore - tableModel.table.columns.length;
             if (merged === 0) {
-                shared.popover(button, 'Nothing to compress: no two columns differ in exactly one row with the same actions.');
+                shared.popover(button, 'Nothing to compress.');
             } else {
                 var suffix = merged === 1 ? 'column' : 'columns';
                 shared.popover(button, merged + ' ' + suffix + ' merged into membership cells, the rules renumbered.', 'green');
@@ -309,7 +286,6 @@ tableView.toggleRowCheck = function(kind, rowKey, checked) {
         delete tableModel.checked[kind][rowKey];
     }
 
-    // Re-render so the delete control appears next to the checkboxes
     this.render();
 };
 
@@ -320,7 +296,6 @@ tableView.deleteCheckedRows = function(kind) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The keyboard cursor on the grid: arrows move it, Enter edits the cell
 tableView.cursor = null;
 
 tableView.applyCursor = function() {
@@ -340,7 +315,6 @@ tableView.cursorCell = function() {
     return out;
 };
 
-// All grid rows in keyboard order, conditions first, then actions
 tableView.cursorRows = function() {
     var out = [];
     tableModel.table.conditions.forEach(function(row) { out.push({kind: 'condition', key: row.letter}); });
@@ -354,7 +328,6 @@ tableView.moveCursor = function(key) {
     if (rows.length === 0) { return; }
     var columns = tableModel.table.columns.map(function(column) { return tableModel.label(column); });
 
-    // The cursor starts on the first cell when nothing is focused yet ..
     if (this.cursor === null) {
         this.cursor = {kind: rows[0].kind, rowKey: rows[0].key, column: columns[0]};
         this.applyCursor();
@@ -365,7 +338,6 @@ tableView.moveCursor = function(key) {
     var rowIndex = rows.findIndex(function(row) { return row.kind === self.cursor.kind && row.key === self.cursor.rowKey; });
     var columnIndex = columns.indexOf(this.cursor.column);
 
-    // .. arrows move it with clamping at the edges ..
     if (key === 'ArrowRight') { columnIndex = Math.min(columnIndex + 1, columns.length - 1); }
     if (key === 'ArrowLeft') { columnIndex = Math.max(columnIndex - 1, 0); }
     if (key === 'ArrowDown') { rowIndex = Math.min(rowIndex + 1, rows.length - 1); }
@@ -377,13 +349,11 @@ tableView.moveCursor = function(key) {
     var cell = this.cursorCell();
     if (cell !== null) { cell.scrollIntoView({behavior: 'smooth', block: 'nearest', inline: 'nearest'}); }
 
-    // .. and Enter opens the focused cell for editing, readonly cells ignore it.
     if (key === 'Enter') {
         if (cell !== null && !cell.classList.contains('table-cell-readonly')) { cell.click(); }
     }
 };
 
-// Shift with an arrow moves the cursor's own row or column in the grid
 tableView.reorderFromKeyboard = function(key) {
     if (this.cursor === null) { return; }
     var moved;
@@ -415,12 +385,10 @@ document.addEventListener('keydown', function(event) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Save stores the whole table document as a new optimistic version -
-// a first save creates the definition itself
 tableView.save = function(button) {
     if (tableModel.table === null) { return; }
     if (tableModel.hasUnfolded()) {
-        shared.popover(button, 'Fold the sub-rules back first, the stored document holds the folded columns.');
+        shared.popover(button, 'Fold the sub-rules back first.');
         return;
     }
 
@@ -434,7 +402,6 @@ tableView.save = function(button) {
     });
     if (handlers === null) { return; }
 
-    // Only a table whose cells all parse gets stored
     tableModel.withValidTable(function() {
         tableModel.save(handlers.done, handlers.error);
     }, function(message) {
@@ -454,8 +421,6 @@ tableModel.load(function() {
 
     if (tableModel.table === null) { return; }
 
-    // Arriving from the vocabulary's where-used list: every row of that
-    // term glows and the first one scrolls into view
     var termToHighlight = shared.termFromHash();
     if (termToHighlight !== null) {
         var termElements = [];

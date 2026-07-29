@@ -1,17 +1,9 @@
 'use strict';
 
-// Local checks for the rule editor: adopting terms the stored documents
-// use but the vocabulary does not declare, validating typed values against
-// their term's type, and building the problems list with quick fixes.
-// Augments the editorModel namespace from editor-model.js. No DOM access
-// in this file.
-
 (function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The type of an adopted term, read off the value nodes next to it -
-// a numeric comparison means a number, true or false a yes/no term
 editorModel.adoptedType = function(nodes) {
     var first = nodes[0];
     if (first !== undefined && first.kind !== 'reference') {
@@ -33,9 +25,6 @@ editorModel.adoptTerm = function(path, nodes) {
     };
 };
 
-// Every term the stored documents name and the vocabulary does not
-// declare becomes an adopted term, so the whole screen can phrase,
-// check and render the rules exactly as stored
 editorModel.adoptRuleTerms = function() {
     var self = this;
 
@@ -63,18 +52,14 @@ editorModel.isNumber = function(value) {
     return out;
 };
 
-// The closest known value for a mistyped choice entry, used
-// as the quick fix suggestion
 editorModel.suggestChoice = function(attribute, typed) {
     var lower = typed.toLowerCase();
 
-    // An exact match up to casing wins ..
     var out = null;
     attribute.values.forEach(function(value) {
         if (out === null && value.toLowerCase() === lower) { out = value; }
     });
 
-    // .. then the longest shared prefix ..
     if (out === null) {
         var bestLength = 0;
         attribute.values.forEach(function(value) {
@@ -88,7 +73,6 @@ editorModel.suggestChoice = function(attribute, typed) {
         });
     }
 
-    // .. and the first known value when nothing matched at all.
     if (out === null) { out = attribute.values[0]; }
 
     return out;
@@ -124,9 +108,6 @@ editorModel.checkTypedValue = function(attribute, value, values, valueIndex, pos
     }
 };
 
-// Local problems with quick fixes plus the set of invalid value chips.
-// A fix holds a direct reference to the values array it repairs.
-// The server's parse and semantic errors join the list separately.
 editorModel.buildProblems = function() {
     var self = this;
     var problems = [];
@@ -189,7 +170,6 @@ editorModel.buildProblems = function() {
     return out;
 };
 
-// The server's structured errors, worded for the problems panel
 editorModel.serverProblems = function() {
     var out = this.serverErrors.map(function(error) {
         var where = error.block;

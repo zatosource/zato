@@ -1,18 +1,10 @@
 'use strict';
 
-// Data model for the rulesets home, the front door of the product: the
-// ruleset list, the full-text search over what the rules say, the change
-// feed of followed rulesets, previews, publishing straight from the list,
-// follows, saved views and the recents strip - all read from and written
-// to the JSON views through the data helpers. No DOM access.
-
 (function() {
 
 var rulesetsModel = {
 
     config: {
-        // The list asks for one capped window no matter how many rulesets
-        // exist, the search is the way in past the cap
         listLimit: 200,
 
         urls: {
@@ -33,7 +25,6 @@ var rulesetsModel = {
         },
     },
 
-    // Loaded from the JSON views
     rulesets: [],
     followedIds: {},
     feed: [],
@@ -43,7 +34,6 @@ var rulesetsModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The first paint waits for everything the screen shows at once
     load: function(onDone) {
         var self = this;
         var remaining = 5;
@@ -108,8 +98,6 @@ var rulesetsModel = {
         return this.followedIds[id] === true;
     },
 
-    // A draft is any stored version past the live one, or the only version
-    // of a ruleset that has never been published
     draftVersion: function(ruleset) {
         if (ruleset.live_version === null) { return ruleset.current_version; }
         if (ruleset.current_version > ruleset.live_version) { return ruleset.current_version; }
@@ -118,8 +106,6 @@ var rulesetsModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The view chips narrow the list, the query searches the names here
-    // and, through the search view, the rule text itself
     filtered: function(view, query) {
         var self = this;
         var needle = query.trim().toLowerCase();
@@ -146,8 +132,6 @@ var rulesetsModel = {
         return out;
     },
 
-    // The server's full-text hits for one ruleset, each a rendered
-    // sentence with the exact place of the match in it
     hitsFor: function(id) {
         var out = this.searchHits.filter(function(hit) { return hit.definition_id === id; });
         return out;
@@ -174,14 +158,10 @@ var rulesetsModel = {
         data.get(this.config.urls.preview(id), onDone, data.reportError);
     },
 
-    // Publishing from the list: the draft becomes the live version and,
-    // for rulesets, starts answering requests without a restart
     publish: function(id, version, onDone, onError) {
         data.post(this.config.urls.publish(id), {version: version}, onDone, onError);
     },
 
-    // A ruleset rename is previewed before it commits, because the name is
-    // the REST address callers use and every rule name carries it
     renamePreview: function(id, newName, onDone, onError) {
         data.post(this.config.urls.rename(id), {new_name: newName, dry_run: true}, onDone, onError);
     },
@@ -190,7 +170,6 @@ var rulesetsModel = {
         var self = this;
         data.post(this.config.urls.rename(id), {new_name: newName, dry_run: false}, function(report) {
 
-            // The list shows the new name without a round trip
             self.byId(id).name = report.new_name;
             onDone(report);
         }, onError);
@@ -212,8 +191,6 @@ var rulesetsModel = {
         }, data.reportError);
     },
 
-    // Marking one followed ruleset seen moves the feed clock past
-    // everything that already happened to it
     markSeen: function(id, onDone) {
         var self = this;
         data.post(this.config.urls.seen(id), {}, function() {

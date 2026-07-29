@@ -1,24 +1,17 @@
 'use strict';
 
-// Rendering for the decision log screen: the aggregate cards that drill
-// down into the list, the searchable decision list with the caller
-// column, and one decision opened into its readable story with the
-// draft replay in place. Event handlers live in log-actions.js, the
-// right-click menu in log-menu.js, both augment this namespace.
-
 (function() {
 
 var logView = {
 
-    // UI state
     search: '',
     rangeDays: logModel.config.defaultRangeDays,
-    outcome: null,          // the active card facet, null shows everything
-    valueFilter: null,      // "everything for the value I clicked": {path, value}
+    outcome: null,
+    valueFilter: null,
     selectedId: null,
     columnWidths: {},
-    folded: {},             // which detail sections are folded shut
-    searchTimer: null,      // the debounce behind the search
+    folded: {},
+    searchTimer: null,
 
     outcomeDots: {
         'matched': 'status-dot-pass',
@@ -54,16 +47,12 @@ var logView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Timestamps come from the views as ISO strings, the list shows the
-    // readable date-and-minute part
     whenText: function(iso) {
         return iso.slice(0, 16).replace('T', ' ');
     },
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The cards: every number on the screen is clickable and filters the
-    // list to the individual decisions behind it
     renderAggregates: function() {
         if (logModel.aggregates === null) {
             document.getElementById('log-aggregates').innerHTML = '';
@@ -87,7 +76,6 @@ var logView = {
         card(null, 'decisions', counts.total);
         counts.outcomes.forEach(function(entry) { card(entry.outcome, entry.label, entry.count); });
 
-        // The duration readout, not a filter - there is nothing to drill into
         var average = logModel.aggregates.average_duration_ms;
         if (average !== null) {
             html += '<div class="log-card log-card-readout" data-tippy-content="The average decision time over the range.">' +
@@ -104,7 +92,6 @@ var logView = {
         var records = logModel.filtered(this.search, this.valueFilter);
         var self = this;
 
-        // Selection follows the filter, the detail never shows a hidden row
         var stillVisible = records.some(function(record) { return record.decision_id === self.selectedId; });
         if (!stillVisible) {
             this.selectedId = null;
@@ -112,7 +99,6 @@ var logView = {
             if (records.length > 0) { this.select(records[0].decision_id); }
         }
 
-        // The value filter is always visible as a chip, one click clears it
         var head = document.getElementById('log-list-head');
         var headHtml = records.length + ' decisions';
         if (this.valueFilter !== null) {
@@ -128,8 +114,6 @@ var logView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The decision list as html, out of the records alone - no DOM is read
-    // here, which is what lets the scale check measure a full page of them
     listHtml: function(records) {
         var self = this;
 
@@ -141,7 +125,6 @@ var logView = {
             var id = record.decision_id;
             var classes = 'log-row' + (id === self.selectedId ? ' log-row-selected' : '');
 
-            // The quiet copy of the id, visible when the row is hovered
             var copy = '<span class="log-row-copy" data-tippy-content="Copy the decision id" ' +
                 'onclick="logView.copyText(event, \'' + id + '\')">' + shared.icon('copy', 10) + '</span>';
 
@@ -167,16 +150,12 @@ var logView = {
         return html;
     },
 
-    // Decision ids are long opaque handles, the list shows the readable
-    // prefix and the copy control carries the whole thing
     shortId: function(decisionId) {
         return decisionId.slice(0, 12);
     },
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // One decision opened into its story: who asked, what came in, what
-    // went out, why, and the rules exactly as the deciding version knew them
     renderDetail: function() {
         var pane = document.getElementById('log-detail-pane');
         if (logModel.detail === null) { pane.innerHTML = ''; return; }
@@ -195,7 +174,6 @@ var logView = {
             '<span class="log-copy-quiet" data-tippy-content="Copy the decision id" ' +
                 'onclick="logView.copyText(event, \'' + decision.decision_id + '\')">' + shared.icon('copy', 11) + '</span>';
 
-        // Only a decision that kept its story can be copied or replayed
         if (decision.has_payload) {
             html += '<button class="button-mini" onclick="logView.addToTestSet(this)" ' +
                 'data-tippy-content="One click turns this stored decision into a scenario in the test set, ' +
@@ -208,15 +186,12 @@ var logView = {
 
         html += '</div>';
 
-        // The version link survives later edits, it points at the snapshot
         html += '<div class="log-version-line">Decided by ' + shared.escape(logModel.rulesetName) +
             ' version ' + decision.rules_version +
             '. <a class="log-version-link" href="/versions/?ruleset=' + decision.ruleset_id + '" ' +
-            'data-tippy-content="Opens the rules exactly as version ' + decision.rules_version +
-            ' knew them. The link points at the version snapshot, so later edits never change what you see here.">' +
+            'data-tippy-content="Open version ' + decision.rules_version + '">' +
             'Open the rules as they were</a></div>';
 
-        // A sampled-away story shows its headers and says so, never a blank
         if (!decision.has_payload) {
             html += '<div class="test-run-note">This decision kept headers only - the capture dial sampled its ' +
                 'full story away. The outcome, the timing and the caller above are everything that was stored.</div>';
@@ -241,8 +216,6 @@ var logView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Every section folds shut, long inputs never push the rules off
-    // the screen
     foldTitleHtml: function(key, label) {
         var isFolded = this.folded[key] === true;
         var chevron = shared.icon(isFolded ? 'chevron-right' : 'chevron-down', 11);
@@ -251,7 +224,6 @@ var logView = {
         return out;
     },
 
-    // The quiet per-value copy, visible when the cell is hovered
     cellCopyHtml: function(value) {
         var out = '<span class="log-cell-copy" data-tippy-content="Copy this value" ' +
             'onclick="logView.copyText(event, \'' + shared.escape(value) + '\')">' + shared.icon('copy', 10) + '</span>';
@@ -286,8 +258,7 @@ var logView = {
         var paths = Object.keys(outputs);
 
         if (paths.length === 0) {
-            html += '<div class="test-run-note">No rule matched, so nothing was assigned - the caller received ' +
-                'an empty outcome, not an error.</div>';
+            html += '<div class="test-run-note">No rule matched, the outcome is empty.</div>';
             return html;
         }
 
@@ -303,8 +274,6 @@ var logView = {
         return html;
     },
 
-    // The readable failure: the exact message the caller received,
-    // in domain terms, never a bare status code
     errorSectionHtml: function(decision) {
         var html = '<div class="test-grid-title">What the caller was told</div>';
         html += '<div class="test-fired-item"><span class="status-dot test-severity-violation"></span>' +
@@ -334,8 +303,6 @@ var logView = {
         return html;
     },
 
-    // The rules exactly as the deciding version knew them - the rendered
-    // snapshot, never the rules as they read today
     rulesSectionHtml: function() {
         var decision = logModel.detail.decision;
         var rendered = logModel.detail.version.rendered;
@@ -351,13 +318,10 @@ var logView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The stored decision replayed against the newest version: would it
-    // come out differently today, value by value
     replaySectionHtml: function(decision) {
         var replayed = logModel.replayResult;
         var html = '<div class="test-grid-title">Replayed against v' + logModel.currentVersion + '</div>';
 
-        // A replay that errors is its own readable answer
         if (replayed.error !== '') {
             html += '<div class="test-fired-item"><span class="status-dot test-severity-violation"></span>' +
                 '<span class="test-fired-statement">' + shared.escape(replayed.error) + '</span></div>';
@@ -418,18 +382,16 @@ var logView = {
             if (errors > 0) {
                 problemCount += 1;
                 items.push('<div class="problem-item"><span class="status-dot status-dot-error"></span>' +
-                    '<span>' + errors + ' decision(s) in the range ended in an input error. ' +
-                    'Click the errors card to see every one of them.</span></div>');
+                    '<span>' + errors + ' decision' + (errors === 1 ? '' : 's') +
+                    ' in the range ended in an input error.</span></div>');
             }
         }
 
-        // The capture readout is a fact of the log, never a problem
         if (logModel.items.length > 0) {
             var readout = logModel.captureReadout();
             items.push('<div class="problem-item"><span class="status-dot status-dot-information"></span>' +
-                '<span>Capture: the searchable header of every decision is always kept, the full story is kept ' +
-                'for every error and for ' + readout.successKept + ' of the ' + readout.successTotal +
-                ' successes on this page - the dial\'s sample. Set deliberately, never a hidden default.</span></div>');
+                '<span>Full stories kept for ' + readout.successKept + ' of the ' + readout.successTotal +
+                ' successes on this page.</span></div>');
         }
 
         head.textContent = 'Problems (' + problemCount + ')';

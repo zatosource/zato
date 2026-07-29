@@ -1,16 +1,9 @@
 'use strict';
 
-// Running test scenarios against the rules: the full run, the single
-// scenario run and promoting an explored outcome into an assertion.
-// Augments the testModel namespace from test-model.js. No DOM access
-// in this file.
-
 (function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Folds one full run's answer into the results and reports the delta
-// against the previous run - the one-glance regression signal
 testModel.ingestRun = function(payload) {
     var self = this;
     var counts = {passed: 0, failed: 0, explored: 0};
@@ -35,9 +28,6 @@ testModel.ingestRun = function(payload) {
     return out;
 };
 
-// A full run: the stored suite runs through the endpoint that records
-// the run in the ruleset's history, a locally edited one through the
-// outcomes feed - the results read the same either way
 testModel.runAll = function(onDone, onError) {
     var self = this;
 
@@ -60,8 +50,6 @@ testModel.runAll = function(onDone, onError) {
     data.post(this.config.urls.outcomes, {documents: this.documents, test_set: this.suite}, ingest, onError);
 };
 
-// One scenario runs alone through the outcomes feed, the rest of the
-// suite keeps its previous results
 testModel.runOne = function(scenario, onDone, onError) {
     var self = this;
 
@@ -80,10 +68,6 @@ testModel.runOne = function(scenario, onDone, onError) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Promoting a whole outcome turns exploration into assertion. An
-// unmodified stored suite promotes through the endpoint, which stores
-// a new version right away - a locally edited one promotes in place
-// and the Save button persists everything together.
 testModel.promote = function(scenario, onDone, onError) {
     var self = this;
     var result = this.resultOf(scenario);

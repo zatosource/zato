@@ -1,21 +1,12 @@
 'use strict';
 
-// Rendering for the versions and changes screen: the linear timeline,
-// the grouped structural diff with word-level changes inside every
-// updated rule, viewed-progress tracking, the outcome comparison, the
-// anchored review comments and the approval card. Event handlers live
-// in versions-actions.js, which augments this namespace.
-
 (function() {
 
 var versionsView = {
 
     config: {
-        // The outcome section lists at most this many changed scenarios,
-        // the tests and simulation screen shows the rest
         maxOutcomeRows: 5,
 
-        // Every history event type as the phrase the activity feed shows
         eventPhrases: {
             'definition.created': 'created this ruleset',
             'definition.renamed': 'renamed this ruleset',
@@ -39,7 +30,6 @@ var versionsView = {
         },
     },
 
-    // UI state
     changesOnly: false,
     splitView: true,
 
@@ -65,16 +55,12 @@ var versionsView = {
     },
 
     renderSubtitle: function() {
-        var text = versionsModel.rulesetName === ''
-            ? 'no ruleset stored yet'
-            : versionsModel.rulesetName + ' \u00b7 every version keeps its comment \u00b7 restoring never renumbers anything';
+        var text = versionsModel.rulesetName === '' ? 'no ruleset stored yet' : versionsModel.rulesetName;
         document.getElementById('main-subtitle').textContent = text;
     },
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Timestamps come from the views as ISO strings, the screen shows
-    // the readable date-and-minute part
     whenText: function(iso) {
         return iso.slice(0, 16).replace('T', ' ');
     },
@@ -93,10 +79,9 @@ var versionsView = {
 
             var badges = '';
             if (version.number === versionsModel.liveVersion) {
-                badges += '<span class="versions-badge versions-badge-live" data-tippy-content="A snapshot ' +
-                    'was taken when this version went live, so this exact state can go live again as-is.">live</span>';
+                badges += '<span class="versions-badge versions-badge-live" ' +
+                    'data-tippy-content="The live version">live</span>';
             } else if (versionsModel.liveVersion === null || version.number > versionsModel.liveVersion) {
-                // Nothing published yet makes every version a draft
                 badges += '<span class="versions-badge versions-badge-draft">draft</span>';
             }
             if (version.restoredFrom !== null) {
@@ -106,8 +91,7 @@ var versionsView = {
             var restore = version.number === versionsModel.currentVersion ? '' :
                 '<button class="button-mini versions-restore" ' +
                 'onclick="versionsView.restore(event, ' + version.number + ', this)" ' +
-                'data-tippy-content="Creates a new version from this exact state and publishes it. ' +
-                'The timeline only ever grows, nothing is renumbered or hidden.">Restore</button>';
+                'data-tippy-content="Restore this state as a new version">Restore</button>';
 
             html += '<div class="' + classes + '" onclick="versionsView.pickVersion(' + version.number + ')">' +
                 '<div class="versions-timeline-top">' +
@@ -161,29 +145,24 @@ var versionsView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The head every rule card shares: name, badge, the viewed toggle
-    // and the count of comments anchored to this rule - a renamed rule
-    // shows both names while its key follows the new one
     ruleHeadHtml: function(name, state, displayName) {
         var key = 'rule-' + name;
         var viewed = versionsModel.viewed[key] === true;
 
-        var viewedControl = '<label class="versions-viewed-toggle" data-tippy-content="Marking a change as viewed ' +
-            'dims it and counts it into the progress bar, the way large reviews stay tractable.">' +
+        var viewedControl = '<label class="versions-viewed-toggle" data-tippy-content="Mark as viewed">' +
             '<input type="checkbox"' + (viewed ? ' checked' : '') +
             ' onchange="versionsView.toggleViewed(\'' + shared.escape(key) + '\', this.checked)"> viewed</label>';
 
         var commentCount = versionsModel.commentsFor(key).length;
         var commentMark = commentCount > 0 ? '<span class="versions-comment-mark" data-tippy-content="' +
-            commentCount + ' comment(s) anchored to this rule, shown under the diff.">' + commentCount + '</span>' : '';
+            commentCount + ' comment' + (commentCount === 1 ? '' : 's') + ' on this rule">' +
+            commentCount + '</span>' : '';
 
         var out = '<div class="versions-rule-head">' + shared.escape(displayName) + commentMark +
             this.stateBadges[state] + viewedControl + '</div>';
         return out;
     },
 
-    // One updated rule: both rendered forms word-diffed, side by side
-    // or as one merged text, and the changed blocks named
     updatedRuleHtml: function(entry) {
         var key = 'rule-' + entry.rule;
         var viewed = versionsModel.viewed[key] === true;
@@ -207,7 +186,6 @@ var versionsView = {
         return html;
     },
 
-    // One added, deleted or renamed rule: its one rendered form, tinted
     plainRuleHtml: function(name, state, rendered, displayName) {
         var key = 'rule-' + name;
         var viewed = versionsModel.viewed[key] === true;
@@ -254,20 +232,17 @@ var versionsView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The outcome comparison: both versions replayed the stored test
-    // set's scenarios, so the reviewer sees which decisions would change,
-    // not only what text changed
     outcomeDiffHtml: function() {
         var self = this;
         var outcome = versionsModel.outcome;
 
         if (outcome === null) {
-            return '<div class="versions-note">The outcome comparison replays a stored test set against both versions. ' +
-                'It runs when the compared versions differ and a test set exists.</div>';
+            return '<div class="versions-note">No outcome comparison.</div>';
         }
 
         var html = '<div class="versions-note">Both versions ran against ' + shared.escape(versionsModel.suiteName) +
-            ', ' + outcome.total + ' scenario(s): <b>' + outcome.changed + ' would change</b>, ' +
+            ', ' + outcome.total + ' scenario' + (outcome.total === 1 ? '' : 's') + ': <b>' +
+            outcome.changed + ' would change</b>, ' +
             outcome.unchanged + ' would not, ' + outcome.errors + ' errored.</div>';
 
         var changed = outcome.scenarios.filter(function(entry) { return entry.status === 'changed'; });
@@ -321,12 +296,12 @@ var versionsView = {
         var html = '';
 
         html += '<div class="versions-summary">Comparing v' + versionsModel.fromNumber +
-            ' with v' + versionsModel.toNumber + ', matched by rule, never by line: ' +
+            ' with v' + versionsModel.toNumber + ': ' +
             '<span class="versions-count-added">' + counts.added + ' added</span>, ' +
             '<span class="versions-count-deleted">' + counts.deleted + ' deleted</span>, ' +
             '<span class="versions-count-renamed">' + counts.renamed + ' renamed</span>, ' +
             '<span class="versions-count-updated">' + counts.updated + ' updated</span>, ' +
-            counts.unchanged + ' unchanged. A renamed rule is a rename, never a delete plus an add.</div>';
+            counts.unchanged + ' unchanged.</div>';
 
         html += this.progressHtml();
 
@@ -371,13 +346,15 @@ var versionsView = {
 
             if (unviewed > 0) {
                 items.push('<div class="problem-item"><span class="status-dot status-dot-warning"></span>' +
-                    '<span>' + unviewed + ' change(s) not yet marked as viewed.</span></div>');
+                    '<span>' + unviewed + ' change' + (unviewed === 1 ? '' : 's') +
+                    ' not marked as viewed.</span></div>');
             }
 
             var commentCount = versionsModel.comments().length;
             if (commentCount > 0) {
                 items.push('<div class="problem-item"><span class="status-dot status-dot-warning"></span>' +
-                    '<span>' + commentCount + ' comment(s) anchored to this version\'s rules.</span></div>');
+                    '<span>' + commentCount + ' comment' + (commentCount === 1 ? '' : 's') +
+                    ' on this version\'s rules.</span></div>');
             }
         }
 
@@ -385,19 +362,19 @@ var versionsView = {
         if (approval !== null && approval.gate_enabled) {
             if (!approval.is_approved) {
                 items.push('<div class="problem-item"><span class="status-dot status-dot-error"></span>' +
-                    '<span>The approval gate is on and v' + approval.version +
-                    ' has no approval yet, so it cannot go live.</span></div>');
+                    '<span>v' + approval.version + ' has no approval yet.</span></div>');
             } else if (!approval.content_matches) {
                 items.push('<div class="problem-item"><span class="status-dot status-dot-error"></span>' +
                     '<span>The stored content of v' + approval.version +
-                    ' differs from what was approved, so it cannot go live.</span></div>');
+                    ' differs from what was approved.</span></div>');
             }
         }
 
         if (versionsModel.outcome !== null && versionsModel.outcome.changed > 0) {
+            var changed = versionsModel.outcome.changed;
             items.push('<div class="problem-item"><span class="status-dot status-dot-information"></span>' +
-                '<span>' + versionsModel.outcome.changed + ' scenario(s) of ' +
-                shared.escape(versionsModel.suiteName) + ' would decide differently. Advisory, not blocking.</span></div>');
+                '<span>' + changed + ' scenario' + (changed === 1 ? '' : 's') + ' of ' +
+                shared.escape(versionsModel.suiteName) + ' would decide differently.</span></div>');
         }
 
         document.getElementById('problems-head').textContent = 'Before this can go live (' + items.length + ')';

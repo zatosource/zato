@@ -1,26 +1,19 @@
 'use strict';
 
-// Rendering for the rule editor in sentence form. The same token structure
-// has two skins: near-natural sentences and the full expression view. The
-// grid and document skins live in editor-views.js and the event handlers
-// in editor-actions.js, both augmenting this namespace.
-
 (function() {
 
 var editorView = {
 
-    // UI state. The four views are renderings of the same stored rule
-    // document: sentence, expression, table and the document itself.
     viewMode: 'sentence',
     expressionMode: false,
-    autoOpen: null,      // data-chip name to click right after the next render
-    problems: [],        // last built problem list, for applyFix
+    autoOpen: null,
+    problems: [],
     invalidKeys: {},
     menuElement: null,
-    menuChoices: [],     // menu items for keyboard navigation
+    menuChoices: [],
     menuChoice: -1,
     menuIsMulti: false,
-    checkTimer: null,    // the debounce behind the server checks
+    checkTimer: null,
 
 // ////////////////////////////////////////////////////////////////////////
 
@@ -60,13 +53,9 @@ var editorView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The comparator and value chips of one condition, shared between the
-    // sentence rendering and the table rendering: same chips, same handlers,
-    // one stored condition behind both
     conditionBodyHtml: function(condition, conditionIndex) {
         var parts = [];
 
-        // The comparator, only offered once a subject exists ..
         if (condition.subject !== null) {
             var comparatorClick = 'editorView.openComparatorMenu(event, ' + conditionIndex + ')';
             if (condition.comparator === null) {
@@ -79,7 +68,6 @@ var editorView = {
             }
         }
 
-        // .. and the values, whose shape follows the comparator.
         if (condition.subject !== null && condition.comparator !== null) {
             var conditionAttribute = vocabulary.attribute(condition.subject);
             var slots = editorModel.valueSlots(condition.comparator);
@@ -121,7 +109,6 @@ var editorView = {
     conditionHtml: function(condition, conditionIndex) {
         var parts = [];
 
-        // The subject, or its typed placeholder ..
         var subjectClick = 'editorView.openSubjectMenu(event, ' + conditionIndex + ')';
         if (condition.subject === null) {
             parts.push(this.placeholderHtml('subject-' + conditionIndex, editorModel.placeholders.subject, subjectClick));
@@ -131,10 +118,8 @@ var editorView = {
             parts.push(this.tokenHtml('editor-token-subject', 'subject-' + conditionIndex, subjectText, subjectClick, false));
         }
 
-        // .. then the comparator and values shared with the table rendering.
         parts.push(this.conditionBodyHtml(condition, conditionIndex));
 
-        // The data-group attribute makes this one condition a drop target of its own
         var out = '<span class="editor-group" data-group="conditions-' + conditionIndex + '">' +
             parts.join('') + this.removeConditionHtml(conditionIndex) + '</span>';
         return out;
@@ -153,13 +138,11 @@ var editorView = {
             var attribute = vocabulary.attribute(action.target);
 
             if (attribute.type === 'yes/no') {
-                // A yes/no action is one phrase, e.g. set approved to true
                 var yesNoText = this.expressionMode
                     ? action.target + ' = ' + action.values[0]
                     : 'set ' + attribute.phrase + ' to ' + action.values[0];
                 parts.push(this.tokenHtml('editor-token-action', chipName, yesNoText, actionClick, false));
             } else {
-                // Everything else is a set phrase plus an editable value
                 var verbText = this.expressionMode ? action.target + ' =' : 'set ' + attribute.phrase + ' to';
                 parts.push(this.tokenHtml('editor-token-action', chipName, verbText, actionClick, false));
                 parts.push(this.valueChipHtml(listName, actionIndex, 0, action.values[0], attribute));
@@ -169,7 +152,6 @@ var editorView = {
         var removeControl = '<span class="editor-group-remove" data-tippy-content="Remove this action" ' +
             'onclick="editorView.removeAction(event, \'' + listName + '\', ' + actionIndex + ')">' + shared.icon('x', 11) + '</span>';
 
-        // The data-group attribute makes this one action a drop target of its own
         var out = '<span class="editor-group" data-group="' + listName + '-' + actionIndex + '">' +
             parts.join('') + removeControl + '</span>';
         return out;
@@ -187,14 +169,11 @@ var editorView = {
     joinerHtml: function(joinerIndex) {
         var text = editorModel.rule.joiners[joinerIndex];
         var out = '<span class="editor-token editor-token-joiner" data-chip="joiner-' + joinerIndex + '" ' +
-            'data-tippy-content="Click to switch between and and or. And binds tighter than or, the boxes show how the conditions group." ' +
+            'data-tippy-content="Click to switch between and and or" ' +
             'onclick="editorView.toggleJoiner(' + joinerIndex + ')">' + text + '</span>';
         return out;
     },
 
-    // Conditions render as or-separated groups of and-joined conditions.
-    // With any or present, each and-group gets a visible box, and the
-    // expression view adds the equivalent parentheses.
     conditionsHtml: function() {
         var self = this;
         var groups = editorModel.conditionGroups();
@@ -220,7 +199,6 @@ var editorView = {
         var out = [];
         groupParts.forEach(function(groupHtml, groupIndex) {
             if (groupIndex > 0) {
-                // The joiner in front of a group's first condition is the or
                 var firstCondition = groups[groupIndex][0];
                 out.push(self.joinerHtml(firstCondition - 1));
             }
@@ -231,16 +209,13 @@ var editorView = {
         return html;
     },
 
-    // The screen without a ruleset or without any rule to edit
     emptyHtml: function() {
         if (editorModel.definitionId === null) {
-            return '<div class="editor-view-note">There is no ruleset yet. ' +
-                '<a href="/rulesets/">The rulesets screen</a> is where one starts.</div>';
+            return '<div class="editor-view-note">No ruleset yet, see <a href="/rulesets/">rulesets</a>.</div>';
         }
 
-        var out = '<div class="editor-view-note">This ruleset has no rules yet. ' +
-            'A rule arrives through <a href="/tables/?ruleset=' + editorModel.definitionId + '">its decision table</a> ' +
-            'or through the vocabulary screen\'s add-from-rules panel.</div>';
+        var out = '<div class="editor-view-note">No rules yet, see ' +
+            '<a href="/tables/?ruleset=' + editorModel.definitionId + '">its decision table</a>.</div>';
         return out;
     },
 
@@ -256,13 +231,10 @@ var editorView = {
 
         var rule = editorModel.rule;
 
-        // Build the local problems first, the value chips need the invalid keys
         var built = editorModel.buildProblems();
         this.problems = built.problems.concat(editorModel.serverProblems());
         this.invalidKeys = built.invalidKeys;
 
-        // The table and document views replace the sentence wholesale,
-        // everything else on the screen stays the same
         if (this.viewMode === 'table' || this.viewMode === 'document') {
             document.getElementById('editor-area').innerHTML =
                 this.viewMode === 'table' ? this.tableViewHtml() : this.documentViewHtml();
@@ -273,7 +245,6 @@ var editorView = {
             return;
         }
 
-        // Each line is a drop target for vocabulary attributes, see editor-drag.js
         var ifParts = [];
         ifParts.push(this.keywordHtml('if'));
         ifParts.push(this.conditionsHtml());
@@ -323,9 +294,6 @@ var editorView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Every edit re-runs the server checks after a short pause: the parse
-    // and semantic errors land in the problems panel and the live outcomes
-    // panel re-runs the test set against the rule as it stands right now
     scheduleServerCheck: function() {
         var self = this;
 
@@ -341,7 +309,6 @@ var editorView = {
         }, editorModel.config.checkDelayMilliseconds);
     },
 
-    // The guided completion chain: after a pick, the next menu opens by itself
     openPendingChip: function() {
         var pending = this.autoOpen;
         this.autoOpen = null;
@@ -359,8 +326,7 @@ var editorView = {
         head.textContent = 'Problems (' + this.problems.length + ')';
 
         if (this.problems.length === 0) {
-            list.innerHTML = '<div class="problem-item problem-none">No problems. ' +
-                'The rule is checked continuously as you write it, never on save.</div>';
+            list.innerHTML = '<div class="problem-item problem-none">No problems in this rule.</div>';
             return;
         }
 
@@ -396,8 +362,6 @@ var editorView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Arrows walk every token, placeholders included, Enter or ArrowDown
-    // opens the one in focus
     activeToken: -1,
 
     markActiveToken: function() {

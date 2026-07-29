@@ -1,6 +1,6 @@
-/* ------------------------------------------------------------ */
-/* Versions - layout                                             */
-/* ------------------------------------------------------------ */
+/* ---------------------------------------------------------- */
+/* Versions - layout                                          */
+/* ---------------------------------------------------------- */
 
 .versions-body{flex:1;display:flex;overflow:hidden}
 .versions-timeline-pane{width:300px;flex-shrink:0;background:var(--chrome);display:flex;flex-direction:column;overflow:auto}
@@ -10,9 +10,9 @@
 .versions-compare-label{font-size:12px;color:var(--text4)}
 .versions-select{background:var(--input-background);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;padding:5px 8px;outline:none;font-family:var(--font)}
 
-/* ------------------------------------------------------------ */
-/* Versions - timeline                                           */
-/* ------------------------------------------------------------ */
+/* ---------------------------------------------------------- */
+/* Versions - timeline                                        */
+/* ---------------------------------------------------------- */
 
 .versions-timeline-item{padding:9px 16px;cursor:pointer}
 .versions-timeline-item:hover{background:var(--panel)}
@@ -24,9 +24,9 @@
 .versions-restore{margin-left:auto;opacity:0;transition:opacity 0.12s}
 .versions-timeline-item:hover .versions-restore{opacity:1}
 
-/* ------------------------------------------------------------ */
-/* Versions - badges and summary                                 */
-/* ------------------------------------------------------------ */
+/* ---------------------------------------------------------- */
+/* Versions - badges and summary                              */
+/* ---------------------------------------------------------- */
 
 .versions-badge{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;border-radius:3px;padding:1px 5px}
 .versions-badge-added{color:var(--green);border:1px solid var(--green)}
@@ -46,9 +46,9 @@
 .versions-section-title{margin:18px 0 8px;font-size:10px;font-weight:700;color:var(--text5);text-transform:uppercase;letter-spacing:0.1em}
 .versions-note{font-size:12px;color:var(--text3);line-height:1.5;max-width:760px;padding:7px 12px;border:1px dashed var(--border);border-radius:5px}
 
-/* ------------------------------------------------------------ */
-/* Versions - viewed progress                                    */
-/* ------------------------------------------------------------ */
+/* ---------------------------------------------------------- */
+/* Versions - viewed progress                                 */
+/* ---------------------------------------------------------- */
 
 .versions-progress{display:flex;align-items:center;gap:12px;margin-top:10px;max-width:520px}
 .versions-progress-text{flex-shrink:0;font-size:11.5px;color:var(--text4)}
@@ -59,9 +59,9 @@
 .versions-viewed-toggle{display:inline-flex;align-items:center;gap:4px;margin-left:8px;font-size:9.5px;font-weight:500;color:var(--text4);cursor:pointer;text-transform:uppercase;letter-spacing:0.05em}
 .versions-viewed-toggle input{accent-color:var(--green);width:11px;height:11px;cursor:pointer}
 
-/* ------------------------------------------------------------ */
-/* Versions - rule diffs                                         */
-/* ------------------------------------------------------------ */
+/* ---------------------------------------------------------- */
+/* Versions - rule diffs                                      */
+/* ---------------------------------------------------------- */
 
 .versions-rule{margin-bottom:12px;max-width:860px}
 .versions-rule-head{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--text2);margin-bottom:3px}
@@ -82,9 +82,9 @@
 
 .versions-comment-mark{display:inline-block;margin-left:6px;min-width:14px;font-size:9.5px;font-weight:700;color:var(--amber);border:1px solid var(--amber);border-radius:50%;line-height:1.4;text-align:center}
 
-/* ------------------------------------------------------------ */
-/* Versions - outcome grid and comments                          */
-/* ------------------------------------------------------------ */
+/* ---------------------------------------------------------- */
+/* Versions - outcome grid and comments                       */
+/* ---------------------------------------------------------- */
 
 table.versions-outcome-grid{border-collapse:separate;border-spacing:0;font-size:12px;margin-top:8px}
 table.versions-outcome-grid td,table.versions-outcome-grid th{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:5px 10px}
@@ -101,9 +101,9 @@ table.versions-outcome-grid td{background:var(--input-background);color:var(--te
 .versions-comment-form input{flex:1;background:var(--input-background);border:1px solid var(--border);border-radius:4px;padding:5px 9px;color:var(--text);font-size:12px;outline:none;font-family:var(--font)}
 .versions-comment-form input:focus{border-color:var(--blue)}
 
-/* ------------------------------------------------------------ */
-/* Versions - approval card and activity                         */
-/* ------------------------------------------------------------ */
+/* ---------------------------------------------------------- */
+/* Versions - approval card and activity                      */
+/* ---------------------------------------------------------- */
 
 .versions-review-card{padding:4px 16px 14px}
 .versions-review-row{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12px;color:var(--text4);padding:3px 0}

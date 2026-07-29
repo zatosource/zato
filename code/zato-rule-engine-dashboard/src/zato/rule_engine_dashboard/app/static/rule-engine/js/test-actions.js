@@ -1,11 +1,5 @@
 'use strict';
 
-// Event handlers for the tests and simulation screen: running scenarios,
-// in-place editing of input and expected values with closed pick lists,
-// promoting actual outcomes to expected ones, keyboard navigation and
-// vocabulary drag and drop. Augments the testView namespace from
-// test-render.js.
-
 (function() {
 
 // ////////////////////////////////////////////////////////////////////////
@@ -71,8 +65,6 @@ testView.runOne = function(button) {
     var scenario = this.selectedScenario();
 
     var handlers = shared.inFlight(button, function(entry) {
-        // The popover is anchored to the button's rectangle before the
-        // re-render replaces the button, otherwise it would open at 0, 0
         shared.popover(button, 'Ran "' + scenario.name + '", ' + self.statusLabels[entry.status] + '.');
         self.render();
     }, function(message) {
@@ -83,8 +75,6 @@ testView.runOne = function(button) {
     testModel.runOne(scenario, handlers.done, handlers.error);
 };
 
-// The play button on a scenario row runs that one scenario without
-// changing which scenario is selected
 testView.runFromList = function(event, index, button) {
     event.stopPropagation();
     var self = this;
@@ -112,7 +102,6 @@ testView.addScenario = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// A sensible starting value per attribute type, edited right after
 testView.defaultValue = function(term) {
     if (term === null) { return ''; }
     if (term.type === 'choice') { return term.values[0]; }
@@ -127,7 +116,6 @@ testView.addInput = function(path) {
     testModel.modified = true;
     this.render();
 
-    // The new value is the next thing to edit, so its editor opens by itself
     var cell = document.querySelector('[data-cell="input"][data-path="' + path + '"]');
     this.editInput(cell, path);
 };
@@ -147,14 +135,10 @@ testView.removeInput = function(event, path) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// In-place editing: choices and yes/no values through closed pick lists,
-// numbers through free typing typed by the vocabulary
 testView.wireEditor = function(element, commit) {
     var self = this;
     this.editing = true;
 
-    // Enter commits and the re-render removes the element, which fires
-    // blur, so the commit only ever runs once
     var committed = false;
     var commitOnce = function() {
         if (committed) { return; }
@@ -191,7 +175,6 @@ testView.buildEditor = function(cell, term, currentText, allowNone) {
         element.value = currentText;
     }
 
-    // The editor takes the cell's exact box, so the grid never shifts
     cell.classList.add('cell-editing');
     cell.textContent = '';
     cell.appendChild(element);
@@ -231,7 +214,6 @@ testView.editExpected = function(cell, path) {
         self.editing = false;
         var trimmed = value.trim();
 
-        // A blank or none expected value removes the assertion on this output
         if (trimmed === '' || trimmed === 'none') {
             delete scenario.expected[path];
         } else {
@@ -242,7 +224,6 @@ testView.editExpected = function(cell, path) {
     });
 };
 
-// The scenario renames in place, in its own header
 testView.editName = function(span) {
     if (this.editing) { return; }
     var self = this;
@@ -274,12 +255,11 @@ testView.promote = function(button) {
     var scenario = this.selectedScenario();
 
     var handlers = shared.inFlight(button, function() {
-        // Promotion changed the expectations, the fresh run scores them
         testModel.runOne(scenario, function() {
             self.render();
             self.renderSubtitle();
         }, data.reportError);
-        shared.popover(button, 'The actual outcome is now the expected one - from here on it has to keep happening.', 'green');
+        shared.popover(button, 'The actual outcome is now the expected one.', 'green');
     }, function(message) {
         shared.popover(button, message, 'red');
     });
@@ -307,8 +287,6 @@ testView.save = function(button) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Vocabulary drag and drop: an attribute dragged onto the input grid
-// joins the scenario, with the attribute's path as the travelling ghost
 testView.dragState = null;
 
 testView.attachVocabularyDrag = function() {
@@ -365,8 +343,6 @@ testView.attachDropTargets = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The keyboard cursor over the detail grids: arrows move it, Enter edits
-// the focused value
 testView.cursorRows = function() {
     var out = [];
     document.querySelectorAll('#test-detail-pane tr').forEach(function(tableRow) {
@@ -426,7 +402,6 @@ document.addEventListener('keydown', function(event) {
     if (keys.indexOf(event.key) === -1) { return; }
     event.preventDefault();
 
-    // Shift with up or down moves the selected scenario in the suite
     if (event.shiftKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
         var offset = event.key === 'ArrowUp' ? -1 : 1;
         if (testModel.moveScenario(testView.selectedIndex, offset)) {
@@ -440,7 +415,6 @@ document.addEventListener('keydown', function(event) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Every scenario runs on arrival, the screen never opens on stale results
 testModel.load(function() {
     if (testModel.suite !== null && testModel.suite.scenarios.length > 0 && testModel.documents !== null) {
         testModel.runAll(function(delta) {
@@ -464,11 +438,8 @@ testView.afterFirstRender = function() {
     shared.attachPaneResize(document.getElementById('test-set-resizer'),
         document.getElementById('test-set-pane'), 'x');
 
-    // The decision log links straight into the A/B view with this hash
     if (window.location.hash === '#ab') { testView.showView('ab'); }
 
-    // Arriving from the vocabulary's where-used list: the scenario cells
-    // of that term and the term's own picker entry glow
     var termToHighlight = shared.termFromHash();
     if (termToHighlight !== null) {
         shared.applyTermHighlight(Array.from(document.querySelectorAll('[data-path="' + termToHighlight + '"]')));

@@ -1,10 +1,5 @@
 'use strict';
 
-// The core of the shared namespace: config, escaping, SVG icons,
-// anchored popovers, tooltips and the in-flight guard around a button.
-// The rest of the UI kernel - the floating panel, the shell and the
-// context menu - augments this namespace from its own files.
-
 (function() {
 
 var shared = {
@@ -16,7 +11,6 @@ var shared = {
         dropPlaceholderThickness: 6,
     },
 
-    // SVG path data for every icon the shell uses, no text glyphs anywhere
     iconPaths: {
         'chevron-left': '<path d="m15 18-6-6 6-6"/>',
         'chevron-right': '<path d="m9 18 6-6-6-6"/>',
@@ -66,9 +60,6 @@ var shared = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Anchored popover, always shown next to the element that was interacted
-    // with. The rectangle is captured at call time, so the message survives
-    // a re-render that replaces the anchor element.
     popover: function(anchor, text, color) {
         if (anchor === null) { return; }
 
@@ -96,12 +87,6 @@ var shared = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // One request at a time per button. The button is disabled for as long as
-    // its request is in flight, so a double click on Save cannot post the same
-    // thing twice, and the caller's own callbacks release it again. A click
-    // arriving while the button is still disabled answers null, which the
-    // caller reads as: this button is busy, do nothing. A caller whose request
-    // can end in a way of its own releases the button through release itself.
     inFlight: function(button, onDone, onError) {
         if (button.disabled) { return null; }
 
@@ -109,8 +94,6 @@ var shared = {
 
         var release = function() { button.disabled = false; };
 
-        // Whatever a caller's own callbacks take is passed straight through,
-        // some of them answer with more than one value
         return {
             done: function() { release(); onDone.apply(null, arguments); },
             error: function() { release(); onError.apply(null, arguments); },

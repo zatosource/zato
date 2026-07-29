@@ -1,24 +1,16 @@
 'use strict';
 
-// Data model for the notifications screen: which chat platforms hold
-// credentials, one ruleset's destinations with their delivery status,
-// the live targets a platform offers right now and the fixed matrix of
-// notified events. No DOM access in this file.
-
 (function() {
 
 var notifyModel = {
 
     config: {
-        // Every platform the notify loop delivers to, in its fixed order
         kinds: ['teams', 'slack'],
         kindLabels: {
             'teams': 'Microsoft Teams',
             'slack': 'Slack',
         },
 
-        // What each platform's credentials must carry - the same required
-        // fields the server checks before it stores anything
         credentialFields: {
             'teams': [
                 {name: 'tenant_id', label: 'Tenant id'},
@@ -43,31 +35,22 @@ var notifyModel = {
         },
     },
 
-    // Only admins manage the shared credentials - the credentials pane is
-    // rendered into the page for admins alone and its presence is the flag
     isAdmin: false,
 
-    // Every stored ruleset, and the one whose destinations show
     rulesets: [],
     rulesetId: null,
     rulesetName: '',
 
-    // The chosen ruleset's destinations with their delivery status
     destinations: [],
 
-    // Which platform holds credentials - never the credentials themselves
     credentials: [],
 
-    // The live targets of the platform picked in the add row
     targets: [],
 
-    // The fixed matrix of notified events, fetched once when first opened
     matrix: null,
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The screen opens on the ruleset the address names, or on the first
-    // stored one, with the credentials status for admins
     load: function(onDone) {
         var self = this;
         var wanted = new URLSearchParams(window.location.search).get('ruleset');
@@ -91,8 +74,6 @@ var notifyModel = {
         }, data.reportError);
     },
 
-    // Which platforms are configured - admins only, everyone else keeps
-    // the empty list and the credentials pane simply is not on their page
     loadCredentials: function(onDone) {
         if (!this.isAdmin) {
             onDone();
@@ -121,8 +102,6 @@ var notifyModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The live picker: what channels one platform offers right now -
-    // an unconfigured platform answers with a readable refusal
     loadTargets: function(kind, onDone, onError) {
         var self = this;
         this.targets = [];
@@ -154,8 +133,6 @@ var notifyModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Stores one platform's credentials - the server encrypts them and
-    // never sends them back, the status list is all the screen ever sees
     saveCredentials: function(kind, values, onDone, onError) {
         var self = this;
         var body = {kind: kind, values: values};
@@ -165,8 +142,6 @@ var notifyModel = {
         }, onError);
     },
 
-    // The test message: admins see their credentials work before any
-    // ruleset relies on them
     sendTest: function(kind, target, onDone, onError) {
         data.post(this.config.urls.chatConfigTest, {kind: kind, target: target}, onDone, onError);
     },
@@ -174,7 +149,6 @@ var notifyModel = {
 // ////////////////////////////////////////////////////////////////////////
 
     loadMatrix: function(onDone) {
-        // The matrix is fixed, one fetch serves every later opening
         if (this.matrix !== null) {
             onDone();
             return;
@@ -189,8 +163,6 @@ var notifyModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The platforms that hold no credentials yet - only admins know,
-    // everyone else gets an empty answer and no problem entries
     unconfiguredKindsInUse: function() {
         if (!this.isAdmin) { return []; }
 

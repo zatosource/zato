@@ -1,32 +1,20 @@
 'use strict';
 
-// Data model for the decision table editor: loading the stored table
-// document and the structure edits. How a cell reads back is the server's
-// answer, never a grammar of our own, and the server-backed checks live
-// in table-checks.js. No DOM access in this file.
-
 (function() {
 
 var tableModel = {
 
     config: {
-        // How long an edit waits before the server validation runs
         checkDelayMilliseconds: 300,
 
-        // What a filter starts as before the author narrows it
         defaultFilterCell: '> 0',
 
-        // The filter editor never shrinks below this, even for a short value
         filterInputMinimumWidth: 160,
 
-        // What a brand-new table is called before its first save
         newTableName: 'Decision table',
 
-        // What the checks say when the table does not hold together yet
         structuralProblemsMessage: 'Fix the structural problems first, the panel below lists them.',
 
-        // What a cell reads as before the first validation has answered, the
-        // same as a cell that takes no part in its column
         emptyReading: {kind: 'any'},
 
         urls: {
@@ -42,28 +30,21 @@ var tableModel = {
         },
     },
 
-    // The stored definition this screen edits - null until a table
-    // exists, the New table button starts the first one
     definitionId: null,
     currentVersion: null,
 
-    // The canonical table document, edited in place
     table: null,
 
-    // Client-side state that never travels with the document
     checked: {condition: {}, action: {}},
     generatedNumbers: {},
     unfoldSnapshots: {},
 
-    // What the server said last: structural errors from validate, how it
-    // read every cell back, and the on-demand check results
     serverErrors: [],
     readings: {},
     conflictResult: null,
     subsumption: [],
     unreachable: [],
 
-    // How a leading comparator symbol reads as words
     symbolPhrases: {
         '==': 'is',
         '!=': 'is not',
@@ -76,8 +57,6 @@ var tableModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The screen opens on the table the address names, or on the first
-    // stored one
     load: function(onDone) {
         var self = this;
         var wanted = new URLSearchParams(window.location.search).get('table');
@@ -88,7 +67,6 @@ var tableModel = {
                 records = records.filter(function(item) { return item.id === parseInt(wanted); });
             }
 
-            // No table yet - the screen renders its empty state
             if (records.length === 0) {
                 self.loadVocabulary(onDone);
                 return;
@@ -125,9 +103,6 @@ var tableModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Every column carries a statement, an overrides list and one cell per
-    // condition row, so the rendering never meets a missing key. Column 0
-    // sorts first, the way the engine fires it.
     normalize: function() {
         var self = this;
 
@@ -147,7 +122,6 @@ var tableModel = {
         });
     },
 
-    // A table that does not exist yet starts as one action-only column
     startNew: function() {
         this.table = {
             name: this.config.newTableName,
@@ -160,7 +134,6 @@ var tableModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The Base column is column 0, every other column is a rule
     label: function(column) {
         var out = column.number === 0 ? 'Base' : String(column.number);
         return out;
@@ -177,7 +150,6 @@ var tableModel = {
         return out;
     },
 
-    // A dotted number like 3.1 marks a sub-rule of column 3
     parentLabel: function(column) {
         var text = String(column.number);
         if (text.indexOf('.') === -1) { return ''; }
@@ -202,7 +174,6 @@ var tableModel = {
         return out;
     },
 
-    // The action cell of one column, blank when the column leaves the target alone
     actionCell: function(column, target) {
         var out = column.actions[target];
         if (out === undefined) { out = ''; }
@@ -211,8 +182,6 @@ var tableModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // A term of the loaded vocabulary, or null for a subject the
-    // vocabulary does not know - flat subjects stay editable as free text
     termFor: function(path) {
         var parts = path.split('.');
         if (parts.length !== 2) { return null; }
@@ -234,10 +203,6 @@ var tableModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // How the server read one condition cell back - the cell grammar lives
-    // there alone, so the sentence bar and the unfold hints speak from its
-    // answer. Nothing has been read yet before the first validation lands,
-    // which is what the empty reading stands for.
     reading: function(column, letter) {
         var columnReadings = this.readings[String(column.number)];
         if (columnReadings === undefined) { return this.config.emptyReading; }
@@ -250,7 +215,6 @@ var tableModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The condition row on which a column can unfold into sub-rules, if any
     unfoldableRow: function(column) {
         if (column.number === 0 || this.parentLabel(column) !== '') { return null; }
 
@@ -267,7 +231,6 @@ var tableModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Rule columns number up from just past the highest whole number in use
     nextNumber: function() {
         var highest = 0;
         this.table.columns.forEach(function(column) {
@@ -312,7 +275,6 @@ var tableModel = {
         rows.splice(toIndex, 0, moved);
     },
 
-    // Move a row one step up or down, for Shift with an arrow key
     moveRowByOffset: function(kind, key, offset) {
         var rows = kind === 'condition' ? this.table.conditions : this.table.actions;
         var keyName = kind === 'condition' ? 'letter' : 'target';
@@ -320,7 +282,6 @@ var tableModel = {
         var fromIndex = rows.findIndex(function(row) { return row[keyName] === key; });
         var toIndex = fromIndex + offset;
 
-        // Clamped at the edges, the caller learns nothing moved
         if (toIndex < 0 || toIndex >= rows.length) { return false; }
 
         var moved = rows.splice(fromIndex, 1)[0];
@@ -328,8 +289,6 @@ var tableModel = {
         return true;
     },
 
-    // Move a rule column one step left or right, the Base column never
-    // moves and nothing moves into its place
     moveColumnByOffset: function(label, offset) {
         var self = this;
         var columns = this.table.columns;
@@ -344,7 +303,6 @@ var tableModel = {
         return true;
     },
 
-    // Move a rule column in front of another one, the Base column never moves
     moveColumn: function(fromLabel, toLabel) {
         var self = this;
         var columns = this.table.columns;
@@ -372,7 +330,6 @@ var tableModel = {
         return out;
     },
 
-    // Delete one row and its cells in every column
     deleteRow: function(kind, key) {
         if (kind === 'condition') {
             this.table.conditions = this.table.conditions.filter(function(row) { return row.letter !== key; });
@@ -397,8 +354,6 @@ var tableModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The table carries at most one filter - it narrows the data every
-    // rule column sees before anything runs
     addFilter: function() {
         var subject = this.table.conditions.length === 0 ? '' : this.table.conditions[0].subject;
         this.table.filter = {subject: subject, cell: this.config.defaultFilterCell};
@@ -408,7 +363,6 @@ var tableModel = {
         delete this.table.filter;
     },
 
-    // Paths already used by the filter or a row, grayed out in the vocabulary pane
     usedPaths: function() {
         var out = [];
         if (this.table.filter !== undefined) { out.push(this.table.filter.subject); }
@@ -428,8 +382,6 @@ var tableModel = {
             comment: 'Edited table ' + this.table.name,
         };
 
-        // An existing table gains a new optimistic version, a new one
-        // comes into being together with its first version
         if (this.definitionId !== null) {
             body.definition_id = this.definitionId;
             body.expected_current_version = this.currentVersion;

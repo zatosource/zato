@@ -1,18 +1,10 @@
 'use strict';
 
-// The right-click menu shared by every screen: game-like hotkeys in front
-// of the labels, a description pane that fills in as entries are hovered,
-// dismissal by a click anywhere else or Escape, and one menu on screen at
-// a time. Augments the shared namespace from shared.js.
-
 (function() {
 
 shared.contextMenuElement = null;
 shared.contextMenuItems = [];
 
-// The hotkeys are positional, the way games assign them: the right hand is
-// on the mouse, the left hand rests on this cluster, the first entry is
-// always Q, the second always W, no reading or reaching required
 shared.contextMenuHotkeys = ['Q', 'W', 'E', 'R', 'A', 'S', 'D', 'F', 'Z', 'X', 'C', 'V'];
 
 // ////////////////////////////////////////////////////////////////////////
@@ -28,9 +20,6 @@ shared.closeContextMenu = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Opens the menu at the pointer. Every item carries a label, a description
-// for the info pane and its action, null draws a separator. The hotkeys
-// are assigned here, by position, never by the caller.
 shared.openContextMenu = function(title, items, x, y) {
     shared.closeContextMenu();
 
@@ -51,10 +40,6 @@ shared.openContextMenu = function(title, items, x, y) {
     var list = document.createElement('div');
     list.className = 'context-menu-list';
 
-    var info = document.createElement('div');
-    info.className = 'context-menu-info';
-    info.textContent = 'Hover an entry to read what it does, or press its key.';
-
     items.forEach(function(item) {
         if (item === null) {
             var separator = document.createElement('div');
@@ -68,7 +53,6 @@ shared.openContextMenu = function(title, items, x, y) {
         entry.innerHTML = '<span class="context-menu-key">' + item.key + '</span>' +
             '<span class="context-menu-label">' + shared.escape(item.label) + '</span>';
 
-        entry.addEventListener('mouseenter', function() { info.textContent = item.description; });
         entry.addEventListener('click', function() {
             shared.closeContextMenu();
             item.action();
@@ -79,10 +63,8 @@ shared.openContextMenu = function(title, items, x, y) {
 
     menu.appendChild(head);
     menu.appendChild(list);
-    menu.appendChild(info);
     document.body.appendChild(menu);
 
-    // Clamped to the viewport so the menu never opens off screen
     var left = Math.min(x, window.innerWidth - menu.offsetWidth - 8);
     var top = Math.min(y, window.innerHeight - menu.offsetHeight - 8);
     menu.style.left = left + 'px';
@@ -102,7 +84,6 @@ shared.contextMenuDismiss = function(event) {
     }
 };
 
-// Escape closes the menu, an entry's own key runs it directly
 shared.contextMenuKeys = function(event) {
     if (event.key === 'Escape') { shared.closeContextMenu(); return; }
 

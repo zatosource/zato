@@ -1,29 +1,17 @@
 'use strict';
 
-// Rendering for the vocabulary screen: the term tree with its filter,
-// one term opened into its definition and the where-used list, and the
-// rename flow that shows its impact before it commits. Event handlers
-// live in vocabulary-actions.js, the right-click menu in
-// vocabulary-menu.js, both augment this namespace.
-
 (function() {
 
 var vocabularyView = {
 
     config: {
-        // The tree never materializes more rows than this, no matter how
-        // many terms the vocabulary holds: past the cap the filter is the
-        // way in, so render cost stops depending on vocabulary size
         maxVisibleTerms: 200,
-        // Where a usage entry opens into
         editorUrl: '/editor/',
     },
 
-    // UI state
     filter: '',
     selectedPath: null,
 
-    // The where-used answer for the selected term, fetched on selection
     usage: null,
 
 // ////////////////////////////////////////////////////////////////////////
@@ -56,14 +44,13 @@ var vocabularyView = {
                 var path = entity.name + '.' + attribute.name;
                 if (needle !== '' && (path + ' ' + attribute.phrase).toLowerCase().indexOf(needle) === -1) { return; }
 
-                // Everything is counted, only the capped window is built
                 total += 1;
                 if (shown >= cap) { return; }
                 shown += 1;
 
                 var classes = 'vocabulary-tree-item' + (path === self.selectedPath ? ' vocabulary-tree-item-selected' : '');
                 var flag = attribute.status === 'deprecated'
-                    ? '<span class="vocabulary-flag" data-tippy-content="Deprecated: existing rules keep running, every picker hides it.">deprecated</span>'
+                    ? '<span class="vocabulary-flag" data-tippy-content="Deprecated">deprecated</span>'
                     : '';
 
                 var pathText = shared.escape(path);
@@ -115,14 +102,13 @@ var vocabularyView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The name itself is the rename control, right where the eye already is
     headHtml: function(path, attribute) {
         var flag = attribute.status === 'deprecated'
-            ? '<span class="vocabulary-flag" data-tippy-content="Existing rules keep running, every picker hides it.">deprecated</span>' : '';
+            ? '<span class="vocabulary-flag" data-tippy-content="Deprecated">deprecated</span>' : '';
 
         var out = '<div class="vocabulary-detail-head">' +
             '<span class="vocabulary-detail-name" onclick="vocabularyView.openRenamePopover(this)" ' +
-                'data-tippy-content="Click to rename. Every place it is used updates together, nothing is left behind to break.">' +
+                'data-tippy-content="Click to rename">' +
                 shared.escape(path) + '</span>' + flag +
             '</div>';
         return out;
@@ -163,10 +149,6 @@ var vocabularyView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The centerpiece: every place this term lives, grouped by the
-    // ruleset it is referenced from, each entry opening the editor with
-    // the term highlighted there. Retiring a term lives here too, next
-    // to the places it would touch.
     usageHtml: function(path, attribute) {
         var self = this;
         var usage = this.usage;
@@ -179,14 +161,13 @@ var vocabularyView = {
             ? '<button class="button-mini" onclick="vocabularyView.restore(this)" ' +
               'data-tippy-content="Back into every picker.">Restore</button>'
             : '<button class="button-mini" onclick="vocabularyView.deprecate(this)" ' +
-              'data-tippy-content="Existing rules keep running, the term leaves every picker and the API contract. The safe way to retire a term, deleting is only for unused ones.">Deprecate</button>';
+              'data-tippy-content="Retire the term">Deprecate</button>';
 
-        // Delete is gated by the where-used index, never a landmine
         var deleteButton = usage.canDelete
             ? '<button class="button-mini vocabulary-delete-enabled" onclick="vocabularyView.deleteTerm(this)" ' +
               'data-tippy-content="Nothing uses this term, deleting is safe.">Delete</button>'
             : '<button class="button-mini vocabulary-delete-blocked" onclick="vocabularyView.explainBlockedDelete(this)" ' +
-              'data-tippy-content="Blocked: ' + usage.count + ' places listed here still use this term. Deprecate instead, or clear them first.">Delete</button>';
+              'data-tippy-content="Blocked, ' + usage.count + ' places still use this term">Delete</button>';
 
         var html = '<div class="test-grid-title vocabulary-usage-title">Used in ' + usage.count + ' places' +
             '<span class="vocabulary-usage-buttons">' + deprecateButton + deleteButton + '</span></div>';
@@ -201,13 +182,11 @@ var vocabularyView = {
                 html += '<a class="vocabulary-usage-entry vocabulary-usage-link" ' +
                     'href="' + self.config.editorUrl + '?ruleset=' + group.definitionId + '#term=' +
                         encodeURIComponent(path) + '" ' +
-                    'data-tippy-content="Opens the rule with this term highlighted in it.">' +
+                    'data-tippy-content="Open the rule">' +
                     shared.escape(self.entryText(entry)) + shared.icon('external-link', 10) + '</a>';
             });
         });
 
-        // Deprecated terms leave the API contract too, everything else
-        // is a field in the generated endpoint documentation
         if (attribute.status !== 'deprecated') {
             html += '<div class="vocabulary-usage-group">Generated API contract</div>' +
                 '<div class="vocabulary-usage-entry">Field ' + shared.escape(path) +
@@ -217,7 +196,6 @@ var vocabularyView = {
         return html;
     },
 
-    // One where-used index entry as the sentence a person reads
     entryText: function(entry) {
         var out = 'Rule ' + entry.rule_name + ', ' + entry.role + ' in its ' + entry.block + ' block';
         return out;
@@ -225,8 +203,6 @@ var vocabularyView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Deprecated terms are the problems panel's business: still-used ones
-    // are warnings, unused ones are one delete away
     renderProblems: function() {
         var self = this;
         var list = document.getElementById('problems-list');
@@ -241,7 +217,6 @@ var vocabularyView = {
             return;
         }
 
-        // Each deprecated term's usage count comes from the index
         var items = [];
         var remaining = deprecated.length;
 
@@ -251,10 +226,10 @@ var vocabularyView = {
                 if (usage.count > 0) {
                     items.push('<div class="problem-item"><span class="status-dot status-dot-warning"></span>' +
                         '<span>' + pathText + ' is deprecated but still used in ' + usage.count +
-                        ' places, they keep working, move them over when convenient.</span></div>');
+                        ' place' + (usage.count === 1 ? '' : 's') + '.</span></div>');
                 } else {
                     items.push('<div class="problem-item"><span class="status-dot status-dot-information"></span>' +
-                        '<span>' + pathText + ' is deprecated and nothing uses it, deleting it is safe.</span></div>');
+                        '<span>' + pathText + ' is deprecated and unused.</span></div>');
                 }
 
                 remaining -= 1;

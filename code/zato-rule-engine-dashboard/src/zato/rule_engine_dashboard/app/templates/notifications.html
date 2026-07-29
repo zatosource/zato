@@ -22,14 +22,11 @@
 
   <div class="toolbar">
     <select class="notify-select" id="notify-ruleset" onchange="notifyView.setRuleset(this)"
-      data-tippy-content="Whose destinations the screen shows - notifications attach to rulesets."></select>
+      data-tippy-content="Ruleset"></select>
     <span class="toolbar-separator"></span>
-    <span class="keyboard-hint">Destinations hear about publishes, rollbacks, approvals, failing advisory tests and traffic spikes</span>
-    <button class="button-ghost" id="notify-matrix-button" onclick="notifyView.openMatrix(this)"
-      data-tippy-content="The fixed set of events every destination is told about, each with an example message.">Event matrix</button>
+    <button class="button-ghost" id="notify-matrix-button" onclick="notifyView.openMatrix(this)">Event matrix</button>
   </div>
 
-  <!-- Destinations on the left, the admin-only credentials cards on the right -->
   <div class="notify-split">
     <div class="notify-destinations-pane" id="notify-destinations"></div>
     {% if request.user.is_superuser %}
