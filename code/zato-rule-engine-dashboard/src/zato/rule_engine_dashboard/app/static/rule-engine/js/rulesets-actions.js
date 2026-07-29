@@ -36,7 +36,7 @@ rulesetsView.select = function(id) {
 };
 
 rulesetsView.open = function(id) {
-    window.location.href = this.config.openUrls.tables + '?ruleset=' + id;
+    window.location.href = this.config.openUrls.editor + '?ruleset=' + id;
 };
 
 rulesetsView.pickRecent = function(id) {

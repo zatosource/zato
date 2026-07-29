@@ -202,6 +202,20 @@ class TestSignInScreenWithASession:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class TestFavicon:
+
+    def test_the_icon_is_served_at_the_root_path_without_a_session(self:'any_') -> 'None':
+        client = Client()
+
+        response:'any_' = client.get('/favicon.ico')
+        assert response.status_code == OK
+
+        content = b''.join(response.streaming_content)
+        assert content[:4] == b'\x00\x00\x01\x00'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class TestAccessControl:
 
     def test_anonymous_goes_to_the_sign_in_screen(self:'any_') -> 'None':

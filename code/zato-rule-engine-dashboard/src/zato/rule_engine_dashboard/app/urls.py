@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django.urls import path
 
 # Zato
-from zato.common.webapp.static import static_file
+from zato.common.webapp.static import Favicon_Path, static_file
 from zato.rule_engine_dashboard.app.views import auth, decisions, editor, events, notifications, rulesets, screens, tables, \
     test_sets, users, versions, vocabulary
 
@@ -24,6 +24,9 @@ urlpatterns = [
 
     # Static files, served by the application itself
     path('static/<path:path>', static_file, name='static-file'),
+
+    # The icon browsers ask for at the root path on their own
+    path('favicon.ico', static_file, {'path': Favicon_Path}, name='favicon'),
 
     # Sign-in and sign-out
     path('login/', auth.login, name='login'),
