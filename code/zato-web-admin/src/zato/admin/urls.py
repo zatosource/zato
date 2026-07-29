@@ -9,10 +9,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Django
 from django.urls import path, re_path as url
 from django.contrib.auth.decorators import login_required
+from django.views.static import serve as static_serve
 
 # Zato
 from zato.admin import settings
-from zato.admin.web.util import static_serve
 from zato.admin.web.views import account, config_db, datadog, destinations, env_variables, grafana_cloud, \
     highlight as highlight_view, http_soap, live_form_updates, log_streaming, logging_, \
     main, news, openapi_, python_packages, sbom, scheduler, service, updates
