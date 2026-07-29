@@ -31,6 +31,7 @@ var rulesetsModel = {
     views: [],
     recents: [],
     searchHits: [],
+    rulesCache: {},
 
 // ////////////////////////////////////////////////////////////////////////
 
@@ -156,6 +157,46 @@ var rulesetsModel = {
 
     preview: function(id, onDone) {
         data.get(this.config.urls.preview(id), onDone, data.reportError);
+    },
+
+    // The rules one set is made of, kept once fetched so reopening a row is instant.
+    cachedRules: function(id) {
+        if (this.rulesCache[id] === undefined) { return null; }
+        return this.rulesCache[id];
+    },
+
+    rules: function(id, onDone) {
+        var self = this;
+        var cached = this.cachedRules(id);
+
+        if (cached !== null) {
+            onDone(cached);
+            return;
+        }
+
+        data.get(this.config.urls.preview(id), function(payload) {
+            var documents = payload.document.documents;
+
+            // A set stored before it ever got a rule carries no documents at all.
+            if (documents === undefined) { documents = {}; }
+
+            var out = [];
+            Object.keys(documents).forEach(function(key) {
+                var entry = documents[key];
+                out.push({
+                    key: key,
+                    name: entry.name,
+                    docs: entry.docs,
+                    conditionCount: entry.conditions.length,
+                    actionCount: entry.then.length,
+                });
+            });
+
+            out.sort(function(left, right) { return left.name.localeCompare(right.name); });
+
+            self.rulesCache[id] = out;
+            onDone(out);
+        }, data.reportError);
     },
 
     publish: function(id, version, onDone, onError) {

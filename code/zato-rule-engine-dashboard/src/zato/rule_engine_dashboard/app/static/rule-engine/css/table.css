@@ -27,7 +27,7 @@ table.table-grid tr:first-child th{border-top:1px solid var(--border)}
 .table-column-subtitle{display:block;font-size:9.5px;font-weight:500;color:var(--text5);text-transform:uppercase;letter-spacing:0.06em;margin-top:1px}
 .table-column-zero{background:var(--panel-raised)}
 
-.table-unfold-hint{position:absolute;top:2px;right:3px;display:inline-flex;align-items:center;gap:1px;font-size:9px;font-weight:500;color:var(--text5);cursor:pointer;line-height:1;padding:2px 3px;border-radius:3px}
+.table-unfold-hint{position:absolute;top:2px;right:3px;display:inline-flex;align-items:center;gap:1px;font-size:9px;font-weight:500;color:var(--text5);cursor:pointer;line-height:1;padding:2px 3px;border-radius:var(--radius-1)}
 .table-unfold-hint:hover{color:var(--text2);background:var(--background)}
 
 /* ---------------------------------------------------------- */
@@ -65,7 +65,7 @@ th.table-column-selected{box-shadow:inset 0 -2px 0 var(--blue)}
 /* ---------------------------------------------------------- */
 
 .table-filter-span{background:var(--filter-span-background);color:var(--text5);font-size:11.5px;font-style:italic;text-align:center;padding:7px 8px}
-.table-filter-remove{float:right;color:var(--text5);cursor:pointer;line-height:1;padding:2px 3px;border-radius:3px;opacity:0;transition:opacity 0.12s}
+.table-filter-remove{float:right;color:var(--text5);cursor:pointer;line-height:1;padding:2px 3px;border-radius:var(--radius-1);opacity:0;transition:opacity 0.12s}
 .table-filter-row:hover .table-filter-remove{opacity:1}
 .table-filter-remove:hover{color:var(--red);background:var(--background)}
 
