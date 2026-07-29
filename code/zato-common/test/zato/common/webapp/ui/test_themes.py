@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The contract smoke for the theming scheme: every generated theme file
 # carries the identical token set, no css outside css/themes/ holds a raw
-# color, the generated Zato Default reproduces the historical palette to
+# color, the generated Zato Dark reproduces the historical palette to
 # the byte, and the converter fails readably on broken input - so a new
 # token can never ship half-themed and a stray hardcoded color can never
 # sneak back in.
@@ -34,11 +34,13 @@ _ui_dir = os.path.dirname(os.path.abspath(_ui_package.__file__))
 _css_dir = os.path.join(_ui_dir, 'static', 'webapp', 'css')
 _themes_dir = os.path.join(_css_dir, 'themes')
 
-# The themes the kit ships with, Zato Default first
-_expected_theme_files = ['ayu-dark.css', 'dark-high-contrast.css', 'gruvbox-dark-hard.css', 'zato-default.css']
+# The themes the kit ships with, in the order the directory lists them
+_expected_theme_files = [
+    'ayu-dark.css', 'dark-high-contrast.css', 'gruvbox-dark-hard.css', 'light-high-contrast.css',
+    'zato-dark.css', 'zato-light.css']
 
 # The palette the very first pages were designed with - the generated
-# Zato Default must reproduce it exactly.
+# Zato Dark must reproduce it exactly.
 _historical_palette = {
     '--background': '#0f172a',
     '--chrome': '#0b1222',
@@ -139,13 +141,13 @@ class TestGeneratedThemes(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_zato_default_keeps_the_historical_palette(self) -> 'None':
+    def test_zato_dark_keeps_the_historical_palette(self) -> 'None':
 
-        path = os.path.join(_themes_dir, 'zato-default.css')
+        path = os.path.join(_themes_dir, 'zato-dark.css')
         tokens = _tokens_of(path)
 
         for token, value in _historical_palette.items():
-            self.assertEqual(tokens[token], value, f'zato-default moved {token} away from {value}')
+            self.assertEqual(tokens[token], value, f'zato-dark moved {token} away from {value}')
 
 # ################################################################################################################################
 # ################################################################################################################################

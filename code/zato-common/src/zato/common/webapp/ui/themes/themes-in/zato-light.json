@@ -1,0 +1,29 @@
+{
+	"$schema": "vscode://schemas/color-theme",
+	"name": "Zato Light",
+	"type": "light",
+	"colors": {
+		"editor.background": "#ffffff",
+		"editor.foreground": "#000000",
+		"foreground": "#333333",
+		"descriptionForeground": "#777777",
+		"disabledForeground": "#999999",
+		"sideBar.background": "#efefef",
+		"editorWidget.background": "#dddddd",
+		"panel.border": "#bbbbbb",
+		"textLink.foreground": "#000099",
+		"button.background": "#000099",
+		"button.hoverBackground": "#000066",
+		"button.foreground": "#ffffff",
+		"input.background": "#ffffff",
+		"scrollbarSlider.background": "#aaaaaa",
+		"scrollbarSlider.hoverBackground": "#999999",
+		"list.hoverBackground": "#efefef",
+		"list.inactiveSelectionBackground": "#e3e3e3",
+		"list.activeSelectionBackground": "#d3d3d3",
+		"editorError.foreground": "#b21104",
+		"editorWarning.foreground": "#b26a00",
+		"charts.green": "#007f00",
+		"charts.purple": "#652d90"
+	}
+}

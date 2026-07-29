@@ -12,8 +12,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # color theme format (JSONC, a colors map keyed by workbench color ids),
 # and each themes-in/overrides/<slug>.json carries the theme's origin and
 # license metadata plus optional pins of our tokens, applied last. Our own
-# palette, Zato Default, is just another such source file - one kind of
-# source for everything.
+# palettes, Zato Dark and Zato Light, are just such source files too - one
+# kind of source for everything.
 #
 # For every theme the converter emits static/webapp/css/themes/<slug>.css
 # with the full token set scoped by html[data-theme="<slug>"], plus
@@ -21,8 +21,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # templates/webapp/themes.html (the link tags webapp/base.html includes).
 #
 # Everything is resolved at conversion time: mapping chains first, then
-# per-type defaults, then derived values (surface mixes and alpha tints),
-# then the overrides. The pages never compute a color at runtime.
+# per-type defaults, then the pins on the mapped tokens, then the derived
+# values (surface mixes and alpha tints) and last the pins on those. The
+# pages never compute a color at runtime.
 
 # stdlib
 import argparse
@@ -33,13 +34,13 @@ import os
 from zato.common.typing_ import anydict, dictlist, strdict, strlist
 from zato.common.webapp.ui.themes.colors import channel_distance, composite, is_opaque, mix, parse_hex, rgb_tuple, to_hex
 from zato.common.webapp.ui.themes.jsonc import load_theme
-from zato.common.webapp.ui.themes.tokens import defaults, mapping, min_surface_distance, mixes, shadows, \
-    surface_wash_ratio, ThemeConversionError, tints, token_order
+from zato.common.webapp.ui.themes.tokens import defaults, logo_directory, logo_opacity, logos, mapping, \
+    min_surface_distance, mixes, shadows, surface_wash_ratio, ThemeConversionError, tints, token_order
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-sort_key_tuple = tuple[bool, str]
+sort_key_tuple = tuple[int, str]
 
 # ################################################################################################################################
 
@@ -50,6 +51,7 @@ _ui_dir = os.path.dirname(_themes_package_dir)
 
 _default_themes_dir   = os.path.join(_themes_package_dir, 'themes-in')
 _default_out_css_dir  = os.path.join(_ui_dir, 'static', 'webapp', 'css', 'themes')
+_assets_dir           = os.path.join(_ui_dir, 'static', 'webapp', 'assets')
 _default_out_index    = os.path.join(_ui_dir, 'static', 'webapp', 'js', 'themes-index.js')
 _default_out_template = os.path.join(_ui_dir, 'templates', 'webapp', 'themes.html')
 
@@ -57,12 +59,30 @@ _default_out_template = os.path.join(_ui_dir, 'templates', 'webapp', 'themes.htm
 _dark_base:'rgb_tuple'  = (0, 0, 0)
 _light_base:'rgb_tuple' = (255, 255, 255)
 
+# Our own themes lead the list, in this order, and everything imported
+# follows them alphabetically
+_own_themes = ['zato-dark', 'zato-light']
+
+# ################################################################################################################################
+
+def _flatten(value:'str', base:'rgb_tuple', slug:'str') -> 'rgb_tuple':
+    """ Reads one color and flattens it over the base if it is translucent,
+    so our tokens are always opaque.
+    """
+    red, green, blue, alpha = parse_hex(value, slug)
+
+    if is_opaque(alpha):
+        out = (red, green, blue)
+    else:
+        out = composite((red, green, blue), alpha, base)
+
+    return out
+
 # ################################################################################################################################
 
 def _resolve_token(token:'str', colors:'anydict', type_defaults:'strdict', base:'rgb_tuple', slug:'str') -> 'rgb_tuple':
-    """ Resolves one mapped token: the first present key in its chain wins,
-    the per-type default catches the rest, and a translucent color is
-    flattened over the base so our tokens are always opaque.
+    """ Resolves one mapped token: the first present key in its chain wins
+    and the per-type default catches the rest.
     """
     for key in mapping[token]:
         if key in colors:
@@ -71,13 +91,7 @@ def _resolve_token(token:'str', colors:'anydict', type_defaults:'strdict', base:
     else:
         value = type_defaults[token]
 
-    red, green, blue, alpha = parse_hex(value, slug)
-
-    if is_opaque(alpha):
-        out = (red, green, blue)
-    else:
-        out = composite((red, green, blue), alpha, base)
-
+    out = _flatten(value, base, slug)
     return out
 
 # ################################################################################################################################
@@ -164,6 +178,21 @@ def convert_one(theme_path:'str', overrides_dir:'str') -> 'anydict':
         if token not in resolved:
             resolved[token] = _resolve_token(token, colors, type_defaults, background, slug)
 
+    # .. every pin is checked here, before anything is derived, so a typo in
+    # an overrides file fails the run rather than reaching a theme file ..
+    overridden = overrides['tokens']
+
+    for token in overridden:
+        if token not in token_order:
+            raise ThemeConversionError(f'{slug}: overrides pin unknown token {token!r}')
+
+    # .. a pin on a mapped token lands before the derived values, so pinning
+    # an accent recolors the washes made of it and pinning a surface recolors
+    # the mixes made of it ..
+    for token, value in overridden.items():
+        if token in mapping:
+            resolved[token] = _flatten(value, background, slug)
+
     tokens:'strdict' = {}
     for token, rgb in resolved.items():
         tokens[token] = to_hex(rgb)
@@ -191,12 +220,24 @@ def convert_one(theme_path:'str', overrides_dir:'str') -> 'anydict':
 
     tokens.update(shadows[theme_type])
 
-    # .. and the overrides land last, the room for our own customizations
-    # on top of any imported scheme.
-    for token, value in overrides['tokens'].items():
-        if token not in tokens:
-            raise ThemeConversionError(f'{slug}: overrides pin unknown token {token!r}')
-        tokens[token] = value
+    # .. the logo the theme is drawn with, the one its type calls for
+    # unless its overrides meta names another file ..
+    logo_file = meta.get('logo')
+    if logo_file is None:
+        logo_file = logos[theme_type]
+
+    logo_path = os.path.join(_assets_dir, logo_file)
+    if not os.path.exists(logo_path):
+        raise ThemeConversionError(f'{slug}: no such logo file, {logo_path}')
+
+    tokens['--logo'] = f"url('{logo_directory}/{logo_file}')"
+    tokens['--logo-opacity'] = logo_opacity
+
+    # .. and the pins on the derived tokens land last, the room for our own
+    # customizations on top of any imported scheme.
+    for token, value in overridden.items():
+        if token not in mapping:
+            tokens[token] = value
 
     css = _render_css(slug, theme_name, meta, tokens)
 
@@ -206,11 +247,16 @@ def convert_one(theme_path:'str', overrides_dir:'str') -> 'anydict':
 # ################################################################################################################################
 
 def _theme_sort_key(theme:'anydict') -> 'sort_key_tuple':
-    """ Zato Default leads the list, the rest stay alphabetical.
+    """ Our own themes lead the list in their own order, the rest stay alphabetical.
     """
-    is_not_default = theme['slug'] != 'zato-default'
+    slug = theme['slug']
 
-    out = (is_not_default, theme['name'])
+    if slug in _own_themes:
+        rank = _own_themes.index(slug)
+    else:
+        rank = len(_own_themes)
+
+    out = (rank, theme['name'])
     return out
 
 # ################################################################################################################################
@@ -279,7 +325,7 @@ def convert_all(themes_dir:'str', out_css_dir:'str', out_index:'str', out_templa
         converted = convert_one(theme_path, overrides_dir)
         themes.append(converted)
 
-    # .. Zato Default leads the list, the rest stay alphabetical ..
+    # .. our own themes lead the list, the rest stay alphabetical ..
     themes.sort(key=_theme_sort_key)
 
     # .. one css file per theme ..

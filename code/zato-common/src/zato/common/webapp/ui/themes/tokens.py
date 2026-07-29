@@ -11,6 +11,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # then derived values (surface mixes and alpha tints), then the overrides.
 # The pages never compute a color at runtime.
 
+# Zato
+from zato.common.webapp.settings import static_url
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -153,8 +156,29 @@ shadows = {
 
 # ################################################################################################################################
 
+# The logo file a theme is drawn with: a dark theme takes the white one,
+# a light theme the blue one, and a theme whose overrides meta names a
+# file takes that one - a light high contrast theme wants the black one.
+logos = {
+    'dark': 'zato-logo-white.svg',
+    'light': 'zato-logo-blue.svg',
+}
+
+# Where the logo files are served from. The url is absolute because a relative
+# one inside a custom property is resolved against a base that differs between
+# browsers - the declaring file in some, the file that uses the property in
+# others - and the logo is declared in a theme file yet used from tokens.css.
+logo_directory = static_url + 'webapp/assets'
+
+# How strongly the logo is drawn: softened everywhere, full strength in
+# the high contrast themes, which pin it in their overrides.
+logo_opacity = '0.75'
+
+# ################################################################################################################################
+
 # The full token set every generated theme carries, in output order.
-token_order = list(mapping) + list(mixes) + list(tints) + ['--shadow-strong', '--shadow-soft']
+token_order = list(mapping) + list(mixes) + list(tints) + \
+    ['--shadow-strong', '--shadow-soft', '--logo', '--logo-opacity']
 
 # The problems panel must always read as its own surface: surfaces closer
 # to the background than this channel distance count as the background,

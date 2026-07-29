@@ -100,7 +100,7 @@ def test_static_files_are_served_with_their_content_types(client:'any_') -> 'Non
         ('/static/webapp/js/shared.js', 'text/javascript'),
         ('/static/webapp/css/tokens.css', 'text/css'),
         ('/static/rule-engine/css/dashboard.css', 'text/css'),
-        ('/static/webapp/assets/zato-logo.svg', 'image/svg+xml'),
+        ('/static/webapp/assets/zato-logo-blue.svg', 'image/svg+xml'),
     ]
 
     for url_path, content_type in expected:

@@ -4,13 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{% block title %}Zato{% endblock %}</title>
-<link rel="icon" type="image/svg+xml" href="{% static 'webapp/assets/zato-logo.svg' %}">
+<link rel="icon" type="image/svg+xml" href="{% static 'webapp/assets/zato-logo-blue.svg' %}">
 <script>
 // The stored theme lands on the html element before the first paint,
 // so the page never flashes the wrong colors
 (function() {
     var stored = window.localStorage.getItem('ui-theme');
-    if (stored === null) { stored = 'zato-default'; }
+    if (stored === null) { stored = 'zato-dark'; }
+
+    // Zato Default became Zato Dark, a browser that stored the old slug
+    // is moved over here, once, so the page is never left unstyled
+    if (stored === 'zato-default') {
+        stored = 'zato-dark';
+        window.localStorage.setItem('ui-theme', stored);
+    }
+
     document.documentElement.dataset.theme = stored;
 })();
 </script>

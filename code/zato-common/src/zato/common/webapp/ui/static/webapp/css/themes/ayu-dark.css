@@ -52,4 +52,6 @@ html[data-theme="ayu-dark"]{
   --indigo-tint-16:rgba(208,161,255,0.16);
   --shadow-strong:rgba(0,0,0,0.55);
   --shadow-soft:rgba(0,0,0,0.5);
+  --logo:url('/static/webapp/assets/zato-logo-white.svg');
+  --logo-opacity:0.75;
 }

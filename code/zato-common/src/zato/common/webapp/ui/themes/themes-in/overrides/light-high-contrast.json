@@ -1,0 +1,39 @@
+{
+	"meta": {
+		"origin": "https://github.com/microsoft/vscode, extensions/theme-defaults/themes/hc_light.json",
+		"license": "MIT",
+		"type": "light",
+		"logo": "zato-logo-black.svg"
+	},
+	"tokens": {
+		"--chrome": "#ffffff",
+		"--panel": "#e6eff7",
+		"--panel-raised": "#d3e3f1",
+		"--border": "#292929",
+		"--text": "#292929",
+		"--text2": "#292929",
+		"--text3": "#292929",
+		"--text4": "#292929",
+		"--text5": "#292929",
+		"--blue": "#0f4a85",
+		"--blue-strong": "#0f4a85",
+		"--blue-strong-hover": "#0d3d6e",
+		"--button-text": "#ffffff",
+		"--green": "#006400",
+		"--red": "#b5200d",
+		"--amber": "#895503",
+		"--indigo": "#5c2d91",
+		"--input-background": "#ffffff",
+		"--scrollbar-thumb": "#292929",
+		"--scrollbar-thumb-hover": "#000000",
+		"--cell-hover": "#e6eff7",
+		"--column-hover": "#d3e3f1",
+		"--column-selected": "#bcd6ea",
+		"--filter-row-background": "#ffffff",
+		"--filter-span-background": "#ffffff",
+		"--sentence-bar-background": "#ffffff",
+		"--problems-background": "#eef5fb",
+		"--problems-border": "#292929",
+		"--logo-opacity": "1"
+	}
+}

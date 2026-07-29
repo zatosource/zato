@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The contract smoke for the theming scheme: every generated theme file
 # carries the identical token set, no css outside css/themes/ holds a raw
-# color, the generated Zato Default reproduces the historical palette to
+# color, the generated Zato Dark reproduces the historical palette to
 # the byte, and the converter fails readably on broken input - so a new
 # token can never ship half-themed and a stray hardcoded color can never
 # sneak back in.
@@ -35,9 +35,10 @@ if 0:
 
 _css_dir = os.path.join(os.path.dirname(os.path.abspath(webapp_ui.__file__)), 'static', 'webapp', 'css')
 _themes_dir = os.path.join(_css_dir, 'themes')
+_assets_dir = os.path.join(os.path.dirname(os.path.abspath(webapp_ui.__file__)), 'static', 'webapp', 'assets')
 _dashboard_css_dir = os.path.join(os.path.dirname(os.path.abspath(dashboard_app.__file__)), 'static', 'rule-engine', 'css')
 
-# The historical palette the default theme must reproduce to the byte.
+# The historical palette Zato Dark must reproduce to the byte.
 Historical_Palette = {
     '--background': '#0f172a',
     '--chrome': '#0b1222',
@@ -112,7 +113,7 @@ def _run_broken(theme_text:'str', overrides_text:'str | None', expected:'str') -
 def test_every_theme_carries_the_identical_token_set() -> 'None':
     theme_files = sorted(os.listdir(_themes_dir))
     theme_count = len(theme_files)
-    assert theme_count == 4, theme_files
+    assert theme_count == 6, theme_files
 
     token_sets = {}
     for name in theme_files:
@@ -146,8 +147,30 @@ def test_no_raw_color_outside_the_generated_themes() -> 'None':
 
 # ################################################################################################################################
 
+def test_every_theme_draws_a_logo_of_its_own_kind() -> 'None':
+    """ Every theme names a logo file that is really there, a dark theme the white
+    one, a light theme the blue one, and a light high contrast theme the black one.
+    """
+    expected_logo = {
+        'ayu-dark.css': 'zato-logo-white.svg',
+        'dark-high-contrast.css': 'zato-logo-white.svg',
+        'gruvbox-dark-hard.css': 'zato-logo-white.svg',
+        'zato-dark.css': 'zato-logo-white.svg',
+        'zato-light.css': 'zato-logo-blue.svg',
+        'light-high-contrast.css': 'zato-logo-black.svg',
+    }
+
+    for name in sorted(os.listdir(_themes_dir)):
+        tokens = _tokens_of(os.path.join(_themes_dir, name))
+        logo_file = expected_logo[name]
+
+        assert tokens['--logo'] == f"url('/static/webapp/assets/{logo_file}')", (name, tokens['--logo'])
+        assert os.path.exists(os.path.join(_assets_dir, logo_file)), logo_file
+
+# ################################################################################################################################
+
 def test_the_default_theme_reproduces_the_historical_palette() -> 'None':
-    tokens = _tokens_of(os.path.join(_themes_dir, 'zato-default.css'))
+    tokens = _tokens_of(os.path.join(_themes_dir, 'zato-dark.css'))
 
     for token, value in Historical_Palette.items():
         assert tokens[token] == value, (token, tokens[token], value)
