@@ -17,9 +17,10 @@ from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Docum
 from zato.common.rule_engine.sql.data import DecisionFilter
 from zato.common.rule_engine.sql.document import deserialize_document
 from zato.common.rule_engine.tokens import ruleset_name_pattern
+from zato.common.util.logging_ import count_text
 from zato.rule_engine_dashboard.app.storage import get_backend, get_manager
 from zato.rule_engine_dashboard.app.views.api import BadRequestError, definition_row, event_row, follow_row, json_api, \
-    read_int, read_json, recent_row, required, serialize_all, view_row
+    json_items, note_answer, read_int, read_json, recent_row, required, serialize_all, view_row
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -65,7 +66,7 @@ def ruleset_list(req:'any_') -> 'any_':
     )
     items = serialize_all(records, definition_row)
 
-    out = JsonResponse({'items': items})
+    out = json_items(req, items, 'definition', 'definitions')
     return out
 
 # ################################################################################################################################
@@ -82,7 +83,7 @@ def ruleset_search(req:'any_') -> 'any_':
     backend = get_backend()
     hits = backend.search.search(query)
 
-    out = JsonResponse({'items': hits})
+    out = json_items(req, hits, 'match', 'matches')
     return out
 
 # ################################################################################################################################
@@ -95,7 +96,7 @@ def ruleset_feed(req:'any_') -> 'any_':
     events = backend.follows.feed(req.user.username)
     items = serialize_all(events, event_row)
 
-    out = JsonResponse({'items': items})
+    out = json_items(req, items, 'unseen change', 'unseen changes')
     return out
 
 # ################################################################################################################################
@@ -114,9 +115,16 @@ def ruleset_preview(req:'any_', definition_id:'int') -> 'any_':
 
     # Only documents that carry rule documents have a readable rendered form.
     if Documents_Key in document:
-        rendered = render_documents(document[Documents_Key])
+        documents = document[Documents_Key]
+        rendered = render_documents(documents)
+        rules_text = count_text(len(documents), 'rule', 'rules')
+        note = f'{record.object_type} `{record.name}` version {record.current_version}, {rules_text}'
     else:
         rendered = None
+        note = f'{record.object_type} `{record.name}` version {record.current_version}'
+
+    events_text = count_text(len(events), 'history event', 'history events')
+    note_answer(req, f'{note}, {events_text}')
 
     # Opening a preview counts as a visit for the recents strip.
     backend.views.touch_recent(actor=actor, definition_id=definition_id)
@@ -147,11 +155,16 @@ def ruleset_publish(req:'any_', definition_id:'int') -> 'any_':
     if record.object_type == Definition_Type_Ruleset:
         loaded = publish_and_reload(get_manager(), backend, definition_id=definition_id, version=version, actor=actor)
         result = {'version': loaded.version, 'rule_names': loaded.rule_names}
+        rules_text = count_text(len(loaded.rule_names), 'rule', 'rules')
+        note = f'ruleset `{record.name}` version {loaded.version} is live with {rules_text}'
+        note_answer(req, note)
 
     # .. every other definition kind only moves the live pointer.
     else:
         published = backend.versions.publish(definition_id=definition_id, version=version, actor=actor)
         result = {'version': published.version, 'rule_names': []}
+        note = f'{record.object_type} `{record.name}` version {published.version} is live'
+        note_answer(req, note)
 
     out = JsonResponse(result)
     return out
@@ -205,8 +218,14 @@ def ruleset_rename(req:'any_', definition_id:'int') -> 'any_':
         'rest_call_count': rest_call_count,
     }
 
+    rules_text = count_text(len(impact), 'rule', 'rules')
+    calls_text = count_text(rest_call_count, 'logged call', 'logged calls')
+
     # The dry run stops at the impact report ..
     if is_dry_run:
+        note = f'`{record.name}` would become `{new_name}`, {rules_text}, {calls_text}'
+        note_answer(req, note)
+
         out = JsonResponse(result)
         return out
 
@@ -233,6 +252,9 @@ def ruleset_rename(req:'any_', definition_id:'int') -> 'any_':
 
     result['version'] = version.version
 
+    note = f'`{record.name}` renamed to `{new_name}` as version {version.version}, {rules_text}'
+    note_answer(req, note)
+
     out = JsonResponse(result)
     return out
 
@@ -245,6 +267,8 @@ def ruleset_follow(req:'any_', definition_id:'int') -> 'any_':
     backend = get_backend()
     _ = backend.follows.follow(actor=req.user.username, definition_id=definition_id)
 
+    note_answer(req, f'now following definition {definition_id}')
+
     out = JsonResponse({'definition_id': definition_id, 'is_following': True})
     return out
 
@@ -256,6 +280,8 @@ def ruleset_unfollow(req:'any_', definition_id:'int') -> 'any_':
     """
     backend = get_backend()
     backend.follows.unfollow(actor=req.user.username, definition_id=definition_id)
+
+    note_answer(req, f'no longer following definition {definition_id}')
 
     out = JsonResponse({'definition_id': definition_id, 'is_following': False})
     return out
@@ -270,7 +296,7 @@ def follow_list(req:'any_') -> 'any_':
     records = backend.follows.list_followed(req.user.username)
     items = serialize_all(records, follow_row)
 
-    out = JsonResponse({'items': items})
+    out = json_items(req, items, 'followed definition', 'followed definitions')
     return out
 
 # ################################################################################################################################
@@ -281,6 +307,8 @@ def ruleset_mark_seen(req:'any_', definition_id:'int') -> 'any_':
     """
     backend = get_backend()
     backend.follows.mark_seen(actor=req.user.username, definition_id=definition_id)
+
+    note_answer(req, f'definition {definition_id} marked as seen')
 
     out = JsonResponse({'definition_id': definition_id})
     return out
@@ -295,7 +323,7 @@ def view_list(req:'any_') -> 'any_':
     records = backend.views.list(req.user.username)
     items = serialize_all(records, view_row)
 
-    out = JsonResponse({'items': items})
+    out = json_items(req, items, 'saved view', 'saved views')
     return out
 
 # ################################################################################################################################
@@ -310,6 +338,8 @@ def view_save(req:'any_') -> 'any_':
 
     backend = get_backend()
     record = backend.views.save(actor=req.user.username, name=name, payload=payload)
+
+    note_answer(req, f'saved the view `{name}`')
 
     out = JsonResponse(view_row(record))
     return out
@@ -326,6 +356,8 @@ def view_delete(req:'any_') -> 'any_':
     backend = get_backend()
     backend.views.delete(actor=req.user.username, name=name)
 
+    note_answer(req, f'deleted the view `{name}`')
+
     out = JsonResponse({'name': name})
     return out
 
@@ -339,7 +371,7 @@ def recent_list(req:'any_') -> 'any_':
     records = backend.views.list_recents(req.user.username)
     items = serialize_all(records, recent_row)
 
-    out = JsonResponse({'items': items})
+    out = json_items(req, items, 'recently opened definition', 'recently opened definitions')
     return out
 
 # ################################################################################################################################

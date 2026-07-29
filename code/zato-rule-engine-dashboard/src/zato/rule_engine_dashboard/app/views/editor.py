@@ -20,8 +20,9 @@ from zato.common.rule_engine.scenarios import run_test_set
 from zato.common.rule_engine.semantics import validate_document
 from zato.common.rule_engine.sql.constants import Documents_Key
 from zato.common.rule_engine.vocabulary import Comparators_By_Type, iter_attributes, Status_Deprecated
+from zato.common.util.logging_ import count_text
 from zato.rule_engine_dashboard.app.storage import get_backend
-from zato.rule_engine_dashboard.app.views.api import json_api, read_json, required
+from zato.rule_engine_dashboard.app.views.api import json_api, note_answer, read_json, required
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,6 +52,10 @@ def editor_validate(req:'any_') -> 'any_':
             semantic_errors = validate_document(document, vocabulary)
             errors.extend(semantic_errors)
 
+    rules_text = count_text(len(documents), 'rule', 'rules')
+    findings_text = count_text(len(errors), 'finding', 'findings')
+    note_answer(req, f'`{ruleset_name}` -> {rules_text}, {findings_text}')
+
     out = JsonResponse({'documents': documents, 'errors': errors})
     return out
 
@@ -64,6 +69,9 @@ def editor_render(req:'any_') -> 'any_':
     documents = required(body, 'documents')
 
     text = render_documents(documents)
+
+    rules_text = count_text(len(documents), 'rule', 'rules')
+    note_answer(req, rules_text)
 
     out = JsonResponse({'text': text})
     return out
@@ -104,6 +112,9 @@ def editor_completion(req:'any_', definition_id:'int') -> 'any_':
 
         terms.append(term)
 
+    terms_text = count_text(len(terms), 'term', 'terms')
+    note_answer(req, f'{terms_text} of vocabulary {definition_id}')
+
     out = JsonResponse({'terms': terms})
     return out
 
@@ -135,6 +146,9 @@ def editor_save(req:'any_') -> 'any_':
     errors = validate_definition_document(object_type, document)
 
     if errors:
+        findings_text = count_text(len(errors), 'finding', 'findings')
+        note_answer(req, f'{object_type} not stored, {findings_text}')
+
         out = JsonResponse({'errors': errors}, status=BAD_REQUEST)
         return out
 
@@ -149,6 +163,7 @@ def editor_save(req:'any_') -> 'any_':
             comment=comment,
         )
         result = {'definition_id': definition_id, 'version': record.version}
+        note_answer(req, f'{object_type} {definition_id} stored as version {record.version}')
 
     # .. while a new one comes into being together with its first version.
     else:
@@ -162,6 +177,7 @@ def editor_save(req:'any_') -> 'any_':
         )
         definition_id = created.id
         result = {'definition_id': created.id, 'version': created.current_version}
+        note_answer(req, f'{object_type} `{name}` created as {created.id}, version {created.current_version}')
 
     # The where-used index follows every save whose document carries rule documents.
     if Documents_Key in document:
@@ -181,6 +197,17 @@ def editor_outcomes(req:'any_') -> 'any_':
     test_set = required(body, 'test_set')
 
     result = run_test_set(test_set, documents)
+
+    total = result['total']
+    passed = result['passed']
+    failed = result['failed']
+    explored = result['explored']
+
+    scenarios_text = count_text(total, 'scenario', 'scenarios')
+    rules_text = count_text(len(documents), 'edited rule', 'edited rules')
+
+    note = f'{scenarios_text} against {rules_text} -> {passed} passed, {failed} failed, {explored} explored'
+    note_answer(req, note)
 
     out = JsonResponse(result)
     return out

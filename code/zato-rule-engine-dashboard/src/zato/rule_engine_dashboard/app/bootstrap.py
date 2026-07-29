@@ -11,7 +11,11 @@ import os
 from logging import getLogger
 
 # Zato
-from zato.rule_engine_dashboard.app.storage import init_storage
+from zato.common.rule_engine.demo_data import seed_demo_definitions
+from zato.common.rule_engine.sql.constants import Definition_Type_Decision_Table, Definition_Type_Ruleset, \
+    Definition_Type_Test_Set, Definition_Type_Vocabulary
+from zato.common.util.logging_ import count_text
+from zato.rule_engine_dashboard.app.storage import get_backend, get_manager, init_storage
 from zato.rule_engine_dashboard.app.user_rules import Root_Username
 
 # ################################################################################################################################
@@ -32,6 +36,17 @@ Env_Admin_Password = 'Zato_Rule_Engine_Dashboard_Admin_Password'
 
 # The Django settings module this application runs with
 _settings_module = 'zato.rule_engine_dashboard.app.settings'
+
+# Every kind of definition the screens open on, with the noun the startup inventory calls it by.
+_definition_kinds = [
+    (Definition_Type_Ruleset,        'ruleset',        'rulesets'),
+    (Definition_Type_Vocabulary,     'vocabulary',     'vocabularies'),
+    (Definition_Type_Decision_Table, 'decision table', 'decision tables'),
+    (Definition_Type_Test_Set,       'test set',       'test sets'),
+]
+
+# How many definitions of one kind the startup inventory names one by one.
+_inventory_limit = 1_000
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -92,14 +107,42 @@ def ensure_root_admin() -> 'None':
 
 # ################################################################################################################################
 
+def seed_demo() -> 'None':
+    """ Fills a brand-new environment with the demo definitions. Idempotent - an environment
+    that already holds definitions of its own is left alone.
+    """
+    seed_demo_definitions(get_backend(), get_manager())
+
+# ################################################################################################################################
+
+def log_contents() -> 'None':
+    """ The inventory of what the store holds when the application starts serving - what
+    the screens will show, named kind by kind so an empty screen is never a mystery.
+    """
+    backend = get_backend()
+
+    for object_type, singular, plural in _definition_kinds:
+        records = backend.definitions.list(object_type=object_type, limit=_inventory_limit)
+        records_text = count_text(len(records), singular, plural)
+
+        logger.info('Rule engine storage holds %s', records_text)
+
+        for record in records:
+            logger.info('.. `%s` (id=%s, current version %s, live version %s)', record.name, record.id,
+                record.current_version, record.live_version)
+
+# ################################################################################################################################
+
 def bootstrap() -> 'None':
     """ Everything the application needs before it can serve anyone - Django itself,
-    its tables, the root account and the rule engine's own storage.
+    its tables, the root account, the rule engine's own storage and what a new environment starts with.
     """
     setup_django()
     create_tables()
     ensure_root_admin()
     init_storage()
+    seed_demo()
+    log_contents()
 
 # ################################################################################################################################
 # ################################################################################################################################

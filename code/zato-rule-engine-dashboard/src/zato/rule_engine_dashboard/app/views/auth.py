@@ -83,6 +83,8 @@ def _handle_login_get(req:'any_') -> 'any_':
             out = HttpResponseRedirect(authorize_url)
             return out
 
+    logger.info('Opening the sign-in screen')
+
     out = _get_login_response(req)
     return out
 
@@ -170,6 +172,8 @@ def logout(req:'any_') -> 'any_':
     """
     if req.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
+
+    logger.info('User `%s` signed out', req.user.username)
 
     django_logout(req)
 

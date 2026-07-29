@@ -179,9 +179,15 @@ server:
 	clear
 	cd ~/env/qs-1/ && Zato_Rule_Engine_Dashboard_DB_URL=$(Zato_Rule_Engine_Dashboard_DB_URL) zato start server1/ --fg --verbose
 
+# The password the admin account is created with on the first start against a new database,
+# the same one the rest of the environment uses
+Zato_Rule_Engine_Dashboard_Admin_Password ?= $(Zato_Password)
+
 rule-engine-dashboard:
 	clear
-	Zato_Rule_Engine_Dashboard_DB_URL=$(Zato_Rule_Engine_Dashboard_DB_URL) $(ZATO_PY) -m zato.rule_engine_dashboard.app.run
+	Zato_Rule_Engine_Dashboard_DB_URL=$(Zato_Rule_Engine_Dashboard_DB_URL) \
+		Zato_Rule_Engine_Dashboard_Admin_Password=$(Zato_Rule_Engine_Dashboard_Admin_Password) \
+		$(ZATO_PY) -m zato.rule_engine_dashboard.app.run
 
 scheduler:
 	clear

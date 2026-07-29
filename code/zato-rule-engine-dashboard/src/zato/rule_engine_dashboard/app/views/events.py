@@ -6,11 +6,16 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from logging import getLogger
+
 # Django
 from django.core.paginator import Paginator
 from django.shortcuts import render
 
 # Zato
+from zato.common.typing_ import cast_
+from zato.common.util.logging_ import count_text
 from zato.rule_engine_dashboard.app.models import UserAction, UserEvent
 from zato.rule_engine_dashboard.app.views.common import admin_required
 
@@ -22,6 +27,8 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+logger = getLogger(__name__)
 
 # How many events one page shows
 _page_size = 50
@@ -59,6 +66,13 @@ def events_list(req:'any_') -> 'any_':
     paginator = Paginator(events, _page_size)
     page = req.GET.get('page')
     events_page = paginator.get_page(page)
+
+    matched_count = cast_('int', paginator.count)
+    matched_text = count_text(matched_count, 'event', 'events')
+    shown_text = count_text(len(events_page.object_list), 'event', 'events')
+
+    logger.info('Opening the user events screen with %s, page %d of %d, showing %s (%s)', matched_text,
+        events_page.number, paginator.num_pages, shown_text, req.user.username)
 
     # .. and the current filters travel into the template so the form and the page links keep them.
     context = {

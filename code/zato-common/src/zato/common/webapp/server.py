@@ -83,12 +83,13 @@ def serve(
         port = default_port
 
     # The application is preloaded in the master process so that all workers share the same
-    # session signing and credential encryption keys ..
+    # session signing and credential encryption keys. There is no access log, because every
+    # screen and every endpoint says in its own log line what it opened or loaded, for whom,
+    # while an access line per static asset says nothing beyond that.
     options = {
         'bind': f'{host}:{port}',
         'workers': _worker_count,
         'preload_app': True,
-        'accesslog': '-',
         'errorlog': '-',
         'loglevel': 'info',
     }
