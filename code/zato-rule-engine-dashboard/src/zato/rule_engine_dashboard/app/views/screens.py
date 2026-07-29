@@ -6,6 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from logging import getLogger
+
 # Django
 from django.shortcuts import redirect, render
 
@@ -17,6 +20,23 @@ from zato.rule_engine_dashboard.app.views.common import signed_in_required
 
 if 0:
     from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _screen(req:'any_', name:'str', template:'str') -> 'any_':
+    """ Renders one screen, saying in the log who opened it - what the screen then loads
+    arrives through its own logged endpoints.
+    """
+    logger.info('Opening the %s screen (%s)', name, req.user.username)
+
+    out = render(req, template)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,7 +53,7 @@ def home(req:'any_') -> 'any_':
 def rulesets(req:'any_') -> 'any_':
     """ The rulesets home screen.
     """
-    out = render(req, 'rulesets.html')
+    out = _screen(req, 'rulesets', 'rulesets.html')
     return out
 
 # ################################################################################################################################
@@ -42,7 +62,7 @@ def rulesets(req:'any_') -> 'any_':
 def editor(req:'any_') -> 'any_':
     """ The sentence editor screen.
     """
-    out = render(req, 'editor.html')
+    out = _screen(req, 'editor', 'editor.html')
     return out
 
 # ################################################################################################################################
@@ -51,7 +71,7 @@ def editor(req:'any_') -> 'any_':
 def tables(req:'any_') -> 'any_':
     """ The decision table screen.
     """
-    out = render(req, 'table.html')
+    out = _screen(req, 'decision table', 'table.html')
     return out
 
 # ################################################################################################################################
@@ -60,7 +80,7 @@ def tables(req:'any_') -> 'any_':
 def tests(req:'any_') -> 'any_':
     """ The tests and simulation screen.
     """
-    out = render(req, 'test.html')
+    out = _screen(req, 'tests and simulation', 'test.html')
     return out
 
 # ################################################################################################################################
@@ -69,7 +89,7 @@ def tests(req:'any_') -> 'any_':
 def versions(req:'any_') -> 'any_':
     """ The versions and changes screen.
     """
-    out = render(req, 'versions.html')
+    out = _screen(req, 'versions and changes', 'versions.html')
     return out
 
 # ################################################################################################################################
@@ -78,7 +98,7 @@ def versions(req:'any_') -> 'any_':
 def decision_log(req:'any_') -> 'any_':
     """ The decision log screen.
     """
-    out = render(req, 'log.html')
+    out = _screen(req, 'decision log', 'log.html')
     return out
 
 # ################################################################################################################################
@@ -87,7 +107,7 @@ def decision_log(req:'any_') -> 'any_':
 def vocabulary(req:'any_') -> 'any_':
     """ The vocabulary screen.
     """
-    out = render(req, 'vocabulary.html')
+    out = _screen(req, 'vocabulary', 'vocabulary.html')
     return out
 
 # ################################################################################################################################
@@ -96,7 +116,7 @@ def vocabulary(req:'any_') -> 'any_':
 def notifications(req:'any_') -> 'any_':
     """ The notifications screen - destinations per ruleset, chat credentials for admins.
     """
-    out = render(req, 'notifications.html')
+    out = _screen(req, 'notifications', 'notifications.html')
     return out
 
 # ################################################################################################################################

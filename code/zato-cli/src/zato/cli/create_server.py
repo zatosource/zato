@@ -15,6 +15,7 @@ from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, \
     common_scheduler_server_address_opts, sql_conf_contents, ZatoCommand
 from zato.common.api import CONTENT_TYPE, Default_Extra_Service_File_Data, Default_Service_File_Data, NotGiven, REDIS, SCHEDULER
 from zato.common.crypto.api import ServerCryptoManager
+from zato.common.rule_engine.demo_data import demo_zrules_contents, Demo_Ruleset_Name
 from zato.common.util.api import as_bool, get_demo_extra_py_fs_locations, get_demo_py_fs_locations
 from zato.common.util.config import get_scheduler_api_client_for_server_password, get_scheduler_api_client_for_server_username
 from zato.common.util.open_ import open_r, open_w
@@ -184,62 +185,6 @@ sample_key=sample_value
 pickup_conf = """#[hot-deploy.user.local-dev]
 #pickup_from=/uncomment/this/stanza/to/enable/a/custom/location
 """
-
-# ################################################################################################################################
-
-demo_zrules_contents = """
-# ################################################################################################################################
-
-rule
-    Airport_01_Flight_Delays
-docs
-    "Handles passenger notifications and accommodations during flight delays exceeding threshold times."
-when
-    flight_delay > 120 and
-    passenger.type in ['platinum', 'diamond'] and
-    is_international == True
-then
-    send_notification = True
-    offer_accomodation = True
-    template = 'DelayAlert'
-
-# ################################################################################################################################
-
-rule
-    Airport_02_Passenger_Flow
-docs
-    "Optimizes processing point operations in response to passenger volume and terminal congestion."
-defaults
-    max_wait_time = 25
-when
-    processing_point.wait_time > max_wait_time and
-    departing_flights_count.next_hour >= 5 and
-    terminal.passenger_density > 75
-then
-    should_open_lane = True
-    redeploy_staff = 'FloatingAssistant'
-    staff_count = 2
-
-# ################################################################################################################################
-
-rule
-    rule_3
-docs
-    This is a docstring
-    it can be multiline
-defaults
-    max = {'a':'b'}
-when
-    abc == 123 or
-    abc == 456
-    # result1.customer_type in ['abc', 'def']
-then
-    fee_waiver = True
-    dedicated_advisor = True
-    status = {'key1':'value1', 'key2':'value2'}
-
-# ################################################################################################################################
-""".strip()
 
 # ################################################################################################################################
 
@@ -640,8 +585,8 @@ class Create(ZatoCommand):
                 user_conf_src = os.path.join(self.target_dir, 'pickup', 'incoming', 'user-conf')
                 os.symlink(user_conf_src, user_conf_dir)
 
-                # Add default rules
-                demo_zrules_loc = os.path.join(user_conf_dir, 'demo.zrules')
+                # Add default rules - the file name is the ruleset name the server loads them under
+                demo_zrules_loc = os.path.join(user_conf_dir, f'{Demo_Ruleset_Name}.zrules')
                 demo_zrules = open_w(demo_zrules_loc)
                 _ = demo_zrules.write(demo_zrules_contents)
                 demo_zrules.close()

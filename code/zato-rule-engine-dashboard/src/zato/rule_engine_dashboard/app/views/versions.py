@@ -15,9 +15,10 @@ from zato.common.rule_engine.loading import load_live_ruleset
 from zato.common.rule_engine.outcome_diff import outcome_diff
 from zato.common.rule_engine.render import render_documents
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Documents_Key, Event_Type_Review_Commented
+from zato.common.util.logging_ import count_text
 from zato.rule_engine_dashboard.app.storage import get_backend, get_manager
-from zato.rule_engine_dashboard.app.views.api import definition_row, event_row, json_api, json_api_admin, read_int, \
-    read_int_required, read_json, required, ruleset_documents, serialize_all, version_row
+from zato.rule_engine_dashboard.app.views.api import definition_row, event_row, json_api, json_api_admin, note_answer, \
+    read_int, read_int_required, read_json, required, ruleset_documents, serialize_all, version_row
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,6 +46,9 @@ def version_timeline(req:'any_', definition_id:'int') -> 'any_':
     record = backend.definitions.get(definition_id)
     events = backend.events.list(definition_id=definition_id, limit=limit)
 
+    events_text = count_text(len(events), 'history event', 'history events')
+    note_answer(req, f'{record.object_type} `{record.name}`, {events_text}')
+
     out = JsonResponse({'definition': definition_row(record), 'events': serialize_all(events, event_row)})
     return out
 
@@ -62,8 +66,11 @@ def version_get(req:'any_', definition_id:'int', version:'int') -> 'any_':
     document = row['document']
     if Documents_Key in document:
         row['rendered'] = render_documents(document[Documents_Key])
+        rules_text = count_text(len(document[Documents_Key]), 'rule', 'rules')
+        note_answer(req, f'version {version} of definition {definition_id}, {rules_text}')
     else:
         row['rendered'] = None
+        note_answer(req, f'version {version} of definition {definition_id}')
 
     out = JsonResponse(row)
     return out
@@ -82,6 +89,15 @@ def version_diff(req:'any_', definition_id:'int') -> 'any_':
     new_documents = ruleset_documents(backend, definition_id, new_version)
 
     result = diff_documents(old_documents, new_documents)
+
+    added_text = count_text(len(result['added']), 'rule added', 'rules added')
+    deleted_text = count_text(len(result['deleted']), 'rule deleted', 'rules deleted')
+    renamed_text = count_text(len(result['renamed']), 'rule renamed', 'rules renamed')
+    updated_text = count_text(len(result['updated']), 'rule updated', 'rules updated')
+    unchanged_text = count_text(len(result['unchanged']), 'rule unchanged', 'rules unchanged')
+
+    versions = f'versions {old_version} and {new_version} of definition {definition_id}'
+    note_answer(req, f'{versions} -> {added_text}, {deleted_text}, {renamed_text}, {updated_text}, {unchanged_text}')
 
     out = JsonResponse(result)
     return out
@@ -113,6 +129,9 @@ def version_rollback(req:'any_', definition_id:'int') -> 'any_':
     if record.object_type == Definition_Type_Ruleset:
         _ = load_live_ruleset(get_manager(), backend, definition_id)
 
+    note = f'{record.object_type} `{record.name}` version {source_version} restored as version {restored.version}'
+    note_answer(req, note)
+
     out = JsonResponse({'version': restored.version})
     return out
 
@@ -132,6 +151,10 @@ def version_compare_outcomes(req:'any_', definition_id:'int') -> 'any_':
     new_documents = ruleset_documents(backend, definition_id, new_version)
 
     result = outcome_diff(old_documents, new_documents, scenarios)
+
+    scenarios_text = count_text(len(scenarios), 'scenario', 'scenarios')
+    versions = f'versions {old_version} and {new_version} of definition {definition_id}'
+    note_answer(req, f'{scenarios_text} across {versions}')
 
     out = JsonResponse(result)
     return out
@@ -169,6 +192,9 @@ def approval_status(req:'any_', definition_id:'int', version:'int') -> 'any_':
     else:
         approval_out = _approval_row(approval)
 
+    note = f'version {version} of definition {definition_id} -> gate enabled {status.gate_enabled}'
+    note_answer(req, f'{note}, approved {status.is_approved}, content matches {status.content_matches}')
+
     out = JsonResponse({
         'definition_id':       status.definition_id,
         'version':             status.version,
@@ -204,6 +230,8 @@ def approval_approve(req:'any_', definition_id:'int', version:'int') -> 'any_':
         comment=comment,
     )
 
+    note_answer(req, f'version {version} of definition {definition_id} approved by `{approver}`')
+
     out = JsonResponse(_approval_row(record))
     return out
 
@@ -223,6 +251,8 @@ def approval_set_gate(req:'any_', definition_id:'int') -> 'any_':
 
     record = backend.approvals.set_gate(definition_id=definition_id, enabled=enabled, actor=actor)
 
+    note_answer(req, f'the approval gate of definition {definition_id} is now enabled {record.gate_enabled}')
+
     out = JsonResponse({'gate_enabled': record.gate_enabled, 'allow_self_approval': record.allow_self_approval})
     return out
 
@@ -241,6 +271,9 @@ def approval_set_self_approval(req:'any_', definition_id:'int') -> 'any_':
     actor = req.user.username
 
     record = backend.approvals.set_self_approval(definition_id=definition_id, allowed=allowed, actor=actor)
+
+    note = f'self-approval of definition {definition_id} is now allowed {record.allow_self_approval}'
+    note_answer(req, note)
 
     out = JsonResponse({'gate_enabled': record.gate_enabled, 'allow_self_approval': record.allow_self_approval})
     return out
@@ -267,6 +300,8 @@ def version_comment(req:'any_', definition_id:'int') -> 'any_':
         actor=actor,
         payload=payload,
     )
+
+    note_answer(req, f'a comment on `{anchor}` in version {version} of definition {definition_id}')
 
     out = JsonResponse(event_row(record))
     return out

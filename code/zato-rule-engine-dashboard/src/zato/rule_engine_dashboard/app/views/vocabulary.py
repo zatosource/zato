@@ -15,15 +15,16 @@ from zato.common.rule_engine.parser import parse_data_details
 from zato.common.rule_engine.references import apply_rename, preview_rename
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
+from zato.common.util.logging_ import count_text
 from zato.rule_engine_dashboard.app.storage import get_backend
-from zato.rule_engine_dashboard.app.views.api import BadRequestError, json_api, read_json, reference_row, required, \
-    serialize_all
+from zato.rule_engine_dashboard.app.views.api import BadRequestError, json_api, note_answer, read_json, reference_row, \
+    required, serialize_all
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, dictlist
+    from zato.common.typing_ import any_, anydict, dictlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,12 +38,31 @@ _rename_scan_limit = 10_000
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _vocabulary_note(vocabulary:'anydict') -> 'str':
+    """ How much one vocabulary document holds, the way the log says it.
+    """
+    entities = vocabulary['entities']
+    term_count = 0
+
+    for entity in entities:
+        term_count += len(entity['attributes'])
+
+    entities_text = count_text(len(entities), 'entity', 'entities')
+    terms_text = count_text(term_count, 'term', 'terms')
+
+    out = f'{entities_text}, {terms_text}'
+    return out
+
+# ################################################################################################################################
+
 @json_api
 def vocabulary_get(req:'any_', definition_id:'int') -> 'any_':
     """ The vocabulary screen's tree - one stored vocabulary document.
     """
     backend = get_backend()
     document = backend.definitions.get_document(definition_id)
+
+    note_answer(req, _vocabulary_note(document))
 
     out = JsonResponse({'vocabulary': document})
     return out
@@ -62,6 +82,9 @@ def term_where_used(req:'any_') -> 'any_':
     records = backend.references.where_used(term)
     items = serialize_all(records, reference_row)
     is_used = len(items) > 0
+
+    places_text = count_text(len(items), 'place', 'places')
+    note_answer(req, f'`{term}` is used in {places_text}')
 
     out = JsonResponse({'term': term, 'items': items, 'is_used': is_used, 'can_delete': not is_used})
     return out
@@ -126,6 +149,13 @@ def term_rename(req:'any_') -> 'any_':
         # .. and keeps the where-used index true to what is now stored.
         _ = backend.references.rebuild(definition_id=record.id, documents=merged)
 
+    rulesets_text = count_text(len(affected), 'ruleset', 'rulesets')
+
+    if is_dry_run:
+        note_answer(req, f'`{old_term}` would become `{new_term}` in {rulesets_text}')
+    else:
+        note_answer(req, f'`{old_term}` renamed to `{new_term}` in {rulesets_text}')
+
     out = JsonResponse({'old_term': old_term, 'new_term': new_term, 'dry_run': is_dry_run, 'definitions': affected})
     return out
 
@@ -139,6 +169,8 @@ def vocabulary_bootstrap(req:'any_') -> 'any_':
     payload = required(body, 'payload')
 
     vocabulary = vocabulary_from_payload(payload)
+
+    note_answer(req, _vocabulary_note(vocabulary))
 
     out = JsonResponse({'vocabulary': vocabulary})
     return out
@@ -163,6 +195,10 @@ def vocabulary_infer(req:'any_', definition_id:'int') -> 'any_':
     for document in documents.values():
         found = infer_from_document(document, vocabulary)
         proposals.extend(found)
+
+    proposals_text = count_text(len(proposals), 'proposed term', 'proposed terms')
+    findings_text = count_text(len(errors), 'finding', 'findings')
+    note_answer(req, f'{proposals_text}, {findings_text}')
 
     out = JsonResponse({'proposals': proposals, 'errors': errors})
     return out

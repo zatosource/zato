@@ -16,9 +16,10 @@ from django.http import JsonResponse
 from zato.common.rule_engine.scenarios import promote_actual, run_test_set, validate_test_set
 from zato.common.rule_engine.simulation import champion_challenger, simulate, validate_kpis
 from zato.common.rule_engine.sql.constants import Definition_Type_Test_Set, Event_Type_Test_Run
+from zato.common.util.logging_ import count_text
 from zato.rule_engine_dashboard.app.storage import get_backend
-from zato.rule_engine_dashboard.app.views.api import definition_row, json_api, read_int, read_json, required, \
-    ruleset_documents, serialize_all
+from zato.rule_engine_dashboard.app.views.api import definition_row, json_api, json_items, note_answer, read_int, \
+    read_json, required, ruleset_documents, serialize_all
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -48,7 +49,7 @@ def test_set_list(req:'any_') -> 'any_':
     records = backend.definitions.list(object_type=Definition_Type_Test_Set, limit=limit)
     items = serialize_all(records, definition_row)
 
-    out = JsonResponse({'items': items})
+    out = json_items(req, items, 'test set', 'test sets')
     return out
 
 # ################################################################################################################################
@@ -61,6 +62,9 @@ def test_set_validate(req:'any_') -> 'any_':
     test_set = required(body, 'test_set')
 
     errors = validate_test_set(test_set)
+
+    findings_text = count_text(len(errors), 'finding', 'findings')
+    note_answer(req, findings_text)
 
     out = JsonResponse({'errors': errors})
     return out
@@ -104,6 +108,17 @@ def test_set_run(req:'any_', test_set_id:'int') -> 'any_':
         payload=payload,
     )
 
+    total = result['total']
+    passed = result['passed']
+    failed = result['failed']
+    explored = result['explored']
+
+    scenarios_text = count_text(total, 'scenario', 'scenarios')
+    against = f'against ruleset {ruleset_id} version {version}'
+
+    note = f'{scenarios_text} {against} -> {passed} passed, {failed} failed, {explored} explored'
+    note_answer(req, note)
+
     out = JsonResponse(result)
     return out
 
@@ -135,6 +150,8 @@ def test_set_promote(req:'any_', test_set_id:'int') -> 'any_':
         comment=comment,
     )
 
+    note_answer(req, f'scenario `{scenario_name}` promoted, test set stored as version {record.version}')
+
     out = JsonResponse({'version': record.version, 'test_set': updated})
     return out
 
@@ -153,12 +170,23 @@ def simulation_run(req:'any_') -> 'any_':
     # KPI definitions that do not hold together end the request before anything runs.
     kpi_errors = validate_kpis(kpis)
     if kpi_errors:
+        kpi_findings_text = count_text(len(kpi_errors), 'KPI finding', 'KPI findings')
+        note_answer(req, kpi_findings_text)
+
         out = JsonResponse({'errors': kpi_errors}, status=BAD_REQUEST)
         return out
 
     backend = get_backend()
     documents = ruleset_documents(backend, ruleset_id, version)
     result = simulate(documents, scenarios, kpis)
+
+    scenarios_text = count_text(result['total'], 'scenario', 'scenarios')
+    kpis_text = count_text(len(kpis), 'KPI', 'KPIs')
+    errors_text = count_text(result['errors'], 'error', 'errors')
+    against = f'against ruleset {ruleset_id} version {version}'
+
+    note = f'{scenarios_text} {against}, {kpis_text}, {errors_text}'
+    note_answer(req, note)
 
     out = JsonResponse(result)
     return out
@@ -179,6 +207,7 @@ def champion_challenger_run(req:'any_') -> 'any_':
     # KPI definitions that do not hold together end the request before anything runs.
     kpi_errors = validate_kpis(kpis)
     if kpi_errors:
+        note_answer(req, count_text(len(kpi_errors), 'KPI finding', 'KPI findings'))
         out = JsonResponse({'errors': kpi_errors}, status=BAD_REQUEST)
         return out
 
@@ -187,6 +216,11 @@ def champion_challenger_run(req:'any_') -> 'any_':
     challenger_documents = ruleset_documents(backend, ruleset_id, challenger_version)
 
     result = champion_challenger(champion_documents, challenger_documents, scenarios, kpis)
+
+    scenarios_text = count_text(len(scenarios), 'scenario', 'scenarios')
+    kpis_text = count_text(len(kpis), 'KPI', 'KPIs')
+    versions = f'versions {champion_version} and {challenger_version} of ruleset {ruleset_id}'
+    note_answer(req, f'{scenarios_text} against {versions}, {kpis_text}')
 
     out = JsonResponse(result)
     return out

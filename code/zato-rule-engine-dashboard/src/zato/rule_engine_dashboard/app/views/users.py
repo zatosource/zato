@@ -17,6 +17,7 @@ from django.http import HttpResponseNotAllowed, HttpResponseRedirect
 from django.shortcuts import redirect, render
 
 # Zato
+from zato.common.util.logging_ import count_text
 from zato.common.webapp.request import client_address
 from zato.rule_engine_dashboard.app import user_rules
 from zato.rule_engine_dashboard.app.models import add_event, UserAction
@@ -46,6 +47,10 @@ def users_list(req:'any_') -> 'any_':
     """ All the application's users, with per-row actions for the ones the actor may manage.
     """
     users = User.objects.order_by('username')
+    user_count = users.count()
+
+    users_text = count_text(user_count, 'user', 'users')
+    logger.info('Opening the users screen with %s (%s)', users_text, req.user.username)
 
     context = {
         'users': users,
@@ -62,6 +67,7 @@ def user_create(req:'any_') -> 'any_':
     """ A new user - the form on GET, the creation on POST.
     """
     if req.method == 'GET':
+        logger.info('Opening the new user screen (%s)', req.user.username)
         out = render(req, 'user_create.html')
         return out
 
@@ -108,6 +114,8 @@ def user_create(req:'any_') -> 'any_':
         user.is_superuser = is_admin
         user.save()
         _ = add_event(req.user.username, UserAction.Create, username, client_address(req), f'is_admin={is_admin}')
+
+    logger.info('Created the user `%s`, admin -> %s (%s)', username, is_admin, req.user.username)
 
     # .. and the list shows the outcome.
     messages.success(req, f'User `{username}` created')
@@ -173,6 +181,7 @@ def user_edit(req:'any_', username:'str') -> 'any_':
     is_self = username == req.user.username
 
     if req.method == 'GET':
+        logger.info('Opening the edit screen of user `%s` (%s)', username, req.user.username)
         context = {
             'subject': user,
             'is_self': is_self,
@@ -195,6 +204,8 @@ def user_edit(req:'any_', username:'str') -> 'any_':
     with atomic():
         user.save()
         _ = add_event(req.user.username, UserAction.Update, username, client_address(req), details)
+
+    logger.info('Updated the user `%s` -> %s (%s)', username, details, req.user.username)
 
     # .. and the list shows the outcome.
     messages.success(req, f'User `{username}` updated')
@@ -223,6 +234,7 @@ def user_change_password(req:'any_', username:'str') -> 'any_':
     is_self = username == req.user.username
 
     if req.method == 'GET':
+        logger.info('Opening the password screen of user `%s` (%s)', username, req.user.username)
         context = {
             'subject': user,
             'is_self': is_self,
@@ -248,6 +260,8 @@ def user_change_password(req:'any_', username:'str') -> 'any_':
         user.save()
         _ = add_event(req.user.username, UserAction.Password_Change, username, client_address(req), '')
 
+    logger.info('Changed the password of user `%s` (%s)', username, req.user.username)
+
     # .. one's own session survives the change ..
     if is_self:
         update_session_auth_hash(req, user)
@@ -271,6 +285,7 @@ def profile(req:'any_') -> 'any_':
     is_root = req.user.username == Root_Username
 
     if req.method == 'GET':
+        logger.info('Opening the profile screen (%s)', req.user.username)
         context = {
             'is_root': is_root,
         }
@@ -295,6 +310,8 @@ def profile(req:'any_') -> 'any_':
         set_display_name(req.user, display_name)
         req.user.save()
         _ = add_event(req.user.username, UserAction.Update, req.user.username, client_address(req), details)
+
+    logger.info('Updated own profile -> %s (%s)', details, req.user.username)
 
     # .. and the profile shows the outcome.
     messages.success(req, 'Display name updated')
@@ -333,6 +350,8 @@ def user_set_active(req:'any_', username:'str', is_active:'bool') -> 'any_':
         user.save()
         _ = add_event(req.user.username, action, username, client_address(req), f'is_active={is_active}')
 
+    logger.info('User `%s` %s (%s)', username, verb, req.user.username)
+
     # .. and the list shows the outcome.
     messages.success(req, f'User `{username}` {verb}')
 
@@ -362,6 +381,8 @@ def user_delete(req:'any_', username:'str') -> 'any_':
         details = f'is_admin={user.is_superuser} is_active={user.is_active}'
         _ = user.delete()
         _ = add_event(req.user.username, UserAction.Delete, username, client_address(req), details)
+
+    logger.info('Deleted the user `%s` -> %s (%s)', username, details, req.user.username)
 
     # .. and the list shows the outcome.
     messages.success(req, f'User `{username}` deleted')

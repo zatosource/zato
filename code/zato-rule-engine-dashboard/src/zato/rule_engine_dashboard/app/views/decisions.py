@@ -18,9 +18,10 @@ from zato.common.rule_engine.loading import load_documents
 from zato.common.rule_engine.render import render_documents
 from zato.common.rule_engine.sql.constants import Documents_Key
 from zato.common.rule_engine.sql.data import DecisionFilter
+from zato.common.util.logging_ import count_text
 from zato.rule_engine_dashboard.app.storage import get_backend
-from zato.rule_engine_dashboard.app.views.api import BadRequestError, decision_row, json_api, read_int, read_json, \
-    read_time, required, ruleset_documents, serialize_all, version_row
+from zato.rule_engine_dashboard.app.views.api import BadRequestError, decision_row, json_api, json_items, note_answer, \
+    read_int, read_json, read_time, required, ruleset_documents, serialize_all, version_row
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -108,7 +109,7 @@ def decision_list(req:'any_') -> 'any_':
     records = backend.reporting.list_decisions(filters, limit=limit)
     items = serialize_all(records, decision_row)
 
-    out = JsonResponse({'items': items})
+    out = json_items(req, items, 'decision', 'decisions')
     return out
 
 # ################################################################################################################################
@@ -130,6 +131,8 @@ def decision_detail(req:'any_', decision_id:'str') -> 'any_':
     else:
         version_data['rendered'] = None
 
+    note_answer(req, f'decision {decision_id} of ruleset {record.ruleset_id}, rules version {record.rules_version}')
+
     out = JsonResponse({'decision': decision_row(record), 'version': version_data})
     return out
 
@@ -145,10 +148,19 @@ def decision_aggregates(req:'any_') -> 'any_':
     # All four aggregates summarise the same selection, so they arrive from one scan of it.
     aggregates = backend.reporting.aggregates(filters)
 
+    outcomes = _count_rows(aggregates.outcomes)
+    versions = _count_rows(aggregates.versions)
+    hourly = _count_rows(aggregates.hourly)
+
+    outcomes_text = count_text(len(outcomes), 'outcome', 'outcomes')
+    versions_text = count_text(len(versions), 'version', 'versions')
+    hourly_text = count_text(len(hourly), 'hour', 'hours')
+    note_answer(req, f'{outcomes_text}, {versions_text}, {hourly_text}')
+
     out = JsonResponse({
-        'outcomes': _count_rows(aggregates.outcomes),
-        'versions': _count_rows(aggregates.versions),
-        'hourly': _count_rows(aggregates.hourly),
+        'outcomes': outcomes,
+        'versions': versions,
+        'hourly': hourly,
         'average_duration_ms': aggregates.average_duration_ms,
     })
     return out
@@ -212,6 +224,10 @@ def decision_rule_counts(req:'any_', definition_id:'int') -> 'any_':
         rules_version=rules_version,
     )
 
+    fired_text = count_text(len(fired), 'firing count', 'firing counts')
+    never_fired_text = count_text(len(never_fired), 'rule that never fired', 'rules that never fired')
+    note_answer(req, f'{fired_text}, {never_fired_text}')
+
     out = JsonResponse({'fired': fired, 'never_fired': never_fired})
     return out
 
@@ -230,6 +246,8 @@ def decision_to_scenario(req:'any_', decision_id:'str') -> 'any_':
         'input': story['input'],
         'expected': story['outputs'],
     }
+
+    note_answer(req, f'one scenario made out of decision {decision_id}')
 
     out = JsonResponse({'scenario': scenario})
     return out
@@ -250,6 +268,8 @@ def decision_replay(req:'any_', decision_id:'str') -> 'any_':
     documents = ruleset_documents(backend, record.ruleset_id, version)
     loaded = load_documents(documents)
     result = evaluate_input(loaded, story['input'])
+
+    note_answer(req, f'decision {decision_id} replayed against version {version} of ruleset {record.ruleset_id}')
 
     out = JsonResponse({'decision_id': decision_id, 'replayed_version': version, 'result': result})
     return out

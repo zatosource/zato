@@ -55,6 +55,23 @@ current_service_name: ContextVar[str] = ContextVar('current_service_name', defau
 # ################################################################################################################################
 # ################################################################################################################################
 
+def count_text(count:'int', singular:'str', plural:'str') -> 'str':
+    """ A count with its noun in the grammatical number the count calls for - `1 ruleset`, `3 rulesets`.
+
+    Both forms are given by the caller because English plurals are not all a matter of adding an s,
+    which is what keeps `1 entities` and `2 entitys` alike out of the logs.
+    """
+    if count == 1:
+        noun = singular
+    else:
+        noun = plural
+
+    out = f'{count} {noun}'
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ServiceContextFilter(logging.Filter):
     def filter(self, record):
         _cid = current_cid.get()
@@ -493,8 +510,8 @@ def set_logging_levels(text:'str') -> 'stranydict':
         set_count += 1
 
     # Log what we did, using the correct singular or plural form.
-    suffix = 'logger' if set_count == 1 else 'loggers'
-    logger.info('Logging levels set for %d %s', set_count, suffix)
+    set_text = count_text(set_count, 'logger', 'loggers')
+    logger.info('Logging levels set for %s', set_text)
 
     out = {
         'success': True,

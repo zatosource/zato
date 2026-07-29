@@ -19,7 +19,8 @@ from zato.common.rule_engine.table_checks import check_conflicts, check_subsumpt
 from zato.common.rule_engine.table_completeness import check_completeness
 from zato.common.rule_engine.table_reading import table_readings
 from zato.common.rule_engine.table_shape import compress_table, expand_table
-from zato.rule_engine_dashboard.app.views.api import json_api, read_json, required
+from zato.common.util.logging_ import count_text
+from zato.rule_engine_dashboard.app.views.api import json_api, note_answer, read_json, required
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,6 +40,8 @@ def _valid_table(req:'any_') -> 'anydict | JsonResponse':
     # Structural errors make every further check meaningless, so they end the request here.
     errors = validate_table(table)
     if errors:
+        findings_text = count_text(len(errors), 'finding', 'findings')
+        note_answer(req, f'the table does not hold together, {findings_text}')
         out = JsonResponse({'errors': errors}, status=BAD_REQUEST)
     else:
         out = table
@@ -58,8 +61,13 @@ def table_validate(req:'any_') -> 'any_':
     table = required(body, 'table')
 
     errors = validate_table(table)
+    readings = table_readings(table)
 
-    out = JsonResponse({'errors': errors, 'readings': table_readings(table)})
+    findings_text = count_text(len(errors), 'finding', 'findings')
+    columns_text = count_text(len(readings), 'column', 'columns')
+    note_answer(req, f'{findings_text}, {columns_text} read back')
+
+    out = JsonResponse({'errors': errors, 'readings': readings})
     return out
 
 # ################################################################################################################################
@@ -74,6 +82,10 @@ def table_compile(req:'any_') -> 'any_':
 
     documents = compile_table(table)
 
+    columns_text = count_text(len(table['columns']), 'column', 'columns')
+    rules_text = count_text(len(documents), 'rule', 'rules')
+    note_answer(req, f'{columns_text} compiled into {rules_text}')
+
     out = JsonResponse({'documents': documents})
     return out
 
@@ -87,11 +99,22 @@ def table_checks(req:'any_') -> 'any_':
     if isinstance(table, JsonResponse):
         return table
 
+    completeness = check_completeness(table)
+    conflicts = check_conflicts(table)
+    subsumption = check_subsumption(table)
+    unreachable = check_unreachable(table)
+
+    gaps_text = count_text(len(completeness['missing']), 'gap', 'gaps')
+    conflicts_text = count_text(len(conflicts['conflicts']), 'conflict', 'conflicts')
+    subsumption_text = count_text(len(subsumption), 'subsumed column', 'subsumed columns')
+    unreachable_text = count_text(len(unreachable), 'unreachable column', 'unreachable columns')
+    note_answer(req, f'{gaps_text}, {conflicts_text}, {subsumption_text}, {unreachable_text}')
+
     out = JsonResponse({
-        'completeness': check_completeness(table),
-        'conflicts': check_conflicts(table),
-        'subsumption': check_subsumption(table),
-        'unreachable': check_unreachable(table),
+        'completeness': completeness,
+        'conflicts': conflicts,
+        'subsumption': subsumption,
+        'unreachable': unreachable,
     })
     return out
 
@@ -107,6 +130,10 @@ def table_expand(req:'any_') -> 'any_':
 
     documents = expand_table(table)
 
+    columns_text = count_text(len(table['columns']), 'column', 'columns')
+    sub_rules_text = count_text(len(documents), 'sub-rule', 'sub-rules')
+    note_answer(req, f'{columns_text} expanded into {sub_rules_text}')
+
     out = JsonResponse({'documents': documents})
     return out
 
@@ -121,6 +148,10 @@ def table_compress(req:'any_') -> 'any_':
         return table
 
     compressed = compress_table(table)
+
+    before_text = count_text(len(table['columns']), 'column', 'columns')
+    after_text = count_text(len(compressed['columns']), 'column', 'columns')
+    note_answer(req, f'{before_text} merged into {after_text}')
 
     out = JsonResponse({'table': compressed})
     return out

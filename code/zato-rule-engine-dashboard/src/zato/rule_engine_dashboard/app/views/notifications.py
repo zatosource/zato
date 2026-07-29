@@ -17,7 +17,8 @@ from zato.common.rule_engine.notify.credentials import credentials_status, Notif
 from zato.common.rule_engine.notify.delivery import list_targets, send_test_message
 from zato.common.rule_engine.notify.matrix import notification_matrix
 from zato.rule_engine_dashboard.app.storage import get_backend
-from zato.rule_engine_dashboard.app.views.api import BadRequestError, json_api, read_json, required
+from zato.rule_engine_dashboard.app.views.api import BadRequestError, json_api, json_items, note_answer, read_json, \
+    required
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,6 +36,7 @@ def _admin_only(req:'any_') -> 'JsonResponse | None':
     if req.user.is_superuser:
         out = None
     else:
+        note_answer(req, 'refused, admins only')
         out = JsonResponse({'error': 'Admins only'}, status=FORBIDDEN)
 
     return out
@@ -79,7 +81,7 @@ def chat_config_status(req:'any_') -> 'any_':
     backend = get_backend()
     items = credentials_status(backend)
 
-    out = JsonResponse({'items': items})
+    out = json_items(req, items, 'chat platform', 'chat platforms')
     return out
 
 # ################################################################################################################################
@@ -97,6 +99,8 @@ def chat_config_save(req:'any_') -> 'any_':
 
     backend = get_backend()
     save_credentials(backend, kind=kind, values=values, actor=req.user.username)
+
+    note_answer(req, f'credentials of `{kind}` stored')
 
     out = JsonResponse({'kind': kind, 'is_configured': True})
     return out
@@ -123,8 +127,11 @@ def chat_config_test(req:'any_') -> 'any_':
     except NotifyConfigError:
         raise
     except Exception as e:
+        note_answer(req, f'the test message to `{target}` on `{kind}` was refused -> {e}')
         out = JsonResponse({'error': str(e)}, status=BAD_GATEWAY)
         return out
+
+    note_answer(req, f'the test message reached `{target}` on `{kind}`')
 
     out = JsonResponse({'kind': kind, 'target': target, 'is_delivered': True})
     return out
@@ -148,10 +155,11 @@ def target_list(req:'any_') -> 'any_':
     except NotifyConfigError:
         raise
     except Exception as e:
+        note_answer(req, f'`{kind}` could not be listed -> {e}')
         out = JsonResponse({'error': str(e)}, status=BAD_GATEWAY)
         return out
 
-    out = JsonResponse({'items': items})
+    out = json_items(req, items, f'target on `{kind}`', f'targets on `{kind}`')
     return out
 
 # ################################################################################################################################
@@ -160,10 +168,9 @@ def target_list(req:'any_') -> 'any_':
 def event_matrix(req:'any_') -> 'any_':
     """ The complete, fixed matrix of events destinations are notified about.
     """
-    _ = req
     items = notification_matrix()
 
-    out = JsonResponse({'items': items})
+    out = json_items(req, items, 'event type', 'event types')
     return out
 
 # ################################################################################################################################
@@ -173,7 +180,6 @@ def event_matrix(req:'any_') -> 'any_':
 def destination_list(req:'any_', definition_id:'int') -> 'any_':
     """ One ruleset's destinations with their delivery status.
     """
-    _ = req
     backend = get_backend()
     records = backend.notifications.list_destinations(definition_id=definition_id, include_inactive=True)
 
@@ -182,7 +188,7 @@ def destination_list(req:'any_', definition_id:'int') -> 'any_':
         row = destination_row(record)
         items.append(row)
 
-    out = JsonResponse({'items': items})
+    out = json_items(req, items, 'destination', 'destinations')
     return out
 
 # ################################################################################################################################
@@ -205,6 +211,8 @@ def destination_add(req:'any_', definition_id:'int') -> 'any_':
 
     row = destination_row(record)
 
+    note_answer(req, f'`{target}` on `{kind}` added to definition {definition_id}')
+
     out = JsonResponse(row)
     return out
 
@@ -214,9 +222,10 @@ def destination_add(req:'any_', definition_id:'int') -> 'any_':
 def destination_delete(req:'any_', destination_id:'int') -> 'any_':
     """ Removes one destination together with its cursor and delivery status.
     """
-    _ = req
     backend = get_backend()
     backend.notifications.delete_destination(destination_id)
+
+    note_answer(req, f'destination {destination_id} removed')
 
     out = JsonResponse({'is_deleted': True})
     return out

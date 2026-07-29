@@ -11,6 +11,7 @@ import json
 from datetime import datetime
 from functools import wraps
 from http.client import BAD_REQUEST, CONFLICT, FORBIDDEN, NOT_FOUND
+from logging import getLogger
 
 # Django
 from django.http import JsonResponse
@@ -21,6 +22,7 @@ from zato.common.rule_engine.sql import ApprovalContentMismatchError, ApprovalRe
     InvalidStoreInputError, RecordNotFoundError, SelfApprovalNotAllowedError, VersionConflictError
 from zato.common.rule_engine.sql.constants import Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
+from zato.common.util.logging_ import count_text
 from zato.rule_engine_dashboard.app.views.common import signed_in_required
 
 # ################################################################################################################################
@@ -33,6 +35,8 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+logger = getLogger(__name__)
 
 Admins_Only_Message = 'This action is reserved for admins'
 
@@ -54,30 +58,60 @@ def _error(message:'str', status:'int') -> 'JsonResponse':
 
 # ################################################################################################################################
 
+def note_answer(req:'any_', note:'str') -> 'None':
+    """ What this request's log line says about its answer, past the status it ends with.
+    """
+    req.answer_note = note
+
+# ################################################################################################################################
+
+def json_items(req:'any_', items:'dictlist', singular:'str', plural:'str') -> 'JsonResponse':
+    """ The list answer every screen reads, with what it carries noted for the log.
+    """
+    item_count = len(items)
+    note = count_text(item_count, singular, plural)
+    note_answer(req, note)
+
+    out = JsonResponse({'items': items})
+    return out
+
+# ################################################################################################################################
+
 def _json_api(view:'any_', needs_admin:'bool') -> 'any_':
     """ The shared body of the JSON endpoint decorators - boundary and store errors become
-    readable JSON responses with matching statuses.
+    readable JSON responses with matching statuses, and every answer says in the log what it carried.
     """
     @wraps(view)
     @signed_in_required
     def wrapper(req:'any_', *args:'any_', **kwargs:'any_') -> 'any_':
 
+        # A view with more to say than its status replaces this note before it answers.
+        req.answer_note = ''
+
         # An endpoint reserved for admins answers everyone else in JSON, the way its callers parse.
         if needs_admin and not req.user.is_superuser:
             out = _error(Admins_Only_Message, FORBIDDEN)
-            return out
+            note_answer(req, Admins_Only_Message)
 
-        try:
-            out = view(req, *args, **kwargs)
-        except BadRequestError as e:
-            out = _error(str(e), BAD_REQUEST)
-        except RecordNotFoundError as e:
-            out = _error(str(e), NOT_FOUND)
-        except (ApprovalContentMismatchError, VersionConflictError) as e:
-            out = _error(str(e), CONFLICT)
-        except (ApprovalRequiredError, InvalidDocumentError, InvalidStoreInputError, NotifyConfigError,
-                SelfApprovalNotAllowedError) as e:
-            out = _error(str(e), BAD_REQUEST)
+        else:
+            try:
+                out = view(req, *args, **kwargs)
+            except BadRequestError as e:
+                out = _error(str(e), BAD_REQUEST)
+            except RecordNotFoundError as e:
+                out = _error(str(e), NOT_FOUND)
+            except (ApprovalContentMismatchError, VersionConflictError) as e:
+                out = _error(str(e), CONFLICT)
+            except (ApprovalRequiredError, InvalidDocumentError, InvalidStoreInputError, NotifyConfigError,
+                    SelfApprovalNotAllowedError) as e:
+                out = _error(str(e), BAD_REQUEST)
+
+        # One line per request tells who asked for what and what came back.
+        if req.answer_note:
+            logger.info('%s %s -> %s -> %s (%s)', req.method, req.path, out.status_code, req.answer_note,
+                req.user.username)
+        else:
+            logger.info('%s %s -> %s (%s)', req.method, req.path, out.status_code, req.user.username)
 
         return out
 
