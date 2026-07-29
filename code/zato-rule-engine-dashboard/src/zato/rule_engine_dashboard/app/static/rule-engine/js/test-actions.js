@@ -259,7 +259,6 @@ testView.promote = function(button) {
             self.render();
             self.renderSubtitle();
         }, data.reportError);
-        shared.popover(button, 'The actual outcome is now the expected one.', 'green');
     }, function(message) {
         shared.popover(button, message, 'red');
     });

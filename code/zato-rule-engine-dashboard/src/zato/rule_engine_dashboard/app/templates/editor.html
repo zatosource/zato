@@ -19,15 +19,13 @@
   </div>
 
   <div class="toolbar">
-    <span class="view-switcher"
-      data-tippy-content="View">
+    <span class="view-switcher">
       <button class="button-ghost toggled" id="view-sentence" onclick="editorView.setView('sentence')">Sentence</button>
       <button class="button-ghost" id="view-expression" onclick="editorView.setView('expression')">Expression</button>
       <button class="button-ghost" id="view-table" onclick="editorView.setView('table')">Table</button>
       <button class="button-ghost" id="view-document" onclick="editorView.setView('document')">Document</button>
     </span>
-    <button class="button-ghost" onclick="editorView.openRuleMenu(event)"
-      data-tippy-content="Rule">Rules</button>
+    <button class="button-ghost" onclick="editorView.openRuleMenu(event)">Rules</button>
     <span class="toolbar-separator"></span>
     <span class="keyboard-hint"><kbd>Arrows</kbd> walk the sentence, <kbd>Enter</kbd> opens the choices of the focused part</span>
     <button class="button-ghost" onclick="editorView.openTests()"

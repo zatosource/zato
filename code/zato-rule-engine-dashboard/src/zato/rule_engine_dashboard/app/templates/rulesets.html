@@ -21,19 +21,16 @@
 
   <div class="toolbar">
     <input class="log-search rulesets-search" id="rulesets-search" type="text"
-      placeholder="Search rule text and names..."
-      data-tippy-content="Search the rules">
+      placeholder="Search rule text and names...">
     <button class="button-ghost rulesets-chip toggled" data-view="all" onclick="rulesetsView.setView(this, 'all')">All</button>
     <button class="button-ghost rulesets-chip" data-view="live" onclick="rulesetsView.setView(this, 'live')">Live</button>
     <button class="button-ghost rulesets-chip" data-view="drafts" onclick="rulesetsView.setView(this, 'drafts')">Drafts</button>
     <button class="button-ghost rulesets-chip" data-view="followed" onclick="rulesetsView.setView(this, 'followed')">Followed</button>
     <span id="rulesets-saved-views"></span>
-    <button class="button-ghost" id="rulesets-save-view-button" onclick="rulesetsView.openSaveViewPanel(this)"
-      data-tippy-content="Save this view">Save view</button>
+    <button class="button-ghost" id="rulesets-save-view-button" onclick="rulesetsView.openSaveViewPanel(this)">Save view</button>
     <span class="toolbar-separator"></span>
     <span id="rulesets-count" class="rulesets-count"></span>
-    <button class="button-ghost" onclick="rulesetsView.newRuleset()"
-      data-tippy-content="New ruleset">New ruleset</button>
+    <button class="button-ghost" onclick="rulesetsView.newRuleset()">New ruleset</button>
     <span class="keyboard-hint"><kbd>/</kbd> searches, <kbd>Arrows</kbd> walk the list, <kbd>Enter</kbd> lists the rules of a set, right-click a row for its menu</span>
   </div>
 

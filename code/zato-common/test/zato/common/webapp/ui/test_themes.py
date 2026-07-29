@@ -35,8 +35,7 @@ _themes_dir = os.path.join(_css_dir, 'themes')
 
 # The themes the kit ships with, in the order the directory lists them
 _expected_theme_files = [
-    'ayu-dark.css', 'dark-high-contrast.css', 'gruvbox-dark-hard.css', 'light-high-contrast.css',
-    'zato-dark.css', 'zato-light.css']
+    'dark-high-contrast.css', 'light-high-contrast.css', 'zato-dark.css', 'zato-light.css']
 
 # ################################################################################################################################
 # ################################################################################################################################

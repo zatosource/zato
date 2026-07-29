@@ -94,8 +94,6 @@ rulesetsView.toggleFollow = function(id) {
         self.renderList();
         self.renderSide();
         shared.initTips();
-        shared.popover(document.querySelector('.rulesets-row[data-id="' + id + '"] .rulesets-star'),
-            followed ? 'Not following.' : 'Following.');
     };
 
     if (followed) {
@@ -122,7 +120,6 @@ rulesetsView.openPublishPanel = function(id, anchor) {
         : 'Draft v' + draft + ' replaces live v' + ruleset.live_version + '.';
 
     shared.openPanel(anchor,
-        '<div class="test-trace-title">Publish ' + shared.escape(ruleset.name) + '</div>' +
         '<div class="floating-panel-line">' + firstLine + '</div>' +
         '<div class="floating-panel-actions">' +
         '<button class="button-primary button-mini" onclick="rulesetsView.confirmPublish(' + id + ', ' + draft + ', this)">' +
@@ -270,7 +267,6 @@ rulesetsView.openSaveViewPanel = function(button) {
     }
 
     shared.openPanel(button,
-        '<div class="test-trace-title">Save this view</div>' +
         '<div class="floating-panel-line">' +
         '<input id="rulesets-view-name" type="text" placeholder="view name" ' +
             'onkeydown="rulesetsView.saveViewKeys(event)">' +
@@ -299,7 +295,6 @@ rulesetsView.confirmSaveView = function(anchor) {
         shared.closePanel();
         self.renderSavedViews();
         shared.initTips();
-        shared.popover(document.querySelector('.rulesets-saved-chip[data-saved-view="' + name + '"]'), 'Saved.', 'green');
     }, function(message) {
         shared.popover(anchor, message, 'red');
     });

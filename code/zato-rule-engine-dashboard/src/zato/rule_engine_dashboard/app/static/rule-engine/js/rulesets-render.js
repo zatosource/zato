@@ -100,16 +100,12 @@ var rulesetsView = {
         var out = '';
 
         if (ruleset.live_version !== null) {
-            out += '<span class="rulesets-badge rulesets-badge-live" ' +
-                'data-tippy-content="This version answers requests right now.">live v' + ruleset.live_version + '</span>';
+            out += '<span class="rulesets-badge rulesets-badge-live">live v' + ruleset.live_version + '</span>';
         }
         if (draft !== null) {
-            out += '<span class="rulesets-badge rulesets-badge-draft" ' +
-                'data-tippy-content="Unpublished draft">draft v' + draft + '</span>';
+            out += '<span class="rulesets-badge rulesets-badge-draft">draft v' + draft + '</span>';
             out += '<button class="button-mini rulesets-publish" ' +
-                'onclick="event.stopPropagation(); rulesetsView.openPublishPanel(' + ruleset.id + ', this)" ' +
-                'data-tippy-content="Publish draft v' + draft +
-                ': a confirmation first, a snapshot is taken and the new version starts answering.">publish</button>';
+                'onclick="event.stopPropagation(); rulesetsView.openPublishPanel(' + ruleset.id + ', this)">publish</button>';
         }
         return out;
     },
@@ -117,9 +113,7 @@ var rulesetsView = {
     starHtml: function(ruleset) {
         var followed = rulesetsModel.isFollowed(ruleset.id);
         var stateClass = followed ? ' rulesets-star-on' : '';
-        var hint = followed
-            ? 'You follow this ruleset, its changes lead the feed. Click to unfollow.'
-            : 'Not followed. Click to follow, its changes will lead the feed.';
+        var hint = followed ? 'Following' : 'Follow';
 
         var out = '<span class="rulesets-star' + stateClass + '" ' +
             'onclick="event.stopPropagation(); rulesetsView.toggleFollow(' + ruleset.id + ')" ' +
@@ -281,8 +275,7 @@ var rulesetsView = {
         var html = '<div class="test-grid-title">Since you were last here</div>';
 
         if (rulesetsModel.feed.length === 0) {
-            html += '<div class="rulesets-preview-note">Nothing new on the rulesets you follow. ' +
-                'The star on a row starts following it.</div>';
+            html += '<div class="rulesets-preview-note">Nothing new on the rulesets you follow.</div>';
             return html;
         }
 
@@ -308,22 +301,16 @@ var rulesetsView = {
 
         var html = '<div class="test-grid-title">' + shared.escape(ruleset.name) +
             '<button class="button-mini rulesets-rename" ' +
-            'onclick="rulesetsView.openRenamePanel(' + ruleset.id + ', this)" ' +
-            'data-tippy-content="Rename the ruleset: the impact first, including how many calls its ' +
-            'current name has served.">rename</button></div>';
+            'onclick="rulesetsView.openRenamePanel(' + ruleset.id + ', this)">rename</button></div>';
 
         var statusValue = (ruleset.live_version === null ? 'never published' : 'live v' + ruleset.live_version) +
             (draft === null ? '' : ', draft v' + draft + ' in progress');
         if (draft !== null) {
             statusValue += ' <button class="button-mini rulesets-publish" ' +
-                'onclick="rulesetsView.openPublishPanel(' + ruleset.id + ', this)" ' +
-                'data-tippy-content="Publish draft v' + draft +
-                ': a confirmation first, a snapshot is taken and the new version starts answering.">publish</button>';
+                'onclick="rulesetsView.openPublishPanel(' + ruleset.id + ', this)">publish</button>';
         }
 
-        var followValue = preview.is_following
-            ? 'yes, its changes lead the feed'
-            : 'no, the star on its row starts following it';
+        var followValue = preview.is_following ? 'yes' : 'no';
 
         html += '<table class="test-grid"><tbody>';
         html += '<tr><td class="test-label-cell">status</td><td class="test-value-cell log-value-readonly">' +
@@ -402,8 +389,7 @@ var rulesetsView = {
             if (ruleset === undefined) { return; }
 
             html += '<button class="button-ghost rulesets-recent-chip" ' +
-                'onclick="rulesetsView.pickRecent(' + ruleset.id + ')" ' +
-                'data-tippy-content="Select it in the list">' +
+                'onclick="rulesetsView.pickRecent(' + ruleset.id + ')">' +
                 shared.escape(ruleset.name) + '</button>';
         });
 
@@ -429,7 +415,7 @@ var rulesetsView = {
                 'onclick="rulesetsView.applySavedView(this, \'' + shared.escape(view.name) + '\')" ' +
                 'data-tippy-content="' + self.describeView(view.payload) + '">' + shared.escape(view.name) +
                 '<span class="rulesets-view-x" onclick="event.stopPropagation(); rulesetsView.deleteSavedView(\'' +
-                shared.escape(view.name) + '\')" data-tippy-content="Deletes this view.">' + shared.icon('x', 10) + '</span></button>';
+                shared.escape(view.name) + '\')">' + shared.icon('x', 10) + '</span></button>';
         });
 
         holder.innerHTML = html;

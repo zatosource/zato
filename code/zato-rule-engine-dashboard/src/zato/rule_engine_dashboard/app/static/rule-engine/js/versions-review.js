@@ -59,8 +59,7 @@ versionsView.renderReview = function() {
         var selfText = approval.allow_self_approval ? 'allowed' : 'not allowed';
         html += '<div class="versions-review-row"><span>Self-approval</span><b>' + selfText +
             ' <button class="button-mini" ' +
-            'onclick="versionsView.setSelfApproval(this, ' + !approval.allow_self_approval + ')" ' +
-            'data-tippy-content="Self-approval">' +
+            'onclick="versionsView.setSelfApproval(this, ' + !approval.allow_self_approval + ')">' +
             (approval.allow_self_approval ? 'Forbid' : 'Allow') + '</button></b></div>';
     }
 
@@ -86,8 +85,7 @@ versionsView.renderReview = function() {
     if (versionsModel.toNumber === versionsModel.liveVersion) {
         html += '<div class="versions-note">Live.</div>';
     } else {
-        html += '<button class="button-primary versions-review-button" onclick="versionsView.publish(this)" ' +
-            'data-tippy-content="Make v' + versionsModel.toNumber + ' live">Publish v' +
+        html += '<button class="button-primary versions-review-button" onclick="versionsView.publish(this)">Publish v' +
             versionsModel.toNumber + '</button>';
     }
 

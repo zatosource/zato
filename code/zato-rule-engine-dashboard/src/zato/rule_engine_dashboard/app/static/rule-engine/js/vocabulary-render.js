@@ -50,7 +50,7 @@ var vocabularyView = {
 
                 var classes = 'vocabulary-tree-item' + (path === self.selectedPath ? ' vocabulary-tree-item-selected' : '');
                 var flag = attribute.status === 'deprecated'
-                    ? '<span class="vocabulary-flag" data-tippy-content="Deprecated">deprecated</span>'
+                    ? '<span class="vocabulary-flag">deprecated</span>'
                     : '';
 
                 var pathText = shared.escape(path);
@@ -77,7 +77,7 @@ var vocabularyView = {
         }
         if (total > shown) {
             html += '<div class="vocabulary-tree-more">Showing the first ' + shown + ' of ' + total +
-                ' matching terms, the filter above narrows this down.</div>';
+                ' matching terms</div>';
         }
         document.getElementById('vocabulary-tree-count').textContent = total + ' terms';
         document.getElementById('vocabulary-tree-list').innerHTML = html;
@@ -104,7 +104,7 @@ var vocabularyView = {
 
     headHtml: function(path, attribute) {
         var flag = attribute.status === 'deprecated'
-            ? '<span class="vocabulary-flag" data-tippy-content="Deprecated">deprecated</span>' : '';
+            ? '<span class="vocabulary-flag">deprecated</span>' : '';
 
         var out = '<div class="vocabulary-detail-head">' +
             '<span class="vocabulary-detail-name" onclick="vocabularyView.openRenamePopover(this)" ' +
@@ -128,11 +128,11 @@ var vocabularyView = {
                 '<td class="' + classes + '" data-field="' + field + '"' + editAttributes + '>' + valueHtml + '</td></tr>';
         };
 
-        row('phrase, how rules read it', 'phrase', shared.escape(attribute.phrase), true);
+        row('phrase', 'phrase', shared.escape(attribute.phrase), true);
         row('type', 'type', shared.escape(attribute.type), false);
 
         if (attribute.type === 'choice') {
-            row('allowed values, everywhere at once', 'values', shared.escape(attribute.values.join(', ')), true);
+            row('allowed values', 'values', shared.escape(attribute.values.join(', ')), true);
         }
         if (attribute.type === 'number range') {
             row('allowed range', 'domain', attribute.domain.low + ' .. ' + attribute.domain.high, true);
@@ -142,8 +142,6 @@ var vocabularyView = {
         row('description', 'description', shared.escape(description), true);
 
         html += '</tbody></table>';
-        html += '<div class="vocabulary-definition-note">The same definition drives the editor dropdowns, the table ' +
-            'cells, the scenario forms and the API validation, one change lands everywhere at once.</div>';
         return html;
     },
 
@@ -160,8 +158,7 @@ var vocabularyView = {
         var deprecateButton = attribute.status === 'deprecated'
             ? '<button class="button-mini" onclick="vocabularyView.restore(this)" ' +
               'data-tippy-content="Back into every picker.">Restore</button>'
-            : '<button class="button-mini" onclick="vocabularyView.deprecate(this)" ' +
-              'data-tippy-content="Retire the term">Deprecate</button>';
+            : '<button class="button-mini" onclick="vocabularyView.deprecate(this)">Deprecate</button>';
 
         var deleteButton = usage.canDelete
             ? '<button class="button-mini vocabulary-delete-enabled" onclick="vocabularyView.deleteTerm(this)" ' +
@@ -173,7 +170,7 @@ var vocabularyView = {
             '<span class="vocabulary-usage-buttons">' + deprecateButton + deleteButton + '</span></div>';
 
         if (usage.groups.length === 0) {
-            html += '<div class="test-run-note">Nothing uses this term, it can be deleted safely.</div>';
+            html += '<div class="test-run-note">Nothing uses this term.</div>';
         }
 
         usage.groups.forEach(function(group) {
@@ -181,8 +178,7 @@ var vocabularyView = {
             group.entries.forEach(function(entry) {
                 html += '<a class="vocabulary-usage-entry vocabulary-usage-link" ' +
                     'href="' + self.config.editorUrl + '?ruleset=' + group.definitionId + '#term=' +
-                        encodeURIComponent(path) + '" ' +
-                    'data-tippy-content="Open the rule">' +
+                        encodeURIComponent(path) + '">' +
                     shared.escape(self.entryText(entry)) + shared.icon('external-link', 10) + '</a>';
             });
         });

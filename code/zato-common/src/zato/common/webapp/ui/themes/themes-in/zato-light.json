@@ -1,6 +1,6 @@
 {
 	"$schema": "vscode://schemas/color-theme",
-	"name": "Zato Light",
+	"name": "Zato light",
 	"type": "light",
 	"colors": {
 		"editor.background": "#ffffff",

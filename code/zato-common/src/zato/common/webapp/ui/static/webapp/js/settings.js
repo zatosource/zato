@@ -34,10 +34,11 @@ var settingsView = {
 
         window.themesIndex.forEach(function(theme) {
             var active = theme.slug === current;
+            var marker = active ? '<span class="settings-theme-kind">active</span>' : '';
+
             html += '<button class="settings-theme-entry' + (active ? ' settings-theme-active' : '') + '" ' +
                 'onclick="settingsView.applyTheme(\'' + theme.slug + '\')">' +
-                '<span>' + theme.name + '</span>' +
-                '<span class="settings-theme-kind">' + theme.type + (active ? ' \u00b7 active' : '') + '</span>' +
+                '<span>' + theme.name + '</span>' + marker +
                 '</button>';
         });
 

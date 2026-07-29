@@ -155,8 +155,7 @@ logView.openCapturePanel = function(button) {
     if (this.panelElement !== null) { this.closePanel(); return; }
 
     var readout = logModel.captureReadout();
-    var html = '<div class="log-capture-title">Capture and retention</div>' +
-        '<div class="log-capture-row"><span>Searchable header of every decision</span><b>always kept</b></div>' +
+    var html = '<div class="log-capture-row"><span>Searchable header of every decision</span><b>always kept</b></div>' +
         '<div class="log-capture-row"><span>Full story of every error</span><b>always kept</b></div>' +
         '<div class="log-capture-row"><span>Full stories of successes on this page</span><b>' +
             readout.successKept + ' of ' + readout.successTotal + '</b></div>';
@@ -169,7 +168,7 @@ logView.openRuleCounts = function(button) {
     var self = this;
 
     logModel.ruleCounts(this.rangeDays, function(counts) {
-        var html = '<div class="log-capture-title">Which rules fire</div>';
+        var html = '';
 
         Object.keys(counts.totals).sort().forEach(function(rule) {
             html += '<div class="log-capture-row"><span>' + shared.escape(rule) + '</span><b>' +

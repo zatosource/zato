@@ -188,8 +188,7 @@ var logView = {
 
         html += '<div class="log-version-line">Decided by ' + shared.escape(logModel.rulesetName) +
             ' version ' + decision.rules_version +
-            '. <a class="log-version-link" href="/versions/?ruleset=' + decision.ruleset_id + '" ' +
-            'data-tippy-content="Open version ' + decision.rules_version + '">' +
+            '. <a class="log-version-link" href="/versions/?ruleset=' + decision.ruleset_id + '">' +
             'Open the rules as they were</a></div>';
 
         if (!decision.has_payload) {

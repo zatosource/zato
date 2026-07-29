@@ -115,7 +115,7 @@ notifyView.openMatrix = function(button) {
     var self = this;
 
     notifyModel.loadMatrix(function() {
-        var html = '<div class="log-capture-title">What destinations are told about</div>';
+        var html = '';
 
         notifyModel.matrix.forEach(function(entry) {
             html += '<div class="notify-matrix-item">' +

@@ -156,6 +156,16 @@ shadows = {
 
 # ################################################################################################################################
 
+# The color a rule name is written in wherever one is listed, over a wash that
+# darkens whatever surface it sits on. A dark theme takes the bright yellow, a
+# light one the same hue burnt down to where it still reads on a pale surface.
+rule_names = {
+    'dark': {'--rule-name': '#fffb00', '--rule-name-background': 'rgba(0,0,0,0.30)'},
+    'light': {'--rule-name': '#6b5300', '--rule-name-background': 'rgba(0,0,0,0.06)'},
+}
+
+# ################################################################################################################################
+
 # The logo file a theme is drawn with: a dark theme takes the white one,
 # a light theme the blue one, and a theme whose overrides meta names a
 # file takes that one - a light high contrast theme wants the black one.
@@ -178,7 +188,7 @@ logo_opacity = '0.75'
 
 # The full token set every generated theme carries, in output order.
 token_order = list(mapping) + list(mixes) + list(tints) + \
-    ['--shadow-strong', '--shadow-soft', '--logo', '--logo-opacity']
+    ['--shadow-strong', '--shadow-soft', '--rule-name', '--rule-name-background', '--logo', '--logo-opacity']
 
 # The problems panel must always read as its own surface: surfaces closer
 # to the background than this channel distance count as the background,
