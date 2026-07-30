@@ -156,9 +156,8 @@ var notifyView = {
             if (entry.is_configured) {
                 html += '<div class="notify-test-row">' +
                     '<input type="text" id="notify-test-' + kind + '" placeholder="Channel to test against...">' +
-                    '<button class="button-ghost" onclick="notifyView.sendTest(this, \'' + kind + '\')" ' +
-                    'data-tippy-content="Sends one test message there with the stored credentials - the ' +
-                    'platform\u2019s own answer comes back verbatim when it refuses.">Send test</button>' +
+                    '<button class="button-ghost" onclick="notifyView.sendTest(this, \'' + kind +
+                    '\')">Send test</button>' +
                     '</div>';
             }
 

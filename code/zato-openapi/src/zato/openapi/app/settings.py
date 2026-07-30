@@ -7,7 +7,7 @@ This file is a proprietary product, not an open-source one.
 """
 
 # Zato
-from zato.common.webapp.settings import build_settings
+from zato.common.webapp.settings import build_settings, build_templates
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -24,19 +24,9 @@ globals().update(build_settings(
 
 WSGI_APPLICATION = 'zato.openapi.app.wsgi.application'
 
-# The console's own templates are found by the app-directories loader, under app/templates
-TEMPLATES = [
-    {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-            ],
-        },
-    },
-]
+TEMPLATES = build_templates(context_processors=[
+    'django.template.context_processors.request',
+])
 
 # ################################################################################################################################
 # ################################################################################################################################

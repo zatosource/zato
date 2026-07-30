@@ -42,7 +42,7 @@ tableView.rowControls = function(kind, rowKey) {
     var out = '<input type="checkbox" class="table-row-checkbox"' + checked +
         ' onchange="tableView.toggleRowCheck(\'' + kind + '\', \'' + rowKey + '\', this.checked)">' +
         '<span class="table-drag-handle" draggable="true" data-kind="' + kind + '" data-row="' + rowKey + '" ' +
-        'data-tippy-content="Drag to reorder this row">' + shared.icon('grip-vertical', 11) + '</span>';
+        '>' + shared.icon('grip-vertical', 11) + '</span>';
 
     return out;
 };
@@ -57,10 +57,8 @@ tableView.columnHeadHtml = function(column, context) {
     if (this.selectedColumn === label) { classes.push('table-column-selected'); }
 
     var subtitle = '';
-    var tooltip = '';
     if (column.number === 0) {
         subtitle = '<span class="table-column-subtitle">always, fires first</span>';
-        tooltip = ' data-tippy-content="Actions only, fires first"';
     }
 
     var parentLabel = tableModel.parentLabel(column);
@@ -71,7 +69,7 @@ tableView.columnHeadHtml = function(column, context) {
         this.columnHintHtml(column) + '</span>';
 
     var out = '<th class="' + classes.join(' ') + '" data-column="' + label + '"' + dragAttribute + ' ' +
-        'onclick="tableView.selectColumn(\'' + label + '\')"' + tooltip + '>' +
+        'onclick="tableView.selectColumn(\'' + label + '\')">' +
         label + subtitle + hint + '</th>';
 
     return out;
@@ -82,9 +80,8 @@ tableView.columnHintHtml = function(column) {
     var parentLabel = tableModel.parentLabel(column);
 
     if (parentLabel !== '') {
-        var out = '<span class="table-unfold-hint" onclick="tableView.foldColumn(event, \'' + parentLabel + '\')" ' +
-            'data-tippy-content="Sub-rule of ' + parentLabel + ', a read-only view of one logical possibility. ' +
-            'Click to fold the sub-rules back into one column.">' + shared.icon('chevrons-down-up', 10) + '</span>';
+        var out = '<span class="table-unfold-hint" onclick="tableView.foldColumn(event, \'' + parentLabel + '\')">' +
+            shared.icon('chevrons-down-up', 10) + '</span>';
         return out;
     }
 
@@ -92,9 +89,7 @@ tableView.columnHintHtml = function(column) {
     if (unfoldableRow === null) { return ''; }
 
     var count = tableModel.reading(column, unfoldableRow.letter).items.length;
-    var result = '<span class="table-unfold-hint" onclick="tableView.unfoldColumn(event, \'' + label + '\')" ' +
-        'data-tippy-content="The ' + unfoldableRow.subject + ' cell holds ' + count + ' values. ' +
-        'Click to unfold into sub-rules">' +
+    var result = '<span class="table-unfold-hint" onclick="tableView.unfoldColumn(event, \'' + label + '\')">' +
         shared.icon('chevrons-up-down', 10) + count + '</span>';
 
     return result;
@@ -124,11 +119,11 @@ tableView.filterRowsHtml = function(columnCount) {
 
         var removeControl = this.phraseMode ? '' :
             '<span class="table-filter-remove" onclick="tableView.removeFilter(event)" ' +
-            'data-tippy-content="Remove the filter">' + shared.icon('x', 11) + '</span>';
+            '>' + shared.icon('x', 11) + '</span>';
 
         html += '<tr class="table-filter-row"><td class="table-expression-column">' +
             '<span class="' + displayClass + '" onclick="tableView.editFilter(this)" ' +
-            'data-tippy-content="Edit the filter">' +
+            '>' +
             shared.escape(display) + '</span>' + removeControl + '</td>';
 
         html += '<td class="table-filter-span" colspan="' + columnCount + '">applies to every rule column</td></tr>';
@@ -241,7 +236,6 @@ tableView.gridHtml = function(context) {
         });
         html += '<td class="table-override-cell" data-column="' + columnLabel + '">' +
             '<select class="' + (current !== '' ? 'table-has-override' : '') + '" ' +
-            'data-tippy-content="This rule wins over the other" ' +
             'onchange="tableView.setOverride(\'' + columnLabel + '\', this.value)">' + options + '</select></td>';
     });
     html += '</tr>';

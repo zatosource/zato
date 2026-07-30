@@ -269,7 +269,7 @@ rulesetsView.onKeyDown = function(event) {
 
 document.addEventListener('keydown', function(event) { rulesetsView.onKeyDown(event); });
 
-shared.panelToggles.push('.rulesets-publish', '.command-suggest-row');
+shared.panelToggles.push('.rulesets-publish', '#rulesets-save-view');
 
 shared.attachPaneResize(document.getElementById('rulesets-side-resizer'),
     document.getElementById('rulesets-side'), 'x-right');

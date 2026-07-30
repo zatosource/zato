@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 
 # Zato
-from zato.common.webapp.settings import build_settings
+from zato.common.webapp.settings import build_settings, build_templates
 from zato.rule_engine_dashboard.app.database import database_from_url
 
 # ################################################################################################################################
@@ -52,22 +52,12 @@ globals().update(build_settings(
 
 LOGIN_URL = '/login/'
 
-# The screens are found by the app-directories loader, both the dashboard's own and the shared UI kit's
-TEMPLATES = [
-    {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-                'zato.common.webapp.ui.context.theme',
-            ],
-        },
-    },
-]
+TEMPLATES = build_templates(context_processors=[
+    'django.template.context_processors.request',
+    'django.contrib.auth.context_processors.auth',
+    'django.contrib.messages.context_processors.messages',
+    'zato.common.webapp.ui.context.theme',
+])
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 

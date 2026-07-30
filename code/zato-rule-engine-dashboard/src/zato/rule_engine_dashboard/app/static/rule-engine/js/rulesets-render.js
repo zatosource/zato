@@ -15,6 +15,7 @@ var rulesetsView = {
 
         loadingText: 'Loading',
         emptyRulesText: 'No rules yet',
+        saveViewLabel: 'Create view',
         searchDelayMilliseconds: 160,
 
         rulesetNamePattern: /^\w+(\.\w+)*$/,
@@ -31,8 +32,6 @@ var rulesetsView = {
             views: 'Saved views',
             text: 'Search',
         },
-
-        saveViewLabel: 'Save as view',
 
         openUrls: {
             tables: '/tables/',
@@ -132,11 +131,10 @@ var rulesetsView = {
     starHtml: function(ruleset) {
         var followed = rulesetsModel.isFollowed(ruleset.id);
         var stateClass = followed ? ' rulesets-star-on' : '';
-        var hint = followed ? 'Following' : 'Follow';
 
         var out = '<span class="rulesets-star' + stateClass + '" ' +
-            'onclick="event.stopPropagation(); rulesetsView.toggleFollow(' + ruleset.id + ')" ' +
-            'data-tippy-content="' + hint + '">' + shared.icon('star', 13) + '</span>';
+            'onclick="event.stopPropagation(); rulesetsView.toggleFollow(' + ruleset.id + ')">' +
+            shared.icon('star', 13) + '</span>';
         return out;
     },
 
@@ -401,43 +399,67 @@ var rulesetsView = {
         var narrowed = this.narrowed();
 
         count.textContent = narrowed ? matching + ' of ' + total : String(total);
-        clear.style.display = narrowed ? 'inline-flex' : 'none';
+        clear.style.visibility = narrowed ? 'visible' : 'hidden';
     },
 
     renderSuggestions: function() {
         var pane = document.getElementById('rulesets-suggest');
+        var groups = this.config.groups;
         var self = this;
-        var lastGroup = null;
         var html = '';
 
-        this.suggestions.forEach(function(entry, index) {
-            if (entry.group !== lastGroup) {
-                html += '<div class="command-suggest-title">' + entry.group + '</div>';
-                lastGroup = entry.group;
-            }
+        [groups.facets, groups.views, groups.text].forEach(function(group) {
+            var rows = '';
 
-            var active = index === self.suggestionIndex ? ' command-suggest-row-active' : '';
-            var check = entry.token !== null && self.isChosen(entry.token) ? shared.icon('check', 12) : '';
-            var tail = '<span class="command-suggest-count">' +
-                (entry.count === null ? '' : entry.count) + '</span>';
+            self.suggestions.forEach(function(entry, index) {
+                if (entry.group !== group) { return; }
+                rows += self.suggestRowHtml(entry, index);
+            });
 
-            // A saved view carries its own way out, so a view is dropped where it is offered
-            if (entry.view !== null) {
-                tail = '<button class="command-suggest-drop" data-tippy-content="Delete" ' +
-                    'onmousedown="event.preventDefault(); event.stopPropagation(); ' +
-                    'rulesetsView.dropSavedView(' + index + ')">' + shared.icon('x', 10) + '</button>';
-            }
+            // The saved views group holds the button that makes one, so its title is always there
+            if (rows === '' && group !== groups.views) { return; }
 
-            html += '<div class="command-suggest-row' + active + '" ' +
-                'onmousedown="event.preventDefault(); rulesetsView.pick(' + index + ')">' +
-                '<span class="command-suggest-check">' + check + '</span>' +
-                '<span class="command-suggest-facet">' + entry.facet + '</span>' +
-                '<span class="command-suggest-value">' + shared.escape(entry.value) + '</span>' +
-                tail + '</div>';
+            html += self.suggestTitleHtml(group) + rows;
         });
 
         pane.innerHTML = html;
-        pane.classList.toggle('command-suggest-open', this.suggestOpen && html !== '');
+        pane.classList.toggle('command-suggest-open', this.suggestOpen);
+    },
+
+    suggestTitleHtml: function(group) {
+        var button = '';
+
+        if (group === this.config.groups.views) {
+            button = '<button class="button-mini command-suggest-new" id="rulesets-save-view" ' +
+                'onmousedown="event.preventDefault(); event.stopPropagation(); ' +
+                'rulesetsView.openSaveViewPanel(this)">' + this.config.saveViewLabel + '</button>';
+        }
+
+        return '<div class="command-suggest-title">' + group + button + '</div>';
+    },
+
+    suggestRowHtml: function(entry, index) {
+        var html = '';
+        var active = index === this.suggestionIndex ? ' command-suggest-row-active' : '';
+        var check = entry.token !== null && this.isChosen(entry.token) ? shared.icon('check', 12) : '';
+        var tail = '<span class="command-suggest-count">' +
+            (entry.count === null ? '' : entry.count) + '</span>';
+
+        // A saved view carries its own way out, so a view is dropped where it is offered
+        if (entry.view !== null) {
+            tail = '<button class="command-suggest-drop" ' +
+                'onmousedown="event.preventDefault(); event.stopPropagation(); ' +
+                'rulesetsView.dropSavedView(' + index + ')">' + shared.icon('x', 10) + '</button>';
+        }
+
+        html += '<div class="command-suggest-row' + active + '" ' +
+            'onmousedown="event.preventDefault(); rulesetsView.pick(' + index + ')">' +
+            '<span class="command-suggest-check">' + check + '</span>' +
+            '<span class="command-suggest-facet">' + entry.facet + '</span>' +
+            '<span class="command-suggest-value">' + shared.escape(entry.value) + '</span>' +
+            tail + '</div>';
+
+        return html;
     },
 
 // ////////////////////////////////////////////////////////////////////////

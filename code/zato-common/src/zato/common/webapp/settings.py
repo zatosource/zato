@@ -13,7 +13,7 @@ from zato.common.crypto.api import CryptoManager
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import stranydict, strlist
+    from zato.common.typing_ import anylist, stranydict, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,6 +36,13 @@ _base_middleware = [
 
 # Every application serves its assets from under this prefix
 static_url = '/static/'
+
+# The loaders are named here rather than left to APP_DIRS, because Django then wraps them in its
+# caching loader, which holds every compiled screen in memory for the life of a worker process.
+_template_loaders = [
+    'django.template.loaders.filesystem.Loader',
+    'django.template.loaders.app_directories.Loader',
+]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -80,6 +87,26 @@ def build_settings(
         'USE_I18N': True,
         'USE_TZ': True,
     }
+
+    return out
+
+# ################################################################################################################################
+
+def build_templates(*, context_processors:'strlist') -> 'anylist':
+    """ The template configuration every standalone Zato web application shares - the screens are
+    found by the app-directories loader, both an application's own and the shared UI kit's, and each
+    one is read from disk as it is used, so editing a screen needs no restart.
+    """
+    out = [
+        {
+            'BACKEND': 'django.template.backends.django.DjangoTemplates',
+            'DIRS': [],
+            'OPTIONS': {
+                'context_processors': context_processors,
+                'loaders': _template_loaders,
+            },
+        },
+    ]
 
     return out
 

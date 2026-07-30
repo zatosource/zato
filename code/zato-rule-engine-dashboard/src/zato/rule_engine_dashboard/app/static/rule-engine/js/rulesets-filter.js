@@ -50,7 +50,6 @@ rulesetsView.buildSuggestions = function() {
             count: counts[candidate.field],
             token: candidate,
             view: null,
-            save: false,
         });
     });
 
@@ -64,22 +63,8 @@ rulesetsView.buildSuggestions = function() {
             count: null,
             token: null,
             view: view,
-            save: false,
         });
     });
-
-    // What is on screen right now can become a view of its own, offered next to the saved ones
-    if (this.narrowed()) {
-        out.push({
-            group: groups.views,
-            facet: 'view',
-            value: this.config.saveViewLabel,
-            count: null,
-            token: null,
-            view: null,
-            save: true,
-        });
-    }
 
     // The typed text itself is an entry, so a search always has a row to land on
     if (typed !== '') {
@@ -90,7 +75,6 @@ rulesetsView.buildSuggestions = function() {
             count: null,
             token: null,
             view: null,
-            save: false,
         });
     }
 
@@ -131,11 +115,6 @@ rulesetsView.pick = function(index) {
 
     if (entry.view !== null) {
         this.applySavedView(entry.view.name);
-        return;
-    }
-
-    if (entry.save) {
-        this.openSaveViewPanel(document.getElementById('rulesets-field'));
         return;
     }
 

@@ -19,14 +19,18 @@ shared.closePanel = function() {
 shared.openPanel = function(anchor, html) {
     shared.closePanel();
 
+    var rectangle = anchor.getBoundingClientRect();
+
     var panel = document.createElement('div');
     panel.className = 'floating-panel';
     panel.innerHTML = html;
     document.body.appendChild(panel);
 
-    var rectangle = anchor.getBoundingClientRect();
-    panel.style.top = (rectangle.bottom + 6) + 'px';
-    panel.style.left = Math.min(rectangle.left, window.innerWidth - panel.offsetWidth - 8) + 'px';
+    var top = rectangle.bottom + 6;
+    var left = rectangle.left;
+
+    panel.style.top = Math.min(top, window.innerHeight - panel.offsetHeight - 8) + 'px';
+    panel.style.left = Math.min(left, window.innerWidth - panel.offsetWidth - 8) + 'px';
     shared.panelElement = panel;
 
     var input = panel.querySelector('input');

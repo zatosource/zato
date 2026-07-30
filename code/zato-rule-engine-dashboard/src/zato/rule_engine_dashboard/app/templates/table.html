@@ -12,14 +12,14 @@
 <div class="main-column">
   <div class="toolbar">
     <button class="button-ghost" id="button-completeness" onclick="tableView.checkCompleteness()"
-      data-tippy-content="Add the missing combinations">Check completeness</button>
+      >Check completeness</button>
     <button class="button-ghost" id="button-conflicts" onclick="tableView.checkConflicts()">Check conflicts</button>
     <button class="button-ghost" id="button-unfold" onclick="tableView.toggleUnfoldAll()">Unfold rules</button>
     <button class="button-ghost" id="button-compress" onclick="tableView.compress()"
-      data-tippy-content="Merge the columns that differ in one row">Compress</button>
+      >Compress</button>
     <span class="toolbar-separator"></span>
     <button class="button-ghost" id="button-phrases" onclick="tableView.togglePhrases()"
-      data-tippy-content="Every row as a phrase, values editable">Phrases</button>
+      >Phrases</button>
     <span class="table-phrase-note" id="table-phrase-note">Phrase view</span>
     <span class="toolbar-separator"></span>
     <input type="text" id="find-input" placeholder="Find in table..." oninput="tableView.render()">
@@ -28,9 +28,9 @@
     <span class="toolbar-separator"></span>
     <button class="button-ghost" id="button-add-column" onclick="tableView.addColumn()">Add rule column</button>
     <button class="button-ghost" onclick="tableView.openTests()"
-      data-tippy-content="Open the tests screen">Test</button>
+      >Test</button>
     <button class="button-primary" onclick="tableView.save(this)"
-      data-tippy-content="Save as a new version">Save</button>
+      >Save</button>
   </div>
 
   <div class="table-grid-area" id="table-grid-area"></div>
