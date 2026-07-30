@@ -4,6 +4,8 @@
 
 shared.panelElement = null;
 
+shared.panelAnchor = null;
+
 shared.panelToggles = ['#settings-button'];
 
 // ////////////////////////////////////////////////////////////////////////
@@ -12,6 +14,7 @@ shared.closePanel = function() {
     if (shared.panelElement === null) { return; }
     shared.panelElement.remove();
     shared.panelElement = null;
+    shared.panelAnchor = null;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -19,19 +22,14 @@ shared.closePanel = function() {
 shared.openPanel = function(anchor, html) {
     shared.closePanel();
 
-    var rectangle = anchor.getBoundingClientRect();
-
     var panel = document.createElement('div');
     panel.className = 'floating-panel';
     panel.innerHTML = html;
     document.body.appendChild(panel);
 
-    var top = rectangle.bottom + 6;
-    var left = rectangle.left;
-
-    panel.style.top = Math.min(top, window.innerHeight - panel.offsetHeight - 8) + 'px';
-    panel.style.left = Math.min(left, window.innerWidth - panel.offsetWidth - 8) + 'px';
+    shared.placeFloating(panel, anchor.getBoundingClientRect());
     shared.panelElement = panel;
+    shared.panelAnchor = anchor;
 
     var input = panel.querySelector('input');
     if (input !== null) { input.focus(); input.select(); }
@@ -48,6 +46,17 @@ document.addEventListener('mousedown', function(event) {
     if (isToggle) { return; }
 
     if (!shared.panelElement.contains(event.target)) { shared.closePanel(); }
+});
+
+// A window that changed size leaves the panel where it can still be reached and used
+window.addEventListener('resize', function() {
+    if (shared.panelElement === null) { return; }
+
+    // A repainted screen can replace the element the panel came from, and a gone anchor
+    // has no rectangle to place anything against
+    if (!document.body.contains(shared.panelAnchor)) { return; }
+
+    shared.placeFloating(shared.panelElement, shared.panelAnchor.getBoundingClientRect());
 });
 
 })();
