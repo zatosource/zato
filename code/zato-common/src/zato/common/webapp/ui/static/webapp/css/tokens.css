@@ -19,6 +19,11 @@
     /* The edge a control takes when it holds the focus, and the edge of a button that acts
        within a panel - the accent of the acting buttons stirred into the resting border */
     --focus-edge: color-mix(in srgb, var(--action-edge) 45%, var(--border));
+
+    /* How far into a field its text begins, and how far past that the hint of the field stands,
+       the caret being at the text's own start */
+    --field-indent: 9px;
+    --hint-gap: 4px;
 }
 body {
     font-family: var(--font);

@@ -13,7 +13,9 @@
 {% block content %}
 <div class="main-column">
   <div class="toolbar">
-    <input class="log-search" id="vocabulary-filter" type="text" placeholder="Filter terms...">
+    <span class="field" data-hint="Filter terms">
+      <input class="log-search" id="vocabulary-filter" type="text" placeholder=" ">
+    </span>
     <span class="toolbar-separator"></span>
     <button class="button-ghost" id="vocabulary-payload-button"
       onclick="vocabularyView.openPayloadPanel(this)"

@@ -128,9 +128,12 @@
     padding-top: 12px;
     border-top: 1px dashed var(--border);
 }
+.notify-test-row .field {
+    flex: 1;
+}
 .notify-test-row input {
     flex: 1;
-    padding: 6px 9px;
+    padding: 6px var(--field-indent);
     border: 1px solid var(--border);
     border-radius: var(--radius-2);
     font-size: 12px;

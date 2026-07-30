@@ -138,7 +138,7 @@ form.filters {
 }
 form.filters input[type="text"],
 form.filters select {
-    padding: 7px 10px;
+    padding: 7px var(--field-indent);
     border: 1px solid var(--border);
     border-radius: var(--radius-2);
     font-size: 12.5px;
