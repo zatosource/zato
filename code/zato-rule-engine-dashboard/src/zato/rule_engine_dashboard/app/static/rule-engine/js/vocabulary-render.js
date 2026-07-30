@@ -152,7 +152,7 @@ var vocabularyView = {
         var usage = this.usage;
 
         if (usage === null) {
-            return '<div class="test-grid-title vocabulary-usage-title">Used in ...</div>';
+            return '<div class="test-grid-title vocabulary-usage-title">Loading</div>';
         }
 
         var deprecateButton = attribute.status === 'deprecated'

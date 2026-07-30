@@ -111,7 +111,7 @@ var notifyView = {
         html += '<select class="notify-select notify-target-select" id="notify-add-target">';
 
         if (this.isLoadingTargets) {
-            html += '<option value="">Asking the platform...</option>';
+            html += '<option value="">Loading</option>';
         } else if (this.addKind === null) {
             html += '<option value="">Pick the platform first</option>';
         } else if (notifyModel.targets.length === 0) {

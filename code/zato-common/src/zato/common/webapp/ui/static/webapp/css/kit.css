@@ -37,8 +37,13 @@ h2{font-size:17px;font-weight:700}
 .keyboard-hint kbd{font-family:var(--mono);font-size:10px;border:1px solid var(--border);border-radius:var(--radius-1);padding:0 4px;color:var(--text4)}
 
 .button-mini{background:transparent;border:1px solid var(--border);border-radius:var(--radius-1);color:var(--text4);font-size:10.5px;cursor:pointer;font-family:var(--font);padding:1px 7px;text-transform:none;letter-spacing:0;font-weight:500;margin-left:10px;vertical-align:1px}
-.button-mini:hover{color:var(--text2);border-color:var(--text4)}
+.button-mini:hover{color:var(--text);border-color:var(--blue)}
+.button-mini:disabled{opacity:0.5;cursor:not-allowed}
 .button-mini-danger:hover{color:var(--red);border-color:var(--red)}
+
+/* The confirming button of a floating panel - a mini button that carries the accent itself */
+.button-mini.button-primary{background:var(--blue-tint-12);border:1px solid var(--blue);color:var(--text);font-weight:600}
+.button-mini.button-primary:hover{background-image:var(--hover-veil)}
 
 /* ---------------------------------------------------------- */
 /* Shared - problems panel                                    */
@@ -51,12 +56,12 @@ h2{font-size:17px;font-weight:700}
 .problems-collapsed .pane-resizer{display:none}
 .problems-list{overflow:auto;padding:2px 0}
 .problem-item{display:flex;align-items:center;gap:8px;padding:5px 24px;font-size:12.5px;color:var(--text2);cursor:pointer}
-.problem-item:hover{background:var(--panel)}
+.problem-item:hover{background-image:var(--hover-veil)}
 .problem-where{margin-left:auto;color:var(--text5);font-size:11px;font-family:var(--mono);flex-shrink:0}
 .problem-fix{flex-shrink:0;font-size:11px;color:var(--blue);border:1px solid var(--border);border-radius:var(--radius-1);padding:1px 7px;cursor:pointer}
-.problem-fix:hover{border-color:var(--blue)}
+.problem-fix:hover{color:var(--text);border-color:var(--blue)}
 .problem-none{color:var(--text5);cursor:default;font-style:italic}
-.problem-none:hover{background:transparent}
+.problem-none:hover{background-image:none}
 .status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;flex-shrink:0}
 .status-dot-error{background:var(--red)}
 .status-dot-warning{background:var(--amber)}
@@ -75,7 +80,7 @@ h2{font-size:17px;font-weight:700}
 .vocabulary-pane.collapsed .vocabulary-head-label,.vocabulary-pane.collapsed .vocabulary-list{display:none}
 .vocabulary-entity{padding:7px 16px 3px;font-size:12px;font-weight:700;color:var(--text2)}
 .vocabulary-item{display:flex;align-items:center;gap:7px;padding:5px 16px 5px 26px;font-size:12px;color:var(--text3);cursor:grab;font-family:var(--mono)}
-.vocabulary-item:hover{background:var(--panel);color:var(--text)}
+.vocabulary-item:hover{background-image:var(--hover-veil);color:var(--text)}
 .vocabulary-item-type{margin-left:auto;font-size:9.5px;color:var(--text5);font-family:var(--font);text-transform:uppercase;letter-spacing:0.05em}
 .vocabulary-item-used{opacity:0.35;cursor:default}
 .vocabulary-item-clickable{cursor:pointer}
@@ -88,7 +93,7 @@ h2{font-size:17px;font-weight:700}
 .context-menu{position:fixed;z-index:1350;background:var(--panel);border:1px solid var(--blue);border-radius:var(--radius-3);box-shadow:0 6px 24px var(--shadow-strong);min-width:240px;max-width:330px;padding:0 0 2px}
 .context-menu-head{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:0.08em}
 .context-menu-item{display:flex;align-items:center;gap:10px;padding:5px 12px;font-size:12.5px;color:var(--text2);cursor:pointer}
-.context-menu-item:hover{background:var(--background);color:var(--text)}
+.context-menu-item:hover{background-image:var(--hover-veil);color:var(--text)}
 .context-menu-item-destructive{color:var(--red)}
 .context-menu-item-destructive:hover{color:var(--red)}
 .context-menu-key{flex-shrink:0;width:16px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--text4);border:1px solid var(--border);border-radius:var(--radius-1);line-height:1.5}
@@ -158,6 +163,6 @@ h2{font-size:17px;font-weight:700}
 .settings-panel-title{padding:4px 14px 2px;font-size:12.5px;font-weight:700;color:var(--text2)}
 .settings-section-title{padding:6px 14px 4px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text4)}
 .settings-theme-entry{display:flex;justify-content:space-between;align-items:baseline;gap:14px;width:100%;text-align:left;background:transparent;border:none;color:var(--text3);font-size:12.5px;font-family:var(--font);padding:6px 14px;cursor:pointer}
-.settings-theme-entry:hover{background:var(--cell-hover);color:var(--text)}
+.settings-theme-entry:hover{background-image:var(--hover-veil);color:var(--text)}
 .settings-theme-active{color:var(--text);background:var(--column-selected)}
 .settings-theme-kind{font-size:10.5px;color:var(--text5)}

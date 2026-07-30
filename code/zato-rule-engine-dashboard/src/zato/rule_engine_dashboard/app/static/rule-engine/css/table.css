@@ -28,7 +28,7 @@ table.table-grid tr:first-child th{border-top:1px solid var(--border)}
 .table-column-zero{background:var(--panel-raised)}
 
 .table-unfold-hint{position:absolute;top:2px;right:3px;display:inline-flex;align-items:center;gap:1px;font-size:9px;font-weight:500;color:var(--text5);cursor:pointer;line-height:1;padding:2px 3px;border-radius:var(--radius-1)}
-.table-unfold-hint:hover{color:var(--text2);background:var(--background)}
+.table-unfold-hint:hover{color:var(--text2);background-image:var(--hover-veil)}
 
 /* ---------------------------------------------------------- */
 /* Table - section rows                                       */
@@ -42,10 +42,10 @@ table.table-grid tr:first-child th{border-top:1px solid var(--border)}
 /* ---------------------------------------------------------- */
 
 .table-cell{min-width:104px;text-align:center;padding:6px 8px;cursor:pointer;color:var(--text);font-family:var(--mono);font-size:12.5px;background:var(--input-background)}
-.table-cell:hover{background:var(--cell-hover)}
+.table-cell:hover{background-image:var(--hover-veil)}
 .table-any-dash{color:var(--text5)}
 .table-cell-readonly{cursor:default;color:var(--text5);font-style:italic;font-family:var(--font);background:var(--panel-raised)}
-.table-cell-readonly:hover{background:var(--panel-raised)}
+.table-cell-readonly:hover{background-image:none}
 .table-cell.cell-editing{padding:0}
 .table-cell input,.table-cell select{display:block;width:100%;background:var(--panel);border:none;box-shadow:inset 0 0 0 1px var(--blue);color:var(--text);font-size:12.5px;font-family:var(--mono);padding:6px 8px;outline:none;text-align:center}
 
@@ -67,7 +67,7 @@ th.table-column-selected{box-shadow:inset 0 -2px 0 var(--blue)}
 .table-filter-span{background:var(--filter-span-background);color:var(--text5);font-size:11.5px;font-style:italic;text-align:center;padding:7px 8px}
 .table-filter-remove{float:right;color:var(--text5);cursor:pointer;line-height:1;padding:2px 3px;border-radius:var(--radius-1);opacity:0;transition:opacity 0.12s}
 .table-filter-row:hover .table-filter-remove{opacity:1}
-.table-filter-remove:hover{color:var(--red);background:var(--background)}
+.table-filter-remove:hover{color:var(--red);background-image:var(--hover-veil)}
 
 .table-filter-input{background:var(--panel);border:none;box-shadow:inset 0 0 0 1px var(--blue);color:var(--text);font-family:var(--mono);font-size:12px;padding:0 2px;outline:none;vertical-align:baseline}
 

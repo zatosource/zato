@@ -21,7 +21,7 @@
 /* ---------------------------------------------------------- */
 
 .editor-token{display:inline-block;padding:1px 7px;border-radius:var(--radius-2);cursor:pointer;margin:0 2px;border:1px solid transparent}
-.editor-token:hover{background:var(--panel);border-color:var(--border)}
+.editor-token:hover{background-image:var(--hover-veil);border-color:var(--border)}
 .editor-token-subject{color:var(--text)}
 .editor-token-comparator{color:var(--amber)}
 .editor-token-value{color:var(--green);font-family:var(--mono);font-size:0.92em}
@@ -33,7 +33,7 @@
 .editor-and-group{display:inline-block;border:1px solid var(--border);border-radius:var(--radius-3);padding:1px 5px;background:var(--blue-tint-05)}
 
 .editor-token-placeholder{color:var(--indigo);font-family:var(--mono);font-size:0.88em;border:1px dashed var(--indigo);opacity:0.85}
-.editor-token-placeholder:hover{background:var(--indigo-tint-12)}
+.editor-token-placeholder:hover{background-image:var(--hover-veil)}
 
 .editor-token-invalid{border-bottom:2px solid var(--red);border-radius:var(--radius-2) var(--radius-2) 0 0}
 
@@ -46,10 +46,10 @@
 .editor-group{white-space:nowrap;display:inline-block}
 .editor-group-remove{color:var(--text5);cursor:pointer;padding:0 3px;border-radius:var(--radius-1);opacity:0;transition:opacity 0.12s;vertical-align:1px}
 .editor-group:hover .editor-group-remove{opacity:1}
-.editor-group-remove:hover{color:var(--red);background:var(--panel)}
+.editor-group-remove:hover{color:var(--red);background-image:var(--hover-veil)}
 
 .editor-add-chip{display:inline-flex;align-items:center;gap:3px;color:var(--text5);font-size:12px;border:1px dashed var(--border);border-radius:var(--radius-2);padding:0 8px;cursor:pointer;margin:0 4px;line-height:1.9;vertical-align:1px}
-.editor-add-chip:hover{color:var(--text2);border-color:var(--text4)}
+.editor-add-chip:hover{color:var(--text);border-color:var(--blue)}
 
 /* ---------------------------------------------------------- */
 /* Editor - completion menu                                   */
@@ -58,7 +58,7 @@
 .editor-completion-menu{position:fixed;z-index:1300;background:var(--panel);border:1px solid var(--blue);border-radius:var(--radius-3);box-shadow:0 6px 24px var(--shadow-strong);min-width:190px;max-height:280px;overflow:auto;padding:4px 0}
 .editor-completion-title{padding:5px 12px 3px;font-size:10px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:0.08em}
 .editor-completion-item{display:flex;align-items:center;gap:8px;padding:5px 12px;font-size:12.5px;color:var(--text2);cursor:pointer}
-.editor-completion-item:hover,.editor-completion-item-active{background:var(--background);color:var(--text)}
+.editor-completion-item:hover,.editor-completion-item-active{background-image:var(--hover-veil);color:var(--text)}
 .editor-completion-hint{margin-left:auto;font-size:10px;color:var(--text5);font-family:var(--mono);padding-left:14px}
 .editor-completion-check{width:13px;flex-shrink:0;color:var(--blue);display:inline-flex}
 

@@ -11,6 +11,14 @@
   --radius-1:2px;
   --radius-2:3px;
   --radius-3:4px;
+
+  /* The one gold every theme washes a highlighted mark with, mid-toned so it carries
+     both on light and on dark surfaces */
+  --gold:#e9c34a;
+
+  /* Every hover darkens what is under it, so it is one veil laid over the element's
+     own background rather than a lighter color per screen */
+  --hover-veil:linear-gradient(rgba(0,0,0,0.07),rgba(0,0,0,0.07));
 }
 body{font-family:var(--font);background:var(--background);color:var(--text);display:flex;height:100vh;overflow:hidden}
 svg{vertical-align:-2px}

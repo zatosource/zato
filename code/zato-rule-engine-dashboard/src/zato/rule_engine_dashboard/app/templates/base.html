@@ -16,8 +16,6 @@
   <div class="navigation-items">
     <a class="navigation-item{% if request.resolver_match.url_name == 'rulesets' %} active{% endif %}"
       href="{% url 'rulesets' %}">Rulesets</a>
-    <a class="navigation-item{% if request.resolver_match.url_name == 'editor' %} active{% endif %}"
-      href="{% url 'editor' %}">Rules</a>
     <a class="navigation-item{% if request.resolver_match.url_name == 'tables' %} active{% endif %}"
       href="{% url 'tables' %}">Decision tables</a>
     <a class="navigation-item{% if request.resolver_match.url_name == 'tests' %} active{% endif %}"
