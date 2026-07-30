@@ -90,6 +90,16 @@ rulesetsView.openSuggestions = function() {
     this.suggestionIndex = -1;
     this.buildSuggestions();
     this.renderSuggestions();
+    this.placePane();
+};
+
+// The pane is laid out against the field once per opening, so it is never off the screen and
+// a pane pulled aside by its header stays where it was put while the list is filtered
+rulesetsView.placePane = function() {
+    var pane = document.getElementById('rulesets-suggest');
+    var field = document.getElementById('rulesets-field');
+
+    shared.placeFloating(pane, field.getBoundingClientRect());
 };
 
 rulesetsView.closeSuggestions = function() {
@@ -201,26 +211,34 @@ rulesetsView.onFieldKeys = function(event) {
 // The pane is moved by its header, so a long list can be pulled off whatever it covers
 rulesetsView.startPaneDrag = function(event) {
     var pane = document.getElementById('rulesets-suggest');
-    var paneLeft = pane.offsetLeft;
-    var paneTop = pane.offsetTop;
+    var paneBox = pane.getBoundingClientRect();
+    var margin = shared.config.viewportMarginPixels;
 
-    var startX = event.clientX;
-    var startY = event.clientY;
+    // What the pane's own offsets are measured from, so a place in the window can be written back
+    var originX = paneBox.left - pane.offsetLeft;
+    var originY = paneBox.top - pane.offsetTop;
+
+    var grabX = event.clientX - paneBox.left;
+    var grabY = event.clientY - paneBox.top;
 
     // A panel opened from the pane belongs to it, so it travels the same distance
     var panel = shared.panelElement;
     var panelBox = panel === null ? null : panel.getBoundingClientRect();
 
     var onMove = function(moveEvent) {
-        var movedX = moveEvent.clientX - startX;
-        var movedY = moveEvent.clientY - startY;
+        var left = moveEvent.clientX - grabX;
+        var top = moveEvent.clientY - grabY;
 
-        pane.style.left = (paneLeft + movedX) + 'px';
-        pane.style.top = (paneTop + movedY) + 'px';
+        // Wherever the pointer goes, the pane stays within reach
+        left = Math.max(margin, Math.min(left, window.innerWidth - margin - paneBox.width));
+        top = Math.max(margin, Math.min(top, window.innerHeight - margin - paneBox.height));
+
+        pane.style.left = (left - originX) + 'px';
+        pane.style.top = (top - originY) + 'px';
 
         if (panel !== null) {
-            panel.style.left = (panelBox.left + movedX) + 'px';
-            panel.style.top = (panelBox.top + movedY) + 'px';
+            panel.style.left = (panelBox.left + (left - paneBox.left)) + 'px';
+            panel.style.top = (panelBox.top + (top - paneBox.top)) + 'px';
         }
     };
 
@@ -320,13 +338,19 @@ var pane = document.getElementById('rulesets-suggest');
 
 document.getElementById('rulesets-clear').innerHTML = shared.icon('x', 11);
 
-// A click anywhere in the field belongs to the input, the way a search field behaves
+// A press anywhere in the field belongs to the input, the way a search field behaves, while the
+// pane runs its own presses. The input can already hold the focus with the pane closed, when
+// Escape shut it, and then no focus event follows, so the pane is opened here as well.
 field.addEventListener('mousedown', function(event) {
+    if (event.target.closest('.command-suggest') !== null) { return; }
     if (event.target.closest('button') !== null) { return; }
-    if (event.target === input) { return; }
 
-    event.preventDefault();
-    input.focus();
+    if (event.target !== input) {
+        event.preventDefault();
+        input.focus();
+    }
+
+    if (!rulesetsView.suggestOpen) { rulesetsView.openSuggestions(); }
 });
 
 pane.addEventListener('mousedown', function(event) {
@@ -362,6 +386,12 @@ document.addEventListener('keydown', function(event) {
     if (!rulesetsView.suggestOpen) { return; }
 
     rulesetsView.closeSuggestions();
+});
+
+window.addEventListener('resize', function() {
+    if (!rulesetsView.suggestOpen) { return; }
+
+    rulesetsView.placePane();
 });
 
 // The screen boots from here, the last of its scripts, so every view method is in place

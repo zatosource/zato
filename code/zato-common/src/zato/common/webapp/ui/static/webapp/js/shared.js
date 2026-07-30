@@ -7,6 +7,11 @@ var shared = {
     config: {
         popoverMilliseconds: 4800,
 
+        // How far a floating surface keeps from the window's edges, and from its own anchor
+        viewportMarginPixels: 8,
+        floatingGapPixels: 6,
+
+
         // What a field says in its own placeholder when it has nothing usable in it
         requiredText: {
             name: 'Name is required',
@@ -97,6 +102,46 @@ var shared = {
 
         instance.show();
         setTimeout(function() { instance.hide(); }, shared.config.popoverMilliseconds);
+    },
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // Any floating surface is laid under its anchor and then pulled back inside the window, and
+    // it flips above the anchor when what is below cannot hold it, so nothing in it is ever out
+    // of reach, whatever the window's size
+    placeFloating: function(element, anchorRect) {
+        var margin = shared.config.viewportMarginPixels;
+        var gap = shared.config.floatingGapPixels;
+        var width = element.offsetWidth;
+        var height = element.offsetHeight;
+
+        var left = anchorRect.left;
+        var rightmost = window.innerWidth - margin - width;
+        if (left > rightmost) { left = rightmost; }
+        if (left < margin) { left = margin; }
+
+        var top = anchorRect.bottom + gap;
+
+        if (top + height + margin > window.innerHeight) {
+            var above = anchorRect.top - gap - height;
+
+            if (above >= margin) {
+                top = above;
+            } else {
+                top = window.innerHeight - margin - height;
+                if (top < margin) { top = margin; }
+            }
+        }
+
+        // A surface inside a container counts from that container, not from the window
+        if (window.getComputedStyle(element).position !== 'fixed') {
+            var box = element.getBoundingClientRect();
+            left = left - (box.left - element.offsetLeft);
+            top = top - (box.top - element.offsetTop);
+        }
+
+        element.style.left = left + 'px';
+        element.style.top = top + 'px';
     },
 
 // ////////////////////////////////////////////////////////////////////////
