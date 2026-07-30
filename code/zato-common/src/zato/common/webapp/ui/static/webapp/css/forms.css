@@ -16,30 +16,6 @@
 .button-primary:hover {
     background: var(--blue-strong-hover);
 }
-.button-ghost {
-    background: transparent;
-    color: var(--text3);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-2);
-    padding: 6px 12px;
-    font-size: 13px;
-    cursor: pointer;
-    font-family: var(--font);
-}
-.button-ghost:hover {
-    color: var(--text);
-    border-color: var(--blue);
-}
-.button-ghost.toggled {
-    color: var(--text);
-    border-color: var(--blue);
-    background: var(--blue-tint-12);
-}
-.button-ghost:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
-
 .messages {
     margin: 0 0 18px 0;
     padding: 0;

@@ -63,11 +63,11 @@ html[data-theme="zato-dark"] {
     --rule-name: #fffb00;
     --rule-name-background: rgba(0, 0, 0, 0.3);
     --hover-veil: linear-gradient(rgba(0, 0, 0, 0.07), rgba(0, 0, 0, 0.07));
-    --action-face: #e6bd3c;
-    --action-face-deep: #c99c16;
-    --action-edge: #8a6c0d;
-    --action-sheen: rgba(255, 255, 255, 0.18);
-    --action-ink: #000000;
+    --action-face: rgba(67, 56, 202, 0.35);
+    --action-face-deep: rgba(67, 56, 202, 0.35);
+    --action-edge: #6366f1;
+    --action-sheen: rgba(255, 255, 255, 0.06);
+    --action-ink: #c7d2fe;
     --link-dash: rgba(255, 255, 255, 0.35);
     --link-hover: #e6bd3c;
     --logo: url("/static/webapp/assets/zato-logo-white.svg");

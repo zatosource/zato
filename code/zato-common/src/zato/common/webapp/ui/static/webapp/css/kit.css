@@ -185,28 +185,38 @@ h2 {
     background-image: var(--hover-veil);
 }
 
-/* The button that carries out the one thing a screen is there for. It keeps its own
-   surface in every theme so it is recognized at a glance, wherever it sits. */
-.button-action {
+/* One surface for every button that acts - the toolbars, the settings button, publish -
+   so a button looks the same wherever it sits and is recognized at a glance. */
+.button-action,
+.button-ghost,
+.settings-button {
     display: inline-block;
-    padding: 1px 8px;
+    padding: 3px 10px;
     border: 1px solid var(--action-edge);
-    border-radius: var(--radius-1);
+    border-radius: var(--radius-2);
     background: linear-gradient(to bottom, var(--action-face), var(--action-face-deep));
     color: var(--action-ink);
     font-family: var(--font);
-    font-size: 10px;
+    font-size: 10.5px;
     font-weight: 400;
     letter-spacing: 0.5px;
     text-align: center;
+    white-space: nowrap;
     cursor: pointer;
-    margin-left: 10px;
     vertical-align: 1px;
     box-shadow: inset 0 1px 0 var(--action-sheen);
 }
-.button-action:disabled {
+.button-action:disabled,
+.button-ghost:disabled,
+.settings-button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+/* A chip that is switched on reads as a key held down */
+.button-ghost.toggled {
+    font-weight: 600;
+    box-shadow: inset 0 1px 3px var(--shadow-strong);
 }
 
 /* ---------------------------------------------------------- */
@@ -692,19 +702,6 @@ a.link:hover {
 .settings-button {
     margin-left: auto;
     align-self: center;
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-2);
-    color: var(--text3);
-    font-size: 12px;
-    font-family: var(--font);
-    padding: 4px 12px;
-    cursor: pointer;
-    white-space: nowrap;
-}
-.settings-button:hover {
-    color: var(--text);
-    border-color: var(--blue);
 }
 .settings-panel-title {
     padding: 4px 14px 2px;
