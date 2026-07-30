@@ -185,6 +185,93 @@ h2 {
     background-image: var(--hover-veil);
 }
 
+/* The button that carries out the one thing a screen is there for. It keeps its own
+   surface in every theme so it is recognized at a glance, wherever it sits. */
+.button-action {
+    display: inline-block;
+    padding: 1px 8px;
+    border: 1px solid var(--action-edge);
+    border-radius: var(--radius-1);
+    background: linear-gradient(to bottom, var(--action-face), var(--action-face-deep));
+    color: var(--action-ink);
+    font-family: var(--font);
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0.5px;
+    text-align: center;
+    cursor: pointer;
+    margin-left: 10px;
+    vertical-align: 1px;
+    box-shadow: inset 0 1px 0 var(--action-sheen);
+}
+.button-action:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ---------------------------------------------------------- */
+/* Shared - pills                                             */
+/* ---------------------------------------------------------- */
+
+/* A short state label on a thin wash of its own accent, monospaced with lining figures so
+   version numbers line up under each other. Every state takes the same wash and the same
+   accent as its ink, so one reads against its background exactly as strongly as the next. */
+.pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 7px;
+    border-radius: var(--radius-2);
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums lining-nums;
+}
+/* A pill sits on the page's own surface, barely tinted, and is written in its faintest ink
+   with a trace of accent stirred in - bright enough to stay light, faint enough to recede. */
+.pill-good {
+    background: color-mix(in srgb, var(--green) 6%, var(--background));
+    color: color-mix(in srgb, var(--green) 25%, var(--text5));
+}
+.pill-progress {
+    background: color-mix(in srgb, var(--blue) 6%, var(--background));
+    color: color-mix(in srgb, var(--blue) 25%, var(--text5));
+}
+.pill-warning {
+    background: color-mix(in srgb, var(--amber) 6%, var(--background));
+    color: color-mix(in srgb, var(--amber) 25%, var(--text5));
+}
+.pill-info {
+    background: color-mix(in srgb, var(--indigo) 6%, var(--background));
+    color: color-mix(in srgb, var(--indigo) 25%, var(--text5));
+}
+
+/* ---------------------------------------------------------- */
+/* Shared - links                                             */
+/* ---------------------------------------------------------- */
+
+/* The standard link face - the page's own ink with a dashed rule under it, the accent on
+   hover. On an anchor that also carries an icon, put it on the span holding the text. */
+.link {
+    color: var(--text);
+    text-decoration: none;
+    padding-bottom: 2px;
+    background-image: repeating-linear-gradient(
+        90deg,
+        var(--link-dash) 0,
+        var(--link-dash) 3px,
+        transparent 3px,
+        transparent 6px
+    );
+    background-size: 100% 1px;
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+}
+a:hover .link,
+a.link:hover {
+    color: var(--link-hover);
+}
+
 /* ---------------------------------------------------------- */
 /* Shared - problems panel                                    */
 /* ---------------------------------------------------------- */
@@ -413,7 +500,7 @@ h2 {
     text-align: center;
     font-family: var(--mono);
     font-size: 10px;
-    color: var(--text4);
+    color: var(--text2);
     border: 1px solid var(--border);
     border-radius: var(--radius-1);
     line-height: 1.5;

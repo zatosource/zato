@@ -88,12 +88,9 @@
 .rulesets-row-stripe {
     background: var(--panel-raised);
 }
-.rulesets-row:hover {
-    background-image: var(--hover-veil);
-}
 .rulesets-row-selected,
 .rulesets-row-selected.rulesets-row-stripe {
-    background: var(--column-selected);
+    background: var(--column-hover);
 }
 
 .rulesets-row-main {
@@ -107,22 +104,23 @@
     font-size: 13.5px;
     font-weight: 600;
 }
+
+/* The row spaces everything in it by its own gap, so the button brings no margin of its own */
+.rulesets-row-name .button-action {
+    margin-left: 0;
+}
 .rulesets-open-link {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    color: var(--text);
     text-decoration: none;
-}
-.rulesets-open-link:hover {
-    color: var(--blue);
 }
 .rulesets-caret {
     display: inline-flex;
     color: var(--text5);
 }
 .rulesets-open-link:hover .rulesets-caret {
-    color: var(--blue);
+    color: var(--link-hover);
 }
 .rulesets-row-description {
     margin-top: 2px;
@@ -140,31 +138,6 @@
 }
 .rulesets-star-on svg {
     fill: currentColor;
-}
-
-.rulesets-badge {
-    font-size: 9.5px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    border-radius: var(--radius-1);
-    padding: 1px 7px;
-}
-.rulesets-badge-live {
-    background: var(--green-tint-14);
-    color: var(--green);
-}
-.rulesets-badge-draft {
-    background: var(--indigo-tint-16);
-    color: var(--indigo);
-}
-.rulesets-badge-problems {
-    border: 1px dashed var(--amber);
-    color: var(--amber);
-}
-
-.rulesets-publish {
-    color: var(--green);
 }
 
 .rulesets-publish-line {
@@ -279,8 +252,8 @@
     letter-spacing: 0.02em;
 }
 .rulesets-rule:hover .rulesets-rule-name {
-    background-color: color-mix(in srgb, var(--gold) 77%, var(--input-background));
-    color: #000;
+    background-color: var(--action-face);
+    color: var(--action-ink);
 }
 .rulesets-rule-docs {
     flex: 1;
