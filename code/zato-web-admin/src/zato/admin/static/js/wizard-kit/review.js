@@ -137,15 +137,6 @@ kit.review.setup = function(wizard) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // The label of a group, which is what wears the badge.
-    review._getGroupLabel = function(groupElement) {
-
-        var out = $(groupElement).find('.wizard-review-group-label');
-        return out;
-    };
-
-// ////////////////////////////////////////////////////////////////////////
-
     // The tooltip on a link - Edit and the group the link goes to.
     review._addEditTooltip = function(editLink, groupLabel) {
 
@@ -217,16 +208,6 @@ kit.review.setup = function(wizard) {
 
             container.append(groupElement);
         }
-
-        // The pointer anywhere on a group marks its label with the same badge
-        // the data tables use - the rest of the marking is in the stylesheet
-        container.find('.wizard-review-group').on('mouseenter', function() {
-            $.fn.zato.highlight_badge.on(review._getGroupLabel(this));
-        });
-
-        container.find('.wizard-review-group').on('mouseleave', function() {
-            $.fn.zato.highlight_badge.off(review._getGroupLabel(this));
-        });
 
         // An Edit link goes to the step its group came from and opens
         // whatever the group named

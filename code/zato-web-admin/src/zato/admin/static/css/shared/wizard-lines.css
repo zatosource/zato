@@ -327,15 +327,17 @@
 }
 
 /* The clear button is a <button>, hence the same list formalize.css writes
-   for the chips above - it reads as one more field of the filter row */
-.wizard-panel .badge-filter-clear,
-.wizard-panel .badge-filter-clear:hover,
-.wizard-panel .badge-filter-clear:focus,
-.wizard-panel .badge-filter-clear:active {
+   for the chips above - it reads as one more field of the filter row. The
+   filter row class rides along so the rest state outweighs the font-size
+   multi-select.css gives the button and nothing changes size on hover. */
+.wizard-panel .badge-picker-filter .badge-filter-clear,
+.wizard-panel .badge-picker-filter .badge-filter-clear:hover,
+.wizard-panel .badge-picker-filter .badge-filter-clear:focus,
+.wizard-panel .badge-picker-filter .badge-filter-clear:active {
     height: 24px;
     padding: 0 8px;
     font-family: inherit;
-    font-size: 12px;
+    font-size: var(--wizard-button-font-size);
     font-weight: 400;
     color: var(--wizard-text-muted);
     background: #fff;
@@ -347,7 +349,7 @@
     outline: none;
 }
 
-.wizard-panel .badge-filter-clear:hover {
+.wizard-panel .badge-picker-filter .badge-filter-clear:hover {
     color: var(--wizard-text);
     border-color: var(--wizard-accent);
 }

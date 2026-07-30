@@ -49,6 +49,10 @@
 /* ------------------------------------------------------------ */
 
 :root {
+    /* Every button anywhere in a wizard - the footer, the panels, the
+       filter rows - reads at this one size */
+    --wizard-button-font-size: 11px;
+
     --wizard-accent: var(--zato-seablue-light2);
     /* What a picked option wears - the lighter of the two dashboard blues,
        so a choice made reads as a choice made and not as an alarm */
@@ -110,6 +114,19 @@
 .wizard-card {
     display: flex;
     flex-direction: column;
+}
+
+/* The one button size the whole wizard uses - the footer's Back, Next and
+   Cancel, a panel's OK and Cancel and the filter row's Clear all take it.
+   Chips, step tabs and option segments are <button> elements too but read
+   as fields and tabs, so they are left out. */
+.wizard-card .action-button,
+.wizard-card .secondary-button,
+.wizard-panel .action-button,
+.wizard-panel .secondary-button,
+.tippy-box[data-theme~='wizard'] .action-button,
+.tippy-box[data-theme~='wizard'] .secondary-button {
+    font-size: var(--wizard-button-font-size);
 }
 
 .wizard-card form {
@@ -885,9 +902,6 @@ a.wizard-select-delete:hover::before {
 .wizard-review-group {
     max-width: 640px;
 
-    /* The honey in a review is square, unlike the badge in a table */
-    --zato-highlight-badge-radius: 0;
-
     /* The wash ends in the room under the last row, so that room is padding */
     padding-bottom: var(--wizard-review-wash-fade);
     margin-bottom: calc(var(--wizard-review-group-space) - var(--wizard-review-wash-fade));
@@ -921,39 +935,6 @@ a.wizard-select-delete:hover::before {
     font-weight: 500;
     color: var(--wizard-text);
     cursor: pointer;
-}
-
-/* The pointer anywhere on a group marks the whole group, not only the link.
-   Nothing here changes size, so nothing moves. */
-.wizard-review-group:hover .wizard-review-group-header {
-    border-bottom-color: var(--zato-highlight-badge-edge);
-    box-shadow: 0 3px 5px -2px var(--zato-highlight-badge-bottom);
-}
-
-/* Anchored at the bottom and given the group's height less its heading, so the
-   wash starts right under the rule and only fades out past the last row */
-.wizard-review-group:hover {
-    background-image: linear-gradient(to bottom,
-        var(--wizard-review-wash-top) 0,
-        var(--wizard-review-wash-bottom) calc(100% - var(--wizard-review-wash-fade)),
-        transparent 100%);
-    background-repeat: no-repeat;
-    background-position: left bottom;
-    background-size: 100% calc(100% - var(--wizard-review-heading-height) - var(--wizard-review-heading-margin));
-}
-
-/* Against the wash a key takes the full text color, as the value already has */
-.wizard-review-group:hover .wizard-review-key {
-    color: var(--wizard-text);
-}
-
-/* The link takes the same honey as the label, drawn outside its text so that
-   nothing moves. The text color stays - the tooltip says what the link does. */
-.wizard-review-group:hover .wizard-review-edit {
-    background: linear-gradient(to bottom, var(--zato-highlight-badge-top), var(--zato-highlight-badge-bottom));
-    box-shadow: 0 0 0 var(--zato-highlight-badge-spread) var(--zato-highlight-badge-bottom);
-    outline: 1px dashed var(--zato-highlight-badge-edge);
-    outline-offset: var(--zato-highlight-badge-spread);
 }
 
 .wizard-review-row {

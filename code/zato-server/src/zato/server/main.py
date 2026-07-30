@@ -180,7 +180,7 @@ class ZatoApplication:
                 else:
                     host, port = v.split(':')
                     self.zato_host = host
-                    self.zato_port = port
+                    self.zato_port = int(port)
             else:
                 if 'deployment_lock' in k:
                     v = int(v)
@@ -192,7 +192,7 @@ class ZatoApplication:
 
         # .. what is our main TCP port ..
         if bind_port := self._get_config_value('bind_port'): # type: ignore
-            self.zato_port = bind_port
+            self.zato_port = int(bind_port)
 
         for name in('deployment_lock_expires', 'deployment_lock_timeout'):
             setattr(self.zato_wsgi_app, name, self.zato_config[name])
