@@ -57,9 +57,7 @@ var logView = {
 
         var card = function(outcome, label, count) {
             var active = self.outcome === outcome ? ' log-card-active' : '';
-            var tip = outcome === null ? 'Show every decision in the range'
-                : 'Only the ' + label + ' decisions, click again to clear';
-            html += '<div class="log-card' + active + '" data-tippy-content="' + tip + '" ' +
+            html += '<div class="log-card' + active + '" ' +
                 'onclick="logView.toggleOutcome(' + (outcome === null ? 'null' : '\'' + outcome + '\'') + ')">' +
                 '<span class="log-card-number">' + count + '</span>' +
                 '<span class="log-card-label">' + label + '</span></div>';
@@ -70,7 +68,7 @@ var logView = {
 
         var average = logModel.aggregates.average_duration_ms;
         if (average !== null) {
-            html += '<div class="log-card log-card-readout" data-tippy-content="The average decision time over the range.">' +
+            html += '<div class="log-card log-card-readout">' +
                 '<span class="log-card-number">' + Math.round(average) + ' ms</span>' +
                 '<span class="log-card-label">average</span></div>';
         }
@@ -95,8 +93,7 @@ var logView = {
         var headHtml = records.length + ' decisions';
         if (this.valueFilter !== null) {
             var phrase = logModel.phraseFor(this.valueFilter.path);
-            headHtml += '<span class="log-filter-chip" data-tippy-content="Click to clear this filter" ' +
-                'onclick="logView.clearValueFilter()">' + shared.escape(phrase + ' = ' + this.valueFilter.value) +
+            headHtml += '<span class="log-filter-chip" onclick="logView.clearValueFilter()">' + shared.escape(phrase + ' = ' + this.valueFilter.value) +
                 ' ' + shared.icon('x', 9) + '</span>';
         }
         head.innerHTML = headHtml;
@@ -117,8 +114,7 @@ var logView = {
             var id = record.decision_id;
             var classes = 'log-row' + (id === self.selectedId ? ' log-row-selected' : '');
 
-            var copy = '<span class="log-row-copy" data-tippy-content="Copy the decision id" ' +
-                'onclick="logView.copyText(event, \'' + id + '\')">' + shared.icon('copy', 10) + '</span>';
+            var copy = '<span class="log-row-copy" onclick="logView.copyText(event, \'' + id + '\')">' + shared.icon('copy', 10) + '</span>';
 
             var key = record.business_key === null ? '' : shared.escape(record.business_key);
             var caller = record.caller === null ? '' : shared.escape(record.caller);
@@ -163,16 +159,11 @@ var logView = {
             '<span class="log-detail-name">' + shared.escape(keyText) + '</span>' +
             '<span class="log-detail-meta">' + shared.escape(this.shortId(decision.decision_id)) + ' \u00b7 ' +
                 this.whenText(decision.occurred_at) + callerText + ' \u00b7 ' + decision.duration_ms + ' ms</span>' +
-            '<span class="log-copy-quiet" data-tippy-content="Copy the decision id" ' +
-                'onclick="logView.copyText(event, \'' + decision.decision_id + '\')">' + shared.icon('copy', 11) + '</span>';
+            '<span class="log-copy-quiet" onclick="logView.copyText(event, \'' + decision.decision_id + '\')">' + shared.icon('copy', 11) + '</span>';
 
         if (decision.has_payload) {
-            html += '<button class="button-mini" onclick="logView.addToTestSet(this)" ' +
-                'data-tippy-content="One click turns this stored decision into a scenario in the test set, ' +
-                'outputs as the expectations.">Add to test set</button>' +
-                '<button class="button-mini" onclick="logView.replay(this)" ' +
-                'data-tippy-content="Runs this same input against v' + logModel.currentVersion +
-                ', the newest stored version, and shows what would come out differently now.">Replay against v' +
+            html += '<button class="button-mini" onclick="logView.addToTestSet(this)">Add to test set</button>' +
+                '<button class="button-mini" onclick="logView.replay(this)">Replay against v' +
                 logModel.currentVersion + '</button>';
         }
 
@@ -215,8 +206,7 @@ var logView = {
     },
 
     cellCopyHtml: function(value) {
-        var out = '<span class="log-cell-copy" data-tippy-content="Copy this value" ' +
-            'onclick="logView.copyText(event, \'' + shared.escape(value) + '\')">' + shared.icon('copy', 10) + '</span>';
+        var out = '<span class="log-cell-copy" onclick="logView.copyText(event, \'' + shared.escape(value) + '\')">' + shared.icon('copy', 10) + '</span>';
         return out;
     },
 

@@ -81,8 +81,7 @@ var versionsView = {
 
             var restore = version.number === versionsModel.currentVersion ? '' :
                 '<button class="button-mini versions-restore" ' +
-                'onclick="versionsView.restore(event, ' + version.number + ', this)" ' +
-                'data-tippy-content="Restore this state as a new version">Restore</button>';
+                'onclick="versionsView.restore(event, ' + version.number + ', this)">Restore</button>';
 
             html += '<div class="' + classes + '" onclick="versionsView.pickVersion(' + version.number + ')">' +
                 '<div class="versions-timeline-top">' +

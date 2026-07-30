@@ -102,8 +102,7 @@ var vocabularyView = {
             ? '<span class="vocabulary-flag">deprecated</span>' : '';
 
         var out = '<div class="vocabulary-detail-head">' +
-            '<span class="vocabulary-detail-name" onclick="vocabularyView.openRenamePopover(this)" ' +
-                'data-tippy-content="Click to rename">' +
+            '<span class="vocabulary-detail-name" onclick="vocabularyView.openRenamePopover(this)">' +
                 shared.escape(path) + '</span>' + flag +
             '</div>';
         return out;
@@ -117,7 +116,7 @@ var vocabularyView = {
 
         var row = function(label, field, valueHtml, editable) {
             var editAttributes = editable
-                ? ' onclick="vocabularyView.editField(this, \'' + field + '\')" data-tippy-content="Click to edit"' : '';
+                ? ' onclick="vocabularyView.editField(this, \'' + field + '\')"' : '';
             var classes = 'test-value-cell' + (editable ? '' : ' log-value-readonly');
             html += '<tr><td class="test-label-cell">' + label + '</td>' +
                 '<td class="' + classes + '" data-field="' + field + '"' + editAttributes + '>' + valueHtml + '</td></tr>';
@@ -151,13 +150,12 @@ var vocabularyView = {
         }
 
         var deprecateButton = attribute.status === 'deprecated'
-            ? '<button class="button-mini" onclick="vocabularyView.restore(this)" ' +
-              'data-tippy-content="Back into every picker.">Restore</button>'
+            ? '<button class="button-mini" onclick="vocabularyView.restore(this)">Restore</button>'
             : '<button class="button-mini" onclick="vocabularyView.deprecate(this)">Deprecate</button>';
 
         var deleteButton = usage.canDelete
-            ? '<button class="button-mini vocabulary-delete-enabled" onclick="vocabularyView.deleteTerm(this)" ' +
-              'data-tippy-content="Nothing uses this term, deleting is safe.">Delete</button>'
+            ? '<button class="button-mini vocabulary-delete-enabled" onclick="vocabularyView.deleteTerm(this)">' +
+              'Delete</button>'
             : '<button class="button-mini vocabulary-delete-blocked" onclick="vocabularyView.explainBlockedDelete(this)" ' +
               'data-tippy-content="Blocked, ' + usage.count + ' places still use this term">Delete</button>';
 

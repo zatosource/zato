@@ -101,8 +101,7 @@ var editorView = {
     },
 
     removeConditionHtml: function(conditionIndex) {
-        var out = '<span class="editor-group-remove" data-tippy-content="Remove this condition" ' +
-            'onclick="editorView.removeCondition(event, ' + conditionIndex + ')">' + shared.icon('x', 11) + '</span>';
+        var out = '<span class="editor-group-remove" onclick="editorView.removeCondition(event, ' + conditionIndex + ')">' + shared.icon('x', 11) + '</span>';
         return out;
     },
 
@@ -149,8 +148,7 @@ var editorView = {
             }
         }
 
-        var removeControl = '<span class="editor-group-remove" data-tippy-content="Remove this action" ' +
-            'onclick="editorView.removeAction(event, \'' + listName + '\', ' + actionIndex + ')">' + shared.icon('x', 11) + '</span>';
+        var removeControl = '<span class="editor-group-remove" onclick="editorView.removeAction(event, \'' + listName + '\', ' + actionIndex + ')">' + shared.icon('x', 11) + '</span>';
 
         var out = '<span class="editor-group" data-group="' + listName + '-' + actionIndex + '">' +
             parts.join('') + removeControl + '</span>';
@@ -169,7 +167,6 @@ var editorView = {
     joinerHtml: function(joinerIndex) {
         var text = editorModel.rule.joiners[joinerIndex];
         var out = '<span class="editor-token editor-token-joiner" data-chip="joiner-' + joinerIndex + '" ' +
-            'data-tippy-content="Click to switch between and and or" ' +
             'onclick="editorView.toggleJoiner(' + joinerIndex + ')">' + text + '</span>';
         return out;
     },

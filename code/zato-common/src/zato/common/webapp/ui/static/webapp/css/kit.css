@@ -148,7 +148,7 @@
     gap: 6px;
     width: 300px;
     height: 28px;
-    padding: 0 7px 0 0;
+    padding: 0 7px;
     background: var(--input-background);
     border: 1px solid var(--border);
     border-radius: var(--radius-2);
@@ -177,7 +177,7 @@
     white-space: nowrap;
 }
 .command-clear {
-    display: none;
+    display: flex;
     align-items: center;
     padding: 2px;
     border: none;
@@ -210,12 +210,32 @@
     display: block;
 }
 .command-suggest-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
     padding: 5px 12px 3px;
     color: var(--text5);
     font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+}
+/* The accent of the acting buttons in the proportions of a pill - a 6% wash of it on the
+   surface it sits on, a trace of it stirred into the faintest ink - with the border kept.
+   The deeper padding underneath lifts the label to the optical middle, the glyphs of a
+   mixed-case word without descenders end on the baseline and read as sitting low. */
+.button-mini.command-suggest-new {
+    margin-left: 0;
+    padding: 1px 7px 2px;
+    border-color: color-mix(in srgb, var(--action-edge) 45%, var(--border));
+    background: color-mix(in srgb, var(--action-edge) 6%, var(--panel-raised));
+    color: color-mix(in srgb, var(--action-edge) 30%, var(--text3));
+}
+.button-mini.command-suggest-new:hover {
+    border-color: color-mix(in srgb, var(--action-edge) 70%, var(--border));
+    background: color-mix(in srgb, var(--action-edge) 12%, var(--panel-raised));
+    color: color-mix(in srgb, var(--action-edge) 40%, var(--text2));
 }
 .command-suggest-row {
     display: flex;

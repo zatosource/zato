@@ -16,11 +16,10 @@
     <div class="command-field" id="rulesets-field">
       <input class="command-input" id="rulesets-search" type="text" autocomplete="off" spellcheck="false"
         placeholder="Filter">
+      <span class="command-count" id="rulesets-count"></span>
+      <button class="command-clear" id="rulesets-clear" onclick="rulesetsView.clearAll()"></button>
       <div class="command-suggest" id="rulesets-suggest"></div>
     </div>
-    <span class="command-count" id="rulesets-count"></span>
-    <button class="command-clear" id="rulesets-clear" onclick="rulesetsView.clearAll()"
-      data-tippy-content="Clear"></button>
     <button class="button-ghost" onclick="rulesetsView.newRuleset()">New ruleset</button>
   </div>
 

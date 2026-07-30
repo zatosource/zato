@@ -92,8 +92,7 @@ var testView = {
                 }
             }
 
-            var play = '<span class="test-set-play" data-tippy-content="Run this scenario" ' +
-                'onclick="testView.runFromList(event, ' + index + ', this)">' + shared.icon('play', 10) + '</span>';
+            var play = '<span class="test-set-play" onclick="testView.runFromList(event, ' + index + ', this)">' + shared.icon('play', 10) + '</span>';
 
             html += '<div class="' + classes + '" data-index="' + index + '" ' +
                 'onclick="testView.selectScenario(' + index + ')">' +
@@ -113,8 +112,8 @@ var testView = {
         var isInvalid = inputErrors.some(function(error) { return error.path === path; });
         var cellClasses = 'test-value-cell' + (isInvalid ? ' test-cell-invalid' : '');
 
-        var removeControl = '<span class="test-row-remove" data-tippy-content="Remove this input" ' +
-            'onclick="testView.removeInput(event, \'' + path + '\')">' + shared.icon('x', 11) + '</span>';
+        var removeControl = '<span class="test-row-remove" onclick="testView.removeInput(event, \'' + path +
+            '\')">' + shared.icon('x', 11) + '</span>';
 
         var out = '<tr>' +
             '<td class="test-label-cell">' + shared.escape(testModel.phraseFor(path)) + removeControl + '</td>' +
@@ -190,14 +189,13 @@ var testView = {
 
         html += '<div class="test-detail-head">' +
             '<span class="status-dot ' + this.statusDots[status] + '"></span>' +
-            '<span class="test-detail-name" onclick="testView.editName(this)" ' +
-                'data-tippy-content="Click to rename this scenario">' + shared.escape(scenario.name) + '</span>' +
+            '<span class="test-detail-name" onclick="testView.editName(this)">' +
+                shared.escape(scenario.name) + '</span>' +
             '<span class="test-detail-status">' + this.statusLabels[status] + '</span>' +
             '<button class="button-mini" onclick="testView.runOne(this)">' + shared.icon('play', 10) + ' Run</button>';
 
         if (result !== null && Object.keys(result.actual).length > 0) {
-            html += '<button class="button-mini" onclick="testView.promote(this)" ' +
-                'data-tippy-content="Promote the actual outcome to expected">' +
+            html += '<button class="button-mini" onclick="testView.promote(this)">' +
                 'Promote actual to expected</button>';
         }
         html += '</div>';
