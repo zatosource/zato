@@ -14,7 +14,6 @@ var rulesetsModel = {
             views: '/rules/views/',
             viewSave: '/rules/views/save/',
             viewDelete: '/rules/views/delete/',
-            recents: '/rules/recents/',
             search: '/rules/search/?q=',
             preview: function(id) { return '/rules/rulesets/' + id + '/preview/'; },
             publish: function(id) { return '/rules/rulesets/' + id + '/publish/'; },
@@ -29,7 +28,6 @@ var rulesetsModel = {
     followedIds: {},
     feed: [],
     views: [],
-    recents: [],
     searchHits: [],
     rulesCache: {},
 
@@ -37,7 +35,7 @@ var rulesetsModel = {
 
     load: function(onDone) {
         var self = this;
-        var remaining = 5;
+        var remaining = 4;
 
         var step = function() {
             remaining -= 1;
@@ -52,7 +50,6 @@ var rulesetsModel = {
         this.loadFollows(step);
         this.loadFeed(step);
         this.loadViews(step);
-        this.loadRecents(step);
     },
 
     loadFollows: function(onDone) {
@@ -80,14 +77,6 @@ var rulesetsModel = {
         }, data.reportError);
     },
 
-    loadRecents: function(onDone) {
-        var self = this;
-        data.get(this.config.urls.recents, function(payload) {
-            self.recents = payload.items;
-            onDone();
-        }, data.reportError);
-    },
-
 // ////////////////////////////////////////////////////////////////////////
 
     byId: function(id) {
@@ -107,15 +96,28 @@ var rulesetsModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    filtered: function(view, query) {
+    counts: function() {
+        var self = this;
+        var out = {live: 0, draft: 0, followed: 0, total: this.rulesets.length};
+
+        this.rulesets.forEach(function(ruleset) {
+            if (ruleset.live_version !== null) { out.live += 1; }
+            if (self.draftVersion(ruleset) !== null) { out.draft += 1; }
+            if (self.isFollowed(ruleset.id)) { out.followed += 1; }
+        });
+
+        return out;
+    },
+
+    filtered: function(filters, query) {
         var self = this;
         var needle = query.trim().toLowerCase();
         var out = [];
 
         this.rulesets.forEach(function(ruleset) {
-            if (view === 'live' && ruleset.live_version === null) { return; }
-            if (view === 'drafts' && self.draftVersion(ruleset) === null) { return; }
-            if (view === 'followed' && !self.isFollowed(ruleset.id)) { return; }
+            if (filters.live && ruleset.live_version === null) { return; }
+            if (filters.draft && self.draftVersion(ruleset) === null) { return; }
+            if (filters.followed && !self.isFollowed(ruleset.id)) { return; }
 
             var hits = self.hitsFor(ruleset.id);
 
@@ -245,9 +247,9 @@ var rulesetsModel = {
         return this.views;
     },
 
-    saveView: function(name, view, query, onDone, onError) {
+    saveView: function(name, payload, onDone, onError) {
         var self = this;
-        data.post(this.config.urls.viewSave, {name: name, payload: {view: view, query: query}}, function() {
+        data.post(this.config.urls.viewSave, {name: name, payload: payload}, function() {
             self.loadViews(onDone);
         }, onError);
     },

@@ -44,7 +44,6 @@ var versionsView = {
 // ////////////////////////////////////////////////////////////////////////
 
     render: function() {
-        this.renderSubtitle();
         this.renderTimeline();
         this.renderSelects();
         this.renderDetail();
@@ -53,13 +52,6 @@ var versionsView = {
         this.renderProblems();
         shared.initTips();
     },
-
-    renderSubtitle: function() {
-        var text = versionsModel.rulesetName === '' ? 'no ruleset stored yet' : versionsModel.rulesetName;
-        document.getElementById('main-subtitle').textContent = text;
-    },
-
-// ////////////////////////////////////////////////////////////////////////
 
     whenText: function(iso) {
         return iso.slice(0, 16).replace('T', ' ');

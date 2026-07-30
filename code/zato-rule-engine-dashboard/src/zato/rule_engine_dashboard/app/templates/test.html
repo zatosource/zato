@@ -9,15 +9,7 @@
 {% endblock %}
 
 {% block content %}
-<!-- Main column -->
 <div class="main-column">
-  <div class="main-topbar">
-    <div class="main-topbar-line">
-      <h2>Tests and simulation</h2>
-      <span class="main-subtitle" id="main-subtitle"></span>
-    </div>
-  </div>
-
   <div class="toolbar">
     <button class="button-ghost toggled" id="button-view-scenarios" onclick="testView.showView('scenarios')">Test scenarios</button>
     <button class="button-ghost" id="button-view-ab" onclick="testView.showView('ab')"
@@ -26,7 +18,6 @@
     <button class="button-ghost" id="button-run-all" onclick="testView.runAll(this)">Run all</button>
     <button class="button-ghost" id="button-add-scenario" onclick="testView.addScenario()">Add scenario</button>
     <span class="toolbar-separator"></span>
-    <span class="keyboard-hint"><kbd>Arrows</kbd> move between cells, <kbd>Enter</kbd> edits a value, <kbd>Shift</kbd>+<kbd>Up</kbd>/<kbd>Down</kbd> reorders the selected scenario, right-click opens the menu</span>
     <button class="button-primary" onclick="testView.save(this)"
       data-tippy-content="Stores the whole suite as a new version.">Save test set</button>
   </div>

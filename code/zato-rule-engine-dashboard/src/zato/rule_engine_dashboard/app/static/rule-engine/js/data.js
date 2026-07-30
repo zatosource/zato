@@ -53,7 +53,7 @@ var data = {
 // ////////////////////////////////////////////////////////////////////////
 
     reportError: function(message) {
-        shared.popover(document.querySelector('.main-topbar-line'), message, 'red');
+        shared.popover(document.querySelector('.command-bar, .toolbar'), message, 'red');
     },
 };
 

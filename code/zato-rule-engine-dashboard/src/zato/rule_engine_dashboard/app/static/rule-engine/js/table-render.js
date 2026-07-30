@@ -64,7 +64,6 @@ var tableView = {
         this.attachDropTargets();
         this.attachColumnDrag();
         this.attachColumnResizers();
-        this.renderSubtitle();
         this.renderProblems();
         this.renderVocabulary();
         this.renderSentence();
@@ -103,20 +102,6 @@ var tableView = {
             var isInvalid = invalidList.some(function(entry) { return entry.column === column && entry.row === row; });
             cell.classList.toggle('table-cell-invalid', isInvalid);
         });
-    },
-
-// ////////////////////////////////////////////////////////////////////////
-
-    renderSubtitle: function() {
-        var subtitle = document.getElementById('main-subtitle');
-        var text = shared.escape(tableModel.table.name);
-
-        if (tableModel.definitionId === null) {
-            text += ' &#183; not saved yet';
-        } else {
-            text += ' &#183; version ' + tableModel.currentVersion;
-        }
-        subtitle.innerHTML = text;
     },
 
 // ////////////////////////////////////////////////////////////////////////

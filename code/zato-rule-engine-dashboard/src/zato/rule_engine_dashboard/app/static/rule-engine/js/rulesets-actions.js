@@ -4,28 +4,6 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-rulesetsView.setQuery = function(value) {
-    var self = this;
-    this.query = value;
-
-    document.querySelectorAll('.rulesets-saved-chip').forEach(function(chip) { chip.classList.remove('toggled'); });
-
-    rulesetsModel.search(value, function() {
-        self.renderList();
-        shared.initTips();
-    });
-};
-
-rulesetsView.setView = function(button, view) {
-    this.view = view;
-    document.querySelectorAll('.rulesets-chip').forEach(function(chip) { chip.classList.remove('toggled'); });
-    button.classList.add('toggled');
-    this.renderList();
-    shared.initTips();
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
 rulesetsView.select = function(id) {
     if (id === this.selectedId) { return; }
     this.selectedId = id;
@@ -37,12 +15,6 @@ rulesetsView.select = function(id) {
 
 rulesetsView.open = function(id) {
     window.location.href = this.config.openUrls.editor + '?ruleset=' + id;
-};
-
-rulesetsView.pickRecent = function(id) {
-    this.select(id);
-    var row = document.querySelector('.rulesets-row-selected');
-    if (row !== null) { row.scrollIntoView({block: 'nearest'}); }
 };
 
 // Clicking the name of a set lists the rules it is made of, right under the row.
@@ -258,80 +230,6 @@ rulesetsView.confirmRename = function(id, button) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-rulesetsView.openSaveViewPanel = function(button) {
-    if (shared.panelElement !== null) { shared.closePanel(); return; }
-
-    if (rulesetsModel.savedViews().length >= this.config.maxSavedViews) {
-        shared.popover(button, this.config.maxSavedViews + ' saved views is the cap, delete one first.', 'red');
-        return;
-    }
-
-    shared.openPanel(button,
-        '<div class="floating-panel-line">' +
-        '<input id="rulesets-view-name" type="text" placeholder="view name" ' +
-            'onkeydown="rulesetsView.saveViewKeys(event)">' +
-        '<button class="button-primary button-mini" onclick="rulesetsView.confirmSaveView(this)">Save</button>' +
-        '</div>' +
-        '<div class="floating-panel-line">' +
-            this.describeView({view: this.view, query: this.query.trim()}) +
-        '</div>');
-};
-
-rulesetsView.saveViewKeys = function(event) {
-    if (event.key === 'Enter') { this.confirmSaveView(event.target); }
-    if (event.key === 'Escape') { shared.closePanel(); }
-};
-
-rulesetsView.confirmSaveView = function(anchor) {
-    var self = this;
-    var name = document.getElementById('rulesets-view-name').value.trim();
-
-    if (name === '' || /[^A-Za-z0-9 ]/.test(name)) {
-        shared.popover(anchor, 'A view name is a few words, letters, digits and spaces only.', 'red');
-        return;
-    }
-
-    var handlers = shared.inFlight(anchor, function() {
-        shared.closePanel();
-        self.renderSavedViews();
-        shared.initTips();
-    }, function(message) {
-        shared.popover(anchor, message, 'red');
-    });
-    if (handlers === null) { return; }
-
-    rulesetsModel.saveView(name, this.view, this.query.trim(), handlers.done, handlers.error);
-};
-
-rulesetsView.applySavedView = function(chip, name) {
-    var self = this;
-    var view = rulesetsModel.savedViews().filter(function(candidate) { return candidate.name === name; })[0];
-    var payload = view.payload;
-
-    this.view = payload.view;
-    this.query = payload.query;
-    document.getElementById('rulesets-search').value = payload.query;
-
-    document.querySelectorAll('.rulesets-chip').forEach(function(other) { other.classList.remove('toggled'); });
-    document.querySelector('.rulesets-chip[data-view="' + payload.view + '"]').classList.add('toggled');
-    chip.classList.add('toggled');
-
-    rulesetsModel.search(payload.query, function() {
-        self.renderList();
-        shared.initTips();
-    });
-};
-
-rulesetsView.deleteSavedView = function(name) {
-    var self = this;
-    rulesetsModel.deleteView(name, function() {
-        self.renderSavedViews();
-        shared.initTips();
-    });
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
 rulesetsView.visibleIds = function() {
     var out = [];
     document.querySelectorAll('.rulesets-row').forEach(function(row) { out.push(parseInt(row.dataset.id)); });
@@ -369,15 +267,9 @@ rulesetsView.onKeyDown = function(event) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-rulesetsModel.load(function() { rulesetsView.render(); });
-
-document.getElementById('rulesets-search').addEventListener('input', function(event) {
-    rulesetsView.setQuery(event.target.value);
-});
-
 document.addEventListener('keydown', function(event) { rulesetsView.onKeyDown(event); });
 
-shared.panelToggles.push('.rulesets-publish', '#rulesets-save-view-button');
+shared.panelToggles.push('.rulesets-publish', '.command-suggest-row');
 
 shared.attachPaneResize(document.getElementById('rulesets-side-resizer'),
     document.getElementById('rulesets-side'), 'x-right');

@@ -31,13 +31,11 @@ tableView.checkConflicts = function() {
 
         var conflicts = payload.conflicts.conflicts;
         if (conflicts.length === 0) {
-            shared.popover(button, 'No conflicts. Every pair of rules either matches different data, ' +
-                'assigns the same values, or is covered by an override.', 'green');
+            shared.popover(button, 'No conflicts', 'green');
         } else {
             var suffix = conflicts.length === 1 ? 'conflict' : 'conflicts';
             var description = conflicts.map(function(pair) { return 'rules ' + pair.first + ' and ' + pair.second; }).join(', ');
-            shared.popover(button, conflicts.length + ' ' + suffix + ' found: ' + description +
-                '. Conflicting columns are shaded red, details are in the problems panel.', 'red');
+            shared.popover(button, conflicts.length + ' ' + suffix + ': ' + description, 'red');
         }
     }, function(message) {
         self.reportCheckFailure(button, message);
@@ -55,15 +53,13 @@ tableView.checkCompleteness = function() {
 
         if (completeness.too_large) {
             self.render();
-            shared.popover(button, 'This table asks for ' + completeness.combinations +
-                ' combinations, too many to check one by one. Narrowing the values in the ' +
-                'condition rows brings it back into range.', 'red');
+            shared.popover(button, completeness.combinations + ' combinations, too many to check', 'red');
             return;
         }
 
         if (proposed.length === 0) {
             self.render();
-            shared.popover(button, 'No missing combinations, every value the cells speak of is handled.', 'green');
+            shared.popover(button, 'No missing combinations', 'green');
             return;
         }
 
@@ -395,7 +391,6 @@ tableView.save = function(button) {
     var self = this;
 
     var handlers = shared.inFlight(button, function(payload) {
-        self.renderSubtitle();
         shared.popover(button, 'Saved as version ' + payload.version + '.', 'green');
     }, function(message) {
         shared.popover(button, message, 'red');

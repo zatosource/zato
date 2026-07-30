@@ -83,24 +83,6 @@
     flex-direction: column;
     overflow: hidden;
 }
-.main-topbar {
-    padding: 16px 24px 0;
-}
-.main-topbar-line {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-    margin-bottom: 4px;
-}
-h2 {
-    font-size: 17px;
-    font-weight: 700;
-}
-.main-subtitle {
-    font-size: 12px;
-    color: var(--text4);
-}
-
 /* ---------------------------------------------------------- */
 /* Shared - toolbar                                           */
 /* ---------------------------------------------------------- */
@@ -133,17 +115,158 @@ h2 {
 .toolbar input[type="text"]:focus {
     border-color: var(--blue);
 }
-.keyboard-hint {
-    font-size: 11px;
+.toolbar select {
+    background: var(--input-background);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-2);
+    padding: 4px 8px;
+    color: var(--text);
+    font-size: 12px;
+    font-family: var(--font);
+    outline: none;
+    cursor: pointer;
+}
+.toolbar select:focus {
+    border-color: var(--blue);
+}
+
+/* ---------------------------------------------------------- */
+/* Shared - command bar                                       */
+/* ---------------------------------------------------------- */
+
+.command-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: var(--sentence-bar-background);
+}
+.command-field {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 300px;
+    height: 28px;
+    padding: 0 7px 0 0;
+    background: var(--input-background);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-2);
+    cursor: text;
+}
+.command-input {
+    flex: 1;
+    min-width: 40px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 12px;
+}
+.command-input::placeholder {
     color: var(--text5);
 }
-.keyboard-hint kbd {
+.command-count {
+    flex-shrink: 0;
+    color: var(--text5);
     font-family: var(--mono);
-    font-size: 10px;
-    border: 1px solid var(--border);
+    font-size: 10.5px;
+    font-variant-numeric: tabular-nums lining-nums;
+    white-space: nowrap;
+}
+.command-clear {
+    display: none;
+    align-items: center;
+    padding: 2px;
+    border: none;
     border-radius: var(--radius-1);
-    padding: 0 4px;
-    color: var(--text4);
+    background: transparent;
+    color: var(--text5);
+    cursor: pointer;
+}
+.command-clear:hover {
+    color: var(--text);
+    background-image: var(--hover-veil);
+}
+
+.command-suggest {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    min-width: 300px;
+    max-height: 320px;
+    overflow: auto;
+    padding: 5px 0;
+    background: var(--panel-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-2);
+    box-shadow: 0 12px 28px var(--shadow-strong);
+    z-index: 1200;
+}
+.command-suggest-open {
+    display: block;
+}
+.command-suggest-title {
+    padding: 5px 12px 3px;
+    color: var(--text5);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.command-suggest-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 12px;
+    cursor: pointer;
+}
+.command-suggest-row-active {
+    background: var(--column-hover);
+}
+.command-suggest-check {
+    display: inline-flex;
+    justify-content: center;
+    width: 12px;
+    flex-shrink: 0;
+    color: var(--blue);
+}
+.command-suggest-facet {
+    min-width: 54px;
+    color: var(--text5);
+    font-family: var(--mono);
+    font-size: 10.5px;
+}
+.command-suggest-value {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text);
+    font-size: 12px;
+}
+.command-suggest-count {
+    color: var(--text5);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-variant-numeric: tabular-nums lining-nums;
+}
+.command-suggest-drop {
+    display: inline-flex;
+    padding: 2px;
+    border: none;
+    border-radius: var(--radius-1);
+    background: transparent;
+    color: var(--text5);
+    cursor: pointer;
+}
+.command-suggest-drop:hover {
+    color: var(--text);
+    background-image: var(--hover-veil);
 }
 
 .button-mini {

@@ -9,16 +9,7 @@
 {% endblock %}
 
 {% block content %}
-<!-- Main column -->
 <div class="main-column">
-  <div class="main-topbar">
-    <div class="main-topbar-line">
-      <h2>Decision tables</h2>
-      <span class="main-subtitle" id="main-subtitle"></span>
-      <span class="table-phrase-note" id="table-phrase-note">Phrase view</span>
-    </div>
-  </div>
-
   <div class="toolbar">
     <button class="button-ghost" id="button-completeness" onclick="tableView.checkCompleteness()"
       data-tippy-content="Add the missing combinations">Check completeness</button>
@@ -29,6 +20,7 @@
     <span class="toolbar-separator"></span>
     <button class="button-ghost" id="button-phrases" onclick="tableView.togglePhrases()"
       data-tippy-content="Every row as a phrase, values editable">Phrases</button>
+    <span class="table-phrase-note" id="table-phrase-note">Phrase view</span>
     <span class="toolbar-separator"></span>
     <input type="text" id="find-input" placeholder="Find in table..." oninput="tableView.render()">
     <input type="text" id="replace-input" placeholder="Replace with...">

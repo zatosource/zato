@@ -11,19 +11,11 @@ var notifyView = {
 // ////////////////////////////////////////////////////////////////////////
 
     render: function() {
-        this.renderSubtitle();
         this.renderRulesetSelect();
         this.renderDestinations();
         this.renderCredentials();
         this.renderProblems();
         shared.initTips();
-    },
-
-    renderSubtitle: function() {
-        var text = notifyModel.rulesetName === ''
-            ? 'no ruleset stored yet'
-            : notifyModel.rulesetName + ' \u00b7 who hears about this ruleset\u2019s life, and through which channel';
-        document.getElementById('main-subtitle').textContent = text;
     },
 
     renderRulesetSelect: function() {
@@ -63,15 +55,14 @@ var notifyView = {
         var self = this;
 
         if (notifyModel.rulesetId === null) {
-            pane.innerHTML = '<div class="test-run-note">No ruleset is stored yet - destinations attach to rulesets.</div>';
+            pane.innerHTML = '<div class="test-run-note">No ruleset yet</div>';
             return;
         }
 
         var html = '<div class="test-grid-title">Who gets told</div>';
 
         if (notifyModel.destinations.length === 0) {
-            html += '<div class="test-run-note">Nobody hears about this ruleset yet. Pick a platform and a ' +
-                'channel below - every event in the matrix will be delivered there.</div>';
+            html += '<div class="test-run-note">No destinations yet</div>';
         } else {
             html += '<table class="test-grid notify-grid"><thead><tr>' +
                 '<th>Platform</th><th>Target</th><th>Last delivery</th><th>Added by</th><th></th>' +

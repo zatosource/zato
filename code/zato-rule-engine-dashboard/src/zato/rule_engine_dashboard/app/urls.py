@@ -74,8 +74,6 @@ urlpatterns = [
     path('rules/views/', rulesets.view_list, name='rules-view-list'),
     path('rules/views/save/', rulesets.view_save, name='rules-view-save'),
     path('rules/views/delete/', rulesets.view_delete, name='rules-view-delete'),
-    path('rules/recents/', rulesets.recent_list, name='rules-recent-list'),
-
     # Vocabulary
     path('rules/vocabulary/bootstrap/', vocabulary.vocabulary_bootstrap, name='rules-vocabulary-bootstrap'),
     path('rules/vocabulary/rename/', vocabulary.term_rename, name='rules-vocabulary-rename'),

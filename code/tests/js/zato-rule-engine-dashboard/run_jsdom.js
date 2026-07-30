@@ -136,18 +136,41 @@ const screens = [
         urlPath: '/rulesets/',
         // The seeded ruleset lands in the list pane
         settled: (window) => window.document.getElementById('rulesets-list').textContent.includes('Loans'),
-        drive: (window) => {
+        drive: async (window) => {
             // The preview pane is driven directly for the seeded ruleset
             const model = window.rulesetsModel;
             check('rulesets: the model holds the seeded ruleset',
                 model.rulesets.some((item) => item.name === 'Loans'));
+
+            // The filter bar is driven the way a hand would: focus, then tick the first facet
+            const view = window.rulesetsView;
+            window.document.getElementById('rulesets-search').focus();
+
+            check('rulesets: the filter bar offers its facets',
+                window.document.getElementById('rulesets-suggest').textContent.includes('status'));
+
+            view.pick(0);
+            check('rulesets: ticking a facet chooses it', view.chosen.length === 1);
+
+            const narrowed = await waitFor(
+                () => window.document.getElementById('rulesets-count').textContent.includes(' of '));
+            check('rulesets: the count reads as the matching part of the whole', narrowed);
+
+            view.pick(0);
+            const unticked = await waitFor(() => view.chosen.length === 0);
+            check('rulesets: ticking the same facet again lets it go', unticked);
+
+            view.clearAll();
+            const cleared = await waitFor(
+                () => !window.document.getElementById('rulesets-count').textContent.includes(' of '));
+            check('rulesets: clearing takes the count back to every set', cleared);
         },
     },
     {
         file: 'editor.html',
         urlPath: '/editor/',
         // The seeded rule opens in the sentence editor
-        settled: (window) => window.document.body.textContent.includes('Preferential_rate'),
+        settled: (window) => window.document.getElementById('editor-area').textContent.includes('credit_score'),
         drive: (window) => {
             const rule = window.editorModel.rule;
             check('editor: the rule model carries the seeded condition',
@@ -158,7 +181,7 @@ const screens = [
         file: 'tables.html',
         urlPath: '/tables/',
         // The seeded decision table renders its grid
-        settled: (window) => window.document.body.textContent.includes('Loan approval'),
+        settled: (window) => window.document.getElementById('table-grid-area').textContent.includes('credit_score'),
         drive: async (window) => {
             check('tables: the table model carries the seeded columns',
                 window.tableModel.table.columns.length === 3);
@@ -178,7 +201,7 @@ const screens = [
         file: 'tests.html',
         urlPath: '/tests/',
         // The seeded suite with its scenarios is on screen
-        settled: (window) => window.document.body.textContent.includes('Loan suite'),
+        settled: (window) => window.document.getElementById('test-set-list').textContent.includes('High score gets the rate'),
         drive: (window) => {
             check('tests: the suite model carries both scenarios', window.testModel.suite.scenarios.length === 2);
         },

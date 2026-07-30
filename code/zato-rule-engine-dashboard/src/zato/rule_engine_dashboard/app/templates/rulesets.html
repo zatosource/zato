@@ -12,29 +12,17 @@
 
 {% block content %}
 <div class="main-column">
-  <div class="main-topbar">
-    <div class="main-topbar-line">
-      <h2>Rulesets</h2>
-      <span class="main-subtitle" id="main-subtitle"></span>
+  <div class="command-bar">
+    <div class="command-field" id="rulesets-field">
+      <input class="command-input" id="rulesets-search" type="text" autocomplete="off" spellcheck="false"
+        placeholder="Filter">
+      <div class="command-suggest" id="rulesets-suggest"></div>
     </div>
-  </div>
-
-  <div class="toolbar">
-    <input class="log-search rulesets-search" id="rulesets-search" type="text"
-      placeholder="Search rule text and names...">
-    <button class="button-ghost rulesets-chip toggled" data-view="all" onclick="rulesetsView.setView(this, 'all')">All</button>
-    <button class="button-ghost rulesets-chip" data-view="live" onclick="rulesetsView.setView(this, 'live')">Live</button>
-    <button class="button-ghost rulesets-chip" data-view="drafts" onclick="rulesetsView.setView(this, 'drafts')">Drafts</button>
-    <button class="button-ghost rulesets-chip" data-view="followed" onclick="rulesetsView.setView(this, 'followed')">Followed</button>
-    <span id="rulesets-saved-views"></span>
-    <button class="button-ghost" id="rulesets-save-view-button" onclick="rulesetsView.openSaveViewPanel(this)">Save view</button>
-    <span class="toolbar-separator"></span>
-    <span id="rulesets-count" class="rulesets-count"></span>
+    <span class="command-count" id="rulesets-count"></span>
+    <button class="command-clear" id="rulesets-clear" onclick="rulesetsView.clearAll()"
+      data-tippy-content="Clear"></button>
     <button class="button-ghost" onclick="rulesetsView.newRuleset()">New ruleset</button>
-    <span class="keyboard-hint"><kbd>/</kbd> searches, <kbd>Arrows</kbd> walk the list, <kbd>Enter</kbd> lists the rules of a set, right-click a row for its menu</span>
   </div>
-
-  <div class="rulesets-recents" id="rulesets-recents"></div>
 
   <div class="rulesets-split">
     <div class="rulesets-list" id="rulesets-list"></div>
@@ -55,4 +43,5 @@
 <script src="{% static 'rule-engine/js/rulesets-render.js' %}"></script>
 <script src="{% static 'rule-engine/js/rulesets-actions.js' %}"></script>
 <script src="{% static 'rule-engine/js/rulesets-menu.js' %}"></script>
+<script src="{% static 'rule-engine/js/rulesets-filter.js' %}"></script>
 {% endblock %}

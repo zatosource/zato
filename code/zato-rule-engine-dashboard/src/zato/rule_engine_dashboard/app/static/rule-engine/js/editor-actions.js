@@ -342,21 +342,6 @@ editorView.setView = function(mode) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-editorView.renderSubtitle = function() {
-    var subtitle = document.getElementById('main-subtitle');
-
-    if (editorModel.definitionId === null) {
-        subtitle.textContent = 'no ruleset yet';
-        return;
-    }
-
-    var text = shared.escape(editorModel.rulesetName) + ' &#183; version ' + editorModel.currentVersion;
-    if (editorModel.rule !== null) {
-        text += ' &#183; rule ' + shared.escape(editorModel.rule.name);
-    }
-    subtitle.innerHTML = text;
-};
-
 editorView.openRuleMenu = function(event) {
     var items = [];
 
@@ -377,7 +362,6 @@ editorView.openTests = function() {
 
 editorView.save = function(button) {
     var handlers = shared.inFlight(button, function(payload) {
-        editorView.renderSubtitle();
         shared.popover(button, 'Saved as version ' + payload.version + '.', 'green');
     }, function(message) {
         shared.popover(button, message, 'red');
@@ -419,7 +403,6 @@ document.addEventListener('mousedown', function(event) {
 // ////////////////////////////////////////////////////////////////////////
 
 editorModel.load(function() {
-    editorView.renderSubtitle();
     editorView.render();
 
     var termToHighlight = shared.termFromHash();

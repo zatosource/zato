@@ -170,10 +170,6 @@ testView.renderAb = function() {
     }
 
     var html = '';
-    html += '<div class="test-ab-intro">Both versions of ' + shared.escape(testModel.rulesetName) +
-        ' run against the suite\'s own scenarios, results and KPI numbers side by side, and every decision ' +
-        'that changes under the challenger is listed with the rules that explain it.</div>';
-
     html += '<div class="test-ab-pickers">' +
         '<label>Champion <select id="ab-champion-version">' + this.versionOptionsHtml(this.championVersion) + '</select></label>' +
         '<label>Challenger <select id="ab-challenger-version">' + this.versionOptionsHtml(this.challengerVersion) + '</select></label>' +

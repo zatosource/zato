@@ -22,20 +22,12 @@ var logView = {
 // ////////////////////////////////////////////////////////////////////////
 
     render: function() {
-        this.renderSubtitle();
         this.renderAggregates();
         this.renderList();
         this.renderDetail();
         this.renderProblems();
         this.attachColumnResizers();
         shared.initTips();
-    },
-
-    renderSubtitle: function() {
-        var text = logModel.rulesetName === ''
-            ? 'no ruleset stored yet'
-            : logModel.rulesetName + ' \u00b7 every decision keeps its searchable header \u00b7 the id is the handle for support';
-        document.getElementById('main-subtitle').textContent = text;
     },
 
     attachColumnResizers: function() {
@@ -192,8 +184,7 @@ var logView = {
             'Open the rules as they were</a></div>';
 
         if (!decision.has_payload) {
-            html += '<div class="test-run-note">This decision kept headers only - the capture dial sampled its ' +
-                'full story away. The outcome, the timing and the caller above are everything that was stored.</div>';
+            html += '<div class="test-run-note">Headers only, no payload was captured</div>';
             pane.innerHTML = html;
             return;
         }
@@ -277,8 +268,7 @@ var logView = {
         var html = '<div class="test-grid-title">What the caller was told</div>';
         html += '<div class="test-fired-item"><span class="status-dot test-severity-violation"></span>' +
             '<span class="test-fired-statement">' + shared.escape(decision.story.error) + '</span></div>';
-        html += '<div class="test-run-note">Nothing was assigned: the message above went back to the caller ' +
-            'as the response, not a bare status code.</div>';
+        html += '<div class="test-run-note">Nothing was assigned</div>';
         return html;
     },
 

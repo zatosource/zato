@@ -33,11 +33,10 @@ var testView = {
     render: function() {
         if (testModel.suite === null) {
             document.getElementById('test-set-list').innerHTML = '<div class="test-empty-note">' +
-                'There is no test set yet. <button class="button-ghost" onclick="testView.startNew()">New test set</button></div>';
+                'No test set yet <button class="button-ghost" onclick="testView.startNew()">New test set</button></div>';
             return;
         }
 
-        this.renderSubtitle();
         this.renderSuite();
         this.renderDetail();
         this.renderProblems();
@@ -49,24 +48,6 @@ var testView = {
         shared.initTips();
         this.scheduleServerCheck();
     },
-
-    renderSubtitle: function() {
-        var text = shared.escape(testModel.suite.name);
-
-        if (testModel.suiteId === null) {
-            text += ' &#183; not saved yet';
-        } else {
-            text += ' &#183; version ' + testModel.suiteVersion;
-        }
-        if (testModel.rulesetId !== null) {
-            text += ' &#183; runs against ' + shared.escape(testModel.rulesetName) +
-                ' version ' + testModel.rulesetCurrentVersion;
-        }
-
-        document.getElementById('main-subtitle').innerHTML = text;
-    },
-
-// ////////////////////////////////////////////////////////////////////////
 
     scheduleServerCheck: function() {
         var self = this;

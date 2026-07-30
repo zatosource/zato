@@ -71,8 +71,8 @@ def test_search_returns_rendered_hits(client:'any_', backend:'any_') -> 'None':
 
 # ################################################################################################################################
 
-def test_preview_renders_and_counts_as_a_visit(client:'any_', backend:'any_') -> 'None':
-    """ The preview carries the rendered rules and recent history, and the visit lands in the recents strip.
+def test_preview_renders_the_rules_and_the_history(client:'any_', backend:'any_') -> 'None':
+    """ The preview carries the rendered rules and the definition's history.
     """
     definition = create_ruleset(backend)
 
@@ -89,12 +89,6 @@ def test_preview_renders_and_counts_as_a_visit(client:'any_', backend:'any_') ->
         event_types.append(event['event_type'])
 
     assert 'definition.created' in event_types
-
-    # The preview itself put the definition into the recents.
-    response:'any_' = client.get('/rules/recents/')
-    items = response.json()['items']
-    assert len(items) == 1
-    assert items[0]['definition_id'] == definition.id
 
 # ################################################################################################################################
 
