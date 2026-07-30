@@ -2,72 +2,205 @@
 /* Rulesets home - toolbar and the split layout               */
 /* ---------------------------------------------------------- */
 
-.rulesets-search{width:320px}
-.rulesets-chip{padding:4px 12px}
-.rulesets-count{font-size:11.5px;color:var(--text4)}
+.rulesets-search {
+    width: 320px;
+}
+.rulesets-chip {
+    padding: 4px 12px;
+}
+.rulesets-count {
+    font-size: 11.5px;
+    color: var(--text4);
+}
 
-.rulesets-saved-chip{display:inline-flex;align-items:center;gap:6px}
-.rulesets-view-x{display:inline-flex;color:var(--text5);cursor:pointer}
-.rulesets-view-x:hover{color:var(--red)}
+.rulesets-saved-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.rulesets-view-x {
+    display: inline-flex;
+    color: var(--text5);
+    cursor: pointer;
+}
+.rulesets-view-x:hover {
+    color: var(--red);
+}
 
 /* ---------------------------------------------------------- */
 /* Rulesets home - recents strip                              */
 /* ---------------------------------------------------------- */
 
-.rulesets-recents{display:flex;align-items:center;gap:8px;padding:6px 24px;border-bottom:1px solid var(--border)}
-.rulesets-recents-label{font-size:11px;color:var(--text5);text-transform:uppercase;letter-spacing:0.05em}
-.rulesets-recent-chip{padding:3px 11px;font-size:11.5px}
+.rulesets-recents {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 24px;
+    border-bottom: 1px solid var(--border);
+}
+.rulesets-recents-label {
+    font-size: 11px;
+    color: var(--text5);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.rulesets-recent-chip {
+    padding: 3px 11px;
+    font-size: 11.5px;
+}
 
-.rulesets-split{flex:1;display:flex;overflow:hidden}
-.rulesets-list{flex:1;min-width:0;overflow:auto;padding:10px 0 16px}
-.rulesets-side{width:380px;min-width:0;flex-shrink:0;overflow:auto;background:var(--chrome);padding:14px 18px}
+.rulesets-split {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+.rulesets-list {
+    flex: 1;
+    min-width: 0;
+    overflow: auto;
+    padding: 10px 0 16px;
+}
+.rulesets-side {
+    width: 380px;
+    min-width: 0;
+    flex-shrink: 0;
+    overflow: auto;
+    background: var(--chrome);
+    padding: 14px 18px;
+}
 
 /* Wide enough to grab without hunting for it. */
-#rulesets-side-resizer{width:6px}
+#rulesets-side-resizer {
+    width: 6px;
+}
 
 /* ---------------------------------------------------------- */
 /* Rulesets home - rows                                       */
 /* ---------------------------------------------------------- */
 
-.rulesets-row{display:flex;align-items:flex-start;gap:18px;padding:10px 24px;cursor:pointer}
-.rulesets-row-stripe{background:var(--panel-raised)}
-.rulesets-row:hover{background-image:var(--hover-veil)}
-.rulesets-row-selected,.rulesets-row-selected.rulesets-row-stripe{background:var(--column-selected)}
+.rulesets-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    padding: 10px 24px;
+    cursor: pointer;
+}
+.rulesets-row-stripe {
+    background: var(--panel-raised);
+}
+.rulesets-row:hover {
+    background-image: var(--hover-veil);
+}
+.rulesets-row-selected,
+.rulesets-row-selected.rulesets-row-stripe {
+    background: var(--column-selected);
+}
 
-.rulesets-row-main{flex:1;min-width:0}
-.rulesets-row-name{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600}
-.rulesets-open-link{display:inline-flex;align-items:center;gap:5px;color:var(--text);text-decoration:none}
-.rulesets-open-link:hover{color:var(--blue)}
-.rulesets-caret{display:inline-flex;color:var(--text5)}
-.rulesets-open-link:hover .rulesets-caret{color:var(--blue)}
-.rulesets-row-description{margin-top:2px;font-size:12px;color:var(--text4)}
+.rulesets-row-main {
+    flex: 1;
+    min-width: 0;
+}
+.rulesets-row-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13.5px;
+    font-weight: 600;
+}
+.rulesets-open-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--text);
+    text-decoration: none;
+}
+.rulesets-open-link:hover {
+    color: var(--blue);
+}
+.rulesets-caret {
+    display: inline-flex;
+    color: var(--text5);
+}
+.rulesets-open-link:hover .rulesets-caret {
+    color: var(--blue);
+}
+.rulesets-row-description {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--text4);
+}
 
-.rulesets-star{display:inline-flex;color:var(--text5);cursor:pointer}
-.rulesets-star-on{color:var(--amber)}
-.rulesets-star-on svg{fill:currentColor}
+.rulesets-star {
+    display: inline-flex;
+    color: var(--text5);
+    cursor: pointer;
+}
+.rulesets-star-on {
+    color: var(--amber);
+}
+.rulesets-star-on svg {
+    fill: currentColor;
+}
 
-.rulesets-badge{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;border-radius:var(--radius-1);padding:1px 7px}
-.rulesets-badge-live{background:var(--green-tint-14);color:var(--green)}
-.rulesets-badge-draft{background:var(--indigo-tint-16);color:var(--indigo)}
-.rulesets-badge-problems{border:1px dashed var(--amber);color:var(--amber)}
+.rulesets-badge {
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-radius: var(--radius-1);
+    padding: 1px 7px;
+}
+.rulesets-badge-live {
+    background: var(--green-tint-14);
+    color: var(--green);
+}
+.rulesets-badge-draft {
+    background: var(--indigo-tint-16);
+    color: var(--indigo);
+}
+.rulesets-badge-problems {
+    border: 1px dashed var(--amber);
+    color: var(--amber);
+}
 
-/* A tint over a dark surface is exactly what a high contrast theme rules out, so each badge
-   becomes its accent in full, read against the surface the theme itself uses */
-html[data-theme$="high-contrast"] .rulesets-badge-live{background:var(--green);color:var(--chrome)}
-html[data-theme$="high-contrast"] .rulesets-badge-draft{background:var(--indigo);color:var(--chrome)}
-html[data-theme$="high-contrast"] .rulesets-badge-problems{background:var(--amber);color:var(--chrome);border-style:solid}
+.rulesets-publish {
+    color: var(--green);
+}
 
-.rulesets-publish{color:var(--green)}
-html[data-theme$="high-contrast"] .rulesets-publish{border-color:var(--green)}
+.rulesets-publish-line {
+    padding: 5px 14px;
+    font-size: 12.5px;
+    color: var(--text3);
+    line-height: 1.45;
+    max-width: 440px;
+}
+.rulesets-publish-warning {
+    color: var(--amber);
+}
 
-.rulesets-publish-line{padding:5px 14px;font-size:12.5px;color:var(--text3);line-height:1.45;max-width:440px}
-.rulesets-publish-warning{color:var(--amber)}
+.rulesets-rename {
+    margin-left: 9px;
+}
+.rulesets-rename-line {
+    padding: 5px 14px;
+    font-size: 12.5px;
+    color: var(--text3);
+    line-height: 1.45;
+    max-width: 440px;
+}
 
-.rulesets-rename{margin-left:9px}
-.rulesets-rename-line{padding:5px 14px;font-size:12.5px;color:var(--text3);line-height:1.45;max-width:440px}
-
-.rulesets-empty{padding:18px 24px;font-size:12.5px;color:var(--text5);font-style:italic}
-.rulesets-more{padding:10px 24px;font-size:11.5px;color:var(--text5);font-style:italic}
+.rulesets-empty {
+    padding: 18px 24px;
+    font-size: 12.5px;
+    color: var(--text5);
+    font-style: italic;
+}
+.rulesets-more {
+    padding: 10px 24px;
+    font-size: 11.5px;
+    color: var(--text5);
+    font-style: italic;
+}
 
 /* ---------------------------------------------------------- */
 /* Rulesets home - the rules of an expanded set                */
@@ -75,78 +208,276 @@ html[data-theme$="high-contrast"] .rulesets-publish{border-color:var(--green)}
 
 /* The dashed spine sits under the caret of the row it belongs to - 24px of row padding,
    13px of star, 8px of gap, half of the 12px caret. */
-.rulesets-rules{margin:0 24px 12px 51px;padding-left:20px;border-left:1px dashed var(--border)}
-.rulesets-rules-head{padding:7px 0 5px;font-size:10.5px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:0.08em}
-.rulesets-rules-empty{padding:8px 0;font-size:12px;color:var(--text5);font-style:italic}
+.rulesets-rules {
+    margin: 0 24px 12px 51px;
+    padding-left: 20px;
+    border-left: 1px dashed var(--border);
+}
+.rulesets-rules-head {
+    padding: 7px 0 5px;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--text4);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+.rulesets-rules-empty {
+    padding: 8px 0;
+    font-size: 12px;
+    color: var(--text5);
+    font-style: italic;
+}
 
-.rulesets-rule{position:relative;display:flex;align-items:baseline;gap:14px;margin-bottom:4px;padding:5px 11px;max-width:900px;
-  background:var(--panel-raised);border-radius:var(--radius-2);text-decoration:none}
-.rulesets-rule:hover{background-image:var(--hover-veil)}
+.rulesets-rule {
+    position: relative;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    margin-bottom: 4px;
+    padding: 5px 11px;
+    max-width: 900px;
+    background: var(--panel-raised);
+    border-radius: var(--radius-2);
+    text-decoration: none;
+}
+.rulesets-rule:hover {
+    background-image: var(--hover-veil);
+}
 
 /* A node on the spine and a dashed run from it to the rule. */
-.rulesets-rule::after{content:'';position:absolute;left:-23px;top:50%;margin-top:-2px;width:5px;height:5px;
-  background:var(--border);border-radius:50%}
-.rulesets-rule::before{content:'';position:absolute;left:-18px;top:50%;width:18px;border-top:1px dashed var(--border)}
+.rulesets-rule::after {
+    content: "";
+    position: absolute;
+    left: -23px;
+    top: 50%;
+    margin-top: -2px;
+    width: 5px;
+    height: 5px;
+    background: var(--border);
+    border-radius: 50%;
+}
+.rulesets-rule::before {
+    content: "";
+    position: absolute;
+    left: -18px;
+    top: 50%;
+    width: 18px;
+    border-top: 1px dashed var(--border);
+}
 
 /* The ink and the gold are mixed against the theme's own text and surface, so the chip lands
    dark on white in the light themes and light on dark in the dark ones, of its own accord. */
-.rulesets-rule-name{flex-shrink:0;font-family:var(--mono);font-size:11px;padding:2px 8px;border:none;border-radius:0;
-  color:color-mix(in srgb, var(--text) 74%, var(--input-background));background:var(--input-background);
-  letter-spacing:0.02em}
-.rulesets-rule:hover .rulesets-rule-name{background-color:color-mix(in srgb, var(--gold) 7%, var(--input-background));
-  color:color-mix(in srgb, var(--gold) 65%, var(--text))}
+.rulesets-rule-name {
+    flex-shrink: 0;
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 2px 8px;
+    border: none;
+    border-radius: 0;
+    color: color-mix(in srgb, var(--text) 74%, var(--input-background));
+    background: var(--input-background);
+    letter-spacing: 0.02em;
+}
+.rulesets-rule:hover .rulesets-rule-name {
+    background-color: color-mix(in srgb, var(--gold) 7%, var(--input-background));
+    color: color-mix(in srgb, var(--gold) 65%, var(--text));
+}
+.rulesets-rule-docs {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    color: var(--text4);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.rulesets-rule-shape {
+    flex-shrink: 0;
+    font-size: 10px;
+    color: var(--text5);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
 
-/* The high contrast themes take no washed tones - the chip keeps the theme's own ink and
-   turns solid gold when hovered */
-html[data-theme$="high-contrast"] .rulesets-rule-name{color:var(--text);background:var(--background)}
-html[data-theme$="high-contrast"] .rulesets-rule:hover .rulesets-rule-name{background-color:var(--gold);
-  color:var(--gold-ink)}
-.rulesets-rule-docs{flex:1;min-width:0;font-size:12px;color:var(--text4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rulesets-rule-shape{flex-shrink:0;font-size:10px;color:var(--text5);text-transform:uppercase;letter-spacing:0.05em}
+.rulesets-rules-loading {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 0;
+    font-size: 12px;
+    color: var(--text5);
+}
+.rulesets-spinner {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    border: 2px solid var(--border);
+    border-top-color: var(--blue);
+    border-radius: 50%;
+    animation: rulesets-spin 0.7s linear infinite;
+}
 
-.rulesets-rules-loading{display:flex;align-items:center;gap:9px;padding:9px 0;font-size:12px;color:var(--text5)}
-.rulesets-spinner{width:13px;height:13px;flex-shrink:0;border:2px solid var(--border);border-top-color:var(--blue);
-  border-radius:50%;animation:rulesets-spin 0.7s linear infinite}
-
-@keyframes rulesets-spin{to{transform:rotate(360deg)}}
+@keyframes rulesets-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
 
 /* ---------------------------------------------------------- */
 /* Rulesets home - full-text matches                          */
 /* ---------------------------------------------------------- */
 
-.rulesets-match{margin-top:5px;padding:4px 10px;background:var(--panel-raised);border-radius:var(--radius-2);font-size:12px;color:var(--text3);max-width:640px}
-.rulesets-match-where{margin-left:9px;font-size:10px;color:var(--text5);text-transform:uppercase;letter-spacing:0.05em}
-.rulesets-match-overflow{margin-top:4px;font-size:11.5px;color:var(--text5);font-style:italic}
-.rulesets-mark{background:var(--blue-tint-28);color:var(--text);border-radius:var(--radius-1);padding:0 1px}
+.rulesets-match {
+    margin-top: 5px;
+    padding: 4px 10px;
+    background: var(--panel-raised);
+    border-radius: var(--radius-2);
+    font-size: 12px;
+    color: var(--text3);
+    max-width: 640px;
+}
+.rulesets-match-where {
+    margin-left: 9px;
+    font-size: 10px;
+    color: var(--text5);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.rulesets-match-overflow {
+    margin-top: 4px;
+    font-size: 11.5px;
+    color: var(--text5);
+    font-style: italic;
+}
+.rulesets-mark {
+    background: var(--blue-tint-28);
+    color: var(--text);
+    border-radius: var(--radius-1);
+    padding: 0 1px;
+}
 
 /* ---------------------------------------------------------- */
 /* Rulesets home - term cross-references                      */
 /* ---------------------------------------------------------- */
 
-.rulesets-term-strip{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:2px 24px 8px;padding:7px 12px;background:var(--panel-raised);border-radius:var(--radius-3)}
-.rulesets-term-strip-label{font-size:11px;color:var(--text5);text-transform:uppercase;letter-spacing:0.05em}
-.rulesets-term-link{display:inline-flex;align-items:baseline;gap:7px;font-size:11.5px;font-family:var(--mono);color:var(--blue);text-decoration:none;background:var(--panel-raised);border-radius:var(--radius-2);padding:3px 10px}
-.rulesets-term-link:hover{background-image:var(--hover-veil);color:var(--text)}
-.rulesets-term-count{font-size:10px;font-family:var(--font);color:var(--text5)}
-.rulesets-term-deprecated{font-size:9.5px;font-family:var(--font);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--amber)}
-.rulesets-term-overflow{font-size:11.5px;color:var(--text5);font-style:italic}
-.rulesets-preview-terms{display:flex;flex-wrap:wrap;gap:6px}
+.rulesets-term-strip {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 2px 24px 8px;
+    padding: 7px 12px;
+    background: var(--panel-raised);
+    border-radius: var(--radius-3);
+}
+.rulesets-term-strip-label {
+    font-size: 11px;
+    color: var(--text5);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.rulesets-term-link {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 7px;
+    font-size: 11.5px;
+    font-family: var(--mono);
+    color: var(--blue);
+    text-decoration: none;
+    background: var(--panel-raised);
+    border-radius: var(--radius-2);
+    padding: 3px 10px;
+}
+.rulesets-term-link:hover {
+    background-image: var(--hover-veil);
+    color: var(--text);
+}
+.rulesets-term-count {
+    font-size: 10px;
+    font-family: var(--font);
+    color: var(--text5);
+}
+.rulesets-term-deprecated {
+    font-size: 9.5px;
+    font-family: var(--font);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--amber);
+}
+.rulesets-term-overflow {
+    font-size: 11.5px;
+    color: var(--text5);
+    font-style: italic;
+}
+.rulesets-preview-terms {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
 
 /* ---------------------------------------------------------- */
 /* Rulesets home - side pane                                  */
 /* ---------------------------------------------------------- */
 
-.rulesets-feed-entry{margin-bottom:12px}
-.rulesets-feed-head{font-size:11.5px;color:var(--text4)}
-.rulesets-feed-ruleset{color:var(--blue);font-weight:600}
-.rulesets-feed-what{margin-top:2px;font-size:12.5px;color:var(--text3)}
+.rulesets-feed-entry {
+    margin-bottom: 12px;
+}
+.rulesets-feed-head {
+    font-size: 11.5px;
+    color: var(--text4);
+}
+.rulesets-feed-ruleset {
+    color: var(--blue);
+    font-weight: 600;
+}
+.rulesets-feed-what {
+    margin-top: 2px;
+    font-size: 12.5px;
+    color: var(--text3);
+}
 
-.rulesets-preview-description{margin-bottom:8px;font-size:12.5px;color:var(--text3)}
-.rulesets-preview-links{display:flex;flex-wrap:wrap;gap:8px}
-.rulesets-preview-link{font-size:12px;color:var(--text2);text-decoration:none;background:var(--panel-raised);border-radius:var(--radius-2);padding:4px 11px}
-.rulesets-preview-link:hover{background-image:var(--hover-veil);color:var(--text)}
+.rulesets-preview-description {
+    margin-bottom: 8px;
+    font-size: 12.5px;
+    color: var(--text3);
+}
+.rulesets-preview-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.rulesets-preview-link {
+    font-size: 12px;
+    color: var(--text2);
+    text-decoration: none;
+    background: var(--panel-raised);
+    border-radius: var(--radius-2);
+    padding: 4px 11px;
+}
+.rulesets-preview-link:hover {
+    background-image: var(--hover-veil);
+    color: var(--text);
+}
 
-.rulesets-preview-rule{display:block;margin-top:4px;padding:4px 10px;background:var(--panel-raised);border-radius:var(--radius-2);
-  font-family:var(--mono);font-size:11.5px;color:var(--text2);text-decoration:none}
-.rulesets-preview-rule:hover{background-image:var(--hover-veil);color:var(--text)}
-.rulesets-preview-note{font-size:11.5px;color:var(--text5);font-style:italic;margin:6px 0}
+.rulesets-preview-rule {
+    display: block;
+    margin-top: 4px;
+    padding: 4px 10px;
+    background: var(--panel-raised);
+    border-radius: var(--radius-2);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--text2);
+    text-decoration: none;
+}
+.rulesets-preview-rule:hover {
+    background-image: var(--hover-veil);
+    color: var(--text);
+}
+.rulesets-preview-note {
+    font-size: 11.5px;
+    color: var(--text5);
+    font-style: italic;
+    margin: 6px 0;
+}

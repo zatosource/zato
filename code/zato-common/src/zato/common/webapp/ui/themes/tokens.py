@@ -166,6 +166,16 @@ rule_names = {
 
 # ################################################################################################################################
 
+# The gold a highlighted mark is washed with and the veil a hover lays over whatever is
+# under it - the same in every theme, so a hover always darkens its surface instead of
+# each screen picking a lighter color.
+marks = {
+    '--gold': '#e9c34a',
+    '--hover-veil': 'linear-gradient(rgba(0,0,0,0.07),rgba(0,0,0,0.07))',
+}
+
+# ################################################################################################################################
+
 # The theme every page starts with: what an anonymous page is drawn in and what
 # a signed-in one falls back to before anybody has picked anything. Named here
 # once, from where the converter writes it into themes-index.js for the settings
@@ -188,15 +198,16 @@ logos = {
 # others - and the logo is declared in a theme file yet used from tokens.css.
 logo_directory = static_url + 'webapp/assets'
 
-# How strongly the logo is drawn: softened everywhere, full strength in
-# the high contrast themes, which pin it in their overrides.
+# How strongly the logo is drawn, softened in every theme unless one pins it
+# in its overrides.
 logo_opacity = '0.75'
 
 # ################################################################################################################################
 
 # The full token set every generated theme carries, in output order.
 token_order = list(mapping) + list(mixes) + list(tints) + \
-    ['--shadow-strong', '--shadow-soft', '--rule-name', '--rule-name-background', '--logo', '--logo-opacity']
+    ['--shadow-strong', '--shadow-soft', '--rule-name', '--rule-name-background'] + list(marks) + \
+    ['--logo', '--logo-opacity']
 
 # The problems panel must always read as its own surface: surfaces closer
 # to the background than this channel distance count as the background,

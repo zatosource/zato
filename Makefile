@@ -22,7 +22,7 @@
 	geiger geiger-zato \
 	rust-lint lint \
 	hl7-haproxy hl7-backend-mllp hl7-backend-rest hl7-send-message \
-	quickstart dashboard server listener haproxy dev sbom scalar-update themes
+	quickstart dashboard server listener haproxy dev sbom scalar-update themes css
 
 SHELL := /bin/bash
 .SHELLFLAGS := -o pipefail -c
@@ -335,6 +335,24 @@ scalar-update: ## Re-download the Scalar bundle pinned in zato-openapi/package.j
 
 themes: ## Regenerate the webapp UI kit's theme css files, themes-index.js and themes.html from the sources in themes-in/.
 	$(ZATO_PY) -m zato.common.webapp.ui.themes
+# The generated theme files are css like any other, so prettier has the last word on their shape
+	$(MAKE) css
+
+# Where the rule engine's css lives - the dashboard's own screens and the webapp UI kit
+# they are built on. Files are discovered under these roots rather than listed, so a new
+# stylesheet is formatted the moment it is added, and anything under a vendor directory
+# is left exactly as it was shipped.
+CSS_ROOTS := \
+	$(CURDIR)/code/zato-rule-engine-dashboard/src/zato/rule_engine_dashboard/app/static \
+	$(CURDIR)/code/zato-common/src/zato/common/webapp/ui/static
+
+PRETTIER_VERSION := 3.6.2
+PRETTIER_CONFIG  := $(CURDIR)/code/.prettierrc
+
+css: ## Format every rule engine css file with prettier - the dashboard's screens and the webapp UI kit, vendored files untouched.
+	files=$$(find $(CSS_ROOTS) -type d -name vendor -prune -o -type f -name '*.css' -print | sort); \
+	if [ -z "$$files" ]; then echo "No css found under $(CSS_ROOTS)"; exit 1; fi; \
+	npx --yes prettier@$(PRETTIER_VERSION) --config $(PRETTIER_CONFIG) --write $$files
 
 help:
 	grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
