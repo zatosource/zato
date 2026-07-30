@@ -134,24 +134,40 @@ tints = {
     '--blue-tint-28': ('--blue', '0.28'),
     '--blue-tint-35': ('--blue', '0.35'),
     '--blue-tint-45': ('--blue', '0.45'),
+    '--green-tint-07': ('--green', '0.07'),
     '--green-tint-10': ('--green', '0.10'),
     '--green-tint-13': ('--green', '0.13'),
     '--green-tint-14': ('--green', '0.14'),
     '--green-tint-55': ('--green', '0.55'),
     '--red-tint-10': ('--red', '0.10'),
     '--red-tint-16': ('--red', '0.16'),
+    '--amber-tint-07': ('--amber', '0.07'),
     '--amber-tint-09': ('--amber', '0.09'),
+    '--amber-tint-10': ('--amber', '0.10'),
+    '--amber-tint-13': ('--amber', '0.13'),
+    '--indigo-tint-07': ('--indigo', '0.07'),
+    '--indigo-tint-10': ('--indigo', '0.10'),
     '--indigo-tint-12': ('--indigo', '0.12'),
+    '--indigo-tint-13': ('--indigo', '0.13'),
     '--indigo-tint-16': ('--indigo', '0.16'),
 }
 
 # ################################################################################################################################
 
 # Box shadow colors, constant per theme type: light surfaces want much
-# lighter shadows than dark ones.
+# lighter shadows than dark ones. The inset one is what gives a pill its
+# pressed-in top edge, so it stays far weaker than the two drop shadows.
 shadows = {
-    'dark': {'--shadow-strong': 'rgba(0,0,0,0.55)', '--shadow-soft': 'rgba(0,0,0,0.5)'},
-    'light': {'--shadow-strong': 'rgba(0,0,0,0.25)', '--shadow-soft': 'rgba(0,0,0,0.2)'},
+    'dark': {
+        '--shadow-strong': 'rgba(0,0,0,0.55)',
+        '--shadow-soft': 'rgba(0,0,0,0.5)',
+        '--shadow-inset': 'rgba(0,0,0,0.35)',
+    },
+    'light': {
+        '--shadow-strong': 'rgba(0,0,0,0.25)',
+        '--shadow-soft': 'rgba(0,0,0,0.2)',
+        '--shadow-inset': 'rgba(0,0,0,0.06)',
+    },
 }
 
 # ################################################################################################################################
@@ -166,12 +182,43 @@ rule_names = {
 
 # ################################################################################################################################
 
-# The gold a highlighted mark is washed with and the veil a hover lays over whatever is
-# under it - the same in every theme, so a hover always darkens its surface instead of
-# each screen picking a lighter color.
+# The veil a hover lays over whatever is under it, the same in every theme, so a hover
+# always darkens its surface instead of each screen picking a lighter color.
 marks = {
-    '--gold': '#e9c34a',
     '--hover-veil': 'linear-gradient(rgba(0,0,0,0.07),rgba(0,0,0,0.07))',
+}
+
+# ################################################################################################################################
+
+# The surface an action button is drawn with: a face fading into a deeper lower edge, the
+# border closing it off, the sheen along its top edge and the ink that reads on it. A light
+# theme takes the full yellow, a dark one the same hue burnt down to where it stops glaring
+# out of the page, and the ink stays black on both because both faces are bright enough.
+actions = {
+    'dark': {
+        '--action-face': '#e6bd3c',
+        '--action-face-deep': '#c99c16',
+        '--action-edge': '#8a6c0d',
+        '--action-sheen': 'rgba(255,255,255,0.18)',
+        '--action-ink': '#000000',
+    },
+    'light': {
+        '--action-face': '#ffd84a',
+        '--action-face-deep': '#ffc311',
+        '--action-edge': '#d4a00a',
+        '--action-sheen': 'rgba(255,255,255,0.25)',
+        '--action-ink': '#000000',
+    },
+}
+
+# ################################################################################################################################
+
+# The dashed rule under a link, in the page's own ink so it reads on either kind of surface,
+# and the color a link turns when the pointer is on it - the gold of an action on a dark
+# page, where it carries, and the blue of a link on a light one.
+links = {
+    'dark': {'--link-dash': 'rgba(255,255,255,0.35)', '--link-hover': '#e6bd3c'},
+    'light': {'--link-dash': 'rgba(0,0,0,0.35)', '--link-hover': '#006fbf'},
 }
 
 # ################################################################################################################################
@@ -206,8 +253,8 @@ logo_opacity = '0.75'
 
 # The full token set every generated theme carries, in output order.
 token_order = list(mapping) + list(mixes) + list(tints) + \
-    ['--shadow-strong', '--shadow-soft', '--rule-name', '--rule-name-background'] + list(marks) + \
-    ['--logo', '--logo-opacity']
+    ['--shadow-strong', '--shadow-soft', '--shadow-inset', '--rule-name', '--rule-name-background'] + \
+    list(marks) + list(actions['light']) + list(links['light']) + ['--logo', '--logo-opacity']
 
 # The problems panel must always read as its own surface: surfaces closer
 # to the background than this channel distance count as the background,

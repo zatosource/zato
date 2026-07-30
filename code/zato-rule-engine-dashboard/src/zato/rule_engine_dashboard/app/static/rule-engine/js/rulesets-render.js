@@ -100,12 +100,12 @@ var rulesetsView = {
         var out = '';
 
         if (ruleset.live_version !== null) {
-            out += '<span class="rulesets-badge rulesets-badge-live">live v' + ruleset.live_version + '</span>';
+            out += '<span class="pill pill-good">live v' + ruleset.live_version + '</span>';
         }
         if (draft !== null) {
-            out += '<span class="rulesets-badge rulesets-badge-draft">draft v' + draft + '</span>';
-            out += '<button class="button-mini rulesets-publish" ' +
-                'onclick="event.stopPropagation(); rulesetsView.openPublishPanel(' + ruleset.id + ', this)">publish</button>';
+            out += '<span class="pill pill-progress">draft v' + draft + '</span>';
+            out += '<button class="button-action rulesets-publish" ' +
+                'onclick="event.stopPropagation(); rulesetsView.openPublishPanel(' + ruleset.id + ', this)">Publish</button>';
         }
         return out;
     },
@@ -152,7 +152,7 @@ var rulesetsView = {
                 '<div class="rulesets-row-name">' + self.starHtml(ruleset) +
                 '<a class="rulesets-open-link" href="' + self.config.openUrls.editor + '?ruleset=' + ruleset.id + '" ' +
                     'onclick="return rulesetsView.toggleRules(event, ' + ruleset.id + ')">' +
-                    caret + self.markHtml(ruleset.name) + '</a>' +
+                    caret + '<span class="link">' + self.markHtml(ruleset.name) + '</span></a>' +
                 self.statusHtml(ruleset) + '</div>' +
                 self.hitsHtml(entry.hits) +
                 '</div>' +
@@ -306,8 +306,8 @@ var rulesetsView = {
         var statusValue = (ruleset.live_version === null ? 'never published' : 'live v' + ruleset.live_version) +
             (draft === null ? '' : ', draft v' + draft + ' in progress');
         if (draft !== null) {
-            statusValue += ' <button class="button-mini rulesets-publish" ' +
-                'onclick="rulesetsView.openPublishPanel(' + ruleset.id + ', this)">publish</button>';
+            statusValue += ' <button class="button-action rulesets-publish" ' +
+                'onclick="rulesetsView.openPublishPanel(' + ruleset.id + ', this)">Publish</button>';
         }
 
         var followValue = preview.is_following ? 'yes' : 'no';

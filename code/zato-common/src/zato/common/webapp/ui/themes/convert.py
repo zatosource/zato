@@ -34,8 +34,9 @@ import os
 from zato.common.typing_ import anydict, dictlist, strdict, strlist
 from zato.common.webapp.ui.themes.colors import channel_distance, composite, is_opaque, mix, parse_hex, rgb_tuple, to_hex
 from zato.common.webapp.ui.themes.jsonc import load_theme
-from zato.common.webapp.ui.themes.tokens import default_theme, defaults, logo_directory, logo_opacity, logos, mapping, \
-    marks, min_surface_distance, mixes, rule_names, shadows, surface_wash_ratio, ThemeConversionError, tints, token_order
+from zato.common.webapp.ui.themes.tokens import actions, default_theme, defaults, links, logo_directory, logo_opacity, \
+    logos, mapping, marks, min_surface_distance, mixes, rule_names, shadows, surface_wash_ratio, ThemeConversionError, \
+    tints, token_order
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -223,8 +224,11 @@ def convert_one(theme_path:'str', overrides_dir:'str') -> 'anydict':
     # .. the rule name color and its wash, the same yellow in every theme ..
     tokens.update(rule_names[theme_type])
 
-    # .. the gold of a highlighted mark and the veil a hover lays down, theme-independent ..
+    # .. the wash of a marked element and the hover veil, the same in every theme, then
+    # the action button surface and the link rule, each in the shade its kind calls for ..
     tokens.update(marks)
+    tokens.update(actions[theme_type])
+    tokens.update(links[theme_type])
 
     # .. the logo the theme is drawn with, the one its type calls for
     # unless its overrides meta names another file ..
