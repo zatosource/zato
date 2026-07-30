@@ -190,17 +190,18 @@ marks = {
 
 # ################################################################################################################################
 
-# The surface an action button is drawn with: a face fading into a deeper lower edge, the
+# The surface anything that acts is drawn with - a publish button, the toolbar chip that is
+# switched on, a rule name under the pointer: a face fading into a deeper lower edge, the
 # border closing it off, the sheen along its top edge and the ink that reads on it. A light
-# theme takes the full yellow, a dark one the same hue burnt down to where it stops glaring
-# out of the page, and the ink stays black on both because both faces are bright enough.
+# theme takes the full yellow of the platform's action buttons, a dark one a pane of indigo,
+# which is what carries on a dark page. The two stops are equal wherever the face is flat.
 actions = {
     'dark': {
-        '--action-face': '#e6bd3c',
-        '--action-face-deep': '#c99c16',
-        '--action-edge': '#8a6c0d',
-        '--action-sheen': 'rgba(255,255,255,0.18)',
-        '--action-ink': '#000000',
+        '--action-face': 'rgba(67,56,202,0.35)',
+        '--action-face-deep': 'rgba(67,56,202,0.35)',
+        '--action-edge': '#6366f1',
+        '--action-sheen': 'rgba(255,255,255,0.06)',
+        '--action-ink': '#c7d2fe',
     },
     'light': {
         '--action-face': '#ffd84a',
