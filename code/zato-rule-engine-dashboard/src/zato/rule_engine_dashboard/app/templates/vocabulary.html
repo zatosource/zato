@@ -12,17 +12,9 @@
 
 {% block content %}
 <div class="main-column">
-  <div class="main-topbar">
-    <div class="main-topbar-line">
-      <h2>Vocabulary</h2>
-      <span class="main-subtitle" id="main-subtitle"></span>
-    </div>
-  </div>
-
   <div class="toolbar">
     <input class="log-search" id="vocabulary-filter" type="text" placeholder="Filter terms...">
     <span class="toolbar-separator"></span>
-    <span class="keyboard-hint"><kbd>/</kbd> jumps to the filter, <kbd>Arrows</kbd> walk the terms, right-click a term for its menu</span>
     <button class="button-ghost" id="vocabulary-payload-button"
       onclick="vocabularyView.openPayloadPanel(this)"
       data-tippy-content="Add terms from a payload">Add from example</button>

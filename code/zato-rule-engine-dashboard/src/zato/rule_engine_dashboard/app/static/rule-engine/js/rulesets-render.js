@@ -14,9 +14,25 @@ var rulesetsView = {
         maxRulesInPanel: 40,
 
         loadingText: 'Loading',
-        emptyRulesText: 'This set has no rules yet, open it to write the first one.',
+        emptyRulesText: 'No rules yet',
+        searchDelayMilliseconds: 160,
 
         rulesetNamePattern: /^\w+(\.\w+)*$/,
+        viewNamePattern: /^[A-Za-z0-9 ]+$/,
+
+        facets: [
+            {facet: 'status', value: 'live', field: 'live'},
+            {facet: 'status', value: 'draft', field: 'draft'},
+            {facet: 'followed', value: 'yes', field: 'followed'},
+        ],
+
+        groups: {
+            facets: 'Filters',
+            views: 'Saved views',
+            text: 'Search',
+        },
+
+        saveViewLabel: 'Save as view',
 
         openUrls: {
             tables: '/tables/',
@@ -51,15 +67,18 @@ var rulesetsView = {
     },
 
     query: '',
-    view: 'all',
+    chosen: [],
+    suggestions: [],
+    suggestionIndex: 0,
+    suggestOpen: false,
+    searchTimer: null,
     selectedId: null,
     expanded: {},
 
 // ////////////////////////////////////////////////////////////////////////
 
     render: function() {
-        this.renderRecents();
-        this.renderSavedViews();
+        this.renderSuggestions();
         this.renderList();
         this.renderSide();
         this.renderProblems();
@@ -125,7 +144,7 @@ var rulesetsView = {
 
     renderList: function() {
         var self = this;
-        var entries = rulesetsModel.filtered(this.view, this.query);
+        var entries = rulesetsModel.filtered(this.filters(), this.query);
         var cap = this.config.maxVisibleRows;
         var html = '';
         var shown = 0;
@@ -164,14 +183,13 @@ var rulesetsView = {
         });
 
         if (html === '') {
-            html = '<div class="rulesets-empty">Nothing matches. The search reads rule text too, try a word from inside a rule, like "score".</div>';
+            html = '<div class="rulesets-empty">Nothing matches</div>';
         }
         if (entries.length > shown) {
-            html += '<div class="rulesets-more">Showing the first ' + shown + ' of ' + entries.length +
-                ' matching rulesets, the search above narrows this down.</div>';
+            html += '<div class="rulesets-more">First ' + shown + ' of ' + entries.length + '</div>';
         }
 
-        document.getElementById('rulesets-count').textContent = entries.length + ' rulesets';
+        this.renderCount(entries.length, rulesetsModel.rulesets.length);
         document.getElementById('rulesets-list').innerHTML = html;
     },
 
@@ -259,8 +277,6 @@ var rulesetsView = {
         rulesetsModel.preview(this.selectedId, function(preview) {
             pane.innerHTML = self.previewHtml(preview);
             shared.initTips();
-
-            rulesetsModel.loadRecents(function() { self.renderRecents(); });
         });
     },
 
@@ -353,7 +369,7 @@ var rulesetsView = {
 
             if (keys.length > this.config.maxPreviewRules) {
                 html += '<div class="rulesets-match-overflow">and ' + (keys.length - this.config.maxPreviewRules) +
-                    ' more, the row itself lists them all</div>';
+                    ' more</div>';
             }
         }
 
@@ -379,51 +395,49 @@ var rulesetsView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    renderRecents: function() {
-        var strip = document.getElementById('rulesets-recents');
-        var html = '';
+    renderCount: function(matching, total) {
+        var count = document.getElementById('rulesets-count');
+        var clear = document.getElementById('rulesets-clear');
+        var narrowed = this.narrowed();
 
-        rulesetsModel.recents.forEach(function(recent) {
-            var ruleset = rulesetsModel.byId(recent.definition_id);
-
-            if (ruleset === undefined) { return; }
-
-            html += '<button class="button-ghost rulesets-recent-chip" ' +
-                'onclick="rulesetsView.pickRecent(' + ruleset.id + ')">' +
-                shared.escape(ruleset.name) + '</button>';
-        });
-
-        if (html === '') {
-            strip.innerHTML = '';
-            strip.style.display = 'none';
-            return;
-        }
-
-        strip.style.display = 'flex';
-        strip.innerHTML = '<span class="rulesets-recents-label">Recently opened</span>' + html;
+        count.textContent = narrowed ? matching + ' of ' + total : String(total);
+        clear.style.display = narrowed ? 'inline-flex' : 'none';
     },
 
-// ////////////////////////////////////////////////////////////////////////
-
-    renderSavedViews: function() {
-        var holder = document.getElementById('rulesets-saved-views');
+    renderSuggestions: function() {
+        var pane = document.getElementById('rulesets-suggest');
         var self = this;
+        var lastGroup = null;
         var html = '';
 
-        rulesetsModel.savedViews().forEach(function(view) {
-            html += '<button class="button-ghost rulesets-chip rulesets-saved-chip" data-saved-view="' + shared.escape(view.name) + '" ' +
-                'onclick="rulesetsView.applySavedView(this, \'' + shared.escape(view.name) + '\')" ' +
-                'data-tippy-content="' + self.describeView(view.payload) + '">' + shared.escape(view.name) +
-                '<span class="rulesets-view-x" onclick="event.stopPropagation(); rulesetsView.deleteSavedView(\'' +
-                shared.escape(view.name) + '\')">' + shared.icon('x', 10) + '</span></button>';
+        this.suggestions.forEach(function(entry, index) {
+            if (entry.group !== lastGroup) {
+                html += '<div class="command-suggest-title">' + entry.group + '</div>';
+                lastGroup = entry.group;
+            }
+
+            var active = index === self.suggestionIndex ? ' command-suggest-row-active' : '';
+            var check = entry.token !== null && self.isChosen(entry.token) ? shared.icon('check', 12) : '';
+            var tail = '<span class="command-suggest-count">' +
+                (entry.count === null ? '' : entry.count) + '</span>';
+
+            // A saved view carries its own way out, so a view is dropped where it is offered
+            if (entry.view !== null) {
+                tail = '<button class="command-suggest-drop" data-tippy-content="Delete" ' +
+                    'onmousedown="event.preventDefault(); event.stopPropagation(); ' +
+                    'rulesetsView.dropSavedView(' + index + ')">' + shared.icon('x', 10) + '</button>';
+            }
+
+            html += '<div class="command-suggest-row' + active + '" ' +
+                'onmousedown="event.preventDefault(); rulesetsView.pick(' + index + ')">' +
+                '<span class="command-suggest-check">' + check + '</span>' +
+                '<span class="command-suggest-facet">' + entry.facet + '</span>' +
+                '<span class="command-suggest-value">' + shared.escape(entry.value) + '</span>' +
+                tail + '</div>';
         });
 
-        holder.innerHTML = html;
-    },
-
-    describeView: function(payload) {
-        var out = payload.view + (payload.query === '' ? '' : ', search ' + shared.escape(payload.query));
-        return out;
+        pane.innerHTML = html;
+        pane.classList.toggle('command-suggest-open', this.suggestOpen && html !== '');
     },
 
 // ////////////////////////////////////////////////////////////////////////

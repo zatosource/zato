@@ -20,7 +20,7 @@ from zato.common.rule_engine.tokens import ruleset_name_pattern
 from zato.common.util.logging_ import count_text
 from zato.rule_engine_dashboard.app.storage import get_backend, get_manager
 from zato.rule_engine_dashboard.app.views.api import BadRequestError, definition_row, event_row, follow_row, json_api, \
-    json_items, note_answer, read_int, read_json, recent_row, required, serialize_all, view_row
+    json_items, note_answer, read_int, read_json, required, serialize_all, view_row
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -125,9 +125,6 @@ def ruleset_preview(req:'any_', definition_id:'int') -> 'any_':
 
     events_text = count_text(len(events), 'history event', 'history events')
     note_answer(req, f'{note}, {events_text}')
-
-    # Opening a preview counts as a visit for the recents strip.
-    backend.views.touch_recent(actor=actor, definition_id=definition_id)
 
     out = JsonResponse({
         'definition': definition_row(record),
@@ -362,17 +359,6 @@ def view_delete(req:'any_') -> 'any_':
     return out
 
 # ################################################################################################################################
-
-@json_api
-def recent_list(req:'any_') -> 'any_':
-    """ The actor's recently visited definitions, newest first.
-    """
-    backend = get_backend()
-    records = backend.views.list_recents(req.user.username)
-    items = serialize_all(records, recent_row)
-
-    out = json_items(req, items, 'recently opened definition', 'recently opened definitions')
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -257,7 +257,6 @@ testView.promote = function(button) {
     var handlers = shared.inFlight(button, function() {
         testModel.runOne(scenario, function() {
             self.render();
-            self.renderSubtitle();
         }, data.reportError);
     }, function(message) {
         shared.popover(button, message, 'red');
@@ -274,7 +273,6 @@ testView.save = function(button) {
     var self = this;
 
     var handlers = shared.inFlight(button, function(payload) {
-        self.renderSubtitle();
         shared.popover(button, 'Saved as version ' + payload.version + '.', 'green');
     }, function(message) {
         shared.popover(button, message, 'red');

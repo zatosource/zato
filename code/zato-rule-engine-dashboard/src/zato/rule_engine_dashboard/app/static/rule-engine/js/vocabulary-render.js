@@ -17,11 +17,6 @@ var vocabularyView = {
 // ////////////////////////////////////////////////////////////////////////
 
     render: function() {
-        var subtitle = vocabulary.name === ''
-            ? 'one definition serves the rules, the tests, the log and the API'
-            : vocabulary.name + ' - one definition serves the rules, the tests, the log and the API';
-        document.getElementById('main-subtitle').textContent = subtitle;
-
         this.renderTree();
         this.renderDetail();
         this.renderProblems();

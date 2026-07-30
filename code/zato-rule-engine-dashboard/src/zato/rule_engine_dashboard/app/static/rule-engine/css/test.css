@@ -361,14 +361,6 @@ tr:hover .test-row-remove {
     overflow: auto;
     padding: 16px 24px;
 }
-.test-ab-intro {
-    max-width: 760px;
-    font-size: 12.5px;
-    color: var(--text3);
-    line-height: 1.5;
-    margin-bottom: 14px;
-}
-
 .test-ab-pickers {
     display: flex;
     align-items: center;

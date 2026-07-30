@@ -30,7 +30,7 @@ from zato.rule_engine_dashboard.app.views.common import signed_in_required
 
 if 0:
     from zato.common.rule_engine.sql import RuleDecisionRecord, RuleDefinitionRecord, RuleEventRecord, RuleFollowRecord, \
-        RuleRecentRecord, RuleReferenceRecord, RuleSQLBackend, RuleVersionRecord, RuleViewRecord
+        RuleReferenceRecord, RuleSQLBackend, RuleVersionRecord, RuleViewRecord
     from zato.common.typing_ import any_, anydict, dictlist, stranydict
 
 # ################################################################################################################################
@@ -394,16 +394,6 @@ def view_row(record:'RuleViewRecord') -> 'stranydict':
     return out
 
 # ################################################################################################################################
-
-def recent_row(record:'RuleRecentRecord') -> 'stranydict':
-    """ One recently visited definition.
-    """
-    out = {
-        'definition_id': record.definition_id,
-        'visited_at':    record.visited_at.isoformat(),
-    }
-
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

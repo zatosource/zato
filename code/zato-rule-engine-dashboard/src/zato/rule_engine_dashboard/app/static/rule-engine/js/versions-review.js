@@ -50,9 +50,7 @@ versionsView.renderReview = function() {
 
     var gateText = approval.gate_enabled ? 'on' : 'off';
     html += '<div class="versions-review-row"><span>Approval gate</span><b>' + gateText +
-        ' <button class="button-mini" onclick="versionsView.setGate(this, ' + !approval.gate_enabled + ')" ' +
-        'data-tippy-content="With the gate on, no version goes live without its one approval, ' +
-        'bound to the exact content that was approved. The change itself is a logged event.">' +
+        ' <button class="button-mini" onclick="versionsView.setGate(this, ' + !approval.gate_enabled + ')">' +
         (approval.gate_enabled ? 'Turn off' : 'Turn on') + '</button></b></div>';
 
     if (approval.gate_enabled) {
@@ -77,9 +75,8 @@ versionsView.renderReview = function() {
         html += '<div class="versions-review-row"><span>Content</span><b>' + matchText + '</b></div>';
     } else {
         html += '<div class="versions-review-row"><span>v' + approval.version + '</span><b>not approved yet</b></div>';
-        html += '<button class="button-primary versions-review-button" onclick="versionsView.approve(this)" ' +
-            'data-tippy-content="Binds you to this exact version and the content hash of its stored snapshot. ' +
-            'An approval is immutable and its own logged event.">Approve v' + approval.version + '</button>';
+        html += '<button class="button-primary versions-review-button" onclick="versionsView.approve(this)">' +
+            'Approve v' + approval.version + '</button>';
     }
 
     if (versionsModel.toNumber === versionsModel.liveVersion) {

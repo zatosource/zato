@@ -9,15 +9,7 @@
 {% endblock %}
 
 {% block content %}
-<!-- Main column -->
 <div class="main-column">
-  <div class="main-topbar">
-    <div class="main-topbar-line">
-      <h2>Rule editor</h2>
-      <span class="main-subtitle" id="main-subtitle"></span>
-    </div>
-  </div>
-
   <div class="toolbar">
     <span class="view-switcher">
       <button class="button-ghost toggled" id="view-sentence" onclick="editorView.setView('sentence')">Sentence</button>
@@ -27,7 +19,6 @@
     </span>
     <button class="button-ghost" onclick="editorView.openRuleMenu(event)">Rules</button>
     <span class="toolbar-separator"></span>
-    <span class="keyboard-hint"><kbd>Arrows</kbd> walk the sentence, <kbd>Enter</kbd> opens the choices of the focused part</span>
     <button class="button-ghost" onclick="editorView.openTests()"
       data-tippy-content="Open the tests screen">Test</button>
     <button class="button-primary" onclick="editorView.save(this)"

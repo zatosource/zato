@@ -10,7 +10,7 @@ var testModel = {
         newSuiteName: 'Test set',
         newScenarioName: 'New scenario',
 
-        noRulesetMessage: 'There is no ruleset to run against yet. Author one in the editor first.',
+        noRulesetMessage: 'No ruleset to run against yet',
 
         urls: {
             suites: '/rules/test-sets/',

@@ -59,12 +59,20 @@ var settingsView = {
 
 window.settingsView = settingsView;
 
-var topbarLine = document.querySelector('.main-topbar-line');
 var settingsButton = document.createElement('button');
 settingsButton.className = 'settings-button';
 settingsButton.id = 'settings-button';
 settingsButton.textContent = 'Settings';
 settingsButton.addEventListener('click', function() { settingsView.openPanel(settingsButton); });
-topbarLine.appendChild(settingsButton);
+
+// Screens with a bar of their own keep the button at its right end, the plain ones open with it
+var bar = document.querySelector('.command-bar, .toolbar');
+
+if (bar === null) {
+    var content = document.querySelector('.main-content');
+    content.insertBefore(settingsButton, content.firstChild);
+} else {
+    bar.appendChild(settingsButton);
+}
 
 })();
