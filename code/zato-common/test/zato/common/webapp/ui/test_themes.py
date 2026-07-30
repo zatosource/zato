@@ -34,8 +34,7 @@ _css_dir = os.path.join(_ui_dir, 'static', 'webapp', 'css')
 _themes_dir = os.path.join(_css_dir, 'themes')
 
 # The themes the kit ships with, in the order the directory lists them
-_expected_theme_files = [
-    'dark-high-contrast.css', 'light-high-contrast.css', 'zato-dark.css', 'zato-light.css']
+_expected_theme_files = ['zato-dark.css', 'zato-light.css']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -46,7 +45,7 @@ def _tokens_of(path:'str') -> 'strdict':
     with open(path) as theme_file:
         text = theme_file.read()
 
-    out = dict(re.findall(r'^  (--[a-z0-9-]+):(.+);$', text, re.M))
+    out = dict(re.findall(r'^    (--[a-z0-9-]+): (.+);$', text, re.M))
     return out
 
 # ################################################################################################################################

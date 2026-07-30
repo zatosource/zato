@@ -2,31 +2,94 @@
 /* Shared - sign-in screen                                    */
 /* ---------------------------------------------------------- */
 
-.auth-screen{flex:1;display:flex;align-items:center;justify-content:center;padding:24px 24px 15vh;overflow:hidden;
-  position:relative;isolation:isolate}
+.auth-screen {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 24px 15vh;
+    overflow: hidden;
+    position: relative;
+    isolation: isolate;
+}
 
 /* One wide wash of color across the whole screen, no pools that read as a blob */
-.auth-screen::before{content:'';position:absolute;inset:0;z-index:-2;pointer-events:none;
-  background-image:radial-gradient(120% 100% at 50% 45%, var(--blue-tint-07), transparent 75%)}
+.auth-screen::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    background-image: radial-gradient(120% 100% at 50% 45%, var(--blue-tint-07), transparent 75%);
+}
 
 /* A dashed mesh with a node at every crossing, on a plane receding towards the top right.
    The pattern is a mask, its white is alpha only, the color comes from the theme. */
-.auth-screen::after{content:'';position:absolute;inset:-60% -70% -50% -60%;z-index:-1;pointer-events:none;
-  background-color:var(--blue);opacity:0.5;
-  transform-origin:0% 100%;
-  transform:perspective(1800px) rotateX(28deg) rotateY(-8deg) rotateZ(-5deg);
-  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Cpath d='M0 0 H48 M0 0 V48' fill='none' stroke='%23fff' stroke-opacity='0.34' stroke-width='1' stroke-dasharray='5 7'/%3E%3Cg fill='%23fff' fill-opacity='0.5'%3E%3Crect x='-0.9' y='-0.9' width='1.8' height='1.8'/%3E%3Crect x='47.1' y='-0.9' width='1.8' height='1.8'/%3E%3Crect x='-0.9' y='47.1' width='1.8' height='1.8'/%3E%3Crect x='47.1' y='47.1' width='1.8' height='1.8'/%3E%3C/g%3E%3C/svg%3E");
-  mask-size:48px 48px;mask-repeat:repeat}
+.auth-screen::after {
+    content: "";
+    position: absolute;
+    inset: -60% -70% -50% -60%;
+    z-index: -1;
+    pointer-events: none;
+    background-color: var(--blue);
+    opacity: 0.5;
+    transform-origin: 0% 100%;
+    transform: perspective(1800px) rotateX(28deg) rotateY(-8deg) rotateZ(-5deg);
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Cpath d='M0 0 H48 M0 0 V48' fill='none' stroke='%23fff' stroke-opacity='0.34' stroke-width='1' stroke-dasharray='5 7'/%3E%3Cg fill='%23fff' fill-opacity='0.5'%3E%3Crect x='-0.9' y='-0.9' width='1.8' height='1.8'/%3E%3Crect x='47.1' y='-0.9' width='1.8' height='1.8'/%3E%3Crect x='-0.9' y='47.1' width='1.8' height='1.8'/%3E%3Crect x='47.1' y='47.1' width='1.8' height='1.8'/%3E%3C/g%3E%3C/svg%3E");
+    mask-size: 48px 48px;
+    mask-repeat: repeat;
+}
 
-.auth-panel{width:290px;position:relative}
-.auth-logo{width:84px;height:30px;margin:0 auto 18px;opacity:var(--logo-opacity);
-  background-image:var(--logo);background-repeat:no-repeat;background-size:contain;background-position:center}
-.auth-panel .messages{margin-bottom:12px}
-.auth-panel .messages li{padding:7px 12px;font-size:12px;text-align:center}
-.auth-panel .form-card{max-width:none;margin-bottom:0;padding:16px 18px;box-shadow:0 10px 34px var(--shadow-soft)}
-.auth-panel .form-row{margin-bottom:11px}
-.auth-panel .form-row label{color:var(--button-text);text-transform:uppercase;font-size:0.6rem;
-  letter-spacing:0.018rem}
-.auth-panel .form-row input[type=text],.auth-panel .form-row input[type=password]{padding:6px 9px;font-size:12.5px}
-.auth-submit{display:block;width:100%;text-align:center;text-decoration:none}
-.auth-alternative{margin-top:12px;padding-top:12px;border-top:1px dashed var(--border)}
+.auth-panel {
+    width: 290px;
+    position: relative;
+}
+.auth-logo {
+    width: 84px;
+    height: 30px;
+    margin: 0 auto 18px;
+    opacity: var(--logo-opacity);
+    background-image: var(--logo);
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-position: center;
+}
+.auth-panel .messages {
+    margin-bottom: 12px;
+}
+.auth-panel .messages li {
+    padding: 7px 12px;
+    font-size: 12px;
+    text-align: center;
+}
+.auth-panel .form-card {
+    max-width: none;
+    margin-bottom: 0;
+    padding: 16px 18px;
+    box-shadow: 0 10px 34px var(--shadow-soft);
+}
+.auth-panel .form-row {
+    margin-bottom: 11px;
+}
+.auth-panel .form-row label {
+    color: var(--button-text);
+    text-transform: uppercase;
+    font-size: 0.6rem;
+    letter-spacing: 0.018rem;
+}
+.auth-panel .form-row input[type="text"],
+.auth-panel .form-row input[type="password"] {
+    padding: 6px 9px;
+    font-size: 12.5px;
+}
+.auth-submit {
+    display: block;
+    width: 100%;
+    text-align: center;
+    text-decoration: none;
+}
+.auth-alternative {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border);
+}

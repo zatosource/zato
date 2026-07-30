@@ -5,6 +5,4 @@ window.themesDefault = 'zato-dark';
 window.themesIndex = [
     {slug: 'zato-dark', name: 'Zato dark', type: 'dark'},
     {slug: 'zato-light', name: 'Zato light', type: 'light'},
-    {slug: 'dark-high-contrast', name: 'Zato dark high contrast', type: 'dark'},
-    {slug: 'light-high-contrast', name: 'Zato light high contrast', type: 'light'},
 ];

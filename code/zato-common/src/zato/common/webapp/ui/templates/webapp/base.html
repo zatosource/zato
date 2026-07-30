@@ -8,8 +8,12 @@
 {% if user.is_authenticated %}
 <script>
 (function() {
+    var shipped = {{ theme_slugs_json|safe }};
     var stored = window.localStorage.getItem('ui-theme');
-    if (stored === null) { stored = '{{ default_theme }}'; }
+
+    // A theme that no longer ships would leave the page without a single token
+    if (shipped.indexOf(stored) === -1) { stored = '{{ default_theme }}'; }
+
     document.documentElement.dataset.theme = stored;
 })();
 </script>

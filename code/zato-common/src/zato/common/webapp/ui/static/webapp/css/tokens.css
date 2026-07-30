@@ -2,33 +2,49 @@
 /* Shared - theme tokens                                      */
 /* ---------------------------------------------------------- */
 
-*{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --font:'IBM Plex Sans',sans-serif;
-  --mono:'IBM Plex Mono',monospace;
-
-  /* Radius scale, tight on purpose - 1 for inline marks, 2 for controls, 3 for containers */
-  --radius-1:2px;
-  --radius-2:3px;
-  --radius-3:4px;
-
-  /* The one gold every theme washes a highlighted mark with, mid-toned so it carries
-     both on light and on dark surfaces */
-  --gold:#e9c34a;
-
-  /* The ink that reads on top of solid gold, whatever the theme */
-  --gold-ink:#1a1400;
-
-  /* Every hover darkens what is under it, so it is one veil laid over the element's
-     own background rather than a lighter color per screen */
-  --hover-veil:linear-gradient(rgba(0,0,0,0.07),rgba(0,0,0,0.07));
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
-body{font-family:var(--font);background:var(--background);color:var(--text);display:flex;height:100vh;overflow:hidden}
-svg{vertical-align:-2px}
+:root {
+    --font: "IBM Plex Sans", sans-serif;
+    --mono: "IBM Plex Mono", monospace;
 
-*{scrollbar-color:var(--scrollbar-thumb) transparent}
-::-webkit-scrollbar{width:12px;height:12px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border-radius:var(--radius-3)}
-::-webkit-scrollbar-thumb:hover{background:var(--scrollbar-thumb-hover)}
-::-webkit-scrollbar-corner{background:transparent}
+    /* Radius scale, tight on purpose - 1 for inline marks, 2 for controls, 3 for containers */
+    --radius-1: 2px;
+    --radius-2: 3px;
+    --radius-3: 4px;
+}
+body {
+    font-family: var(--font);
+    background: var(--background);
+    color: var(--text);
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+svg {
+    vertical-align: -2px;
+}
+
+* {
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: var(--radius-3);
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+}
+::-webkit-scrollbar-corner {
+    background: transparent;
+}

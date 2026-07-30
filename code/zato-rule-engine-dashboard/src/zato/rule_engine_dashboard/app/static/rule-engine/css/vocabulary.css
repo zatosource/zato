@@ -2,53 +2,192 @@
 /* Vocabulary - split layout                                  */
 /* ---------------------------------------------------------- */
 
-.vocabulary-split{flex:1;display:flex;overflow:hidden}
-.vocabulary-tree-pane{width:300px;flex-shrink:0;background:var(--chrome);display:flex;flex-direction:column;overflow:hidden}
-.vocabulary-tree-head{display:flex;align-items:center;padding:10px 16px 6px;font-size:11px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:0.08em}
-.vocabulary-tree-list{flex:1;overflow:auto;padding-bottom:12px}
-.vocabulary-tree-empty{padding:14px 16px;color:var(--text5);font-size:12px;font-style:italic}
+.vocabulary-split {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+.vocabulary-tree-pane {
+    width: 300px;
+    flex-shrink: 0;
+    background: var(--chrome);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.vocabulary-tree-head {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text4);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+.vocabulary-tree-list {
+    flex: 1;
+    overflow: auto;
+    padding-bottom: 12px;
+}
+.vocabulary-tree-empty {
+    padding: 14px 16px;
+    color: var(--text5);
+    font-size: 12px;
+    font-style: italic;
+}
 
-.vocabulary-tree-item{display:flex;align-items:center;gap:8px;padding:6px 16px;font-size:12.5px;color:var(--text3);cursor:pointer}
-.vocabulary-tree-item:hover{background-image:var(--hover-veil)}
-.vocabulary-tree-item-selected{background:var(--panel);color:var(--text);font-weight:600}
-.vocabulary-tree-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.vocabulary-tree-item .vocabulary-item-type{margin-left:auto}
+.vocabulary-tree-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    font-size: 12.5px;
+    color: var(--text3);
+    cursor: pointer;
+}
+.vocabulary-tree-item:hover {
+    background-image: var(--hover-veil);
+}
+.vocabulary-tree-item-selected {
+    background: var(--panel);
+    color: var(--text);
+    font-weight: 600;
+}
+.vocabulary-tree-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.vocabulary-tree-item .vocabulary-item-type {
+    margin-left: auto;
+}
 
-.vocabulary-tree-more{padding:8px 16px;font-size:11.5px;color:var(--text5);font-style:italic;line-height:1.4}
+.vocabulary-tree-more {
+    padding: 8px 16px;
+    font-size: 11.5px;
+    color: var(--text5);
+    font-style: italic;
+    line-height: 1.4;
+}
 
-.vocabulary-drop-into{outline:2px dashed var(--blue);outline-offset:-2px;background:var(--blue-tint-07)}
+.vocabulary-drop-into {
+    outline: 2px dashed var(--blue);
+    outline-offset: -2px;
+    background: var(--blue-tint-07);
+}
 
-.vocabulary-flag{flex-shrink:0;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;border:1px dashed var(--amber);color:var(--amber);border-radius:var(--radius-1);padding:1px 6px}
+.vocabulary-flag {
+    flex-shrink: 0;
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border: 1px dashed var(--amber);
+    color: var(--amber);
+    border-radius: var(--radius-1);
+    padding: 1px 6px;
+}
 
 /* ---------------------------------------------------------- */
 /* Vocabulary - opened term                                   */
 /* ---------------------------------------------------------- */
 
-.vocabulary-detail-pane{flex:1;overflow:auto;padding:16px 24px}
-.vocabulary-detail-head{display:flex;align-items:center;gap:9px;margin-bottom:6px;flex-wrap:wrap}
-.vocabulary-detail-name{font-size:14.5px;font-weight:700;color:var(--text);font-family:var(--mono);cursor:pointer;border-radius:var(--radius-2);padding:2px 7px;margin-left:-7px}
-.vocabulary-detail-name:hover{background-image:var(--hover-veil);color:var(--blue)}
+.vocabulary-detail-pane {
+    flex: 1;
+    overflow: auto;
+    padding: 16px 24px;
+}
+.vocabulary-detail-head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+}
+.vocabulary-detail-name {
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--text);
+    font-family: var(--mono);
+    cursor: pointer;
+    border-radius: var(--radius-2);
+    padding: 2px 7px;
+    margin-left: -7px;
+}
+.vocabulary-detail-name:hover {
+    background-image: var(--hover-veil);
+    color: var(--blue);
+}
 
-.vocabulary-delete-blocked{opacity:0.55;cursor:not-allowed}
-.vocabulary-delete-enabled:hover{color:var(--red)}
+.vocabulary-delete-blocked {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+.vocabulary-delete-enabled:hover {
+    color: var(--red);
+}
 
 /* ---------------------------------------------------------- */
 /* Vocabulary - where-used                                    */
 /* ---------------------------------------------------------- */
 
-.vocabulary-usage-title{display:flex;align-items:center;max-width:640px}
-.vocabulary-usage-buttons{margin-left:2px}
-.vocabulary-usage-group{margin-top:10px;font-size:12px;font-weight:700;color:var(--text2)}
-.vocabulary-usage-entry{display:block;padding:4px 8px 4px 16px;font-size:12.5px;color:var(--text3);max-width:640px;border-radius:var(--radius-2)}
-.vocabulary-usage-entry:nth-child(even of .vocabulary-usage-entry){background:var(--panel-raised)}
-.vocabulary-usage-link{text-decoration:none}
-.vocabulary-usage-link:hover{background-image:var(--hover-veil);color:var(--text)}
-.vocabulary-usage-link svg{margin-left:7px;vertical-align:-1px;color:var(--text5)}
+.vocabulary-usage-title {
+    display: flex;
+    align-items: center;
+    max-width: 640px;
+}
+.vocabulary-usage-buttons {
+    margin-left: 2px;
+}
+.vocabulary-usage-group {
+    margin-top: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text2);
+}
+.vocabulary-usage-entry {
+    display: block;
+    padding: 4px 8px 4px 16px;
+    font-size: 12.5px;
+    color: var(--text3);
+    max-width: 640px;
+    border-radius: var(--radius-2);
+}
+.vocabulary-usage-entry:nth-child(even of .vocabulary-usage-entry) {
+    background: var(--panel-raised);
+}
+.vocabulary-usage-link {
+    text-decoration: none;
+}
+.vocabulary-usage-link:hover {
+    background-image: var(--hover-veil);
+    color: var(--text);
+}
+.vocabulary-usage-link svg {
+    margin-left: 7px;
+    vertical-align: -1px;
+    color: var(--text5);
+}
 
 /* ---------------------------------------------------------- */
 /* Vocabulary - payload preview                               */
 /* ---------------------------------------------------------- */
 
-.vocabulary-payload-term{display:flex;align-items:baseline;gap:10px;padding:3px 14px;font-size:12px;color:var(--text3)}
-.vocabulary-payload-term b{color:var(--text2);font-family:var(--mono);font-size:11.5px;font-weight:600}
-.vocabulary-payload-term-known{opacity:0.5}
+.vocabulary-payload-term {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 3px 14px;
+    font-size: 12px;
+    color: var(--text3);
+}
+.vocabulary-payload-term b {
+    color: var(--text2);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    font-weight: 600;
+}
+.vocabulary-payload-term-known {
+    opacity: 0.5;
+}

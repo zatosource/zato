@@ -15,7 +15,10 @@ var settingsView = {
 
     currentTheme: function() {
         var stored = window.localStorage.getItem(this.config.storageKey);
-        if (stored === null) { stored = this.config.defaultTheme; }
+
+        var shipped = window.themesIndex.some(function(theme) { return theme.slug === stored; });
+        if (!shipped) { stored = this.config.defaultTheme; }
+
         return stored;
     },
 

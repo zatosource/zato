@@ -41,7 +41,7 @@ _dashboard_css_dir = os.path.join(os.path.dirname(os.path.abspath(dashboard_app.
 
 def _tokens_of(path:'str') -> 'strdict':
     with open(path) as f:
-        return dict(re.findall(r'^  (--[a-z0-9-]+):(.+);$', f.read(), re.M))
+        return dict(re.findall(r'^    (--[a-z0-9-]+): (.+);$', f.read(), re.M))
 
 # ################################################################################################################################
 
@@ -76,7 +76,7 @@ def _run_broken(theme_text:'str', overrides_text:'str | None', expected:'str') -
 def test_every_theme_carries_the_identical_token_set() -> 'None':
     theme_files = sorted(os.listdir(_themes_dir))
     theme_count = len(theme_files)
-    assert theme_count == 4, theme_files
+    assert theme_count == 2, theme_files
 
     token_sets = {}
     for name in theme_files:
@@ -112,20 +112,18 @@ def test_no_raw_color_outside_the_generated_themes() -> 'None':
 
 def test_every_theme_draws_a_logo_of_its_own_kind() -> 'None':
     """ Every theme names a logo file that is really there, a dark theme the white
-    one, a light theme the blue one, and a light high contrast theme the black one.
+    one and a light theme the blue one.
     """
     expected_logo = {
-        'dark-high-contrast.css': 'zato-logo-white.svg',
         'zato-dark.css': 'zato-logo-white.svg',
         'zato-light.css': 'zato-logo-blue.svg',
-        'light-high-contrast.css': 'zato-logo-black.svg',
     }
 
     for name in sorted(os.listdir(_themes_dir)):
         tokens = _tokens_of(os.path.join(_themes_dir, name))
         logo_file = expected_logo[name]
 
-        assert tokens['--logo'] == f"url('/static/webapp/assets/{logo_file}')", (name, tokens['--logo'])
+        assert tokens['--logo'] == f'url("/static/webapp/assets/{logo_file}")', (name, tokens['--logo'])
         assert os.path.exists(os.path.join(_assets_dir, logo_file)), logo_file
 
 # ################################################################################################################################
