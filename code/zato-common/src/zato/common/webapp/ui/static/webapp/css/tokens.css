@@ -15,6 +15,10 @@
     --radius-1: 2px;
     --radius-2: 3px;
     --radius-3: 4px;
+
+    /* The edge a control takes when it holds the focus, and the edge of a button that acts
+       within a panel - the accent of the acting buttons stirred into the resting border */
+    --focus-edge: color-mix(in srgb, var(--action-edge) 45%, var(--border));
 }
 body {
     font-family: var(--font);

@@ -16,6 +16,8 @@ var rulesetsView = {
         loadingText: 'Loading',
         emptyRulesText: 'No rules yet',
         saveViewLabel: 'Create view',
+        countNoun: 'ruleset',
+        countNounPlural: 'rulesets',
         searchDelayMilliseconds: 160,
 
         rulesetNamePattern: /^\w+(\.\w+)*$/,
@@ -68,7 +70,7 @@ var rulesetsView = {
     query: '',
     chosen: [],
     suggestions: [],
-    suggestionIndex: 0,
+    suggestionIndex: -1,
     suggestOpen: false,
     searchTimer: null,
     selectedId: null,
@@ -397,8 +399,10 @@ var rulesetsView = {
         var count = document.getElementById('rulesets-count');
         var clear = document.getElementById('rulesets-clear');
         var narrowed = this.narrowed();
+        var reading = narrowed ? matching + ' of ' + total : String(total);
+        var noun = total === 1 ? this.config.countNoun : this.config.countNounPlural;
 
-        count.textContent = narrowed ? matching + ' of ' + total : String(total);
+        count.textContent = reading + ' ' + noun;
         clear.style.visibility = narrowed ? 'visible' : 'hidden';
     },
 
@@ -406,7 +410,7 @@ var rulesetsView = {
         var pane = document.getElementById('rulesets-suggest');
         var groups = this.config.groups;
         var self = this;
-        var html = '';
+        var html = '<div class="command-suggest-drag">' + shared.icon('grip-horizontal', 12) + '</div>';
 
         [groups.facets, groups.views, groups.text].forEach(function(group) {
             var rows = '';

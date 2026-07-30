@@ -240,4 +240,23 @@ def test_saved_views_are_named_and_replaceable(client:'any_') -> 'None':
     assert response.json()['items'] == []
 
 # ################################################################################################################################
+
+def test_saved_view_names_arrive_stripped(client:'any_') -> 'None':
+    """ A name is stored without the whitespace around it, and a name of only whitespace is refused.
+    """
+    payload = {'object_type': 'ruleset', 'search_text': 'loans'}
+
+    response = post_json(client, '/rules/views/save/', {'name': '  My rulesets  ', 'payload': payload})
+    assert response.status_code == OK
+    assert response.json()['name'] == 'My rulesets'
+
+    response:'any_' = client.get('/rules/views/')
+    items = response.json()['items']
+    assert len(items) == 1
+    assert items[0]['name'] == 'My rulesets'
+
+    response = post_json(client, '/rules/views/save/', {'name': '   ', 'payload': payload})
+    assert response.status_code == BAD_REQUEST
+
+# ################################################################################################################################
 # ################################################################################################################################

@@ -47,7 +47,7 @@ notifyView.addDestination = function(anchor) {
     var target = document.getElementById('notify-add-target').value;
 
     if (this.addKind === null || target === '') {
-        shared.popover(anchor, 'Pick the platform and one of its channels first.', 'red');
+        shared.popover(anchor, 'Pick a platform and a channel', 'red');
         return;
     }
 
@@ -77,7 +77,7 @@ notifyView.saveCredentials = function(anchor, kind) {
     var handlers = shared.inFlight(anchor, function() {
         self.render();
         shared.popover(document.getElementById('notify-credentials-pane'),
-            notifyModel.config.kindLabels[kind] + ' credentials stored, encrypted at rest.', 'green');
+            notifyModel.config.kindLabels[kind] + ' credentials stored', 'green');
     }, function(message) { shared.popover(anchor, message, 'red'); });
     if (handlers === null) { return; }
 
@@ -85,15 +85,16 @@ notifyView.saveCredentials = function(anchor, kind) {
 };
 
 notifyView.sendTest = function(anchor, kind) {
-    var target = document.getElementById('notify-test-' + kind).value.trim();
+    var input = document.getElementById('notify-test-' + kind);
+    var target = input.value.trim();
 
     if (target === '') {
-        shared.popover(anchor, 'Name the channel the test message goes to.', 'red');
+        shared.requireInput(input, shared.config.requiredText.channel);
         return;
     }
 
     var handlers = shared.inFlight(anchor, function() {
-        shared.popover(anchor, 'Delivered to ' + target + ' - the credentials work.', 'green');
+        shared.popover(anchor, 'Delivered to ' + target, 'green');
     }, function(message) { shared.popover(anchor, message, 'red'); });
     if (handlers === null) { return; }
 

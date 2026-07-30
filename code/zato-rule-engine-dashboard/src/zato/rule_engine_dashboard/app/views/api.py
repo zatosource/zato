@@ -154,13 +154,21 @@ def read_json(req:'any_') -> 'anydict':
 # ################################################################################################################################
 
 def required(body:'anydict', name:'str') -> 'any_':
-    """ Returns a field every request of a given kind must carry.
+    """ Returns a field every request of a given kind must carry. A text field arrives stripped,
+    so what is stored is what is read back, and it must carry something.
     """
     if name not in body:
         message = f'Missing required field -> {name}'
         raise BadRequestError(message)
 
     out = body[name]
+
+    if isinstance(out, str):
+        out = out.strip()
+        if not out:
+            message = f'Empty required field -> {name}'
+            raise BadRequestError(message)
+
     return out
 
 # ################################################################################################################################

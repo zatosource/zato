@@ -6,6 +6,18 @@ var shared = {
 
     config: {
         popoverMilliseconds: 4800,
+
+        // What a field says in its own placeholder when it has nothing usable in it
+        requiredText: {
+            name: 'Name is required',
+            comment: 'Comment is required',
+            channel: 'Channel is required',
+            term: 'Term is required',
+            entity: 'Entity is required',
+            range: 'Range reads low .. high',
+            find: 'Text is required',
+        },
+
         tippyShowDelayMilliseconds: 350,
         termHighlightMilliseconds: 4000,
         dropPlaceholderThickness: 6,
@@ -18,6 +30,8 @@ var shared = {
         'chevrons-down-up': '<path d="m7 20 5-5 5 5"/><path d="m7 4 5 5 5-5"/>',
         'grip-vertical': '<circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/>' +
             '<circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/>',
+        'grip-horizontal': '<circle cx="12" cy="9" r="1"/><circle cx="19" cy="9" r="1"/><circle cx="5" cy="9" r="1"/>' +
+            '<circle cx="12" cy="15" r="1"/><circle cx="19" cy="15" r="1"/><circle cx="5" cy="15" r="1"/>',
         'x': '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
         'chevron-down': '<path d="m6 9 6 6 6-6"/>',
         'chevron-up': '<path d="m18 15-6-6-6 6"/>',
@@ -83,6 +97,26 @@ var shared = {
 
         instance.show();
         setTimeout(function() { instance.hide(); }, shared.config.popoverMilliseconds);
+    },
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // A field that came in empty or unusable says so where the value belongs, and takes
+    // its own placeholder back as soon as the next character arrives
+    requireInput: function(element, text) {
+        var placeholder = element.placeholder;
+
+        var restore = function() {
+            element.classList.remove('input-missing');
+            element.placeholder = placeholder;
+            element.removeEventListener('input', restore);
+        };
+
+        element.value = '';
+        element.placeholder = text;
+        element.classList.add('input-missing');
+        element.addEventListener('input', restore);
+        element.focus();
     },
 
 // ////////////////////////////////////////////////////////////////////////
