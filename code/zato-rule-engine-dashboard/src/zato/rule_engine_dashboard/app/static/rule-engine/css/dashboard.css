@@ -39,7 +39,7 @@ table.list tr:last-child td{border-bottom:none}
 .actions{display:flex;gap:8px}
 .actions form{margin:0}
 button.action,a.action{display:inline-block;padding:5px 12px;border:1px solid var(--border);border-radius:var(--radius-2);font-size:12.5px;font-family:var(--font);color:var(--text3);text-decoration:none;background:transparent;cursor:pointer}
-button.action:hover,a.action:hover{color:var(--text);border-color:var(--text3)}
+button.action:hover,a.action:hover{color:var(--text);border-color:var(--blue)}
 button.action.danger{color:var(--red)}
 button.action.danger:hover{border-color:var(--red)}
 .muted{color:var(--text5)}

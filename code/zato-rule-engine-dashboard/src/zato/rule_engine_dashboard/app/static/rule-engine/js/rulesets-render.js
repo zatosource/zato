@@ -13,7 +13,7 @@ var rulesetsView = {
         maxRenamedRules: 6,
         maxRulesInPanel: 40,
 
-        loadingRulesText: 'Reading the rules of',
+        loadingText: 'Loading',
         emptyRulesText: 'This set has no rules yet, open it to write the first one.',
 
         rulesetNamePattern: /^\w+(\.\w+)*$/,
@@ -184,7 +184,7 @@ var rulesetsView = {
         if (rules === null) {
             return '<div class="rulesets-rules">' +
                 '<div class="rulesets-rules-loading"><span class="rulesets-spinner"></span>' +
-                this.config.loadingRulesText + ' ' + shared.escape(ruleset.name) + '</div>' +
+                this.config.loadingText + '</div>' +
                 '</div>';
         }
 

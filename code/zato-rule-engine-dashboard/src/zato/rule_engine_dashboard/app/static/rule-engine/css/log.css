@@ -13,13 +13,13 @@
 
 .log-aggregates{display:flex;align-items:center;gap:10px;padding:12px 24px 10px;background:var(--chrome);flex-wrap:wrap}
 .log-card{display:flex;align-items:baseline;gap:7px;padding:7px 14px;border-radius:var(--radius-3);background:var(--panel);cursor:pointer}
-.log-card:hover{background:var(--panel-raised)}
+.log-card:hover{background-image:var(--hover-veil)}
 .log-card-active{box-shadow:inset 0 0 0 1px var(--blue)}
 .log-card-number{font-size:16px;font-weight:700;color:var(--text);font-family:var(--mono)}
 .log-card-label{font-size:10.5px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:0.06em}
 
 .log-card-readout{cursor:default}
-.log-card-readout:hover{background:var(--panel)}
+.log-card-readout:hover{background-image:none}
 
 /* ---------------------------------------------------------- */
 /* Decision log - split layout                                */
@@ -30,7 +30,7 @@
 .log-list-head{padding:10px 16px 6px;font-size:11px;font-weight:700;color:var(--text4);text-transform:uppercase;letter-spacing:0.08em;display:flex;align-items:center;gap:8px}
 
 .log-filter-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:var(--radius-2);background:var(--panel);color:var(--blue);font-size:10.5px;text-transform:none;letter-spacing:0;cursor:pointer}
-.log-filter-chip:hover{background:var(--panel-raised)}
+.log-filter-chip:hover{background-image:var(--hover-veil)}
 .log-list{flex:1;overflow:auto;padding:0 10px 12px}
 .log-empty{padding:16px;color:var(--text5);font-size:12px;font-style:italic}
 
@@ -40,7 +40,7 @@
 
 .log-row{cursor:pointer}
 .log-row:nth-child(even) td{background:var(--panel)}
-.log-row:hover td{background:var(--panel-raised)}
+.log-row:hover td{background-image:var(--hover-veil)}
 .log-row-selected td,.log-row-selected:nth-child(even) td{background:var(--panel-raised);color:var(--text)}
 
 .log-when{font-family:var(--mono);font-size:11px;color:var(--text4)}
@@ -62,7 +62,7 @@
 .log-version-link:hover{text-decoration:underline}
 
 .log-value-readonly{cursor:default}
-.log-value-readonly:hover{background:var(--input-background)}
+.log-value-readonly:hover{background-image:none}
 
 .log-rules-snapshot{font-family:var(--mono);font-size:12px;color:var(--text3);line-height:1.6;background:var(--panel-raised);border-radius:var(--radius-2);padding:7px 10px;max-width:860px}
 
@@ -77,14 +77,14 @@
 
 .log-row-copy{margin-left:7px;color:var(--text5);cursor:pointer;padding:1px 3px;border-radius:var(--radius-1);opacity:0;transition:opacity 0.12s}
 .log-row:hover .log-row-copy{opacity:1}
-.log-row-copy:hover{color:var(--blue);background:var(--background)}
+.log-row-copy:hover{color:var(--blue);background-image:var(--hover-veil)}
 
 .log-copy-quiet{color:var(--text5);cursor:pointer;padding:2px 4px;border-radius:var(--radius-1)}
-.log-copy-quiet:hover{color:var(--blue);background:var(--panel)}
+.log-copy-quiet:hover{color:var(--blue);background-image:var(--hover-veil)}
 
 .log-cell-copy{position:absolute;right:5px;top:50%;transform:translateY(-50%);color:var(--text5);cursor:pointer;padding:2px 3px;border-radius:var(--radius-1);opacity:0;transition:opacity 0.12s}
 .test-value-cell:hover .log-cell-copy{opacity:1}
-.log-cell-copy:hover{color:var(--blue);background:var(--panel)}
+.log-cell-copy:hover{color:var(--blue);background-image:var(--hover-veil)}
 
 /* ---------------------------------------------------------- */
 /* Decision log - capture and rule-count panels               */
