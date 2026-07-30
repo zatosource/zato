@@ -22,8 +22,12 @@
       >Phrases</button>
     <span class="table-phrase-note" id="table-phrase-note">Phrase view</span>
     <span class="toolbar-separator"></span>
-    <input type="text" id="find-input" placeholder="Find in table..." oninput="tableView.render()">
-    <input type="text" id="replace-input" placeholder="Replace with...">
+    <span class="field" data-hint="Find in table">
+      <input type="text" id="find-input" placeholder=" " oninput="tableView.render()">
+    </span>
+    <span class="field" data-hint="Replace with">
+      <input type="text" id="replace-input" placeholder=" ">
+    </span>
     <button class="button-ghost" id="button-replace" onclick="tableView.doReplace()">Replace</button>
     <span class="toolbar-separator"></span>
     <button class="button-ghost" id="button-add-column" onclick="tableView.addColumn()">Add rule column</button>

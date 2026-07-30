@@ -15,9 +15,9 @@
   <div class="command-bar">
     <button class="button-ghost" onclick="rulesetsView.newRuleset()">New ruleset</button>
     <span class="command-bar-pipe">|</span>
-    <div class="command-field" id="rulesets-field">
+    <div class="command-field field" id="rulesets-field" data-hint="Filter rulesets">
       <input class="command-input" id="rulesets-search" type="text" autocomplete="off" spellcheck="false"
-        placeholder="Filter rulesets">
+        placeholder=" ">
       <span class="command-count" id="rulesets-count"></span>
       <button class="command-clear" id="rulesets-clear" onclick="rulesetsView.clearAll()"></button>
       <div class="command-suggest" id="rulesets-suggest"></div>

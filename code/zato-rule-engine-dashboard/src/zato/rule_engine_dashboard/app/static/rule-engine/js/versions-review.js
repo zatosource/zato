@@ -29,7 +29,9 @@ versionsView.commentsHtml = function() {
 
     html += '<div class="versions-comment-form">' +
         '<select id="versions-comment-anchor" class="versions-select">' + options + '</select>' +
-        '<input type="text" id="versions-comment-text" placeholder="A comment for the author...">' +
+        '<span class="field" data-hint="Comment for the author">' +
+        '<input type="text" id="versions-comment-text" placeholder=" ">' +
+        '</span>' +
         '<button class="button-mini" onclick="versionsView.addComment(this)">Add</button></div>';
 
     return html;

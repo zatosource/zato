@@ -143,8 +143,10 @@ rulesetsView.openRenamePanel = function(id, anchor) {
 
     shared.openPanel(anchor,
         '<div class="floating-panel-line">' +
-        '<input id="rulesets-rename-input" type="text" value="' + shared.escape(ruleset.name) + '" ' +
+        '<span class="field" data-hint="">' +
+        '<input id="rulesets-rename-input" type="text" placeholder=" " value="' + shared.escape(ruleset.name) + '" ' +
             'onkeydown="rulesetsView.renameKeys(event, ' + id + ')">' +
+        '</span>' +
         '<button class="button-primary button-mini" onclick="rulesetsView.previewRename(' + id + ', this)">' +
             'Preview impact</button>' +
         '</div>' +

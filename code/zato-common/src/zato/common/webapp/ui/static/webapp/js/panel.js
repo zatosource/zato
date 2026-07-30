@@ -32,7 +32,14 @@ shared.openPanel = function(anchor, html) {
     shared.panelAnchor = anchor;
 
     var input = panel.querySelector('input');
-    if (input !== null) { input.focus(); input.select(); }
+    if (input === null) { return; }
+
+    input.focus();
+    input.select();
+
+    // The press that opened the panel is still on its way through the page, and whatever it does
+    // with the focus happens after this line, so the field is asked for it again once that is over
+    window.requestAnimationFrame(function() { input.focus(); });
 };
 
 // ////////////////////////////////////////////////////////////////////////

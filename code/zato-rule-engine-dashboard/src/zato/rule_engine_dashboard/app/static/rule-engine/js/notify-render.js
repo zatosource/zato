@@ -91,7 +91,7 @@ var notifyView = {
         var html = '<div class="notify-add-row">' +
             '<select class="notify-select" id="notify-add-kind" onchange="notifyView.setAddKind(this)">';
 
-        html += '<option value=""' + (this.addKind === null ? ' selected' : '') + '>Platform...</option>';
+        html += '<option value=""' + (this.addKind === null ? ' selected' : '') + '>Platform</option>';
         notifyModel.config.kinds.forEach(function(kind) {
             var selected = kind === notifyView.addKind ? ' selected' : '';
             html += '<option value="' + kind + '"' + selected + '>' +
@@ -155,7 +155,9 @@ var notifyView = {
 
             if (entry.is_configured) {
                 html += '<div class="notify-test-row">' +
-                    '<input type="text" id="notify-test-' + kind + '" placeholder="Channel to test against...">' +
+                    '<span class="field" data-hint="Channel to test against">' +
+                    '<input type="text" id="notify-test-' + kind + '" placeholder=" ">' +
+                    '</span>' +
                     '<button class="button-ghost" onclick="notifyView.sendTest(this, \'' + kind +
                     '\')">Send test</button>' +
                     '</div>';

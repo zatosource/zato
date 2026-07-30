@@ -101,7 +101,7 @@ tableView.editCell = function(cell, columnLabel, rowKey, kind) {
         return;
     }
 
-    var placeholder = kind === 'condition' ? '18..65, in {A, B}, >= 10, or -' : 'value';
+    var placeholder = kind === 'condition' ? '18..65, in {A, B}, >= 10, or -' : 'Value';
     cell.innerHTML = '<input type="text" value="' + shared.escape(raw === '-' ? '' : raw) + '" ' +
         'placeholder="' + placeholder + '">';
     this.wireTextInput(cell.querySelector('input'), commit, cancel);

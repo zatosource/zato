@@ -400,12 +400,15 @@ table.versions-outcome-grid td {
     max-width: 640px;
     margin-top: 10px;
 }
+.versions-comment-form .field {
+    flex: 1;
+}
 .versions-comment-form input {
     flex: 1;
     background: var(--input-background);
     border: 1px solid var(--border);
     border-radius: var(--radius-2);
-    padding: 5px 9px;
+    padding: 5px var(--field-indent);
     color: var(--text);
     font-size: 12px;
     outline: none;

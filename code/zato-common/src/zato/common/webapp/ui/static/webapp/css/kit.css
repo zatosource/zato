@@ -105,7 +105,7 @@
     background: var(--input-background);
     border: 1px solid var(--border);
     border-radius: var(--radius-2);
-    padding: 5px 9px;
+    padding: 5px var(--field-indent);
     color: var(--text);
     font-size: 12px;
     outline: none;
@@ -153,7 +153,7 @@
     gap: 6px;
     width: 300px;
     height: 28px;
-    padding: 0 7px;
+    padding: 0 7px 0 0;
     background: var(--input-background);
     border: 1px solid var(--border);
     border-radius: var(--radius-2);
@@ -163,15 +163,42 @@
     border-color: var(--focus-edge);
 }
 
+/* ---------------------------------------------------------- */
+/* Shared - fields and their hints                            */
+/* ---------------------------------------------------------- */
+
+/* The caret of a field stands where the text of it begins, which is where the browser's own
+   placeholder would be as well, so the hint is written beside the caret instead - it carries the
+   text a field is wrapped with and it goes as soon as the field holds anything. */
+.field {
+    position: relative;
+    display: flex;
+    min-width: 0;
+}
+.field::after {
+    content: attr(data-hint);
+    position: absolute;
+    left: calc(var(--field-indent) + var(--hint-gap));
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--text5);
+    font-family: var(--font);
+    font-size: 12px;
+    white-space: nowrap;
+}
+.field:has(input:not(:placeholder-shown))::after {
+    content: none;
+}
+
 /* A field waiting for a value it must have - the ask is written where the value goes */
-.input-missing::placeholder,
-.command-input.input-missing::placeholder {
+.field-missing::after {
     color: var(--red);
 }
 .command-input {
     flex: 1;
     min-width: 40px;
-    padding: 0;
+    padding: 0 0 0 var(--field-indent);
     background: transparent;
     border: none;
     outline: none;
@@ -833,10 +860,11 @@ a.link:hover {
     color: var(--text);
     font-size: 12px;
     font-family: var(--mono);
-    padding: 5px 10px;
+    padding: 5px var(--field-indent);
     outline: none;
     min-width: 0;
 }
+.floating-panel-line .field,
 .floating-panel-line input {
     flex: 1;
 }
@@ -856,7 +884,7 @@ a.link:hover {
     color: var(--text);
     font-size: 11.5px;
     font-family: var(--mono);
-    padding: 8px 10px;
+    padding: 8px var(--field-indent);
     outline: none;
     resize: vertical;
 }

@@ -5,8 +5,12 @@
 {% block main %}
 
 <form method="get" action="{% url 'events' %}" class="filters">
-    <input type="text" name="actor" value="{{ actor }}" placeholder="Actor">
-    <input type="text" name="subject" value="{{ subject }}" placeholder="Subject">
+    <span class="field" data-hint="Actor">
+        <input type="text" name="actor" value="{{ actor }}" placeholder=" ">
+    </span>
+    <span class="field" data-hint="Subject">
+        <input type="text" name="subject" value="{{ subject }}" placeholder=" ">
+    </span>
     <select name="action">
         <option value="">All actions</option>
         {% for item in actions %}

@@ -48,7 +48,9 @@ vocabularyView.editField = function(cell, field) {
     }[field];
 
     cell.classList.add('cell-editing');
-    cell.innerHTML = '<input type="text" value="' + shared.escape(current) + '">';
+    cell.innerHTML = '<span class="field" data-hint="">' +
+        '<input type="text" placeholder=" " value="' + shared.escape(current) + '">' +
+        '</span>';
     var input = cell.querySelector('input');
     input.focus();
     input.select();
@@ -113,8 +115,10 @@ vocabularyView.openRenamePopover = function(anchor) {
 
     shared.openPanel(anchor,
         '<div class="floating-panel-line">' +
-        '<input id="vocabulary-rename-input" type="text" value="' + attribute.name + '" ' +
+        '<span class="field" data-hint="">' +
+        '<input id="vocabulary-rename-input" type="text" placeholder=" " value="' + attribute.name + '" ' +
             'onkeydown="vocabularyView.renameKeys(event)">' +
+        '</span>' +
         '<button class="button-primary button-mini" onclick="vocabularyView.confirmRename(this)">' +
             'Rename in ' + count + ' place' + (count === 1 ? '' : 's') + '</button>' +
         '</div>');
@@ -216,14 +220,18 @@ vocabularyView.openAddPanel = function(button) {
     vocabulary.entities.forEach(function(entity) {
         entityOptions += '<option value="' + entity.name + '">' + entity.name + '</option>';
     });
-    entityOptions += '<option value="">new entity...</option>';
+    entityOptions += '<option value="">New entity</option>';
 
     shared.openPanel(button,
         '<div class="floating-panel-line">' +
         '<select id="vocabulary-add-entity" onchange="vocabularyView.onAddEntityChange(this)">' + entityOptions + '</select>' +
-        '<input id="vocabulary-add-entity-name" type="text" placeholder="entity name" style="display:none">' +
-        '<input id="vocabulary-add-name" type="text" placeholder="term name" ' +
+        '<span class="field" id="vocabulary-add-entity-field" data-hint="Entity name" style="display:none">' +
+        '<input id="vocabulary-add-entity-name" type="text" placeholder=" ">' +
+        '</span>' +
+        '<span class="field" data-hint="Term name">' +
+        '<input id="vocabulary-add-name" type="text" placeholder=" " ' +
             'onkeydown="if (event.key === \'Enter\') { vocabularyView.confirmAddTerm(this); }">' +
+        '</span>' +
         '<select id="vocabulary-add-type">' +
         '<option>number</option><option>number range</option><option>choice</option>' +
         '<option>yes/no</option><option>text</option></select>' +
@@ -236,9 +244,9 @@ vocabularyView.openAddPanel = function(button) {
 };
 
 vocabularyView.onAddEntityChange = function(select) {
-    var entityNameInput = document.getElementById('vocabulary-add-entity-name');
-    entityNameInput.style.display = select.value === '' ? 'inline-block' : 'none';
-    if (select.value === '') { entityNameInput.focus(); }
+    var entityField = document.getElementById('vocabulary-add-entity-field');
+    entityField.style.display = select.value === '' ? 'flex' : 'none';
+    if (select.value === '') { document.getElementById('vocabulary-add-entity-name').focus(); }
 };
 
 vocabularyView.confirmAddTerm = function(anchor) {

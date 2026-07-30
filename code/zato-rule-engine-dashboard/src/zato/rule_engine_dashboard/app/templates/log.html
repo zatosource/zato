@@ -12,7 +12,9 @@
 {% block content %}
 <div class="main-column">
   <div class="toolbar">
-    <input class="log-search" id="log-search" type="text" placeholder="Business key or decision id...">
+    <span class="field" data-hint="Business key or decision id">
+      <input class="log-search" id="log-search" type="text" placeholder=" ">
+    </span>
     <select class="log-range" id="log-range" onchange="logView.setRange(this)">
       <option value="1">Today</option>
       <option value="3">Last 3 days</option>

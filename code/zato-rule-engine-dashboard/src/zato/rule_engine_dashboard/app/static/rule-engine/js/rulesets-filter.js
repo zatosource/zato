@@ -263,8 +263,10 @@ rulesetsView.openSaveViewPanel = function(anchor) {
 
     shared.openPanel(anchor,
         '<div class="floating-panel-line">' +
-        '<input id="rulesets-view-name" type="text" placeholder="view name" ' +
+        '<span class="field" data-hint="View name">' +
+        '<input id="rulesets-view-name" type="text" placeholder=" " ' +
             'onkeydown="rulesetsView.saveViewKeys(event)">' +
+        '</span>' +
         '<button class="button-primary button-mini" onclick="rulesetsView.confirmSaveView(this)">Create</button>' +
         '</div>');
 };

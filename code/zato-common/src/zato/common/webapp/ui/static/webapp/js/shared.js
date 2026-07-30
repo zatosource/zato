@@ -147,19 +147,20 @@ var shared = {
 // ////////////////////////////////////////////////////////////////////////
 
     // A field that came in empty or unusable says so where the value belongs, and takes
-    // its own placeholder back as soon as the next character arrives
+    // its own hint back as soon as the next character arrives
     requireInput: function(element, text) {
-        var placeholder = element.placeholder;
+        var field = element.closest('.field');
+        var hint = field.dataset.hint;
 
         var restore = function() {
-            element.classList.remove('input-missing');
-            element.placeholder = placeholder;
+            field.classList.remove('field-missing');
+            field.dataset.hint = hint;
             element.removeEventListener('input', restore);
         };
 
         element.value = '';
-        element.placeholder = text;
-        element.classList.add('input-missing');
+        field.dataset.hint = text;
+        field.classList.add('field-missing');
         element.addEventListener('input', restore);
         element.focus();
     },

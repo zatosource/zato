@@ -108,6 +108,9 @@ def test_static_files_are_served_with_their_content_types(client:'any_') -> 'Non
         assert response.status_code == OK, (url_path, response.status_code)
         assert response.headers['Content-Type'].startswith(content_type), (url_path, response.headers['Content-Type'])
 
+        # An edited asset reaches the screen on the next request, without a cache bypass by hand
+        assert response.headers['Cache-Control'] == 'no-cache', (url_path, response.headers['Cache-Control'])
+
 # ################################################################################################################################
 
 def test_signed_out_visitors_land_on_the_sign_in_screen() -> 'None':
