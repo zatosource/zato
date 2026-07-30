@@ -50,10 +50,11 @@ versionsView.toggleViewed = function(key, isViewed) {
 versionsView.addComment = function(button) {
     var self = this;
     var anchor = document.getElementById('versions-comment-anchor').value;
-    var text = document.getElementById('versions-comment-text').value.trim();
+    var input = document.getElementById('versions-comment-text');
+    var text = input.value.trim();
 
     if (text === '') {
-        shared.popover(button, 'Type the comment first.');
+        shared.requireInput(input, shared.config.requiredText.comment);
         return;
     }
 
@@ -141,8 +142,8 @@ versionsView.restore = function(event, number, button) {
     };
 
     var handlers = shared.inFlight(button, function(payload) {
-        shared.popover(button, 'Version ' + payload.version + ' was created from v' + number +
-            ' and is live. The history stays linear.', 'green');
+        shared.popover(button, 'v' + payload.version + ' was created from v' + number +
+            ' and is live', 'green');
 
         versionsModel.toNumber = payload.version;
         versionsModel.fromNumber = number;

@@ -64,8 +64,7 @@ logView.copyText = function(event, text) {
 
 logView.addToTestSet = function(anchor) {
     var handlers = shared.inFlight(anchor, function(suiteName) {
-        shared.popover(anchor, 'Added to ' + suiteName + ' as a scenario, with what went out as the ' +
-            'expectations. Yesterday\'s traffic is today\'s regression test.', 'green');
+        shared.popover(anchor, 'Added to ' + suiteName + ' as a scenario', 'green');
     }, function(message) { shared.popover(anchor, message, 'red'); });
     if (handlers === null) { return; }
 

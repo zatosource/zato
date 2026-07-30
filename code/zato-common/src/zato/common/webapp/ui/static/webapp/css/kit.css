@@ -113,7 +113,7 @@
     width: 130px;
 }
 .toolbar input[type="text"]:focus {
-    border-color: var(--blue);
+    border-color: var(--focus-edge);
 }
 .toolbar select {
     background: var(--input-background);
@@ -127,7 +127,7 @@
     cursor: pointer;
 }
 .toolbar select:focus {
-    border-color: var(--blue);
+    border-color: var(--focus-edge);
 }
 
 /* ---------------------------------------------------------- */
@@ -141,6 +141,11 @@
     padding: 12px 24px;
     background: var(--sentence-bar-background);
 }
+.command-bar-pipe {
+    color: var(--border);
+    font-size: 13px;
+    user-select: none;
+}
 .command-field {
     position: relative;
     display: flex;
@@ -153,6 +158,15 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-2);
     cursor: text;
+}
+.command-field:focus-within {
+    border-color: var(--focus-edge);
+}
+
+/* A field waiting for a value it must have - the ask is written where the value goes */
+.input-missing::placeholder,
+.command-input.input-missing::placeholder {
+    color: var(--red);
 }
 .command-input {
     flex: 1;
@@ -170,7 +184,7 @@
 }
 .command-count {
     flex-shrink: 0;
-    color: var(--text5);
+    color: color-mix(in srgb, var(--text5) 75%, var(--input-background));
     font-family: var(--mono);
     font-size: 10.5px;
     font-variant-numeric: tabular-nums lining-nums;
@@ -209,6 +223,19 @@
 .command-suggest-open {
     display: block;
 }
+.command-suggest-dragging {
+    user-select: none;
+}
+.command-suggest-drag {
+    display: flex;
+    justify-content: center;
+    padding: 0 0 2px;
+    color: color-mix(in srgb, var(--text5) 60%, var(--panel-raised));
+    cursor: grab;
+}
+.command-suggest-dragging .command-suggest-drag {
+    cursor: grabbing;
+}
 .command-suggest-title {
     display: flex;
     align-items: center;
@@ -222,20 +249,28 @@
     letter-spacing: 0.05em;
 }
 /* The accent of the acting buttons in the proportions of a pill - a 6% wash of it on the
-   surface it sits on, a trace of it stirred into the faintest ink - with the border kept.
-   The deeper padding underneath lifts the label to the optical middle, the glyphs of a
-   mixed-case word without descenders end on the baseline and read as sitting low. */
-.button-mini.command-suggest-new {
-    margin-left: 0;
-    padding: 1px 7px 2px;
-    border-color: color-mix(in srgb, var(--action-edge) 45%, var(--border));
+   surface it sits on, a trace of it stirred into the ink - with the border kept. */
+.button-mini.command-suggest-new,
+.button-mini.button-primary {
+    border-color: var(--focus-edge);
     background: color-mix(in srgb, var(--action-edge) 6%, var(--panel-raised));
     color: color-mix(in srgb, var(--action-edge) 30%, var(--text3));
 }
-.button-mini.command-suggest-new:hover {
+.button-mini.command-suggest-new:hover,
+.button-mini.button-primary:hover {
     border-color: color-mix(in srgb, var(--action-edge) 70%, var(--border));
     background: color-mix(in srgb, var(--action-edge) 12%, var(--panel-raised));
     color: color-mix(in srgb, var(--action-edge) 40%, var(--text2));
+}
+
+/* The deeper padding underneath lifts the label to the optical middle, the glyphs of a
+   mixed-case word without descenders end on the baseline and read as sitting low. */
+.button-mini.command-suggest-new,
+.button-mini.button-primary {
+    padding: 1px 7px 2px;
+}
+.button-mini.command-suggest-new {
+    margin-left: 0;
 }
 .command-suggest-row {
     display: flex;
@@ -317,15 +352,9 @@
     border-color: var(--red);
 }
 
-/* The confirming button of a floating panel - a mini button that carries the accent itself */
+/* The confirming button of a floating panel, the same face as the acting button of a pane */
 .button-mini.button-primary {
-    background: var(--blue-tint-12);
-    border: 1px solid var(--blue);
-    color: var(--text);
     font-weight: 600;
-}
-.button-mini.button-primary:hover {
-    background-image: var(--hover-veil);
 }
 
 /* One surface for every button that acts - the toolbars, the settings button, publish -
@@ -612,10 +641,10 @@ a.link:hover {
 .context-menu {
     position: fixed;
     z-index: 1350;
-    background: var(--panel);
-    border: 1px solid var(--blue);
-    border-radius: var(--radius-3);
-    box-shadow: 0 6px 24px var(--shadow-strong);
+    background: var(--panel-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-2);
+    box-shadow: 0 12px 28px var(--shadow-strong);
     min-width: 240px;
     max-width: 330px;
     padding: 0 0 2px;
@@ -780,10 +809,10 @@ a.link:hover {
 .floating-panel {
     position: fixed;
     z-index: 1300;
-    background: var(--panel);
-    border: 1px solid var(--blue);
-    border-radius: var(--radius-3);
-    box-shadow: 0 6px 24px var(--shadow-strong);
+    background: var(--panel-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-2);
+    box-shadow: 0 12px 28px var(--shadow-strong);
     min-width: 340px;
     max-width: 480px;
     padding: 8px 0;
@@ -813,7 +842,7 @@ a.link:hover {
 }
 .floating-panel-line input:focus,
 .floating-panel-line select:focus {
-    box-shadow: inset 0 0 0 1px var(--blue);
+    box-shadow: inset 0 0 0 1px var(--focus-edge);
 }
 .floating-panel textarea {
     display: block;
@@ -832,7 +861,7 @@ a.link:hover {
     resize: vertical;
 }
 .floating-panel textarea:focus {
-    box-shadow: inset 0 0 0 1px var(--blue);
+    box-shadow: inset 0 0 0 1px var(--focus-edge);
 }
 .floating-panel-actions {
     padding: 8px 14px 4px;

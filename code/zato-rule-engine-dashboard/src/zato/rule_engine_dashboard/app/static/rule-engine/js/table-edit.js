@@ -60,7 +60,7 @@ tableView.editCell = function(cell, columnLabel, rowKey, kind) {
 
         if (highlightCleared) {
             shared.popover(document.querySelector('th[data-column="' + columnLabel + '"]'),
-                'Rule ' + columnLabel + ' now has an action, the completeness highlight is cleared.', 'green');
+                'Rule ' + columnLabel + ' has an action now', 'green');
         }
     };
     var cancel = function() { self.editing = false; self.render(); };
@@ -111,7 +111,7 @@ tableView.editCell = function(cell, columnLabel, rowKey, kind) {
 
 tableView.editFilter = function(span) {
     if (this.phraseMode) {
-        shared.popover(span, 'The phrase view keeps the logic closed. Switch back to edit the filter.');
+        shared.popover(span, 'Switch off the phrase view to edit');
         return;
     }
     if (this.editing) { return; }
@@ -208,8 +208,7 @@ tableView.setOverride = function(columnLabel, value) {
         tableModel.unreachable = payload.unreachable;
 
         if (value !== '' && tableModel.conflictLabels().length < countBefore) {
-            shared.popover(anchor, 'The conflict is resolved: when both rules match the same data, rule ' +
-                columnLabel + ' wins and rule ' + value + ' stays silent.', 'green');
+            shared.popover(anchor, 'Rule ' + columnLabel + ' wins over rule ' + value, 'green');
         }
         self.render();
     }, function() {

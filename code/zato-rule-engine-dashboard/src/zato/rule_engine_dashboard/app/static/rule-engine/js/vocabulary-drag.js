@@ -99,8 +99,7 @@ list.addEventListener('drop', function(event) {
 
         if (entityChanged) {
             shared.popover(document.querySelector('[data-path="' + newPath + '"]'),
-                'Moved to ' + targetEntityName + '. The path is now ' + newPath +
-                ', every referencing ruleset was updated together, the API contract regenerated.', 'green');
+                'Moved to ' + targetEntityName + ', the path is now ' + newPath, 'green');
         }
     }, data.reportError);
 });

@@ -40,7 +40,7 @@ testView.compare = function(button) {
         return;
     }
     if (testModel.suite.scenarios.length === 0) {
-        shared.popover(button, 'The suite has no scenarios yet - the comparison needs inputs to run.');
+        shared.popover(button, 'No scenarios yet');
         return;
     }
 

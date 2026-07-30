@@ -168,7 +168,7 @@ rulesetsView.previewRename = function(id, button) {
     var newName = this.renameInput();
 
     if (!this.config.rulesetNamePattern.test(newName)) {
-        shared.popover(button, 'A ruleset name is dotted words, letters, digits and underscores only.', 'red');
+        shared.requireInput(document.getElementById('rulesets-rename-input'), shared.config.requiredText.name);
         return;
     }
 
@@ -269,7 +269,7 @@ rulesetsView.onKeyDown = function(event) {
 
 document.addEventListener('keydown', function(event) { rulesetsView.onKeyDown(event); });
 
-shared.panelToggles.push('.rulesets-publish', '#rulesets-save-view');
+shared.panelToggles.push('.rulesets-publish', '#rulesets-save-view', '.command-suggest-drag');
 
 shared.attachPaneResize(document.getElementById('rulesets-side-resizer'),
     document.getElementById('rulesets-side'), 'x-right');

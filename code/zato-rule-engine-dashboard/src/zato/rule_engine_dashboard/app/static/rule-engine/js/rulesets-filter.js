@@ -80,14 +80,14 @@ rulesetsView.buildSuggestions = function() {
 
     this.suggestions = out;
 
-    if (this.suggestionIndex >= out.length) { this.suggestionIndex = 0; }
+    if (this.suggestionIndex >= out.length) { this.suggestionIndex = -1; }
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
 rulesetsView.openSuggestions = function() {
     this.suggestOpen = true;
-    this.suggestionIndex = 0;
+    this.suggestionIndex = -1;
     this.buildSuggestions();
     this.renderSuggestions();
 };
@@ -162,7 +162,7 @@ rulesetsView.setQuery = function(value) {
     var self = this;
 
     this.query = value;
-    this.suggestionIndex = 0;
+    this.suggestionIndex = -1;
 
     this.buildSuggestions();
     this.renderSuggestions();
@@ -183,7 +183,7 @@ rulesetsView.onFieldKeys = function(event) {
     if (event.key === 'ArrowUp') { event.preventDefault(); this.moveSuggestion(-1); return; }
 
     if (event.key === 'Enter' || event.key === 'Tab') {
-        if (this.suggestions.length === 0) { return; }
+        if (this.suggestionIndex < 0) { return; }
         event.preventDefault();
         this.pick(this.suggestionIndex);
         return;
@@ -198,9 +198,48 @@ rulesetsView.onFieldKeys = function(event) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// The pane is moved by its header, so a long list can be pulled off whatever it covers
+rulesetsView.startPaneDrag = function(event) {
+    var pane = document.getElementById('rulesets-suggest');
+    var paneLeft = pane.offsetLeft;
+    var paneTop = pane.offsetTop;
+
+    var startX = event.clientX;
+    var startY = event.clientY;
+
+    // A panel opened from the pane belongs to it, so it travels the same distance
+    var panel = shared.panelElement;
+    var panelBox = panel === null ? null : panel.getBoundingClientRect();
+
+    var onMove = function(moveEvent) {
+        var movedX = moveEvent.clientX - startX;
+        var movedY = moveEvent.clientY - startY;
+
+        pane.style.left = (paneLeft + movedX) + 'px';
+        pane.style.top = (paneTop + movedY) + 'px';
+
+        if (panel !== null) {
+            panel.style.left = (panelBox.left + movedX) + 'px';
+            panel.style.top = (panelBox.top + movedY) + 'px';
+        }
+    };
+
+    var onUp = function() {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        pane.classList.remove('command-suggest-dragging');
+    };
+
+    pane.classList.add('command-suggest-dragging');
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 rulesetsView.openSaveViewPanel = function(anchor) {
     if (rulesetsModel.savedViews().length >= this.config.maxSavedViews) {
-        shared.popover(anchor, this.config.maxSavedViews + ' saved views is the cap, delete one first.', 'red');
+        shared.popover(anchor, this.config.maxSavedViews + ' views is the cap', 'red');
         return;
     }
 
@@ -208,7 +247,7 @@ rulesetsView.openSaveViewPanel = function(anchor) {
         '<div class="floating-panel-line">' +
         '<input id="rulesets-view-name" type="text" placeholder="view name" ' +
             'onkeydown="rulesetsView.saveViewKeys(event)">' +
-        '<button class="button-primary button-mini" onclick="rulesetsView.confirmSaveView(this)">Save</button>' +
+        '<button class="button-primary button-mini" onclick="rulesetsView.confirmSaveView(this)">Create</button>' +
         '</div>');
 };
 
@@ -219,10 +258,11 @@ rulesetsView.saveViewKeys = function(event) {
 
 rulesetsView.confirmSaveView = function(anchor) {
     var self = this;
-    var name = document.getElementById('rulesets-view-name').value.trim();
+    var input = document.getElementById('rulesets-view-name');
+    var name = input.value.trim();
 
     if (!this.config.viewNamePattern.test(name)) {
-        shared.popover(anchor, 'A view name is letters, digits and spaces only.', 'red');
+        shared.requireInput(input, shared.config.requiredText.name);
         return;
     }
 
@@ -276,6 +316,7 @@ rulesetsView.deleteSavedView = function(name) {
 
 var field = document.getElementById('rulesets-field');
 var input = document.getElementById('rulesets-search');
+var pane = document.getElementById('rulesets-suggest');
 
 document.getElementById('rulesets-clear').innerHTML = shared.icon('x', 11);
 
@@ -288,10 +329,40 @@ field.addEventListener('mousedown', function(event) {
     input.focus();
 });
 
+pane.addEventListener('mousedown', function(event) {
+    if (event.target.closest('.command-suggest-drag') === null) { return; }
+
+    event.preventDefault();
+    rulesetsView.startPaneDrag(event);
+});
+
 input.addEventListener('focus', function() { rulesetsView.openSuggestions(); });
-input.addEventListener('blur', function() { rulesetsView.closeSuggestions(); });
+
+input.addEventListener('blur', function(event) {
+    // A panel opened from the pane takes the focus, and the pane stays as it was
+    if (event.relatedTarget !== null && event.relatedTarget.closest('.floating-panel') !== null) { return; }
+
+    rulesetsView.closeSuggestions();
+});
 input.addEventListener('input', function(event) { rulesetsView.setQuery(event.target.value); });
 input.addEventListener('keydown', function(event) { rulesetsView.onFieldKeys(event); });
+
+// The pane closes from anywhere, whether or not the field still holds the focus - a panel
+// opened from the pane counts as part of it, everything else is elsewhere
+document.addEventListener('mousedown', function(event) {
+    if (!rulesetsView.suggestOpen) { return; }
+    if (event.target.closest('#rulesets-field') !== null) { return; }
+    if (event.target.closest('.floating-panel') !== null) { return; }
+
+    rulesetsView.closeSuggestions();
+});
+
+document.addEventListener('keydown', function(event) {
+    if (event.key !== 'Escape') { return; }
+    if (!rulesetsView.suggestOpen) { return; }
+
+    rulesetsView.closeSuggestions();
+});
 
 // The screen boots from here, the last of its scripts, so every view method is in place
 rulesetsModel.load(function() { rulesetsView.render(); });

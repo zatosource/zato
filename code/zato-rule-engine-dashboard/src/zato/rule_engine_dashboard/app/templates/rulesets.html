@@ -13,14 +13,15 @@
 {% block content %}
 <div class="main-column">
   <div class="command-bar">
+    <button class="button-ghost" onclick="rulesetsView.newRuleset()">New ruleset</button>
+    <span class="command-bar-pipe">|</span>
     <div class="command-field" id="rulesets-field">
       <input class="command-input" id="rulesets-search" type="text" autocomplete="off" spellcheck="false"
-        placeholder="Filter">
+        placeholder="Filter rulesets">
       <span class="command-count" id="rulesets-count"></span>
       <button class="command-clear" id="rulesets-clear" onclick="rulesetsView.clearAll()"></button>
       <div class="command-suggest" id="rulesets-suggest"></div>
     </div>
-    <button class="button-ghost" onclick="rulesetsView.newRuleset()">New ruleset</button>
   </div>
 
   <div class="rulesets-split">

@@ -74,11 +74,23 @@ vocabularyView.commitField = function(cell, field, value) {
             .filter(function(item) { return item !== ''; });
     }
     if (field === 'domain') {
-        var match = /^(-?\d+(?:\.\d+)?)\s*\.\.\s*(-?\d+(?:\.\d+)?)$/.exec(value.trim());
-        if (match === null) {
-            shared.popover(cell, 'A range reads low .. high, for example 300 .. 850.', 'red');
+        var text = value.trim();
+
+        // An emptied cell is a cancelled edit, which is also the way out of a rejected one
+        if (text === '') {
             this.renderDetail();
             shared.initTips();
+            return;
+        }
+
+        var match = /^(-?\d+(?:\.\d+)?)\s*\.\.\s*(-?\d+(?:\.\d+)?)$/.exec(text);
+        if (match === null) {
+            this.renderDetail();
+            shared.initTips();
+
+            var fresh = document.querySelector('[data-field="domain"]');
+            this.editField(fresh, 'domain');
+            shared.requireInput(fresh.querySelector('input'), shared.config.requiredText.range);
             return;
         }
         attribute.domain = {low: +match[1], high: +match[2]};
@@ -115,9 +127,11 @@ vocabularyView.renameKeys = function(event) {
 
 vocabularyView.confirmRename = function(anchor) {
     var self = this;
-    var newName = document.getElementById('vocabulary-rename-input').value.trim();
+    var input = document.getElementById('vocabulary-rename-input');
+    var newName = input.value.trim();
+
     if (newName === '' || /[^A-Za-z0-9_]/.test(newName)) {
-        shared.popover(anchor, 'A term name is one word, letters, digits and underscores only.', 'red');
+        shared.requireInput(input, shared.config.requiredText.name);
         return;
     }
 
@@ -132,7 +146,7 @@ vocabularyView.confirmRename = function(anchor) {
 
         shared.popover(document.querySelector('.vocabulary-detail-name'),
             'Renamed across ' + report.definitions.length + ' ruleset' +
-            (report.definitions.length === 1 ? '' : 's') + '.', 'green');
+            (report.definitions.length === 1 ? '' : 's'), 'green');
     }, function(message) {
         shared.popover(anchor, message, 'red');
     });
@@ -234,8 +248,13 @@ vocabularyView.confirmAddTerm = function(anchor) {
     var name = document.getElementById('vocabulary-add-name').value.trim();
     var type = document.getElementById('vocabulary-add-type').value;
 
-    if (entityName === '' || name === '' || /[^A-Za-z0-9_]/.test(entityName) || /[^A-Za-z0-9_]/.test(name)) {
-        shared.popover(anchor, 'An entity and a term name are one word each, letters, digits and underscores only.', 'red');
+    if (entityName === '' || /[^A-Za-z0-9_]/.test(entityName)) {
+        shared.requireInput(document.getElementById('vocabulary-add-entity-name'), shared.config.requiredText.entity);
+        return;
+    }
+
+    if (name === '' || /[^A-Za-z0-9_]/.test(name)) {
+        shared.requireInput(document.getElementById('vocabulary-add-name'), shared.config.requiredText.term);
         return;
     }
 

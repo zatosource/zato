@@ -6,7 +6,7 @@
 
 tableView.checksBlocked = function(button) {
     if (tableModel.hasUnfolded()) {
-        shared.popover(button, 'Fold the sub-rules back first, checks run over the stored columns.');
+        shared.popover(button, 'Fold the sub-rules back first');
         return true;
     }
     return false;
@@ -80,8 +80,7 @@ tableView.checkCompleteness = function() {
         self.render();
         var gapText = labels.length === 1 ? '1 missing combination was' : labels.length + ' missing combinations were';
         var ruleWord = labels.length === 1 ? 'rule ' : 'rules ';
-        shared.popover(button, gapText + ' added as ' + ruleWord + labels.join(', ') +
-            ', shaded green. The check only fills in the missing conditions, every action stays yours to decide.', 'green');
+        shared.popover(button, gapText + ' added as ' + ruleWord + labels.join(', '), 'green');
     }, function(message) {
         self.reportCheckFailure(button, message);
     });
@@ -234,7 +233,7 @@ tableView.doReplace = function() {
     var replacement = document.getElementById('replace-input').value;
 
     if (term === '') {
-        shared.popover(button, 'Type something in the find box first.');
+        shared.requireInput(document.getElementById('find-input'), shared.config.requiredText.find);
         return;
     }
 
