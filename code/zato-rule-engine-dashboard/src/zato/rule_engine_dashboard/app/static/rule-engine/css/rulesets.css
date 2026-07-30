@@ -279,8 +279,8 @@
     letter-spacing: 0.02em;
 }
 .rulesets-rule:hover .rulesets-rule-name {
-    background-color: color-mix(in srgb, var(--gold) 7%, var(--input-background));
-    color: color-mix(in srgb, var(--gold) 65%, var(--text));
+    background-color: color-mix(in srgb, var(--gold) 77%, var(--input-background));
+    color: #000;
 }
 .rulesets-rule-docs {
     flex: 1;
