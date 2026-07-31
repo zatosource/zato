@@ -30,7 +30,7 @@ from zato.common.util.api import utcnow
 if 0:
     from gevent import Greenlet
     from zato.common.pubsub.sql.backend import SQLPubSubBackend
-    from zato.common.typing_ import anydict, intlist, strlist
+    from zato.common.typing_ import anydict, intlist, strlist, strset
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -40,6 +40,10 @@ logger = getLogger(__name__)
 
 _default_delivery_block_ms = 5000
 _delivery_batch_size = 50
+
+# How long to wait for a subscriber's delivery greenlet to come back between two batches, which covers
+# the batch it may have started just before it was asked to pause.
+_pause_join_timeout = 30
 
 _max_retry_time = PubSub.Delivery.Max_Retry_Time
 _retry_interval_initial = PubSub.Delivery.Retry_Interval_Initial
@@ -63,6 +67,7 @@ class PushDelivery:
         self.backend = backend
         self._stop_event = Event()
         self._greenlets:'sub_key_greenlet_dict' = {}
+        self._paused:'strset' = set()
         self._lock = RLock()
 
 # ################################################################################################################################
@@ -82,6 +87,44 @@ class PushDelivery:
         with self._lock:
             if greenlet := self._greenlets.pop(sub_key, None):
                 greenlet.kill()
+
+# ################################################################################################################################
+
+    def pause_sub_key(self, sub_key:'str') -> 'None':
+        """ Stops the delivery greenlet of one subscriber between two of its batches, rather than
+        wherever it happens to be, which is what a queue being moved needs - a message whose delivery
+        is cut in half is never acknowledged and goes out a second time when the queue starts again.
+        """
+        with self._lock:
+            self._paused.add(sub_key)
+            greenlet = self._greenlets.pop(sub_key, None)
+
+        # A subscriber whose greenlet never ran has nothing to wait for
+        if not greenlet:
+            return
+
+        # The loop notices the pause only once it is between batches, and a fetch of its own blocks
+        # for a while, so waking that fetch up is what makes the pause take effect right away ..
+        self.backend.notify_sub_keys([sub_key])
+
+        # .. and this is where whatever is being delivered right now is waited for ..
+        _ = greenlet.join(timeout=_pause_join_timeout)
+
+        # .. while a greenlet still busy after all that time is stopped where it stands,
+        # .. which is the same at-least-once trade-off that a server shutdown makes.
+        if not greenlet.ready():
+            logger.info('Delivery greenlet for sub_key `%s` did not pause in time, stopping it now', sub_key)
+            greenlet.kill()
+
+# ################################################################################################################################
+
+    def resume_sub_key(self, sub_key:'str') -> 'None':
+        """ Starts a paused subscriber's delivery greenlet again, under the sub key it always had.
+        """
+        with self._lock:
+            self._paused.discard(sub_key)
+
+        self.start_sub_key(sub_key)
 
 # ################################################################################################################################
 
@@ -108,6 +151,8 @@ class PushDelivery:
         while not self._stop_event.is_set():
             if sub_key not in self.server.config_manager._push_subs:
                 break
+            if sub_key in self._paused:
+                break
             pending = self.backend.fetch_pending(sub_key, max_messages=_delivery_batch_size)
             if not pending:
                 break
@@ -116,6 +161,8 @@ class PushDelivery:
         # .. then wait for new messages.
         while not self._stop_event.is_set():
             if sub_key not in self.server.config_manager._push_subs:
+                break
+            if sub_key in self._paused:
                 break
             try:
                 messages = self.backend.fetch_messages(
@@ -145,9 +192,21 @@ class PushDelivery:
         sequence_ids:'intlist' = []
 
         for message in messages:
+
+            # A queue asked to pause stops between two of its messages, and what is left of the batch
+            # stays in the queue, to go out when the queue starts again.
+            if sub_key in self._paused:
+                break
+
             topic_name = message['topic_name']
             sub_config = config_by_topic[topic_name]
-            self._deliver_with_retry(message, sub_config, sub_key)
+
+            # A message the pause interrupted has not been concluded either way, so it is not acked
+            is_concluded = self._deliver_with_retry(message, sub_config, sub_key)
+
+            if not is_concluded:
+                break
+
             msg_ids.append(message['msg_id'])
             sequence_ids.append(message['sequence_id'])
 
@@ -162,10 +221,11 @@ class PushDelivery:
         message:'anydict',
         sub_config:'anydict',
         sub_key:'str',
-    ) -> 'None':
+    ) -> 'bool':
         """ Attempt to deliver a message, retrying with logarithmic backoff and jitter
         until the delivery deadline is reached or the message expires. Acknowledgement
-        is the caller's job - one transaction covers the whole batch.
+        is the caller's job - one transaction covers the whole batch. Answers with whether
+        the message was concluded, which a queue asked to pause between two attempts was not.
         """
         msg_id = message['msg_id']
 
@@ -182,6 +242,12 @@ class PushDelivery:
         expired = False
 
         while monotonic() < deadline:
+
+            # .. a queue asked to pause gives up between two attempts rather than in the middle of one,
+            # .. leaving the message where it is so that it goes out again once the queue resumes ..
+            if sub_key in self._paused:
+                logger.info('Pausing sub_key `%s` between delivery attempts, msg_id `%s`', sub_key, msg_id)
+                return False
 
             # .. drop expired messages without delivery ..
             now = utcnow()
@@ -218,6 +284,9 @@ class PushDelivery:
 
             # .. record the delivery outcome in the audit log.
         self._insert_audit_event(message, sub_config, sub_key, delivered, expired)
+
+        # The message is out of the queue's hands either way - delivered, expired or given up on.
+        return True
 
 # ################################################################################################################################
 

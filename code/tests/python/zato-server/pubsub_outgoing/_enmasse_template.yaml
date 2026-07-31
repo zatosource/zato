@@ -14,6 +14,20 @@ outgoing_rest:
     timeout: 30
     request_method: POST
 
+  - name: test.outgoing.to-rename
+    host: "http://127.0.0.1:{{port_rename}}"
+    url_path: /api/rename
+    data_format: json
+    timeout: 30
+    request_method: POST
+
+  - name: test.outgoing.to-delete
+    host: "http://127.0.0.1:{{port_delete}}"
+    url_path: /api/delete
+    data_format: json
+    timeout: 30
+    request_method: POST
+
   - name: test.outgoing.inventory
     host: "http://127.0.0.1:{{port_inventory}}"
     url_path: /api/inventory/items

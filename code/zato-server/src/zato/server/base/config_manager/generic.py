@@ -6,6 +6,9 @@ Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from contextlib import nullcontext
+
 # Bunch
 from zato.common.ext.bunch import Bunch
 
@@ -37,6 +40,7 @@ from zato.server.generic.api.outconn_mongodb import outconn_mongodb_bool_config_
     outconn_mongodb_int_config_keys
 from zato.server.generic.api.outconn_smb import outconn_smb_config_defaults, outconn_smb_int_config_keys
 from zato.server.generic.connection import GenericConnection
+from zato.server.connection.outgoing_delivery import publishable_generic_types
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -72,6 +76,9 @@ class Generic(ConfigManagerImpl):
     as2_config_generation: 'int'
     _generic_conn_handler: 'stranydict'
     _get_generic_impl_func: 'callable_'
+    get_outgoing_publish_lock: 'callable_'
+    rename_outgoing_subscription: 'callable_'
+    delete_outgoing_subscription: 'callable_'
 
 # ################################################################################################################################
 
@@ -126,7 +133,7 @@ class Generic(ConfigManagerImpl):
 
 # ################################################################################################################################
 
-    def _delete_generic_connection(self, msg:'stranydict') -> 'None':
+    def _delete_generic_connection(self, msg:'stranydict', needs_queue_delete:'bool'=True) -> 'None':
 
         conn_dict, conn_value = self._find_conn_info(msg['id'], msg['name'])
         if not conn_dict:
@@ -147,6 +154,13 @@ class Generic(ConfigManagerImpl):
             # .. delete the connection from the configuration object ..
             conn_name = conn_dict['name']
             _ = conn_value.pop(conn_name, None)
+
+            # .. a connection that can be published to takes its queue with it, unless this delete
+            # .. is only the first half of an edit, which puts the connection back right away ..
+            conn_type = publishable_generic_types.get(conn_dict['type_'])
+
+            if conn_type and needs_queue_delete:
+                self.delete_outgoing_subscription(conn_type, conn_dict['id'], conn_name)
 
             # .. and note the change for whoever caches anything built out of these configs.
             self._note_as2_config_change(conn_dict['type_'])
@@ -228,12 +242,33 @@ class Generic(ConfigManagerImpl):
             conn_dict, _ = self._find_conn_info(msg['id'])
             secret = conn_dict['secret']
 
-        # Delete the connection
-        self._delete_generic_connection(msg)
+        # The name the connection goes by until this edit is over is what a rename moves its topic from
+        old_conn_dict, _ = self._find_conn_info(msg['id'])
+        old_name = old_conn_dict['name']
 
-        # Recreate it now but make sure to include the secret too
-        msg['secret'] = secret
-        self._create_generic_connection(msg, True, skip)
+        conn_type = publishable_generic_types.get(msg['type_'])
+        is_rename = bool(conn_type) and old_name != msg['name']
+
+        # A renamed connection that can be published to has its topic moved to the new name, and both
+        # that and the config this method replaces happen with nothing being published to it in between,
+        # because a publication resolves its topic from what the config says the connection is called.
+        if is_rename:
+            lock = self.get_outgoing_publish_lock(conn_type, msg['id'])
+        else:
+            lock = nullcontext()
+
+        with lock:
+
+            # Delete the connection, although not the queue in front of it, which this edit keeps
+            self._delete_generic_connection(msg, needs_queue_delete=False)
+
+            # Recreate it now but make sure to include the secret too
+            msg['secret'] = secret
+            self._create_generic_connection(msg, True, skip)
+
+            # .. and whatever was queued for this connection now waits under its new topic.
+            if is_rename:
+                self.rename_outgoing_subscription(conn_type, msg['id'], old_name, msg['name'])
 
 # ################################################################################################################################
 

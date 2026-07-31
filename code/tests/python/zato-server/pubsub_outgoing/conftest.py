@@ -52,9 +52,11 @@ def _build_config(
     connection_password = 'test.outgoing.' + CryptoManager.generate_hex_string()
 
     # Each connection has a target of its own, so that what one of them receives
-    # is never mistaken for what the other one did ..
+    # is never mistaken for what another one did ..
     orders_port = find_free_port()
     inventory_port = find_free_port()
+    rename_port = find_free_port()
+    delete_port = find_free_port()
 
     orders_receiver = RecordingReceiver(orders_port)
     orders_receiver.start()
@@ -62,15 +64,25 @@ def _build_config(
     inventory_receiver = RecordingReceiver(inventory_port)
     inventory_receiver.start()
 
-    # .. and both of them are stopped when the session ends.
+    rename_receiver = RecordingReceiver(rename_port)
+    rename_receiver.start()
+
+    delete_receiver = RecordingReceiver(delete_port)
+    delete_receiver.start()
+
+    # .. and all of them are stopped when the session ends.
     state.receivers.append(orders_receiver)
     state.receivers.append(inventory_receiver)
+    state.receivers.append(rename_receiver)
+    state.receivers.append(delete_receiver)
 
-    logger.info('Receivers started on ports %d and %d', orders_port, inventory_port)
+    logger.info('Receivers started on ports %d, %d, %d and %d', orders_port, inventory_port, rename_port, delete_port)
 
     placeholders = {
         'port_orders': str(orders_port),
         'port_inventory': str(inventory_port),
+        'port_rename': str(rename_port),
+        'port_delete': str(delete_port),
         'connection_password': connection_password,
     }
 
@@ -94,6 +106,8 @@ def _build_config(
 
         TestConfig.orders_receiver = orders_receiver
         TestConfig.inventory_receiver = inventory_receiver
+        TestConfig.rename_receiver = rename_receiver
+        TestConfig.delete_receiver = delete_receiver
 
         TestConfig.state = state
 
@@ -127,6 +141,8 @@ def clear_receivers() -> 'any_':
     """
     TestConfig.orders_receiver.clear()
     TestConfig.inventory_receiver.clear()
+    TestConfig.rename_receiver.clear()
+    TestConfig.delete_receiver.clear()
 
     yield
 

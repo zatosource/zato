@@ -14,15 +14,16 @@ from unittest.mock import MagicMock
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.pubsub.outgoing import delivery_handlers, deliver_envelope, get_outgoing_sub_config, \
-    get_outgoing_sub_key, get_outgoing_topic_name, OutgoingPublisher, parse_outgoing_sub_key, register_delivery_handler
+from zato.common.pubsub.outgoing import conn_locators, delivery_handlers, deliver_envelope, find_outgoing_conn, \
+    get_outgoing_sub_config, get_outgoing_sub_key, get_outgoing_topic_name, locate_outgoing_conn, OutgoingPublisher, \
+    parse_outgoing_sub_key, register_outgoing_conn_type
 from zato.common.pubsub.sql.backend import PublishResult
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist
+    from zato.common.typing_ import any_, anylist, anytuple
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -32,8 +33,16 @@ if 0:
 _type_ftp = 'ftp-test'
 _type_smb = 'smb-test'
 
-# The connection name most of the assertions use.
+# The connection most of the assertions use - the id it keeps for as long as it exists
+# and the name it goes by.
+_conn_id = 17
 _conn_name = 'Order Intake'
+
+# The name that same connection goes by after it has been renamed.
+_conn_name_renamed = 'Order Intake EU'
+
+# The id of the second connection, the one the registry tests deliver to as well.
+_other_conn_id = 23
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,31 +69,38 @@ class OutgoingNamingTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_sub_key_preserves_connection_name_case(self) -> 'None':
-        out = get_outgoing_sub_key('rest', _conn_name)
-        self.assertEqual(out, 'zato.out.rest.Order Intake')
+    def test_sub_key_is_built_from_the_connection_id(self) -> 'None':
+        """ The queue is named after what a rename leaves alone, which is the connection's id.
+        """
+        out = get_outgoing_sub_key('rest', _conn_id)
+        self.assertEqual(out, 'zato.out.rest.17')
+
+# ################################################################################################################################
+
+    def test_sub_key_does_not_change_when_the_connection_is_renamed(self) -> 'None':
+        before = get_outgoing_sub_key('rest', _conn_id)
+        after = get_outgoing_sub_key('rest', _conn_id)
+
+        self.assertEqual(before, after)
 
 # ################################################################################################################################
 
     def test_sub_key_round_trips_through_parse(self) -> 'None':
-        sub_key = get_outgoing_sub_key('rest', _conn_name)
-        conn_type, conn_name = parse_outgoing_sub_key(sub_key)
+        sub_key = get_outgoing_sub_key('rest', _conn_id)
+        conn_type, conn_id = parse_outgoing_sub_key(sub_key)
 
         self.assertEqual(conn_type, 'rest')
-        self.assertEqual(conn_name, _conn_name)
+        self.assertEqual(conn_id, _conn_id)
 
 # ################################################################################################################################
 
-    def test_sub_key_round_trips_with_dots_in_the_connection_name(self) -> 'None':
-        """ A connection named after a host keeps every one of its dots on the way back.
+    def test_parsed_connection_id_is_a_number(self) -> 'None':
+        """ It is what a connection is looked up by, so it comes back as what it was published under.
         """
-        conn_name = 'crm.example.com api'
-        sub_key = get_outgoing_sub_key('rest', conn_name)
+        sub_key = get_outgoing_sub_key('rest', _conn_id)
+        _, conn_id = parse_outgoing_sub_key(sub_key)
 
-        conn_type, parsed_name = parse_outgoing_sub_key(sub_key)
-
-        self.assertEqual(conn_type, 'rest')
-        self.assertEqual(parsed_name, conn_name)
+        self.assertIsInstance(conn_id, int)
 
 # ################################################################################################################################
 
@@ -102,7 +118,7 @@ class OutgoingNamingTestCase(unittest.TestCase):
         """ Every outgoing connection is subscribed by the one delivery service, as a push subscription.
         """
         topic_name = get_outgoing_topic_name('rest', _conn_name)
-        sub_key = get_outgoing_sub_key('rest', _conn_name)
+        sub_key = get_outgoing_sub_key('rest', _conn_id)
 
         out = get_outgoing_sub_config(sub_key, topic_name)
 
@@ -115,32 +131,56 @@ class OutgoingNamingTestCase(unittest.TestCase):
 # ################################################################################################################################
 
 class OutgoingRegistryTestCase(unittest.TestCase):
-    """ Which handler a published message is given to.
+    """ Which connection a published message is given to, and through which handler.
     """
 
     def setUp(self) -> 'None':
         self.server = MagicMock()
         self.received:'anylist' = []
 
-        for conn_type in (_type_ftp, _type_smb):
-            _ = delivery_handlers.pop(conn_type, None)
+        # The connections these tests deliver to, by the id each of them is published to under
+        self.connections = {
+            _conn_id: _conn_name,
+            _other_conn_id: 'Archive',
+        }
+
+        self._forget_test_types()
 
 # ################################################################################################################################
 
     def tearDown(self) -> 'None':
+        self._forget_test_types()
+
+# ################################################################################################################################
+
+    def _forget_test_types(self) -> 'None':
+
         for conn_type in (_type_ftp, _type_smb):
             _ = delivery_handlers.pop(conn_type, None)
+            _ = conn_locators.pop(conn_type, None)
 
 # ################################################################################################################################
 
     def _register(self, conn_type:'str') -> 'None':
 
         received = self.received
+        connections = self.connections
 
-        def handler(server:'any_', cid:'str', conn_name:'str', data:'str') -> 'None':
-            received.append((conn_type, conn_name, data))
+        def locator(server:'any_', conn_id:'int') -> 'anytuple':
 
-        register_delivery_handler(conn_type, handler)
+            conn_name = connections.get(conn_id)
+
+            if not conn_name:
+                return ()
+
+            # The wrapper a locator answers with is whatever the handler needs, here the name itself
+            out = (conn_name, conn_name)
+            return out
+
+        def handler(server:'any_', cid:'str', wrapper:'any_', data:'str') -> 'None':
+            received.append((conn_type, wrapper, data))
+
+        register_outgoing_conn_type(conn_type, locator, handler)
 
 # ################################################################################################################################
 
@@ -148,16 +188,66 @@ class OutgoingRegistryTestCase(unittest.TestCase):
 
         self._register(_type_ftp)
 
-        envelope = {'conn_type': _type_ftp, 'conn_name': _conn_name, 'data': 'Order 1234'}
+        envelope = {'conn_type': _type_ftp, 'conn_id': _conn_id, 'conn_name': _conn_name, 'data': 'Order 1234'}
         deliver_envelope(self.server, 'test-cid', envelope)
 
         self.assertEqual(self.received, [(_type_ftp, _conn_name, 'Order 1234')])
 
 # ################################################################################################################################
 
+    def test_a_renamed_connection_still_receives_the_message(self) -> 'None':
+        """ The envelope carries the name from before the rename and the id, and it is the id that decides.
+        """
+        self._register(_type_ftp)
+        self.connections[_conn_id] = _conn_name_renamed
+
+        envelope = {'conn_type': _type_ftp, 'conn_id': _conn_id, 'conn_name': _conn_name, 'data': 'Order 1234'}
+        deliver_envelope(self.server, 'test-cid', envelope)
+
+        self.assertEqual(self.received, [(_type_ftp, _conn_name_renamed, 'Order 1234')])
+
+# ################################################################################################################################
+
+    def test_a_connection_that_is_gone_raises(self) -> 'None':
+        """ What is raised names the connection, so a log line says which one it was.
+        """
+        self._register(_type_ftp)
+        del self.connections[_conn_id]
+
+        envelope = {'conn_type': _type_ftp, 'conn_id': _conn_id, 'conn_name': _conn_name, 'data': 'Order 1234'}
+
+        with self.assertRaises(Exception) as context:
+            deliver_envelope(self.server, 'test-cid', envelope)
+
+        self.assertIn(str(_conn_id), str(context.exception))
+        self.assertIn(_conn_name, str(context.exception))
+
+# ################################################################################################################################
+
+    def test_find_answers_with_nothing_for_a_connection_that_is_gone(self) -> 'None':
+        """ This is what a server starting up uses, where a connection deleted meanwhile is not an error.
+        """
+        self._register(_type_ftp)
+        del self.connections[_conn_id]
+
+        out = find_outgoing_conn(self.server, _type_ftp, _conn_id)
+        self.assertFalse(out)
+
+# ################################################################################################################################
+
+    def test_locate_answers_with_the_current_name(self) -> 'None':
+
+        self._register(_type_ftp)
+        self.connections[_conn_id] = _conn_name_renamed
+
+        conn_name, _ = locate_outgoing_conn(self.server, _type_ftp, _conn_id)
+        self.assertEqual(conn_name, _conn_name_renamed)
+
+# ################################################################################################################################
+
     def test_unregistered_conn_type_raises(self) -> 'None':
 
-        envelope = {'conn_type': _type_ftp, 'conn_name': _conn_name, 'data': 'Order 1234'}
+        envelope = {'conn_type': _type_ftp, 'conn_id': _conn_id, 'conn_name': _conn_name, 'data': 'Order 1234'}
 
         with self.assertRaises(Exception) as context:
             deliver_envelope(self.server, 'test-cid', envelope)
@@ -171,8 +261,8 @@ class OutgoingRegistryTestCase(unittest.TestCase):
         self._register(_type_ftp)
         self._register(_type_smb)
 
-        first = {'conn_type': _type_ftp, 'conn_name': _conn_name, 'data': 'Order 1234'}
-        second = {'conn_type': _type_smb, 'conn_name': 'Archive', 'data': 'Order 5678'}
+        first = {'conn_type': _type_ftp, 'conn_id': _conn_id, 'conn_name': _conn_name, 'data': 'Order 1234'}
+        second = {'conn_type': _type_smb, 'conn_id': _other_conn_id, 'conn_name': 'Archive', 'data': 'Order 5678'}
 
         deliver_envelope(self.server, 'test-cid', first)
         deliver_envelope(self.server, 'test-cid', second)
@@ -190,12 +280,16 @@ class OutgoingRegistryTestCase(unittest.TestCase):
         """ What a handler raises is what reaches the delivery loop, which is what makes it retry.
         """
 
-        def handler(server:'any_', cid:'str', conn_name:'str', data:'str') -> 'None':
+        def locator(server:'any_', conn_id:'int') -> 'anytuple':
+            out = (_conn_name, _conn_name)
+            return out
+
+        def handler(server:'any_', cid:'str', wrapper:'any_', data:'str') -> 'None':
             raise Exception('The connection refused the message')
 
-        register_delivery_handler(_type_ftp, handler)
+        register_outgoing_conn_type(_type_ftp, locator, handler)
 
-        envelope = {'conn_type': _type_ftp, 'conn_name': _conn_name, 'data': 'Order 1234'}
+        envelope = {'conn_type': _type_ftp, 'conn_id': _conn_id, 'conn_name': _conn_name, 'data': 'Order 1234'}
 
         with self.assertRaises(Exception) as context:
             deliver_envelope(self.server, 'test-cid', envelope)
@@ -214,18 +308,23 @@ class OutgoingPublisherTestCase(unittest.TestCase):
         self.server = MagicMock()
         self.server.config_manager._outgoing_sub_key_cache = set()
         self.server.config_manager._outgoing_sub_key_lock = threading.RLock()
+        self.server.config_manager._outgoing_conn_locks = {}
         self.server.config_manager._push_subs = {}
 
-        # The topic is what the config manager hands back to a publisher ..
+        # The topic and the connection's current name are what the config manager hands back ..
         self.topic_name = get_outgoing_topic_name('rest', _conn_name)
-        self.server.config_manager.ensure_outgoing_subscription.return_value = self.topic_name
+        self.server.config_manager.ensure_outgoing_subscription.return_value = (self.topic_name, _conn_name)
+
+        # .. the publication takes the connection's own lock while it runs ..
+        self.lock = threading.RLock()
+        self.server.config_manager.get_outgoing_publish_lock.return_value = self.lock
 
         # .. and this is what the backend answers each publication with.
         publish_result = PublishResult()
         publish_result.msg_id = 'test-message-id-001'
         self.server.pubsub_backend.publish.return_value = publish_result
 
-        self.publisher = OutgoingPublisher(self.server, 'rest', _conn_name)
+        self.publisher = OutgoingPublisher(self.server, 'rest', _conn_id)
 
 # ################################################################################################################################
 
@@ -244,7 +343,16 @@ class OutgoingPublisherTestCase(unittest.TestCase):
 
         _ = self.publisher.publish('Order 1234')
 
-        self.server.config_manager.ensure_outgoing_subscription.assert_called_once_with('rest', _conn_name)
+        self.server.config_manager.ensure_outgoing_subscription.assert_called_once_with('rest', _conn_id)
+
+# ################################################################################################################################
+
+    def test_publish_takes_the_connection_lock(self) -> 'None':
+        """ It is held for as long as the publication runs, which is what a rename waits for.
+        """
+        _ = self.publisher.publish('Order 1234')
+
+        self.server.config_manager.get_outgoing_publish_lock.assert_called_once_with('rest', _conn_id)
 
 # ################################################################################################################################
 
@@ -259,13 +367,30 @@ class OutgoingPublisherTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def test_envelope_names_the_connection_it_is_for(self) -> 'None':
+    def test_publish_goes_to_the_topic_of_the_current_name(self) -> 'None':
+        """ A connection renamed since the publisher was built is published to under its new topic.
+        """
+        renamed_topic = get_outgoing_topic_name('rest', _conn_name_renamed)
+        self.server.config_manager.ensure_outgoing_subscription.return_value = (renamed_topic, _conn_name_renamed)
 
+        _ = self.publisher.publish('Order 1234')
+
+        call_args = self.server.pubsub_backend.publish.call_args
+        positional = call_args[0]
+
+        self.assertEqual(positional[0], renamed_topic)
+
+# ################################################################################################################################
+
+    def test_envelope_carries_the_connection_id(self) -> 'None':
+        """ The id is what the message is delivered by, because a rename does not touch it.
+        """
         _ = self.publisher.publish('Order 1234')
 
         envelope = self._get_published_envelope()
 
         self.assertEqual(envelope['conn_type'], 'rest')
+        self.assertEqual(envelope['conn_id'], _conn_id)
         self.assertEqual(envelope['conn_name'], _conn_name)
         self.assertEqual(envelope['data'], 'Order 1234')
 

@@ -583,6 +583,7 @@ test-pubsub-outgoing: ## Publishing to outgoing connections - the naming, the ha
 		$(CURDIR)/code/zato-server/src/zato/server/service/internal/pubsub/outgoing.py \
 		$(CURDIR)/code/tests/python/zato-common/pubsub/test_outgoing.py \
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/outgoing.py \
+		$(CURDIR)/code/tests/python/zato-server/outgoing_delivery/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_outgoing/
 	pyright \
 		$(CURDIR)/code/zato-common/src/zato/common/pubsub/outgoing.py \
@@ -591,9 +592,11 @@ test-pubsub-outgoing: ## Publishing to outgoing connections - the naming, the ha
 		$(CURDIR)/code/zato-server/src/zato/server/service/internal/pubsub/outgoing.py \
 		$(CURDIR)/code/tests/python/zato-common/pubsub/test_outgoing.py \
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/outgoing.py \
+		$(CURDIR)/code/tests/python/zato-server/outgoing_delivery/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_outgoing/
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
 		$(CURDIR)/code/tests/python/zato-common/pubsub/test_outgoing.py \
+		$(CURDIR)/code/tests/python/zato-server/outgoing_delivery/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_outgoing \
 		-W "ignore:This process:DeprecationWarning" \
 		$(FAIL_FAST) $(PYTEST_ARGS)

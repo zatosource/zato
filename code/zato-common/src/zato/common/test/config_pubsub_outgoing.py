@@ -43,13 +43,21 @@ class TestConfig:
     orders_connection = 'test.outgoing.orders'
     inventory_connection = 'test.outgoing.inventory'
 
+    # The connections that the tests of renaming and deleting have to themselves, because what
+    # they do to a connection is not something the other tests could go on publishing to
+    rename_connection = 'test.outgoing.to-rename'
+    rename_connection_new_name = 'test.outgoing.renamed'
+    delete_connection = 'test.outgoing.to-delete'
+
     # The credentials the inventory connection authenticates with
     connection_username = ''
     connection_password = ''
 
-    # The targets of those two connections
+    # The targets of those connections
     orders_receiver: 'any_' = None
     inventory_receiver: 'any_' = None
+    rename_receiver: 'any_' = None
+    delete_receiver: 'any_' = None
 
     # The session state, which is what a restart goes through
     state: 'any_' = None

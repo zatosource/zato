@@ -6,23 +6,26 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# How a message published to an outgoing connection is actually handed over to it. There is one
-# handler per type of connection, each of them reaching the connection the way a service would,
-# so an edit to a connection is picked up without anything here being told about it. A handler
-# raises when the connection did not accept the message, which is what makes the pub/sub delivery
-# loop keep the message queued and try again.
+# How a message published to an outgoing connection is actually handed over to it. There are two
+# functions per type of connection - one that finds a connection by the id it was published to,
+# and one that gives a message to what was found - each of them reaching the connection the way
+# a service would, so an edit to a connection is picked up without anything here being told about
+# it. A handler raises when the connection did not accept the message, which is what makes the
+# pub/sub delivery loop keep the message queued and try again.
 
 # stdlib
 from json import loads
 from logging import getLogger
 
 # Zato
-from zato.common.pubsub.outgoing import register_delivery_handler
+from zato.common.api import GENERIC
+from zato.common.pubsub.outgoing import register_outgoing_conn_type
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from zato.common.typing_ import any_, anytuple
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -47,13 +50,33 @@ class OutgoingType:
     FHIR = 'fhir'
 
 # ################################################################################################################################
+
+# Which generic connection type is published to as which kind of outgoing connection. A type that is
+# not here has no queue, so a rename or a delete of one has nothing to move or to remove.
+publishable_generic_types = {
+    GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: OutgoingType.FHIR,
+}
+
+# ################################################################################################################################
 # ################################################################################################################################
 
-def _deliver_to_rest(server:'ParallelServer', cid:'str', conn_name:'str', data:'str') -> 'None':
+def _locate_rest(server:'ParallelServer', conn_id:'int') -> 'anytuple':
+    """ Finds an outgoing REST connection by its id, which is what the connection keeps through a rename.
+    """
+    item = server.config_manager.config_store.out_plain_http.get_by_id(conn_id)
+
+    # A connection that was deleted is no longer anywhere to be found
+    if not item:
+        return ()
+
+    out = (item.config['name'], item.conn)
+    return out
+
+# ################################################################################################################################
+
+def _deliver_to_rest(server:'ParallelServer', cid:'str', wrapper:'any_', data:'str') -> 'None':
     """ Hands one message over to an outgoing REST connection.
     """
-    item = server.config_manager.config_store.out_plain_http[conn_name]
-    wrapper = item.conn
 
     # The method, address, headers, query string and credentials all come from the connection itself ..
     response = wrapper.rest_invoke(cid, data)
@@ -63,11 +86,22 @@ def _deliver_to_rest(server:'ParallelServer', cid:'str', conn_name:'str', data:'
 
 # ################################################################################################################################
 
-def _deliver_to_fhir(server:'ParallelServer', cid:'str', conn_name:'str', data:'str') -> 'None':
+def _locate_fhir(server:'ParallelServer', conn_id:'int') -> 'anytuple':
+    """ Finds an outgoing HL7 FHIR connection by its id. These connections live in a dict keyed by name,
+    so the id is what each of them is compared by.
+    """
+    for item in server.config_manager.outconn_hl7_fhir.values():
+        if item['id'] == conn_id:
+            out = (item['name'], item.conn)
+            return out
+
+    return ()
+
+# ################################################################################################################################
+
+def _deliver_to_fhir(server:'ParallelServer', cid:'str', wrapper:'any_', data:'str') -> 'None':
     """ Hands one message over to an outgoing HL7 FHIR connection, as a resource of the type the document names.
     """
-    item = server.config_manager.outconn_hl7_fhir[conn_name]
-    wrapper = item.conn
 
     # A FHIR resource travels as a document, so what arrives here as text is that document in its JSON form ..
     resource = loads(data)
@@ -86,8 +120,8 @@ def _deliver_to_fhir(server:'ParallelServer', cid:'str', conn_name:'str', data:'
 def register_delivery_handlers() -> 'None':
     """ Makes every type of outgoing connection that can be published to publishable.
     """
-    register_delivery_handler(OutgoingType.REST, _deliver_to_rest)
-    register_delivery_handler(OutgoingType.FHIR, _deliver_to_fhir)
+    register_outgoing_conn_type(OutgoingType.REST, _locate_rest, _deliver_to_rest)
+    register_outgoing_conn_type(OutgoingType.FHIR, _locate_fhir, _deliver_to_fhir)
 
 # ################################################################################################################################
 # ################################################################################################################################
