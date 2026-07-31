@@ -365,8 +365,12 @@ class HL7MLLPServer:
         # so the reader starts with it rather than with an empty buffer
         reader = FrameReader(client_socket, self.router.get_start_sequences(), config.read_buffer_size, initial_bytes)
 
-        # Fallback settings for a frame that matched nothing, whose channel is by definition unknown
+        # Default settings for a frame that matched nothing, whose channel is by definition unknown
         unmatched_settings = RouteSettings()
+
+        # Until a message matches a route the wait between messages is the listener's own,
+        # because there is no channel yet whose idle deadline could apply instead
+        idle_timeout = config.idle_timeout
 
         try:
 
@@ -374,7 +378,7 @@ class HL7MLLPServer:
 
                 try:
                     msh_line = reader.read_first_line(
-                        config.max_first_line_size, config.idle_timeout, config.first_line_timeout)
+                        config.max_first_line_size, idle_timeout, config.first_line_timeout)
 
                 except HL7Exception as exception:
                     self.state.on_error()
@@ -397,6 +401,10 @@ class HL7MLLPServer:
                     settings = matched_route.settings
                     end_sequences = [settings.end_sequence]
                     self._apply_keepalive(client_socket, settings)
+
+                    # From here on the wait between messages down this connection
+                    # is the matched channel's own idle deadline
+                    idle_timeout = settings.idle_timeout
 
                 # .. the rest of the frame is read under whatever the matched channel allows,
                 # .. which is what makes two senders down one connection read differently ..
@@ -624,6 +632,7 @@ class HL7MLLPServer:
         control_id:'str',
         settings:'RouteSettings',
         connection_context:'ConnectionContext',
+        channel_name:'str',
         ) -> 'None':
         """ Answers a message the matched channel has already seen within its own TTL window.
         A duplicate is acknowledged positively and its callback is not invoked.
@@ -631,7 +640,11 @@ class HL7MLLPServer:
         if settings.should_log_messages:
             logger.info('Duplicate message (MSH-10: %s) from %s, skipping', control_id, connection_context.endpoint)
 
+        # A duplicate's acknowledgment feeds the live state, the channel's own included
         self.state.on_ack_sent()
+
+        channel_state = self.get_channel_state(channel_name)
+        channel_state.on_ack_sent()
 
         ack_string = build_ack(msh_line, 'AA')
         self._send_framed(active_socket, ack_string, settings, connection_context)
@@ -689,16 +702,18 @@ class HL7MLLPServer:
                 msh_line = message_text[:first_cr]
 
             # .. a channel with deduplication on answers a control id it has already seen
-            # .. without invoking anything ..
-            if settings.deduplicator:
+            # .. without invoking anything - only a matched route carries a deduplicator ..
+            if matched_route:
+                if settings.deduplicator:
 
-                control_id = extract_control_id(msh_line)
+                    control_id = extract_control_id(msh_line)
 
-                # .. only deduplicate if the message actually has a control ID ..
-                if control_id:
-                    if settings.deduplicator.is_duplicate(control_id):
-                        self._handle_duplicate(active_socket, msh_line, control_id, settings, connection_context)
-                        continue
+                    # .. only deduplicate if the message actually has a control ID ..
+                    if control_id:
+                        if settings.deduplicator.is_duplicate(control_id):
+                            self._handle_duplicate(active_socket, msh_line, control_id, settings,
+                                connection_context, matched_route.channel_name)
+                            continue
 
             # .. a matched message counts on its channel's own state too ..
             if matched_route:
@@ -780,8 +795,11 @@ class HL7MLLPServer:
                         if not settings.should_return_errors:
                             error_text = ''
 
-                        # .. a reject is a negative acknowledgment in the channel's live state ..
+                        # .. a reject is a negative acknowledgment in the channel's live state,
+                        # .. the matched channel's own included ..
                         self.state.on_nack_sent()
+                        if channel_state:
+                            channel_state.on_nack_sent()
 
                         ack_string = build_ack(msh_line, ack_code, error_text=error_text,
                             error_condition=Condition_Data_Type_Error)

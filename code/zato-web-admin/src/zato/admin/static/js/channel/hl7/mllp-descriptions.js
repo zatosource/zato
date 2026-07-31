@@ -42,6 +42,10 @@ $.fn.zato.channel.hl7.mllp.field_descriptions = {
     'id_start_seq': 'MLLP start-of-block byte in hex.<br>Standard: 0b.',
     'id_end_seq': 'MLLP end-of-block bytes in hex.<br>Standard: 1c 0d.',
 
+    // Tolerance tab - parsing
+    'id_should_parse_on_input': 'When on, each incoming message is parsed<br>into a structured HL7 object before the service<br>receives it. When off, the service receives<br>the raw ER7 text.',
+    'id_should_validate': 'When on, each parsed message is validated<br>against the HL7 v2 grammar and a message<br>that fails validation is rejected with an AE.<br>Applies only when parsing is on.',
+
     // Tolerance tab - wire-level preprocessing
     'id_normalize_line_endings': 'Converts CRLF and LF to CR<br>as required by HL7 v2.',
     'id_force_standard_delimiters': 'Rewrites MSH-2 to standard delimiters<br>(^~\\&amp;).',

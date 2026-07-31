@@ -163,9 +163,7 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['is_outconn'] = False
         initial_input_dict['sec_use_rbac'] = False
         initial_input_dict['pool_size'] = 1
-        initial_input_dict['should_parse_on_input'] = True
         initial_input_dict['data_format'] = HL7.Const.Version.v2.id
-        initial_input_dict['hl7_version'] = HL7.Const.Version.v2.id
 
         # The security select carries its type along with the id, and only the id is stored
         initial_input_dict['security_id'] = self._get_security_id()

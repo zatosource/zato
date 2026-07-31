@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django import forms
 
 # Zato
-from zato.admin.web.forms import add_security_select, add_select, add_services
+from zato.admin.web.forms import add_security_select, add_services
 from zato.common.api import HL7
 
 # ################################################################################################################################
@@ -55,8 +55,6 @@ class CreateForm(forms.Form):
     should_return_errors = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     should_log_messages = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     is_audit_log_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-
-    hl7_version = forms.ChoiceField(widget=forms.Select())
 
     # A channel hands each message to a service, to its destinations, or to both, so this
     # is not required on its own - the page checks that at least one of the two is there.
@@ -160,7 +158,6 @@ class CreateForm(forms.Form):
         if mtls_security_list is None:
             mtls_security_list = []
 
-        add_select(self, 'hl7_version', HL7.Const.Version(), needs_initial_select=False)
         add_services(self, req)
         add_security_select(self, security_list, field_name='rest_security_id')
         add_security_select(self, mtls_security_list, field_name='security_id')

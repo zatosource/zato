@@ -15,7 +15,7 @@ from urllib.parse import parse_qsl
 from uuid import uuid4
 
 # Zato
-from zato.common.api import AS2, Audit_Config, FileTransfer, GENERIC as COMMON_GENERIC, generic_attrs, query_parameters, \
+from zato.common.api import AS2, Audit_Config, FileTransfer, GENERIC as COMMON_GENERIC, query_parameters, \
      SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, ZATO_NONE
 from zato.common.as2.rotation import complete_rotation, needs_rotation_completion
 from zato.common.audit_log.common import AuditEvent
@@ -36,7 +36,7 @@ from zato.common.util.time_ import utcnow
 from zato.server.config_audit import get_model_snapshot, record_service_config_change
 from zato.server.generic.api.outconn_sdk import get_secret_field_names
 from zato.server.generic.connection import GenericConnection
-from zato.server.service import AsIs, Int
+from zato.server.service import Int
 from zato.server.service.internal import AdminService, ChangePasswordBase
 from zato.server.service.internal.generic import _BaseService
 from zato.server.service.internal.outgoing.file_transfer.schedule import delete_connection_jobs, resync_connection_jobs
@@ -216,16 +216,6 @@ def ensure_ints(data:'strdict') -> 'None':
             data[name] = value
 
 # ################################################################################################################################
-
-class _CreateEditIO:
-    input_required = ('name', 'type_', 'is_active', 'is_internal', 'is_channel', 'is_outconn')
-    input_optional = ('cluster_id', 'id', Int('pool_size'), Int('cache_expiry'), 'address', Int('port'), Int('timeout'),
-        'data_format', 'version',
-        'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id', AsIs('tenant_id'),
-        AsIs('client_id'), AsIs('security_id')) + extra_secret_keys + generic_attrs
-    force_empty_keys = True
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 class _CreateEdit(_BaseService):
@@ -320,6 +310,12 @@ class _CreateEdit(_BaseService):
 
         # Break down security definitions into components
         security_id = data.get('security_id') or ''
+
+        # Some Dashboard views, e.g. HL7 MLLP channels and FHIR outgoing connections, send the ID
+        # as a plain integer with no type prefix, in which case there are no components to break down.
+        if isinstance(security_id, int):
+            security_id = ''
+
         if sec_def_sep in security_id:
 
             # Extract the components ..
