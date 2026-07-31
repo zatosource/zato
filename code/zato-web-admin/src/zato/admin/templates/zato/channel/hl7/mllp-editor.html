@@ -285,6 +285,14 @@ $(document).ready(function() {
                 <div class="dashboard-tab-panel" id="mllp-editor-tab-panel-tolerance" role="tabpanel" hidden>
                     <table class="form-data">
                         <tr>
+                            <td><label for="id_{{ field_prefix }}should_parse_on_input">Parse on input</label></td>
+                            <td>{{ form.should_parse_on_input }}</td>
+                        </tr>
+                        <tr>
+                            <td><label for="id_{{ field_prefix }}should_validate">Validate</label></td>
+                            <td>{{ form.should_validate }}</td>
+                        </tr>
+                        <tr>
                             <td><label for="id_{{ field_prefix }}normalize_line_endings">Normalize line endings</label></td>
                             <td>{{ form.normalize_line_endings }}</td>
                         </tr>

@@ -290,7 +290,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
         # Looking a definition up by its id gives the configuration itself, whereas looking one up
         # by name gives an object that has the configuration under an attribute of its own
-        subject_dn = security_definition.get('client_cert_subject_dn')
+        subject_dn = security_definition['client_cert_subject_dn']
         common_name = extract_common_name(subject_dn)
 
         # A definition that only names a fingerprint cannot be matched here, because a fingerprint

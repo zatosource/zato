@@ -42,6 +42,27 @@ class TestChannelHL7MLLP:
         assert resp['name'] == 'test-ch-hl7mllp-1'
         self.__class__.created_ids.append(resp['id'])
 
+    def test_02a_create_with_security_id(self, client):
+        # The Dashboard's MLLP view sends security_id as a plain integer,
+        # with no security-type prefix in front of it
+        resp = client.create(f'{SERVICE}.create',
+            cluster_id=1,
+            name='test-ch-hl7mllp-mtls',
+            type_=TYPE,
+            is_active=True,
+            is_internal=False,
+            is_channel=True,
+            is_outconn=False,
+            address='127.0.0.1',
+            port=17010,
+            pool_size=1,
+            service='demo.ping',
+            security_id=123,
+        )
+        assert 'id' in resp
+        assert resp['name'] == 'test-ch-hl7mllp-mtls'
+        self.__class__.created_ids.append(resp['id'])
+
     def test_03_get_list_after_create(self, client):
         data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)
         names = [item['name'] for item in data]

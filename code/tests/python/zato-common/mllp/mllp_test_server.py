@@ -24,7 +24,7 @@ from zato.common.hl7.mllp.dedup import extract_control_id
 from zato.common.hl7.mllp.preprocess import build_tolerance_config
 from zato.common.hl7.mllp.router import HL7MessageRouter
 from zato.common.hl7.mllp.server import HL7MLLPServer
-from zato.common.hl7.mllp.settings import ListenerConfig, RouteSettings
+from zato.common.hl7.mllp.settings import Default_Idle_Timeout, ListenerConfig, RouteSettings
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -139,6 +139,7 @@ def _build_argument_parser() -> 'argparse.ArgumentParser':
     _ = parser.add_argument('--max-msg-size', type=int, default=2_000_000)
     _ = parser.add_argument('--read-buffer-size', type=int, default=4096)
     _ = parser.add_argument('--recv-timeout', type=float, default=30.0)
+    _ = parser.add_argument('--idle-timeout', type=float, default=Default_Idle_Timeout)
     _ = parser.add_argument('--log-messages', action=argparse.BooleanOptionalAction, default=False)
     _ = parser.add_argument('--should-return-errors', action=argparse.BooleanOptionalAction, default=False)
 
@@ -193,6 +194,7 @@ def main() -> 'None':
         start_sequence=_start_sequence,
         end_sequence=_end_sequence,
         recv_timeout=args.recv_timeout,
+        idle_timeout=args.idle_timeout,
         max_message_size=args.max_msg_size,
         should_log_messages=args.log_messages,
         should_return_errors=args.should_return_errors,
