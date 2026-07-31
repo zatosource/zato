@@ -14,9 +14,9 @@ from unittest.mock import MagicMock
 
 # Zato
 from zato.common.ext.bunch import Bunch
-from zato.common.pubsub.outgoing import deliver_envelope
+from zato.common.pubsub.outgoing import deliver_envelope, OutgoingType
 from zato.server.config import ConfigDict
-from zato.server.connection.outgoing_delivery import OutgoingType, register_delivery_handlers
+from zato.server.connection.outgoing_delivery import register_delivery_handlers
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -79,9 +79,14 @@ class _FHIRClient:
 
     def __init__(self) -> 'None':
         self.requests:'anylist' = []
+        self.is_accepted = True
 
     def _do_request(self, method:'str', path:'str', data:'stranydict') -> 'None':
         self.requests.append((method, path, data))
+
+        # This is what fhirpy does with a response that was not a success
+        if not self.is_accepted:
+            raise Exception('The FHIR server did not accept the document')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -281,6 +286,94 @@ class FHIRDeliveryTestCase(unittest.TestCase):
             deliver_envelope(self.server, 'test-cid', envelope)
 
         self.assertIn(str(_conn_id), str(context.exception))
+
+# ################################################################################################################################
+
+    def test_the_document_reaches_the_client_parsed(self) -> 'None':
+        """ The queue carries a document as text, and what the client is given is the document itself.
+        """
+        envelope = _new_envelope(OutgoingType.FHIR, dumps(_fhir_document))
+        deliver_envelope(self.server, 'test-cid', envelope)
+
+        _, _, data = self.wrapper.fhir_client.requests[0]
+
+        self.assertIsInstance(data, dict)
+        self.assertEqual(data['resourceType'], _fhir_resource_type)
+        self.assertEqual(data['name'], _fhir_document['name'])
+
+# ################################################################################################################################
+
+    def test_a_refusing_client_makes_the_handler_raise(self) -> 'None':
+        """ What the handler raises is what keeps the document in the queue for another attempt.
+        """
+        self.wrapper.fhir_client.is_accepted = False
+
+        envelope = _new_envelope(OutgoingType.FHIR, dumps(_fhir_document))
+
+        with self.assertRaises(Exception) as context:
+            deliver_envelope(self.server, 'test-cid', envelope)
+
+        self.assertIn('did not accept the document', str(context.exception))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class RegistryTestCase(unittest.TestCase):
+    """ That a message goes to the handler of the type it was published to, rather than to whichever
+    connection happens to answer to the name.
+    """
+
+    def setUp(self) -> 'None':
+
+        register_delivery_handlers()
+
+        self.rest_wrapper = _RESTWrapper()
+        self.fhir_wrapper = _FHIRWrapper()
+
+        # Both connections go by the same name and the same id, which is all a message has to go on
+        rest_item = Bunch()
+        rest_item.config = {'id': _conn_id, 'name': _conn_name}
+        rest_item.conn = self.rest_wrapper
+
+        config_dict = ConfigDict('out_plain_http', Bunch())
+        config_dict[_conn_name] = rest_item
+        config_dict.set_key_id_data(rest_item.config)
+
+        fhir_item = Bunch()
+        fhir_item.id = _conn_id
+        fhir_item.name = _conn_name
+        fhir_item.conn = self.fhir_wrapper
+
+        self.server = MagicMock()
+        self.server.config_manager.config_store.out_plain_http = config_dict
+        self.server.config_manager.outconn_hl7_fhir = {_conn_name: fhir_item}
+
+# ################################################################################################################################
+
+    def test_the_registry_picks_the_handler_by_type(self) -> 'None':
+
+        deliver_envelope(self.server, 'rest-cid', _new_envelope(OutgoingType.REST, 'Order 1234'))
+        deliver_envelope(self.server, 'fhir-cid', _new_envelope(OutgoingType.FHIR, dumps(_fhir_document)))
+
+        # Each of them received its own message and neither received the other's
+        self.assertEqual(self.rest_wrapper.invocations, [('rest-cid', 'Order 1234')])
+
+        requests = self.fhir_wrapper.fhir_client.requests
+        self.assertEqual(len(requests), 1)
+        self.assertEqual(requests[0][1], _fhir_resource_type)
+
+# ################################################################################################################################
+
+    def test_an_unknown_type_is_refused(self) -> 'None':
+        """ A type that was never registered has no queue and no handler, so a message naming one
+        is an error rather than something quietly dropped.
+        """
+        envelope = _new_envelope('no-such-type', 'Order 1234')
+
+        with self.assertRaises(Exception) as context:
+            deliver_envelope(self.server, 'test-cid', envelope)
+
+        self.assertIn('no-such-type', str(context.exception))
 
 # ################################################################################################################################
 # ################################################################################################################################

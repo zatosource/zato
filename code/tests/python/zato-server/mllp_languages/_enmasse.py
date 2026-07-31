@@ -45,7 +45,7 @@ security:
     type: mtls
     client_cert_subject_dn: {Java_Client_Subject_DN}
 
-channel_hl7_mllp:
+channel_mllp:
 """
 
     for channel in Channels:

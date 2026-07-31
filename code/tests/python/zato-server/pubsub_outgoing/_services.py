@@ -67,6 +67,24 @@ class PublishThroughFacade(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class PublishToFHIRConnection(Service):
+    """ Publishes one document to an outgoing FHIR connection, the way an application does it.
+    """
+
+    name = 'test.outgoing.publish-fhir'
+
+    def handle(self) -> 'None':
+
+        conn_name = self.request.raw_request['conn_name']
+        document = self.request.raw_request['document']
+
+        result = self.fhir[conn_name].publish(document)
+
+        self.response.payload = {'msg_id': result.msg_id}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class _OutgoingConnectionService(Service):
     """ What the services that change an outgoing REST connection have in common, which is reading
     the configuration that connection has right now, the way the Dashboard reads it into its form.

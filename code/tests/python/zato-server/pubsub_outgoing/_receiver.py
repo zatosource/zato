@@ -26,6 +26,10 @@ if 0:
 
 logger = logging.getLogger('zato.test.pubsub_outgoing.receiver')
 
+# What a plain REST target answers with, which is what most of these connections are pointed at.
+_default_content_type = 'application/json'
+_default_body = '{}'
+
 # How long the server waits for its thread to notice a shutdown, in seconds.
 _shutdown_timeout_seconds = 5
 
@@ -50,6 +54,22 @@ class RecordedRequest(NamedTuple):
 # ################################################################################################################################
 
 request_list = list[RecordedRequest]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ReceiverAnswer(NamedTuple):
+    """ What a receiver answers one request with. A FHIR target answers differently from a REST one,
+    so what a target says is part of how it is set up rather than fixed here.
+    """
+    status_code: int
+    content_type: str
+    body: str
+
+# ################################################################################################################################
+
+# What a target that is refusing says, whatever it answers with when it is accepting
+_refusal_answer = ReceiverAnswer(SERVICE_UNAVAILABLE, _default_content_type, _default_body)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -99,13 +119,14 @@ class _RequestHandler(BaseHTTPRequestHandler):
             body=body.decode('utf-8'),
         )
 
-        status_code = self.server.receiver.record(request)
+        answer = self.server.receiver.record(request)
+        body = answer.body.encode('utf-8')
 
-        self.send_response(status_code)
-        self.send_header('Content-Type', 'application/json')
-        self.send_header('Content-Length', '2')
+        self.send_response(answer.status_code)
+        self.send_header('Content-Type', answer.content_type)
+        self.send_header('Content-Length', str(len(body)))
         self.end_headers()
-        _ = self.wfile.write(b'{}')
+        _ = self.wfile.write(body)
 
 # ################################################################################################################################
 
@@ -133,11 +154,21 @@ class RecordingReceiver:
     for as long as a test needs a target that is not accepting anything.
     """
 
-    def __init__(self, port:'int') -> 'None':
+    def __init__(
+        self,
+        port:'int',
+        status_code:'int'=OK,
+        content_type:'str'=_default_content_type,
+        body:'str'=_default_body,
+    ) -> 'None':
         self.port = port
         self.requests:'request_list' = []
         self.rejection_count = 0
         self.rejections_left = 0
+
+        # What this target says when it accepts a request - a FHIR server does not answer
+        # the way a plain REST one does, and what a client makes of the answer is part of the test
+        self.answer = ReceiverAnswer(status_code, content_type, body)
 
         self._server:'_ReceiverHTTPServer | None' = None
         self._thread:'threading.Thread | None' = None
@@ -145,8 +176,8 @@ class RecordingReceiver:
 
 # ################################################################################################################################
 
-    def record(self, request:'RecordedRequest') -> 'int':
-        """ Stores one request and answers with the status the receiver is currently giving out.
+    def record(self, request:'RecordedRequest') -> 'ReceiverAnswer':
+        """ Stores one request and answers the way the receiver is currently answering.
         """
         with self._lock:
 
@@ -155,13 +186,12 @@ class RecordingReceiver:
                 self.rejections_left -= 1
                 self.rejection_count += 1
 
-                out = SERVICE_UNAVAILABLE
-                return out
+                return _refusal_answer
 
             # .. anything else is accepted and kept.
             self.requests.append(request)
 
-            out = OK
+            out = self.answer
             return out
 
 # ################################################################################################################################

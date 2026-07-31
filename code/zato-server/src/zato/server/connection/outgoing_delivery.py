@@ -19,7 +19,7 @@ from logging import getLogger
 
 # Zato
 from zato.common.api import GENERIC
-from zato.common.pubsub.outgoing import register_outgoing_conn_type
+from zato.common.pubsub.outgoing import OutgoingType, register_outgoing_conn_type
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,14 +41,6 @@ _fhir_block_timeout = 30
 _fhir_method = 'POST'
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-class OutgoingType:
-    """ The kinds of outgoing connection that can be published to.
-    """
-    REST = 'rest'
-    FHIR = 'fhir'
-
 # ################################################################################################################################
 
 # Which generic connection type is published to as which kind of outgoing connection. A type that is

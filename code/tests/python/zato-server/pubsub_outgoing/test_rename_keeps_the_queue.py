@@ -11,9 +11,8 @@ import unittest
 from json import loads
 
 # Zato
-from zato.common.pubsub.outgoing import get_outgoing_sub_key, get_outgoing_topic_name
+from zato.common.pubsub.outgoing import get_outgoing_sub_key, get_outgoing_topic_name, OutgoingType
 from zato.common.test.config_pubsub_outgoing import TestConfig
-from zato.server.connection.outgoing_delivery import OutgoingType
 
 # local
 from _helpers import get_queue, get_client, publish, rename_connection

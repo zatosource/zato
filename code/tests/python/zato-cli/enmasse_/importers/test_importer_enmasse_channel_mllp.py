@@ -15,7 +15,7 @@ from unittest import TestCase, main
 # Zato
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
-from zato.cli.enmasse.importers.channel_hl7_mllp import ChannelHL7MLLPImporter
+from zato.cli.enmasse.importers.channel_mllp import ChannelMLLPImporter
 from zato.cli.enmasse.importers.security import SecurityImporter
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
@@ -32,7 +32,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestEnmasseChannelHL7MLLPImporter(TestCase):
+class TestEnmasseChannelMLLPImporter(TestCase):
     """ Tests importing HL7 MLLP channels.
     """
 
@@ -50,7 +50,7 @@ class TestEnmasseChannelHL7MLLPImporter(TestCase):
         self.importer = EnmasseYAMLImporter()
 
         # Initialize the HL7 MLLP channel importer
-        self.channel_hl7_mllp_importer = ChannelHL7MLLPImporter(self.importer)
+        self.channel_mllp_importer = ChannelMLLPImporter(self.importer)
 
         # A channel may name a security definition, so the definitions have to exist first
         self.security_importer = SecurityImporter(self.importer)
@@ -84,17 +84,17 @@ class TestEnmasseChannelHL7MLLPImporter(TestCase):
 
 # ################################################################################################################################
 
-    def test_channel_hl7_mllp_creation(self) -> 'None':
+    def test_channel_mllp_creation(self) -> 'None':
         """ Test the creation of HL7 MLLP channels.
         """
         self._setup_test_environment()
 
-        channel_defs = self.yaml_config['channel_hl7_mllp']
+        channel_defs = self.yaml_config['channel_mllp']
 
         channel_def_count = len(channel_defs)
         self.assertTrue(channel_def_count > 0, 'No HL7 MLLP channel definitions found in YAML')
 
-        channels_created, _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+        channels_created, _ = self.channel_mllp_importer.sync_definitions(channel_defs, self.session)
 
         # Every channel the template declares should be created
         created_count = len(channels_created)
@@ -108,13 +108,13 @@ class TestEnmasseChannelHL7MLLPImporter(TestCase):
 
 # ################################################################################################################################
 
-    def test_channel_hl7_mllp_opaque_fields(self) -> 'None':
+    def test_channel_mllp_opaque_fields(self) -> 'None':
         """ Verify opaque fields roundtrip - routing, tolerance, and dedup fields.
         """
         self._setup_test_environment()
 
-        channel_defs = self.yaml_config['channel_hl7_mllp']
-        channels_created, _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+        channel_defs = self.yaml_config['channel_mllp']
+        channels_created, _ = self.channel_mllp_importer.sync_definitions(channel_defs, self.session)
 
         # Build a lookup by name
         channels_by_name = {}
@@ -145,15 +145,15 @@ class TestEnmasseChannelHL7MLLPImporter(TestCase):
 
 # ################################################################################################################################
 
-    def test_channel_hl7_mllp_idempotent_update(self) -> 'None':
+    def test_channel_mllp_idempotent_update(self) -> 'None':
         """ Run sync twice, assert second run produces 0 creates and updates with no data drift.
         """
         self._setup_test_environment()
 
-        channel_defs = self.yaml_config['channel_hl7_mllp']
+        channel_defs = self.yaml_config['channel_mllp']
 
         # First sync - all channels should be created
-        channels_created, _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+        channels_created, _ = self.channel_mllp_importer.sync_definitions(channel_defs, self.session)
 
         channel_def_count = len(channel_defs)
 
@@ -161,7 +161,7 @@ class TestEnmasseChannelHL7MLLPImporter(TestCase):
         self.assertEqual(created_count, channel_def_count)
 
         # Second sync - no new creates, only updates
-        channels_created_2, channels_updated_2 = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+        channels_created_2, channels_updated_2 = self.channel_mllp_importer.sync_definitions(channel_defs, self.session)
 
         created_count_2 = len(channels_created_2)
         updated_count_2 = len(channels_updated_2)
@@ -170,13 +170,13 @@ class TestEnmasseChannelHL7MLLPImporter(TestCase):
 
 # ################################################################################################################################
 
-    def test_channel_hl7_mllp_defaults(self) -> 'None':
+    def test_channel_mllp_defaults(self) -> 'None':
         """ Verify that channels created without explicit tolerance flags get the library defaults.
         """
         self._setup_test_environment()
 
-        channel_defs = self.yaml_config['channel_hl7_mllp']
-        channels_created, _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+        channel_defs = self.yaml_config['channel_mllp']
+        channels_created, _ = self.channel_mllp_importer.sync_definitions(channel_defs, self.session)
 
         # Channel 1 does not override tolerance flags - check that defaults apply
         channels_by_name = {}
@@ -204,7 +204,7 @@ class TestEnmasseChannelHL7MLLPImporter(TestCase):
 
 # ################################################################################################################################
 
-    def test_channel_hl7_mllp_is_active_honoured_on_update(self) -> 'None':
+    def test_channel_mllp_is_active_honoured_on_update(self) -> 'None':
         """ A channel the YAML marks as inactive stays inactive when the same YAML is synced again.
         """
         self._setup_test_environment()
@@ -215,23 +215,23 @@ class TestEnmasseChannelHL7MLLPImporter(TestCase):
             'is_active': False,
         }]
 
-        channels_created, _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+        channels_created, _ = self.channel_mllp_importer.sync_definitions(channel_defs, self.session)
         self.assertFalse(channels_created[0].is_active)
 
         # The second sync goes down the update path, which is where the flag used to be dropped
-        _, channels_updated = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+        _, channels_updated = self.channel_mllp_importer.sync_definitions(channel_defs, self.session)
         self.assertFalse(channels_updated[0].is_active)
 
 # ################################################################################################################################
 
-    def test_channel_hl7_mllp_stores_the_destination_list_as_text(self) -> 'None':
+    def test_channel_mllp_stores_the_destination_list_as_text(self) -> 'None':
         """ A file writes a channel's destinations as a list of its own, while what a channel
         stores is the JSON text the Dashboard writes - one stored form for both.
         """
         self._setup_test_environment()
 
-        channel_defs = self.yaml_config['channel_hl7_mllp']
-        channels_created, _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+        channel_defs = self.yaml_config['channel_mllp']
+        channels_created, _ = self.channel_mllp_importer.sync_definitions(channel_defs, self.session)
 
         channels_by_name = {}
         for channel in channels_created:
@@ -256,14 +256,14 @@ class TestEnmasseChannelHL7MLLPImporter(TestCase):
 
 # ################################################################################################################################
 
-    def test_channel_hl7_mllp_delivers_without_a_service(self) -> 'None':
+    def test_channel_mllp_delivers_without_a_service(self) -> 'None':
         """ A channel that hands each message to its destinations alone needs no service, and
         what it never said stays at its default.
         """
         self._setup_test_environment()
 
-        channel_defs = self.yaml_config['channel_hl7_mllp']
-        channels_created, _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+        channel_defs = self.yaml_config['channel_mllp']
+        channels_created, _ = self.channel_mllp_importer.sync_definitions(channel_defs, self.session)
 
         channels_by_name = {}
         for channel in channels_created:
@@ -285,7 +285,7 @@ class TestEnmasseChannelHL7MLLPImporter(TestCase):
 
 # ################################################################################################################################
 
-    def test_channel_hl7_mllp_rejects_an_unusable_destination_list(self) -> 'None':
+    def test_channel_mllp_rejects_an_unusable_destination_list(self) -> 'None':
         """ A destination list that could not be delivered to is refused before it is stored.
         """
         self._setup_test_environment()
@@ -298,7 +298,7 @@ class TestEnmasseChannelHL7MLLPImporter(TestCase):
         }]
 
         with self.assertRaises(Exception):
-            _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+            _ = self.channel_mllp_importer.sync_definitions(channel_defs, self.session)
 
         # A destination of a type nothing can deliver through
         channel_defs = [{
@@ -307,7 +307,7 @@ class TestEnmasseChannelHL7MLLPImporter(TestCase):
         }]
 
         with self.assertRaises(Exception):
-            _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+            _ = self.channel_mllp_importer.sync_definitions(channel_defs, self.session)
 
         # A delivery mode that does not exist, the reserved one included
         channel_defs = [{
@@ -317,11 +317,11 @@ class TestEnmasseChannelHL7MLLPImporter(TestCase):
         }]
 
         with self.assertRaises(Exception):
-            _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+            _ = self.channel_mllp_importer.sync_definitions(channel_defs, self.session)
 
 # ################################################################################################################################
 
-    def test_channel_hl7_mllp_needs_somewhere_to_deliver(self) -> 'None':
+    def test_channel_mllp_needs_somewhere_to_deliver(self) -> 'None':
         """ A channel that names neither a service nor a destination is rejected.
         """
         self._setup_test_environment()
@@ -331,18 +331,18 @@ class TestEnmasseChannelHL7MLLPImporter(TestCase):
         }]
 
         with self.assertRaises(Exception):
-            _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+            _ = self.channel_mllp_importer.sync_definitions(channel_defs, self.session)
 
 # ################################################################################################################################
 
-    def test_channel_hl7_mllp_security_name_resolves_to_id(self) -> 'None':
+    def test_channel_mllp_security_name_resolves_to_id(self) -> 'None':
         """ The security definition a channel names is stored as that definition's id, and the name
         it was given by never reaches the channel's own fields.
         """
         self._setup_test_environment()
 
-        channel_defs = self.yaml_config['channel_hl7_mllp']
-        channels_created, _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+        channel_defs = self.yaml_config['channel_mllp']
+        channels_created, _ = self.channel_mllp_importer.sync_definitions(channel_defs, self.session)
 
         channels_by_name = {}
         for channel in channels_created:
@@ -363,7 +363,7 @@ class TestEnmasseChannelHL7MLLPImporter(TestCase):
 
 # ################################################################################################################################
 
-    def test_channel_hl7_mllp_unknown_security_is_rejected(self) -> 'None':
+    def test_channel_mllp_unknown_security_is_rejected(self) -> 'None':
         """ A channel naming a security definition that does not exist is rejected rather than
         created without one, which would leave it accepting every sender.
         """
@@ -376,7 +376,7 @@ class TestEnmasseChannelHL7MLLPImporter(TestCase):
         }]
 
         with self.assertRaises(Exception):
-            _ = self.channel_hl7_mllp_importer.sync_definitions(channel_defs, self.session)
+            _ = self.channel_mllp_importer.sync_definitions(channel_defs, self.session)
 
 # ################################################################################################################################
 # ################################################################################################################################

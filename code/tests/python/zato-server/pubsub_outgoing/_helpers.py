@@ -26,6 +26,7 @@ if 0:
 # and one per thing that can be done to one.
 _publish_service = 'test.outgoing.publish'
 _publish_through_facade_service = 'test.outgoing.publish-through-facade'
+_publish_fhir_service = 'test.outgoing.publish-fhir'
 _rename_service = 'test.outgoing.rename-connection'
 _delete_service = 'test.outgoing.delete-connection'
 _get_queues_service = 'test.outgoing.get-queues'
@@ -77,6 +78,22 @@ def publish_through_facade(client:'AdminClient', conn_name:'str', data:'any_') -
     }
 
     response = client.invoke(_publish_through_facade_service, request)
+    response = as_dict(response)
+
+    out = response['msg_id']
+    return out
+
+# ################################################################################################################################
+
+def publish_fhir(client:'AdminClient', conn_name:'str', document:'anydict') -> 'str':
+    """ Publishes one document to an outgoing FHIR connection and returns the id it was given.
+    """
+    request = {
+        'conn_name': conn_name,
+        'document': document,
+    }
+
+    response = client.invoke(_publish_fhir_service, request)
     response = as_dict(response)
 
     out = response['msg_id']

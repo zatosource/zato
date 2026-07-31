@@ -14,7 +14,7 @@ from zato.cli.enmasse.importers.generic import GenericConnectionImporter
 # ################################################################################################################################
 # ################################################################################################################################
 
-class OutgoingHL7MLLPImporter(GenericConnectionImporter):
+class OutgoingMLLPImporter(GenericConnectionImporter):
 
     connection_type = GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP
 

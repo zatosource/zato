@@ -129,7 +129,7 @@ class Enmasse(ZatoCommand):
                 data_dict: 'stranydict' = exporter.export_to_dict(session)
 
                 # If requested, limit the export to specific object types only,
-                # e.g. --include-type channel_hl7_mllp or a comma-separated list of types.
+                # e.g. --include-type channel_mllp or a comma-separated list of types.
                 if args.include_type:
                     include_types = {item.strip() for item in args.include_type.split(',')}
                     data_dict = {key: value for key, value in data_dict.items() if key in include_types}

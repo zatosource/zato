@@ -31,7 +31,7 @@ logger = getLogger(__name__)
 
 _Outgoing_HL7_MLLP_Template = """
 
-outgoing_hl7_mllp:
+outgoing_mllp:
 
   - name: enmasse.hl7.mllp.out.1.{test_suffix}
     address: 127.0.0.1:30901
@@ -58,7 +58,7 @@ outgoing_hl7_mllp:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestEnmasseOutgoingHL7MLLPLive(BaseEnmasseTestCase):
+class TestEnmasseOutgoingMLLPLive(BaseEnmasseTestCase):
     """ Live CLI tests for outgoing HL7 MLLP import, export, and reimport against a real server.
     """
 
@@ -69,7 +69,7 @@ class TestEnmasseOutgoingHL7MLLPLive(BaseEnmasseTestCase):
 
 # ################################################################################################################################
 
-    def test_outgoing_hl7_mllp_import_export_reimport(self) -> 'None':
+    def test_outgoing_mllp_import_export_reimport(self) -> 'None':
         """ Full cycle: import outgoing HL7 MLLP connections, export them, verify the export, then reimport to confirm idempotency.
         """
 
@@ -99,7 +99,7 @@ class TestEnmasseOutgoingHL7MLLPLive(BaseEnmasseTestCase):
             _ = self.invoke_enmasse(import_path)
 
             # .. export them back out ..
-            _ = self.invoke_enmasse(export_path, is_import=False, is_export=True, include_type='outgoing_hl7_mllp')
+            _ = self.invoke_enmasse(export_path, is_import=False, is_export=True, include_type='outgoing_mllp')
 
             # .. read the exported file ..
             with open(export_path, 'r') as f:
@@ -107,10 +107,10 @@ class TestEnmasseOutgoingHL7MLLPLive(BaseEnmasseTestCase):
 
             exported_dict = yaml.safe_load(export_data)
 
-            # .. confirm the exported YAML has the outgoing_hl7_mllp key ..
-            self.assertIn('outgoing_hl7_mllp', exported_dict, 'outgoing_hl7_mllp key missing from export')
+            # .. confirm the exported YAML has the outgoing_mllp key ..
+            self.assertIn('outgoing_mllp', exported_dict, 'outgoing_mllp key missing from export')
 
-            exported_connections = exported_dict['outgoing_hl7_mllp']
+            exported_connections = exported_dict['outgoing_mllp']
 
             # .. filter to our test connections ..
             test_connections = []
@@ -151,7 +151,7 @@ class TestEnmasseOutgoingHL7MLLPLive(BaseEnmasseTestCase):
             reimport_export_file_name = 'zato-enmasse-hl7-out-reimport-export-' + test_suffix + '.yaml'
             reimport_export_path = os.path.join(tmp_dir, reimport_export_file_name)
 
-            _ = self.invoke_enmasse(reimport_export_path, is_import=False, is_export=True, include_type='outgoing_hl7_mllp')
+            _ = self.invoke_enmasse(reimport_export_path, is_import=False, is_export=True, include_type='outgoing_mllp')
 
             with open(reimport_export_path, 'r') as f:
                 reimport_data = f.read()
@@ -159,7 +159,7 @@ class TestEnmasseOutgoingHL7MLLPLive(BaseEnmasseTestCase):
             reimport_dict = yaml.safe_load(reimport_data)
 
             reimport_connections = []
-            for connection in reimport_dict['outgoing_hl7_mllp']:
+            for connection in reimport_dict['outgoing_mllp']:
                 if test_suffix in connection['name']:
                     reimport_connections.append(connection)
 

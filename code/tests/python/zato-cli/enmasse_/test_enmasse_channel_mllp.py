@@ -37,7 +37,7 @@ security:
     type: mtls
     client_cert_subject_dn: CN=enmasse.hl7.client,O=Enmasse,C=US
 
-channel_hl7_mllp:
+channel_mllp:
 
   - name: enmasse.hl7.mllp.1.{test_suffix}
     service: demo.ping
@@ -83,7 +83,7 @@ channel_hl7_mllp:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestEnmasseChannelHL7MLLPLive(BaseEnmasseTestCase):
+class TestEnmasseChannelMLLPLive(BaseEnmasseTestCase):
     """ Live CLI tests for HL7 MLLP channel import, export, and reimport against a real server.
     """
 
@@ -94,7 +94,7 @@ class TestEnmasseChannelHL7MLLPLive(BaseEnmasseTestCase):
 
 # ################################################################################################################################
 
-    def test_hl7_mllp_import_export_reimport(self) -> 'None':
+    def test_mllp_import_export_reimport(self) -> 'None':
         """ Full cycle: import HL7 MLLP channels, export them, verify the export, then reimport to confirm idempotency.
         """
 
@@ -125,7 +125,7 @@ class TestEnmasseChannelHL7MLLPLive(BaseEnmasseTestCase):
 
             # .. export them back out ..
             _ = self.invoke_enmasse(
-                export_path, is_import=False, is_export=True, include_type='channel_hl7_mllp,security')
+                export_path, is_import=False, is_export=True, include_type='channel_mllp,security')
 
             # .. read the exported file ..
             with open(export_path, 'r') as f:
@@ -133,10 +133,10 @@ class TestEnmasseChannelHL7MLLPLive(BaseEnmasseTestCase):
 
             exported_dict = yaml.safe_load(export_data)
 
-            # .. confirm the exported YAML has the channel_hl7_mllp key ..
-            self.assertIn('channel_hl7_mllp', exported_dict, 'channel_hl7_mllp key missing from export')
+            # .. confirm the exported YAML has the channel_mllp key ..
+            self.assertIn('channel_mllp', exported_dict, 'channel_mllp key missing from export')
 
-            exported_channels = exported_dict['channel_hl7_mllp']
+            exported_channels = exported_dict['channel_mllp']
 
             # .. filter to our test channels ..
             test_channels = []
@@ -212,7 +212,7 @@ class TestEnmasseChannelHL7MLLPLive(BaseEnmasseTestCase):
             reimport_export_file_name = 'zato-enmasse-hl7-reimport-export-' + test_suffix + '.yaml'
             reimport_export_path = os.path.join(tmp_dir, reimport_export_file_name)
 
-            _ = self.invoke_enmasse(reimport_export_path, is_import=False, is_export=True, include_type='channel_hl7_mllp')
+            _ = self.invoke_enmasse(reimport_export_path, is_import=False, is_export=True, include_type='channel_mllp')
 
             with open(reimport_export_path, 'r') as f:
                 reimport_data = f.read()
@@ -220,7 +220,7 @@ class TestEnmasseChannelHL7MLLPLive(BaseEnmasseTestCase):
             reimport_dict = yaml.safe_load(reimport_data)
 
             reimport_channels = []
-            for channel in reimport_dict['channel_hl7_mllp']:
+            for channel in reimport_dict['channel_mllp']:
                 if test_suffix in channel['name']:
                     reimport_channels.append(channel)
 

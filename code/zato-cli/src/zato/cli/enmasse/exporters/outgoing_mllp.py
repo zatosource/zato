@@ -24,7 +24,7 @@ if 0:
     from zato.cli.enmasse.exporter import EnmasseYAMLExporter
     from zato.common.typing_ import anydict, list_
 
-    outgoing_hl7_mllp_def_list = list_[anydict]
+    outgoing_mllp_def_list = list_[anydict]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,14 +34,14 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class OutgoingHL7MLLPExporter:
+class OutgoingMLLPExporter:
 
     def __init__(self, exporter:'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
 # ################################################################################################################################
 
-    def export(self, session:'SASession', cluster_id:'int') -> 'outgoing_hl7_mllp_def_list':
+    def export(self, session:'SASession', cluster_id:'int') -> 'outgoing_mllp_def_list':
         """ Exports outgoing HL7 MLLP connection definitions.
         """
         logger.info('Exporting outgoing HL7 MLLP definitions')

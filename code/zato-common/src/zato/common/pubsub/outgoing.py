@@ -46,6 +46,16 @@ conn_locators:'strcalldict' = {}
 # ################################################################################################################################
 # ################################################################################################################################
 
+class OutgoingType:
+    """ The kinds of outgoing connection that can be published to. These names are part of what
+    a queue is called, so they live next to the functions that build those names.
+    """
+    REST = 'rest'
+    FHIR = 'fhir'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def get_outgoing_topic_name(conn_type:'str', conn_name:'str') -> 'str':
     """ The name of the topic that carries messages destined for one outgoing connection. A rename
     of that connection moves the topic, which is the only thing about a queue that a name decides.

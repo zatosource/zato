@@ -577,18 +577,22 @@ test-pubsub-backend: ## Pub/sub SQL backend contract tests, no server needed.
 
 test-pubsub-outgoing: ## Publishing to outgoing connections - the naming, the handler registry and delivery through a real server.
 	$(CURDIR)/code/bin/ruff check \
+		$(CURDIR)/code/zato-common/src/zato/common/hl7/fhir/fields.py \
 		$(CURDIR)/code/zato-common/src/zato/common/pubsub/outgoing.py \
 		$(CURDIR)/code/zato-common/src/zato/common/test/config_pubsub_outgoing.py \
 		$(CURDIR)/code/zato-server/src/zato/server/connection/outgoing_delivery.py \
+		$(CURDIR)/code/zato-server/src/zato/server/generic/api/outconn_hl7_fhir.py \
 		$(CURDIR)/code/zato-server/src/zato/server/service/internal/pubsub/outgoing.py \
 		$(CURDIR)/code/tests/python/zato-common/pubsub/test_outgoing.py \
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/outgoing.py \
 		$(CURDIR)/code/tests/python/zato-server/outgoing_delivery/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_outgoing/
 	pyright \
+		$(CURDIR)/code/zato-common/src/zato/common/hl7/fhir/fields.py \
 		$(CURDIR)/code/zato-common/src/zato/common/pubsub/outgoing.py \
 		$(CURDIR)/code/zato-common/src/zato/common/test/config_pubsub_outgoing.py \
 		$(CURDIR)/code/zato-server/src/zato/server/connection/outgoing_delivery.py \
+		$(CURDIR)/code/zato-server/src/zato/server/generic/api/outconn_hl7_fhir.py \
 		$(CURDIR)/code/zato-server/src/zato/server/service/internal/pubsub/outgoing.py \
 		$(CURDIR)/code/tests/python/zato-common/pubsub/test_outgoing.py \
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/outgoing.py \
