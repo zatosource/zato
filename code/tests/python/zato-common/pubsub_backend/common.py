@@ -91,6 +91,38 @@ def get_delivery_rows(sub_key:'str') -> 'anylist':
 
 # ################################################################################################################################
 
+def get_sub_rows(sub_key:'str') -> 'anylist':
+    """ Reads all of one subscriber's subscription rows straight from the database, which is
+    what tells how many queues a connection has and what topic each of them is under.
+    """
+    engine = get_pubsub_engine()
+
+    query = select(topic_sub_table)
+    query = query.where(topic_sub_table.c.sub_key == sub_key)
+    query = query.order_by(topic_sub_table.c.topic_name)
+
+    with engine.connect() as connection:
+        out = connection.execute(query).fetchall()
+
+    return out
+
+# ################################################################################################################################
+
+def move_message_rows(old_topic_name:'str', new_topic_name:'str') -> 'None':
+    """ Moves one topic's message rows and nothing else, which is what a rename interrupted
+    halfway through leaves behind - the deliveries and the subscription still under the old name.
+    """
+    engine = get_pubsub_engine()
+
+    update_statement = message_table.update()
+    update_statement = update_statement.where(message_table.c.topic_name == old_topic_name)
+    update_statement = update_statement.values(topic_name=new_topic_name)
+
+    with engine.begin() as connection:
+        _ = connection.execute(update_statement)
+
+# ################################################################################################################################
+
 def assert_mysql_connection_encrypted() -> 'None':
     """ Confirms that the current MySQL session is encrypted.
     """
