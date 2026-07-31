@@ -241,6 +241,7 @@ def zato_dashboard() -> 'any_':
     server_port    = _find_free_port()
     dashboard_port = _find_free_port()
     broker_port    = _find_free_port()
+    mllp_port      = _find_free_port()
 
     # The queue bridge needs its own Redis on its own port - servers left over from other
     # test sessions in the same run also connect to the default localhost:6379 and would
@@ -339,6 +340,10 @@ def zato_dashboard() -> 'any_':
     server_env['Zato_Config_Bind_Port'] = str(server_port)
     server_env['Zato_Broker_HTTP_Port'] = str(broker_port)
     server_env['Zato_Queue_Bridge_Redis_Port'] = str(queue_bridge_redis_port)
+
+    # The internal MLLP listener binds to this port, which is how the tests that
+    # speak to MLLP channels over the wire know where to connect upfront.
+    server_env['Zato_HL7_MLLP_Port'] = str(mllp_port)
     server_env.pop('COVERAGE_PROCESS_START', None)
 
     # The pub/sub database lives inside this test server's own directory,
@@ -442,6 +447,7 @@ def zato_dashboard() -> 'any_':
     yield {
         'host': host,
         'server_port': server_port,
+        'mllp_port': mllp_port,
         'dashboard_port': dashboard_port,
         'dashboard_url': f'http://{host}:{dashboard_port}',
         'password': _Password,

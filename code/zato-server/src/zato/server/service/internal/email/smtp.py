@@ -19,6 +19,7 @@ from six import add_metaclass
 from zato.common.api import SMTPMessage
 from zato.common.broker_message import EMAIL
 from zato.common.odb.model import SMTP
+from zato.common.typing_ import cast_
 from zato.common.version import get_version
 from zato.common.odb.query import email_smtp_list
 from zato.server.service import Boolean
@@ -28,6 +29,12 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 # ################################################################################################################################
 
 version = get_version()
+
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
 
 # ################################################################################################################################
 
@@ -43,9 +50,14 @@ output_optional_extra = [Boolean('needs_tls_verify'), 'ca_certs_path', 'helo_hos
 
 # ################################################################################################################################
 
-def instance_hook(service, input, instance, attrs):
+def instance_hook(service:'any_', input:'any_', instance:'any_', attrs:'any_') -> 'None':
     if attrs.is_create_edit:
         instance.username = input.username or '' # So it's not stored as None/NULL
+
+        # The dashboard form leaves the ping address empty unless one was typed in
+        # while the column itself is NOT NULL, so an absent value is stored as an empty string.
+        if not instance.ping_address:
+            instance.ping_address = ''
 
 # ################################################################################################################################
 
@@ -79,7 +91,7 @@ class ChangePassword(ChangePasswordBase):
     password_required = False
 
     def handle(self):
-        def _auth(instance, password):
+        def _auth(instance:'any_', password:'any_') -> 'None':
             instance.password = password
 
         return self._handle(SMTP, _auth, EMAIL.SMTP_CHANGE_PASSWORD.value)
@@ -97,7 +109,9 @@ class Ping(AdminService):
         with closing(self.odb.session()) as session:
             item = session.query(SMTP).filter_by(id=self.request.input.id).one()
 
-        conn = self.email.smtp.get(item.name, True).conn
+        # The e-mail API is always built by the time a service runs
+        email = cast_('any_', self.email)
+        conn = email.smtp.get(item.name, True).conn
 
         # Check the connection at the protocol level first, without sending any message ..
         start_time = time()

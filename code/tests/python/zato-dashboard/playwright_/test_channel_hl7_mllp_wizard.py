@@ -9,7 +9,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import time
 
+# pytest
+import pytest
+
 # Zato
+from hl7_client import java_client
+from hl7_client.mllp_receiver import MLLPReceiver
+from mllp_channel import send_python, wait_for_item, wait_for_port, wait_until_routed, Host
 from zato.common.crypto.api import CryptoManager
 
 # ################################################################################################################################
@@ -17,7 +23,8 @@ from zato.common.crypto.api import CryptoManager
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import any_, anydict
+    any_ = any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -27,12 +34,13 @@ _Outgoing_Url_Pattern = '/zato/outgoing/hl7/mllp/?cluster=1&type_=outconn-hl7-ml
 
 _Test_Name_Prefix = 'test.mllp.wizard.' + CryptoManager.generate_hex_string(32) + '.'
 
-# The service every channel in these tests invokes - it exists in each test environment
-_Test_Service = 'demo.ping'
+# The service every channel in these tests invokes - the fixture that answers each message
+# with an acknowledgment naming the channel that handled it, so the wire sends below can
+# tell from the acknowledgment alone that the wizard-created channel is the one answering
+_Test_Service = 'test.hl7.mllp.wire.ack-identity'
 
-# Where the outgoing connection the destination points at would deliver - nothing listens there,
-# the wizard only stores the destination
-_Outconn_Address = '127.0.0.1:17999'
+# The sender the channel's routing criteria are about
+_Wizard_App = 'WIZARD_SENDER'
 
 # The badge picker the wizard's destinations panel runs on
 _Picker_Action = 'mllp-wizard-destinations'
@@ -44,7 +52,7 @@ def _navigate_to_mllp(page:'Page', base_url:'str') -> 'None':
     """ Opens the HL7 MLLP channels page and waits for the data table.
     """
     _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-    page.wait_for_selector('#data-table', state='visible')
+    _ = page.wait_for_selector('#data-table', state='visible')
 
 # ################################################################################################################################
 
@@ -56,7 +64,7 @@ def _navigate_to_outgoing_mllp(page:'Page', base_url:'str') -> 'None':
 
 # ################################################################################################################################
 
-def _create_outgoing_connection(page:'Page', base_url:'str', name:'str') -> 'None':
+def _create_outgoing_connection(page:'Page', base_url:'str', name:'str', address:'str') -> 'None':
     """ Creates the outgoing MLLP connection a destination of the wizard points at.
     """
     _navigate_to_outgoing_mllp(page, base_url)
@@ -65,7 +73,7 @@ def _create_outgoing_connection(page:'Page', base_url:'str', name:'str') -> 'Non
     _ = page.wait_for_selector('#create-div', state='visible')
 
     page.fill('#id_name', name)
-    page.fill('#id_address', _Outconn_Address)
+    page.fill('#id_address', address)
 
     page.click('#create-div input[type="submit"]')
     _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
@@ -93,28 +101,50 @@ def _get_item_id(page:'Page', name:'str') -> 'str':
     """
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
     row = page.query_selector(row_selector)
-    id_cell = row.query_selector('td[class*="item_id_"]')
-    out = id_cell.inner_text().strip()
+    assert row is not None, f'No row for "{name}" on the list page'
 
+    id_cell = row.query_selector('td[class*="item_id_"]')
+    assert id_cell is not None, f'No id cell in the row of "{name}"'
+
+    out = id_cell.inner_text().strip()
     return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _text_has(control_id:'str') -> 'any_':
+    """ A predicate matching a receiver delivery whose text carries this control id.
+    """
+    def _predicate(item:'any_') -> 'bool':
+        out = control_id in item.text
+        return out
+
+    return _predicate
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class TestChannelHL7MLLPWizard:
     """ Walks the MLLP channel wizard end to end - a regression check that the wizard,
-    now a wizard-kit instance, still creates channels through all three steps.
+    now a wizard-kit instance, still creates channels through all three steps - and then
+    invokes the created channel over the wire with the python-hl7 and Java HAPI clients.
     """
 
+    @pytest.mark.expect_log_errors('No matching MLLP channel for message')
     def test_mllp_wizard_full_cycle(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
 
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
+        mllp_port = zato_dashboard['mllp_port']
+
+        # The receiver the channel's destination delivers to - a real hl7apy MLLP server
+        receiver = MLLPReceiver()
+        receiver.start()
 
         # Collect console errors along the way ..
         console_errors = [] # type: list
 
-        def _on_console(msg:'object') -> 'None':
+        def _on_console(msg:'any_') -> 'None':
             if msg.type == 'error':
                 console_errors.append(msg.text)
 
@@ -123,7 +153,7 @@ class TestChannelHL7MLLPWizard:
         # .. and server errors too.
         server_errors = [] # type: list
 
-        def _on_response(response:'object') -> 'None':
+        def _on_response(response:'any_') -> 'None':
             if response.status >= 500:
                 server_errors.append(f'{response.status} {response.url}')
 
@@ -132,18 +162,19 @@ class TestChannelHL7MLLPWizard:
         # The connection the channel's destination points at has to exist before the wizard
         # opens, so the destinations panel has it to offer
         outconn_name = _Test_Name_Prefix + 'outconn'
-        _create_outgoing_connection(page, base_url, outconn_name)
+        _create_outgoing_connection(page, base_url, outconn_name, f'{Host}:{receiver.port}')
 
         _navigate_to_mllp(page, base_url)
 
         # Open the wizard from the list page
         page.click('#markup .page_prompt a:has-text("Create a new channel")')
-        page.wait_for_selector('#mllp-wizard', state='visible')
+        _ = page.wait_for_selector('#mllp-wizard', state='visible')
 
-        # Step 1 - the name, everything else keeps its defaults
+        # Step 1 - the name and one routing criterion, everything else keeps its defaults
         channel_name = _Test_Name_Prefix + 'channel'
 
         page.fill('#id_name', channel_name)
+        page.evaluate(f'$("#id_msh3_sending_app").val("{_Wizard_App}")')
 
         # The header badge mirrors the name as it is typed
         badge_text = page.inner_text('#mllp-wizard-name-badge')
@@ -188,13 +219,39 @@ class TestChannelHL7MLLPWizard:
         # Finish - back on the list with the new channel
         page.click('#mllp-wizard-next')
         page.wait_for_url('**/zato/channel/hl7/mllp/**', timeout=10000)
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{channel_name}"))')
         assert row is not None, f'Channel "{channel_name}" should be on the list after the wizard'
 
         row_text = row.inner_text()
         assert _Test_Service in row_text, f'Expected the service in the row, got: "{row_text}"'
+
+        # The channel is live now - the external clients invoke it over the wire and its
+        # acknowledgments name it, control id echoed and all. python-hl7 goes first ..
+        wait_for_port(mllp_port)
+        wait_until_routed(mllp_port, channel_name, _Wizard_App)
+
+        control_id = 'py.' + CryptoManager.generate_hex_string()
+        result = send_python(mllp_port, control_id, _Wizard_App)
+
+        assert result.msa_1 == 'AA', f'Expected AA, got: {result}'
+        assert result.msa_2 == control_id, f'Expected the control id echoed, got: {result}'
+        assert result.msa_3 == channel_name, f'Expected `{channel_name}` to answer, got: {result}'
+
+        # .. its message also reached the destination the wizard stored ..
+        _ = wait_for_item(receiver.deliveries, _text_has(control_id), f'delivery of {control_id}')
+
+        # .. and the Java HAPI client next, wherever there is a Java runtime.
+        if java_client.is_java_available():
+            control_id = 'java.' + CryptoManager.generate_hex_string()
+            result = java_client.send_message(Host, mllp_port, control_id, _Wizard_App)
+
+            assert result.msa_1 == 'AA', f'Expected AA, got: {result}'
+            assert result.msa_2 == control_id, f'Expected the control id echoed, got: {result}'
+            assert result.msa_3 == channel_name, f'Expected `{channel_name}` to answer, got: {result}'
+
+            _ = wait_for_item(receiver.deliveries, _text_has(control_id), f'delivery of {control_id}')
 
         # The created channel stores the destination - the full-page editor reads it back
         # into its hidden JSON field
@@ -217,7 +274,7 @@ class TestChannelHL7MLLPWizard:
         item_id = _get_item_id(page, channel_name)
 
         page.evaluate(f'$.fn.zato.channel.hl7.mllp.delete_("{item_id}")')
-        page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
         page.click('#popup_ok')
         time.sleep(0.5)
 
@@ -226,6 +283,9 @@ class TestChannelHL7MLLPWizard:
 
         # Delete the outgoing connection the destination pointed at
         _delete_outgoing_connection(page, base_url, outconn_name)
+
+        # The receiver has served its purpose
+        receiver.stop()
 
         # No console or server errors along the way
         real_errors = [] # type: list

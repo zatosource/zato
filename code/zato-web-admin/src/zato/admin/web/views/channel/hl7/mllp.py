@@ -374,17 +374,25 @@ class _CreateEdit(CreateEdit):
     def _get_rest_channel_id(self, mllp_name:'str') -> 'int':
         """ Returns the id of the REST channel backing an MLLP channel of this name, zero if there is none.
         """
-        response = self.req.zato.client.invoke('zato.http-soap.get', {
+
+        # An MLLP channel without a backing REST channel is the regular state of affairs here
+        # rather than an error - e.g. the first save of a new channel - and the get service
+        # raises when no such object exists, so the lookup goes through the list instead.
+        name = _REST_Channel_Name_Prefix + mllp_name
+
+        response = self.req.zato.client.invoke('zato.http-soap.get-list', {
             'cluster_id': self.cluster_id,
-            'name': _REST_Channel_Name_Prefix + mllp_name,
+            'connection': 'channel',
+            'transport': 'plain_http',
+            'query': name,
         })
 
-        if response.ok:
-            out = response.data.id
-        else:
-            out = 0
+        if response.ok and response.data:
+            for item in response.data:
+                if item.name == name:
+                    return item.id
 
-        return out
+        return 0
 
 # ################################################################################################################################
 

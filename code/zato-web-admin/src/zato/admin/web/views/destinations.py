@@ -110,8 +110,11 @@ def _get_generic_names(req:'any_', destination_type:'str') -> 'strlist':
 def _get_smtp_names(req:'any_') -> 'strlist':
     """ Returns the e-mail connections, which is what an e-mail destination delivers through.
     """
+    # The list service is built by GetListMeta, whose pagination inputs have to be given
     request = {
         'cluster_id': req.zato.cluster_id,
+        'paginate': False,
+        'cur_page': 1,
     }
 
     out = _get_names(req, _smtp_service, request)
