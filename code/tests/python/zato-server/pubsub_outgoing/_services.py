@@ -7,38 +7,44 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from cleanup import run_cleanup_scenario
-from common import pubsub_backend_env
-from encryption import run_encryption_scenario
-from lifecycle import run_lifecycle_scenario
-from outgoing import run_outgoing_scenario
-from push_delivery import run_push_delivery_scenario
-from queues import run_queues_scenario
-from stats import run_stats_scenario
-from wakeup import run_wakeup_scenario
+from zato.server.service import Service
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-if 0:
-    from live_sql.containers import DatabaseServer
-    DatabaseServer = DatabaseServer
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def test_pubsub_backend_postgresql(postgresql_server:'DatabaseServer') -> 'None':
-    """ The complete pub/sub backend scenario against a plain PostgreSQL server.
+class PublishToOutgoingConnection(Service):
+    """ Publishes one message to an outgoing connection, the way an application does it.
     """
-    with pubsub_backend_env(postgresql_server.details):
-        run_lifecycle_scenario()
-        run_queues_scenario()
-        run_stats_scenario()
-        run_wakeup_scenario()
-        run_encryption_scenario()
-        run_cleanup_scenario()
-        run_push_delivery_scenario()
-        run_outgoing_scenario()
+
+    name = 'test.outgoing.publish'
+
+    def handle(self) -> 'None':
+
+        conn_name = self.request.raw_request['conn_name']
+        data = self.request.raw_request['data']
+
+        result = self.out.rest[conn_name].publish(data)
+
+        self.response.payload = {'msg_id': result.msg_id}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class PublishThroughFacade(Service):
+    """ Publishes one message to an outgoing connection named through the REST facade, which is
+    the other way of naming the same connection.
+    """
+
+    name = 'test.outgoing.publish-through-facade'
+
+    def handle(self) -> 'None':
+
+        conn_name = self.request.raw_request['conn_name']
+        data = self.request.raw_request['data']
+
+        result = self.rest[conn_name].publish(data)
+
+        self.response.payload = {'msg_id': result.msg_id}
 
 # ################################################################################################################################
 # ################################################################################################################################

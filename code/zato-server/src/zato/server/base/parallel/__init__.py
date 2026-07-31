@@ -66,6 +66,7 @@ from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.config_manager import ConfigManager
 from zato.server.config import ConfigStore
 from zato.server.connection.mcp.session import MCPSessionReaper
+from zato.server.connection.outgoing_delivery import register_delivery_handlers
 from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
 from zato.server.connection.server.rpc.config import ODBConfigSource
 from zato.server.groups.base import GroupsManager
@@ -1752,6 +1753,12 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # The built-in subscriber that delivers messages published to the outbound AS4 topic -
         # it has to exist before any user service publishes its first AS4 message.
         self._setup_as4_delivery_subscription()
+
+        # Publishing to an outgoing connection is only possible once its type knows how to be delivered to ..
+        register_delivery_handlers()
+
+        # .. and the queues of the connections published to before this server started come back here.
+        self.config_manager.restore_outgoing_subscriptions()
 
         for sub_key in self.config_manager._push_subs:
             self.pubsub_push_delivery.start_sub_key(sub_key)

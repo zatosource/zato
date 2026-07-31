@@ -66,6 +66,26 @@ class SQLAdminAPI(SQLBrowseAPI):
 
 # ################################################################################################################################
 
+    def get_sub_keys_by_prefix(self, prefix:'str') -> 'strlist':
+        """ Returns every distinct subscriber key that starts with the given prefix, which is how
+        subscriptions that live in memory only are found again when a server starts.
+        """
+        pattern = prefix + '%'
+
+        query = select(topic_sub_table.c.sub_key)
+        query = query.where(topic_sub_table.c.sub_key.like(pattern))
+        query = query.distinct()
+
+        out:'strlist' = []
+
+        with self.engine.connect() as connection:
+            for row in connection.execute(query):
+                out.append(row.sub_key)
+
+        return out
+
+# ################################################################################################################################
+
     def get_topic_subscribers(self, topic_name:'str') -> 'strlist':
         """ Get list of subscribers for a topic.
         """

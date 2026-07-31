@@ -40,6 +40,8 @@ from zato.common.facade import _service_name_to_topic, _service_sub_key_prefix
 from zato.common.json_internal import loads
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.typing_ import cast_
+from zato.common.pubsub.outgoing import get_outgoing_sub_config, get_outgoing_sub_key, get_outgoing_topic_name, \
+    OutgoingPublisher, parse_outgoing_sub_key
 from zato.common.pubsub.sql.backend import PublishResult
 from zato.common.util.api import asbool, fs_safe_name, import_module_from_path, new_cid_server, new_msg_id, parse_datetime, \
     update_apikey_username_to_channel, utcnow, visit_py_source, wait_for_dict_key, wait_for_dict_key_by_get_func
@@ -56,6 +58,7 @@ from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
 from zato.server.connection.http_soap.response_cache import purge_channel as purge_response_cache
 from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.odoo import OdooWrapper
+from zato.server.connection.outgoing_delivery import OutgoingType
 from zato.server.generic.api.channel_openapi import ChannelOpenAPIWrapper
 from zato.server.generic.api.chat_microsoft_teams import ChatMicrosoftTeamsWrapper
 from zato.server.generic.api.chat_slack import ChatSlackWrapper
@@ -300,6 +303,12 @@ class ConfigManager(_ConfigManagerBase):
 
         # Lock to serialize service-topic setup/teardown
         self._service_topic_lock = RLock()
+
+        # Sub keys of the outgoing connections that already have a queue of their own
+        self._outgoing_sub_key_cache = set() # type: set[str]
+
+        # Lock to serialize the setup of those queues
+        self._outgoing_sub_key_lock = RLock()
 
         # Pub/sub topic manager for topic-level lookups
         from zato.common.pubsub.topic_manager import TopicManager
@@ -774,6 +783,11 @@ class ConfigManager(_ConfigManagerBase):
 
             # To make the API consistent with that of SQL connection pools
             config_data.ping = wrapper.ping
+
+            # A REST connection can also be published to, which delivers to it with retries
+            if config_data.config['transport'] == URL_TYPE.PLAIN_HTTP:
+                publisher = OutgoingPublisher(self.server, OutgoingType.REST, config_data.config['name'])
+                config_data.publish = publisher.publish
 
             # Store ID -> name mapping
             config_dict.set_key_id_data(config_data.config)
@@ -2440,6 +2454,11 @@ class ConfigManager(_ConfigManagerBase):
         config_dict[msg['name']].conn = wrapper
         config_dict[msg['name']].ping = wrapper.ping # (just like in self.init_http)
 
+        # .. a REST connection can also be published to (just like in self.init_http_soap) ..
+        if msg['transport'] == URL_TYPE.PLAIN_HTTP:
+            publisher = OutgoingPublisher(self.server, OutgoingType.REST, msg['name'])
+            config_dict[msg['name']].publish = publisher.publish
+
         # Store mapping of ID -> name
         config_dict.set_key_id_data(msg)
 
@@ -2806,6 +2825,65 @@ class ConfigManager(_ConfigManagerBase):
             self._push_subs[sub_key].append(sub_config)
 
         self.server.pubsub_push_delivery.start_sub_key(sub_key)
+
+# ################################################################################################################################
+
+    def ensure_outgoing_subscription(self, conn_type:'str', conn_name:'str') -> 'str':
+        """ Makes sure that one outgoing connection has a topic and a queue of its own,
+        returning the name of that topic.
+        """
+        topic_name = get_outgoing_topic_name(conn_type, conn_name)
+        sub_key = get_outgoing_sub_key(conn_type, conn_name)
+
+        # The lock is what keeps two publications from setting the same connection up twice ..
+        with self._outgoing_sub_key_lock:
+
+            # .. and a connection already set up needs nothing further ..
+            if sub_key not in self._outgoing_sub_key_cache:
+
+                # .. the subscription is what makes a publication reach this connection's queue ..
+                self.server.pubsub_backend.subscribe(sub_key, topic_name)
+
+                # .. the push config is what tells a delivery greenlet where to take the messages ..
+                sub_config = get_outgoing_sub_config(sub_key, topic_name)
+                self._push_subs[sub_key] = [sub_config]
+
+                # .. that greenlet runs from this moment on ..
+                self.server.pubsub_push_delivery.start_sub_key(sub_key)
+
+                # .. and this connection is never set up again.
+                self._outgoing_sub_key_cache.add(sub_key)
+
+                logger.info('Created outgoing connection queue `%s` for topic `%s`', sub_key, topic_name)
+
+        return topic_name
+
+# ################################################################################################################################
+
+    def restore_outgoing_subscriptions(self) -> 'None':
+        """ Brings back the queues of the outgoing connections that were published to before this server
+        started, which is what lets whatever they still hold be delivered. Their greenlets are started
+        by the caller, along with those of every other push subscription.
+        """
+        sub_key_list = self.server.pubsub_backend.get_sub_keys_by_prefix(PubSub.Outgoing.Sub_Key_Prefix)
+
+        for sub_key in sub_key_list:
+
+            # The connection a queue belongs to is what its own sub key says ..
+            conn_type, conn_name = parse_outgoing_sub_key(sub_key)
+            topic_name = get_outgoing_topic_name(conn_type, conn_name)
+
+            # .. and the queue is put back exactly as the first publication to it made it.
+            sub_config = get_outgoing_sub_config(sub_key, topic_name)
+            self._push_subs[sub_key] = [sub_config]
+            self._outgoing_sub_key_cache.add(sub_key)
+
+        queue_count = len(sub_key_list)
+        suffix = 'queue' if queue_count == 1 else 'queues'
+
+        logger.info('Restored %d outgoing connection %s', queue_count, suffix)
+
+# ################################################################################################################################
 
     def cleanup_subscription(self, sub_key:'str', username:'str') -> 'None':
         """ Cleans up all in-memory and Redis state for a single subscription.

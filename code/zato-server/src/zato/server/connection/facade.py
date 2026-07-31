@@ -226,7 +226,7 @@ class RESTFacade:
         item = self._out_plain_http[name]
 
         # .. now, we can return our own facade.
-        invoker = RESTInvoker(item.conn, self)
+        invoker = RESTInvoker(item.conn, self, item)
         return invoker
 
 # ################################################################################################################################
@@ -269,13 +269,24 @@ class RESTFacade:
 class RESTInvoker:
     conn: 'HTTPSOAPWrapper'
     container: 'RESTFacade'
+    item: 'any_'
 
-    def __init__(self, conn:'HTTPSOAPWrapper', container:'RESTFacade') -> 'None':
+    def __init__(self, conn:'HTTPSOAPWrapper', container:'RESTFacade', item:'any_') -> 'None':
         self.conn = conn
         self.container = container
+        self.item = item
 
     def __repr__(self) -> 'str':
         return f'RESTInvoker({self.conn.config["name"]} at {hex(id(self))})'
+
+# ################################################################################################################################
+
+    def publish(self, data:'any_'='', **kwargs:'any_') -> 'any_':
+        """ Queues a message for delivery to this connection. This is the same publisher that
+        self.out.rest reaches, so both ways of naming a connection publish to the same queue.
+        """
+        out = self.item.publish(data, **kwargs)
+        return out
 
 # ################################################################################################################################
 

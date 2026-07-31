@@ -6,39 +6,39 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from json import loads
+from logging import getLogger
+
 # Zato
-from cleanup import run_cleanup_scenario
-from common import pubsub_backend_env
-from encryption import run_encryption_scenario
-from lifecycle import run_lifecycle_scenario
-from outgoing import run_outgoing_scenario
-from push_delivery import run_push_delivery_scenario
-from queues import run_queues_scenario
-from stats import run_stats_scenario
-from wakeup import run_wakeup_scenario
+from zato.common.api import PubSub
+from zato.common.pubsub.outgoing import deliver_envelope
+from zato.server.service import Service
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-if 0:
-    from live_sql.containers import DatabaseServer
-    DatabaseServer = DatabaseServer
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_pubsub_backend_postgresql(postgresql_server:'DatabaseServer') -> 'None':
-    """ The complete pub/sub backend scenario against a plain PostgreSQL server.
+class Deliver(Service):
+    """ Delivers one published message to the outgoing connection it was addressed to. This is the subscriber
+    behind the queue of every outgoing connection that anything is published to.
     """
-    with pubsub_backend_env(postgresql_server.details):
-        run_lifecycle_scenario()
-        run_queues_scenario()
-        run_stats_scenario()
-        run_wakeup_scenario()
-        run_encryption_scenario()
-        run_cleanup_scenario()
-        run_push_delivery_scenario()
-        run_outgoing_scenario()
+
+    name = PubSub.Outgoing.Delivery_Service
+
+    def handle(self) -> 'None':
+
+        # The invocation machinery hands the envelope over either as a string or as a parsed dict ..
+        envelope = self.request.raw_request
+        if isinstance(envelope, str):
+            envelope = loads(envelope)
+
+        # .. and delivery raises on failure, which is what keeps the message queued for another attempt.
+        deliver_envelope(self.server, self.cid, envelope)
 
 # ################################################################################################################################
 # ################################################################################################################################
