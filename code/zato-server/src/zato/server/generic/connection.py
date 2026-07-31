@@ -12,7 +12,17 @@ from zato.common.ext.bunch import bunchify
 # Zato
 from zato.common.api import GENERIC
 from zato.common.json_internal import dumps, loads
+from zato.common.typing_ import cast_
 from zato.server.generic import attrs_gen_conn
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, anydict, anylistnone
+    any_ = any_
+    anydict = anydict
+    anylistnone = anylistnone
 
 # ################################################################################################################################
 
@@ -51,9 +61,12 @@ class GenericConnection:
 # ################################################################################################################################
 
     @staticmethod
-    def from_dict(data, skip=None):
+    def from_dict(data:'anydict', skip:'anylistnone'=None) -> 'GenericConnection':
         conn = GenericConnection()
-        skip = skip or []
+
+        if skip is None:
+            skip = []
+
         for key, value in sorted(data.items()):
             if key in skip:
                 continue
@@ -65,22 +78,28 @@ class GenericConnection:
 
 # ################################################################################################################################
 
-    def to_dict(self, needs_bunch=False):
-        out = {}
+    def to_dict(self, needs_bunch:'bool'=False) -> 'anydict':
+
+        out:'anydict' = {}
+
         for name in self.__slots__:
             if name != 'opaque':
                 value = getattr(self, name)
                 if isinstance(value, bytes):
                     value = value.decode('utf8')
                 out[name] = value
+
         out.update(self.opaque)
 
-        return bunchify(out) if needs_bunch else out
+        if needs_bunch:
+            out = cast_('anydict', bunchify(out))
+
+        return out
 
 # ################################################################################################################################
 
     @staticmethod
-    def from_model(data):
+    def from_model(data:'any_') -> 'GenericConnection':
         instance = GenericConnection()
 
         opaque_value = getattr(data, GENERIC.ATTR_NAME, None)
@@ -97,9 +116,13 @@ class GenericConnection:
 
 # ################################################################################################################################
 
-    def to_sql_dict(self, needs_bunch=False, skip=None):
-        out = {}
-        skip = skip or []
+    def to_sql_dict(self, needs_bunch:'bool'=False, skip:'anylistnone'=None) -> 'anydict':
+
+        out:'anydict' = {}
+
+        if skip is None:
+            skip = []
+
         for name in self.__slots__:
             if name in skip:
                 continue
@@ -108,6 +131,9 @@ class GenericConnection:
             else:
                 out[GENERIC.ATTR_NAME] = dumps(self.opaque)
 
-        return bunchify(out) if needs_bunch else out
+        if needs_bunch:
+            out = cast_('anydict', bunchify(out))
+
+        return out
 
 # ################################################################################################################################

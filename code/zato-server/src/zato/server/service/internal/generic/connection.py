@@ -83,7 +83,7 @@ _chat_conn_types = frozenset({
 
 # ################################################################################################################################
 
-def instance_hook(service, input, instance, attrs):
+def instance_hook(service:'Service', input:'Bunch', instance:'any_', attrs:'any_') -> 'None':
     """ Called before delete commit. Cleans up the HTTPSOAP channel for MCP and Rule engine API connections.
     """
     if instance.type_ == COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP:
@@ -94,7 +94,7 @@ def instance_hook(service, input, instance, attrs):
 
 # ################################################################################################################################
 
-def delete_hook(service, input, instance, attrs):
+def delete_hook(service:'Service', input:'Bunch', instance:'any_', attrs:'any_') -> 'None':
     """ Called after delete commit. The deletion lands in the audit trail
     with what the connection looked like when it was removed.
     """
@@ -439,7 +439,7 @@ class _CreateEdit(_BaseService):
                 conn_dict.get('type_'), conn_dict.get('name'), conn_dict.get('cluster_id'))
 
             # This will be needed in case this is a rename
-            old_name = model.name
+            old_name = cast_('str', model.name)
 
             for key, value in sorted(conn_dict.items()):
 
@@ -553,7 +553,7 @@ class GetList(AdminService):
     def get_data(self, session:'any_') -> 'any_':
         cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
         self.logger.info('GenericConn GetList.get_data: cluster_id=%s, type_=%s', cluster_id, self.request.input.type_)
-        data = self._search(connection_list, session, cluster_id, self.request.input.type_, False)
+        data:'any_' = self._search(connection_list, session, cluster_id, self.request.input.type_, False)
         self.logger.info('GenericConn GetList.get_data: result count=%s', data.count() if hasattr(data, 'count') else 'N/A')
         return data
 
@@ -625,7 +625,7 @@ class GetList(AdminService):
 
         for item in search_result:
             conn = GenericConnection.from_model(item)
-            conn_dict = cast_('anydict', conn.to_dict())
+            conn_dict = conn.to_dict()
 
             # Everyone else knows objects from the external database under their offset ids
             if needs_id_offset:
@@ -684,7 +684,7 @@ class GetByID(AdminService):
 
             # .. turn the model into a dict ..
             conn = GenericConnection.from_model(item)
-            conn_dict = cast_('anydict', conn.to_dict())
+            conn_dict = conn.to_dict()
 
         # .. everyone else knows objects from the external database under their offset ids ..
         conn_dict['id'] = input_id
