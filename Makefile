@@ -8,7 +8,7 @@
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console \
 	help install-deps \
 	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-pubsub-backend test-pubsub-backend-perf test-pubsub-backend-perf-mass test-pubsub-system-perf test-enmasse \
-	test-cli test-mcp _test-mcp test-bearer _test-bearer test-graphql test-grpc test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-llm test-hl7 test-hl7-languages test-hl7-volume test-ui test-ui-pubsub test-ui-openapi _test-ui test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
+	test-cli test-mcp _test-mcp test-bearer _test-bearer test-graphql test-grpc test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-llm test-hl7 test-hl7-mllp-channels test-hl7-languages test-hl7-volume test-ui test-ui-pubsub test-ui-openapi _test-ui test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-audit-log-ui test-alerting test-destinations test-analytics test-analytics-ui test-demo-seed test-logging test-ibm-mq test-mongodb test-es \
 	test-rule-engine test-rule-engine-perf test-rule-engine-jobs test-rule-engine-dashboard-ui test-webapp-ui \
 	rule-engine-notify rule-engine-retention rule-engine-spike-alerts rule-engine-dashboard \
@@ -800,6 +800,7 @@ test-microsoft-cloud: ## Microsoft 365 connection tests through a live Zato serv
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-hl7: ## HL7v2 parsing and MLLP tests.
+	$(MAKE) test-hl7-mllp-channels
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/mllp/ \
 		$(CURDIR)/code/tests/python/zato-common/hl7_audit/ \
@@ -809,9 +810,18 @@ test-hl7: ## HL7v2 parsing and MLLP tests.
 		$(CURDIR)/code/tests/python/zato-common/destination/ \
 		$(CURDIR)/code/tests/python/zato-server/destinations/ \
 		$(CURDIR)/code/tests/python/zato-common/demo_seed/ \
-		$(CURDIR)/code/tests/python/zato-server/mllp_integration/ \
-		$(CURDIR)/code/tests/python/zato-server/mllp_languages/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7 -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
+test-hl7-mllp-channels: ## MLLP channel tests - wiring, counters, live listener behavior, HAProxy routing and server integration.
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/mllp_channels/ \
+		$(CURDIR)/code/tests/python/zato-server/mllp_integration/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7_mllp_channels -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/mllp_languages/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7_mllp_languages -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-hl7-languages: ## MLLP channels proven from other languages, through real HAProxy - Linux only, needs a JDK and haproxy.
