@@ -11,6 +11,7 @@ from cleanup import run_cleanup_scenario
 from common import pubsub_backend_env
 from encryption import run_encryption_scenario
 from lifecycle import run_lifecycle_scenario
+from outgoing import run_outgoing_scenario
 from push_delivery import run_push_delivery_scenario
 from queues import run_queues_scenario
 from stats import run_stats_scenario
@@ -37,6 +38,7 @@ def test_pubsub_backend_mysql(mysql_server:'DatabaseServer') -> 'None':
         run_encryption_scenario()
         run_cleanup_scenario()
         run_push_delivery_scenario()
+        run_outgoing_scenario()
 
 # ################################################################################################################################
 # ################################################################################################################################

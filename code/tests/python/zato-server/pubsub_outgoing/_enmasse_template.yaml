@@ -1,0 +1,31 @@
+security:
+
+  - name: test.outgoing.credentials
+    type: basic_auth
+    username: test.outgoing.api
+    password: "{{connection_password}}"
+
+outgoing_rest:
+
+  - name: test.outgoing.orders
+    host: "http://127.0.0.1:{{port_orders}}"
+    url_path: /api/orders
+    data_format: json
+    timeout: 30
+    request_method: POST
+
+  - name: test.outgoing.inventory
+    host: "http://127.0.0.1:{{port_inventory}}"
+    url_path: /api/inventory/items
+    data_format: json
+    timeout: 30
+    security: test.outgoing.credentials
+    request_method: PUT
+    request_query_string:
+      - key: status
+        value: active
+        mode: text
+    request_headers:
+      - key: X-Sync-Source
+        value: daily-sync
+        mode: text

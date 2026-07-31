@@ -2174,6 +2174,17 @@ class PubSub:
         Sub_Key = 'zpsk.rest'
         Reply_Queue = 'zato-reply'
 
+    class Outgoing:
+
+        # Each outgoing connection that is published to has a topic of its own under this prefix.
+        Topic_Prefix = 'zato.out.to.'
+
+        # .. and a queue of its own under this one.
+        Sub_Key_Prefix = 'zato.out.'
+
+        # Every such queue is subscribed by this one service.
+        Delivery_Service = 'zato.pubsub.outgoing.deliver'
+
     class REST_Server:
 
         Default_Host = '0.0.0.0'
