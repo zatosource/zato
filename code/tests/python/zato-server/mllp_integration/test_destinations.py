@@ -15,6 +15,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import socket
+import socketserver
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -32,6 +33,7 @@ from zato.common.hl7.mllp.codec import FrameDecoder, frame_encode
 
 # Zato - test helpers
 from conftest import wait_for_port_open
+from rest_echo_server import HTTPEchoHandler
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -42,6 +44,8 @@ if 0:
     any_ = any_
     anydict = anydict
     anylist = anylist
+
+    echo_server_gen = Generator['_TrackingTCPServer', None, None]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -59,6 +63,7 @@ _connection_type_channel = 'channel-hl7-mllp'
 _connection_type_outconn = 'outconn-hl7-mllp'
 _connection_type_fhir    = 'outconn-hl7-fhir'
 _generic_service_name    = 'zato.generic.connection'
+_http_soap_service_name  = 'zato.http-soap'
 
 # The channels this module runs against
 _fanout_channel = 'test-destinations-fanout'
@@ -79,11 +84,16 @@ _forward_outconn = 'test-destinations-outconn'
 _reply_outconn   = 'test-destinations-reply-outconn'
 _fhir_outconn    = 'test-destinations-fhir'
 _dead_outconn    = 'test-destinations-dead-outconn'
+_rest_outconn    = 'test-destinations-rest'
+
+# The path the REST outgoing connection posts to on the echo server
+_rest_url_path = '/hl7/admissions'
 
 # The names the channels declare their destinations under - the service says what each of them
 # receives by these very names
 _forward_destination = 'forward-ehr'
 _fhir_destination    = 'fhir-ehr'
+_rest_destination    = 'rest-billing'
 _second_destination  = 'forward-second'
 _paused_destination  = 'paused-ehr'
 
@@ -367,6 +377,36 @@ def fhir_server() -> 'Generator[int, None, None]':
 # ################################################################################################################################
 # ################################################################################################################################
 
+class _TrackingTCPServer(socketserver.TCPServer):
+    """ A TCP server whose handler keeps the last request it was sent, which is where a test
+    reads back what the REST destination delivered.
+    """
+    allow_reuse_address = True
+
+    request_count = 0
+    last_body = b''
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(scope='module')
+def rest_echo() -> 'echo_server_gen':
+    """ Starts the HTTP echo server the REST destination delivers to and returns the server
+    itself, its port and the requests it received both readable off it.
+    """
+    server = _TrackingTCPServer(('127.0.0.1', 0), HTTPEchoHandler)
+
+    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+    server_thread.start()
+
+    yield server
+
+    server.shutdown()
+    server.server_close()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class TestChannelDestinations:
     """ Wire-level tests for what a channel's destinations receive, run against a live server.
     """
@@ -381,6 +421,7 @@ class TestChannelDestinations:
     reply_outconn_id:'int' = 0
     fhir_outconn_id:'int' = 0
     dead_outconn_id:'int' = 0
+    rest_outconn_id:'int' = 0
 
 # ################################################################################################################################
 
@@ -394,6 +435,7 @@ class TestChannelDestinations:
         reply_backend_port:'int',
         reply_backend:'any_',
         fhir_server:'int',
+        rest_echo:'_TrackingTCPServer',
         ) -> 'None':
         """ Creates the outgoing connections the destinations point at and the channels
         that declare them.
@@ -470,10 +512,29 @@ class TestChannelDestinations:
         assert 'id' in response
         self.__class__.fhir_outconn_id = response['id']
 
-        # .. the channel whose service says what each of its two destinations receives ..
+        # .. the REST connection one of the destinations posts through, pointing at the echo server ..
+        rest_echo_port = rest_echo.server_address[1]
+
+        response = zato_client.create(
+            f'{_http_soap_service_name}.create',
+            cluster_id=1,
+            name=_rest_outconn,
+            is_active=True,
+            is_internal=False,
+            connection='outgoing',
+            transport='plain_http',
+            url_path=_rest_url_path,
+            host=f'http://127.0.0.1:{rest_echo_port}',
+        )
+
+        assert 'id' in response
+        self.__class__.rest_outconn_id = response['id']
+
+        # .. the channel whose service says what two of its three destinations receive ..
         fanout_destinations = [
             _new_destination(_forward_destination, DestinationType.MLLP, _forward_outconn),
             _new_destination(_fhir_destination, DestinationType.FHIR, _fhir_outconn, method='POST', path='/Patient'),
+            _new_destination(_rest_destination, DestinationType.REST, _rest_outconn, method='POST'),
         ]
 
         response = zato_client.create(
@@ -603,8 +664,9 @@ class TestChannelDestinations:
         self,
         zato_server:'dict',
         mllp_port:'int',
+        rest_echo:'_TrackingTCPServer',
         ) -> 'None':
-        """ One message fans out to both destinations, each recorded as its own delivery
+        """ One message fans out to all three destinations, each recorded as its own delivery
         under the correlation id the message arrived under.
         """
         audit_db_path = zato_server['audit_db_path']
@@ -615,9 +677,9 @@ class TestChannelDestinations:
         assert b'MSA|AA|' + control_id.encode() in acknowledgment
 
         cid = _get_message_cid(audit_db_path, _fanout_channel, control_id)
-        hops = _wait_for_hops(audit_db_path, cid, 2)
+        hops = _wait_for_hops(audit_db_path, cid, 3)
 
-        assert len(hops) == 2
+        assert len(hops) == 3
 
         # The MLLP destination was sent the message as it arrived ..
         forward_hop = _get_hop_by_destination(hops, audit_db_path, _forward_destination)
@@ -641,6 +703,14 @@ class TestChannelDestinations:
         assert fhir_details['method'] == 'POST'
         assert fhir_details['path'] == '/Patient'
 
+        # .. the REST destination was posted the message as it arrived ..
+        rest_hop = _get_hop_by_destination(hops, audit_db_path, _rest_destination)
+
+        assert rest_hop['source'] == AuditSource.REST_Outgoing
+        assert rest_hop['object_name'] == _rest_outconn
+        assert rest_hop['outcome'] == AuditOutcome.OK
+        assert control_id in _get_details(rest_hop)['payload']
+
         # .. each delivery says which destination of which channel it was, and that it took
         # one attempt ..
         forward_attrs = _get_attr_map(audit_db_path, forward_hop['id'])
@@ -649,8 +719,12 @@ class TestChannelDestinations:
         assert forward_attrs['destination_type'] == DestinationType.MLLP
         assert forward_attrs['attempt'] == '1'
 
-        # .. and the FHIR server really was written to.
+        # .. the FHIR server really was written to ..
         assert any(_fhir_resource_id in item for item in _fhir_bodies)
+
+        # .. and so was the echo server behind the REST destination.
+        assert rest_echo.request_count >= 1
+        assert control_id.encode() in rest_echo.last_body
 
 # ################################################################################################################################
 
@@ -668,12 +742,17 @@ class TestChannelDestinations:
         _ = _send_and_receive(mllp_port, _build_adt_a01(control_id, _fanout_sender, note='BROADCAST'))
 
         cid = _get_message_cid(audit_db_path, _fanout_channel, control_id)
-        hops = _wait_for_hops(audit_db_path, cid, 2)
+        hops = _wait_for_hops(audit_db_path, cid, 3)
 
         # What the service made of the message is what went out ..
         forward_hop = _get_hop_by_destination(hops, audit_db_path, _forward_destination)
 
         assert 'Seen by the service' in _get_details(forward_hop)['payload']
+
+        # .. the REST destination received the same broadcast ..
+        rest_hop = _get_hop_by_destination(hops, audit_db_path, _rest_destination)
+
+        assert 'Seen by the service' in _get_details(rest_hop)['payload']
 
         # .. and the destination the service named separately still received what it was named with.
         fhir_hop = _get_hop_by_destination(hops, audit_db_path, _fhir_destination)
@@ -697,11 +776,16 @@ class TestChannelDestinations:
         _ = _send_and_receive(mllp_port, _build_adt_a01(control_id, _fanout_sender, note='PER_NAME'))
 
         cid = _get_message_cid(audit_db_path, _fanout_channel, control_id)
-        hops = _wait_for_hops(audit_db_path, cid, 2)
+        hops = _wait_for_hops(audit_db_path, cid, 3)
 
         forward_hop = _get_hop_by_destination(hops, audit_db_path, _forward_destination)
 
         assert 'For the EHR alone' in _get_details(forward_hop)['payload']
+
+        # The destination named separately was the only one to receive that payload
+        rest_hop = _get_hop_by_destination(hops, audit_db_path, _rest_destination)
+
+        assert 'For the EHR alone' not in _get_details(rest_hop)['payload']
 
 # ################################################################################################################################
 
@@ -719,17 +803,22 @@ class TestChannelDestinations:
         _ = _send_and_receive(mllp_port, _build_adt_a01(control_id, _fanout_sender, note='DROPPED'))
 
         cid = _get_message_cid(audit_db_path, _fanout_channel, control_id)
-        hops = _wait_for_hops(audit_db_path, cid, 1)
+        hops = _wait_for_hops(audit_db_path, cid, 2)
 
-        # Give the delivery that must not happen the same chance to land as the one that must
+        # Give the delivery that must not happen the same chance to land as the ones that must
         time.sleep(1)
 
         hops = _get_hops(audit_db_path, cid)
 
-        assert len(hops) == 1
+        assert len(hops) == 2
 
-        attrs = _get_attr_map(audit_db_path, hops[0]['id'])
-        assert attrs['destination_name'] == _fhir_destination
+        names = set()
+
+        for row in hops:
+            attrs = _get_attr_map(audit_db_path, row['id'])
+            names.add(attrs['destination_name'])
+
+        assert names == {_fhir_destination, _rest_destination}
 
 # ################################################################################################################################
 
@@ -877,6 +966,10 @@ class TestChannelDestinations:
         ):
             if connection_id:
                 zato_client.delete(f'{_generic_service_name}.delete', id=connection_id)
+
+        # The REST connection is not a generic one and is deleted through its own service
+        if self.__class__.rest_outconn_id:
+            zato_client.delete(f'{_http_soap_service_name}.delete', id=self.__class__.rest_outconn_id)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -13,8 +13,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # acknowledgment building included.
 
 # stdlib
+from contextlib import contextmanager
 from json import dumps
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 # Zato
 from zato.common.api import HL7
@@ -23,9 +24,10 @@ from zato.common.hl7.mllp.router import ChannelRoute
 from zato.common.hl7.mllp.server import ConnectionContext, HL7MLLPServer
 from zato.common.hl7.mllp.settings import Default_End_Sequence, Default_Start_Sequence, ListenerConfig, RouteSettings
 from zato.common.typing_ import cast_
+from zato.server.destination.channel import ChannelConnections
 from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper
 
-from service_stub import ServerStub
+from service_stub import EMailAPIRecorder, FHIRFacadeRecorder, MLLPFacadeRecorder, RESTFacadeRecorder, ServerStub
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,6 +62,62 @@ Message_CID = 'cid-channel-message-1'
 # The connections the destinations of the tests point at
 MLLP_Connection = 'hl7.forward.ehr'
 REST_Connection = 'rest.billing'
+SMTP_Connection = 'smtp.notifications'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The connections every delivery of these tests goes through, kept here so that a test reads back
+# what was sent through them after the channel is done with the message
+_recorders:'stranydict' = {}
+
+# ################################################################################################################################
+
+def _install_recorders(self:'ChannelConnections', server:'any_', cid:'str') -> 'None':
+    """ Gives a channel with no service connections that record what they were sent, in place of
+    the ones that would really reach something.
+    """
+    self.rest  = _recorders['rest']
+    self.mllp  = _recorders['mllp']
+    self.fhir  = _recorders['fhir']
+    self.email = _recorders['email']
+
+# ################################################################################################################################
+
+@contextmanager
+def running_synchronously() -> 'any_':
+    """ Runs the deliveries a channel does not wait for here and now, so that a test sees the whole
+    fan-out rather than only the part the sender waits for.
+    """
+    _recorders['rest']  = RESTFacadeRecorder()
+    _recorders['mllp']  = MLLPFacadeRecorder()
+    _recorders['fhir']  = FHIRFacadeRecorder()
+    _recorders['email'] = EMailAPIRecorder()
+
+    def spawn(function:'any_', *args:'any_') -> 'None':
+        function(*args)
+
+    with patch.object(ChannelConnections, 'init', _install_recorders):
+        with patch('zato.server.destination.hook.gevent_spawn', spawn):
+            yield
+
+# ################################################################################################################################
+
+def get_mllp_calls() -> 'anylist':
+    out = _recorders['mllp'].calls
+    return out
+
+# ################################################################################################################################
+
+def get_rest_calls() -> 'anylist':
+    out = _recorders['rest'].calls
+    return out
+
+# ################################################################################################################################
+
+def get_email_calls() -> 'anylist':
+    out = _recorders['email'].smtp.calls
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

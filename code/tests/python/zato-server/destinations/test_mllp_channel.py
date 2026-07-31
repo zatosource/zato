@@ -10,75 +10,46 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # tells that service about the channel it came from, or, with no service to hand it to, the
 # destinations it delivers to itself and in what order.
 
-# stdlib
-from contextlib import contextmanager
-from unittest.mock import patch
-
 # Zato
 from zato.common.api import CHANNEL
-from zato.common.destination.constants import DeliveryMode
-from zato.server.destination.channel import ChannelConnections, run_for_channel
+from zato.common.destination.constants import DeliveryMode, DestinationType
+from zato.server.destination.channel import run_for_channel
 
-from service_stub import EMailAPIRecorder, FHIRFacadeRecorder, MLLPFacadeRecorder, RESTFacadeRecorder, MLLP_Response
-from mllp_test_channel import get_invoker, Channel_Name, Message_CID, MLLP_Connection, new_channel_item, \
-    new_parallel_server, new_stored_list, new_wrapper, Request_Message, REST_Connection
+from service_stub import MLLP_Response, REST_Response
+from mllp_test_channel import get_email_calls, get_invoker, get_mllp_calls, get_rest_calls, running_synchronously, \
+    Channel_Name, Message_CID, MLLP_Connection, new_channel_item, new_parallel_server, new_stored_list, new_wrapper, \
+    Request_Message, REST_Connection, SMTP_Connection
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, stranydict
+    from zato.common.typing_ import stranydict
 
-    anylist = anylist
     stranydict = stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The connections every delivery of these tests goes through, kept here so that a test reads back
-# what was sent through them after the channel is done with the message
-_recorders:'stranydict' = {}
+# Where the e-mail destination of the fan-out sends and under what subject line
+_email_recipient = 'admissions@example.com'
+_email_subject = 'A new admission arrived'
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-def _install_recorders(self:'ChannelConnections', server:'any_', cid:'str') -> 'None':
-    """ Gives a channel with no service connections that record what they were sent, in place of
-    the ones that would really reach something.
+def _new_email_entry() -> 'stranydict':
+    """ Returns an e-mail destination the way the Dashboard stores one, with the recipient
+    and the subject line among its options.
     """
-    self.rest  = _recorders['rest']
-    self.mllp  = _recorders['mllp']
-    self.fhir  = _recorders['fhir']
-    self.email = _recorders['email']
+    out = {
+        'name': SMTP_Connection,
+        'type': DestinationType.SMTP,
+        'connection': SMTP_Connection,
+        'is_active': True,
+        'options': {'to': _email_recipient, 'subject': _email_subject},
+    }
 
-# ################################################################################################################################
-
-@contextmanager
-def _running_synchronously() -> 'any_':
-    """ Runs the deliveries a channel does not wait for here and now, so that a test sees the whole
-    fan-out rather than only the part the sender waits for.
-    """
-    _recorders['rest']  = RESTFacadeRecorder()
-    _recorders['mllp']  = MLLPFacadeRecorder()
-    _recorders['fhir']  = FHIRFacadeRecorder()
-    _recorders['email'] = EMailAPIRecorder()
-
-    def spawn(function:'any_', *args:'any_') -> 'None':
-        function(*args)
-
-    with patch.object(ChannelConnections, 'init', _install_recorders):
-        with patch('zato.server.destination.hook.gevent_spawn', spawn):
-            yield
-
-# ################################################################################################################################
-
-def _get_mllp_calls() -> 'anylist':
-    out = _recorders['mllp'].calls
-    return out
-
-# ################################################################################################################################
-
-def _get_rest_calls() -> 'anylist':
-    out = _recorders['rest'].calls
     return out
 
 # ################################################################################################################################
@@ -147,16 +118,28 @@ class TestWhichWayAMessageGoes:
 class TestAChannelWithNoService:
 
     def test_every_destination_receives_the_message_as_it_arrived(self) -> 'None':
-        channel_item = new_channel_item(new_stored_list(), delivery_mode=DeliveryMode.In_Order)
+        stored = new_stored_list()
+        stored.append(_new_email_entry())
 
-        with _running_synchronously():
+        channel_item = new_channel_item(stored, delivery_mode=DeliveryMode.In_Order)
+
+        with running_synchronously():
             result = run_for_channel(new_parallel_server(), channel_item, Request_Message)
 
         assert result
         assert result.has_response is False
 
-        assert _get_mllp_calls()[0][1] == Request_Message
-        assert _get_rest_calls()[0][2] == (Request_Message,)
+        assert get_mllp_calls()[0][1] == Request_Message
+        assert get_rest_calls()[0][2] == (Request_Message,)
+
+        # The e-mail destination received the message as the body, sent to the recipient
+        # and under the subject line the destination names.
+        connection, to, subject, body = get_email_calls()[0]
+
+        assert connection == SMTP_Connection
+        assert to == _email_recipient
+        assert subject == _email_subject
+        assert body == Request_Message
 
 # ################################################################################################################################
 
@@ -164,12 +147,28 @@ class TestAChannelWithNoService:
         stored = new_stored_list()[:1]
         channel_item = new_channel_item(stored, respond_from=MLLP_Connection)
 
-        with _running_synchronously():
+        with running_synchronously():
             result = run_for_channel(new_parallel_server(), channel_item, Request_Message)
 
         assert result
         assert result.has_response is True
         assert result.response == MLLP_Response
+
+# ################################################################################################################################
+
+    def test_the_rest_destination_the_channel_replies_from_produces_the_answer(self) -> 'None':
+        stored = new_stored_list()[1:]
+        channel_item = new_channel_item(stored, respond_from=REST_Connection)
+
+        with running_synchronously():
+            result = run_for_channel(new_parallel_server(), channel_item, Request_Message)
+
+        assert result
+        assert result.has_response is True
+        assert result.response == REST_Response
+
+        # The delivery really went through the REST connection
+        assert get_rest_calls()[0][0] == REST_Connection
 
 # ################################################################################################################################
 
@@ -179,11 +178,11 @@ class TestAChannelWithNoService:
 
         channel_item = new_channel_item(stored, delivery_mode=DeliveryMode.In_Order)
 
-        with _running_synchronously():
+        with running_synchronously():
             _ = run_for_channel(new_parallel_server(), channel_item, Request_Message)
 
-        assert len(_get_mllp_calls()) == 1
-        assert _get_rest_calls() == []
+        assert len(get_mllp_calls()) == 1
+        assert get_rest_calls() == []
 
 # ################################################################################################################################
 
@@ -195,33 +194,33 @@ class TestAChannelWithNoService:
 
         channel_item = new_channel_item(stored)
 
-        with _running_synchronously():
+        with running_synchronously():
             assert run_for_channel(new_parallel_server(), channel_item, Request_Message) is None
 
-        assert _get_mllp_calls() == []
-        assert _get_rest_calls() == []
+        assert get_mllp_calls() == []
+        assert get_rest_calls() == []
 
 # ################################################################################################################################
 
     def test_delivering_one_after_another_reaches_every_destination_in_turn(self) -> 'None':
         channel_item = new_channel_item(new_stored_list(), delivery_mode=DeliveryMode.In_Order)
 
-        with _running_synchronously():
+        with running_synchronously():
             _ = run_for_channel(new_parallel_server(), channel_item, Request_Message)
 
-        assert _get_mllp_calls()[0][0] == MLLP_Connection
-        assert _get_rest_calls()[0][0] == REST_Connection
+        assert get_mllp_calls()[0][0] == MLLP_Connection
+        assert get_rest_calls()[0][0] == REST_Connection
 
 # ################################################################################################################################
 
     def test_delivering_all_at_once_reaches_every_destination_too(self) -> 'None':
         channel_item = new_channel_item(new_stored_list(), delivery_mode=DeliveryMode.Same_Time)
 
-        with _running_synchronously():
+        with running_synchronously():
             _ = run_for_channel(new_parallel_server(), channel_item, Request_Message)
 
-        assert len(_get_mllp_calls()) == 1
-        assert len(_get_rest_calls()) == 1
+        assert len(get_mllp_calls()) == 1
+        assert len(get_rest_calls()) == 1
 
 # ################################################################################################################################
 
@@ -232,7 +231,7 @@ class TestAChannelWithNoService:
         wrapper = new_wrapper(service='', destinations=new_stored_list(), respond_from=MLLP_Connection)
         wrapper.server = new_parallel_server()
 
-        with _running_synchronously():
+        with running_synchronously():
             out = wrapper._deliver_to_destinations(Request_Message, Message_CID)
 
         assert out == MLLP_Response

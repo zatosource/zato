@@ -6,11 +6,24 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+import json
+
 import pytest
 from zato.common.test.client import AdminClient as ZatoClient
 
 SERVICE = 'zato.generic.connection'
 TYPE = 'channel-hl7-mllp'
+
+# The destination list one of the channels stores, with the fields the Dashboard writes
+DESTINATIONS = [
+    {
+        'name': 'forward-ehr',
+        'type': 'hl7-mllp',
+        'connection': 'test-ch-hl7mllp-outconn',
+        'is_active': True,
+        'options': {},
+    },
+]
 
 @pytest.fixture(scope='module')
 def client(zato_server):
@@ -62,6 +75,43 @@ class TestChannelHL7MLLP:
         assert 'id' in resp
         assert resp['name'] == 'test-ch-hl7mllp-mtls'
         self.__class__.created_ids.append(resp['id'])
+
+    def test_02b_create_with_destinations(self, client:'ZatoClient') -> 'None':
+        # The destination fields ride through the opaque store with everything else
+        resp = client.create(f'{SERVICE}.create',
+            cluster_id=1,
+            name='test-ch-hl7mllp-dest',
+            type_=TYPE,
+            is_active=True,
+            is_internal=False,
+            is_channel=True,
+            is_outconn=False,
+            address='127.0.0.1',
+            port=17011,
+            pool_size=1,
+            service='',
+            destinations=json.dumps(DESTINATIONS),
+            respond_from='forward-ehr',
+            delivery_mode='in-order',
+        )
+        assert 'id' in resp
+        assert resp['name'] == 'test-ch-hl7mllp-dest'
+        self.__class__.created_ids.append(resp['id'])
+
+    def test_02c_destination_fields_come_back_as_stored(self, client:'ZatoClient') -> 'None':
+        data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)
+
+        item = None
+        for entry in data:
+            if entry['name'] == 'test-ch-hl7mllp-dest':
+                item = entry
+                break
+
+        assert item is not None
+
+        assert json.loads(item['destinations']) == DESTINATIONS
+        assert item['respond_from'] == 'forward-ehr'
+        assert item['delivery_mode'] == 'in-order'
 
     def test_03_get_list_after_create(self, client):
         data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)

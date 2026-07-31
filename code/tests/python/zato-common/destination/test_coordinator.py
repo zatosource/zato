@@ -194,6 +194,25 @@ class TestRespondFrom:
         assert recorder.get_delivered_names() == [MLLP_Connection, REST_Connection]
 
 # ################################################################################################################################
+
+    def test_a_channel_answering_from_a_destination_that_is_paused_answers_from_its_service(self) -> 'None':
+        recorder = ConnectionRecorder()
+        context = new_test_context(recorder)
+
+        # The destination the channel replies from is paused, so nothing plans a delivery to it
+        stored = get_stored_list()
+        stored[2]['is_active'] = False
+
+        config = parse_config(Channel_Name, stored, FHIR_Connection)
+
+        result = deliver(context, config, new_overrides(), Request_Payload)
+
+        # The channel has no answer of its own to relay and the remaining destinations
+        # still received the message.
+        assert result.has_response is False
+        assert recorder.get_delivered_names() == [MLLP_Connection, REST_Connection]
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestRetries:

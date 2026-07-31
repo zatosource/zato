@@ -20,6 +20,9 @@ from collections.abc import Generator
 from http.client import OK
 from urllib.request import Request, urlopen
 
+# The shared MLLP helpers, e.g. rest_echo_server, live next to the standalone test server,
+# after this directory itself so that nothing of the same name is shadowed
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'zato-common', 'mllp'))
 sys.path.insert(0, os.path.dirname(__file__))
 
 # pytest
