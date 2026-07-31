@@ -438,7 +438,12 @@ class ReprocessHL7Message(AdminService):
         if edited_payload == '':
             edited_payload = None
 
-        destination_names = _get_destination_names(self.request.input.destinations)
+        # The input arrives as None when the caller names no destinations at all
+        destinations = self.request.input.destinations
+        if destinations is None:
+            destinations = ''
+
+        destination_names = _get_destination_names(destinations)
 
         # A failed reprocess comes back as a report too, never as a bare exception,
         # so the caller always sees the same shape with the details inside.
