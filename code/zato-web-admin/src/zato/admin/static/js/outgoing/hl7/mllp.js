@@ -35,9 +35,6 @@ $(document).ready(function() {
         'circuit_breaker_threshold_percent',
         'circuit_breaker_window_seconds',
         'circuit_breaker_reset_seconds',
-        'tls_cert_path',
-        'tls_key_path',
-        'tls_ca_path',
     ]);
     // Generic connection names are unique per connection type,
     // so the check is scoped to this page's own type.

@@ -255,6 +255,14 @@ class _HL7FHIRConnection(SyncFHIRClient):
         self.execute(path='/CapabilityStatement', method='get')
 
 # ################################################################################################################################
+
+    def zato_delete_impl(self, reason:'str | None'=None) -> 'None':
+        """ What the connection queue calls when this connection is deleted - it must exist
+        because the inherited .delete is fhirpy's resource-level API, not a teardown hook,
+        and there is nothing to release since each request opens its own HTTP connection.
+        """
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class OutconnHL7FHIRWrapper(Wrapper):

@@ -1,0 +1,27 @@
+// Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+// Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+//
+// A command-line HL7 MLLP client built on HAPI, the standard Java HL7 v2 library,
+// with everything pulled from Maven Central the way any other HAPI user pulls it.
+
+plugins {
+    id 'application'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+
+    // The HAPI core plus the message structures for HL7 v2.5, the version the tests speak
+    implementation 'ca.uhn.hapi:hapi-base:2.6.0'
+    implementation 'ca.uhn.hapi:hapi-structures-v25:2.6.0'
+
+    // HAPI logs through SLF4J - a no-op binding keeps standard output to what the client prints itself
+    runtimeOnly 'org.slf4j:slf4j-nop:2.0.16'
+}
+
+application {
+    mainClass = 'HapiMllpClient'
+}
