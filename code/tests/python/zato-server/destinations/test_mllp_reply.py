@@ -14,7 +14,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.common.hl7.mllp.settings import RouteSettings
 
-from mllp_test_channel import handle_one_message, new_route, Request_Message
+from service_stub import REST_Response
+from mllp_test_channel import handle_one_message, new_parallel_server, new_route, new_stored_list, new_wrapper, \
+    running_synchronously, Request_Message, REST_Connection
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -109,6 +111,26 @@ class TestWhatTheSenderIsAnswered:
 
         assert len(replies) == 1
         assert 'MSA|AA|' in replies[0]
+
+# ################################################################################################################################
+
+    def test_a_channel_that_replies_from_a_rest_destination_is_answered_for(self) -> 'None':
+        """ A REST destination answers with plain text rather than with a message of its own,
+        so the listener builds the acknowledgment instead of relaying that text.
+        """
+        stored = new_stored_list()[1:]
+
+        wrapper = new_wrapper(service='', destinations=stored, respond_from=REST_Connection)
+        wrapper.server = new_parallel_server()
+
+        route = new_route(wrapper._deliver_to_destinations)
+
+        with running_synchronously():
+            replies = handle_one_message(route)
+
+        assert len(replies) == 1
+        assert 'MSA|AA|' in replies[0]
+        assert REST_Response not in replies[0]
 
 # ################################################################################################################################
 
