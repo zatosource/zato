@@ -39,8 +39,9 @@ from zato.cli.enmasse.exporters.sftp import SFTPExporter
 from zato.cli.enmasse.exporters.smb import SMBExporter
 from zato.cli.enmasse.exporters.confluence import ConfluenceExporter
 from zato.cli.enmasse.exporters.custom import CustomConnectorExporter
-from zato.cli.enmasse.exporters.channel_hl7_mllp import ChannelHL7MLLPExporter
-from zato.cli.enmasse.exporters.outgoing_hl7_mllp import OutgoingHL7MLLPExporter
+from zato.cli.enmasse.exporters.channel_mllp import ChannelMLLPExporter
+from zato.cli.enmasse.exporters.outgoing_mllp import OutgoingMLLPExporter
+from zato.cli.enmasse.exporters.outgoing_fhir import OutgoingFHIRExporter
 from zato.cli.enmasse.exporters.es import ElasticSearchExporter
 from zato.cli.enmasse.exporters.graphql import OutgoingGraphQLExporter
 from zato.cli.enmasse.exporters.grpc import OutgoingGRPCExporter
@@ -97,8 +98,9 @@ class EnmasseYAMLExporter:
         self.channel_exporter = ChannelExporter(self)
         self.channel_soap_exporter = ChannelSOAPExporter(self)
         self.channel_as4_exporter = ChannelAS4Exporter(self)
-        self.channel_hl7_mllp_exporter = ChannelHL7MLLPExporter(self)
-        self.outgoing_hl7_mllp_exporter = OutgoingHL7MLLPExporter(self)
+        self.channel_mllp_exporter = ChannelMLLPExporter(self)
+        self.outgoing_mllp_exporter = OutgoingMLLPExporter(self)
+        self.outgoing_fhir_exporter = OutgoingFHIRExporter(self)
         self.outgoing_graphql_exporter = OutgoingGraphQLExporter(self)
         self.outgoing_grpc_exporter = OutgoingGRPCExporter(self)
         self.channel_ibm_mq_exporter = ChannelIBMMQExporter(self)
@@ -265,21 +267,30 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
-    def export_channel_hl7_mllp(self, session:'SASession') -> 'list':
+    def export_channel_mllp(self, session:'SASession') -> 'list':
         """ Exports HL7 MLLP channel definitions.
         """
         _ = self.get_cluster(session)
-        channel_hl7_mllp_list = self.channel_hl7_mllp_exporter.export(session, self.cluster_id)
-        return channel_hl7_mllp_list
+        channel_mllp_list = self.channel_mllp_exporter.export(session, self.cluster_id)
+        return channel_mllp_list
 
 # ################################################################################################################################
 
-    def export_outgoing_hl7_mllp(self, session:'SASession') -> 'list':
+    def export_outgoing_mllp(self, session:'SASession') -> 'list':
         """ Exports outgoing HL7 MLLP definitions.
         """
         _ = self.get_cluster(session)
-        outgoing_hl7_mllp_list = self.outgoing_hl7_mllp_exporter.export(session, self.cluster_id)
-        return outgoing_hl7_mllp_list
+        outgoing_mllp_list = self.outgoing_mllp_exporter.export(session, self.cluster_id)
+        return outgoing_mllp_list
+
+# ################################################################################################################################
+
+    def export_outgoing_fhir(self, session:'SASession') -> 'list':
+        """ Exports outgoing HL7 FHIR definitions.
+        """
+        _ = self.get_cluster(session)
+        outgoing_fhir_list = self.outgoing_fhir_exporter.export(session, self.cluster_id)
+        return outgoing_fhir_list
 
 # ################################################################################################################################
 
@@ -695,14 +706,19 @@ class EnmasseYAMLExporter:
             output_dict['channel_as4'] = channel_as4_defs
 
         # Export HL7 MLLP channel definitions
-        channel_hl7_mllp_defs = self.export_channel_hl7_mllp(session)
-        if channel_hl7_mllp_defs:
-            output_dict['channel_hl7_mllp'] = channel_hl7_mllp_defs
+        channel_mllp_defs = self.export_channel_mllp(session)
+        if channel_mllp_defs:
+            output_dict['channel_mllp'] = channel_mllp_defs
 
         # Export outgoing HL7 MLLP definitions
-        outgoing_hl7_mllp_defs = self.export_outgoing_hl7_mllp(session)
-        if outgoing_hl7_mllp_defs:
-            output_dict['outgoing_hl7_mllp'] = outgoing_hl7_mllp_defs
+        outgoing_mllp_defs = self.export_outgoing_mllp(session)
+        if outgoing_mllp_defs:
+            output_dict['outgoing_mllp'] = outgoing_mllp_defs
+
+        # Export outgoing HL7 FHIR definitions
+        outgoing_fhir_defs = self.export_outgoing_fhir(session)
+        if outgoing_fhir_defs:
+            output_dict['outgoing_fhir'] = outgoing_fhir_defs
 
         # Export IBM MQ channel definitions
         channel_ibm_mq_defs = self.export_channel_ibm_mq(session)

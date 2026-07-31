@@ -49,6 +49,19 @@ class TestConfig:
     rename_connection_new_name = 'test.outgoing.renamed'
     delete_connection = 'test.outgoing.to-delete'
 
+    # The outgoing FHIR connections, the second of which authenticates with the same credentials
+    # the inventory one does
+    fhir_connection = 'test.outgoing.fhir'
+    fhir_secured_connection = 'test.outgoing.fhir-secured'
+
+    # The name a REST connection and a FHIR connection share, which is what the type each of them
+    # is published to has to tell apart
+    shared_connection = 'test.outgoing.shared'
+
+    # The base path both FHIR connections are addressed with, so that the path a request lands
+    # on says where it came from
+    fhir_base_path = '/fhir/r4'
+
     # The credentials the inventory connection authenticates with
     connection_username = ''
     connection_password = ''
@@ -58,6 +71,10 @@ class TestConfig:
     inventory_receiver: 'any_' = None
     rename_receiver: 'any_' = None
     delete_receiver: 'any_' = None
+    fhir_receiver: 'any_' = None
+    fhir_secured_receiver: 'any_' = None
+    shared_rest_receiver: 'any_' = None
+    shared_fhir_receiver: 'any_' = None
 
     # The session state, which is what a restart goes through
     state: 'any_' = None

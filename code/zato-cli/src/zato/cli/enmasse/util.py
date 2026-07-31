@@ -15,6 +15,7 @@ from json import dumps as json_dumps, loads as json_loads
 # Zato
 from zato.cli.enmasse.config import ModuleCtx
 from zato.common.api import EnvVariable, HTTP_SOAP, SCHEDULER, SchedulerLink, URL_TYPE
+from zato.common.hl7.fhir.fields import Outconn_Enmasse_Names as Outconn_FHIR_Enmasse_Names
 from zato.common.hl7.mllp.fields import Channel_Enmasse_Names, Outconn_Names
 from zato.common.odb.model import Job
 from zato.common.util.api import asbool
@@ -511,6 +512,15 @@ def reorder_fields(fields:'anydict') -> 'anydict':
 # ################################################################################################################################
 # ################################################################################################################################
 
+# What a top-level key that has been renamed is called now, keyed by the name it used to go by.
+Renamed_Keys = {
+    'channel_hl7_mllp': 'channel_mllp',
+    'outgoing_hl7_mllp': 'outgoing_mllp',
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def get_top_level_order() -> 'strlist':
 
     return [
@@ -544,8 +554,9 @@ def get_top_level_order() -> 'strlist':
         'outgoing_graphql',
         'outgoing_grpc',
         'outgoing_kafka',
-        'channel_hl7_mllp',
-        'outgoing_hl7_mllp',
+        'channel_mllp',
+        'outgoing_mllp',
+        'outgoing_fhir',
         'email_imap',
         'email_smtp',
         'odoo',
@@ -653,8 +664,9 @@ def get_object_order(object_type:'str') -> 'strlist':
     order['outgoing_grpc'] = 'name', 'is_active', 'address', 'security', 'is_tls', 'tls_ca_certs_file', 'proto_path', \
         'stub_module', 'stub_class', 'ping_timeout', 'max_send_message_size', 'max_recv_message_size',
     order['outgoing_kafka'] = 'name', 'is_active', 'address', 'topic',
-    order['channel_hl7_mllp'] = ('name',) + Channel_Enmasse_Names
-    order['outgoing_hl7_mllp'] = ('name', 'address') + Outconn_Names
+    order['channel_mllp'] = ('name',) + Channel_Enmasse_Names
+    order['outgoing_mllp'] = ('name', 'address') + Outconn_Names
+    order['outgoing_fhir'] = ('name', 'address') + Outconn_FHIR_Enmasse_Names
     order['email_imap'] = 'name', 'is_active', 'type', 'host', 'port', 'username', 'tenant_id', 'client_id', \
         'scheduler_run_every', 'scheduler_run_unit', 'scheduler_start_date', 'scheduler_service', \
         'scheduler_invoke_with', # TODO: Implement type vs. server_type

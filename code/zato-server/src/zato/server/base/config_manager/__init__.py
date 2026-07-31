@@ -42,7 +42,7 @@ from zato.common.json_internal import loads
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.typing_ import cast_
 from zato.common.pubsub.outgoing import find_outgoing_conn, get_outgoing_sub_config, get_outgoing_sub_key, \
-    get_outgoing_topic_name, locate_outgoing_conn, OutgoingPublisher, parse_outgoing_sub_key
+    get_outgoing_topic_name, locate_outgoing_conn, OutgoingPublisher, OutgoingType, parse_outgoing_sub_key
 from zato.common.pubsub.sql.backend import PublishResult
 from zato.common.util.api import asbool, fs_safe_name, import_module_from_path, new_cid_server, new_msg_id, parse_datetime, \
     update_apikey_username_to_channel, utcnow, visit_py_source, wait_for_dict_key, wait_for_dict_key_by_get_func
@@ -59,7 +59,6 @@ from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
 from zato.server.connection.http_soap.response_cache import purge_channel as purge_response_cache
 from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.odoo import OdooWrapper
-from zato.server.connection.outgoing_delivery import OutgoingType
 from zato.server.generic.api.channel_openapi import ChannelOpenAPIWrapper
 from zato.server.generic.api.chat_microsoft_teams import ChatMicrosoftTeamsWrapper
 from zato.server.generic.api.chat_slack import ChatSlackWrapper

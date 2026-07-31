@@ -43,3 +43,24 @@ outgoing_rest:
       - key: X-Sync-Source
         value: daily-sync
         mode: text
+
+  # This one shares its name with a FHIR connection, which is what proves that a publication
+  # goes to the connection of the type it was published to rather than to whichever one answers to the name
+  - name: test.outgoing.shared
+    host: "http://127.0.0.1:{{port_shared_rest}}"
+    url_path: /api/shared
+    data_format: json
+    timeout: 30
+    request_method: POST
+
+outgoing_fhir:
+
+  - name: test.outgoing.fhir
+    address: "http://127.0.0.1:{{port_fhir}}/fhir/r4"
+
+  - name: test.outgoing.fhir-secured
+    address: "http://127.0.0.1:{{port_fhir_secured}}/fhir/r4"
+    security: test.outgoing.credentials
+
+  - name: test.outgoing.shared
+    address: "http://127.0.0.1:{{port_shared_fhir}}/fhir/r4"

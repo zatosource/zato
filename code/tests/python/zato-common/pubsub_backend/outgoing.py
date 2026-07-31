@@ -38,6 +38,9 @@ if 0:
 # asserted here is the registry doing the choosing rather than any one connection type.
 _conn_type = 'file-transfer-test'
 
+# A second type, for the flow that has two of them sharing one connection name
+_other_conn_type = 'sdk-transfer-test'
+
 # The connections published to, by the id each of them keeps for as long as it exists.
 _conn_id_orders = 17
 _conn_id_archive = 23
@@ -47,8 +50,10 @@ _name_orders = 'Order Intake'
 _name_archive = 'Archive Upload'
 _name_orders_renamed = 'Order Intake EU'
 
-# The connections themselves, by id, the way a server's configuration holds them.
+# The connections themselves, by id, the way a server's configuration holds them. Each type has
+# its own set, because a name and an id mean something only within one type of connection.
 _connections:'anydict' = {}
+_other_connections:'anydict' = {}
 
 # How long one wait for an expected outcome may take at most, in seconds -
 # generous because a retry sleeps for seconds before its next attempt.
@@ -183,6 +188,20 @@ def _locate_test_connection(server:'any_', conn_id:'int') -> 'anytuple':
 
 # ################################################################################################################################
 
+def _locate_other_test_connection(server:'any_', conn_id:'int') -> 'anytuple':
+    """ The locator of the second type - it looks in that type's own set of connections, which is
+    what keeps an id or a name from meaning anything outside the type it belongs to.
+    """
+    connection = _other_connections.get(conn_id)
+
+    if not connection:
+        return ()
+
+    out = (connection.name, connection)
+    return out
+
+# ################################################################################################################################
+
 def _deliver_to_test_connection(server:'any_', cid:'str', wrapper:'any_', data:'str') -> 'None':
     """ The delivery handler this scenario registers - it gives the message to what the locator found.
     """
@@ -195,6 +214,16 @@ def _new_connection(conn_id:'int', name:'str') -> '_Connection':
     """
     out = _Connection(name)
     _connections[conn_id] = out
+
+    return out
+
+# ################################################################################################################################
+
+def _new_other_connection(conn_id:'int', name:'str') -> '_Connection':
+    """ The same, for the second type of connection.
+    """
+    out = _Connection(name)
+    _other_connections[conn_id] = out
 
     return out
 
@@ -869,14 +898,84 @@ def _run_delete_flow() -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _run_type_isolation_flow() -> 'None':
+    """ Two types of connection sharing one name and one id have a queue each, and neither of them
+    is ever given what the other was published to with.
+    """
+    delete_all_rows()
+
+    _, server, delivery = _new_server()
+
+    # The same name and the same id under two different types, which is all that keeps them apart
+    first = _new_connection(_conn_id_orders, _name_orders)
+    second = _new_other_connection(_conn_id_orders, _name_orders)
+
+    first_publisher = OutgoingPublisher(_as_server(server), _conn_type, _conn_id_orders)
+    second_publisher = OutgoingPublisher(_as_server(server), _other_conn_type, _conn_id_orders)
+
+    first_expected:'anylist' = []
+    second_expected:'anylist' = []
+
+    for index in range(_message_count):
+
+        first_data = f'Order {index}'
+        first_expected.append(first_data)
+        _ = first_publisher.publish(first_data)
+
+        second_data = f'Archive {index}'
+        second_expected.append(second_data)
+        _ = second_publisher.publish(second_data)
+
+    def has_everything() -> 'bool':
+        out = len(first.received) == _message_count and len(second.received) == _message_count
+        return out
+
+    # Each of them receives everything that was published to it ..
+    _wait_until(has_everything, 'both connections receive everything published to them')
+
+    # .. and nothing that was published to the other one ..
+    assert first.received == first_expected, first.received
+    assert second.received == second_expected, second.received
+
+    # .. because the two are queues of their own, one per type ..
+    first_sub_key = get_outgoing_sub_key(_conn_type, _conn_id_orders)
+    second_sub_key = get_outgoing_sub_key(_other_conn_type, _conn_id_orders)
+
+    assert first_sub_key != second_sub_key, first_sub_key
+
+    outgoing_sub_keys = server.pubsub_backend.get_sub_keys_by_prefix(PubSub.Outgoing.Sub_Key_Prefix)
+    assert sorted(outgoing_sub_keys) == sorted([first_sub_key, second_sub_key]), outgoing_sub_keys
+
+    # .. each subscribed to the topic of its own type.
+    first_topic = get_outgoing_topic_name(_conn_type, _name_orders)
+    second_topic = get_outgoing_topic_name(_other_conn_type, _name_orders)
+
+    assert first_topic != second_topic, first_topic
+
+    first_sub_rows = get_sub_rows(first_sub_key)
+    second_sub_rows = get_sub_rows(second_sub_key)
+
+    assert len(first_sub_rows) == 1, first_sub_rows
+    assert len(second_sub_rows) == 1, second_sub_rows
+
+    assert first_sub_rows[0].topic_name == first_topic, first_sub_rows[0].topic_name
+    assert second_sub_rows[0].topic_name == second_topic, second_sub_rows[0].topic_name
+
+    delivery.stop()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def run_outgoing_scenario() -> 'None':
     """ Publishing to an outgoing connection over the shared backend - a publication reaches the
     connection it named, each connection has a queue of its own, a refused message is offered
     again, an expired one is not, what a stopped process left behind is delivered when it starts
     again, and messages arrive in the order they were published in. A renamed connection keeps
-    the one queue it had, with everything in it, and a deleted one takes its queue with it.
+    the one queue it had, with everything in it, a deleted one takes its queue with it, and two
+    types sharing one name have a queue each.
     """
     register_outgoing_conn_type(_conn_type, _locate_test_connection, _deliver_to_test_connection)
+    register_outgoing_conn_type(_other_conn_type, _locate_other_test_connection, _deliver_to_test_connection)
 
     _run_publish_delivers_flow()
     _run_queue_isolation_flow()
@@ -890,6 +989,7 @@ def run_outgoing_scenario() -> 'None':
     _run_rename_keeps_order_flow()
     _run_rename_crash_flow()
     _run_delete_flow()
+    _run_type_isolation_flow()
 
 # ################################################################################################################################
 # ################################################################################################################################

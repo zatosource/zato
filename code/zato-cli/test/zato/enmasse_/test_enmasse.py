@@ -152,7 +152,7 @@ class EnmasseTestCase(BaseEnmasseTestCase):
             _ = self.invoke_enmasse(import_path, server_dir=self.environment.server_dir)
 
             # Now export the data
-            include_types = 'channel_rest,security,elastic_search,channel_openapi,channel_hl7_mllp'
+            include_types = 'channel_rest,security,elastic_search,channel_openapi,channel_mllp'
             _ = self.invoke_enmasse(
                 export_path, is_import=False, is_export=True, include_type=include_types,
                 server_dir=self.environment.server_dir)
@@ -184,8 +184,8 @@ class EnmasseTestCase(BaseEnmasseTestCase):
 
             # Verify that HL7 MLLP channels survived the round trip
             if exported_dict:
-                if 'channel_hl7_mllp' in exported_dict:
-                    exported_hl7_channels = exported_dict['channel_hl7_mllp']
+                if 'channel_mllp' in exported_dict:
+                    exported_hl7_channels = exported_dict['channel_mllp']
 
                     # Filter to only enmasse test channels
                     enmasse_hl7_channels = []

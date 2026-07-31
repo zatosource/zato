@@ -34,8 +34,9 @@ from zato.cli.enmasse.importers.scheduler import SchedulerImporter
 from zato.cli.enmasse.importers.sql import SQLImporter
 from zato.cli.enmasse.importers.confluence import ConfluenceImporter
 from zato.cli.enmasse.importers.jira import JiraImporter
-from zato.cli.enmasse.importers.channel_hl7_mllp import ChannelHL7MLLPImporter
-from zato.cli.enmasse.importers.outgoing_hl7_mllp import OutgoingHL7MLLPImporter
+from zato.cli.enmasse.importers.channel_mllp import ChannelMLLPImporter
+from zato.cli.enmasse.importers.outgoing_mllp import OutgoingMLLPImporter
+from zato.cli.enmasse.importers.outgoing_fhir import OutgoingFHIRImporter
 from zato.cli.enmasse.importers.graphql import OutgoingGraphQLImporter
 from zato.cli.enmasse.importers.grpc import OutgoingGRPCImporter
 from zato.cli.enmasse.importers.amqp import ChannelAMQPImporter, OutgoingAMQPImporter
@@ -63,6 +64,7 @@ from zato.cli.enmasse.importers.pubsub_topic import PubSubTopicImporter
 from zato.cli.enmasse.importers.pubsub_permission import PubSubPermissionImporter
 from zato.cli.enmasse.importers.pubsub_subscription import PubSubSubscriptionImporter
 from zato.cli.enmasse.importers.channel_openapi import ChannelOpenAPIImporter
+from zato.cli.enmasse.util import Renamed_Keys
 from zato.common.odb.model import Cluster
 
 # ################################################################################################################################
@@ -91,8 +93,9 @@ for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse
                         'zato.cli.enmasse.importers.es', 'zato.cli.enmasse.importers.odoo',
                         'zato.cli.enmasse.importers.scheduler', 'zato.cli.enmasse.importers.sql',
                         'zato.cli.enmasse.importers.confluence', 'zato.cli.enmasse.importers.jira',
-                        'zato.cli.enmasse.importers.channel_hl7_mllp',
-                        'zato.cli.enmasse.importers.outgoing_hl7_mllp',
+                        'zato.cli.enmasse.importers.channel_mllp',
+                        'zato.cli.enmasse.importers.outgoing_mllp',
+                        'zato.cli.enmasse.importers.outgoing_fhir',
                         'zato.cli.enmasse.importers.graphql',
                         'zato.cli.enmasse.importers.grpc',
                         'zato.cli.enmasse.importers.amqp',
@@ -143,8 +146,9 @@ class EnmasseYAMLImporter:
         self.job_defs = {}
         self.confluence_defs = {}
         self.jira_defs = {}
-        self.channel_hl7_mllp_defs = {}
-        self.outgoing_hl7_mllp_defs = {}
+        self.channel_mllp_defs = {}
+        self.outgoing_mllp_defs = {}
+        self.outgoing_fhir_defs = {}
         self.channel_ibm_mq_defs = {}
         self.channel_kafka_defs = {}
         self.gateway_mcp_defs = {}
@@ -198,8 +202,9 @@ class EnmasseYAMLImporter:
         self.scheduler_importer = SchedulerImporter(self)
         self.confluence_importer = ConfluenceImporter(self)
         self.jira_importer = JiraImporter(self)
-        self.channel_hl7_mllp_importer = ChannelHL7MLLPImporter(self)
-        self.outgoing_hl7_mllp_importer = OutgoingHL7MLLPImporter(self)
+        self.channel_mllp_importer = ChannelMLLPImporter(self)
+        self.outgoing_mllp_importer = OutgoingMLLPImporter(self)
+        self.outgoing_fhir_importer = OutgoingFHIRImporter(self)
         self.channel_ibm_mq_importer = ChannelIBMMQImporter(self)
         self.channel_amqp_importer = ChannelAMQPImporter(self, 'amqp')
         self.outgoing_amqp_importer = OutgoingAMQPImporter(self, 'amqp')
@@ -360,6 +365,12 @@ class EnmasseYAMLImporter:
         """ Process a config dict into the expected result format.
             This is the final processing step after handling includes.
         """
+        # A key that has been renamed is refused, because importing the file without it would
+        # leave the objects it declares uncreated while reporting that all went well
+        for key in config:
+            if new_key := Renamed_Keys.get(key):
+                raise ValueError(f'Key `{key}` is now called `{new_key}`')
+
         # Convert the raw YAML into a structured representation
         result = {}
 
@@ -989,19 +1000,19 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
-    def sync_channel_hl7_mllp(self, channel_hl7_mllp_list:'list', session:'SASession') -> 'tuple':
-        if not channel_hl7_mllp_list:
+    def sync_channel_mllp(self, channel_mllp_list:'list', session:'SASession') -> 'tuple':
+        if not channel_mllp_list:
             return [], []
 
-        count = len(channel_hl7_mllp_list)
+        count = len(channel_mllp_list)
         noun = 'definition' if count == 1 else 'definitions'
         logger.info(f'Processing {count} HL7 MLLP channel {noun}')
 
-        for idx, item in enumerate(channel_hl7_mllp_list):
+        for idx, item in enumerate(channel_mllp_list):
             logger.info('HL7 MLLP channel item %d: %s', idx, item)
 
-        created, updated = self.channel_hl7_mllp_importer.sync_definitions(channel_hl7_mllp_list, session)
-        self.channel_hl7_mllp_defs = self.channel_hl7_mllp_importer.connection_defs
+        created, updated = self.channel_mllp_importer.sync_definitions(channel_mllp_list, session)
+        self.channel_mllp_defs = self.channel_mllp_importer.connection_defs
 
         created_count = len(created)
         updated_count = len(updated)
@@ -1011,23 +1022,45 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
-    def sync_outgoing_hl7_mllp(self, outgoing_hl7_mllp_list:'list', session:'SASession') -> 'tuple':
-        if not outgoing_hl7_mllp_list:
+    def sync_outgoing_mllp(self, outgoing_mllp_list:'list', session:'SASession') -> 'tuple':
+        if not outgoing_mllp_list:
             return [], []
 
-        count = len(outgoing_hl7_mllp_list)
+        count = len(outgoing_mllp_list)
         noun = 'definition' if count == 1 else 'definitions'
         logger.info(f'Processing {count} outgoing HL7 MLLP {noun}')
 
-        for idx, item in enumerate(outgoing_hl7_mllp_list):
+        for idx, item in enumerate(outgoing_mllp_list):
             logger.info('Outgoing HL7 MLLP item %d: %s', idx, item)
 
-        created, updated = self.outgoing_hl7_mllp_importer.sync_definitions(outgoing_hl7_mllp_list, session)
-        self.outgoing_hl7_mllp_defs = self.outgoing_hl7_mllp_importer.connection_defs
+        created, updated = self.outgoing_mllp_importer.sync_definitions(outgoing_mllp_list, session)
+        self.outgoing_mllp_defs = self.outgoing_mllp_importer.connection_defs
 
         created_count = len(created)
         updated_count = len(updated)
         logger.info('Processed outgoing HL7 MLLP definitions: created=%d updated=%d', created_count, updated_count)
+
+        return created, updated
+
+# ################################################################################################################################
+
+    def sync_outgoing_fhir(self, outgoing_fhir_list:'list', session:'SASession') -> 'tuple':
+        if not outgoing_fhir_list:
+            return [], []
+
+        count = len(outgoing_fhir_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} outgoing HL7 FHIR {noun}')
+
+        for idx, item in enumerate(outgoing_fhir_list):
+            logger.info('Outgoing HL7 FHIR item %d: %s', idx, item)
+
+        created, updated = self.outgoing_fhir_importer.sync_definitions(outgoing_fhir_list, session)
+        self.outgoing_fhir_defs = self.outgoing_fhir_importer.connection_defs
+
+        created_count = len(created)
+        updated_count = len(updated)
+        logger.info('Processed outgoing HL7 FHIR definitions: created=%d updated=%d', created_count, updated_count)
 
         return created, updated
 
@@ -1780,20 +1813,28 @@ class EnmasseYAMLImporter:
             self.updated_objects['outgoing_grpc'] = outgoing_grpc_updated
 
         # Process HL7 MLLP channel definitions
-        channel_hl7_mllp_list = yaml_config.get('channel_hl7_mllp', [])
-        channel_hl7_mllp_created, channel_hl7_mllp_updated = self.sync_channel_hl7_mllp(channel_hl7_mllp_list, session)
-        if channel_hl7_mllp_created:
-            self.created_objects['channel_hl7_mllp'] = channel_hl7_mllp_created
-        if channel_hl7_mllp_updated:
-            self.updated_objects['channel_hl7_mllp'] = channel_hl7_mllp_updated
+        channel_mllp_list = yaml_config.get('channel_mllp', [])
+        channel_mllp_created, channel_mllp_updated = self.sync_channel_mllp(channel_mllp_list, session)
+        if channel_mllp_created:
+            self.created_objects['channel_mllp'] = channel_mllp_created
+        if channel_mllp_updated:
+            self.updated_objects['channel_mllp'] = channel_mllp_updated
 
         # Process outgoing HL7 MLLP definitions
-        outgoing_hl7_mllp_list = yaml_config.get('outgoing_hl7_mllp', [])
-        outgoing_hl7_mllp_created, outgoing_hl7_mllp_updated = self.sync_outgoing_hl7_mllp(outgoing_hl7_mllp_list, session)
-        if outgoing_hl7_mllp_created:
-            self.created_objects['outgoing_hl7_mllp'] = outgoing_hl7_mllp_created
-        if outgoing_hl7_mllp_updated:
-            self.updated_objects['outgoing_hl7_mllp'] = outgoing_hl7_mllp_updated
+        outgoing_mllp_list = yaml_config.get('outgoing_mllp', [])
+        outgoing_mllp_created, outgoing_mllp_updated = self.sync_outgoing_mllp(outgoing_mllp_list, session)
+        if outgoing_mllp_created:
+            self.created_objects['outgoing_mllp'] = outgoing_mllp_created
+        if outgoing_mllp_updated:
+            self.updated_objects['outgoing_mllp'] = outgoing_mllp_updated
+
+        # Process outgoing HL7 FHIR definitions
+        outgoing_fhir_list = yaml_config.get('outgoing_fhir', [])
+        outgoing_fhir_created, outgoing_fhir_updated = self.sync_outgoing_fhir(outgoing_fhir_list, session)
+        if outgoing_fhir_created:
+            self.created_objects['outgoing_fhir'] = outgoing_fhir_created
+        if outgoing_fhir_updated:
+            self.updated_objects['outgoing_fhir'] = outgoing_fhir_updated
 
         # Process Microsoft 365 connection definitions
         microsoft_cloud_list = yaml_config.get('microsoft_cloud', [])

@@ -6,41 +6,24 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from typing import NamedTuple
-
 # Zato
 from zato.common.api import HL7
 from zato.common.destination.constants import Default_Delivery_Mode, Respond_From_Service
+from zato.common.hl7.fields import ConnectionField, get_column_defaults, get_defaults, get_int_names, get_names, \
+    get_opaque_defaults
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, strtuple
+    from zato.common.typing_ import strtuple
 
-    anydict = anydict
     strtuple = strtuple
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class MLLPField(NamedTuple):
-    """ One configuration field of an MLLP channel or outgoing connection.
-    """
-
-    # The key the field is stored, imported and exported under
-    name: 'str'
-
-    # The value in force when neither the Dashboard nor enmasse supplies one
-    default: 'any_'
-
-    # Whether the field has a column of its own in generic_conn - everything else lives in the opaque blob
-    is_column: 'bool' = False
-
-# ################################################################################################################################
-# ################################################################################################################################
-
+MLLPField = ConnectionField
 mllp_field_list = list[MLLPField]
 
 # ################################################################################################################################
@@ -187,75 +170,6 @@ Outconn_Fields:'mllp_field_list' = [
     MLLPField('tls_cert_path', ''),
     MLLPField('tls_key_path', ''),
 ]
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def get_column_defaults(fields:'mllp_field_list') -> 'anydict':
-    """ The defaults of the fields that generic_conn stores in a column of their own.
-    """
-    out:'anydict' = {}
-
-    for field in fields:
-        if field.is_column:
-            out[field.name] = field.default
-
-    return out
-
-# ################################################################################################################################
-
-def get_opaque_defaults(fields:'mllp_field_list') -> 'anydict':
-    """ The defaults of the fields that generic_conn stores in its opaque blob.
-    """
-    out:'anydict' = {}
-
-    for field in fields:
-        if not field.is_column:
-            out[field.name] = field.default
-
-    return out
-
-# ################################################################################################################################
-
-def get_defaults(fields:'mllp_field_list') -> 'anydict':
-    """ The defaults of every field, no matter where it is stored.
-    """
-    out:'anydict' = {}
-
-    for field in fields:
-        out[field.name] = field.default
-
-    return out
-
-# ################################################################################################################################
-
-def get_int_names(fields:'mllp_field_list') -> 'strtuple':
-    """ The names of the fields holding a whole number, which the Dashboard and opaque storage
-    may both hand over as text.
-    """
-    names = []
-
-    for field in fields:
-        is_bool = isinstance(field.default, bool)
-        if isinstance(field.default, int):
-            if not is_bool:
-                names.append(field.name)
-
-    out = tuple(names)
-    return out
-
-# ################################################################################################################################
-
-def get_names(fields:'mllp_field_list') -> 'strtuple':
-    """ The names of every field, in declaration order.
-    """
-    names = []
-
-    for field in fields:
-        names.append(field.name)
-
-    out = tuple(names)
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

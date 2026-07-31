@@ -411,7 +411,7 @@ mcp_gateway:
     url_path: /mcp/enmasse-2
     services: billing.get-invoice
 
-channel_hl7_mllp:
+channel_mllp:
 
   - name: enmasse.hl7.mllp.1
     service: enmasse.hl7.test.service

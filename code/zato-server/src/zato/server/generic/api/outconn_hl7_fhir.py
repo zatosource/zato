@@ -18,7 +18,9 @@ from fhirpy import SyncFHIRClient
 # Zato
 from zato.common.api import HL7
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.hl7.fhir.fields import Outconn_Config_Defaults, Outconn_Int_Names
 from zato.common.json_internal import dumps
+from zato.common.pubsub.outgoing import OutgoingPublisher, OutgoingType
 from zato.common.typing_ import cast_
 from zato.common.util.api import as_bool, new_cid_server
 from zato.server.connection.queue import Wrapper
@@ -28,7 +30,8 @@ from zato.server.connection.queue import Wrapper
 
 if 0:
     from zato.common.ext.bunch import Bunch
-    from zato.common.typing_ import stranydict
+    from zato.common.pubsub.sql.backend import PublishResult
+    from zato.common.typing_ import any_, stranydict
     from zato.server.base.parallel import ParallelServer
     ParallelServer = ParallelServer
 
@@ -51,19 +54,10 @@ _ms_per_second = 1000
 
 # Defaults applied by the config manager when the create path does not supply a field,
 # e.g. when an outconn is created directly through zato.generic.connection.create.
-outconn_fhir_config_defaults:'dict[str, object]' = {
-    'auth_type': HL7.Const.FHIR_Auth_Type.No_Auth.id,
-    'security_id': 0,
-    'username': '',
-    'secret': '',
-    'pool_size': HL7.Default.pool_size,
-
-    # Audit - off unless turned on per connection
-    'is_audit_log_active': False,
-}
+outconn_fhir_config_defaults = Outconn_Config_Defaults
 
 # Config keys that must be integers but may arrive as strings from opaque storage
-outconn_fhir_int_config_keys = ('security_id', 'pool_size')
+outconn_fhir_int_config_keys = Outconn_Int_Names
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -89,8 +83,30 @@ class _HL7FHIRConnection(SyncFHIRClient):
         else:
             self.zato_basic_auth_header = None
 
+        # What a guaranteed delivery to this connection goes through. It is built from the connection's
+        # id rather than its name because that is what a rename leaves alone.
+        self.zato_publisher = OutgoingPublisher(
+            self.zato_config['server'],
+            OutgoingType.FHIR,
+            self.zato_config['id'],
+        )
+
         address = self.zato_config['address']
         super().__init__(address)
+
+# ################################################################################################################################
+
+    def publish(self, resource:'stranydict', **kwargs:'any_') -> 'PublishResult':
+        """ Queues one FHIR document for delivery to this connection, returning as soon as it is stored.
+        """
+
+        # A document with no resource type has no path to be created under, so it could never
+        # be delivered - it is refused here rather than left retrying in a queue forever.
+        if 'resourceType' not in resource:
+            raise Exception('A FHIR document to publish needs a resourceType')
+
+        out = self.zato_publisher.publish(resource, **kwargs)
+        return out
 
 # ################################################################################################################################
 

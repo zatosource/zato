@@ -26,7 +26,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ChannelHL7MLLPImporter(GenericConnectionImporter):
+class ChannelMLLPImporter(GenericConnectionImporter):
 
     connection_type = GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP
 
