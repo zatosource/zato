@@ -8,6 +8,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import sys
+
+# The modules next to this one are imported by name, which is what puts them within reach
+sys.path.insert(0, os.path.dirname(__file__))
 
 # pytest
 import pytest

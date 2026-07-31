@@ -20,6 +20,7 @@ from zato.common.api import PubSub
 from zato.common.pubsub.outgoing import deliver_envelope, get_outgoing_sub_key, get_outgoing_topic_name, \
     OutgoingPublisher, register_delivery_handler
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.typing_ import cast_
 from zato.server.base.config_manager import ConfigManager
 from zato.server.base.parallel.delivery import PushDelivery
 
@@ -28,6 +29,7 @@ from zato.server.base.parallel.delivery import PushDelivery
 
 if 0:
     from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_
+    from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -133,9 +135,17 @@ class _StubServer:
         self.invoked.append(service_name)
 
         envelope = loads(payload)
-        deliver_envelope(self, 'test-cid', envelope)
+        deliver_envelope(_as_server(self), 'test-cid', envelope)
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def _as_server(server:'_StubServer') -> 'ParallelServer':
+    """ The stub in the shape that the code being tested is typed for.
+    """
+    out = cast_('ParallelServer', server)
+    return out
+
 # ################################################################################################################################
 
 def _deliver_to_test_connection(server:'any_', cid:'str', conn_name:'str', data:'str') -> 'None':
@@ -163,7 +173,7 @@ def _new_server() -> 'anytuple':
     """
     backend = SQLPubSubBackend()
     server = _StubServer(backend)
-    delivery = PushDelivery(server, backend) # type: ignore[arg-type]
+    delivery = PushDelivery(_as_server(server), backend)
 
     server.pubsub_push_delivery = delivery
 
@@ -196,7 +206,7 @@ def _run_publish_delivers_flow() -> 'None':
     _, server, delivery = _new_server()
     connection = _new_connection(_conn_orders)
 
-    publisher = OutgoingPublisher(server, _conn_type, _conn_orders) # type: ignore[arg-type]
+    publisher = OutgoingPublisher(_as_server(server), _conn_type, _conn_orders)
     result = publisher.publish('Order 1234')
 
     # The publication is a publication like any other, so it has a message id of its own ..
@@ -237,8 +247,8 @@ def _run_queue_isolation_flow() -> 'None':
     down = _new_connection(_conn_archive)
     down.refuses_everything = True
 
-    healthy_publisher = OutgoingPublisher(server, _conn_type, _conn_orders) # type: ignore[arg-type]
-    down_publisher = OutgoingPublisher(server, _conn_type, _conn_archive) # type: ignore[arg-type]
+    healthy_publisher = OutgoingPublisher(_as_server(server), _conn_type, _conn_orders)
+    down_publisher = OutgoingPublisher(_as_server(server), _conn_type, _conn_archive)
 
     # The connection that is down is published to first, so that it is already retrying
     # while the healthy one is being published to ..
@@ -299,7 +309,7 @@ def _run_retry_then_success_flow() -> 'None':
     connection = _new_connection(_conn_orders)
     connection.refusals_left = _refusal_count
 
-    publisher = OutgoingPublisher(server, _conn_type, _conn_orders) # type: ignore[arg-type]
+    publisher = OutgoingPublisher(_as_server(server), _conn_type, _conn_orders)
     _ = publisher.publish('Order 1234')
 
     def has_message() -> 'bool':
@@ -338,7 +348,7 @@ def _run_expiration_flow() -> 'None':
     connection = _new_connection(_conn_orders)
     connection.refuses_everything = True
 
-    publisher = OutgoingPublisher(server, _conn_type, _conn_orders) # type: ignore[arg-type]
+    publisher = OutgoingPublisher(_as_server(server), _conn_type, _conn_orders)
     _ = publisher.publish('Order 1234', expiration=_short_expiration_seconds)
 
     sub_key = get_outgoing_sub_key(_conn_type, _conn_orders)
@@ -374,7 +384,7 @@ def _run_restart_recovery_flow() -> 'None':
     connection = _new_connection(_conn_orders)
     connection.refuses_everything = True
 
-    publisher = OutgoingPublisher(first_server, _conn_type, _conn_orders) # type: ignore[arg-type]
+    publisher = OutgoingPublisher(_as_server(first_server), _conn_type, _conn_orders)
     _ = publisher.publish('Order 1234')
 
     def is_retrying() -> 'bool':
@@ -437,7 +447,7 @@ def _run_ordering_flow() -> 'None':
     _, server, delivery = _new_server()
     connection = _new_connection(_conn_orders)
 
-    publisher = OutgoingPublisher(server, _conn_type, _conn_orders) # type: ignore[arg-type]
+    publisher = OutgoingPublisher(_as_server(server), _conn_type, _conn_orders)
 
     expected:'anylist' = []
 
