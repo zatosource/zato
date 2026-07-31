@@ -7,7 +7,7 @@
 	analytics update cron-update stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console \
 	help install-deps \
-	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-pubsub-backend test-pubsub-backend-perf test-pubsub-backend-perf-mass test-pubsub-system-perf test-enmasse \
+	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-pubsub-backend test-pubsub-outgoing test-pubsub-backend-perf test-pubsub-backend-perf-mass test-pubsub-system-perf test-enmasse \
 	test-cli test-mcp _test-mcp test-bearer _test-bearer test-graphql test-grpc test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-llm test-hl7 test-hl7-mllp-channels test-hl7-languages test-hl7-volume test-ui test-ui-pubsub test-ui-openapi _test-ui test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-audit-log-ui test-alerting test-destinations test-analytics test-analytics-ui test-demo-seed test-logging test-ibm-mq test-mongodb test-es \
 	test-rule-engine test-rule-engine-perf test-rule-engine-jobs test-rule-engine-dashboard-ui test-webapp-ui \
@@ -457,6 +457,7 @@ test-pubsub: ## All pub/sub tests.
 _test-pubsub:
 	$(MAKE) test-pubsub-backend 2>&1 | $(TS)
 	$(MAKE) test-pubsub-backend-amqp 2>&1 | $(TS)
+	$(MAKE) test-pubsub-outgoing 2>&1 | $(TS)
 	ruff check \
 		$(CURDIR)/code/tests/python/zato-common/pubsub/ \
 		$(CURDIR)/code/tests/python/zato-common/rabbitmq_/ \
@@ -572,6 +573,34 @@ test-pubsub-backend: ## Pub/sub SQL backend contract tests, no server needed.
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_pubsub_backend_sqlite.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend \
 		-W "ignore:This process:DeprecationWarning" \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+
+test-pubsub-outgoing: ## Publishing to outgoing connections - the naming, the handler registry and delivery through a real server.
+	$(CURDIR)/code/bin/ruff check \
+		$(CURDIR)/code/zato-common/src/zato/common/pubsub/outgoing.py \
+		$(CURDIR)/code/zato-common/src/zato/common/test/config_pubsub_outgoing.py \
+		$(CURDIR)/code/zato-server/src/zato/server/connection/outgoing_delivery.py \
+		$(CURDIR)/code/zato-server/src/zato/server/service/internal/pubsub/outgoing.py \
+		$(CURDIR)/code/tests/python/zato-common/pubsub/test_outgoing.py \
+		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/outgoing.py \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_outgoing/
+	pyright \
+		$(CURDIR)/code/zato-common/src/zato/common/pubsub/outgoing.py \
+		$(CURDIR)/code/zato-common/src/zato/common/test/config_pubsub_outgoing.py \
+		$(CURDIR)/code/zato-server/src/zato/server/connection/outgoing_delivery.py \
+		$(CURDIR)/code/zato-server/src/zato/server/service/internal/pubsub/outgoing.py \
+		$(CURDIR)/code/tests/python/zato-common/pubsub/test_outgoing.py \
+		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/outgoing.py \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_outgoing/
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
+		$(CURDIR)/code/tests/python/zato-common/pubsub/test_outgoing.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_outgoing \
+		-W "ignore:This process:DeprecationWarning" \
+		$(FAIL_FAST) $(PYTEST_ARGS)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_outgoing/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_outgoing_live \
+		-W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-pubsub-backend-perf: ## Pub/sub SQL backend performance tests, no server needed - throughput, traffic shapes, the million-message backlog and deep clear-queue.
