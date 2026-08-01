@@ -33,6 +33,11 @@ if 0:
 
 logger = getLogger(__name__)
 
+# How many seconds to wait for a client from the connection's pool. Waiting rather than giving up at once
+# means that two runs over one connection take turns instead of one of them failing, and it also covers
+# the window while the pool is still being filled in after the server starts.
+_pool_block_timeout = 60
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -159,7 +164,7 @@ class SMBConnection:
     def get_info(self, remote_path:'str') -> 'SMBInfo':
 
         # Ask the remote server about the path ..
-        with self.wrapper.client() as client:
+        with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
             client = cast_('SMBClient', client)
             stat_result = client.stat(remote_path)
 
@@ -175,7 +180,7 @@ class SMBConnection:
 
     def exists(self, remote_path:'str') -> 'bool':
 
-        with self.wrapper.client() as client:
+        with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
             client = cast_('SMBClient', client)
             out = client.exists(remote_path)
 
@@ -234,7 +239,7 @@ class SMBConnection:
         out:'smb_info_list' = []
 
         # List the remote directory ..
-        with self.wrapper.client() as client:
+        with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
             client = cast_('SMBClient', client)
             entries = client.scandir(remote_path)
 
@@ -249,7 +254,7 @@ class SMBConnection:
 
     def delete_file(self, remote_path:'str') -> 'None':
 
-        with self.wrapper.client() as client:
+        with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
             client = cast_('SMBClient', client)
             client.remove(remote_path)
 
@@ -257,7 +262,7 @@ class SMBConnection:
 
     def delete_directory(self, remote_path:'str') -> 'None':
 
-        with self.wrapper.client() as client:
+        with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
             client = cast_('SMBClient', client)
             client.rmdir(remote_path)
 
@@ -265,7 +270,7 @@ class SMBConnection:
 
     def create_directory(self, remote_path:'str', exist_ok:'bool'=False) -> 'None':
 
-        with self.wrapper.client() as client:
+        with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
             client = cast_('SMBClient', client)
             client.makedirs(remote_path, exist_ok)
 
@@ -273,7 +278,7 @@ class SMBConnection:
 
     def move(self, from_path:'str', to_path:'str') -> 'None':
 
-        with self.wrapper.client() as client:
+        with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
             client = cast_('SMBClient', client)
             client.rename(from_path, to_path)
 
@@ -283,7 +288,7 @@ class SMBConnection:
 
     def read(self, remote_path:'str') -> 'bytes':
 
-        with self.wrapper.client() as client:
+        with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
             client = cast_('SMBClient', client)
             out = client.read(remote_path)
 
@@ -297,7 +302,7 @@ class SMBConnection:
         if not isinstance(data, bytes):
             data = data.encode(encoding)
 
-        with self.wrapper.client() as client:
+        with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
             client = cast_('SMBClient', client)
             client.write(remote_path, data)
 

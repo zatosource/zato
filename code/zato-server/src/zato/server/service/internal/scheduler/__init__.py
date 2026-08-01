@@ -68,6 +68,13 @@ _opaque_stale_keys = frozenset(_ib_params + (
     'repeats', 'service', 'name', 'is_active', 'job_type', 'start_date', 'extra', 'id', 'cluster_id',
 ))
 
+# What an optional input carries when the caller did not send it at all - none of these
+# may be taken for a value the caller actually asked for.
+_not_sent = ('', None, ZATO_NONE)
+
+# A job nobody said anything about is on
+_default_is_active = True
+
 default_page = 1
 default_page_size = 50
 
@@ -79,6 +86,38 @@ def _item_by_id(items, id_):
         if item['id'] == id_:
             return item
     return None
+
+# ################################################################################################################################
+
+def _keep_what_the_job_already_carries(self:'any_', input:'any_') -> 'None':
+    """ Fills the input of an edit in with what the job already has wherever the caller said nothing.
+    An edit arriving from one screen knows nothing about the fields another screen owns, so a field
+    that was not sent must keep its value rather than be stored empty.
+    """
+    # stdlib
+    from contextlib import closing
+
+    with closing(self.odb.session()) as session:
+        job_row = session.query(Job).filter_by(id=input.id).first()
+
+        # The job may be gone by now, in which case the edit will fail further down anyway
+        if not job_row:
+            return
+
+        existing_is_active = job_row.is_active
+        existing_opaque = parse_instance_opaque_attr(job_row)
+
+    # The optional fields - run timeouts, jitter, timezone and the four hooks
+    for param in _new_params:
+        if input.get(param) in _not_sent:
+            existing_value = existing_opaque.get(param)
+            if existing_value:
+                input[param] = existing_value
+
+    # .. and the switch itself, so that an edit which does not name it never turns a job
+    # .. back on that somebody switched off elsewhere.
+    if input.get('is_active') in _not_sent:
+        input.is_active = existing_is_active
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -211,10 +250,19 @@ def _create_edit(self, action):
         logger.info(msg)
         raise ServiceMissingException(cid, msg)
 
+    # An edit only ever changes what it names - everything the caller left out is read back
+    # from the job before anything else looks at the input.
+    if action == 'edit':
+        _keep_what_the_job_already_carries(self, input)
+
     extra = input.extra
     if extra is None:
         extra = ''
+
     is_active = input.is_active
+    if is_active in _not_sent:
+        is_active = _default_is_active
+
     start_date = parse_datetime(input.start_date)
     start_iso = start_date.isoformat()
 
@@ -391,7 +439,7 @@ def _create_edit(self, action):
                         if link_conn_type in FileTransfer.ConnTypeList:
                             with closing(self.odb.session()) as session:
                                 update_schedule_job_fields(session, link_conn_id, link_kind, run.run_every, run.run_unit,
-                                    start_iso, job_id)
+                                    start_iso, job_id, is_active)
 
                         # .. other connection types describe their linked job in their own opaque fields.
                         else:
@@ -411,7 +459,7 @@ def _create_edit(self, action):
 class _CreateEdit(_SchedulerAdmin):
     """ A base class for both creating and editing scheduler jobs.
     """
-    input = 'cluster_id', 'name', 'is_active', 'job_type', 'service', 'start_date', \
+    input = 'cluster_id', 'name', '-is_active', 'job_type', 'service', 'start_date', \
         Int('-id'), '-extra', '-weeks', '-days', '-hours', '-minutes', '-seconds', '-repeats', \
         '-cron_definition', '-should_ignore_existing', \
         '-jitter_ms', '-timezone', '-max_execution_time_ms', \

@@ -43,7 +43,9 @@ class CrudTests(FileTransferScheduleTestBase):
         schedule_id = response['id']
         job_id = response['job_id']
 
-        assert schedule_id == 'invoices.hourly'
+        # The id is the schedule's own, generated when it was created and unrelated to its name
+        assert schedule_id
+        assert schedule_id != 'invoices.hourly'
 
         # The job exists, is interval-based and points back to its connection
         job = harness.job_of(conn, 'invoices.hourly')
@@ -241,12 +243,12 @@ class CrudTests(FileTransferScheduleTestBase):
         conn = harness.new_conn()
         directory = harness.make_directory()
 
-        _ = harness.client.create_schedule(conn.id, 'switched.off', directory, is_active=False)
+        response = harness.client.create_schedule(conn.id, 'switched.off', directory, is_active=False)
 
         job = harness.job_of(conn, 'switched.off')
         assert not job['is_active']
 
-        schedule = harness.client.require_schedule(conn.id, 'switched.off')
+        schedule = harness.client.require_schedule(conn.id, response['id'])
         assert not schedule['is_active']
 
 # ################################################################################################################################

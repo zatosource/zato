@@ -11,7 +11,7 @@ import time
 from json import loads
 
 # Zato
-from zato.common.api import FileTransfer, GENERIC, SCHEDULER
+from zato.common.api import FileTransfer, GENERIC, LDAP, SCHEDULER
 from zato.common.defaults import default_cluster_id
 from zato.common.typing_ import cast_
 
@@ -40,6 +40,32 @@ Start_Date_Never = '2099-01-01T00:00:00'
 # A generic connection type that carries no file transfer schedules, used by the tests that check
 # what happens when a schedule names a connection of the wrong kind.
 Foreign_Conn_Type = GENERIC.CONNECTION.TYPE.OUTCONN_LDAP
+
+# What an LDAP connection needs on top of the fields every generic connection carries - the server
+# normalizes each of these when the connection is created and none of them has a default there.
+Foreign_Conn_Fields = {
+    'server_list': 'ldap://127.0.0.1:389',
+    'username': 'zato.test.user',
+    'secret': 'zato.test.secret',
+    'auth_type': LDAP.AUTH_TYPE.SIMPLE.id,
+    'sasl_mechanism': LDAP.SASL_MECHANISM.EXTERNAL.id,
+    'get_info': LDAP.GET_INFO.SCHEMA.id,
+    'ip_mode': LDAP.IP_MODE.IP_SYSTEM_DEFAULT.id,
+    'pool_max_cycles': 1,
+    'pool_keep_alive': 30,
+    'pool_ha_strategy': LDAP.POOL_HA_STRATEGY.ROUND_ROBIN.id,
+    'pool_exhaust_timeout': 5,
+    'pool_lifetime': 3600,
+    'pool_size': 1,
+    'connect_timeout': 5,
+    'use_auto_range': True,
+    'use_tls': False,
+    'is_read_only': False,
+    'is_stats_enabled': False,
+    'is_tls_enabled': False,
+    'should_check_names': True,
+    'should_return_empty_attrs': True,
+}
 
 # How long to keep retrying the dispatch service while a newly created connection propagates
 # to the server's connection store, in seconds
@@ -159,11 +185,8 @@ class ScheduleClient:
             'is_channel': False,
             'is_outgoing': True,
             'is_outconn': True,
-            'pool_size': 1,
-            'server_list': 'ldap://127.0.0.1:389',
-            'username': 'zato.test.user',
-            'secret': 'zato.test.secret',
         }
+        request.update(Foreign_Conn_Fields)
 
         response = unwrap(self.client.invoke(f'{Service_Conn}.create', request))
 
@@ -292,6 +315,11 @@ class ScheduleClient:
         request = self.schedule_request(conn_id, name, directory, **extra)
         request['id'] = schedule_id
 
+        # An edit that does not name the switch must not carry one, otherwise it is not the unrelated
+        # edit the tests mean by it - the schedule keeps whatever it and its job already agree on.
+        if 'is_active' not in extra:
+            _ = request.pop('is_active')
+
         out = unwrap(self.client.invoke(f'{Service_Schedule}.edit', request))
         return out
 
@@ -321,6 +349,23 @@ class ScheduleClient:
 
         for schedule in schedules:
             if schedule['id'] == schedule_id:
+                out = schedule
+                break
+        else:
+            out = None
+
+        return out
+
+# ################################################################################################################################
+
+    def get_schedule_by_name(self, conn_id:'int', name:'str') -> 'anydict | None':
+        """ Returns one schedule entry of a connection by the name it carries, or None when there is
+        no such entry - a name is a label, so this is the only way to look one up without its id.
+        """
+        schedules = self.get_schedules(conn_id)
+
+        for schedule in schedules:
+            if schedule['name'] == name:
                 out = schedule
                 break
         else:

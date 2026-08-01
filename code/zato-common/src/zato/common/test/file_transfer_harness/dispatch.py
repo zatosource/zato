@@ -6,9 +6,6 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# pytest
-import pytest
-
 # Zato
 from zato.common.api import FileTransfer
 from zato.common.test.file_transfer_harness.base import FileTransferScheduleTestBase
@@ -189,7 +186,6 @@ class DispatchTests(FileTransferScheduleTestBase):
 
 # ################################################################################################################################
 
-    @pytest.mark.xfail(strict=False, reason='A directory that is not there ends the run with an error')
     def test_missing_directory_is_a_no_op(self, harness:'Harness') -> 'None':
 
         conn = harness.new_conn()

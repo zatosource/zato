@@ -14,9 +14,9 @@ from zato.cli.enmasse.util import preprocess_item
 from zato.common.api import FileTransfer, SCHEDULER, SchedulerLink
 from zato.common.odb.model import GenericConn, Job, to_json
 from zato.common.odb.query.generic import connection_list
-from zato.common.util.file_transfer_scheduler import build_job_extra, get_job_name, schedule_from_yaml
+from zato.common.util.file_transfer_scheduler import build_job_extra, get_job_name, new_schedule_id, schedule_from_yaml
 from zato.common.util.imap_scheduler import interval_from_unit
-from zato.common.util.sql import set_instance_opaque_attrs
+from zato.common.util.sql import parse_instance_opaque_attr, set_instance_opaque_attrs
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -226,6 +226,26 @@ class GenericConnectionImporter:
 
 # ################################################################################################################################
 
+    def _get_schedule_ids_by_name(self, connection:'any_') -> 'anydict':
+        """ Returns the id of each schedule the connection already carries, keyed by its name -
+        the name is what YAML and a stored entry have in common, since the id never travels in YAML.
+        """
+        out:'anydict' = {}
+
+        # A connection being created for the first time carries nothing yet
+        if not connection.id:
+            return out
+
+        opaque = parse_instance_opaque_attr(connection)
+        schedules = opaque.get(FileTransfer.Scheduler.Schedules_Field) or []
+
+        for schedule in schedules:
+            out[schedule['name']] = schedule['id']
+
+        return out
+
+# ################################################################################################################################
+
     def _sync_schedules(self, schedules:'anylist', connection:'any_', session:'SASession') -> 'None':
         """ Creates or updates the scheduler job of each file transfer schedule from YAML,
         deletes the jobs of schedules that the YAML no longer contains and stores
@@ -233,14 +253,25 @@ class GenericConnectionImporter:
         """
         _scheduler = FileTransfer.Scheduler
 
+        # A schedule this connection already has keeps the id it was created with, so the link
+        # its job carries stays valid across re-imports. Anything the YAML has not been seen with
+        # before is new and is given an id of its own.
+        existing_ids = self._get_schedule_ids_by_name(connection)
+
         # The full entries to store with the connection, and the job names the YAML wants to exist
         entries = []
         wanted_job_names = set()
 
         for schedule_def in schedules:
 
+            name = schedule_def['name']
+            schedule_id = existing_ids.get(name)
+
+            if schedule_id is None:
+                schedule_id = new_schedule_id()
+
             # Turn the YAML shape into a full entry with all the defaults filled in
-            entry = schedule_from_yaml(schedule_def)
+            entry = schedule_from_yaml(schedule_def, schedule_id)
 
             # The job invokes the internal dispatch service and its extra data carries
             # the connection's identity along with the schedule itself.

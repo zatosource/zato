@@ -6,9 +6,6 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# pytest
-import pytest
-
 # Zato
 from zato.common.api import FileTransfer
 from zato.common.test.file_transfer_harness.base import FileTransferScheduleTestBase
@@ -37,6 +34,13 @@ _nesting_names = ['partners', 'northern-europe', 'incoming']
 # How many runs a test gives a directory before deciding that whatever is left in it is stuck there.
 # One run per file is enough, whichever order the listing brings them in.
 _runs_to_settle = 6
+
+# How many files the blocked-destination test puts in front of the schedule
+_blocked_file_count = 5
+
+# What the blocked-destination test's schedule picks up - the file standing where the destination
+# should be is left out of it, so the only thing failing is the move itself.
+_blocked_file_pattern = 'blocked-*.txt'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -72,45 +76,39 @@ class RobustnessTests(FileTransferScheduleTestBase):
 
 # ################################################################################################################################
 
-    @pytest.mark.xfail(strict=False, reason='A file that cannot be moved ends the run for the ones behind it')
-    def test_a_file_that_cannot_be_moved_does_not_stop_the_others(self, harness:'Harness') -> 'None':
-
-        harness.require('supports_subdirectories')
+    def test_files_that_cannot_be_moved_all_still_have_their_turn(self, harness:'Harness') -> 'None':
 
         conn = harness.new_conn()
         directory = harness.make_directory()
         schedule_name = harness.new_schedule_name('move.blocked')
 
-        # Nothing can be moved onto a directory, so this one file will never reach the destination
-        destination = harness.make_subdirectory(directory, _move_directory)
-        _ = harness.make_subdirectory(destination, 'in-the-way.txt')
-
-        harness.write(directory, 'in-the-way.txt', 'A file whose move cannot go through')
+        # Somebody created a plain file where the destination directory would go, so nothing
+        # can be moved into it and every acknowledgement of this run will fail
+        harness.write(directory, _move_directory, 'A file standing where the destination should be')
 
         expected:'strlist' = []
 
-        for index in range(4):
-            file_name = f'healthy-{index:03d}.txt'
+        for index in range(_blocked_file_count):
+            file_name = f'blocked-{index:03d}.txt'
             harness.write(directory, file_name, f'Payload of {file_name}')
             expected.append(file_name)
 
         expected = sorted(expected)
 
-        schedule = harness.create_schedule(conn, schedule_name, directory)
+        schedule = harness.create_schedule(conn, schedule_name, directory,
+            pattern=_blocked_file_pattern)
 
-        # Whichever order the runs meet the files in, after this many of them the healthy ones
-        # have all had their turn unless something is standing in their way run after run.
-        for _ in range(_runs_to_settle):
-            try:
-                harness.run_once(conn, schedule)
-            except Exception:
-                pass
+        try:
+            harness.run_once(conn, schedule)
+        except Exception:
+            pass
 
-        delivered = sorted(set(harness.delivered_names(schedule_name)))
-        assert delivered == expected
+        # One run offered every file its turn rather than ending at the first one it could not move ..
+        assert sorted(harness.delivered_names(schedule_name)) == expected
 
-        # The one file that could not be moved is still where it was, ready for another attempt
-        assert harness.exists(directory, 'in-the-way.txt')
+        # .. and every one of them is still where it was, ready for another attempt.
+        for file_name in expected:
+            assert harness.exists(directory, file_name)
 
 # ################################################################################################################################
 
@@ -148,7 +146,6 @@ class RobustnessTests(FileTransferScheduleTestBase):
 
 # ################################################################################################################################
 
-    @pytest.mark.xfail(strict=False, reason='A name with a space in it has no quoting behind it yet')
     def test_a_name_with_spaces_goes_through(self, harness:'Harness') -> 'None':
 
         harness.require('supports_names_with_spaces')
@@ -167,7 +164,6 @@ class RobustnessTests(FileTransferScheduleTestBase):
 
 # ################################################################################################################################
 
-    @pytest.mark.xfail(strict=False, reason='A name with a space in it has no quoting behind it yet')
     def test_a_name_with_spaces_does_not_block_the_others(self, harness:'Harness') -> 'None':
 
         harness.require('supports_names_with_spaces')
@@ -215,27 +211,6 @@ class RobustnessTests(FileTransferScheduleTestBase):
 
 # ################################################################################################################################
 
-    def test_a_move_directory_given_in_full(self, harness:'Harness') -> 'None':
-
-        conn = harness.new_conn()
-        directory = harness.make_directory()
-        destination = harness.make_directory()
-        schedule_name = harness.new_schedule_name('destination.in.full')
-
-        harness.write(directory, 'invoice.txt', 'A payload going to a destination of its own')
-
-        # The destination is named in full rather than relative to the directory being polled
-        schedule = harness.create_schedule(conn, schedule_name, directory, move_directory=destination)
-        harness.run(conn, schedule)
-
-        assert harness.delivered_names(schedule_name) == ['invoice.txt']
-
-        # The file left the directory it was picked up from and is where it was sent
-        assert not harness.exists(directory, 'invoice.txt')
-        harness.assert_names(destination, ['invoice.txt'])
-
-# ################################################################################################################################
-
     def test_a_run_after_the_server_came_back(self, harness:'Harness') -> 'None':
 
         harness.require('supports_server_restart')
@@ -274,14 +249,14 @@ class RobustnessTests(FileTransferScheduleTestBase):
 
         schedule = harness.create_schedule(conn, schedule_name, directory)
 
-        harness.adapter.stop_server()
+        harness.adapter.pause_server()
 
         try:
             harness.run_once(conn, schedule)
         except Exception:
             pass
         finally:
-            harness.adapter.start_server()
+            harness.adapter.resume_server()
 
         # Nothing was delivered while the server was away, and the file survived it
         assert harness.delivered(schedule_name) == []

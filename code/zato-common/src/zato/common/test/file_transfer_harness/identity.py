@@ -44,6 +44,9 @@ _job_timeout_ms = 90_000
 # How far from now the last modification time of a file just written may be, in seconds
 _last_modified_tolerance = 600
 
+# A move destination named in full rather than relative to the directory being polled
+_destination_in_full = '/tmp/zato-file-transfer-destination-in-full'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -51,7 +54,6 @@ class IdentityTests(FileTransferScheduleTestBase):
     """ How a schedule is named, what its id then is, and what a schedule and its job do to each other's fields.
     """
 
-    @pytest.mark.xfail(strict=False, reason='Names differing only in punctuation share one id')
     def test_names_that_slug_alike_are_told_apart(self, harness:'Harness') -> 'None':
 
         conn = harness.new_conn()
@@ -66,7 +68,6 @@ class IdentityTests(FileTransferScheduleTestBase):
 
 # ################################################################################################################################
 
-    @pytest.mark.xfail(strict=False, reason='A name of no ASCII letters is left with an empty id')
     def test_names_of_non_ascii_letters_are_told_apart(self, harness:'Harness') -> 'None':
 
         conn = harness.new_conn()
@@ -90,7 +91,6 @@ class IdentityTests(FileTransferScheduleTestBase):
 
 # ################################################################################################################################
 
-    @pytest.mark.xfail(strict=False, reason='A renamed schedule keeps the id its first name gave it')
     def test_a_renamed_schedule_frees_its_old_name(self, harness:'Harness') -> 'None':
 
         conn = harness.new_conn()
@@ -167,11 +167,10 @@ class IdentityTests(FileTransferScheduleTestBase):
             _ = harness.client.create_schedule(conn.id, 'already.taken', directory)
 
         # The schedule that could not have a job of its own was not left behind either
-        assert harness.client.get_schedule(conn.id, 'already.taken') is None
+        assert harness.client.get_schedule_by_name(conn.id, 'already.taken') is None
 
 # ################################################################################################################################
 
-    @pytest.mark.xfail(strict=False, reason='A schedule edit rebuilds its job from the schedule alone')
     def test_a_schedule_edit_keeps_what_the_job_carries(self, harness:'Harness') -> 'None':
 
         conn = harness.new_conn()
@@ -195,7 +194,6 @@ class IdentityTests(FileTransferScheduleTestBase):
 
 # ################################################################################################################################
 
-    @pytest.mark.xfail(strict=False, reason='A job switched off in the scheduler is switched back on by a schedule edit')
     def test_a_job_switched_off_stays_off(self, harness:'Harness') -> 'None':
 
         conn = harness.new_conn()
@@ -218,7 +216,6 @@ class IdentityTests(FileTransferScheduleTestBase):
 
 # ################################################################################################################################
 
-    @pytest.mark.xfail(strict=False, reason='Two schedules created at once read and write one list of schedules')
     def test_schedules_created_at_the_same_time_all_survive(self, harness:'Harness') -> 'None':
 
         conn = harness.new_conn()
@@ -250,7 +247,6 @@ class IdentityTests(FileTransferScheduleTestBase):
 
 # ################################################################################################################################
 
-    @pytest.mark.xfail(strict=False, reason='A destination that points back at the directory is not refused yet')
     def test_a_destination_pointing_at_the_directory_is_refused(self, harness:'Harness') -> 'None':
 
         conn = harness.new_conn()
@@ -262,7 +258,6 @@ class IdentityTests(FileTransferScheduleTestBase):
 
 # ################################################################################################################################
 
-    @pytest.mark.xfail(strict=False, reason='A destination pointing upwards is not refused yet')
     def test_a_destination_pointing_upwards_is_refused(self, harness:'Harness') -> 'None':
 
         conn = harness.new_conn()
@@ -270,6 +265,19 @@ class IdentityTests(FileTransferScheduleTestBase):
 
         with pytest.raises(Exception):
             _ = harness.client.create_schedule(conn.id, 'destination.is.upwards', directory, move_directory='..')
+
+# ################################################################################################################################
+
+    def test_a_destination_named_in_full_is_refused(self, harness:'Harness') -> 'None':
+
+        conn = harness.new_conn()
+        directory = harness.make_directory()
+
+        # A destination is always relative to the directory being polled, so a path of its own
+        # names nowhere the schedule could put anything
+        with pytest.raises(Exception):
+            _ = harness.client.create_schedule(conn.id, 'destination.in.full', directory,
+                move_directory=_destination_in_full)
 
 # ################################################################################################################################
 
@@ -319,8 +327,10 @@ class IdentityTests(FileTransferScheduleTestBase):
         # The file was written moments ago, so its modification time must say so
         parsed = datetime.fromisoformat(last_modified)
 
+        # A protocol that reports a modification time without a timezone reports it in the one
+        # the remote side keeps, which for a test server on this machine is this machine's own.
         if parsed.tzinfo is None:
-            parsed = parsed.replace(tzinfo=timezone.utc)
+            parsed = parsed.astimezone()
 
         now = datetime.now(timezone.utc)
         distance = abs(now - parsed)

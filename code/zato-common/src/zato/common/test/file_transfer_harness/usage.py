@@ -105,7 +105,6 @@ class UsageTests(FileTransferScheduleTestBase):
 
 # ################################################################################################################################
 
-    @pytest.mark.xfail(strict=False, reason='A file name that arrives twice has no destination of its own yet')
     def test_the_same_file_name_arriving_twice_keeps_both(self, harness:'Harness') -> 'None':
 
         conn = harness.new_conn()

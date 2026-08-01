@@ -8,7 +8,9 @@ fixture and one subclass per test module. Nothing in the harness changes.
 
 Write `zato/common/test/file_transfer_harness/<protocol>_adapter.py` with a subclass of `FileTransferAdapter`.
 If the test server serves a directory on the machine running the tests, mix in `LocalBackedRemote` as well
-and only two of the inspection methods below are left to write.
+and only two of the inspection methods below are left to write. The mixin goes first in the base list,
+`class SFTPAdapter(LocalBackedRemote, FileTransferAdapter)`, so that what it supplies wins over the
+declarations of the base class.
 
 ### Identity and timing
 
@@ -37,11 +39,14 @@ does not have.
 
 ### Methods
 
-Server lifecycle, called by the session fixture.
+Server lifecycle. The first two are called by the session fixture, the rest by the tests that need
+the remote side to go away.
 
 - `start_server`
-- `stop_server`
-- `restart_server`
+- `stop_server` - ends the suite for this protocol and removes everything the server used
+- `restart_server` - the server goes away and comes straight back, dropping every open session
+- `pause_server` - the server goes away and stays away, keeping everything it serves
+- `resume_server` - a paused server comes back exactly as it was
 
 The protocol-specific half of the connection requests.
 

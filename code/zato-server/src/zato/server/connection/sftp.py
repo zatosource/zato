@@ -31,6 +31,11 @@ if 0:
 
 logger = getLogger(__name__)
 
+# How many seconds to wait for a client from the connection's pool. Waiting rather than giving up at once
+# means that two runs over one connection take turns instead of one of them failing, and it also covers
+# the window while the pool is still being filled in after the server starts.
+_pool_block_timeout = 60
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -57,6 +62,19 @@ def get_entry_type(prefix:'str') -> 'str':
     if not out:
         out = EntryType.other
 
+    return out
+
+# ################################################################################################################################
+
+def quote_path(path:'str') -> 'str':
+    """ Returns a path in the shape a batch line accepts it. An unquoted name with a space in it
+    would become several arguments, so every path is quoted, and a name carrying a quote
+    or a backslash of its own has it escaped first.
+    """
+    escaped = path.replace('\\', '\\\\')
+    escaped = escaped.replace('"', '\\"')
+
+    out = f'"{escaped}"'
     return out
 
 # ################################################################################################################################
@@ -172,8 +190,8 @@ class SFTPConnection:
         if log_level > 0:
             logger.info('Executing cid:`%s` `%s`', self.cid, data)
 
-        # Run the command(s) using a client from the wrapper's queue ..
-        with self.wrapper.client() as client:
+        # Run the command(s) using a client from the wrapper's queue, waiting for one if they are all busy ..
+        with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
             out = client.execute(self.cid, data, log_level) # type: SFTPOutput
 
         if log_level > 0:
@@ -286,49 +304,13 @@ class SFTPConnection:
         # Move to other entries now
         line = line[10:].strip()
 
-        # Ignore hardlinks / directory entries
-        line_parts = line.split(' ', 1)
-
-        # The first part are the very ignored hardlinks and directory entries
-        line = line_parts[1]
-
-        # The next entry is owner
-        line_parts = line.split(' ', 1)
-        owner = line_parts[0]
-
-        # The next entry is group name
-        line = line_parts[1].strip()
-        line_parts = line.split(' ', 1)
-        group = line_parts[0]
-
-        # Next is the entry size
-        line = line_parts[1].strip()
-        line_parts = line.split(' ', 1)
-        size = line_parts[0]
-
-        # Split by whitespace into individual elements
-        line = line_parts[1].strip()
-        line_parts = line.split(' ', 4)
-
-        elems = []
-        for elem in line_parts:
-            if elem.strip():
-                elems.append(elem)
-
-        # Next two tokens are modification date, but only its month and day will be known here
-        month = elems[0]
-        day = elems[1]
-
-        elems = elems[2:]
-
-        # Next token is either year or hour:minute
-        year_time_info = elems[0]
+        # Everything up to the timestamp is a single token separated by runs of spaces whose width
+        # depends on the values themselves. The name is what follows the timestamp, all of it, because
+        # a name may hold spaces of its own and taking only the next token would truncate it.
+        _, owner, group, size, month, day, year_time_info, name = line.split(maxsplit=7)
 
         # We can now combine all date elements to build a full modification time
         last_modified = self._build_last_modified(month, day, year_time_info)
-
-        # Anything left must be our entry name
-        name = elems[1].strip()
 
         # Populate everything before returning ..
         out.type = entry_type
@@ -401,7 +383,7 @@ class SFTPConnection:
         else:
             options = '-l'
 
-        result = self.execute('ls {} {}'.format(options, remote_path), log_level, raise_on_error)
+        result = self.execute('ls {} {}'.format(options, quote_path(remote_path)), log_level, raise_on_error)
 
         if result.stdout:
             out = self._parse_ls_output(result.stdout)
@@ -429,7 +411,7 @@ class SFTPConnection:
     def exists(self, remote_path:'str', log_level:'int'=0) -> 'bool':
 
         # The is_ok flag will be True only if the remote path points to an existing file or directory
-        result = self.execute('ls {}'.format(remote_path), log_level, raise_on_error=False)
+        result = self.execute('ls {}'.format(quote_path(remote_path)), log_level, raise_on_error=False)
 
         out = result.is_ok
         return out
@@ -506,7 +488,7 @@ class SFTPConnection:
         else:
             command = 'rm'
 
-        out = self.execute('{} {}'.format(command, remote_path), log_level)
+        out = self.execute('{} {}'.format(command, quote_path(remote_path)), log_level)
         return out
 
 # ################################################################################################################################
@@ -553,42 +535,42 @@ class SFTPConnection:
 
     def chmod(self, mode:'str', remote_path:'str', log_level:'int'=0) -> 'SFTPOutput':
 
-        out = self.execute('chmod {} {}'.format(mode, remote_path), log_level)
+        out = self.execute('chmod {} {}'.format(mode, quote_path(remote_path)), log_level)
         return out
 
 # ################################################################################################################################
 
     def chown(self, owner:'str', remote_path:'str', log_level:'int'=0) -> 'SFTPOutput':
 
-        out = self.execute('chown {} {}'.format(owner, remote_path), log_level)
+        out = self.execute('chown {} {}'.format(owner, quote_path(remote_path)), log_level)
         return out
 
 # ################################################################################################################################
 
     def chgrp(self, group:'str', remote_path:'str', log_level:'int'=0) -> 'SFTPOutput':
 
-        out = self.execute('chgrp {} {}'.format(group, remote_path), log_level)
+        out = self.execute('chgrp {} {}'.format(group, quote_path(remote_path)), log_level)
         return out
 
 # ################################################################################################################################
 
     def create_symlink(self, from_path:'str', to_path:'str', log_level:'int'=0) -> 'SFTPOutput':
 
-        out = self.execute('ln -s {} {}'.format(from_path, to_path), log_level)
+        out = self.execute('ln -s {} {}'.format(quote_path(from_path), quote_path(to_path)), log_level)
         return out
 
 # ################################################################################################################################
 
     def create_hardlink(self, from_path:'str', to_path:'str', log_level:'int'=0) -> 'SFTPOutput':
 
-        out = self.execute('ln {} {}'.format(from_path, to_path), log_level)
+        out = self.execute('ln {} {}'.format(quote_path(from_path), quote_path(to_path)), log_level)
         return out
 
 # ################################################################################################################################
 
     def create_directory(self, remote_path:'str', log_level:'int'=0) -> 'SFTPOutput':
 
-        out = self.execute('mkdir {}'.format(remote_path), log_level)
+        out = self.execute('mkdir {}'.format(quote_path(remote_path)), log_level)
         return out
 
 # ################################################################################################################################
@@ -602,7 +584,7 @@ class SFTPConnection:
 
     def move(self, from_path:'str', to_path:'str', log_level:'int'=0) -> 'SFTPOutput':
 
-        out = self.execute('rename {} {}'.format(from_path, to_path), log_level)
+        out = self.execute('rename {} {}'.format(quote_path(from_path), quote_path(to_path)), log_level)
         return out
 
     rename = move
@@ -627,7 +609,7 @@ class SFTPConnection:
         else:
             options = ''
 
-        out = self.execute('get{} {} {}'.format(options, remote_path, local_path), log_level)
+        out = self.execute('get{} {} {}'.format(options, quote_path(remote_path), quote_path(local_path)), log_level)
         return out
 
 # ################################################################################################################################
@@ -687,7 +669,7 @@ class SFTPConnection:
         else:
             options = ''
 
-        out = self.execute('put{} {} {}'.format(options, local_path, remote_path), log_level)
+        out = self.execute('put{} {} {}'.format(options, quote_path(local_path), quote_path(remote_path)), log_level)
         return out
 
 # ################################################################################################################################
