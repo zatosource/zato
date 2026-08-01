@@ -27,6 +27,7 @@ from zato.common.soap.envelope import attach_body, build_envelope, build_fault, 
 from zato.common.soap.message import SOAPMessage
 from zato.common.soap.mtom import build_mtom, build_swa, parse_message, to_bytes_map
 from zato.common.soap.security.wss import enforce_wss
+from zato.common.util.xml_.core import XMLException
 from zato.common.util.xml_.mime_ import new_content_id, Part
 
 # ################################################################################################################################
@@ -98,7 +99,7 @@ class _Handler(BaseHTTPRequestHandler):
             record['body'] = parse_body(envelope, parts_map)
 
         # A non-SOAP body is recorded as-is, which is enough for the ping and error paths.
-        except (SOAPException, etree.XMLSyntaxError):
+        except (SOAPException, XMLException, etree.XMLSyntaxError):
             pass
 
         return record

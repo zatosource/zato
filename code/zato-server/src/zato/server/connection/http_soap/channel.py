@@ -438,11 +438,12 @@ class RequestDispatcher:
                 self.check_security_via_groups(cid, channel_item['name'], security_groups_ctx, wsgi_environ)
 
             # .. a channel protected by groups alone, whose groups have no members, has no credentials
-            # .. to check the caller against, so no caller passes ..
+            # .. to check the caller against, so no caller passes - this is the same default deny
+            # .. that check_security_via_groups applies when a credential does not match ..
             elif not has_sec_def:
                 logger.warning('Channel `%s` is protected by security groups that have no members, cid:`%s`',
                     channel_item['name'], cid)
-                raise Unauthorized(cid, '401 Unauthorized', None)
+                raise Forbidden(cid)
 
 # ################################################################################################################################
 
