@@ -164,6 +164,26 @@ class SFTPTestServer:
 
 # ################################################################################################################################
 
+    def _start_process(self) -> 'None':
+
+        # The server runs in the foreground, as the current user, with no root or systemd needed -
+        # note that its output must be discarded rather than piped because nothing ever reads the pipes,
+        # and once a full pipe buffer blocked sshd mid-handshake, every client would hang forever.
+        self.sshd = Popen([_sshd_binary, '-D', '-e', '-f', self.config_path], stdout=DEVNULL, stderr=DEVNULL)
+
+        self._wait_until_accepting_connections()
+
+# ################################################################################################################################
+
+    def _stop_process(self) -> 'None':
+
+        if self.sshd:
+            self.sshd.terminate()
+            _ = self.sshd.wait()
+            self.sshd = None
+
+# ################################################################################################################################
+
     def start(self) -> 'None':
 
         # Generate the host key ..
@@ -179,25 +199,27 @@ class SFTPTestServer:
         # .. write out the server's configuration ..
         self._write_config()
 
-        # .. start the server in the foreground, as the current user, with no root or systemd needed -
-        # .. note that its output must be discarded rather than piped because nothing ever reads the pipes,
-        # .. and once a full pipe buffer blocked sshd mid-handshake, every client would hang forever ..
-        self.sshd = Popen([_sshd_binary, '-D', '-e', '-f', self.config_path], stdout=DEVNULL, stderr=DEVNULL)
-
-        # .. and wait until it accepts connections.
-        self._wait_until_accepting_connections()
+        # .. and start the server, waiting until it accepts connections.
+        self._start_process()
 
         logger.info('Test SSH server started on %s:%s (%s)', self.host, self.port, self.base_dir)
+
+# ################################################################################################################################
+
+    def restart(self) -> 'None':
+        """ Stops the server and starts it again on the same port, with the same keys and the same files.
+        """
+        self._stop_process()
+        self._start_process()
+
+        logger.info('Test SSH server restarted on %s:%s (%s)', self.host, self.port, self.base_dir)
 
 # ################################################################################################################################
 
     def stop(self) -> 'None':
 
         # Stop the server first ..
-        if self.sshd:
-            self.sshd.terminate()
-            _ = self.sshd.wait()
-            self.sshd = None
+        self._stop_process()
 
         # .. and only then delete everything it used.
         rmtree(self.base_dir, ignore_errors=True)

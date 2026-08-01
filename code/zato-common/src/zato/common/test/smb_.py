@@ -84,7 +84,7 @@ class SMBTestServer:
 
 # ################################################################################################################################
 
-    def start(self) -> 'None':
+    def _start_server(self) -> 'None':
 
         # Build the server object ..
         self.server = SimpleSMBServer(listenAddress=self.host, listenPort=self.port)
@@ -111,22 +111,46 @@ class SMBTestServer:
         # .. and wait until it accepts connections.
         self._wait_until_accepting_connections()
 
-        logger.info('Test SMB server started on %s:%s (%s)', self.host, self.port, self.files_dir)
-
 # ################################################################################################################################
 
-    def stop(self) -> 'None':
+    def _stop_server(self) -> 'None':
 
-        # Stop the server first - shutdown ends the serve_forever loop and stop closes the listening socket ..
+        # Shutdown ends the serve_forever loop and stop closes the listening socket ..
         if self.server:
             self.server.getServer().shutdown()
             self.server.stop()
             self.server = None
 
-        # .. wait for its thread to finish ..
+        # .. and then its thread has nothing left to do.
         if self.server_thread:
             self.server_thread.join(timeout=_start_timeout)
             self.server_thread = None
+
+# ################################################################################################################################
+
+    def start(self) -> 'None':
+
+        self._start_server()
+
+        logger.info('Test SMB server started on %s:%s (%s)', self.host, self.port, self.files_dir)
+
+# ################################################################################################################################
+
+    def restart(self) -> 'None':
+        """ Stops the server and starts it again on the same port, keeping the files of its share
+        and dropping every session a client had open.
+        """
+        self._stop_server()
+        self._start_server()
+
+        logger.info('Test SMB server restarted on %s:%s (%s)', self.host, self.port, self.files_dir)
+
+# ################################################################################################################################
+
+    def stop(self) -> 'None':
+
+        # Stop the server first ..
+        self._stop_server()
 
         # .. and only then delete everything it used.
         rmtree(self.files_dir, ignore_errors=True)

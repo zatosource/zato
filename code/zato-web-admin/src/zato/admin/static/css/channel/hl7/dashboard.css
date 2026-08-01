@@ -1,0 +1,18 @@
+/*
+ * HL7 channel dashboard.
+ *
+ * The page has a single Channels card, so the shared two-column grid
+ * of the dashboard kit is collapsed to one full-width column.
+ */
+
+/* ------------------------------------------------------------ */
+/* HL7 dashboard - layout overrides                              */
+/* ------------------------------------------------------------ */
+
+.dashboard-grid-section {
+    grid-template-columns: 1fr;
+}
+
+.dashboard-grid-section .dashboard-card {
+    max-height: none;
+}
