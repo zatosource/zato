@@ -25,7 +25,7 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.test.client import AdminClient
 from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
 from zato.common.test.file_transfer_harness.deliveries import build_test_services_source
-from zato.common.test.file_transfer_harness.sftp_adapter import Key_Env_Name, SFTPAdapter
+from zato.common.test.file_transfer_harness.sftp_adapter import SFTPAdapter
 from zato.common.test.file_transfer_harness.smb_adapter import SMBAdapter
 from zato.common.util.tcp import get_free_port
 
@@ -43,8 +43,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The SFTP client key's path must be known before the Zato server starts because the server receives it
-# through an environment variable, while the key itself is written out only once the test SSH server runs.
+# The SFTP client key's path must be known before any connection is created because the connections
+# carry it themselves, while the key is written out only once the test SSH server runs.
 _key_directory = tempfile.mkdtemp(prefix='zato_file_transfer_key_')
 _key_path = os.path.join(_key_directory, 'client-key')
 
@@ -122,7 +122,6 @@ zato_server = create_zato_server_fixture(
     template_path='',
     quickstart_prefix='zato_file_transfer_qs_',
     extra_server_env={
-        Key_Env_Name: _key_path,
 
         # The server must talk to this suite's private scheduler, not to any other one
         'Zato_Scheduler_Stream_Prefix': _scheduler_stream_prefix,

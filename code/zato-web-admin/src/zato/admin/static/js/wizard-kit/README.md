@@ -4,9 +4,10 @@ A config-driven framework for multi-step wizard pages, following the dashboard k
 
 A wizard page is one dashboard card holding a step strip, one body per step, a review on the last step and a footer with Back, Next and Cancel. The rendered Django form is the single source of every field's value - whatever the wizard shows on its steps reads from and writes back into the form, so the payload posted on Finish is exactly what the matching full-page editor would post.
 
-Two instances exist today:
+Three instances exist today:
 
 - the HL7 MLLP channel wizard - `static/js/channel/hl7/mllp-wizard/`
+- the HL7 MLLP outgoing connection wizard - `static/js/outgoing/hl7/mllp-wizard/`
 - the file transfer schedule wizard for SFTP and SMB - `static/js/outgoing/file-transfer-schedule-wizard.js`
 
 ## Modules
@@ -20,6 +21,7 @@ Two instances exist today:
 | `select-rows.js` | `kit.selectRows` | A column of rows, each with its own selects and a delete link, plus the add link under the list |
 | `lines.js` | `kit.lines` | Decision lines - a step body written as sentences, each line one label and one value, the value a chip opening a panel or a strip of options |
 | `collapse.js` | `kit.collapse` | Collapsibles - a section folded behind one line of the step, and the groups a section or a card folds inside itself |
+| `probe.js` | `kit.probe` | The live check - a button that posts what has been filled in so far to an endpoint and paints the verdict, before anything is saved |
 
 An instance uses whichever modules its config declares - MLLP uses toggle rows and popovers, the schedule wizard uses choice cards and the context badge, both use the name badge, the help badges and the review renderer from the same code.
 
@@ -55,7 +57,7 @@ The page then calls `wizard.init({list_url: ...})` when the DOM is ready.
 | `idPrefix` | Every element id on the page starts with it, see the element contract below |
 | `formSelector` | The form that Finish posts |
 | `stepCount` | How many steps the wizard has |
-| `fieldPrefix` | Optional, in front of Django field ids, e.g. `edit-` - this is how one template serves both create and edit |
+| `fieldPrefix` | Optional, in front of Django field ids, e.g. `edit-` - this is how one template serves both create and edit. The MLLP outgoing connection wizard is the instance that uses it, its edit endpoint reading `edit-` prefixed names |
 | `nameField` | The field the header badge mirrors, `name` by default |
 | `requiredFields` | Fields that must not be empty on submit |
 | `helpRowSelector` | Optional, the rows the page-wide "How does it work?" badge walks through |
@@ -65,7 +67,7 @@ The page then calls `wizard.init({list_url: ...})` when the DOM is ready.
 | `finishLabel` | Optional, what the button on the last step says - named after the action the wizard ends in, `Create` or `Edit` |
 | `savedMessage`, `saveErrorMessage`, `redirectDelayMs`, `nextLabel` | Optional, the defaults in `kit.core.defaults` cover them |
 
-`core.setup` installs on the namespace: `config`, `state`, `field`, `init`, `goToStep`, `save`, `updateNameBadge`, `initNameBadge`, `onNameCheckResult`. The `wizard.field(name)` accessor resolves `#id_<fieldPrefix><name>` and is the one way into the rendered Django form.
+`core.setup` installs on the namespace: `config`, `state`, `field`, `fieldSelector`, `init`, `goToStep`, `save`, `updateNameBadge`, `initNameBadge`, `onNameCheckResult`. The `wizard.field(name)` accessor resolves `#id_<fieldPrefix><name>` and is the one way into the rendered Django form. `wizard.fieldSelector(name)` returns the same id as a selector string, which is what the shared helpers that mark a field required or check it for uniqueness take - everything inside the kit goes through one of the two, so a prefixed instance is prefixed everywhere.
 
 ## Element contract
 
@@ -163,6 +165,24 @@ A group is folded behind its own heading with a chevron, and groups sit inside a
 
 Both hide with the `hidden` attribute rather than with a height that animates - a body sliding out of something that is itself sliding open is what makes an opening jerk. The spacing, the indent under a heading and the chevron are the kit's, so an instance writes only what its own body holds.
 
+## The live check
+
+Some answers can be proven right there and then. A probe is one button and one verdict beside it - it posts the named fields of the rendered Django form to an endpoint of the instance's choosing and paints what comes back:
+
+```javascript
+$.fn.zato.wizard_kit.probe.init(wizard, {
+    slotId: 'mllp-outconn-wizard-slot-check',
+    buttonId: 'mllp-outconn-wizard-check',
+    endpoint: '/zato/outgoing/hl7/mllp/wizard/test/?cluster=1',
+    fields: ['address', 'start_seq', 'end_seq', 'recv_timeout'],
+    runLabel: 'Test the connection'
+});
+```
+
+The template holds the row and its label, the label pointing at `buttonId` so the check is a regular "How does it work?" stop, and the kit fills the slot. Nothing is stored, so a probe works on the first step of a wizard that has never saved - which is the point of it, a reader finding out that an address is wrong before creating anything rather than after.
+
+The endpoint answers with `{is_ok, summary}`. What the one line says is the instance's own view's business, the kit only decides how it looks - green for the answer that came back, red for the one that did not. A probe that has not been run yet says nothing at all, so a step only walked through never reads as a failure. `init` returns a handle with `reset()`, for an instance clearing the verdict once an answer the check was about has changed.
+
 ## Review groups
 
 The review step renders from a list of groups - each group is `{label, step, rows}`, each row a `[key, value]` pair. The value is usually text but may also be a ready DOM Node, e.g. a badge. Each group carries an Edit link that goes to the step the answers came from.
@@ -198,7 +218,7 @@ Clicks inside the unfolded body do not re-select, so typing into the card's own 
 
 ## CSS
 
-The shared stylesheet is `static/css/shared/wizard-kit.css` - the card, the step strip, the badges, the name row, sections, toggle rows, select rows, the service picker, option cards, choice cards, the review, the popover micro-forms (tippy theme `wizard`), the footer and the status area. The decision lines have one of their own, `static/css/shared/wizard-lines.css` - the lines, the chips, the options strip and the panels, including how a badge picker sits inside a panel. An instance stylesheet adds only what is truly its own, e.g. the MLLP tolerance grid.
+The shared stylesheet is `static/css/shared/wizard-kit.css` - the card, the step strip, the badges, the name row, sections, toggle rows, select rows, the service picker, option cards, choice cards, the review, the popover micro-forms (tippy theme `wizard`), the live check, the footer and the status area. The decision lines have one of their own, `static/css/shared/wizard-lines.css` - the lines, the chips, the options strip and the panels, including how a badge picker sits inside a panel. An instance stylesheet adds only what is truly its own, e.g. the MLLP tolerance grid.
 
 Parameterization runs through the `--wizard-*` tokens, declared with defaults on `:root` because the popover micro-forms are appended to `document.body`, outside any page container. An instance recolors itself by overriding the tokens in its own stylesheet, also on `:root`, since one page carries one wizard.
 

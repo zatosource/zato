@@ -16,6 +16,7 @@ import pytest
 from hl7_client import java_client
 from hl7_client.mllp_receiver import MLLPReceiver
 from mllp_channel import send_python, wait_for_item, wait_for_port, wait_until_routed, Host
+from mllp_outconn import create_outgoing_connection, delete_outgoing_connection
 from zato.common.crypto.api import CryptoManager
 
 # ################################################################################################################################
@@ -30,7 +31,6 @@ if 0:
 # ################################################################################################################################
 
 _Page_Url_Pattern = '/zato/channel/hl7/mllp/?cluster=1&type_=channel-hl7-mllp'
-_Outgoing_Url_Pattern = '/zato/outgoing/hl7/mllp/?cluster=1&type_=outconn-hl7-mllp'
 
 _Test_Name_Prefix = 'test.mllp.wizard.' + CryptoManager.generate_hex_string(32) + '.'
 
@@ -53,46 +53,6 @@ def _navigate_to_mllp(page:'Page', base_url:'str') -> 'None':
     """
     _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
     _ = page.wait_for_selector('#data-table', state='visible')
-
-# ################################################################################################################################
-
-def _navigate_to_outgoing_mllp(page:'Page', base_url:'str') -> 'None':
-    """ Opens the outgoing HL7 MLLP connections page and waits for the data table.
-    """
-    _ = page.goto(f'{base_url}{_Outgoing_Url_Pattern}')
-    _ = page.wait_for_selector('#data-table', state='visible')
-
-# ################################################################################################################################
-
-def _create_outgoing_connection(page:'Page', base_url:'str', name:'str', address:'str') -> 'None':
-    """ Creates the outgoing MLLP connection a destination of the wizard points at.
-    """
-    _navigate_to_outgoing_mllp(page, base_url)
-
-    page.click('#markup .page_prompt a:has-text("Create a new connection")')
-    _ = page.wait_for_selector('#create-div', state='visible')
-
-    page.fill('#id_name', name)
-    page.fill('#id_address', address)
-
-    page.click('#create-div input[type="submit"]')
-    _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
-
-    _ = page.wait_for_selector(f'#data-table tbody tr:has(td:text-is("{name}"))', state='visible', timeout=5000)
-
-# ################################################################################################################################
-
-def _delete_outgoing_connection(page:'Page', base_url:'str', name:'str') -> 'None':
-    """ Deletes the outgoing MLLP connection the test created.
-    """
-    _navigate_to_outgoing_mllp(page, base_url)
-
-    item_id = _get_item_id(page, name)
-
-    page.evaluate(f'$.fn.zato.outgoing.hl7.mllp.delete_("{item_id}")')
-    _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
-    page.click('#popup_ok')
-    time.sleep(0.5)
 
 # ################################################################################################################################
 
@@ -162,7 +122,7 @@ class TestChannelHL7MLLPWizard:
         # The connection the channel's destination points at has to exist before the wizard
         # opens, so the destinations panel has it to offer
         outconn_name = _Test_Name_Prefix + 'outconn'
-        _create_outgoing_connection(page, base_url, outconn_name, f'{Host}:{receiver.port}')
+        create_outgoing_connection(page, base_url, outconn_name, f'{Host}:{receiver.port}')
 
         _navigate_to_mllp(page, base_url)
 
@@ -282,7 +242,7 @@ class TestChannelHL7MLLPWizard:
         assert row is None, f'Channel "{channel_name}" should be gone after delete'
 
         # Delete the outgoing connection the destination pointed at
-        _delete_outgoing_connection(page, base_url, outconn_name)
+        delete_outgoing_connection(page, base_url, outconn_name)
 
         # The receiver has served its purpose
         receiver.stop()

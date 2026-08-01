@@ -72,7 +72,8 @@
 //      wizard.review.refreshSummaries()- recomputes the card summaries
 //
 // setup(wizard, config) installs on the namespace: config, state, field,
-// init, goToStep, save, updateNameBadge, initNameBadge, onNameCheckResult.
+// fieldSelector, init, goToStep, save, updateNameBadge, initNameBadge,
+// onNameCheckResult.
 // The page then calls wizard.init({list_url: ...}) when the DOM is ready.
 
 (function($) {
@@ -127,10 +128,20 @@ kit.core.setup = function(wizard, config) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+    // Where one field of the rendered Django form is. The shared helpers that
+    // mark a field required or check it for uniqueness take a selector rather
+    // than an element, which is why this is exposed next to wizard.field.
+    wizard.fieldSelector = function(name) {
+        var fieldPrefix = wizard.config.fieldPrefix ? wizard.config.fieldPrefix : '';
+        var out = '#id_' + fieldPrefix + name;
+        return out;
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
     // The one accessor into the rendered Django form
     wizard.field = function(name) {
-        var fieldPrefix = wizard.config.fieldPrefix ? wizard.config.fieldPrefix : '';
-        var out = $('#id_' + fieldPrefix + name);
+        var out = $(wizard.fieldSelector(name));
         return out;
     };
 
@@ -144,7 +155,7 @@ kit.core.setup = function(wizard, config) {
 
         // Mark the fields that must not be empty ..
         for(var fieldIdx = 0; fieldIdx < wizardConfig.requiredFields.length; fieldIdx++) {
-            $.fn.zato.data_table.set_field_required('#id_' + wizardConfig.requiredFields[fieldIdx]);
+            $.fn.zato.data_table.set_field_required(wizard.fieldSelector(wizardConfig.requiredFields[fieldIdx]));
         }
 
         // .. the instance wires its own controls ..
@@ -156,7 +167,7 @@ kit.core.setup = function(wizard, config) {
         // in the header following the checks ..
         if(wizardConfig.nameUnique) {
             var unique = wizardConfig.nameUnique;
-            $.fn.zato.validate_unique('#id_' + wizardConfig.nameField, unique.source, unique.field,
+            $.fn.zato.validate_unique(wizard.fieldSelector(wizardConfig.nameField), unique.source, unique.field,
                 {filter_name: unique.filterName, filter_value: unique.filterValue}, wizard.onNameCheckResult);
         }
 
@@ -203,7 +214,7 @@ kit.core.setup = function(wizard, config) {
         });
 
         // .. the name badge follows the name as the user types ..
-        $('#id_' + wizardConfig.nameField).on('input', function() {
+        wizard.field(wizardConfig.nameField).on('input', function() {
             wizard.state.isNameTaken = false;
             wizard.updateNameBadge();
         });

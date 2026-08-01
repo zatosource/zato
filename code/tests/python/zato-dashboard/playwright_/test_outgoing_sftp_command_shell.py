@@ -151,9 +151,8 @@ def sftp_shell(logged_in_page:'Page', zato_dashboard:'anydict') -> 'any_':
     # An earlier run may have recorded a different key for this same host and port
     forget_host_key(sftp_server.host, sftp_server.port)
 
-    # The zato server was started with an environment variable pointing to this path -
-    # the key itself is copied there only now, with the permissions that ssh requires.
-    sftp_key_env_name = zato_dashboard['sftp_key_env_name']
+    # The connection below points at this path - the key itself is copied there
+    # only now, with the permissions that ssh requires.
     sftp_key_path = zato_dashboard['sftp_key_path']
 
     shutil.copyfile(sftp_server.client_key_encrypted_path, sftp_key_path)
@@ -176,7 +175,7 @@ def sftp_shell(logged_in_page:'Page', zato_dashboard:'anydict') -> 'any_':
             f'{sftp_server.host}:{sftp_server.port}',
             sftp_server.username,
             sftp_server.password,
-            private_key=sftp_key_env_name,
+            private_key=sftp_key_path,
             strict_host_key_checking=False,
         )
 

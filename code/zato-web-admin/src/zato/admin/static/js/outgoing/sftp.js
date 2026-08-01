@@ -39,7 +39,7 @@ $.fn.zato.outgoing.sftp.field_descriptions = {
     'id_address': 'Where the SFTP server listens, as host<br>or host:port, e.g. sftp.example.com:22.',
     'id_username': 'Username to log in to the SFTP server as.<br>Leave empty if the server takes the identity<br>from the private key alone.',
     'id_secret': 'Password for the username above.<br>Leave empty when logging in<br>with a private key instead.',
-    'id_private_key': 'Name of an environment variable that holds<br>the path to the private key file,<br>e.g. Zato_SFTP_Key. Used instead of a password.',
+    'id_private_key': 'Full path to the private key file on the<br>server\'s filesystem, e.g. /opt/zato/keys/id_rsa.<br>Used instead of a password.',
     'id_strict_host_key_checking': 'When on, the server\'s host key must already be<br>in known_hosts or the connection is rejected.<br>Turning it off accepts the keys of new hosts.',
     'id_ignore_host_key_changes': 'When on, host keys are neither checked nor recorded,<br>so a server that regenerated its key still connects.<br>This overrides strict host key checking.',
 };

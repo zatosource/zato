@@ -73,6 +73,14 @@ class HL7MLLPClient:
         """ Sends a framed HL7 message and returns a validated AckResult.
         """
 
+        # A message over the size this connection was configured for is turned away here rather
+        # than put on the wire. The receiving side holds its senders to a bound of its own and
+        # answers one that crosses it by dropping the connection part-way through the frame,
+        # which the sender can only report as the connection having failed.
+        if len(data) > self.max_message_size:
+            raise HL7Exception(
+                f'Message is {len(data)} bytes, over the maximum of {self.max_message_size} for {self.host}:{self.port}')
+
         # Frame the outbound message ..
         framed_message = frame_encode(data, self.start_sequence, self.end_sequence)
 

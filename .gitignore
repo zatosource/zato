@@ -98,7 +98,9 @@ vscode
 # Compiled clients of the MLLP language tests, built on demand from their own sources
 code/tests/python/zato-server/mllp_languages/clients/*/.build/
 
-# The Gradle-built HL7 MLLP client and the Gradle distribution it bootstraps for itself
+# The Gradle-built HL7 MLLP client and listener, and the Gradle distribution they bootstrap
 code/tests/java/hl7-mllp-client/build/
 code/tests/java/hl7-mllp-client/.gradle/
+code/tests/java/hl7-mllp-server/build/
+code/tests/java/hl7-mllp-server/.gradle/
 code/tests/java/.gradle-dist/

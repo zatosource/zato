@@ -53,6 +53,11 @@
        filter rows - reads at this one size */
     --wizard-button-font-size: 11px;
 
+    /* How much room the question on a decision line gets. Every line of a
+       page shares it, so the values line up in a column, and a wizard whose
+       questions are longer sets it higher on its own card. */
+    --wizard-line-label-width: 14.5em;
+
     --wizard-accent: var(--zato-seablue-light2);
     /* What a picked option wears - the lighter of the two dashboard blues,
        so a choice made reads as a choice made and not as an alarm */
@@ -972,6 +977,65 @@ a.wizard-select-delete:hover::before {
     font-size: 12.5px;
     background: rgba(0, 0, 0, 0.045);
     border-radius: 3px;
+}
+
+/* ------------------------------------------------------------ */
+/* Wizard - the live check                                       */
+/* ------------------------------------------------------------ */
+
+/* One button and the verdict beside it. The button reads as a field of
+   the row it sits on rather than as the step's own action, so it stays
+   the quieter of the two and Next keeps the emphasis. The states are
+   spelled out because formalize.css writes a look for every bare
+   button, and a check that changed size on hover would read as a nudge
+   towards pressing it. */
+.wizard-card .wizard-probe-button,
+.wizard-card .wizard-probe-button:hover,
+.wizard-card .wizard-probe-button:focus,
+.wizard-card .wizard-probe-button:active {
+    height: 24px;
+    padding: 0 10px;
+    font-family: inherit;
+    font-size: var(--wizard-button-font-size);
+    font-weight: 400;
+    color: var(--wizard-text-muted);
+    background: #fff;
+    background-image: none;
+    border: 1px solid var(--wizard-border-strong);
+    border-radius: 3px;
+    box-shadow: none;
+    text-shadow: none;
+    outline: none;
+}
+
+.wizard-card .wizard-probe-button:hover {
+    color: var(--wizard-text);
+    border-color: var(--wizard-accent);
+}
+
+/* A check on its way is not pressed again */
+.wizard-card .wizard-probe-button:disabled,
+.wizard-card .wizard-probe-button:disabled:hover {
+    color: var(--wizard-text-faint);
+    border-color: var(--wizard-border);
+    cursor: not-allowed;
+}
+
+/* The verdict shares the row with the button, its color saying which of
+   the two answers came back. Empty until a check has run, which is what
+   keeps a step that was only walked through from reading as a failure. */
+.wizard-probe-result {
+    margin-left: 10px;
+    font-size: 12px;
+    color: var(--wizard-text-muted);
+}
+
+.wizard-probe-ok {
+    color: var(--wizard-done);
+}
+
+.wizard-probe-error {
+    color: var(--wizard-error);
 }
 
 /* ------------------------------------------------------------ */

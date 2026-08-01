@@ -1,0 +1,29 @@
+/*
+ * HL7 MLLP outgoing connection wizard - the multi-step create and edit page.
+ *
+ * Everything the wizard shares with other wizards - the card, the step
+ * strip, the toggle rows, the live check, the review, the footer and the
+ * popover micro-forms - comes from shared/wizard-kit.css. This file holds
+ * only what is MLLP's own.
+ */
+
+/* ------------------------------------------------------------ */
+/* MLLP outconn wizard - the TLS toggle row                      */
+/* ------------------------------------------------------------ */
+
+/* The TLS label sits next to an actual slider and rides one pixel
+   higher than the shared toggle labels */
+.wizard-toggle-label[for="mllp-outconn-wizard-toggle-tls"] {
+    top: -2px;
+}
+
+/* ------------------------------------------------------------ */
+/* MLLP outconn wizard - the decision lines                      */
+/* ------------------------------------------------------------ */
+
+/* Step 02 asks its questions as whole sentences, e.g. "Sending pauses
+   when the endpoint fails", which do not fit the width a line label
+   has by default */
+#mllp-outconn-wizard {
+    --wizard-line-label-width: 19em;
+}

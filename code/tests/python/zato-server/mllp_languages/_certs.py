@@ -66,6 +66,10 @@ Java_Client_Subject_DN = f'CN={Java_Client_Common_Name},O={_Organization_Name}'
 # The alias the client's own key and certificate are stored under in its keystore
 _Java_Keystore_Alias = 'zato-mllp-client'
 
+# The alias the server's own key and certificate are stored under in the key store a JVM listener
+# presents from
+_Server_Keystore_Alias = 'zato-mllp-server'
+
 # How many bits the password protecting the keystore is made of. It is written in hexadecimal so
 # that nothing in it has to be escaped by whichever language reads the store.
 _Store_Password_Bits = 256
@@ -90,8 +94,22 @@ class TestCertificates(NamedTuple):
     # The Java client's own key and certificate, in the form a Java keystore is loaded from
     java_keystore_path: 'str'
 
-    # The password the Java keystore is protected with
+    # The password the Java keystore is protected with, which is also what the server key store
+    # below is protected with, one run having one password
     java_store_password: 'str'
+
+    # The server certificate and its key, each in a file of its own. HAProxy wants the two together
+    # and everything else wants them apart, so both forms are written.
+    server_cert_path: 'str'
+    server_key_path: 'str'
+
+    # The identity a client presents, as the two separate PEM files an outgoing connection names
+    # in its tls_cert_path and tls_key_path
+    client_cert_path: 'str'
+    client_key_path: 'str'
+
+    # The same server certificate and key in the form a JVM loads what it presents from
+    server_keystore_path: 'str'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -122,6 +140,20 @@ def _to_pem(certificate:'x509.Certificate') -> 'bytes':
     """ Renders one certificate in the PEM form every file here is written in.
     """
     out = certificate.public_bytes(serialization.Encoding.PEM)
+    return out
+
+# ################################################################################################################################
+
+def _to_private_pem(key:'RSAPrivateKey') -> 'bytes':
+    """ Renders one private key in the PEM form every reader of a key file here expects. The key is
+    left unencrypted because it lives for the length of one run in a directory of that run's own.
+    """
+    out = key.private_bytes(
+        serialization.Encoding.PEM,
+        serialization.PrivateFormat.TraditionalOpenSSL,
+        serialization.NoEncryption(),
+    )
+
     return out
 
 # ################################################################################################################################
@@ -201,26 +233,45 @@ def generate_certificates(directory:'str') -> 'TestCertificates':
         serialization.BestAvailableEncryption(password_bytes),
     )
 
+    # The same server material a JVM loads what it presents from, which is how HAPI's own listener
+    # terminates TLS - it reads a key store rather than a pair of PEM files
+    server_keystore = serialize_key_and_certificates(
+        _Server_Keystore_Alias.encode('utf8'),
+        server_key,
+        server_cert,
+        [ca_cert],
+        serialization.BestAvailableEncryption(password_bytes),
+    )
+
     out = TestCertificates(
         directory=directory,
         ca_cert_path=os.path.join(directory, 'ca.pem'),
         haproxy_pem_path=os.path.join(directory, 'haproxy.pem'),
         java_keystore_path=os.path.join(directory, 'java-client.p12'),
         java_store_password=java_store_password,
+        server_cert_path=os.path.join(directory, 'server-cert.pem'),
+        server_key_path=os.path.join(directory, 'server-key.pem'),
+        client_cert_path=os.path.join(directory, 'client-cert.pem'),
+        client_key_path=os.path.join(directory, 'client-key.pem'),
+        server_keystore_path=os.path.join(directory, 'java-server.p12'),
     )
 
     _write_bytes(out.ca_cert_path, _to_pem(ca_cert))
 
     # HAProxy reads the certificate and its key out of one file, in that order
-    server_key_pem = server_key.private_bytes(
-        serialization.Encoding.PEM,
-        serialization.PrivateFormat.TraditionalOpenSSL,
-        serialization.NoEncryption(),
-    )
+    server_key_pem = _to_private_pem(server_key)
 
     _write_bytes(out.haproxy_pem_path, _to_pem(server_cert) + server_key_pem)
 
+    # Everything other than HAProxy names the certificate and the key separately
+    _write_bytes(out.server_cert_path, _to_pem(server_cert))
+    _write_bytes(out.server_key_path, server_key_pem)
+
+    _write_bytes(out.client_cert_path, _to_pem(client_cert))
+    _write_bytes(out.client_key_path, _to_private_pem(client_key))
+
     _write_bytes(out.java_keystore_path, java_keystore)
+    _write_bytes(out.server_keystore_path, server_keystore)
 
     return out
 
