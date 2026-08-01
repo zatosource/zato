@@ -14,8 +14,8 @@ from http.client import FOUND, OK
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.playwright_pubsub import create_basic_auth
 
-from openapi_console_lib import console_login, get_spec_response, Console_Login_Path, Path_Diffing, Path_Methods, \
-    Path_Typed, Path_Untyped
+from openapi_console_lib import console_login, console_logout, get_spec_response, Console_Login_Path, Path_Diffing, \
+    Path_Methods, Path_Typed, Path_Untyped
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -65,8 +65,10 @@ class TestOpenAPIConsoleSecurityNoGrants:
         # .. the first sign-in also waits out the propagation of the new definition ..
         console_login(page, console_url, definition['username'], definition['password'])
 
-        # .. and now the sign-in POST itself demonstrably redirects to the console page.
-        _ = page.goto(console_url + Console_Login_Path)
+        # .. and now the sign-in POST itself demonstrably redirects to the console page,
+        # which the session established above must be ended for, because the sign-in page
+        # is served to callers with no identity only ..
+        console_logout(page, console_url)
 
         page.fill('#username', definition['username'])
         page.fill('#password', definition['password'])

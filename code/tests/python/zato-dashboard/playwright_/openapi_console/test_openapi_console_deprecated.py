@@ -73,6 +73,12 @@ class TestOpenAPIConsoleDeprecated:
 
         def has_regular_operation(spec:'anydict') -> 'bool':
             paths = spec['paths']
+
+            # The document is rebuilt after each Dashboard change, so the endpoint
+            # is briefly absent while the change propagates.
+            if Path_Typed not in paths:
+                return False
+
             path_item = paths[Path_Typed]
             operation = path_item['post']
 
@@ -91,10 +97,19 @@ class TestOpenAPIConsoleDeprecated:
         # .. the operation is marked as deprecated in the document itself ..
         def has_deprecated_operation(spec:'anydict') -> 'bool':
             paths = spec['paths']
+
+            # The same rebuild window applies here ..
+            if Path_Typed not in paths:
+                return False
+
             path_item = paths[Path_Typed]
             operation = path_item['post']
 
-            out = operation.get('deprecated') is True
+            # .. and the flag appears only once the deprecation has propagated.
+            if 'deprecated' not in operation:
+                return False
+
+            out = operation['deprecated'] is True
             return out
 
         spec = wait_for_spec(page, console_url, has_deprecated_operation)

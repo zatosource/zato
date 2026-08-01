@@ -42,11 +42,12 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-Console_Path       = '/openapi/console'
-Console_Login_Path = '/openapi/console/login'
-Spec_JSON_Path     = '/openapi/console/openapi.json'
-Spec_YAML_Path     = '/openapi/console/openapi.yaml'
-Relay_Base_Path    = '/openapi/console/relay'
+Console_Path        = '/openapi/console'
+Console_Login_Path  = '/openapi/console/login'
+Console_Logout_Path = '/openapi/console/logout'
+Spec_JSON_Path      = '/openapi/console/openapi.json'
+Spec_YAML_Path      = '/openapi/console/openapi.yaml'
+Relay_Base_Path     = '/openapi/console/relay'
 
 # The console's admin is the Dashboard's own admin user, with the same username and password
 Admin_Username = 'admin'
@@ -102,6 +103,9 @@ _Login_Timeout = 30
 # How long to wait between sign-in attempts
 _Login_Poll_Interval = 1.0
 
+# How long to wait for a page of the console to render, in milliseconds
+_Render_Timeout_MS = 10_000
+
 # How long to wait for the caller's document to match a condition
 _Spec_Timeout = 30
 
@@ -132,25 +136,37 @@ _Log_Poll_Interval = 0.5
 # ################################################################################################################################
 # ################################################################################################################################
 
+def console_logout(page:'Page', console_url:'str') -> 'None':
+    """ Ends whatever session the browser context carries and leaves the sign-in form open.
+    """
+    # Signing out redirects to the sign-in page, which is where the form is rendered ..
+    _ = page.goto(console_url + Console_Logout_Path)
+
+    # .. and a session that carries no identity always gets the form itself, never a redirect.
+    page.wait_for_selector('#username', state='visible', timeout=_Render_Timeout_MS)
+
+# ################################################################################################################################
+
 def console_login(page:'Page', console_url:'str', username:'str', password:'str', timeout:'int'=_Login_Timeout) -> 'None':
     """ Signs in to the console through its sign-in form, retrying while newly created
     credentials propagate to the server. Returns once the console page has rendered.
     """
+    # The sign-in page sends a caller whose session already carries an identity straight
+    # to the console, so any previous session is ended before this one signs in.
+    console_logout(page, console_url)
+
     deadline = time.monotonic() + timeout
 
     while True:
 
-        # Open the sign-in form ..
-        _ = page.goto(console_url + Console_Login_Path)
-
-        # .. fill in the credentials ..
+        # Fill in the credentials ..
         page.fill('#username', username)
         page.fill('#password', password)
 
         # .. submit the form - a success redirects to the console page,
         # a failure re-renders the form with an error message ..
         page.click('.console-login-button')
-        page.wait_for_selector('.console-header, .console-login-error', state='visible', timeout=10000)
+        page.wait_for_selector('.console-header, .console-login-error', state='visible', timeout=_Render_Timeout_MS)
 
         # .. the console header renders only after a successful sign-in ..
         if page.query_selector('.console-header'):
