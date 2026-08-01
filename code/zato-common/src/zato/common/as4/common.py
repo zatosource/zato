@@ -33,6 +33,12 @@ class Default:
     Test_Action     = 'http://docs.oasis-open.org/ebxml-msg/ebms/v3.0/ns/core/200704/test'
     Party_ID_Type_Unregistered = 'urn:oasis:names:tc:ebcore:partyid-type:unregistered'
 
+    # What a message goes out under when the connection sending it names no service and no action
+    # of its own. The specification reserves the pair above for the conformance test that every
+    # receiver answers and delivers to nobody, so business traffic may not carry it by default.
+    Service         = 'urn:zato:as4:service'
+    Action          = 'urn:zato:as4:action'
+
     # HTTP timeout for outbound AS4 requests.
     HTTP_Timeout_Seconds = 120
 

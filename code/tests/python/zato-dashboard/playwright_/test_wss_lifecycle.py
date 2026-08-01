@@ -6,6 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# pytest
+import pytest
+
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.playwright_pubsub import close_dialog_via_jquery
@@ -26,6 +29,10 @@ _Test_Name_Prefix = 'test.wss.' + CryptoManager.generate_hex_string(32) + '.'
 
 _Sample_Key_Path = '/opt/zato/pki/wss-lifecycle-key.pem'
 _Sample_Certificate_Path = '/opt/zato/pki/wss-lifecycle-certificate.pem'
+
+# A definition made only to be read back through the Dashboard signs what it sends and verifies
+# nothing on the way in, which is what the server says of a definition with no trust material
+_No_Trust_Material_Log = 'has neither trust anchors nor a peer certificate'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -156,6 +163,7 @@ class TestWSSLifecycle:
 
 # ################################################################################################################################
 
+    @pytest.mark.expect_log_errors(_No_Trust_Material_Log)
     def test_saml_lifecycle(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
 
         page = logged_in_page

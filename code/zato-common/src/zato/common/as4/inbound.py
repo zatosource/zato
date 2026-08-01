@@ -15,7 +15,8 @@ from http.client import OK
 from lxml import etree
 
 # Zato
-from zato.common.as4.common import AS4ProtocolException, AS4SecurityException, EbMSError, Limits, serves_channel, Severity
+from zato.common.as4.common import AS4ProtocolException, AS4SecurityException, Default, EbMSError, Limits, \
+    serves_channel, Severity
 from zato.common.as4.ebms import build_envelope, build_error, build_receipt, parse_messaging
 from zato.common.as4.mime_ import parse_multipart, restore_payloads
 from zato.common.as4.security.credentials import require_credentials
@@ -109,6 +110,18 @@ class InboundResult:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _is_test_message(user_message:'UserMessageDetails') -> 'bool':
+    """ Says whether a message is the conformance test the ebMS specification reserves a service
+    and an action for - it carries no business payload and every receiver answers it.
+    """
+    if user_message.service != Default.Test_Service:
+        return False
+
+    out = user_message.action == Default.Test_Action
+    return out
+
+# ################################################################################################################################
+
 def _match_pmode(pmodes:'pmode_list', user_message:'UserMessageDetails') -> 'PMode':
     """ Finds the P-Mode that governs an incoming user message by its service and action. A message
     that matches none of the configured P-Modes has no agreed terms to be processed under, which is
@@ -120,6 +133,14 @@ def _match_pmode(pmodes:'pmode_list', user_message:'UserMessageDetails') -> 'PMo
                 out = pmode
                 break
     else:
+        # The test service and action are the specification's own rather than anything agreed
+        # between two parties, so a channel answers them under the terms it already has ..
+        if pmodes:
+            if _is_test_message(user_message):
+                out = pmodes[0]
+                return out
+
+        # .. and anything else has no agreed terms to be processed under.
         raise AS4ProtocolException(
             EbMSError.Processing_Mode_Mismatch,
             f'No P-Mode is configured for service `{user_message.service}` and action `{user_message.action}`')
@@ -395,21 +416,25 @@ def handle(
         # .. restore the payloads to what the sender submitted ..
         payloads = restore_payloads(user_message, parts)
 
-        # .. give the caller a chance to reject the message on business grounds,
-        # .. e.g. a receiver that this endpoint does not serve ..
-        payload_details:'anylist' = []
+        # .. a test message proves the exchange works and nothing more, so it is answered with
+        # .. the receipt below and never handed on as business traffic ..
+        if not _is_test_message(user_message):
 
-        if validate:
-            payload_details = validate(user_message, payloads)
+            # .. give the caller a chance to reject the message on business grounds,
+            # .. e.g. a receiver that this endpoint does not serve ..
+            payload_details:'anylist' = []
 
-        # .. and only deliver them if this is not a replay of a message we already have.
-        if is_duplicate:
-            out.is_duplicate = is_duplicate(user_message.message_id)
+            if validate:
+                payload_details = validate(user_message, payloads)
 
-        if not out.is_duplicate:
-            out.user_message = user_message
-            out.payloads = payloads
-            out.payload_details = payload_details
+            # .. and only deliver them if this is not a replay of a message we already have.
+            if is_duplicate:
+                out.is_duplicate = is_duplicate(user_message.message_id)
+
+            if not out.is_duplicate:
+                out.user_message = user_message
+                out.payloads = payloads
+                out.payload_details = payload_details
 
         # The receipt echoes the verified references - that is the non-repudiation proof.
         receipt_envelope = build_envelope()

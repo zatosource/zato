@@ -17,6 +17,7 @@ import pytest
 from zato.common.api import ZATO_NONE
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.playwright_pubsub import create_basic_auth
+from zato.common.util.auth import Auth_Basic_No_Auth
 
 from openapi_console_lib import edit_channel_by_name, Path_Untyped, Service_Untyped
 from rest_channel import invoke_channel, invoke_until_status
@@ -41,6 +42,9 @@ _Expected_Response = {'echo': True}
 # A path no channel has ever existed for
 _Unknown_Path = '/no/such/path/on/this/server'
 
+# What the server logs when a request to a secured channel carries no Authorization header
+_No_Credentials_Log = f'Basic Auth -> {Auth_Basic_No_Auth}'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -52,8 +56,8 @@ class TestOpenAPIConsoleSecurityDefaultPosture:
 
 # ################################################################################################################################
 
-    # The 401 checks below make the server log its Unauthorized rejections
-    @pytest.mark.expect_log_errors('Unauthorized')
+    # The 401 checks below make the server log both the rejection itself and the header it had nothing to read
+    @pytest.mark.expect_log_errors('Unauthorized', _No_Credentials_Log)
     def test_default_posture(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Walks the untyped channel through inactive, active-with-no-security
         and active-with-security, asserting the server's behavior at each step.

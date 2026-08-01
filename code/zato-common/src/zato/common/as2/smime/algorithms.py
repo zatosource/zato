@@ -101,10 +101,15 @@ Micalg_Spelling = {
     'sha-512': DigestAlgorithm.SHA512,
 }
 
-# Maps outbound CBC algorithm names to the classes the envelope builder accepts.
-CBC_Class_By_Name = {
-    EncryptionAlgorithm.AES_128_CBC: AES128,
-    EncryptionAlgorithm.AES_256_CBC: AES256,
+# Maps outbound AES-CBC algorithm names to their key sizes in bytes and object identifiers.
+AES_CBC_Key_Size_By_Name = {
+    EncryptionAlgorithm.AES_128_CBC: _aes_128_key_size,
+    EncryptionAlgorithm.AES_256_CBC: _aes_256_key_size,
+}
+
+AES_CBC_OID_By_Name = {
+    EncryptionAlgorithm.AES_128_CBC: OID.AES_128_CBC,
+    EncryptionAlgorithm.AES_256_CBC: OID.AES_256_CBC,
 }
 
 # Maps inbound CBC algorithm identifiers to their cipher classes and block sizes -
