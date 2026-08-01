@@ -59,6 +59,9 @@
             'username',
             'private_key',
             'strict_host_key_checking',
+
+            {% comment %} 6 {% endcomment %}
+            'ignore_host_key_changes',
         ]
     }
     </script>
@@ -115,6 +118,9 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
+                        {% comment %} 6 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+
                 </thead>
 
                 <tbody>
@@ -149,11 +155,14 @@
                         <td class='ignore'>{{ item.private_key|default:'' }}</td>
                         <td class='ignore'>{{ item.strict_host_key_checking }}</td>
 
+                        {% comment %} 6 {% endcomment %}
+                        <td class='ignore'>{{ item.ignore_host_key_changes }}</td>
+
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='17'>No results</td>
+                        <td colspan='18'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -227,6 +236,15 @@
                             </td>
                             <td>
                                 {{ create_form.strict_host_key_checking }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_ignore_host_key_changes">Ignore host key changes</label>
+                            </td>
+                            <td>
+                                {{ create_form.ignore_host_key_changes }}
                             </td>
                         </tr>
 
@@ -310,6 +328,15 @@
                             </td>
                             <td>
                                 {{ edit_form.strict_host_key_checking }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-ignore_host_key_changes">Ignore host key changes</label>
+                            </td>
+                            <td>
+                                {{ edit_form.ignore_host_key_changes }}
                             </td>
                         </tr>
 

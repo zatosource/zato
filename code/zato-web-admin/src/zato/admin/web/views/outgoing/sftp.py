@@ -31,7 +31,20 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 _fields_required = ('name',)
-_fields_optional = 'is_active', 'address', 'username', 'private_key', 'strict_host_key_checking'
+_fields_optional = 'is_active', 'address', 'username', 'private_key', 'strict_host_key_checking', \
+    'ignore_host_key_changes'
+
+# The connection's fields that a checkbox stands for, which is what turns their input into a boolean
+_fields_checkbox = 'strict_host_key_checking', 'ignore_host_key_changes'
+
+# What the command shell shows in an output pane that the command left empty
+Command_Shell_Empty_Output = '(None)'
+
+# What the command shell shows instead of a response time when the command never got as far as being timed
+Command_Shell_No_Response_Time = 'n/a'
+
+# What the command shell says when the commands ran but did not succeed
+Command_Shell_Error_Message = 'Command failed, see stderr'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -82,7 +95,7 @@ class _CreateEdit(CreateEdit):
                 return SKIP_VALUE
 
         # The checkbox arrives as 'on' when it is checked and as an empty value otherwise
-        elif name == 'strict_host_key_checking':
+        elif name in _fields_checkbox:
             value = value == 'on'
 
         return value
@@ -156,25 +169,41 @@ def command_shell_action(req, id, cluster_id, name_slug):
         if response.ok:
             data = response.data
 
+            # Everything below is optional on the service's output, which means that a command
+            # that produced nothing, or that never ran at all, leaves the field out of the payload.
+
+            is_ok = data.get('is_ok')
+            if is_ok is None:
+                is_ok = False
+
             stdout = data.get('stdout')
             if not stdout:
-                stdout = '(None)'
+                stdout = Command_Shell_Empty_Output
 
             stderr = data.get('stderr')
             if not stderr:
-                stderr = '(None)'
+                stderr = Command_Shell_Empty_Output
+
+            response_time = data.get('response_time')
+            if not response_time:
+                response_time = Command_Shell_No_Response_Time
 
             return HttpResponse(dumps({
-                'msg': 'Response time: {} (#{})'.format(data.response_time, data.command_no),
+                'is_ok': is_ok,
+                'error_message': Command_Shell_Error_Message,
+                'response_time': response_time,
+                'command_no': data.command_no,
                 'stdout': stdout,
                 'stderr': stderr,
             }), content_type='application/javascript')
         else:
             raise Exception(response.details)
 
-    except Exception:
-        msg = 'Caught an exception, e:`{}`'.format(format_exc())
-        logger.error(msg)
-        return HttpResponseServerError(msg)
+    except Exception as e:
+
+        # The traceback belongs in the log, whereas the browser only ever shows what went wrong,
+        # because the command shell puts this text straight into its output pane.
+        logger.error('Caught an exception, e:`%s`', format_exc())
+        return HttpResponseServerError(str(e).encode('utf8'))
 
 # ################################################################################################################################

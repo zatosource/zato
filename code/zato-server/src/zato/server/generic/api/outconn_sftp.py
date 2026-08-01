@@ -51,6 +51,12 @@ log_level_map = {
 _host_key_checking_strict = 'StrictHostKeyChecking=yes'
 _host_key_checking_accept_new = 'StrictHostKeyChecking=accept-new'
 
+# Accepting a new key is not enough for a host whose key changed since it was recorded, because
+# the binary refuses to connect at all in that case. Reading the recorded keys from an empty file
+# is what makes every host look new, so these two go together and never on their own.
+_host_key_checking_none = 'StrictHostKeyChecking=no'
+_known_hosts_none = 'UserKnownHostsFile=/dev/null'
+
 # ################################################################################################################################
 
 # Default values applied when a configuration key is missing or None
@@ -59,13 +65,14 @@ outconn_sftp_config_defaults:'dict[str, object]' = {
     'username': '',
     'private_key': '',
     'strict_host_key_checking': True,
+    'ignore_host_key_changes': False,
 }
 
 # Config keys that must be integers but may arrive as strings from opaque storage
 outconn_sftp_int_config_keys = ()
 
 # Config keys that must be booleans but may arrive as strings from opaque storage
-outconn_sftp_bool_config_keys = ('strict_host_key_checking',)
+outconn_sftp_bool_config_keys = ('strict_host_key_checking', 'ignore_host_key_changes')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -103,6 +110,10 @@ class SFTPClient:
 
         # Whether the remote host key must already be known or whether keys of new hosts are accepted
         self.strict_host_key_checking = self.config.strict_host_key_checking # type: bool
+
+        # Whether host keys are to be disregarded altogether, which is what a server that regenerates
+        # its keys, such as one in a container, needs for its connections to keep working
+        self.ignore_host_key_changes = self.config.ignore_host_key_changes # type: bool
 
         # Added for API completeness
         self.is_connected = True
@@ -155,13 +166,22 @@ class SFTPClient:
         args.append('-P')
         args.append(str(self.port))
 
+        # Disregarding host keys takes precedence over how strictly they would be checked otherwise,
+        # because there is nothing left to check once the recorded keys are read from an empty file.
+        if self.ignore_host_key_changes:
+            args.append('-o')
+            args.append(_host_key_checking_none)
+            args.append('-o')
+            args.append(_known_hosts_none)
+
         # With strict checking on, the remote host key must already be in known_hosts,
         # otherwise keys of previously unknown hosts are accepted and recorded on first connection.
-        args.append('-o')
-        if self.strict_host_key_checking:
-            args.append(_host_key_checking_strict)
         else:
-            args.append(_host_key_checking_accept_new)
+            args.append('-o')
+            if self.strict_host_key_checking:
+                args.append(_host_key_checking_strict)
+            else:
+                args.append(_host_key_checking_accept_new)
 
         return args
 

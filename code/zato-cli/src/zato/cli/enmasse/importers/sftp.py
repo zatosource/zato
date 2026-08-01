@@ -41,6 +41,7 @@ class SFTPImporter(GenericConnectionImporter):
     connection_extra_field_defaults = {
         'private_key': '',
         'strict_host_key_checking': True,
+        'ignore_host_key_changes': False,
     }
 
     connection_secret_keys = ['password', 'secret']

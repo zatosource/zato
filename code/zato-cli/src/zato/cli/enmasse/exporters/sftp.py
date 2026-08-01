@@ -35,12 +35,14 @@ logger = logging.getLogger(__name__)
 OPTIONAL_FIELDS = [
     'private_key',
     'strict_host_key_checking',
+    'ignore_host_key_changes',
 ]
 
 # Values that are not exported because they match the defaults
 _field_defaults = {
     'private_key': '',
     'strict_host_key_checking': True,
+    'ignore_host_key_changes': False,
 }
 
 # ################################################################################################################################

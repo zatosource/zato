@@ -70,7 +70,10 @@ class _TestWrapper:
     def __init__(self, client:'SFTPClient') -> 'None':
         self.client_object = client
 
-    def client(self) -> '_TestWrapperClient':
+    def client(self, should_block:'bool'=False, block_timeout:'int'=0) -> '_TestWrapperClient':
+
+        # Blocking has no meaning here, there is one client and it is always free,
+        # but the caller is the real connection object and it passes these along regardless.
         return _TestWrapperClient(self.client_object)
 
     def ping(self) -> 'None':
@@ -129,8 +132,11 @@ class OutconnSFTPTestCase(TestCase):
             'secret': secret,
             'private_key': private_key,
 
-            # The test server's host key is freshly generated, which means it cannot be in known_hosts yet
             'strict_host_key_checking': False,
+
+            # The test server's host key is freshly generated on each run, so it is neither
+            # in known_hosts nor the same one as the last run left there under this address
+            'ignore_host_key_changes': True,
         })
 
         return config
@@ -140,11 +146,6 @@ class OutconnSFTPTestCase(TestCase):
     def make_client(self, config:'Bunch') -> 'SFTPClient':
 
         client = SFTPClient(config, cast_('any_', None))
-
-        # Keep the throwaway host keys of test servers out of the user's known_hosts file
-        client.base_args.append('-o')
-        client.base_args.append('UserKnownHostsFile=/dev/null')
-
         return client
 
 # ################################################################################################################################

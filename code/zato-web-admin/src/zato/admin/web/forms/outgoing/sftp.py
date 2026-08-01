@@ -27,6 +27,7 @@ class CreateForm(forms.Form):
 
     private_key = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
     strict_host_key_checking = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    ignore_host_key_changes = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
     def __init__(self, prefix=None, req=None):
         super(CreateForm, self).__init__(prefix=prefix)
@@ -42,9 +43,9 @@ class EditForm(CreateForm):
 # ################################################################################################################################
 
 class CommandShellForm(forms.Form):
-    data = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:70px'}), initial='ls .')
-    stdout = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:170px'}))
-    stderr = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:270px'}))
+
+    # Stdout and stderr are not fields - the command shell renders them as its own output panes.
+    data = forms.CharField(widget=forms.Textarea(), initial='ls .')
     log_level = forms.ChoiceField(widget=forms.Select())
 
     def __init__(self):
