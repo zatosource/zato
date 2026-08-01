@@ -58,6 +58,18 @@ channel_int_config_keys = Channel_Int_Names
 # No certificate carries this, so the channel refuses everything rather than everything through.
 _Unresolvable_Common_Name = '\x00unresolvable'
 
+# ################################################################################################################################
+
+def _get_message_text(data:'any_') -> 'str':
+    """ Returns the ER7 text of what the listener handed a channel - a channel that parses on
+    input is given a parsed message and one that does not is given the text itself.
+    """
+    if isinstance(data, str):
+        return data
+
+    out = data.to_er7()
+    return out
+
 # What serialises the workers that all hold the same channel when its REST bridge is deleted
 _Rest_Channel_Lock_Prefix = 'zato.channel.hl7.mllp.rest-channel.'
 _Rest_Channel_Lock_Ttl    = 30
@@ -227,12 +239,16 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
 # ################################################################################################################################
 
-    def _deliver_to_destinations(self, data:'str', cid:'str') -> 'any_':
+    def _deliver_to_destinations(self, data:'any_', cid:'str') -> 'any_':
         """ Delivers one message to this channel's destinations with nothing between the two, which
         is what a channel that names no service does with everything it accepts. Nothing here looks
         at what the message says - a channel with no service passes bytes through and no more.
         """
-        result = run_for_channel(self.parallel_server, self._build_channel_item(), data, cid=cid)
+        # A channel that parses on input is handed a parsed message, and what a destination
+        # receives is the message rather than an object, so the text of it is what goes out
+        message_text = _get_message_text(data)
+
+        result = run_for_channel(self.parallel_server, self._build_channel_item(), message_text, cid=cid)
 
         # Our response to produce - a channel that replies from one of its destinations answers
         # with what that destination said, and one that does not has nothing of its own to say

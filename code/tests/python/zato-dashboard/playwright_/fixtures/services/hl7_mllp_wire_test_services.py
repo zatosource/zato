@@ -18,7 +18,8 @@ from zato.server.service import Service
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import strlist
+    from zato.common.typing_ import any_, strlist
+    any_ = any_
     strlist = strlist
 
 # ################################################################################################################################
@@ -28,6 +29,22 @@ if 0:
 _Timestamp_Format = '%Y%m%d%H%M%S'
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def _get_message_text(request:'any_') -> 'str':
+    """ Returns the ER7 text of what a channel handed over - a REST channel delivers bytes,
+    an MLLP channel that parses on input delivers a parsed message, and one that does not
+    delivers the text itself.
+    """
+    if isinstance(request, bytes):
+        return request.decode('utf-8')
+
+    if isinstance(request, str):
+        return request
+
+    out = request.to_er7()
+    return out
+
 # ################################################################################################################################
 
 def _get_msh_fields(message:'str') -> 'strlist':
@@ -51,10 +68,7 @@ class HL7MLLPWireAckIdentity(Service):
 
     def handle(self):
 
-        # The MLLP channel delivers text while the REST channel delivers bytes
-        message = self.request.raw_request
-        if isinstance(message, bytes):
-            message = message.decode('utf-8')
+        message = _get_message_text(self.request.raw_request)
 
         # The channel this service runs on behalf of
         channel_item = self.wsgi_environ['zato.channel_item']
@@ -107,10 +121,7 @@ class HL7MLLPWirePopulate(Service):
 
     def handle(self):
 
-        # The MLLP channel delivers text while the REST channel delivers bytes
-        message = self.request.raw_request
-        if isinstance(message, bytes):
-            message = message.decode('utf-8')
+        message = _get_message_text(self.request.raw_request)
 
         # The destinations this channel declares, by name and type
         channel_item = self.wsgi_environ['zato.channel_item']
