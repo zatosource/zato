@@ -14,10 +14,9 @@ import pytest
 
 # Zato
 from audit_resubmit import is_report_ok, resubmit_until
-from hl7_client import java_client
 from hl7_client.mllp_receiver import MLLPReceiver
 from mllp_channel import create_channel, create_outgoing_connection, delete_channel, delete_outgoing_connection, \
-    send_python, wait_for_item, wait_for_port, wait_until_accepted, Host
+    save_channel, send_python, send_with_both_clients, wait_for_item, wait_for_port, wait_until_accepted, Host
 from zato.common.crypto.api import CryptoManager
 
 # ################################################################################################################################
@@ -90,7 +89,8 @@ class TestChannelHL7MLLPAudit:
     """ Proves the compliance and recovery story of an audited channel from outside - what
     external clients send over the wire is what the dashboard's audit log lists, and a message
     whose receiver was down when it arrived reaches that receiver after an operator reprocesses
-    it from that very audit log.
+    it from that very audit log. The channel is saved through the wizard along the way, so a
+    switch the edit posted back the other way round is caught by the log going quiet.
     """
 
     @pytest.mark.expect_log_errors(
@@ -126,14 +126,7 @@ class TestChannelHL7MLLPAudit:
             # The compliance half - what the clients send is what the audit log lists ..
             control_ids = []
 
-            control_id = 'py.' + CryptoManager.generate_hex_string()
-            result = send_python(mllp_port, control_id, _Audit_App)
-            assert result.msa_1 == 'AA', f'Expected AA, got: {result}'
-            control_ids.append(control_id)
-
-            if java_client.is_java_available():
-                control_id = 'java.' + CryptoManager.generate_hex_string()
-                result = java_client.send_message(Host, mllp_port, control_id, _Audit_App)
+            for control_id, result in send_with_both_clients(mllp_port, _Audit_App):
                 assert result.msa_1 == 'AA', f'Expected AA, got: {result}'
                 control_ids.append(control_id)
 
@@ -148,7 +141,22 @@ class TestChannelHL7MLLPAudit:
             for control_id in control_ids:
                 _ = _wait_for_received_row(page, control_id)
 
-            # The recovery half - the receiver goes down and a message arrives while it is gone ..
+            # Saving the channel through the wizard again, with nothing changed, leaves it
+            # audited - a switch the wizard posted back the other way round would show up
+            # here as an arrival its audit log knows nothing about ..
+            save_channel(page, base_url, channel_name)
+            _ = wait_until_accepted(mllp_port, _Audit_App)
+
+            saved_control_id = 'py.' + CryptoManager.generate_hex_string()
+            result = send_python(mllp_port, saved_control_id, _Audit_App)
+            assert result.msa_1 == 'AA', f'Expected AA, got: {result}'
+
+            _ = wait_for_item(receiver.deliveries, _text_has(saved_control_id), f'delivery of {saved_control_id}')
+
+            _open_audit_page(page, base_url, channel_name)
+            _ = _wait_for_received_row(page, saved_control_id)
+
+            # .. the recovery half - the receiver goes down and a message arrives while it is gone ..
             receiver.stop()
 
             lost_control_id = 'py.' + CryptoManager.generate_hex_string()

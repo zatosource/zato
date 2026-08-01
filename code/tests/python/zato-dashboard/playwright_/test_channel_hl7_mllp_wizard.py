@@ -13,9 +13,9 @@ import time
 import pytest
 
 # Zato
-from hl7_client import java_client
 from hl7_client.mllp_receiver import MLLPReceiver
-from mllp_channel import send_python, wait_for_item, wait_for_port, wait_until_routed, Host
+from mllp_channel import delete_channel, get_item_id, navigate_to_channels, send_with_both_clients, wait_for_item, \
+    wait_for_port, wait_until_routed, Host
 from mllp_outconn import create_outgoing_connection, delete_outgoing_connection
 from zato.common.crypto.api import CryptoManager
 
@@ -30,8 +30,6 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Page_Url_Pattern = '/zato/channel/hl7/mllp/?cluster=1&type_=channel-hl7-mllp'
-
 _Test_Name_Prefix = 'test.mllp.wizard.' + CryptoManager.generate_hex_string(32) + '.'
 
 # The service every channel in these tests invokes - the fixture that answers each message
@@ -44,30 +42,6 @@ _Wizard_App = 'WIZARD_SENDER'
 
 # The badge picker the wizard's destinations panel runs on
 _Picker_Action = 'mllp-wizard-destinations'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _navigate_to_mllp(page:'Page', base_url:'str') -> 'None':
-    """ Opens the HL7 MLLP channels page and waits for the data table.
-    """
-    _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-    _ = page.wait_for_selector('#data-table', state='visible')
-
-# ################################################################################################################################
-
-def _get_item_id(page:'Page', name:'str') -> 'str':
-    """ Extracts the server-side ID of a row by its name.
-    """
-    row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    row = page.query_selector(row_selector)
-    assert row is not None, f'No row for "{name}" on the list page'
-
-    id_cell = row.query_selector('td[class*="item_id_"]')
-    assert id_cell is not None, f'No id cell in the row of "{name}"'
-
-    out = id_cell.inner_text().strip()
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -87,8 +61,10 @@ def _text_has(control_id:'str') -> 'any_':
 class TestChannelHL7MLLPWizard:
     """ Walks the MLLP channel wizard end to end - a regression check that the wizard,
     now a wizard-kit instance, still creates channels through all three steps - and then
-    invokes the created channel over the wire with the python-hl7 and Java HAPI clients,
-    finishing with the same wizard opened on the channel it created.
+    invokes the created channel over the wire with the python-hl7 and Java HAPI clients.
+    The same wizard then opens on the channel it created and saves it with nothing changed,
+    after which the wire sends run again - a channel the edit quietly changed is one that
+    stops answering the way it did before.
     """
 
     @pytest.mark.expect_log_errors('No matching MLLP channel for message')
@@ -125,7 +101,7 @@ class TestChannelHL7MLLPWizard:
         outconn_name = _Test_Name_Prefix + 'outconn'
         create_outgoing_connection(page, base_url, outconn_name, f'{Host}:{receiver.port}')
 
-        _navigate_to_mllp(page, base_url)
+        navigate_to_channels(page, base_url)
 
         # Open the wizard from the list page
         page.click('#markup .page_prompt a:has-text("Create a new channel")')
@@ -188,35 +164,14 @@ class TestChannelHL7MLLPWizard:
         row_text = row.inner_text()
         assert _Test_Service in row_text, f'Expected the service in the row, got: "{row_text}"'
 
-        # The channel is live now - the external clients invoke it over the wire and its
-        # acknowledgments name it, control id echoed and all. python-hl7 goes first ..
+        # The channel is live now - the external clients invoke it over the wire and it
+        # answers for itself, its message reaching the destination the wizard stored
         wait_for_port(mllp_port)
-        wait_until_routed(mllp_port, channel_name, _Wizard_App)
-
-        control_id = 'py.' + CryptoManager.generate_hex_string()
-        result = send_python(mllp_port, control_id, _Wizard_App)
-
-        assert result.msa_1 == 'AA', f'Expected AA, got: {result}'
-        assert result.msa_2 == control_id, f'Expected the control id echoed, got: {result}'
-        assert result.msa_3 == channel_name, f'Expected `{channel_name}` to answer, got: {result}'
-
-        # .. its message also reached the destination the wizard stored ..
-        _ = wait_for_item(receiver.deliveries, _text_has(control_id), f'delivery of {control_id}')
-
-        # .. and the Java HAPI client next, wherever there is a Java runtime.
-        if java_client.is_java_available():
-            control_id = 'java.' + CryptoManager.generate_hex_string()
-            result = java_client.send_message(Host, mllp_port, control_id, _Wizard_App)
-
-            assert result.msa_1 == 'AA', f'Expected AA, got: {result}'
-            assert result.msa_2 == control_id, f'Expected the control id echoed, got: {result}'
-            assert result.msa_3 == channel_name, f'Expected `{channel_name}` to answer, got: {result}'
-
-            _ = wait_for_item(receiver.deliveries, _text_has(control_id), f'delivery of {control_id}')
+        self._check_over_the_wire(mllp_port, channel_name, receiver)
 
         # The same wizard opens on the channel it just created, and everything the channel
         # stores is what it opens with - the destination in its hidden JSON field ..
-        item_id = _get_item_id(page, channel_name)
+        item_id = get_item_id(page, channel_name)
 
         _ = page.goto(f'{base_url}/zato/channel/hl7/mllp/wizard/{item_id}/?cluster=1')
         _ = page.wait_for_selector('#mllp-wizard', state='visible')
@@ -250,19 +205,12 @@ class TestChannelHL7MLLPWizard:
         row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{channel_name}"))')
         assert row is not None, f'Channel "{channel_name}" should still be on the list after the edit wizard'
 
-        # Delete the channel the test created
-        _navigate_to_mllp(page, base_url)
-        item_id = _get_item_id(page, channel_name)
+        # .. and the saved channel is the same channel over the wire as before - what the
+        # wizard read back is what it posted, so the route and the destination are intact.
+        self._check_over_the_wire(mllp_port, channel_name, receiver)
 
-        page.evaluate(f'$.fn.zato.channel.hl7.mllp.delete_("{item_id}")')
-        _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
-        page.click('#popup_ok')
-        time.sleep(0.5)
-
-        row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{channel_name}"))')
-        assert row is None, f'Channel "{channel_name}" should be gone after delete'
-
-        # Delete the outgoing connection the destination pointed at
+        # Delete the channel the test created and the connection its destination pointed at
+        delete_channel(page, base_url, channel_name)
         delete_outgoing_connection(page, base_url, outconn_name)
 
         # The receiver has served its purpose
@@ -278,6 +226,24 @@ class TestChannelHL7MLLPWizard:
 
         assert not real_errors, 'Console errors during the MLLP wizard cycle:\n' + '\n'.join(real_errors)
         assert not server_errors, 'HTTP 500+ responses during the MLLP wizard cycle:\n' + '\n'.join(server_errors)
+
+# ################################################################################################################################
+
+    def _check_over_the_wire(self, mllp_port:'int', channel_name:'str', receiver:'MLLPReceiver') -> 'None':
+        """ Both external clients get the channel's own acknowledgment, control id echoed and
+        all, and each message reaches the destination the channel stores. Runs once on the
+        channel the wizard created and once more on the same channel saved through the wizard,
+        so a value the edit failed to carry over is a channel that stops behaving this way.
+        """
+        wait_until_routed(mllp_port, channel_name, _Wizard_App)
+
+        for control_id, result in send_with_both_clients(mllp_port, _Wizard_App):
+
+            assert result.msa_1 == 'AA', f'Expected AA, got: {result}'
+            assert result.msa_2 == control_id, f'Expected the control id echoed, got: {result}'
+            assert result.msa_3 == channel_name, f'Expected `{channel_name}` to answer, got: {result}'
+
+            _ = wait_for_item(receiver.deliveries, _text_has(control_id), f'delivery of {control_id}')
 
 # ################################################################################################################################
 # ################################################################################################################################

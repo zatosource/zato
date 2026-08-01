@@ -13,13 +13,13 @@ import time
 import pytest
 
 # Zato
-from hl7_client import java_client
 from hl7_client.fhir_receiver import FHIRReceiver
 from hl7_client.mllp_receiver import MLLPReceiver
 from hl7_client.rest_receiver import RESTReceiver
 from hl7_client.smtp_receiver import SMTPReceiver
 from mllp_channel import create_channel, create_outgoing_connection, delete_channel, delete_outgoing_connection, \
-    get_item_id, send_python, wait_for_item, wait_for_port, wait_until_accepted, wait_until_routed, Host
+    get_item_id, save_channel, send_python, send_with_both_clients, wait_for_item, wait_for_port, \
+    wait_until_accepted, wait_until_routed, Host
 from rest_outconn import create_outconn as create_rest_outconn, delete_outconn as delete_rest_outconn, \
     get_outconn_id, open_outconn_page
 from zato.common.crypto.api import CryptoManager
@@ -224,7 +224,9 @@ class TestChannelHL7MLLPDestinations:
     """ Creates channels with destinations of every type through the wizard and proves, from
     outside over the wire, that what arrives on the channel reaches every receiver - the
     receivers being the same libraries other systems receive with: hl7apy for MLLP, aiosmtpd
-    for e-mail and fhir.resources validating what the FHIR destination sends.
+    for e-mail and fhir.resources validating what the FHIR destination sends. The destination
+    list, the delivery mode and the destination that replies are all answers the wizard has to
+    read back before it can save a channel again, so each is proved once more after a save.
     """
 
     @pytest.mark.expect_log_errors('No matching MLLP channel for message')
@@ -271,40 +273,16 @@ class TestChannelHL7MLLPDestinations:
             wait_for_port(mllp_port)
             _ = wait_until_accepted(mllp_port, _Fanout_App)
 
-            # Each sender's message must reach every receiver - python-hl7 first ..
-            control_ids = []
+            # Each sender's message must reach every receiver ..
+            self._check_fanout(mllp_port, mllp_receiver, rest_receiver, smtp_receiver)
 
-            control_id = 'py.' + CryptoManager.generate_hex_string()
-            result = send_python(mllp_port, control_id, _Fanout_App)
-            assert result.msa_1 == 'AA', f'Expected AA, got: {result}'
-            control_ids.append(control_id)
+            # .. and it still must once the channel has been saved through the wizard again
+            # with nothing changed, which is the whole destination list - the connection of
+            # each, the type of each and the options of each - read back and posted anew.
+            save_channel(page, base_url, channel_name)
+            _ = wait_until_accepted(mllp_port, _Fanout_App)
 
-            # .. and the Java HAPI client wherever there is a Java runtime.
-            if java_client.is_java_available():
-                control_id = 'java.' + CryptoManager.generate_hex_string()
-                result = java_client.send_message(Host, mllp_port, control_id, _Fanout_App)
-                assert result.msa_1 == 'AA', f'Expected AA, got: {result}'
-                control_ids.append(control_id)
-
-            for control_id in control_ids:
-
-                # The MLLP receiver got the message as it arrived ..
-                delivery = wait_for_item(
-                    mllp_receiver.deliveries, _text_has(control_id), f'MLLP delivery of {control_id}')
-                assert _Fanout_App in delivery.text, f'Expected the sender in the delivery, got: {delivery.text}'
-
-                # .. so did the REST receiver, as the body of a POST ..
-                request = wait_for_item(
-                    rest_receiver.requests, _body_has(control_id), f'REST delivery of {control_id}')
-                assert request.method == 'POST', f'Expected a POST, got: {request.method}'
-                assert request.path == '/deliver', f'Expected /deliver, got: {request.path}'
-
-                # .. and so did the e-mail receiver, under the subject and to the recipient
-                # the destination's options name.
-                email = wait_for_item(
-                    smtp_receiver.messages, _body_has(control_id), f'e-mail delivery of {control_id}')
-                assert email.recipients == [_Smtp_To], f'Expected `{_Smtp_To}`, got: {email.recipients}'
-                assert email.subject == _Smtp_Subject, f'Expected `{_Smtp_Subject}`, got: {email.subject}'
+            self._check_fanout(mllp_port, mllp_receiver, rest_receiver, smtp_receiver)
 
         finally:
             delete_channel(page, base_url, channel_name)
@@ -315,6 +293,41 @@ class TestChannelHL7MLLPDestinations:
             mllp_receiver.stop()
             rest_receiver.stop()
             smtp_receiver.stop()
+
+# ################################################################################################################################
+
+    def _check_fanout(
+        self,
+        mllp_port:'int',
+        mllp_receiver:'MLLPReceiver',
+        rest_receiver:'RESTReceiver',
+        smtp_receiver:'SMTPReceiver',
+        ) -> 'None':
+        """ What each external client sends reaches all three receivers - the MLLP one as the
+        message arrived, the REST one as the body of a POST, and the e-mail one under the
+        subject and to the recipient the destination's options name.
+        """
+        for control_id, result in send_with_both_clients(mllp_port, _Fanout_App):
+
+            assert result.msa_1 == 'AA', f'Expected AA, got: {result}'
+
+            # The MLLP receiver got the message as it arrived ..
+            delivery = wait_for_item(
+                mllp_receiver.deliveries, _text_has(control_id), f'MLLP delivery of {control_id}')
+            assert _Fanout_App in delivery.text, f'Expected the sender in the delivery, got: {delivery.text}'
+
+            # .. so did the REST receiver, as the body of a POST ..
+            request = wait_for_item(
+                rest_receiver.requests, _body_has(control_id), f'REST delivery of {control_id}')
+            assert request.method == 'POST', f'Expected a POST, got: {request.method}'
+            assert request.path == '/deliver', f'Expected /deliver, got: {request.path}'
+
+            # .. and so did the e-mail receiver, under the subject and to the recipient
+            # the destination's options name.
+            email = wait_for_item(
+                smtp_receiver.messages, _body_has(control_id), f'e-mail delivery of {control_id}')
+            assert email.recipients == [_Smtp_To], f'Expected `{_Smtp_To}`, got: {email.recipients}'
+            assert email.subject == _Smtp_Subject, f'Expected `{_Smtp_Subject}`, got: {email.subject}'
 
 # ################################################################################################################################
 
@@ -361,14 +374,7 @@ class TestChannelHL7MLLPDestinations:
 
             control_ids = []
 
-            control_id = 'py.' + CryptoManager.generate_hex_string()
-            result = send_python(mllp_port, control_id, _Populate_App)
-            assert result.msa_1 == 'AA', f'Expected AA, got: {result}'
-            control_ids.append(control_id)
-
-            if java_client.is_java_available():
-                control_id = 'java.' + CryptoManager.generate_hex_string()
-                result = java_client.send_message(Host, mllp_port, control_id, _Populate_App)
+            for control_id, result in send_with_both_clients(mllp_port, _Populate_App):
                 assert result.msa_1 == 'AA', f'Expected AA, got: {result}'
                 control_ids.append(control_id)
 
@@ -479,16 +485,16 @@ class TestChannelHL7MLLPDestinations:
                 f'Same-time deliveries should overlap - {overlap_details}'
 
             # .. and with in-order, the fast receiver is only reached once the slow
-            # receiver has finished.
-            control_id = 'py.' + CryptoManager.generate_hex_string()
-            result = send_python(mllp_port, control_id, _In_Order_App)
-            assert result.msa_1 == 'AA', f'Expected AA, got: {result}'
+            # receiver has finished ..
+            self._check_in_order(mllp_port, slow_receiver, fast_receiver)
 
-            slow_delivery, fast_delivery = self._wait_for_both(slow_receiver, fast_receiver, control_id)
+            # .. which is still so once that channel has been saved through the wizard again
+            # with nothing changed - a mode the wizard failed to read back would leave the
+            # channel on the one a new channel starts with, and the two would overlap.
+            save_channel(page, base_url, in_order_channel)
+            _ = wait_until_accepted(mllp_port, _In_Order_App)
 
-            order_details = f'fast at {fast_delivery.arrived_at}, slow done at {slow_delivery.completed_at}'
-            assert fast_delivery.arrived_at >= slow_delivery.completed_at, \
-                f'In-order deliveries should be serialized - {order_details}'
+            self._check_in_order(mllp_port, slow_receiver, fast_receiver)
 
         finally:
             delete_channel(page, base_url, same_time_channel)
@@ -498,6 +504,27 @@ class TestChannelHL7MLLPDestinations:
 
             slow_receiver.stop()
             fast_receiver.stop()
+
+# ################################################################################################################################
+
+    def _check_in_order(
+        self,
+        mllp_port:'int',
+        slow_receiver:'MLLPReceiver',
+        fast_receiver:'MLLPReceiver',
+        ) -> 'None':
+        """ One message on the in-order channel, whose fast receiver may only be reached
+        once the slow one has finished with its own copy.
+        """
+        control_id = 'py.' + CryptoManager.generate_hex_string()
+        result = send_python(mllp_port, control_id, _In_Order_App)
+        assert result.msa_1 == 'AA', f'Expected AA, got: {result}'
+
+        slow_delivery, fast_delivery = self._wait_for_both(slow_receiver, fast_receiver, control_id)
+
+        order_details = f'fast at {fast_delivery.arrived_at}, slow done at {slow_delivery.completed_at}'
+        assert fast_delivery.arrived_at >= slow_delivery.completed_at, \
+            f'In-order deliveries should be serialized - {order_details}'
 
 # ################################################################################################################################
 
@@ -559,32 +586,36 @@ class TestChannelHL7MLLPDestinations:
                 destinations=[_mllp_destination(mllp_conn)],
                 respond_from=mllp_conn)
 
-            # The route is ready when the receiver's own note comes back over the wire
+            # Every client's reply is the receiver's acknowledgment, control id and all ..
             wait_for_port(mllp_port)
-            wait_until_routed(mllp_port, _Respond_Note, _Respond_App)
+            self._check_reply_from_receiver(mllp_port)
 
-            # The python-hl7 client's reply is the receiver's acknowledgment, control id and all ..
-            control_id = 'py.' + CryptoManager.generate_hex_string()
-            result = send_python(mllp_port, control_id, _Respond_App)
-
-            assert result.msa_1 == 'AA', f'Expected AA, got: {result}'
-            assert result.msa_2 == control_id, f'Expected the control id echoed, got: {result}'
-            assert result.msa_3 == _Respond_Note, f'Expected the receiver to answer, got: {result}'
-
-            # .. and so is the Java HAPI client's.
-            if java_client.is_java_available():
-                control_id = 'java.' + CryptoManager.generate_hex_string()
-                result = java_client.send_message(Host, mllp_port, control_id, _Respond_App)
-
-                assert result.msa_1 == 'AA', f'Expected AA, got: {result}'
-                assert result.msa_2 == control_id, f'Expected the control id echoed, got: {result}'
-                assert result.msa_3 == _Respond_Note, f'Expected the receiver to answer, got: {result}'
+            # .. and it still is once the channel has been saved through the wizard again with
+            # nothing changed, the destination that replies being one of the answers the
+            # wizard has to read back before it can post it anew.
+            save_channel(page, base_url, channel_name)
+            self._check_reply_from_receiver(mllp_port)
 
         finally:
             delete_channel(page, base_url, channel_name)
             delete_outgoing_connection(page, base_url, mllp_conn)
 
             receiver.stop()
+
+# ################################################################################################################################
+
+    def _check_reply_from_receiver(self, mllp_port:'int') -> 'None':
+        """ What each external client reads off its socket is the acknowledgment the
+        destination's receiver made, its note in MSA-3 being how they tell that answer from
+        the listener's own.
+        """
+        wait_until_routed(mllp_port, _Respond_Note, _Respond_App)
+
+        for control_id, result in send_with_both_clients(mllp_port, _Respond_App):
+
+            assert result.msa_1 == 'AA', f'Expected AA, got: {result}'
+            assert result.msa_2 == control_id, f'Expected the control id echoed, got: {result}'
+            assert result.msa_3 == _Respond_Note, f'Expected the receiver to answer, got: {result}'
 
 # ################################################################################################################################
 # ################################################################################################################################
