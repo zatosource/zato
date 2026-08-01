@@ -280,13 +280,15 @@ class TestEnmasseSMBFromYAML(TestCase):
 # ################################################################################################################################
 
     def test_smb_schedules_import(self):
-        """ Test that a connection's schedules from YAML create their scheduler jobs,
-        linked back to the connection.
+        """ Test that a connection's schedules from YAML create their scheduler jobs, that a re-import
+        updates the same jobs in place and that removing a schedule from YAML deletes its job.
         """
         self._setup_test_environment()
 
         _scheduler = FileTransfer.Scheduler
 
+        # A connection with two schedules - the first one relies on the defaults wherever possible
+        # and the second one overrides them all.
         conn_def = {
             'name': ModuleCtx.Conn_Name,
             'host': self.smb_server.host,
@@ -301,41 +303,105 @@ class TestEnmasseSMBFromYAML(TestCase):
                     'run_every': 30,
                     'run_unit': 'minutes',
                 },
+                {
+                    'name': 'reports.daily',
+                    'directory': 'my-share/incoming/reports',
+                    'service': 'demo.ping',
+                    'run_every': 1,
+                    'run_unit': 'days',
+                    'is_active': False,
+                    'pattern': '*.csv',
+                    'ready_how': 'marker',
+                    'marker_suffix': '.ok',
+                    'should_claim': True,
+                    'on_success': 'delete',
+                },
             ],
         }
 
-        # Import the connection along with its schedule
+        # Import the connection along with its schedules
         created, _ = self.smb_importer.sync_definitions([conn_def], self.session)
         self.assertEqual(len(created), 1)
 
         instance = created[0]
         opaque = parse_instance_opaque_attr(instance)
 
-        # The stored list carries the full entry with the defaults filled in
+        # The stored list carries the full entries with the defaults filled in
         schedules = opaque[_scheduler.Schedules_Field]
-        self.assertEqual(len(schedules), 1)
+        self.assertEqual(len(schedules), 2)
 
-        schedule = schedules[0]
+        first = schedules[0]
 
-        self.assertEqual(schedule['id'], 'invoices.hourly')
-        self.assertEqual(schedule['directory'], 'my-share/incoming/invoices')
-        self.assertEqual(schedule['pattern'], _scheduler.Default_Pattern)
-        self.assertEqual(schedule['ready_how'], _scheduler.ReadyHow.Stability)
+        self.assertEqual(first['id'], 'invoices.hourly')
+        self.assertEqual(first['directory'], 'my-share/incoming/invoices')
+        self.assertEqual(first['pattern'], _scheduler.Default_Pattern)
+        self.assertEqual(first['ready_how'], _scheduler.ReadyHow.Stability)
+        self.assertEqual(first['on_success'], _scheduler.OnSuccess.Move)
+        self.assertEqual(first['move_directory'], _scheduler.Default_Move_Directory)
+        self.assertTrue(first['is_active'])
 
-        # The schedule has a linked job with the conventional name, the right interval,
+        second = schedules[1]
+
+        self.assertEqual(second['pattern'], '*.csv')
+        self.assertEqual(second['ready_how'], _scheduler.ReadyHow.Marker)
+        self.assertEqual(second['marker_suffix'], '.ok')
+        self.assertTrue(second['should_claim'])
+        self.assertEqual(second['on_success'], _scheduler.OnSuccess.Delete)
+        self.assertFalse(second['is_active'])
+
+        # Each schedule has a linked job with the conventional name, the right interval,
         # the SMB dispatch service and the link attributes.
-        job_name = 'smb.{}.invoices.hourly'.format(ModuleCtx.Conn_Name)
-        job = self.session.query(Job).filter_by(name=job_name).one()
+        first_job_name = 'smb.{}.invoices.hourly'.format(ModuleCtx.Conn_Name)
+        second_job_name = 'smb.{}.reports.daily'.format(ModuleCtx.Conn_Name)
 
-        self.assertEqual(schedule['job_id'], job.id)
-        self.assertEqual(job.interval_based.minutes, 30)
-        self.assertEqual(job.service.name, _scheduler.Dispatch_Service[GENERIC.CONNECTION.TYPE.OUTCONN_SMB])
+        first_job = self.session.query(Job).filter_by(name=first_job_name).one()
+        second_job = self.session.query(Job).filter_by(name=second_job_name).one()
 
-        job_opaque = parse_instance_opaque_attr(job)
+        self.assertEqual(first['job_id'], first_job.id)
+        self.assertEqual(second['job_id'], second_job.id)
 
-        self.assertEqual(job_opaque[SchedulerLink.Conn_ID], instance.id)
-        self.assertEqual(job_opaque[SchedulerLink.Conn_Type], GENERIC.CONNECTION.TYPE.OUTCONN_SMB)
-        self.assertEqual(job_opaque[SchedulerLink.Kind], 'invoices.hourly')
+        self.assertEqual(first_job.interval_based.minutes, 30)
+        self.assertEqual(second_job.interval_based.days, 1)
+
+        self.assertEqual(first_job.service.name, _scheduler.Dispatch_Service[GENERIC.CONNECTION.TYPE.OUTCONN_SMB])
+
+        first_job_opaque = parse_instance_opaque_attr(first_job)
+
+        self.assertEqual(first_job_opaque[SchedulerLink.Conn_ID], instance.id)
+        self.assertEqual(first_job_opaque[SchedulerLink.Conn_Type], GENERIC.CONNECTION.TYPE.OUTCONN_SMB)
+        self.assertEqual(first_job_opaque[SchedulerLink.Kind], 'invoices.hourly')
+
+        # A re-import with the first schedule changed and the second one removed
+        # must update the first job in place and delete the second one.
+        conn_def['schedules'] = [
+            {
+                'name': 'invoices.hourly',
+                'directory': 'my-share/incoming/invoices-v2',
+                'service': 'demo.ping',
+                'run_every': 3,
+                'run_unit': 'hours',
+            },
+        ]
+
+        _, updated = self.smb_importer.sync_definitions([conn_def], self.session)
+        self.assertEqual(len(updated), 1)
+
+        updated_opaque = parse_instance_opaque_attr(updated[0])
+        updated_schedules = updated_opaque[_scheduler.Schedules_Field]
+
+        self.assertEqual(len(updated_schedules), 1)
+        self.assertEqual(updated_schedules[0]['directory'], 'my-share/incoming/invoices-v2')
+
+        # It is still the same job, just with a new interval ..
+        updated_job = self.session.query(Job).filter_by(name=first_job_name).one()
+
+        self.assertEqual(updated_job.id, first_job.id)
+        self.assertEqual(updated_job.interval_based.hours, 3)
+        self.assertEqual(updated_job.interval_based.minutes, 0)
+
+        # .. while the removed schedule's job is gone.
+        second_job_query = self.session.query(Job).filter_by(name=second_job_name).first()
+        self.assertIsNone(second_job_query)
 
 # ################################################################################################################################
 

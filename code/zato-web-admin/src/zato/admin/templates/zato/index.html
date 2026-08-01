@@ -308,6 +308,7 @@
                                     <li class="child"><a class="menu-link" href="{% url "out-llm" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-llm">LLM connections</a></li>
                                 </ul>
                             </li>
+                            {% if 0 %}
                             <li class="first-level" >
                                 <a class="menu-link"  style="padding-left: 0.3rem" href="#">EDI &darr;</a>
                                 <ul>
@@ -330,6 +331,7 @@
 
                                 </ul>
                             </li>
+                            {% endif %}
                             <li class="first-level" style="padding-left: 0.3rem">
                                 <a class="menu-link" href="#">Security &darr;</a>
                                 <ul>
@@ -575,12 +577,14 @@
                                 </ul>
                             </li>
 
+                            {% if 0 %}
                             <li class="first-level">
                                 <a class="menu-link">Analytics &darr;</a>
                                 <ul>
                                     <li class="child"><a class="menu-link" href="{% url "analytics" %}?cluster={{ cluster_id|default:"1" }}">REST channels</a></li>
                                 </ul>
                             </li>
+                            {% endif %}
 
                             {% if 0 %}
                             <li class="first-level">

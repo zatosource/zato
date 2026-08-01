@@ -10,19 +10,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 
 class TestConfig:
-    """ Connection details of the test server, populated by the session fixture in conftest.
+    """ Connection details of the one Zato server that every protocol's tests share,
+    populated by the session fixture in conftest.
     """
     host = '127.0.0.1'
     server_port = 0
     invoke_password = ''
     server_directory = ''
 
-    # The file that the hot-deployed test service appends each received file transfer item to
+    # The file that the hot-deployed test services append each received file transfer item to
     evidence_file = ''
-
-    # Names of the hot-deployed test services
-    service_store_file = 'file-transfer-scheduler-test.store-file'
-    service_always_raise = 'file-transfer-scheduler-test.always-raise'
 
 # ################################################################################################################################
 # ################################################################################################################################

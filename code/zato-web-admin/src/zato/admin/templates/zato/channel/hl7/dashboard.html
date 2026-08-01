@@ -3,6 +3,10 @@
 
 {% block html_title %}HL7 channels{% endblock %}
 
+{% block dashboard_extra_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/channel/hl7/dashboard.css">
+{% endblock %}
+
 {% block dashboard_domain_js %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/dashboard.js"></script>
 {{ dashboard_data|json_script:"dashboard-data" }}
