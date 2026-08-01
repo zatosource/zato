@@ -8,11 +8,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from json import dumps, loads
-from re import sub as re_sub
 
 # Zato
 from zato.common.api import FileTransfer
 from zato.common.odb.model import GenericConn
+from zato.common.util.api import new_cid
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -81,6 +81,7 @@ def update_schedule_job_fields(
     run_unit,    # type: str
     start_date,  # type: str
     job_id,      # type: int
+    is_active,   # type: bool
     ) -> 'None':
     """ Writes the current state of a scheduler job back to the schedule entry it is linked to,
     e.g. after an edit made directly in the scheduler's own UI.
@@ -94,6 +95,10 @@ def update_schedule_job_fields(
             schedule['run_unit'] = run_unit
             schedule['start_date'] = start_date
             schedule['job_id'] = job_id
+
+            # .. a job switched off in the scheduler is a schedule switched off, so that the two
+            # .. sides never disagree about whether the schedule runs at all ..
+            schedule['is_active'] = is_active
             break
 
     # .. the entry may be gone already, in which case there is nothing to write back ..
@@ -123,17 +128,11 @@ def delete_schedule_entry(session:'SASession', conn_id:'int', schedule_id:'str')
 
 # ################################################################################################################################
 
-def get_schedule_id(name:'str') -> 'str':
-    """ Turns a schedule's name into its id - a lowercase slug that stays stable across renames of other fields,
-    e.g. Invoices Hourly becomes invoices-hourly.
+def new_schedule_id() -> 'str':
+    """ Returns the id of a schedule about to be created. It is generated once and never derived from
+    anything the user can change, so a rename leaves it alone and no two schedules can ever share one.
     """
-
-    # Everything that is not a letter, a digit or a dot becomes a dash ..
-    out = re_sub('[^a-z0-9.]+', '-', name.lower())
-
-    # .. and the edges never carry dashes.
-    out = out.strip('-')
-
+    out = new_cid()
     return out
 
 # ################################################################################################################################
@@ -148,7 +147,7 @@ def get_job_name(conn_type:'str', conn_name:'str', schedule_name:'str') -> 'str'
 
 # ################################################################################################################################
 
-# The schedule fields that never travel in YAML - the id is derived from the name
+# The schedule fields that never travel in YAML - the id belongs to the environment that generated it
 # and the job id is a database-specific value that would not survive a move.
 _non_portable_fields = ('id', 'job_id')
 
@@ -197,14 +196,15 @@ def export_schedule_list(schedules:'dictlist') -> 'dictlist':
 
 # ################################################################################################################################
 
-def schedule_from_yaml(schedule_def:'stranydict') -> 'stranydict':
+def schedule_from_yaml(schedule_def:'stranydict', schedule_id:'str') -> 'stranydict':
     """ Turns the YAML shape of one schedule back into a full entry of a connection's list,
-    filling in the defaults for everything the YAML left out. The job link is added by the caller.
+    filling in the defaults for everything the YAML left out. The id comes from the caller because
+    a schedule that already exists keeps the one it was created with. The job link is added by the caller.
     """
     name = schedule_def['name']
 
     out = {
-        'id': get_schedule_id(name),
+        'id': schedule_id,
         'name': name,
         'directory': schedule_def['directory'],
         'service': schedule_def['service'],

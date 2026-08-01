@@ -38,7 +38,7 @@ _key_permissions = 0o600
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SFTPAdapter(FileTransferAdapter, LocalBackedRemote):
+class SFTPAdapter(LocalBackedRemote, FileTransferAdapter):
     """ Runs the shared file transfer schedule tests against a real SSH server with an SFTP subsystem.
     """
 
@@ -97,6 +97,16 @@ class SFTPAdapter(FileTransferAdapter, LocalBackedRemote):
 
     def restart_server(self) -> 'None':
         self.server.restart()
+
+# ################################################################################################################################
+
+    def pause_server(self) -> 'None':
+        self.server.pause()
+
+# ################################################################################################################################
+
+    def resume_server(self) -> 'None':
+        self.server.resume()
 
 # ################################################################################################################################
 

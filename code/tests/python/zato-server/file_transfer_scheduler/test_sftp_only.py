@@ -85,8 +85,15 @@ class TestSFTPOnly(FileTransferScheduleTestBase):
         except Exception:
             pass
 
-        # Whatever the connection made of the host key, no file went missing over it
-        assert harness.exists(directory, 'invoice.txt')
+        # Whatever the connection made of the host key, the file is accounted for - either it was
+        # turned away and is waiting where it was, or it went through and is in the destination
+        left_in_place = harness.exists(directory, 'invoice.txt')
+
+        if left_in_place:
+            assert harness.delivered(schedule_name) == []
+        else:
+            assert harness.delivered_names(schedule_name) == ['invoice.txt']
+            harness.assert_names(harness.move_directory_of(directory), ['invoice.txt'])
 
 # ################################################################################################################################
 

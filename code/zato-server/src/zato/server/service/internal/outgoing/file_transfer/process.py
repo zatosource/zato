@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from datetime import datetime, timezone
 from fnmatch import fnmatch
 from traceback import format_exc
 
@@ -131,6 +132,58 @@ def _keep_stable_entries(conn:'any_', directory:'str', candidates:'anylist', sta
 
 # ################################################################################################################################
 
+def _get_move_destination(conn:'any_', move_directory:'str', file_name:'str') -> 'str':
+    """ Returns the path a file is moved to once its target service is done with it - its own name
+    unless the destination already holds something of that name, in which case the moment the file
+    arrived is what tells this one from the one already there.
+    """
+    out = f'{move_directory}/{file_name}'
+
+    # Nothing of that name is in the way so the file keeps its own ..
+    if not conn.exists(out):
+        return out
+
+    # .. otherwise it is given a name that says when it turned up, so that a feed sending
+    # .. one name every day leaves every day's file behind rather than only the last one.
+    stamp = datetime.now(timezone.utc).strftime(_scheduler.Collision_Suffix_Format)
+
+    out = f'{move_directory}/{file_name}.{stamp}'
+    return out
+
+# ################################################################################################################################
+
+def _ack_one_file(
+    conn,         # type: any_
+    schedule,     # type: stranydict
+    directory,    # type: str
+    file_name,    # type: str
+    full_path,    # type: str
+    current_path, # type: str
+    ) -> 'None':
+    """ Puts a file that its target service accepted out of the way - it is either moved to the schedule's
+    destination or deleted, either of which makes sure the next run never picks it up again.
+    """
+    if schedule['on_success'] == _scheduler.OnSuccess.Move:
+
+        move_directory = f'{directory}/{schedule["move_directory"]}'
+
+        # The destination directory is created on first use
+        if not conn.exists(move_directory):
+            _ = conn.create_directory(move_directory)
+
+        destination = _get_move_destination(conn, move_directory, file_name)
+        _ = conn.move(current_path, destination)
+
+    else:
+        _ = conn.delete_file(current_path)
+
+    # In marker mode, the marker goes away together with its data file
+    if schedule['ready_how'] == _scheduler.ReadyHow.Marker:
+        marker_path = full_path + schedule['marker_suffix']
+        _ = conn.delete_file(marker_path)
+
+# ################################################################################################################################
+
 def _process_one_file(
     service,   # type: Service
     conn,      # type: any_
@@ -182,31 +235,24 @@ def _process_one_file(
         service.logger.warning('Could not invoke `%s` with file `%s` from `%s` -> `%s`',
             schedule['service'], full_path, conn_name, format_exc())
 
-        # A claimed file is renamed back so the next run, here or elsewhere, can take it again
+        # A claimed file is renamed back so the next run, here or elsewhere, can take it again.
+        # The file may be gone by now, e.g. another consumer took it, which is not our concern here.
         if current_path != full_path:
-            _ = conn.move(current_path, full_path)
+            try:
+                _ = conn.move(current_path, full_path)
+            except Exception:
+                service.logger.info('Could not release the claim on `%s`', current_path)
 
         return
 
-    # Everything succeeded so the file is acked - it is either moved away or deleted,
-    # ensuring it is never picked up twice.
-    if schedule['on_success'] == _scheduler.OnSuccess.Move:
-
-        move_directory = f'{directory}/{schedule["move_directory"]}'
-
-        # The destination directory is created on first use
-        if not conn.exists(move_directory):
-            _ = conn.create_directory(move_directory)
-
-        _ = conn.move(current_path, f'{move_directory}/{file_name}')
-
-    else:
-        _ = conn.delete_file(current_path)
-
-    # In marker mode, the marker goes away together with its data file
-    if schedule['ready_how'] == _scheduler.ReadyHow.Marker:
-        marker_path = full_path + schedule['marker_suffix']
-        _ = conn.delete_file(marker_path)
+    # Everything succeeded so the file is acked. An ack that cannot go through - because the destination
+    # will not take the file or because another run moved it away a moment earlier - concerns this one
+    # file alone, so it is logged and the run carries on with the files behind it.
+    try:
+        _ack_one_file(conn, schedule, directory, file_name, full_path, current_path)
+    except Exception:
+        service.logger.warning('Could not put file `%s` out of the way after `%s` took it -> `%s`',
+            full_path, schedule['service'], format_exc())
 
 # ################################################################################################################################
 
@@ -230,10 +276,16 @@ def process_files(service:'Service', context:'stranydict') -> 'None':
     else:
         conn = service.smb[conn_name]
 
+    # A directory that is not there yet, e.g. the partner has not created it, or one that went away
+    # during maintenance, means there is nothing to do - exactly what an empty one means.
+    if not conn.exists(directory):
+        service.logger.info('Directory `%s` does not exist in `%s`, nothing to do', directory, conn_name)
+        return
+
     # Look into the directory ..
     entries = conn.list(directory)
 
-    # .. an empty or missing directory means there is nothing to do ..
+    # .. an empty one means there is nothing to do ..
     if not entries:
         return
 
@@ -244,9 +296,14 @@ def process_files(service:'Service', context:'stranydict') -> 'None':
     if schedule['ready_how'] == _scheduler.ReadyHow.Stability:
         candidates = _keep_stable_entries(conn, directory, candidates, schedule['stability_delay'])
 
-    # .. and now each ready file can be handled on its own.
+    # .. and now each ready file can be handled on its own. One file that cannot be handled never ends
+    # the run for the files behind it - the run is over only once every file has had its turn.
     for entry in candidates:
-        _process_one_file(service, conn, context, schedule, directory, entry)
+        try:
+            _process_one_file(service, conn, context, schedule, directory, entry)
+        except Exception:
+            service.logger.warning('Could not handle file `%s` from `%s` -> `%s`',
+                _get_file_name(entry), conn_name, format_exc())
 
 # ################################################################################################################################
 # ################################################################################################################################

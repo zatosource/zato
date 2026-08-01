@@ -9,9 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from threading import Thread
 
-# pytest
-import pytest
-
 # Zato
 from zato.common.api import FileTransfer
 from zato.common.test.file_transfer_harness.base import FileTransferScheduleTestBase
@@ -63,6 +60,18 @@ def _run_together(harness:'Harness', conn:'Connection', schedules:'anylist') -> 
     return errors
 
 # ################################################################################################################################
+
+def _assert_no_errors(errors:'anylist') -> 'None':
+    """ Fails with what the runs raised rather than with the bare fact that they raised something.
+    """
+    reasons = []
+
+    for error in errors:
+        reasons.append(str(error))
+
+    assert errors == [], f'The runs raised {reasons}'
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class ConcurrencyTests(FileTransferScheduleTestBase):
@@ -93,7 +102,7 @@ class ConcurrencyTests(FileTransferScheduleTestBase):
         second = harness.create_schedule(conn, second_name, directory, should_claim=True)
 
         errors = _run_together(harness, conn, [first, second])
-        assert errors == []
+        _assert_no_errors(errors)
 
         # Between the two of them every file went through exactly once ..
         delivered = harness.delivered_names(first_name) + harness.delivered_names(second_name)
@@ -107,7 +116,6 @@ class ConcurrencyTests(FileTransferScheduleTestBase):
 
 # ################################################################################################################################
 
-    @pytest.mark.xfail(strict=False, reason='Two runs reaching for one file end each other early')
     def test_competing_consumers_without_claiming_lose_no_file(self, harness:'Harness') -> 'None':
 
         conn = harness.new_conn()
@@ -166,7 +174,7 @@ class ConcurrencyTests(FileTransferScheduleTestBase):
             service=Service_Slow_Store, should_claim=True)
 
         errors = _run_together(harness, conn, [schedule, schedule])
-        assert errors == []
+        _assert_no_errors(errors)
 
         # Claiming is what keeps two overlapping runs from delivering the same file twice
         delivered = harness.delivered_names(schedule_name)
@@ -194,7 +202,7 @@ class ConcurrencyTests(FileTransferScheduleTestBase):
         second = harness.create_schedule(conn, second_name, second_directory)
 
         errors = _run_together(harness, conn, [first, second])
-        assert errors == []
+        _assert_no_errors(errors)
 
         assert harness.delivered_names(first_name) == ['first.txt']
         assert harness.delivered_names(second_name) == ['second.txt']

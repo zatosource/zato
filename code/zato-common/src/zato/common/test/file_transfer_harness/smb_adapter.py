@@ -26,7 +26,7 @@ Conn_Name_Prefix = 'test-file-transfer-smb-'
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SMBAdapter(FileTransferAdapter, LocalBackedRemote):
+class SMBAdapter(LocalBackedRemote, FileTransferAdapter):
     """ Runs the shared file transfer schedule tests against a real SMB server.
     """
 
@@ -70,6 +70,16 @@ class SMBAdapter(FileTransferAdapter, LocalBackedRemote):
 
     def restart_server(self) -> 'None':
         self.server.restart()
+
+# ################################################################################################################################
+
+    def pause_server(self) -> 'None':
+        self.server.pause()
+
+# ################################################################################################################################
+
+    def resume_server(self) -> 'None':
+        self.server.resume()
 
 # ################################################################################################################################
 

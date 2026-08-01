@@ -216,6 +216,26 @@ class SFTPTestServer:
 
 # ################################################################################################################################
 
+    def pause(self) -> 'None':
+        """ Takes the server away without touching anything it uses, which is how a test asks
+        for a server that cannot be reached for a while. Nothing else may be assumed about
+        the state of what the server serves - resume brings it back exactly as it was.
+        """
+        self._stop_process()
+
+        logger.info('Test SSH server paused on %s:%s (%s)', self.host, self.port, self.base_dir)
+
+# ################################################################################################################################
+
+    def resume(self) -> 'None':
+        """ Brings a paused server back on the same port, with the same keys and the same files.
+        """
+        self._start_process()
+
+        logger.info('Test SSH server resumed on %s:%s (%s)', self.host, self.port, self.base_dir)
+
+# ################################################################################################################################
+
     def stop(self) -> 'None':
 
         # Stop the server first ..

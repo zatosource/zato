@@ -147,6 +147,25 @@ class SMBTestServer:
 
 # ################################################################################################################################
 
+    def pause(self) -> 'None':
+        """ Takes the server away without touching the directory backing its share, which is how a test
+        asks for a server that cannot be reached for a while. Resume brings it back exactly as it was.
+        """
+        self._stop_server()
+
+        logger.info('Test SMB server paused on %s:%s (%s)', self.host, self.port, self.files_dir)
+
+# ################################################################################################################################
+
+    def resume(self) -> 'None':
+        """ Brings a paused server back on the same port, with the files of its share as they were.
+        """
+        self._start_server()
+
+        logger.info('Test SMB server resumed on %s:%s (%s)', self.host, self.port, self.files_dir)
+
+# ################################################################################################################################
+
     def stop(self) -> 'None':
 
         # Stop the server first ..

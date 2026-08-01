@@ -1337,6 +1337,10 @@ class FileTransfer:
         # The suffix a file is renamed to when a schedule claims it for itself
         Claim_Suffix = '.processing'
 
+        # What a file is given on top of its own name when the destination it is moved into
+        # already holds something of that name - the moment it arrived tells the two apart.
+        Collision_Suffix_Format = '%Y%m%d-%H%M%S-%f'
+
 # ################################################################################################################################
 # ################################################################################################################################
 

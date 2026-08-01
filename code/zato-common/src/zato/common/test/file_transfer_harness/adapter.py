@@ -82,7 +82,7 @@ class FileTransferAdapter:
 # ################################################################################################################################
 
     def stop_server(self) -> 'None':
-        """ Stops the test server and removes everything it used.
+        """ Stops the test server and removes everything it used, which ends the suite for this protocol.
         """
         raise Exception('Adapters must implement stop_server')
 
@@ -92,6 +92,22 @@ class FileTransferAdapter:
         """ Stops the test server and starts it again, keeping the files it serves.
         """
         raise Exception('Adapters must implement restart_server')
+
+# ################################################################################################################################
+
+    def pause_server(self) -> 'None':
+        """ Takes the test server away for a while, keeping the files it serves, which is how a test
+        asks for a remote side that cannot be reached. The suite goes on afterwards, so nothing
+        the server serves may be removed here.
+        """
+        raise Exception('Adapters must implement pause_server')
+
+# ################################################################################################################################
+
+    def resume_server(self) -> 'None':
+        """ Brings a paused test server back, with everything it serves as it was.
+        """
+        raise Exception('Adapters must implement resume_server')
 
 # ################################################################################################################################
 
