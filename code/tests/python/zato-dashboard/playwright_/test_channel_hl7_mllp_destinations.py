@@ -29,9 +29,10 @@ from zato.common.crypto.api import CryptoManager
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import any_, anydict
+    from zato.common.typing_ import any_, anydict, anylist
     any_ = any_
     anydict = anydict
+    anylist = anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -83,6 +84,27 @@ _Fhir_Page_Url = '/zato/outgoing/hl7/fhir/?cluster=1&type_=outconn-hl7-fhir'
 _Smtp_Page_Url = '/zato/email/smtp/?cluster=1'
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def _wait_until_quiet(deliveries:'anylist') -> 'int':
+    """ Returns how many deliveries a receiver holds once no more arrive. The probes that
+    register a route are delivered too and there is nothing in a delivery to tell them from
+    a test's own sends, so what they left behind has to settle before the sends begin.
+    """
+    count = len(deliveries)
+    deadline = time.monotonic() + _Absence_Wait * 10
+
+    while time.monotonic() < deadline:
+
+        time.sleep(_Absence_Wait)
+
+        if len(deliveries) == count:
+            break
+
+        count = len(deliveries)
+
+    return count
+
 # ################################################################################################################################
 
 def _create_fhir_connection(page:'Page', base_url:'str', name:'str', address:'str') -> 'None':
@@ -372,13 +394,15 @@ class TestChannelHL7MLLPDestinations:
             wait_for_port(mllp_port)
             _ = wait_until_accepted(mllp_port, _Populate_App)
 
+            # The probes that registered the route were delivered as well and one resource looks
+            # like another, so their deliveries are counted in before any send of this test's own
+            fhir_count_before = _wait_until_quiet(fhir_receiver.resources)
+
             control_ids = []
 
             for control_id, result in send_with_both_clients(mllp_port, _Populate_App):
                 assert result.msa_1 == 'AA', f'Expected AA, got: {result}'
                 control_ids.append(control_id)
-
-            fhir_count_before = len(fhir_receiver.resources)
 
             for control_id in control_ids:
 
