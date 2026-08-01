@@ -16,6 +16,7 @@ import pytest
 # Zato
 from zato.common.test import rand_string
 from zato.common.test.playwright_pubsub import create_basic_auth
+from zato.common.util.auth import Auth_Basic_No_Auth
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,8 +52,13 @@ _Group_Log_Patterns = (
     'Received both Basic Auth and API key (groups)',
 )
 
-# Log patterns produced by the server when a security definition rejects credentials
-_Auth_Log_Patterns = ('401 Unauthorized path_info', 'Unauthorized; path_info')
+# Log patterns produced by the server when a security definition rejects credentials,
+# including the one for a request that carried no Authorization header at all
+_Auth_Log_Patterns = (
+    '401 Unauthorized path_info',
+    'Unauthorized; path_info',
+    f'Basic Auth -> {Auth_Basic_No_Auth}',
+)
 
 # The group-name uniqueness probe queries a groups table missing from the quickstart ODB,
 # so the dashboard middleware logs this warning whenever a group is created via the UI

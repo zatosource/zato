@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import socket
 import subprocess
 from time import sleep, time
 from typing import NamedTuple
@@ -60,6 +61,18 @@ class ModuleCtx:
     # How long to sleep between readiness checks
     Ready_Sleep = 2
 
+    # How long to wait for a host port to be released by whatever container still holds it
+    Port_Free_Timeout = 120
+
+    # How long to sleep between checks of whether a host port can be bound
+    Port_Free_Sleep = 1
+
+    # How many times starting the container is attempted while its host port is still busy
+    Start_Attempts = 5
+
+    # What docker says when the host port is not free yet
+    Port_In_Use_Marker = 'address already in use'
+
     # Hard resource limits for the container so a test run can never overwhelm the host -
     # queue manager startup is CPU-hungry and spawns hundreds of processes if left unbounded
     CPU_Limit    = '2'
@@ -80,6 +93,46 @@ def _remove_stale_container(name:'str') -> 'None':
     """ Removes a container left over from a previous, possibly interrupted, run.
     """
     _ = subprocess.run(['docker', 'rm', '-f', name], capture_output=True, check=False)
+
+# ################################################################################################################################
+
+def _remove_containers_using_port(port:'int') -> 'None':
+    """ Removes any container publishing the host port, whatever its name is - a container
+    from an interrupted run keeps the port bound and docker run would refuse to start ours.
+    """
+    result = subprocess.run(
+        ['docker', 'ps', '-a', '--filter', f'publish={port}', '--format', '{{.Names}}'],
+        capture_output=True,
+        check=False,
+    )
+
+    names = result.stdout.decode('utf-8').split()
+
+    for name in names:
+        _ = subprocess.run(['docker', 'rm', '-f', name], capture_output=True, check=False)
+
+# ################################################################################################################################
+
+def _wait_until_port_is_free(port:'int') -> 'None':
+    """ Waits until the host port can be bound - docker releases a published port asynchronously
+    after a container goes away, so a start following a stop can otherwise race with it.
+    """
+    deadline = time() + ModuleCtx.Port_Free_Timeout
+
+    while time() < deadline:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as test_socket:
+
+            # Without this a port left in TIME_WAIT would look busy even though docker could publish it
+            test_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+            try:
+                test_socket.bind(('0.0.0.0', port))
+            except OSError:
+                sleep(ModuleCtx.Port_Free_Sleep)
+            else:
+                return
+
+    raise Exception(f'Host port {port} was still in use after {ModuleCtx.Port_Free_Timeout}s')
 
 # ################################################################################################################################
 
@@ -126,6 +179,7 @@ def start_ibm_mq(*, needs_ssl:'bool', certificates:'certificatepathsnone' = None
         port = ModuleCtx.MQ_Port
 
     _remove_stale_container(container_name)
+    _remove_containers_using_port(port)
 
     command:'strlist' = [
         'docker', 'run', '-d', '--rm',
@@ -153,12 +207,35 @@ def start_ibm_mq(*, needs_ssl:'bool', certificates:'certificatepathsnone' = None
 
     # Start the container, surfacing docker's own error message if the command fails -
     # a bare CalledProcessError hides both stdout and stderr.
-    result = subprocess.run(command, capture_output=True, check=False)
+    is_started = False
+    last_stdout = ''
+    last_stderr = ''
 
-    if result.returncode != 0:
-        stdout = result.stdout.decode('utf-8')
-        stderr = result.stderr.decode('utf-8')
-        raise Exception(f'Could not start `{container_name}`, stdout: `{stdout}`, stderr: `{stderr}`')
+    for _ in range(ModuleCtx.Start_Attempts):
+
+        # The port a previous container published may still be going away, so it is confirmed free first
+        _wait_until_port_is_free(port)
+
+        result = subprocess.run(command, capture_output=True, check=False)
+
+        if result.returncode == 0:
+            is_started = True
+            break
+
+        last_stdout = result.stdout.decode('utf-8')
+        last_stderr = result.stderr.decode('utf-8')
+
+        # Docker creates the container before it sets its networking up, so a failed attempt leaves one behind
+        _remove_stale_container(container_name)
+
+        # Anything other than a port that is still busy is a real error and retrying would not help
+        if ModuleCtx.Port_In_Use_Marker not in last_stderr:
+            break
+
+        sleep(ModuleCtx.Port_Free_Sleep)
+
+    if not is_started:
+        raise Exception(f'Could not start `{container_name}`, stdout: `{last_stdout}`, stderr: `{last_stderr}`')
 
     # Wait until the queue manager reports it is ready to accept connections
     _wait_until_ready(container_name)
