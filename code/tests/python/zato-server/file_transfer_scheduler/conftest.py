@@ -24,7 +24,7 @@ import pytest
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.client import AdminClient
 from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
-from zato.common.test.file_transfer_harness.evidence import build_test_services_source
+from zato.common.test.file_transfer_harness.deliveries import build_test_services_source
 from zato.common.test.file_transfer_harness.sftp_adapter import Key_Env_Name, SFTPAdapter
 from zato.common.test.file_transfer_harness.smb_adapter import SMBAdapter
 from zato.common.util.tcp import get_free_port
@@ -76,14 +76,14 @@ def _build_config(
     invoke_password:'str',
 ) -> 'anydict':
 
-    # A directory for the evidence file and the generated source code of the test services
+    # A directory for the deliveries file and the generated source code of the test services
     work_directory = tempfile.mkdtemp(prefix='zato_file_transfer_work_')
 
-    evidence_file = os.path.join(work_directory, 'file-transfer-items.jsonl')
-    TestConfig.evidence_file = evidence_file
+    deliveries_file = os.path.join(work_directory, 'file-transfer-items.jsonl')
+    TestConfig.deliveries_file = deliveries_file
 
-    # Render the test services with the evidence file path embedded ..
-    source = build_test_services_source(evidence_file)
+    # Render the test services with the deliveries file path embedded ..
+    source = build_test_services_source(deliveries_file)
 
     # .. and write them out for the fixture to copy into the server's pickup directory.
     source_path = os.path.join(work_directory, 'file_transfer_scheduler_test_services.py')
@@ -147,10 +147,10 @@ def admin_client(zato_server:'any_') -> 'AdminClient':
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def evidence_file(zato_server:'any_') -> 'str':
+def deliveries_file(zato_server:'any_') -> 'str':
     """ The file that the hot-deployed test services record each received file in.
     """
-    out = TestConfig.evidence_file
+    out = TestConfig.deliveries_file
     return out
 
 # ################################################################################################################################
@@ -185,7 +185,7 @@ def smb_adapter() -> 'any_':
 
 @pytest.fixture(scope='session')
 def scheduler_process(zato_server:'any_') -> 'any_':
-    """ Starts this suite's own private scheduler for tests that need real fire events. Its stream prefix
+    """ Starts this suite's own private scheduler for tests whose schedules the scheduler itself is to fire. Its stream prefix
     and HTTP port are unique to this run, so it never interferes with any other scheduler - be it
     the user's own one or one belonging to another test suite running in parallel.
     It depends on the server fixture so that it starts only after quickstart wiped the Redis keys.

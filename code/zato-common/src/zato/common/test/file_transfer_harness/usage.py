@@ -15,7 +15,7 @@ import pytest
 # Zato
 from zato.common.api import FileTransfer
 from zato.common.test.file_transfer_harness.base import FileTransferScheduleTestBase
-from zato.common.test.file_transfer_harness.evidence import Max_Recorded_Payload_Size
+from zato.common.test.file_transfer_harness.deliveries import Max_Recorded_Payload_Size
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -169,7 +169,7 @@ class UsageTests(FileTransferScheduleTestBase):
         expected_length = len(payload)
         expected_digest = sha256(payload).hexdigest()
 
-        # The test is only worth running on a payload too large to be kept in the evidence in full
+        # The test is only worth running on a payload too large to be recorded in full
         assert expected_length > Max_Recorded_Payload_Size
 
         harness.write(directory, 'one-whole-day.csv', payload)

@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import pytest
 
 # Zato
-from zato.common.test.file_transfer_harness.real_fire import RealFireTests
+from zato.common.test.file_transfer_harness.scheduler_driven import SchedulerDrivenTests
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -21,7 +21,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestSFTPRealFire(RealFireTests):
+class TestSFTPSchedulerDriven(SchedulerDrivenTests):
 
     @pytest.fixture()
     def adapter(self, sftp_adapter:'FileTransferAdapter') -> 'FileTransferAdapter':
@@ -30,7 +30,7 @@ class TestSFTPRealFire(RealFireTests):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestSMBRealFire(RealFireTests):
+class TestSMBSchedulerDriven(SchedulerDrivenTests):
 
     @pytest.fixture()
     def adapter(self, smb_adapter:'FileTransferAdapter') -> 'FileTransferAdapter':

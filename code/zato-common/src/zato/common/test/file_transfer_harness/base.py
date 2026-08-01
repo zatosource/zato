@@ -17,7 +17,7 @@ import pytest
 from zato.common.api import FileTransfer
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.file_transfer_harness.client import ScheduleClient
-from zato.common.test.file_transfer_harness.evidence import Evidence, Service_Store_File
+from zato.common.test.file_transfer_harness.deliveries import Deliveries, Service_Store_File
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,10 +52,10 @@ class Harness:
     and the record of what the schedules delivered. Nothing in here knows which protocol it is driving.
     """
 
-    def __init__(self, client:'ScheduleClient', adapter:'FileTransferAdapter', evidence:'Evidence') -> 'None':
+    def __init__(self, client:'ScheduleClient', adapter:'FileTransferAdapter', deliveries:'Deliveries') -> 'None':
         self.client = client
         self.adapter = adapter
-        self.evidence = evidence
+        self.deliveries = deliveries
 
 # ################################################################################################################################
 
@@ -82,7 +82,7 @@ class Harness:
 # ################################################################################################################################
 
     def new_schedule_name(self, prefix:'str') -> 'str':
-        """ A schedule name that no other test uses, so the evidence of two tests never mixes.
+        """ A schedule name that no other test uses, so what two tests delivered never mixes.
         """
         suffix = CryptoManager.generate_hex_string(_schedule_name_bits)
 
@@ -175,12 +175,13 @@ class Harness:
 
 # ################################################################################################################################
 
-    def assert_names(self, directory:'str', expected:'strlist') -> 'None':
+    def assert_names(self, directory:'str', expected:'strlist', timeout:'float'=0.0) -> 'None':
         """ Waits until a remote directory holds exactly the given names, within the protocol's settle timeout,
         so that a protocol whose writes take a moment to become visible does not fail on timing alone.
+        A caller that has no way of knowing when the run it is watching finished gives a timeout of its own.
         """
         expected = sorted(expected)
-        deadline = time.monotonic() + self.adapter.settle_timeout
+        deadline = time.monotonic() + max(self.adapter.settle_timeout, timeout)
 
         while True:
             actual = self.names(directory)
@@ -221,13 +222,13 @@ class Harness:
 # ################################################################################################################################
 
     def delivered(self, schedule_name:'str') -> 'dictlist':
-        out = self.evidence.read(schedule_name)
+        out = self.deliveries.read(schedule_name)
         return out
 
 # ################################################################################################################################
 
     def delivered_names(self, schedule_name:'str') -> 'strlist':
-        out = self.evidence.file_names(schedule_name)
+        out = self.deliveries.file_names(schedule_name)
         return out
 
 # ################################################################################################################################
@@ -270,14 +271,14 @@ class FileTransferScheduleTestBase:
         self,
         admin_client:'AdminClient',
         adapter:'FileTransferAdapter',
-        evidence_file:'str',
+        deliveries_file:'str',
         ) -> 'Harness':
         """ Everything one test works through, built fresh for each test around a shared server.
         """
         client = ScheduleClient(admin_client, adapter, Service_Store_File)
-        evidence = Evidence(evidence_file)
+        deliveries = Deliveries(deliveries_file)
 
-        out = Harness(client, adapter, evidence)
+        out = Harness(client, adapter, deliveries)
         return out
 
 # ################################################################################################################################

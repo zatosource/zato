@@ -12,7 +12,7 @@ from threading import Thread
 # Zato
 from zato.common.api import FileTransfer
 from zato.common.test.file_transfer_harness.base import FileTransferScheduleTestBase
-from zato.common.test.file_transfer_harness.evidence import Service_Slow_Store
+from zato.common.test.file_transfer_harness.deliveries import Service_Slow_Store
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -220,7 +220,7 @@ def imap_test_server() -> 'any_':
 
 @pytest.fixture(scope='session')
 def scheduler_process(zato_server:'any_') -> 'any_':
-    """ Makes sure the Rust scheduler binary runs for tests that need real fire events, starting one if none is running.
+    """ Makes sure the Rust scheduler binary runs for tests whose schedules the scheduler itself is to fire, starting one if none is running.
     It depends on the server fixture so that it starts only after quickstart wiped the Redis keys.
     """
 

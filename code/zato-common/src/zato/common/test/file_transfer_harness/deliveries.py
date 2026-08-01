@@ -39,7 +39,7 @@ Max_Recorded_Payload_Size = 4096
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Source code of the services that the schedules under test invoke, rendered with the evidence file's path
+# Source code of the services that the schedules under test invoke, rendered with the deliveries file's path
 # and the service names embedded. Every one of them records what it received before deciding what to do,
 # except the one that refuses everything.
 Test_Services_Template = '''# -*- coding: utf-8 -*-
@@ -54,14 +54,14 @@ from gevent import sleep
 # Zato
 from zato.server.service import Service
 
-_evidence_file = '{evidence_file}'
+_deliveries_file = '{deliveries_file}'
 _failing_file_token = '{failing_file_token}'
 _slow_store_delay = {slow_store_delay}
 _max_recorded_payload_size = {max_recorded_payload_size}
 
 
 def _record(item):
-    """ Appends one line describing the file that was received to the evidence file.
+    """ Appends one line describing the file that was received to the deliveries file.
     """
     data = item.data
 
@@ -93,8 +93,8 @@ def _record(item):
         'data_digest': digest,
     }})
 
-    with open(_evidence_file, 'a') as evidence:
-        _ = evidence.write(line + '\\n')
+    with open(_deliveries_file, 'a') as file_handle:
+        _ = file_handle.write(line + '\\n')
 
 
 class StoreFileTransferItem(Service):
@@ -151,11 +151,11 @@ class SlowStoreFileTransfer(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def build_test_services_source(evidence_file:'str') -> 'str':
+def build_test_services_source(deliveries_file:'str') -> 'str':
     """ Renders the source code of the services that the schedules under test invoke.
     """
     out = Test_Services_Template.format(
-        evidence_file=evidence_file,
+        deliveries_file=deliveries_file,
         failing_file_token=Failing_File_Token,
         slow_store_delay=Slow_Store_Delay,
         max_recorded_payload_size=Max_Recorded_Payload_Size,
@@ -170,12 +170,12 @@ def build_test_services_source(evidence_file:'str') -> 'str':
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Evidence:
+class Deliveries:
     """ What the services invoked by the schedules under test recorded about the files they received.
     """
 
-    def __init__(self, evidence_file:'str') -> 'None':
-        self.evidence_file = evidence_file
+    def __init__(self, deliveries_file:'str') -> 'None':
+        self.deliveries_file = deliveries_file
 
 # ################################################################################################################################
 
@@ -185,11 +185,11 @@ class Evidence:
         out:'dictlist' = []
 
         # The file comes into existence only once the first item was recorded
-        if not os.path.exists(self.evidence_file):
+        if not os.path.exists(self.deliveries_file):
             return out
 
-        with open(self.evidence_file) as evidence:
-            for line in evidence:
+        with open(self.deliveries_file) as file_handle:
+            for line in file_handle:
                 line = line.strip()
                 if line:
                     entry = loads(line)

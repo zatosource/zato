@@ -98,7 +98,7 @@ def sharepoint_adapter() -> 'any_':
 
 One three-line subclass per test module - `test_crud.py`, `test_validation.py`, `test_dispatch.py`,
 `test_dispatch_modes.py`, `test_usage.py`, `test_concurrency.py`, `test_robustness.py`, `test_identity.py`
-and `test_real_fire.py`.
+and `test_scheduler_driven.py`.
 
 ```python
 class TestSharePointCrud(CrudTests):

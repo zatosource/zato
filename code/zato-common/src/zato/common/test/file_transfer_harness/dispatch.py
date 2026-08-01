@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.common.api import FileTransfer
 from zato.common.test.file_transfer_harness.base import FileTransferScheduleTestBase
-from zato.common.test.file_transfer_harness.evidence import Service_Always_Raise
+from zato.common.test.file_transfer_harness.deliveries import Service_Always_Raise
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,7 +45,7 @@ class DispatchTests(FileTransferScheduleTestBase):
         harness.run(conn, schedule)
 
         # The target service saw each of the two files exactly once ..
-        entries = harness.evidence.by_file_name(schedule_name)
+        entries = harness.deliveries.by_file_name(schedule_name)
         assert len(entries) == 2
 
         # .. with the full details of each of them ..
