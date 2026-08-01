@@ -112,13 +112,13 @@
 
                         {# How many outgoing connections each message is delivered to on top of the service #}
                         {% if item.destination_count %}
-                        <td><a href="{% url "channel-hl7-mllp-editor-edit" item.id %}?cluster={{ cluster_id }}">{{ item.destination_count }}</a></td>
+                        <td><a href="{% url "channel-hl7-mllp-wizard-edit" item.id %}?cluster={{ cluster_id }}">{{ item.destination_count }}</a></td>
                         {% else %}
                         <td>---</td>
                         {% endif %}
 
                         <td><a href="/zato/audit-log/?source=hl7&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a></td>
-                        <td><a href="{% url "channel-hl7-mllp-editor-edit" item.id %}?cluster={{ cluster_id }}">Edit</a></td>
+                        <td><a href="{% url "channel-hl7-mllp-wizard-edit" item.id %}?cluster={{ cluster_id }}">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.channel.hl7.mllp.delete_('{{ item.id }}')">Delete</a></td>
                         <td><a href="javascript:$.fn.zato.channel.hl7.mllp.invoke('{{ item.id }}')">Invoke</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>

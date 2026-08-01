@@ -26,8 +26,10 @@ review.config = {
     notSetLabel: 'Not set',
     noServiceLabel: 'No service',
 
-    // What the tolerance review says when nothing differs from the defaults
+    // What the tolerance review says when nothing differs from the defaults,
+    // which on edit are the very values the channel was opened with
     allStandardFixupsLabel: 'All standard fixups enabled',
+    unchangedFixupsLabel: 'Unchanged',
 
     // How many fixups a row of the tolerance grid holds - which column a
     // fixup is in is what decides the side its help opens on
@@ -390,7 +392,8 @@ review._toleranceReviewRows = function() {
     }
 
     if(!out.length) {
-        out.push([config.allStandardFixupsLabel, '']);
+        var emptyLabel = wizard.state.isEdit ? config.unchangedFixupsLabel : config.allStandardFixupsLabel;
+        out.push([emptyLabel, '']);
     }
 
     return out;
@@ -491,8 +494,7 @@ review.render = function() {
         transportRows.push(['REST security', securityBadge]);
     }
 
-    // Routing - the default flag and the matchers live side by side,
-    // just like on the full-page editor's routing tab
+    // Routing - the default flag and the matchers live side by side
     var routingRows = [];
 
     if(wizard.field('is_default').prop('checked')) {

@@ -19,9 +19,10 @@ from django.http import HttpResponse, JsonResponse
 from django.template.response import TemplateResponse
 
 # Zato
+from zato.admin.web.forms import populate_form_initial
 from zato.admin.web.forms.channel.hl7.mllp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, \
-    get_security_id_from_select, get_security_groups_from_checkbox_list, SecurityList
+    get_http_channel_security_id, get_security_id_from_select, SecurityList
 from zato.common.api import GENERIC, generic_attrs, Groups, HL7, SEC_DEF_TYPE, ZATO_NONE
 from zato.common.destination.model import count_entries
 from zato.common.hl7.mllp.fields import Channel_Defaults, resolve_max_msg_size
@@ -32,9 +33,10 @@ from zato.common.model.hl7 import HL7MLLPChannelConfigObject
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, stranydict
+    from zato.common.typing_ import any_, stranydict, strlist
     any_ = any_
     stranydict = stranydict
+    strlist = strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,11 +46,12 @@ logger = getLogger(__name__)
 # .. name prefix for backing REST channels ..
 _REST_Channel_Name_Prefix = 'hl7.rest.'
 
-# .. the full-page editor template shared by the create and edit pages ..
-_Editor_Template = 'zato/channel/hl7/mllp-editor.html'
-
-# .. the multi-step wizard template used when creating a new channel ..
+# .. the multi-step wizard template, serving both the create and the edit page ..
 _Wizard_Template = 'zato/channel/hl7/mllp-wizard.html'
+
+# .. what the security selects carry in front of a definition's id, an id alone being
+# .. what a channel stores under security_id ..
+_MTLS_Select_Prefix = SEC_DEF_TYPE.MTLS + '/'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -146,7 +149,15 @@ class _CreateEdit(CreateEdit):
         """
         if value is None:
             if name in Channel_Defaults:
-                value = Channel_Defaults[name]
+                default = Channel_Defaults[name]
+
+                # The page renders every switch it has, and a switch that is off is not posted
+                # at all, so nothing arriving under a switch is the switch being off - taking
+                # the default here would put back the very value that was just turned off.
+                if isinstance(default, bool):
+                    value = False
+                else:
+                    value = default
 
         return value
 
@@ -246,32 +257,51 @@ class _CreateEdit(CreateEdit):
 
 # ################################################################################################################################
 
-    def _create_security_group(self, mllp_name:'str', security_id_list:'list') -> 'int':
+    def _save_security_group(self, mllp_name:'str', security_id_list:'list') -> 'int':
         """ Wraps the security definitions picked in the wizard in one group,
-        created transparently for the backing REST channel. The input values
+        kept transparently for the backing REST channel. The input values
         come from the security select, i.e. they look like basic_auth/123.
         """
 
         # .. the group members are keyed the way the groups page keys them ..
-        member_id_list = [item.replace('/', '-') for item in security_id_list]
+        member_id_list = []
+        for item in security_id_list:
+            member_id_list.append(item.replace('/', '-'))
 
         # .. the group carries the same name as the backing REST channel,
         # which the wizard has already checked for uniqueness ..
         group_name = _REST_Channel_Name_Prefix + mllp_name
 
-        response = self.req.zato.client.invoke('zato.groups.create', {
+        request:'stranydict' = {
             'group_type': Groups.Type.API_Clients,
             'name': group_name,
             'member_id_list': member_id_list,
-        })
+        }
 
-        if response.ok:
-            group_id = response.data.id
-            logger.info('Created security group id=%s `%s` for MLLP channel `%s`', group_id, group_name, mllp_name)
-            return group_id
+        # .. a channel saved again already has a group of that name, so the picks it carries
+        # now replace the ones the group was left with the last time around ..
+        group_id = _get_security_group_id(self.req, group_name)
+
+        if group_id:
+            request['id'] = group_id
+            service_name = 'zato.groups.edit'
         else:
-            logger.error('Could not create security group `%s` for `%s`: %s', group_name, mllp_name, response.details)
-            raise Exception(f'Could not create security group `{group_name}`: {response.details}')
+            service_name = 'zato.groups.create'
+
+        response = self.req.zato.client.invoke(service_name, request)
+
+        if not response.ok:
+            logger.error('Could not save security group `%s` for `%s`: %s', group_name, mllp_name, response.details)
+            raise Exception(f'Could not save security group `{group_name}`: {response.details}')
+
+        # .. a group just created is the one case where the id comes from the server.
+        if not group_id:
+            group_id = response.data.id
+
+        logger.info('Saved security group id=%s `%s` for MLLP channel `%s`', group_id, group_name, mllp_name)
+
+        out = group_id
+        return out
 
 # ################################################################################################################################
 
@@ -284,19 +314,16 @@ class _CreateEdit(CreateEdit):
         security_id = get_security_id_from_select(
             self.req.POST, self.form_prefix, field_name='rest_security_id')
 
-        # .. extract security groups from the full-page editor's checkbox list ..
-        security_groups = get_security_groups_from_checkbox_list(
-            self.req.POST, self.form_prefix, field_name_prefix='mllp_security_group_checkbox_')
-
         # .. with two or more security definitions picked in the wizard,
-        # all of them arrive in this list and a security group is created
-        # for them on the fly - the group secures the channel and no single
+        # all of them arrive in this list and one group of the channel's own
+        # holds them - the group secures the channel and no single
         # definition is assigned to it directly ..
+        security_groups = []
         security_id_list = self.req.POST.getlist('mllp_security_id_list')
         security_id_count = len(security_id_list)
 
         if security_id_count > 1:
-            group_id = self._create_security_group(mllp_name, security_id_list)
+            group_id = self._save_security_group(mllp_name, security_id_list)
             security_groups.append(group_id)
             security_id = ZATO_NONE
 
@@ -468,25 +495,65 @@ class Delete(_Delete):
 # ################################################################################################################################
 # ################################################################################################################################
 
-@method_allowed('GET')
-def editor_create(req:'any_') -> 'TemplateResponse':
-    """ A full-page editor for a new HL7 MLLP channel.
+def _get_security_group_id(req:'any_', group_name:'str') -> 'int':
+    """ Returns the id of the API client group of this name, zero when there is none.
     """
-    security_list = SecurityList.from_service(req.zato.client, req.zato.cluster.id, SEC_DEF_TYPE.BASIC_AUTH)
-    mtls_security_list = SecurityList.from_service(req.zato.client, req.zato.cluster.id, SEC_DEF_TYPE.MTLS)
+    response = req.zato.client.invoke('zato.groups.get-list', {
+        'group_type': Groups.Type.API_Clients,
+    })
 
-    return_data = {
-        'cluster_id': req.zato.cluster_id,
-        'action': 'create',
-        'field_prefix': '',
-        'form': CreateForm(req=req, security_list=security_list, mtls_security_list=mtls_security_list),
-        'item_name': '',
-        'item_id': '',
-        'item': None,
-    }
+    for group in response.data:
+        if group['name'] == group_name:
+            out = group['id']
+            break
+    else:
+        out = 0
 
-    out = TemplateResponse(req, _Editor_Template, return_data)
     return out
+
+# ################################################################################################################################
+
+def _get_rest_security_key_list(req:'any_', mllp_name:'str') -> 'strlist':
+    """ The definitions the channel's REST bridge authenticates its callers with, each in the
+    sec_type/id form the wizard's security rows are built from. Two or more of them are kept in
+    a group of the channel's own, which is where the whole list is read back from.
+    """
+    out = []
+
+    group_name = _REST_Channel_Name_Prefix + mllp_name
+    group_id = _get_security_group_id(req, group_name)
+
+    if not group_id:
+        return out
+
+    response = req.zato.client.invoke('zato.groups.get-member-list', {
+        'group_type': Groups.Type.API_Clients,
+        'group_id': group_id,
+    })
+
+    for member in response.data:
+        sec_type = member['sec_type']
+        security_id = member['security_id']
+        out.append(f'{sec_type}/{security_id}')
+
+    return out
+
+# ################################################################################################################################
+
+def _populate_rest_bridge(req:'any_', item_dict:'stranydict', rest_channel_id:'int') -> 'None':
+    """ Puts the path and the security definition of the backing REST channel under the two
+    fields the wizard's REST popover opens with. An MLLP channel stores neither of them - both
+    belong to the REST channel it keeps alongside itself.
+    """
+    response = req.zato.client.invoke('zato.http-soap.get', {
+        'cluster_id': req.zato.cluster_id,
+        'id': rest_channel_id,
+    })
+
+    rest_channel = response.data
+
+    item_dict['rest_url_path'] = rest_channel.url_path
+    item_dict['rest_security_id'] = get_http_channel_security_id(rest_channel)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -501,21 +568,24 @@ def wizard_create(req:'any_') -> 'TemplateResponse':
     return_data = {
         'cluster_id': req.zato.cluster_id,
         'form': CreateForm(req=req, security_list=security_list, mtls_security_list=mtls_security_list),
+        'is_edit': False,
+        'item_id': '',
+        'rest_channel_id': 0,
+        'security_key_list': [],
     }
 
     out = TemplateResponse(req, _Wizard_Template, return_data)
     return out
 
 # ################################################################################################################################
-# ################################################################################################################################
 
 @method_allowed('GET')
-def editor_edit(req:'any_', id:'str') -> 'TemplateResponse':
-    """ A full-page editor for one existing HL7 MLLP channel.
+def wizard_edit(req:'any_', id:'str') -> 'TemplateResponse':
+    """ The same wizard, opened on one existing HL7 MLLP channel.
     """
 
     # The URL points to one channel, so one channel is what is fetched - the page renders
-    # nothing about any of the others
+    # nothing about any of the others ..
     response = req.zato.client.invoke('zato.generic.connection.get-by-id', {'id': id})
 
     if not response.ok:
@@ -523,20 +593,43 @@ def editor_edit(req:'any_', id:'str') -> 'TemplateResponse':
 
     item_dict = response.data
 
+    # .. the mTLS select carries a definition's type alongside its id, while a channel stores
+    # the id alone, so what was stored is put back into the shape the select offers ..
+    if 'security_id' in item_dict:
+        security_id = item_dict['security_id']
+        if security_id:
+            item_dict['security_id'] = f'{_MTLS_Select_Prefix}{security_id}'
+
+    # .. the REST bridge, if there is one, says what its path and its security are ..
+    rest_channel_id = 0
+
+    if 'rest_channel_id' in item_dict:
+        rest_channel_id = item_dict['rest_channel_id']
+
+    if rest_channel_id:
+        _populate_rest_bridge(req, item_dict, rest_channel_id)
+
     security_list = SecurityList.from_service(req.zato.client, req.zato.cluster.id, SEC_DEF_TYPE.BASIC_AUTH)
     mtls_security_list = SecurityList.from_service(req.zato.client, req.zato.cluster.id, SEC_DEF_TYPE.MTLS)
 
+    # .. the edit endpoint reads its input under the edit- prefix, which is what the form
+    # .. is built with and what the wizard's own fieldPrefix mirrors ..
+    form = EditForm(prefix='edit', req=req, security_list=security_list, mtls_security_list=mtls_security_list)
+    populate_form_initial(form, item_dict)
+
     return_data = {
         'cluster_id': req.zato.cluster_id,
-        'action': 'edit',
-        'field_prefix': 'edit-',
-        'form': EditForm(prefix='edit', req=req, security_list=security_list, mtls_security_list=mtls_security_list),
-        'item_name': item_dict['name'],
+        'form': form,
+        'is_edit': True,
         'item_id': item_dict['id'],
-        'item': item_dict,
+
+        # The id of the backing REST channel travels with the save, so a channel renamed here
+        # keeps the REST channel it already has rather than being given a second one
+        'rest_channel_id': rest_channel_id,
+        'security_key_list': _get_rest_security_key_list(req, item_dict['name']),
     }
 
-    out = TemplateResponse(req, _Editor_Template, return_data)
+    out = TemplateResponse(req, _Wizard_Template, return_data)
     return out
 
 # ################################################################################################################################

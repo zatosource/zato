@@ -5,9 +5,9 @@
 // which one of them produces the reply. Every value is a chip opening a
 // panel of the wizard kit's decision lines, the panels themselves are in
 // destination-panels.js. The answers serialize into the form's hidden
-// "destinations", "respond_from" and "delivery_mode" fields in the very
-// shape the full-page editor produces, reusing the type and option
-// definitions of the shared destinations module.
+// "destinations", "respond_from" and "delivery_mode" fields in the shape a
+// channel stores them, reusing the type and option definitions of the
+// shared destinations module.
 
 (function($) {
 
@@ -335,6 +335,46 @@ destinations.serialize = function() {
     wizard.field('destinations').val(serialized.length ? JSON.stringify(serialized) : '');
     wizard.field('respond_from').val(wizard.state.respondFrom);
     wizard.field('delivery_mode').val(wizard.state.delivery);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// Reads the three hidden fields back into the state, the exact mirror of
+// serialize - this is what a channel opened for editing starts out with.
+destinations.deserialize = function() {
+
+    var stored = wizard.field('destinations').val();
+    var destinationList = [];
+
+    if(stored) {
+        var storedList = JSON.parse(stored);
+
+        for(var storedIdx = 0; storedIdx < storedList.length; storedIdx++) {
+
+            var entry = storedList[storedIdx];
+
+            destinationList.push({
+                type: entry.type,
+                connection: entry.connection,
+                isActive: entry.is_active,
+                options: entry.options
+            });
+        }
+    }
+
+    wizard.state.destinationList = destinationList;
+
+    // A channel created before either of the two answers existed has nothing
+    // under them, and the state keeps what it opened with then
+    var respondFrom = wizard.field('respond_from').val();
+    if(respondFrom) {
+        wizard.state.respondFrom = respondFrom;
+    }
+
+    var delivery = wizard.field('delivery_mode').val();
+    if(delivery) {
+        wizard.state.delivery = delivery;
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////

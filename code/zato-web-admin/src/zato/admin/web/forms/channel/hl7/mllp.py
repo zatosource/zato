@@ -168,5 +168,14 @@ class CreateForm(forms.Form):
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
+    def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
+        super(EditForm, self).__init__(*args, **kwargs)
+
+        # A widget rendering the checked attribute renders it whatever its value is, so a switch
+        # declared that way would come up on for a channel that has it off. An existing channel
+        # says what each of its switches is set to, and that is what the page opens with.
+        for field in self.fields.values():
+            _ = field.widget.attrs.pop('checked', None)
+
 # ################################################################################################################################
 # ################################################################################################################################
