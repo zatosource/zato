@@ -2,7 +2,7 @@
 markers = [
     "perftest: long-running performance tests, skipped by default",
     "expect_log_errors: test intentionally triggers server log errors matching the given patterns",
-    "slow: tests that wait on real fire events or move a lot of files, deselected with -m 'not slow'",
+    "slow: tests that wait on the scheduler firing or move a lot of files, deselected with -m 'not slow'",
 ]
 addopts = "-m 'not perftest' --import-mode=importlib"
 log_cli = true

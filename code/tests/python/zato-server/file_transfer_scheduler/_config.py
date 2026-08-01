@@ -19,7 +19,7 @@ class TestConfig:
     server_directory = ''
 
     # The file that the hot-deployed test services append each received file transfer item to
-    evidence_file = ''
+    deliveries_file = ''
 
 # ################################################################################################################################
 # ################################################################################################################################

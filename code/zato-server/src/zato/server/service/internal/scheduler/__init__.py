@@ -89,7 +89,7 @@ def _item_by_id(items, id_):
 
 # ################################################################################################################################
 
-def _keep_what_the_job_already_carries(self:'any_', input:'any_') -> 'None':
+def _keep_unsent_job_fields(self:'any_', input:'any_') -> 'None':
     """ Fills the input of an edit in with what the job already has wherever the caller said nothing.
     An edit arriving from one screen knows nothing about the fields another screen owns, so a field
     that was not sent must keep its value rather than be stored empty.
@@ -253,7 +253,7 @@ def _create_edit(self, action):
     # An edit only ever changes what it names - everything the caller left out is read back
     # from the job before anything else looks at the input.
     if action == 'edit':
-        _keep_what_the_job_already_carries(self, input)
+        _keep_unsent_job_fields(self, input)
 
     extra = input.extra
     if extra is None:

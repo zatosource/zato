@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.common.api import FileTransfer
 from zato.common.test.file_transfer_harness.base import FileTransferScheduleTestBase
-from zato.common.test.file_transfer_harness.evidence import Failing_File_Token, Service_Fail_Selected, Service_Store_File
+from zato.common.test.file_transfer_harness.deliveries import Failing_File_Token, Service_Fail_Selected, Service_Store_File
 
 # ################################################################################################################################
 # ################################################################################################################################

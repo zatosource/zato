@@ -36,6 +36,9 @@ _fire_wait_seconds = 45
 # How long to wait before deciding that no fire event is coming, in seconds
 _quiet_wait_seconds = 15
 
+# How long to give a run to put a file out of the way after the delivery it recorded, in seconds
+_ack_wait_seconds = 15
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -62,7 +65,7 @@ def _starting_much_later() -> 'str':
 # ################################################################################################################################
 
 @pytest.mark.slow
-class RealFireTests(FileTransferScheduleTestBase):
+class SchedulerDrivenTests(FileTransferScheduleTestBase):
     """ Schedules driven by the scheduler itself rather than by a hand-made invocation of the dispatch service.
     """
 
@@ -77,16 +80,16 @@ class RealFireTests(FileTransferScheduleTestBase):
         _ = harness.client.create_schedule(conn.id, schedule_name, directory,
             run_every=1, run_unit=_scheduler.Unit.Seconds, start_date=_starting_now())
 
-        entries = harness.evidence.wait_for_count(schedule_name, 1, _fire_wait_seconds)
+        entries = harness.deliveries.wait_for_count(schedule_name, 1, _fire_wait_seconds)
 
         assert entries[0]['file_name'] == 'delivered.txt'
         assert entries[0]['data'] == 'Payload delivered by the scheduler'
 
         # The file was moved away, so the fires that follow find nothing to do
-        entries = harness.evidence.wait_for_quiet(schedule_name, 3)
+        entries = harness.deliveries.wait_for_quiet(schedule_name, 3)
 
         assert len(entries) == 1
-        harness.assert_names(harness.move_directory_of(directory), ['delivered.txt'])
+        harness.assert_names(harness.move_directory_of(directory), ['delivered.txt'], timeout=_ack_wait_seconds)
 
 # ################################################################################################################################
 
@@ -102,12 +105,13 @@ class RealFireTests(FileTransferScheduleTestBase):
             run_every=1, run_unit=_scheduler.Unit.Seconds, start_date=_starting_now(),
             on_success=_scheduler.OnSuccess.Delete, move_directory='')
 
-        entries = harness.evidence.wait_for_count(schedule_name, 1, _fire_wait_seconds)
+        entries = harness.deliveries.wait_for_count(schedule_name, 1, _fire_wait_seconds)
 
         assert entries[0]['file_name'] == 'ephemeral.txt'
 
-        # Nothing was moved anywhere, the file is simply gone
-        harness.assert_names(directory, [])
+        # Nothing was moved anywhere, the file is simply gone. The record of the delivery reaches this test
+        # before the run that produced it is over, so the file goes away a moment after it is recorded.
+        harness.assert_names(directory, [], timeout=_ack_wait_seconds)
 
 # ################################################################################################################################
 
@@ -122,7 +126,7 @@ class RealFireTests(FileTransferScheduleTestBase):
         _ = harness.client.create_schedule(conn.id, schedule_name, directory,
             run_every=1, run_unit=_scheduler.Unit.Seconds, start_date=_starting_now(), is_active=False)
 
-        entries = harness.evidence.wait_for_quiet(schedule_name, _quiet_wait_seconds)
+        entries = harness.deliveries.wait_for_quiet(schedule_name, _quiet_wait_seconds)
 
         assert entries == []
         harness.assert_names(directory, ['untouched.txt'])
@@ -140,7 +144,7 @@ class RealFireTests(FileTransferScheduleTestBase):
         _ = harness.client.create_schedule(conn.id, schedule_name, directory,
             run_every=1, run_unit=_scheduler.Unit.Seconds, start_date=_starting_much_later())
 
-        entries = harness.evidence.wait_for_quiet(schedule_name, _quiet_wait_seconds)
+        entries = harness.deliveries.wait_for_quiet(schedule_name, _quiet_wait_seconds)
 
         assert entries == []
         harness.assert_names(directory, ['untouched.txt'])
@@ -159,7 +163,7 @@ class RealFireTests(FileTransferScheduleTestBase):
         created = harness.client.create_schedule(conn.id, schedule_name, directory,
             run_every=1, run_unit=_scheduler.Unit.Seconds, start_date=_starting_now())
 
-        entries = harness.evidence.wait_for_count(schedule_name, 1, _fire_wait_seconds)
+        entries = harness.deliveries.wait_for_count(schedule_name, 1, _fire_wait_seconds)
         assert entries[0]['file_name'] == 'first.txt'
 
         # The schedule is pointed at another directory while the scheduler is running ..
@@ -169,7 +173,7 @@ class RealFireTests(FileTransferScheduleTestBase):
         # .. and a file dropped there is delivered, which the old directory could never have produced.
         harness.write(other_directory, 'second.txt', 'Payload of the directory the schedule was moved to')
 
-        entries = harness.evidence.wait_for_count(schedule_name, 2, _fire_wait_seconds)
+        entries = harness.deliveries.wait_for_count(schedule_name, 2, _fire_wait_seconds)
 
         delivered = harness.delivered_names(schedule_name)
         assert delivered == ['first.txt', 'second.txt']
@@ -187,14 +191,14 @@ class RealFireTests(FileTransferScheduleTestBase):
         created = harness.client.create_schedule(conn.id, schedule_name, directory,
             run_every=1, run_unit=_scheduler.Unit.Seconds, start_date=_starting_now())
 
-        _ = harness.evidence.wait_for_count(schedule_name, 1, _fire_wait_seconds)
+        _ = harness.deliveries.wait_for_count(schedule_name, 1, _fire_wait_seconds)
 
         harness.client.delete_schedule(conn.id, created['id'])
 
         # A file dropped after the schedule was deleted has nothing left to pick it up
         harness.write(directory, 'second.txt', 'Payload nothing is left to deliver')
 
-        entries = harness.evidence.wait_for_quiet(schedule_name, _quiet_wait_seconds)
+        entries = harness.deliveries.wait_for_quiet(schedule_name, _quiet_wait_seconds)
 
         assert len(entries) == 1
         assert harness.exists(directory, 'second.txt')
