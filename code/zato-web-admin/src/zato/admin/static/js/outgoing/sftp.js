@@ -40,7 +40,8 @@ $.fn.zato.outgoing.sftp.field_descriptions = {
     'id_username': 'Username to log in to the SFTP server as.<br>Leave empty if the server takes the identity<br>from the private key alone.',
     'id_secret': 'Password for the username above.<br>Leave empty when logging in<br>with a private key instead.',
     'id_private_key': 'Name of an environment variable that holds<br>the path to the private key file,<br>e.g. Zato_SFTP_Key. Used instead of a password.',
-    'id_strict_host_key_checking': 'When on, the server\'s host key must already be<br>in known_hosts or the connection is rejected.<br>Turning it off accepts any host key.',
+    'id_strict_host_key_checking': 'When on, the server\'s host key must already be<br>in known_hosts or the connection is rejected.<br>Turning it off accepts the keys of new hosts.',
+    'id_ignore_host_key_changes': 'When on, host keys are neither checked nor recorded,<br>so a server that regenerated its key still connects.<br>This overrides strict host key checking.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -76,6 +77,7 @@ $.fn.zato.outgoing.sftp.data_table.new_row = function(item, data, include_tr) {
 
     var is_active = item.is_active == true;
     var strict_host_key_checking = item.strict_host_key_checking == true;
+    var ignore_host_key_changes = item.ignore_host_key_changes == true;
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
@@ -108,6 +110,9 @@ $.fn.zato.outgoing.sftp.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.username ? item.username : '');
     row += String.format("<td class='ignore'>{0}</td>", item.private_key ? item.private_key : '');
     row += String.format("<td class='ignore'>{0}</td>", strict_host_key_checking ? 'True' : 'False');
+
+    // 6
+    row += String.format("<td class='ignore'>{0}</td>", ignore_host_key_changes ? 'True' : 'False');
 
     if(include_tr) {
         row += '</tr>';

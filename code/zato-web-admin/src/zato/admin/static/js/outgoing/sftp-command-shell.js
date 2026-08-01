@@ -1,32 +1,153 @@
-$(document).ready(function() {
+(function($) {
 
-    _.each(['data'], function(name) {
-        $.fn.zato.data_table.set_field_required('#' + name);
-    });
+var shell = $.fn.zato.outgoing.sftp.command_shell;
 
-    var _callback = function(data, status, xhr){
+shell.config = {
+    formSelector: '#sftp-shell-form',
+    tabSelector: '.sftp-shell-card .dashboard-tab',
+    panelPrefix: 'sftp-shell-tab-panel-',
+    defaultTab: 'stdout',
+    errorTab: 'stderr',
+    emptyOutput: '(None)',
+    runningMessage: 'Running ..',
+    okMessage: 'Done',
+    okStatusClass: 'sftp-shell-status-ok',
+    errorStatusClass: 'sftp-shell-status-error',
+    statusClearMs: 4000
+};
 
-        var success = status == 'success';
-        var msg = success ? data.msg : data.responseText;
-        $.fn.zato.user_message(success, msg);
+shell._tabHandle = null;
+shell._statusTimer = null;
 
-        if(success) {
-            $('#id_stdout').text(data.stdout);
-            $('#id_stderr').text(data.stderr);
-        }
+// ////////////////////////////////////////////////////////////////////////
+// Status message
+// ////////////////////////////////////////////////////////////////////////
+
+shell.setStatus = function(text, statusClass) {
+    var config = shell.config;
+    var $status = $('#sftp-shell-status');
+
+    $status.text(text).removeClass(config.okStatusClass + ' ' + config.errorStatusClass);
+
+    if (statusClass) {
+        $status.addClass(statusClass);
     }
 
-    var options = {
-        success: _callback,
-        error:  _callback,
-        resetForm: false,
-        'dataType': 'json',
-    };
+    if (shell._statusTimer) {
+        clearTimeout(shell._statusTimer);
+        shell._statusTimer = null;
+    }
 
-    $('#command_shell_form').submit(function() {
-        $('#id_stdout').text('');
-        $('#id_stderr').text('');
-        $(this).ajaxSubmit(options);
+    // Keep an error on screen, everything else fades out on its own.
+    if (statusClass !== config.errorStatusClass) {
+        shell._statusTimer = setTimeout(function() {
+            $status.text('');
+        }, config.statusClearMs);
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////
+// Output panes
+// ////////////////////////////////////////////////////////////////////////
+
+shell.setOutput = function(name, text) {
+    $('#sftp-shell-' + name).text(text);
+
+    // A command's output ends in a newline, which is not a line of its own.
+    var lineCount = 0;
+    var trimmed = text.replace(/\s+$/, '');
+
+    if (trimmed && trimmed !== shell.config.emptyOutput) {
+        lineCount = trimmed.split('\n').length;
+    }
+
+    $('#sftp-shell-' + name + '-lines').text(lineCount);
+};
+
+shell.clearOutput = function() {
+    shell.setOutput('stdout', '');
+    shell.setOutput('stderr', '');
+    $('#sftp-shell-timing').prop('hidden', true).text('');
+};
+
+// ////////////////////////////////////////////////////////////////////////
+// Running a command
+// ////////////////////////////////////////////////////////////////////////
+
+shell.onSuccess = function(data) {
+    var config = shell.config;
+
+    shell.setOutput('stdout', data.stdout);
+    shell.setOutput('stderr', data.stderr);
+
+    $('#sftp-shell-timing').prop('hidden', false).text(data.response_time + ' (#' + data.command_no + ')');
+
+    if (data.is_ok) {
+        shell.setStatus(config.okMessage, config.okStatusClass);
+    }
+    else {
+        shell.setStatus(data.error_message, config.errorStatusClass);
+
+        // A command that failed says why on stderr, so that is what the reader needs to see.
+        shell._tabHandle.set_tab(config.errorTab, true);
+    }
+};
+
+shell.onError = function(xhr) {
+    shell.setOutput('stdout', '');
+    shell.setOutput('stderr', xhr.responseText);
+
+    // The response body is what the request failed on, which is more use than the status line's `Internal Server Error`.
+    shell.setStatus(xhr.responseText, shell.config.errorStatusClass);
+    shell._tabHandle.set_tab(shell.config.errorTab, true);
+};
+
+shell.run = function() {
+    var config = shell.config;
+    var $form = $(config.formSelector);
+
+    shell.clearOutput();
+    shell.setStatus(config.runningMessage, null);
+
+    $.ajax({
+        type: 'POST',
+        url: $form.attr('action'),
+        data: $form.serialize(),
+        dataType: 'json',
+        success: shell.onSuccess,
+        error: shell.onError
+    });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+// Initialization
+// ////////////////////////////////////////////////////////////////////////
+
+shell.init = function() {
+    var config = shell.config;
+    var kit = $.fn.zato.dashboard_kit;
+
+    shell._tabHandle = kit.tabs.init({
+        tab_selector: config.tabSelector,
+        panel_prefix: config.panelPrefix,
+        default_tab: config.defaultTab
+    });
+
+    $(config.formSelector).submit(function() {
+        shell.run();
         return false;
     });
-});
+
+    $('#sftp-shell-clear').click(function() {
+        shell.clearOutput();
+        shell.setStatus('', null);
+    });
+
+    // .. nothing has run yet, so both panes start empty ..
+    shell.clearOutput();
+
+    // .. and fade in.
+    kit.reveal();
+};
+
+})(jQuery);

@@ -197,14 +197,13 @@ class TestEnmasseSFTPFromYAML(TestCase):
             'secret': instance.secret,
             'private_key': opaque.private_key,
             'strict_host_key_checking': opaque.strict_host_key_checking,
+
+            # The test server's host key is freshly generated on each run, so it is neither
+            # in known_hosts nor the same one as the last run left there under this address
+            'ignore_host_key_changes': True,
         })
 
         client = SFTPClient(config, cast_('any_', None))
-
-        # Keep the throwaway host keys of test servers out of the user's known_hosts file
-        client.base_args.append('-o')
-        client.base_args.append('UserKnownHostsFile=/dev/null')
-
         return client
 
 # ################################################################################################################################

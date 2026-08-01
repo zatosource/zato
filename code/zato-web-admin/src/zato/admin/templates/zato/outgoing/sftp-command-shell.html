@@ -1,63 +1,89 @@
-{% extends "zato/index.html" %}
+{% extends "zato/dashboard_base.html" %}
 
 {% block html_title %}SFTP command shell{% endblock %}
 
-{% block "extra_css" %}
-    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% block dashboard_extra_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/settings.css">
+<link rel="stylesheet" type="text/css" href="/static/css/outgoing/sftp-command-shell.css">
 {% endblock %}
 
-{% block "extra_js" %}
-
-    {% comment %} jQuery {% endcomment %}
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.form.js"></script>
-
-    {% comment %} Common JS {% endcomment %}
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
-
-    {% comment %} SFTP {% endcomment %}
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/sftp-command-shell.js"></script>
-
+{% block dashboard_domain_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/sftp-command-shell.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.outgoing.sftp.command_shell.init();
+});
+</script>
 {% endblock %}
 
-{% block "content" %}
-<h2 class="zato">Outgoing SFTP command shell</h2>
+{% block dashboard_tiles %}{% endblock %}
+{% block dashboard_header_pill %}{% endblock %}
+{% block dashboard_chart_header_content %}{% endblock %}
+{% block dashboard_time_range_options %}{% endblock %}
+{% block dashboard_refresh_options %}{% endblock %}
 
-<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+{% block dashboard_grid %}
 
-<div id="markup">
-    <table id="data-table">
-        <tr>
-            <td class='inline_header'>Send commands using SFTP connection `{{ conn_name }}`</td>
-        </tr>
-        <tr>
-            <td>
-                <form novalidate id="command_shell_form" action="{% url "out-sftp-command-shell-action" conn_id cluster_id name_slug %}" method="post">
+        <div class="dashboard-card sftp-shell-card" id="sftp-shell-card">
+
+            <div class="dashboard-card-header">
+                <h3>SFTP command shell</h3>
+                <span class="dashboard-pill" id="sftp-shell-conn-name">{{ conn_name }}</span>
+                <span class="dashboard-pill sftp-shell-timing" id="sftp-shell-timing" hidden></span>
+            </div>
+
+            <form novalidate id="sftp-shell-form"
+                  action="{% url "out-sftp-command-shell-action" conn_id cluster_id name_slug %}" method="post">
                 {% csrf_token %}
+
+                <input type="hidden" name="id" value="{{ conn_id }}" />
+                <input type="hidden" name="cluster_id" value="{{ cluster_id }}" />
+
+                <div class="sftp-shell-editor">
                     {{ form.data }}
-                    <br/><br/>
-
-                    <input type="hidden" id="id" name="id" value="{{ conn_id }}" />
-                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
-
-                    <div style="text-align:right">
-                        <span class="form_hint">Log level:</span> {{ form.log_level }}
-                        <input type="submit" value="Submit" />
+                    <div class="sftp-shell-hint">
+                        One command per line, e.g. <code>ls /tmp</code>,
+                        <code>get /tmp/remote.txt /tmp/local.txt</code> or
+                        <code>put /tmp/local.txt /tmp/remote.txt</code>.
                     </div>
+                </div>
 
-                    Stdout:
-                    <br/>
-                    {{ form.stdout }}
+                <div class="sftp-shell-actions">
+                    <span class="sftp-shell-status" id="sftp-shell-status"></span>
+                    <label class="sftp-shell-log-level-label" for="id_log_level">Log level</label>
+                    {{ form.log_level }}
+                    <button type="button" class="secondary-button" id="sftp-shell-clear">Clear</button>
+                    <button type="submit" class="action-button" id="sftp-shell-run">Run</button>
+                </div>
 
-                    <br/>
-                    <br/>
-                    Stderr:
-                    <br/>
-                    {{ form.stderr }}
+            </form>
 
-                </form>
-            </td>
-        </tr>
-    </table>
-</div>
+            <div class="dashboard-card-header dashboard-card-header-tabs sftp-shell-output-header">
+                <div class="dashboard-tabs" role="tablist" aria-label="Command output">
+
+                    <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="stdout"
+                            role="tab" aria-selected="true">
+                        <span class="dashboard-tab-label">Stdout</span>
+                        <span class="dashboard-pill" id="sftp-shell-stdout-lines">0</span>
+                    </button>
+
+                    <button type="button" class="dashboard-tab" data-tab="stderr"
+                            role="tab" aria-selected="false">
+                        <span class="dashboard-tab-label">Stderr</span>
+                        <span class="dashboard-pill" id="sftp-shell-stderr-lines">0</span>
+                    </button>
+
+                </div>
+            </div>
+
+            <div class="dashboard-tab-panel" id="sftp-shell-tab-panel-stdout" role="tabpanel">
+                <pre class="sftp-shell-output" id="sftp-shell-stdout"></pre>
+            </div>
+
+            <div class="dashboard-tab-panel" id="sftp-shell-tab-panel-stderr" role="tabpanel" hidden>
+                <pre class="sftp-shell-output" id="sftp-shell-stderr"></pre>
+            </div>
+
+        </div>
 
 {% endblock %}
