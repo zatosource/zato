@@ -10,7 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 from http.client import FOUND, UNAUTHORIZED
 
-from openapi_console_lib import console_login, Admin_Username, Console_Login_Path, Console_Path, Spec_JSON_Path
+from openapi_console_lib import console_login, Admin_Username, Console_Login_Path, Console_Logout_Path, Console_Path, \
+    Spec_JSON_Path
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -23,9 +24,6 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
-
-# The path that ends the session
-_Logout_Path = '/openapi/console/logout'
 
 # The one body every session failure returns
 _Unauthorized_Body = 'Unauthorized'
@@ -51,7 +49,7 @@ class TestOpenAPIConsoleSecurityLogout:
         console_login(page, console_url, Admin_Username, password)
 
         # .. signing out redirects to the sign-in page ..
-        response = page.request.get(console_url + _Logout_Path, max_redirects=0)
+        response = page.request.get(console_url + Console_Logout_Path, max_redirects=0)
         assert response.status == FOUND, f'Expected a redirect from logout, got {response.status}'
 
         location = response.headers['location']
