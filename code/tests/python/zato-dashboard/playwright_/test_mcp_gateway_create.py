@@ -13,6 +13,9 @@ import os
 import time
 from http.client import FORBIDDEN, NOT_FOUND, OK
 
+# pytest
+import pytest
+
 # requests
 import requests
 
@@ -38,6 +41,10 @@ logger = logging.getLogger(__name__)
 _Page_Url_Pattern = '/zato/gateway/mcp/?cluster=1'
 
 _Test_Name_Prefix = 'test.mcp.playwright.' + rand_string() + '.'
+
+# What the server logs when a gateway with no security at all is probed - the default deny
+# these tests confirm, not a fault
+_No_Members_Log = 'is protected by security groups that have no members'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -102,6 +109,7 @@ class TestMCPGatewayCreate:
 
 # ################################################################################################################################
 
+    @pytest.mark.expect_log_errors(_No_Members_Log)
     def test_create_minimal(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Creates an MCP gateway with only name and url_path via the UI, verifies the row
         appears correctly, then confirms the gateway is live on the server (returns 403 because
@@ -159,6 +167,7 @@ class TestMCPGatewayCreate:
 
 # ################################################################################################################################
 
+    @pytest.mark.expect_log_errors(_No_Members_Log)
     def test_create_with_services(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Creates an MCP gateway with two services assigned via the badge picker.
         Verifies the row shows service count = 2, reopens edit to confirm both are pre-selected,
@@ -485,6 +494,7 @@ class TestMCPGatewayCreate:
 
 # ################################################################################################################################
 
+    @pytest.mark.expect_log_errors(_No_Members_Log)
     def test_edit_rename(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Creates an MCP gateway, then edits it to change both name and url_path.
         Asserts the old URL returns 404 and the new URL is routable (403 = no security, but routable).
@@ -626,6 +636,7 @@ class TestMCPGatewayCreate:
 
 # ################################################################################################################################
 
+    @pytest.mark.expect_log_errors(_No_Members_Log)
     def test_edit_deactivate(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Creates an MCP gateway, then edits it to uncheck is_active.
         Asserts the URL returns 404 after deactivation.
@@ -676,6 +687,7 @@ class TestMCPGatewayCreate:
 
 # ################################################################################################################################
 
+    @pytest.mark.expect_log_errors(_No_Members_Log)
     def test_edit_reactivate(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Creates an MCP gateway, deactivates it, then reactivates it.
         Asserts the URL returns 404 when inactive and is routable again after reactivation.
@@ -1126,6 +1138,7 @@ class TestMCPGatewayCreate:
 
 # ################################################################################################################################
 
+    @pytest.mark.expect_log_errors(_No_Members_Log)
     def test_edit_remove_all_security(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Creates a gateway with sec defs, edits to remove all.
         Asserts all requests return 403 (default deny).
@@ -2366,6 +2379,7 @@ class MCPTestAllowListB(Service):
 
 # ################################################################################################################################
 
+    @pytest.mark.expect_log_errors(_No_Members_Log)
     def test_mcp_concurrent_edit_via_ui_and_api(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
         """ Creates a gateway via UI, edits its url_path via the API, refreshes the UI page,
         asserts the new url_path is displayed in the table, then edits via UI again
