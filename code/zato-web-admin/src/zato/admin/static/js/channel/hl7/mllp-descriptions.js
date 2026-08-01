@@ -1,7 +1,7 @@
 // HL7 MLLP channel - the per-field help texts behind the "How does it work?"
-// badges, keyed by the Django form field ids. One map shared by the
-// full-page editor and the creation wizard, so a field is always
-// explained with the same words no matter which page shows it.
+// badges, keyed by the Django form field ids. One map for every page that
+// shows a channel's fields, so a field is always explained with the same
+// words wherever it appears.
 
 (function($) {
 
@@ -9,7 +9,7 @@
 
 $.fn.zato.channel.hl7.mllp.field_descriptions = {
 
-    // Main tab
+    // Main
     'id_name': 'A unique name for this MLLP channel.<br>Used to identify it in logs and the dashboard.',
     'id_is_active': 'Whether this channel will accept connections.<br>Inactive channels do not route messages.',
     'id_service': 'The service invoked for each<br>incoming HL7 message.',
@@ -19,11 +19,10 @@ $.fn.zato.channel.hl7.mllp.field_descriptions = {
     'id_rest_security_id': 'Security definition used to authenticate<br>incoming REST requests.',
     'id_rest_security_groups': 'Security groups that can access<br>the REST channel.',
 
-    // Destinations tab
-    'destinations-respond-from-create': 'What the caller receives in response -<br>what the service returns or the response<br>of one, synchronously delivered, destination.',
-    'destinations-respond-from-edit': 'What the caller receives in response -<br>what the service returns or the response<br>of one, synchronously delivered, destination.',
+    // Destinations
+    'destinations-respond-from': 'What the caller receives in response -<br>what the service returns or the response<br>of one, synchronously delivered, destination.',
 
-    // Routing tab
+    // Routing
     'id_is_default': 'When enabled, this channel receives all messages<br>that no other channel claimed. Only one channel<br>can be the default at a time.',
     'id_msh3_sending_app': 'Only accept messages where MSH-3<br>(sending application) equals this value.<br>Empty means any. Case-insensitive.',
     'id_msh4_sending_facility': 'Only accept messages where MSH-4<br>(sending facility) equals this value.<br>Empty means any. Case-insensitive.',
@@ -34,7 +33,7 @@ $.fn.zato.channel.hl7.mllp.field_descriptions = {
     'id_msh11_processing_id': 'Only accept messages where MSH-11<br>(P=production, T=training, D=debugging)<br>equals this value. Empty means any. Case-insensitive.',
     'id_msh12_version_id': 'Only accept messages where MSH-12<br>(HL7 version, e.g. 2.5) equals this value.<br>Empty means any. Case-insensitive.',
 
-    // Protocol tab
+    // Protocol
     'id_use_msh18_encoding': 'When on, the server reads the character encoding<br>from the MSH-18 field of each incoming message.<br>When off, or if MSH-18 is empty, the Encoding<br>setting is used instead.',
     'id_default_character_encoding': 'Character encoding used to decode raw bytes<br>when MSH-18 is absent or the MSH-18 toggle is off.',
     'id_recv_timeout': 'Per-recv timeout in milliseconds.<br>The connection stays open between messages.',
@@ -42,17 +41,17 @@ $.fn.zato.channel.hl7.mllp.field_descriptions = {
     'id_start_seq': 'MLLP start-of-block byte in hex.<br>Standard: 0b.',
     'id_end_seq': 'MLLP end-of-block bytes in hex.<br>Standard: 1c 0d.',
 
-    // Tolerance tab - parsing
+    // Tolerance - parsing
     'id_should_parse_on_input': 'When on, each incoming message is parsed<br>into a structured HL7 object before the service<br>receives it. When off, the service receives<br>the raw ER7 text.',
     'id_should_validate': 'When on, each parsed message is validated<br>against the HL7 v2 grammar and a message<br>that fails validation is rejected with an AE.<br>Applies only when parsing is on.',
 
-    // Tolerance tab - wire-level preprocessing
+    // Tolerance - wire-level preprocessing
     'id_normalize_line_endings': 'Converts CRLF and LF to CR<br>as required by HL7 v2.',
     'id_force_standard_delimiters': 'Rewrites MSH-2 to standard delimiters<br>(^~\\&amp;).',
     'id_repair_truncated_msh': 'Recovers messages with a corrupted<br>or malformed MSH segment.',
     'id_split_concatenated_messages': 'Splits a TCP payload containing multiple<br>MSH segments into separate messages.',
 
-    // Tolerance tab - parser-level fixups
+    // Tolerance - parser-level fixups
     'id_normalize_obx2_value_type': 'When OBX-2 is empty but OBX-5 has data,<br>fills OBX-2 with ST so the observation<br>value can be accessed.',
     'id_replace_invalid_obx2_value_type': 'Replaces unrecognized OBX-2 data types<br>with ST. Prevents parse failures from<br>nonstandard value type codes.',
     'id_normalize_invalid_escape_sequences': 'Removes stray backslash characters that<br>do not form a valid HL7 escape sequence.<br>Prevents parse errors from malformed escapes.',
@@ -61,16 +60,16 @@ $.fn.zato.channel.hl7.mllp.field_descriptions = {
     'id_allow_short_encoding_characters': 'Pads MSH-2 with standard encoding characters<br>when the sender provides fewer than the<br>required four.',
     'id_fix_off_by_one_field_index': 'Removes a spurious empty first field from<br>non-MSH segments. Fixes messages where a<br>leading separator shifts all field indices.',
 
-    // Deduplication tab
+    // Deduplication
     'id_dedup_ttl_value': 'How long to remember message control IDs (MSH-10).<br>Duplicates within this window are acknowledged<br>but not delivered to the service.<br>Zero turns deduplication off.',
     'id_dedup_ttl_unit': 'Time unit for the dedup window<br>(minutes, hours, or days).',
 
-    // Logging tab
+    // Logging
     'id_should_return_errors': 'When on, error details are included<br>in NAK responses sent to the sender (ERR segment).<br>When off, the NAK code is sent without details.',
     'id_should_log_messages': 'When on, each incoming message body and<br>routing decision is written to the server log<br>(server.log in the server directory).',
     'id_is_audit_log_active': 'When on, each message this channel receives<br>and each acknowledgment it sends is recorded<br>in the audit log.',
 
-    // Security tab
+    // Security
     'id_security_id': 'The mTLS definition naming the client certificate<br>a sender has to connect with. Without one, a sender<br>is accepted whatever certificate it used.',
     'id_allowed_networks': 'Comma-separated addresses and CIDR blocks<br>a sender\'s address has to fall inside,<br>e.g. 10.0.0.0/8, 192.168.1.5.<br>Empty allows any address.'
 };

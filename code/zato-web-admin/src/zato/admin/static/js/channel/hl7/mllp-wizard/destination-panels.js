@@ -8,7 +8,7 @@
 //
 // The service and the reply panels are lists of one pick each, filtered by
 // typing, and both read their choices from the rendered Django form, which
-// keeps the wizard and the full-page editor on one list of options.
+// is the one list of options the page has.
 
 (function($) {
 

@@ -87,7 +87,8 @@ def _text_has(control_id:'str') -> 'any_':
 class TestChannelHL7MLLPWizard:
     """ Walks the MLLP channel wizard end to end - a regression check that the wizard,
     now a wizard-kit instance, still creates channels through all three steps - and then
-    invokes the created channel over the wire with the python-hl7 and Java HAPI clients.
+    invokes the created channel over the wire with the python-hl7 and Java HAPI clients,
+    finishing with the same wizard opened on the channel it created.
     """
 
     @pytest.mark.expect_log_errors('No matching MLLP channel for message')
@@ -213,13 +214,12 @@ class TestChannelHL7MLLPWizard:
 
             _ = wait_for_item(receiver.deliveries, _text_has(control_id), f'delivery of {control_id}')
 
-        # The created channel stores the destination - the full-page editor reads it back
-        # into its hidden JSON field
+        # The same wizard opens on the channel it just created, and everything the channel
+        # stores is what it opens with - the destination in its hidden JSON field ..
         item_id = _get_item_id(page, channel_name)
 
-        _ = page.goto(f'{base_url}/zato/channel/hl7/mllp/editor/{item_id}/?cluster=1')
-        _ = page.wait_for_selector('#id_edit-destinations', state='attached')
-        _ = page.wait_for_function('document.querySelector("#id_edit-destinations").value !== ""')
+        _ = page.goto(f'{base_url}/zato/channel/hl7/mllp/wizard/{item_id}/?cluster=1')
+        _ = page.wait_for_selector('#mllp-wizard', state='visible')
 
         stored_destinations = page.input_value('#id_edit-destinations')
 
@@ -228,6 +228,27 @@ class TestChannelHL7MLLPWizard:
 
         assert 'hl7-mllp' in stored_destinations, \
             f'Expected the destination type among the stored destinations, got: "{stored_destinations}"'
+
+        # .. the name in the header badge ..
+        badge_text = page.inner_text('#mllp-wizard-name-badge')
+        assert channel_name in badge_text, f'Expected "{channel_name}" in the name badge, got: "{badge_text}"'
+
+        # .. and the destination counted on the chip of step 2 ..
+        page.click('#mllp-wizard-next')
+        time.sleep(0.2)
+
+        chip_text = page.inner_text('#mllp-wizard-slot-destinations-chip')
+        assert '1 destination' in chip_text, f'Expected "1 destination" on the chip, got: "{chip_text}"'
+
+        # .. and saving from the review, with nothing changed, lands back on the list.
+        page.click('#mllp-wizard-next')
+        time.sleep(0.2)
+
+        page.click('#mllp-wizard-next')
+        _ = page.wait_for_selector('#data-table', state='visible', timeout=10000)
+
+        row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{channel_name}"))')
+        assert row is not None, f'Channel "{channel_name}" should still be on the list after the edit wizard'
 
         # Delete the channel the test created
         _navigate_to_mllp(page, base_url)

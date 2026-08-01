@@ -14,12 +14,12 @@ from django.http import JsonResponse
 from django.template.response import TemplateResponse
 
 # Zato
+from zato.admin.web.forms import populate_form_initial
 from zato.admin.web.forms.outgoing.hl7.mllp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, invoke_action_handler, method_allowed
 from zato.common.api import GENERIC, generic_attrs
 from zato.common.crypto.api import CryptoManager
 from zato.common.hl7.mllp.client import HL7MLLPClient
-from zato.common.hl7.mllp.fields import Outconn_Defaults
 from zato.common.hl7.mllp.tls import build_client_ssl_context
 from zato.common.model.hl7 import HL7MLLPOutconnConfigObject
 from zato.common.util.api import hex_sequence_to_bytes
@@ -165,38 +165,6 @@ def wizard_create(req:'any_') -> 'TemplateResponse':
 
 # ################################################################################################################################
 
-def _get_wizard_initial(item:'stranydict') -> 'stranydict':
-    """ What the wizard's fields open with for one stored connection - what it has on record,
-    with the shared defaults standing in for any field added after it was created.
-    """
-    out = dict(Outconn_Defaults)
-
-    for name in out:
-
-        if name not in item:
-            continue
-
-        value = item[name]
-
-        # A field the record has nothing under is one the default answers for. Rendering the blank
-        # instead would post a blank back, and a blank is not a number - which is what the server
-        # would have to make of one arriving under a field that counts seconds or bytes.
-        if value is None:
-            continue
-
-        if value == '':
-            continue
-
-        out[name] = value
-
-    # Name and address are required rather than defaulted, so they are not among the fields above
-    out['name'] = item['name']
-    out['address'] = item['address']
-
-    return out
-
-# ################################################################################################################################
-
 @method_allowed('GET')
 def wizard_edit(req:'any_', id:'str') -> 'TemplateResponse':
     """ The same wizard, opened on one existing HL7 MLLP outgoing connection.
@@ -213,9 +181,7 @@ def wizard_edit(req:'any_', id:'str') -> 'TemplateResponse':
     # .. the edit endpoint reads its input under the edit- prefix, which is what the form
     # .. is built with and what the wizard's own fieldPrefix mirrors ..
     form = EditForm(prefix='edit')
-
-    for name, value in _get_wizard_initial(item_dict).items():
-        form.fields[name].initial = value
+    populate_form_initial(form, item_dict)
 
     return_data = {
         'cluster_id': req.zato.cluster_id,

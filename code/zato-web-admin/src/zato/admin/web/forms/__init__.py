@@ -19,6 +19,15 @@ from zato.common.py23_.past.builtins import basestring
 from zato.common.api import IO, ZATO_NONE
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, stranydict
+
+    any_ = any_
+    stranydict = stranydict
+
+# ################################################################################################################################
 
 INITIAL_CHOICES_DICT = {'': '----------'}
 Initial_Choices_Dict_Attrs = {'id':'', 'name':'----------'}
@@ -232,6 +241,31 @@ def add_select_from_service(form, req, service_name, field_names, by_id=True, se
         for item in response:
             id_attr = item.id if by_id else item.name
             field.choices.append([id_attr, item.name])
+
+# ################################################################################################################################
+
+def populate_form_initial(form:'any_', item:'stranydict') -> 'None':
+    """ Makes every field of a form open with what one stored object has under the same name.
+    A field the object has nothing under keeps the initial the form itself declares, which is
+    the very default a new object would be created with.
+    """
+    for name, field in form.fields.items():
+
+        if name not in item:
+            continue
+
+        value = item[name]
+
+        # A field the record has nothing under is one the form's own default answers for. Rendering
+        # the blank instead would post a blank back, and a blank is not a number - which is what the
+        # server would have to make of one arriving under a field that counts seconds or bytes.
+        if value is None:
+            continue
+
+        if value == '':
+            continue
+
+        field.initial = value
 
 # ################################################################################################################################
 # ################################################################################################################################

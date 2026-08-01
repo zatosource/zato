@@ -376,10 +376,10 @@ forms.registerKind('securityList', {
 // ////////////////////////////////////////////////////////////////////////
 
     // The security rows write into the wizard state, with the first pick
-    // also landing in the Django select - a single security posts exactly
-    // the way the full-page editor posts it. The rows survive even with
-    // the slider off - only the Django select and the submit treat the
-    // channel as having no security then.
+    // also landing in the Django select, which is what a single security
+    // posts on its own. The rows survive even with the slider off - only
+    // the Django select and the submit treat the channel as having no
+    // security then.
     save: function(popper, fieldSpec) {
 
         var securityConfig = forms.securityConfig;

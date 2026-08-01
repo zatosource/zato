@@ -1,19 +1,25 @@
 {% extends "zato/dashboard_base.html" %}
 
 {% comment %}
-Multi-step wizard for creating a new HL7 MLLP channel - three steps with
-progressive disclosure. Basic answers live directly on the steps while
-everything advanced opens in small popover micro-forms. The generic
-machinery and look come from the wizard kit. The view provides:
+Multi-step wizard for an HL7 MLLP channel - three steps with progressive
+disclosure. Basic answers live directly on the steps while everything
+advanced opens in small popover micro-forms. The generic machinery and
+look come from the wizard kit. The view provides:
 
-* cluster_id   - the current cluster
-* form         - CreateForm, its fields carry all the defaults
+* cluster_id        - the current cluster
+* form              - CreateForm, its fields carrying all the defaults,
+                      or EditForm prefilled from the stored channel
+* is_edit           - whether the wizard opened on an existing channel
+* item_id           - the id of the channel being edited, empty on create
+* rest_channel_id   - the id of the backing REST channel, zero when there is none
+* security_key_list - the definitions the REST bridge authenticates with
 
-The wizard posts to the same create endpoint the full-page editor uses,
-so the resulting channel is identical to one created through the editor.
+One page serves both actions. On edit the form carries the edit- prefix
+its endpoint reads its input under, which the wizard's own fieldPrefix
+mirrors, so every field id on the page follows along on its own.
 {% endcomment %}
 
-{% block html_title %}HL7 MLLP channel - Create a new channel{% endblock %}
+{% block html_title %}HL7 MLLP channel - {% if is_edit %}Edit a channel{% else %}Create a new channel{% endif %}{% endblock %}
 
 {% block dashboard_extra_css %}
 <link rel="stylesheet" type="text/css" href="/static/css/settings.css">
@@ -45,10 +51,14 @@ so the resulting channel is identical to one created through the editor.
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-wizard/destination-panels.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-wizard/review.js"></script>
 
+{{ security_key_list|json_script:"mllp-wizard-security-key-list" }}
+
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
     $.fn.zato.channel.hl7.mllp.wizard.init({
-        list_url: '{% url "channel-hl7-mllp" %}?cluster={{ cluster_id }}&type_=channel-hl7-mllp'
+        list_url: '{% url "channel-hl7-mllp" %}?cluster={{ cluster_id }}&type_=channel-hl7-mllp',
+        is_edit: {% if is_edit %}true{% else %}false{% endif %},
+        security_key_list: JSON.parse(document.getElementById('mllp-wizard-security-key-list').textContent)
     });
 });
 </script>
@@ -69,11 +79,11 @@ $(document).ready(function() {
             <div class="dashboard-card-header">
                 <!-- The label makes the title a regular "How does it work?"
                      stop - clicking it shows the wizard-wide overview -->
-                <h3 id="mllp-wizard-title"><label for="mllp-wizard-title">New HL7 MLLP channel</label></h3>
+                <h3 id="mllp-wizard-title"><label for="mllp-wizard-title">{% if is_edit %}Edit HL7 MLLP channel{% else %}New HL7 MLLP channel{% endif %}</label></h3>
                 <span class="wizard-badge wizard-name-badge" id="mllp-wizard-name-badge" hidden></span>
             </div>
 
-            <form novalidate action="{% url "channel-hl7-mllp-create" %}" method="post" id="create-form">
+            <form novalidate action="{% if is_edit %}{% url "channel-hl7-mllp-edit" %}{% else %}{% url "channel-hl7-mllp-create" %}{% endif %}" method="post" id="create-form">
 
                 <!-- The step strip wears the shared dashboard tabs chrome, the same
                      the security posture page uses - the tabs show progress, the
@@ -98,14 +108,14 @@ $(document).ready(function() {
 
                     <div class="wizard-name-row">
                         <div class="wizard-name-field">
-                            <label for="id_name">Name</label>
+                            <label for="{{ form.name.id_for_label }}">Name</label>
                             {{ form.name }}
                         </div>
-                        <label class="wizard-active-field" for="id_is_active" data-help-placement="top">
+                        <label class="wizard-active-field" for="{{ form.is_active.id_for_label }}" data-help-placement="top">
                             Active
                             {{ form.is_active }}
                         </label>
-                        <label class="wizard-active-field" for="id_is_default" data-help-placement="top">
+                        <label class="wizard-active-field" for="{{ form.is_default.id_for_label }}" data-help-placement="top">
                             Default
                             {{ form.is_default }}
                         </label>
@@ -182,13 +192,24 @@ $(document).ready(function() {
                                 <div class="wizard-collapse-group">
                                     <div class="wizard-collapse-group-title">
                                         <svg class="wizard-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                        Parsing
+                                    </div>
+                                    <div class="wizard-collapse-group-body mllp-wizard-tolerance-grid" hidden>
+                                        <label for="{{ form.should_parse_on_input.id_for_label }}">Parse each message on input {{ form.should_parse_on_input }}</label>
+                                        <label for="{{ form.should_validate.id_for_label }}">Validate each message {{ form.should_validate }}</label>
+                                    </div>
+                                </div>
+
+                                <div class="wizard-collapse-group">
+                                    <div class="wizard-collapse-group-title">
+                                        <svg class="wizard-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
                                         Wire-level fixups
                                     </div>
                                     <div class="wizard-collapse-group-body mllp-wizard-tolerance-grid" hidden>
-                                        <label for="id_normalize_line_endings">Normalize line endings to CR {{ form.normalize_line_endings }}</label>
-                                        <label for="id_force_standard_delimiters">Force the standard delimiters {{ form.force_standard_delimiters }}</label>
-                                        <label for="id_repair_truncated_msh">Repair a truncated MSH header {{ form.repair_truncated_msh }}</label>
-                                        <label for="id_split_concatenated_messages">Split concatenated messages {{ form.split_concatenated_messages }}</label>
+                                        <label for="{{ form.normalize_line_endings.id_for_label }}">Normalize line endings to CR {{ form.normalize_line_endings }}</label>
+                                        <label for="{{ form.force_standard_delimiters.id_for_label }}">Force the standard delimiters {{ form.force_standard_delimiters }}</label>
+                                        <label for="{{ form.repair_truncated_msh.id_for_label }}">Repair a truncated MSH header {{ form.repair_truncated_msh }}</label>
+                                        <label for="{{ form.split_concatenated_messages.id_for_label }}">Split concatenated messages {{ form.split_concatenated_messages }}</label>
                                     </div>
                                 </div>
 
@@ -198,13 +219,13 @@ $(document).ready(function() {
                                         Content-level fixups
                                     </div>
                                     <div class="wizard-collapse-group-body mllp-wizard-tolerance-grid" hidden>
-                                        <label for="id_normalize_obx2_value_type">Fill empty OBX-2 value type {{ form.normalize_obx2_value_type }}</label>
-                                        <label for="id_replace_invalid_obx2_value_type">Replace invalid OBX-2 value type {{ form.replace_invalid_obx2_value_type }}</label>
-                                        <label for="id_normalize_invalid_escape_sequences">Strip orphan escape characters {{ form.normalize_invalid_escape_sequences }}</label>
-                                        <label for="id_normalize_obx8_abnormal_flags">Clear OBX-8 literal null values {{ form.normalize_obx8_abnormal_flags }}</label>
-                                        <label for="id_normalize_quadruple_quoted_empty">Strip multi-quote empty values {{ form.normalize_quadruple_quoted_empty }}</label>
-                                        <label for="id_allow_short_encoding_characters">Pad short encoding characters {{ form.allow_short_encoding_characters }}</label>
-                                        <label for="id_fix_off_by_one_field_index">Fix an off-by-one field index {{ form.fix_off_by_one_field_index }}</label>
+                                        <label for="{{ form.normalize_obx2_value_type.id_for_label }}">Fill empty OBX-2 value type {{ form.normalize_obx2_value_type }}</label>
+                                        <label for="{{ form.replace_invalid_obx2_value_type.id_for_label }}">Replace invalid OBX-2 value type {{ form.replace_invalid_obx2_value_type }}</label>
+                                        <label for="{{ form.normalize_invalid_escape_sequences.id_for_label }}">Strip orphan escape characters {{ form.normalize_invalid_escape_sequences }}</label>
+                                        <label for="{{ form.normalize_obx8_abnormal_flags.id_for_label }}">Clear OBX-8 literal null values {{ form.normalize_obx8_abnormal_flags }}</label>
+                                        <label for="{{ form.normalize_quadruple_quoted_empty.id_for_label }}">Strip multi-quote empty values {{ form.normalize_quadruple_quoted_empty }}</label>
+                                        <label for="{{ form.allow_short_encoding_characters.id_for_label }}">Pad short encoding characters {{ form.allow_short_encoding_characters }}</label>
+                                        <label for="{{ form.fix_off_by_one_field_index.id_for_label }}">Fix an off-by-one field index {{ form.fix_off_by_one_field_index }}</label>
                                     </div>
                                 </div>
 
@@ -296,6 +317,11 @@ $(document).ready(function() {
                     {{ form.delivery_mode }}
 
                 </div>
+
+                {% if is_edit %}
+                <input type="hidden" id="id_edit-id" name="id" value="{{ item_id }}" />
+                <input type="hidden" id="id_rest_channel_id" name="rest_channel_id" value="{{ rest_channel_id }}" />
+                {% endif %}
 
                 <input type="hidden" id="id_cluster_id" name="cluster_id" value="{{ cluster_id }}" />
             </form>
