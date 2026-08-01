@@ -191,6 +191,20 @@
                                 {{ create_form.is_active }}
                                 </label>
 
+                                |
+
+                                <label for="id_strict_host_key_checking">
+                                Strict host key checking
+                                {{ create_form.strict_host_key_checking }}
+                                </label>
+
+                                |
+
+                                <label for="id_ignore_host_key_changes">
+                                Ignore host key changes
+                                {{ create_form.ignore_host_key_changes }}
+                                </label>
+
                             </td>
                         </tr>
 
@@ -223,28 +237,12 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_private_key">Private key environment variable</label>
+                                <label for="id_private_key">Private key file</label>
                             </td>
                             <td>
                                 {{ create_form.private_key }}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                                <label for="id_strict_host_key_checking">Strict host key checking</label>
-                            </td>
-                            <td>
-                                {{ create_form.strict_host_key_checking }}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                                <label for="id_ignore_host_key_changes">Ignore host key changes</label>
-                            </td>
-                            <td>
-                                {{ create_form.ignore_host_key_changes }}
+                                <br/>
+                                <span class="form_hint">Full path on the server's filesystem</span>
                             </td>
                         </tr>
 
@@ -283,6 +281,20 @@
                                 {{ edit_form.is_active }}
                                 </label>
 
+                                |
+
+                                <label for="id_edit-strict_host_key_checking">
+                                Strict host key checking
+                                {{ edit_form.strict_host_key_checking }}
+                                </label>
+
+                                |
+
+                                <label for="id_edit-ignore_host_key_changes">
+                                Ignore host key changes
+                                {{ edit_form.ignore_host_key_changes }}
+                                </label>
+
                             </td>
                         </tr>
 
@@ -315,28 +327,12 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_edit-private_key">Private key environment variable</label>
+                                <label for="id_edit-private_key">Private key file</label>
                             </td>
                             <td>
                                 {{ edit_form.private_key }}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                                <label for="id_edit-strict_host_key_checking">Strict host key checking</label>
-                            </td>
-                            <td>
-                                {{ edit_form.strict_host_key_checking }}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                                <label for="id_edit-ignore_host_key_changes">Ignore host key changes</label>
-                            </td>
-                            <td>
-                                {{ edit_form.ignore_host_key_changes }}
+                                <br/>
+                                <span class="form_hint">Full path on the server's filesystem</span>
                             </td>
                         </tr>
 

@@ -12,6 +12,7 @@ import socket
 import time
 
 # Zato
+import mllp_outconn
 from hl7_client import python_client
 from zato.common.crypto.api import CryptoManager
 
@@ -28,9 +29,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The pages these helpers drive
+# The page these helpers drive - where the outgoing connections are is mllp_outconn's own
 Channel_Page_Url = '/zato/channel/hl7/mllp/?cluster=1&type_=channel-hl7-mllp'
-Outgoing_Page_Url = '/zato/outgoing/hl7/mllp/?cluster=1&type_=outconn-hl7-mllp'
 
 # Where the channels listen
 Host = '127.0.0.1'
@@ -60,14 +60,6 @@ def navigate_to_channels(page:'Page', base_url:'str') -> 'None':
 
 # ################################################################################################################################
 
-def navigate_to_outgoing(page:'Page', base_url:'str') -> 'None':
-    """ Opens the outgoing HL7 MLLP connections page and waits for the data table.
-    """
-    _ = page.goto(f'{base_url}{Outgoing_Page_Url}')
-    _ = page.wait_for_selector('#data-table', state='visible')
-
-# ################################################################################################################################
-
 def get_item_id(page:'Page', name:'str') -> 'str':
     """ Extracts the server-side ID of a row by its name.
     """
@@ -89,40 +81,12 @@ def get_item_id(page:'Page', name:'str') -> 'str':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def create_outgoing_connection(page:'Page', base_url:'str', name:'str', address:'str', recv_timeout_ms:'int'=0) -> 'None':
-    """ Creates an outgoing MLLP connection through its own page, the way a person does.
-    A receive timeout in milliseconds replaces the form's default when the receiver
-    the connection points at is a slow one.
-    """
-    navigate_to_outgoing(page, base_url)
-
-    page.click('#markup .page_prompt a:has-text("Create a new connection")')
-    _ = page.wait_for_selector('#create-div', state='visible')
-
-    page.fill('#id_name', name)
-    page.fill('#id_address', address)
-
-    if recv_timeout_ms:
-        page.fill('#id_recv_timeout', str(recv_timeout_ms))
-
-    page.click('#create-div input[type="submit"]')
-    _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
-
-    _ = page.wait_for_selector(f'#data-table tbody tr:has(td:text-is("{name}"))', state='visible', timeout=5000)
-
-# ################################################################################################################################
-
-def delete_outgoing_connection(page:'Page', base_url:'str', name:'str') -> 'None':
-    """ Deletes an outgoing MLLP connection through its own page.
-    """
-    navigate_to_outgoing(page, base_url)
-
-    item_id = get_item_id(page, name)
-
-    page.evaluate(f'$.fn.zato.outgoing.hl7.mllp.delete_("{item_id}")')
-    _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
-    page.click('#popup_ok')
-    time.sleep(0.5)
+# A channel test needs an outgoing connection to point a destination at, and driving that
+# page is the outconn wizard's business rather than this module's - the names are re-exported
+# here so that a test which only wants the plumbing keeps importing from one place.
+navigate_to_outgoing = mllp_outconn.navigate_to_outgoing
+create_outgoing_connection = mllp_outconn.create_outgoing_connection
+delete_outgoing_connection = mllp_outconn.delete_outgoing_connection
 
 # ################################################################################################################################
 # ################################################################################################################################

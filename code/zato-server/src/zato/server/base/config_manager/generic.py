@@ -231,6 +231,24 @@ class Generic(ConfigManagerImpl):
 
     def _edit_generic_connection(self, msg:'stranydict', skip:'any_'=None, secret:'strnone'=None) -> 'None':
 
+        # The connection as this server currently knows it - it is also what a rename moves the topic from
+        old_conn_dict, _ = self._find_conn_info(msg['id'])
+
+        # A server without the connection in its configuration has nothing to edit, which happens when
+        # an earlier create never reached it. The message describes the connection in full, so it is built
+        # from scratch here, otherwise the connection would stay missing on this server no matter
+        # how many times it is edited.
+        if old_conn_dict is None:
+
+            self.logger.info('Creating generic connection `%s` (%s) out of an edit - it was not in the config yet',
+                msg['name'], msg['type_'])
+
+            if secret:
+                msg['secret'] = secret
+
+            self._create_generic_connection(msg, True, skip)
+            return
+
         # If we do not have a secret on input, we need to look it up in the incoming message.
         # If it is still not there, assume that we are going to reuse the same secret
         # that we already have defined for the object
@@ -239,11 +257,8 @@ class Generic(ConfigManagerImpl):
             secret = msg.get('secret', ZATO_NONE)
 
         if secret == ZATO_NONE:
-            conn_dict, _ = self._find_conn_info(msg['id'])
-            secret = conn_dict['secret']
+            secret = old_conn_dict['secret']
 
-        # The name the connection goes by until this edit is over is what a rename moves its topic from
-        old_conn_dict, _ = self._find_conn_info(msg['id'])
         old_name = old_conn_dict['name']
 
         conn_type = publishable_generic_types.get(msg['type_'])
@@ -484,11 +499,15 @@ class Generic(ConfigManagerImpl):
             if config.get(key) is None:
                 config[key] = default
 
-        # .. and make sure numeric fields are integers.
+        # .. and make sure numeric fields are integers - an empty string means
+        # .. the create path had no value for the field, so its default applies.
         for key in outconn_int_config_keys:
             value = config[key]
             if isinstance(value, str):
-                config[key] = int(value)
+                if value:
+                    config[key] = int(value)
+                else:
+                    config[key] = outconn_config_defaults[key]
 
 # ################################################################################################################################
 

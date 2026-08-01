@@ -22,9 +22,12 @@
     gap: 12px;
 }
 
+/* All the labels of a page share one width, which is what lines the values
+   up in a column. A wizard whose questions are longer than the default
+   widens the token on its own card rather than on the class. */
 .wizard-line-label {
     flex: 0 0 auto;
-    width: 14.5em;
+    width: var(--wizard-line-label-width);
     font-size: 13px;
     color: var(--wizard-text);
 }

@@ -66,7 +66,7 @@ def _do_full_crud(page:'Page', base_url:'str', suffix:'str') -> 'None':
     page.fill('#id_edit-name', edited_name)
     page.fill('#id_edit-address', 'sftp.edited.example.com:22022')
     page.fill('#id_edit-username', 'sftp-user-edited')
-    page.fill('#id_edit-private_key', 'My_Edited_SFTP_Key_File')
+    page.fill('#id_edit-private_key', '/tmp/my-edited-sftp-key')
     page.click('#id_edit-strict_host_key_checking')
 
     submit_edit_form(page)
@@ -271,9 +271,8 @@ class TestOutgoingSFTPLifecycle:
         # An earlier run may have recorded a different key for this same host and port
         forget_host_key(sftp_server.host, sftp_server.port)
 
-        # The zato server was started with an environment variable pointing to this path -
-        # the key itself is copied there only now, with the permissions that ssh requires.
-        sftp_key_env_name = zato_dashboard['sftp_key_env_name']
+        # The connection below points at this path - the key itself is copied there
+        # only now, with the permissions that ssh requires.
         sftp_key_path = zato_dashboard['sftp_key_path']
 
         shutil.copyfile(sftp_server.client_key_encrypted_path, sftp_key_path)
@@ -285,9 +284,8 @@ class TestOutgoingSFTPLifecycle:
             open_sftp_page(page, base_url)
 
             # .. create a connection pointing at the live server - it authenticates with an encrypted key
-            # .. whose passphrase is the connection's password, referred to through the environment
-            # .. variable, and host key checking must be off because the server's host key
-            # .. was generated a moment ago ..
+            # .. whose passphrase is the connection's password, and host key checking must be off
+            # .. because the server's host key was generated a moment ago ..
             name = _Test_Name_Prefix + 'ping'
             address = f'{sftp_server.host}:{sftp_server.port}'
 
@@ -297,7 +295,7 @@ class TestOutgoingSFTPLifecycle:
                 address,
                 sftp_server.username,
                 sftp_server.password,
-                private_key=sftp_key_env_name,
+                private_key=sftp_key_path,
                 strict_host_key_checking=False,
             )
 

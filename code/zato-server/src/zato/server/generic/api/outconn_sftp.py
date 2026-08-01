@@ -103,9 +103,9 @@ class SFTPClient:
             password = ''
         self.password = password # type: str
 
-        # An optional name of an environment variable that points to a private key file on disk -
-        # when it is empty, system-level keys are used. The variable is resolved on each command
-        # rather than here so a misconfigured connection can still be created and edited.
+        # An optional path to a private key file on this server's filesystem - when it is empty,
+        # system-level keys are used. The path is checked on each command rather than here
+        # so a misconfigured connection can still be created and edited.
         self.private_key = self.config.private_key # type: str
 
         # Whether the remote host key must already be known or whether keys of new hosts are accepted
@@ -187,17 +187,12 @@ class SFTPClient:
 
 # ################################################################################################################################
 
-    def _resolve_private_key(self) -> 'str':
-        """ Turns the private key environment variable into a path to a key file on disk.
-        The variable comes from the outside world, which is why an explicit check is needed here.
+    def _check_private_key(self) -> 'None':
+        """ Makes sure the connection's private key is where the configuration says it is.
+        The path comes from the outside world, which is why an explicit check is needed here.
         """
-        out = os.environ.get(self.private_key)
-
-        if out is None:
-            raise Exception('Environment variable `{}` with a path to the private key of `{}` is not set'.format(
-                self.private_key, self.name))
-
-        return out
+        if not os.path.exists(self.private_key):
+            raise Exception('Private key `{}` of `{}` does not exist'.format(self.private_key, self.name))
 
 # ################################################################################################################################
 
@@ -246,12 +241,12 @@ class SFTPClient:
         args.extend(self.base_args)
 
         # A private key is optional - when it is given, only that identity is offered to the server.
-        # The environment variable is resolved here, on each command, so that a connection whose
-        # variable is missing fails with a clear error when it is used, not when it is created.
+        # The path is checked here, on each command, so that a connection whose key is missing
+        # fails with a clear error when it is used, not when it is created.
         if self.private_key:
-            private_key_path = self._resolve_private_key()
+            self._check_private_key()
             args.append('-i')
-            args.append(private_key_path)
+            args.append(self.private_key)
             args.append('-o')
             args.append('IdentitiesOnly=yes')
 
@@ -298,7 +293,7 @@ class SFTPClient:
 
         try:
             # Build the full command line for this invocation - this is inside the try block
-            # because resolving the private key environment variable may raise an exception.
+            # because checking that the private key file exists may raise an exception.
             command = self._build_command(log_level)
             out.command = command
 

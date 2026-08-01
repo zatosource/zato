@@ -72,11 +72,6 @@ _Zato_Bin  = os.path.join(_Zato_Base, 'code', 'bin', 'zato')
 
 _Password = 'test.dashboard.' + CryptoManager.generate_hex_string()
 
-# The server process gets its environment once, at start, which is why the variable
-# with the path to an SFTP private key must be exported here - the key file itself
-# is created later, by tests that need it, under the path the variable points to.
-_SFTP_Key_Env_Name = 'Zato_Test_SFTP_Key_File'
-
 _Process_Kill_Timeout  = 5
 _Server_Wait_Timeout   = 60
 _Quickstart_Timeout    = 120
@@ -351,9 +346,8 @@ def zato_dashboard() -> 'any_':
     pubsub_db_path = os.path.join(server_dir, 'pubsub.db')
     server_env['Zato_PubSub_DB_Name'] = pubsub_db_path
 
-    # SFTP tests copy a private key to this path after the server has already started
+    # SFTP tests copy a private key to this path and point their connections at it
     sftp_key_path = os.path.join(temporary_dir, 'sftp-test-key')
-    server_env[_SFTP_Key_Env_Name] = sftp_key_path
 
     # Kerberos tests write this configuration file when their KDC starts - the path is fixed
     # and exported here because the server reads its environment once, at start.
@@ -459,7 +453,6 @@ def zato_dashboard() -> 'any_':
         'dashboard_process': dashboard_process,
         'listener_process': listener_process,
         'queue_bridge_redis_port': queue_bridge_redis_port,
-        'sftp_key_env_name': _SFTP_Key_Env_Name,
         'sftp_key_path': sftp_key_path,
     }
 

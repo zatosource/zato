@@ -1,0 +1,266 @@
+{% extends "zato/dashboard_base.html" %}
+
+{% comment %}
+Multi-step wizard for an HL7 MLLP outgoing connection - three steps with
+progressive disclosure. The two answers that cannot be guessed, the name
+and the address, sit directly on the first step while everything that has
+a sensible default opens in a small popover micro-form. The generic
+machinery and look come from the wizard kit. The view provides:
+
+* cluster_id - the current cluster
+* form       - CreateForm on create, EditForm prefilled on edit
+* is_edit    - whether the wizard opened on an existing connection
+* item_id    - the id of the connection being edited, empty on create
+
+One page serves both actions. On edit the form carries the edit- prefix
+its endpoint reads its input under, which the wizard's own fieldPrefix
+mirrors, so every field id on the page follows along on its own.
+{% endcomment %}
+
+{% block html_title %}HL7 MLLP outgoing connection - {% if is_edit %}Edit a connection{% else %}Create a new connection{% endif %}{% endblock %}
+
+{% block dashboard_extra_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/settings.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-lines.css">
+<link rel="stylesheet" type="text/css" href="/static/css/outgoing/hl7/mllp-wizard.css">
+{% endblock %}
+
+{% block dashboard_domain_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/core.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/collapse.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/forms.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/probe.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/review.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/hl7/mllp-descriptions.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/hl7/mllp-wizard/core.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/hl7/mllp-wizard/forms.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/hl7/mllp-wizard/review.js"></script>
+
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.outgoing.hl7.mllp.wizard.init({
+        list_url: '{% url "outgoing-hl7-mllp" %}?cluster={{ cluster_id }}&type_=outconn-hl7-mllp',
+        test_url: '{% url "outgoing-hl7-mllp-wizard-test" %}?cluster={{ cluster_id }}',
+        is_edit: {% if is_edit %}true{% else %}false{% endif %}
+    });
+});
+</script>
+{% endblock %}
+
+{% block dashboard_tiles %}{% endblock %}
+{% block dashboard_header_pill %}{% endblock %}
+{% block dashboard_chart_header_content %}{% endblock %}
+{% block dashboard_time_range_options %}{% endblock %}
+{% block dashboard_refresh_options %}{% endblock %}
+
+{% block dashboard_grid %}
+
+        <div id="user-message-div" style="display:none"><pre id="user-message" class="user-message"></pre></div>
+
+        <div class="dashboard-card wizard-card" id="mllp-outconn-wizard">
+
+            <div class="dashboard-card-header">
+                <!-- The label makes the title a regular "How does it work?"
+                     stop - clicking it shows the wizard-wide overview -->
+                <h3 id="mllp-outconn-wizard-title"><label for="mllp-outconn-wizard-title">{% if is_edit %}Edit HL7 MLLP outgoing connection{% else %}New HL7 MLLP outgoing connection{% endif %}</label></h3>
+                <span class="wizard-badge wizard-name-badge" id="mllp-outconn-wizard-name-badge" hidden></span>
+            </div>
+
+            <form novalidate action="{% if is_edit %}{% url "outgoing-hl7-mllp-edit" %}{% else %}{% url "outgoing-hl7-mllp-create" %}{% endif %}" method="post" id="create-form">
+
+                <!-- The step strip wears the shared dashboard tabs chrome - the tabs
+                     show progress, the walking itself happens through Next and Back -->
+                <div class="dashboard-tabs wizard-steps" id="mllp-outconn-wizard-steps" role="tablist" aria-label="Wizard steps">
+                    <button type="button" class="dashboard-tab wizard-step wizard-step-active dashboard-tab-active" data-step="0" role="tab" aria-selected="true">
+                        <span class="wizard-step-num">01</span>
+                        <span class="dashboard-tab-label">Where do messages go?</span>
+                    </button>
+                    <button type="button" class="dashboard-tab wizard-step" data-step="1" role="tab" aria-selected="false">
+                        <span class="wizard-step-num">02</span>
+                        <span class="dashboard-tab-label">Delivery options</span>
+                    </button>
+                    <button type="button" class="dashboard-tab wizard-step" data-step="2" role="tab" aria-selected="false">
+                        <span class="wizard-step-num">03</span>
+                        <span class="dashboard-tab-label">Review and go</span>
+                    </button>
+                </div>
+
+                <!-- Step 1 - the name, the endpoint, how messages are framed and
+                     the check that says whether anything is listening there -->
+                <div class="wizard-step-body" id="mllp-outconn-wizard-step-body-0">
+
+                    <div class="wizard-name-row">
+                        <div class="wizard-name-field">
+                            <label for="{{ form.name.id_for_label }}">Name</label>
+                            {{ form.name }}
+                        </div>
+                        <label class="wizard-active-field" for="{{ form.is_active.id_for_label }}" data-help-placement="top">
+                            Active
+                            {{ form.is_active }}
+                        </label>
+                    </div>
+
+                    <div class="wizard-section">
+                        <div class="wizard-field-row">
+                            <label for="{{ form.address.id_for_label }}">Address</label>
+                            {{ form.address }}
+                            <span class="wizard-field-hint">e.g. 10.20.30.40:2575</span>
+                        </div>
+                    </div>
+
+                    <div class="wizard-section">
+
+                        <div class="wizard-toggle-row" id="mllp-outconn-wizard-row-framing">
+                            <label class="wizard-toggle-label" for="mllp-outconn-wizard-edit-framing">Framing</label>
+                            <a href="javascript:void(0)" class="wizard-toggle-edit" id="mllp-outconn-wizard-edit-framing"><span class="zato-link-face wizard-toggle-summary" id="mllp-outconn-wizard-summary-framing"></span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+
+                        <div class="wizard-toggle-row" id="mllp-outconn-wizard-row-timing">
+                            <label class="wizard-toggle-label" for="mllp-outconn-wizard-edit-timing">Timing</label>
+                            <a href="javascript:void(0)" class="wizard-toggle-edit" id="mllp-outconn-wizard-edit-timing"><span class="zato-link-face wizard-toggle-summary" id="mllp-outconn-wizard-summary-timing"></span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+
+                        <div class="wizard-toggle-row" id="mllp-outconn-wizard-row-tls">
+                            <label class="wizard-toggle-label" for="mllp-outconn-wizard-toggle-tls">TLS</label>
+                            <input type="checkbox" id="mllp-outconn-wizard-toggle-tls">
+                            <a href="javascript:void(0)" class="wizard-toggle-edit" id="mllp-outconn-wizard-edit-tls"><span class="zato-link-face wizard-toggle-summary" id="mllp-outconn-wizard-summary-tls"></span><span class="zato-soft-hint">Click to edit</span></a>
+                        </div>
+
+                    </div>
+
+                    <!-- Everything the check needs has just been answered, so it
+                         closes the step - nothing is saved either way -->
+                    <div class="wizard-section">
+                        <div class="wizard-line" id="mllp-outconn-wizard-row-check">
+                            <label class="wizard-line-label" for="mllp-outconn-wizard-check">Is anything listening?</label>
+                            <span class="wizard-line-slot" id="mllp-outconn-wizard-slot-check"></span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Step 2 - the pool, what happens to a send that fails and the
+                     logging folded away underneath -->
+                <div class="wizard-step-body" id="mllp-outconn-wizard-step-body-1" hidden>
+
+                    <!-- One decision per line, each value the summary of the
+                         popover that answers it -->
+                    <div class="wizard-section">
+                        <div class="wizard-lines" id="mllp-outconn-wizard-lines">
+
+                            <div class="wizard-line" id="mllp-outconn-wizard-row-pool">
+                                <label class="wizard-line-label" for="mllp-outconn-wizard-edit-pool">Connections kept open</label>
+                                <span class="wizard-line-slot"><a href="javascript:void(0)" class="wizard-toggle-edit" id="mllp-outconn-wizard-edit-pool"><span class="zato-link-face wizard-toggle-summary" id="mllp-outconn-wizard-summary-pool"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                            </div>
+
+                            <div class="wizard-line" id="mllp-outconn-wizard-row-retries">
+                                <label class="wizard-line-label" for="mllp-outconn-wizard-edit-retries">A failed send is retried</label>
+                                <span class="wizard-line-slot"><a href="javascript:void(0)" class="wizard-toggle-edit" id="mllp-outconn-wizard-edit-retries"><span class="zato-link-face wizard-toggle-summary" id="mllp-outconn-wizard-summary-retries"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                            </div>
+
+                            <div class="wizard-line" id="mllp-outconn-wizard-row-breaker">
+                                <label class="wizard-line-label" for="mllp-outconn-wizard-edit-breaker">Sending pauses when the endpoint fails</label>
+                                <span class="wizard-line-slot"><a href="javascript:void(0)" class="wizard-toggle-edit" id="mllp-outconn-wizard-edit-breaker"><span class="zato-link-face wizard-toggle-summary" id="mllp-outconn-wizard-summary-breaker"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="wizard-section">
+
+                        <div class="wizard-line" id="mllp-outconn-wizard-row-options">
+                            <label class="wizard-line-label" for="mllp-outconn-wizard-edit-options">More options</label>
+                            <span class="wizard-line-slot"><a href="javascript:void(0)" class="wizard-toggle-edit" id="mllp-outconn-wizard-edit-options"><span class="zato-link-face wizard-toggle-summary" id="mllp-outconn-wizard-summary-options"></span><span class="zato-soft-hint" id="mllp-outconn-wizard-hint-options"></span></a></span>
+                        </div>
+
+                        <div class="wizard-collapse-body" id="mllp-outconn-wizard-options-body" hidden>
+
+                            <div class="wizard-option-card wizard-option-card-clickable" id="mllp-outconn-wizard-card-logging">
+                                <div class="wizard-option-header">
+                                    <span class="wizard-option-label">Logging and audit</span>
+                                    <span class="wizard-option-summary" id="mllp-outconn-wizard-summary-logging"></span>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Step 3 - review, with the check repeated at its foot so the
+                     endpoint can be tried once more before anything is saved -->
+                <div class="wizard-step-body" id="mllp-outconn-wizard-step-body-2" hidden>
+
+                    <div class="wizard-review" id="mllp-outconn-wizard-review"></div>
+
+                    <div class="wizard-section">
+                        <div class="wizard-line" id="mllp-outconn-wizard-row-review-check">
+                            <label class="wizard-line-label" for="mllp-outconn-wizard-review-check">Is anything listening?</label>
+                            <span class="wizard-line-slot" id="mllp-outconn-wizard-slot-review-check"></span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Help on the left, Back and Next in the middle, Cancel on the right -->
+                <div class="wizard-footer">
+                    <span class="how-it-works-badge" id="mllp-outconn-wizard-how-it-works">How does it work?</span>
+                    <div class="wizard-footer-center">
+                        <!-- The page opens on the first step, where there is nothing
+                             to go back to, so Back starts out disabled -->
+                        <button type="button" class="secondary-button" id="mllp-outconn-wizard-back" disabled>Back</button>
+                        <button type="button" class="action-button" id="mllp-outconn-wizard-next">Next</button>
+                    </div>
+                    <div class="wizard-footer-right">
+                        <span class="wizard-status" id="mllp-outconn-wizard-status"></span>
+                        <button type="button" class="secondary-button wizard-cancel" id="mllp-outconn-wizard-cancel">Cancel</button>
+                    </div>
+                </div>
+
+                <!-- Fields edited through the popover micro-forms - never shown directly -->
+                <div class="wizard-hidden-fields" hidden>
+
+                    {{ form.start_seq }}
+                    {{ form.end_seq }}
+                    {{ form.max_msg_size }}
+                    {{ form.read_buffer_size }}
+                    {{ form.recv_timeout }}
+                    {{ form.max_wait_time }}
+
+                    {{ form.tls_ca_path }}
+                    {{ form.tls_cert_path }}
+                    {{ form.tls_key_path }}
+
+                    {{ form.pool_size }}
+
+                    {{ form.max_retries }}
+                    {{ form.backoff_base_seconds }}
+                    {{ form.backoff_cap_seconds }}
+                    {{ form.backoff_jitter_percent }}
+
+                    {{ form.circuit_breaker_threshold_percent }}
+                    {{ form.circuit_breaker_window_seconds }}
+                    {{ form.circuit_breaker_reset_seconds }}
+
+                    {{ form.should_log_messages }}
+                    {{ form.logging_level }}
+                    {{ form.is_audit_log_active }}
+
+                </div>
+
+                <input type="hidden" id="id_cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                {% if is_edit %}
+                <input type="hidden" id="id_edit-id" name="id" value="{{ item_id }}" />
+                {% endif %}
+            </form>
+
+        </div>
+
+{% endblock %}

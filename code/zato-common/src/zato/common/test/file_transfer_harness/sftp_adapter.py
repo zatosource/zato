@@ -26,9 +26,6 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The name of the environment variable through which a server finds the SFTP client key on disk
-Key_Env_Name = 'Zato_Test_FT_SFTP_Key_File'
-
 # Every connection an SFTP test creates starts with this
 Conn_Name_Prefix = 'test-file-transfer-sftp-'
 
@@ -63,8 +60,8 @@ class SFTPAdapter(LocalBackedRemote, FileTransferAdapter):
 
     def __init__(self, key_path:'str') -> 'None':
 
-        # The Zato server reads the client key through an environment variable, so the path is fixed
-        # before the server starts while the key itself is written out only once the test server runs.
+        # This is where the connections look for the client key - the path is settled here
+        # while the key itself is written out only once the test server runs.
         self.key_path = key_path
 
         self.server = SFTPTestServer()
@@ -81,7 +78,7 @@ class SFTPAdapter(LocalBackedRemote, FileTransferAdapter):
         address = f'[{self.server.host}]:{self.server.port}'
         _ = subprocess_run(['ssh-keygen', '-R', address], capture_output=True)
 
-        # .. the Zato server looks for the key under the path its environment variable already names ..
+        # .. the Zato server looks for the key under the path the connections already name ..
         _ = copyfile(self.server.client_key_path, self.key_path)
         os.chmod(self.key_path, _key_permissions)
 
@@ -115,7 +112,7 @@ class SFTPAdapter(LocalBackedRemote, FileTransferAdapter):
         out:'anydict' = {
             'address': f'{self.server.host}:{self.server.port}',
             'username': self.username,
-            'private_key': Key_Env_Name,
+            'private_key': self.key_path,
             'strict_host_key_checking': False,
         }
 

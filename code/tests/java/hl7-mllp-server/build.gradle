@@ -1,0 +1,28 @@
+// Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+// Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+//
+// An MLLP listener built on HAPI, the standard Java HL7 v2 library, so that an outgoing
+// connection can be tested against the reference implementation of the receiving side
+// rather than against another copy of Zato's own.
+
+plugins {
+    id 'application'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+
+    // The HAPI core plus the message structures for HL7 v2.5, the version the tests speak
+    implementation 'ca.uhn.hapi:hapi-base:2.6.0'
+    implementation 'ca.uhn.hapi:hapi-structures-v25:2.6.0'
+
+    // HAPI logs through SLF4J - a no-op binding keeps standard output to what the server prints itself
+    runtimeOnly 'org.slf4j:slf4j-nop:2.0.16'
+}
+
+application {
+    mainClass = 'HapiMllpServer'
+}

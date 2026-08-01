@@ -25,6 +25,7 @@ class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     should_log_messages = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_audit_log_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     pool_size = forms.CharField(initial=_default.pool_size, widget=forms.TextInput(attrs={'style':'width:11%'}))
     logging_level = forms.ChoiceField(widget=forms.Select())

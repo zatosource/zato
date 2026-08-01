@@ -908,7 +908,11 @@ class SFTPFacade:
 
     def __getitem__(self, name:'str') -> 'SFTPConnection':
 
-        # This will raise a KeyError if there is no such connection
+        # A bare KeyError here would report the name and nothing else, which leaves the reader
+        # with no way of telling a missing connection apart from any other error carrying that name.
+        if name not in self._outconn_sftp:
+            raise Exception('No such outgoing SFTP connection `{}`'.format(name))
+
         item = self._outconn_sftp[name]
 
         # The wrapper holds a queue with the underlying SFTP client
