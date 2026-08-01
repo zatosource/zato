@@ -15,7 +15,7 @@ import pytest
 
 # Zato
 from zato.common.test import rand_string
-from zato.common.test.playwright_pubsub import create_basic_auth
+from zato.common.test.playwright_pubsub import create_basic_auth, open_create_dialog
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -46,7 +46,7 @@ _API_Key_Header = 'X-API-Key'
 _Cell_Security = 6
 
 # Log patterns produced by the server when credentials are rejected
-_Auth_Log_Patterns = ('401 Unauthorized path_info', 'Unauthorized; path_info')
+_Auth_Log_Patterns = ('401 Unauthorized path_info', 'Unauthorized; path_info', 'Basic Auth -> ')
 
 # Headers a TLS-terminating proxy injects after verifying the client certificate
 _MTLS_Header_Verify      = 'X-Zato-SSL-Client-Verify'
@@ -264,39 +264,28 @@ class TestRESTChannelSecurity:
 
 # ################################################################################################################################
 
-    def test_ntlm_assignment(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
-        """ Creates an NTLM definition, assigns it to a channel and verifies the assignment
-        persists across the row and the edit dialog. NTLM requires a Windows domain so there
-        is no live invocation here.
+    def test_ntlm_is_not_offered_to_channels(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
+        """ NTLM authenticates an outgoing connection to somewhere else and verifies nobody
+        on the way in, so a channel may not name one - the create dialog's security select
+        leaves every NTLM definition out.
         """
 
         page = logged_in_page
         base_url = zato_dashboard['dashboard_url']
 
-        channel_name = _Test_Name_Prefix + 'ntlm'
-        url_path = '/test/rest/sec-ntlm/' + rand_string()
-
         # Create the security definition ..
         definition = create_ntlm_definition(page, base_url, _Test_Name_Prefix + 'ntlm-def')
 
-        # .. create the channel with that definition assigned ..
-        channel_id = create_channel(page, base_url, channel_name, _Echo_Service, url_path, {
-            'security': f'NTLM/{definition["name"]}',
-        })
-
-        # .. a server-rendered row shows the definition, so reload the page first ..
+        # .. open the create dialog on a freshly loaded page so its select is built
+        # .. with the definition already in place ..
         open_channel_page(page, base_url)
-        row = find_channel_row(page, channel_name)
-        cells = get_row_cell_texts(row)
-        assert definition['name'] in cells[_Cell_Security], \
-            f'Expected "{definition["name"]}" in the security cell, got: "{cells[_Cell_Security]}"'
+        open_create_dialog(page)
 
-        # .. and the edit dialog has it selected.
-        open_edit_dialog(page, channel_id)
+        # .. and the select offers nothing of it.
+        labels = page.evaluate('$("#id_security option").map(function() { return $(this).text(); }).get()')
 
-        selected_label = _get_selected_security_label(page)
-        expected_label = f'NTLM/{definition["name"]}'
-        assert selected_label == expected_label, f'Expected "{expected_label}" selected, got: "{selected_label}"'
+        for label in labels:
+            assert definition['name'] not in label, f'Expected no NTLM option, got: "{label}"'
 
 # ################################################################################################################################
 

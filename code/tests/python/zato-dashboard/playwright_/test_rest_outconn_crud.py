@@ -50,12 +50,12 @@ _Cell_Timeout = 12
 _Cell_Validate_TLS = 13
 _Cell_Ping_Method = 14
 _Cell_Pool_Size = 15
-_Cell_Content_Type = 17
-_Cell_Audit_Log = 18
-_Cell_Edit = 19
-_Cell_Delete = 20
-_Cell_Ping = 21
-_Cell_Invoke = 22
+_Cell_Content_Type = 16
+_Cell_Audit_Log = 17
+_Cell_Edit = 18
+_Cell_Delete = 19
+_Cell_Ping = 20
+_Cell_Invoke = 21
 
 # Defaults the create form arrives with
 _Default_Ping_Method = 'HEAD'
