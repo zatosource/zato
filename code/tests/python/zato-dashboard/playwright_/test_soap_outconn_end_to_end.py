@@ -10,6 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import time
 from base64 import b64decode, b64encode
 
+# pytest
+import pytest
+
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.soap.common import NS
@@ -36,6 +39,10 @@ _Propagation_Timeout = 30
 
 # How long to sleep between the attempts above
 _Propagation_Poll_Interval = 1.0
+
+# An outgoing connection signs what it sends and verifies nothing on the way in, so the
+# definitions here carry no trust material and the server says as much when they are saved
+_No_Trust_Material_Log = 'has neither trust anchors nor a peer certificate'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -184,6 +191,7 @@ class TestSOAPOutconnEndToEnd:
 
 # ################################################################################################################################
 
+    @pytest.mark.expect_log_errors(_No_Trust_Material_Log)
     def test_signed_saml(
         self, logged_in_page:'Page', zato_dashboard:'anydict', soap_test_server:'any_') -> 'None':
         """ The attached SAML definition produces a signed assertion with an audience
@@ -263,6 +271,7 @@ class TestSOAPOutconnEndToEnd:
 
 # ################################################################################################################################
 
+    @pytest.mark.expect_log_errors(_No_Trust_Material_Log)
     def test_x509_signed(
         self, logged_in_page:'Page', zato_dashboard:'anydict', soap_test_server:'any_') -> 'None':
         """ The attached X.509 definition signs outgoing messages and the endpoint

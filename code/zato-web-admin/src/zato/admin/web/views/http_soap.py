@@ -69,6 +69,13 @@ _rest_security_type_supported = {
     SEC_DEF_TYPE.SPNEGO,
 }
 
+# Security types an outgoing connection uses to authenticate itself elsewhere - they verify
+# nobody on the way in, so the server refuses them on a channel and the select does not offer them
+_outgoing_only_security_types = {
+    SEC_DEF_TYPE.NTLM,
+    SEC_DEF_TYPE.SPNEGO,
+}
+
 # Names of the fields that describe the declarative invocation profile of an outgoing REST connection
 _invocation_field_names = (
     'scheduler_run_every',
@@ -268,6 +275,9 @@ def index(req): # type: ignore
             if connection == 'outgoing':
                 if transport == URL_TYPE.PLAIN_HTTP and def_item.sec_type not in _rest_security_type_supported:
                     continue
+
+            elif def_item.sec_type in _outgoing_only_security_types:
+                continue
 
             _security.append(def_item)
 
