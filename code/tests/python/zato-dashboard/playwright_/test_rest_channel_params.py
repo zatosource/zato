@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
-from http.client import NOT_FOUND, OK
+from http.client import METHOD_NOT_ALLOWED, NOT_FOUND, OK
 
 # pytest
 import pytest
@@ -38,6 +38,9 @@ logger = logging.getLogger(__name__)
 _Test_Name_Prefix = 'test.rest.params.' + rand_string() + '.'
 
 _JSON_Headers = {'Content-Type': 'application/json'}
+
+# What the server logs when a path is reached with a method none of its channels accepts
+_Method_Not_Allowed_Log = 'Method not allowed'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -399,6 +402,7 @@ class TestRESTChannelParams:
 
 # ################################################################################################################################
 
+    @pytest.mark.expect_log_errors(_Method_Not_Allowed_Log)
     def test_method_restriction(
         self, logged_in_page:'Page', zato_dashboard:'anydict', introspection_service:'str') -> 'None':
         """ A channel restricted to POST accepts POST requests only.
@@ -421,9 +425,13 @@ class TestRESTChannelParams:
         details = response.json()
         assert details['http_method'] == 'POST', f'Expected the POST method reported, got: {details["http_method"]}'
 
-        # .. while GET does not.
+        # .. while GET is turned away with the methods the path does accept.
         response = invoke_channel(server_port, url_path, method='GET')
-        assert response.status_code == NOT_FOUND, f'Expected NOT_FOUND for GET, got {response.status_code}'
+        assert response.status_code == METHOD_NOT_ALLOWED, \
+            f'Expected METHOD_NOT_ALLOWED for GET, got {response.status_code}'
+
+        allow_header = response.headers['Allow']
+        assert allow_header == 'POST', f'Expected the Allow header to name POST, got: {allow_header}'
 
 # ################################################################################################################################
 
