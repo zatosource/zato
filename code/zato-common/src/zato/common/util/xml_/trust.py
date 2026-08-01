@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from datetime import datetime, timezone
 
 # cryptography
+from cryptography.exceptions import InvalidSignature
 from cryptography.x509 import BasicConstraints, ExtensionNotFound, KeyUsage
 
 # Zato
@@ -51,6 +52,19 @@ def _check_is_certificate_authority(certificate:'any_') -> 'None':
 
     if not basic_constraints.value.ca:
         raise XMLSecurityException(f'Issuer `{certificate.subject}` is not a certificate authority')
+
+# ################################################################################################################################
+
+def _check_issued_by(certificate:'any_', issuer:'any_') -> 'None':
+    """ Rejects a certificate the claimed issuer did not sign. A signer chaining up to a
+    certificate authority that merely carries the same subject name as a trusted one fails
+    here, which is a message that cannot be trusted rather than anything gone wrong.
+    """
+    try:
+        certificate.verify_directly_issued_by(issuer)
+    except (InvalidSignature, TypeError, ValueError) as e:
+        raise XMLSecurityException(
+            f'Certificate `{certificate.subject}` was not issued by `{issuer.subject}` -> {e}') from e
 
 # ################################################################################################################################
 
@@ -118,7 +132,7 @@ def validate_certificate_chain(chain:'certificate_list', keystore:'Keystore') ->
             _check_validity_period(anchor, now)
             _check_is_certificate_authority(anchor)
             _check_key_usage(anchor, 'key_cert_sign')
-            current.verify_directly_issued_by(anchor)
+            _check_issued_by(current, anchor)
             break
 
         # Otherwise the next chain element must be the issuer.
@@ -131,7 +145,7 @@ def validate_certificate_chain(chain:'certificate_list', keystore:'Keystore') ->
         _check_is_certificate_authority(issuer)
         _check_key_usage(issuer, 'key_cert_sign')
 
-        current.verify_directly_issued_by(issuer)
+        _check_issued_by(current, issuer)
         current = issuer
 
 # ################################################################################################################################

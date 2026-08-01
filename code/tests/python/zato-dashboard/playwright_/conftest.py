@@ -77,6 +77,15 @@ _Server_Wait_Timeout   = 60
 _Quickstart_Timeout    = 120
 _Ping_Poll_Interval    = 0.5
 
+# What the file pickup listener prints once its watch is actually in place - anything written
+# to the pickup directory before that line appears produces no event at all, so tests that
+# hot-deploy a service right after the environment comes up would never see it deployed
+_Listener_Ready_Marker  = 'Watching for changes'
+_Listener_Ready_Timeout = 30
+
+# The other streamed processes have no readiness line to look for
+_No_Ready_Marker = ''
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -214,14 +223,25 @@ def _wait_for_http(host:'str', port:'int', path:'str', timeout:'int' = _Server_W
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _stream_output(process:'subprocess.Popen', label:'str', time_reference:'float') -> 'None':
-    """ Streams subprocess stdout to the test console with timing information.
+def _stream_output(
+    process:'subprocess.Popen',
+    label:'str',
+    time_reference:'float',
+    ready_marker:'str',
+    ready_event:'threading.Event',
+    ) -> 'None':
+    """ Streams subprocess stdout to the test console with timing information, signalling
+    the given event once the process prints the line that says it is ready.
     """
 
     for line in iter(process.stdout.readline, b''):
         text = line.decode('utf-8', errors='replace').rstrip()
         elapsed = time.monotonic() - time_reference
         logger.info(f'[{label} {elapsed:6.1f}s] {text}')
+
+        # An empty marker means this process has no readiness line to wait for
+        if ready_marker and ready_marker in text:
+            ready_event.set()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -365,7 +385,9 @@ def zato_dashboard() -> 'any_':
     time_after_server_start = time.monotonic()
 
     server_thread = threading.Thread(
-        target=_stream_output, args=(server_process, 'SERVER', time_after_server_start), daemon=True)
+        target=_stream_output,
+        args=(server_process, 'SERVER', time_after_server_start, _No_Ready_Marker, threading.Event()),
+        daemon=True)
     server_thread.start()
 
     # .. 5) start the dashboard ..
@@ -391,7 +413,9 @@ def zato_dashboard() -> 'any_':
     _cleanup_refs['dashboard_process'] = dashboard_process
 
     dashboard_thread = threading.Thread(
-        target=_stream_output, args=(dashboard_process, 'DASHBOARD', time_after_server_start), daemon=True)
+        target=_stream_output,
+        args=(dashboard_process, 'DASHBOARD', time_after_server_start, _No_Ready_Marker, threading.Event()),
+        daemon=True)
     dashboard_thread.start()
 
     # .. 6) wait for both to be ready ..
@@ -432,11 +456,25 @@ def zato_dashboard() -> 'any_':
     )
     _cleanup_refs['listener_process'] = listener_process
 
+    listener_ready = threading.Event()
+
     listener_thread = threading.Thread(
-        target=_stream_output, args=(listener_process, 'LISTENER', time_after_server_start), daemon=True)
+        target=_stream_output,
+        args=(listener_process, 'LISTENER', time_after_server_start, _Listener_Ready_Marker, listener_ready),
+        daemon=True)
     listener_thread.start()
 
     logger.info('[TIMING] file pickup listener started, pid=%s', listener_process.pid)
+
+    # Nothing may be written to the pickup directory until the watch is in place, otherwise
+    # the event that would deploy it is never reported at all.
+    if not listener_ready.wait(_Listener_Ready_Timeout):
+        _kill_process(listener_process)
+        _kill_process(server_process)
+        _kill_process(dashboard_process)
+        raise RuntimeError(f'File pickup listener was not watching within {_Listener_Ready_Timeout}s')
+
+    logger.info('[TIMING] file pickup listener watching after %.1fs', time.monotonic() - time_after_server_start)
 
     yield {
         'host': host,

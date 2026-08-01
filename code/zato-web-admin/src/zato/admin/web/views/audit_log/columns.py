@@ -135,6 +135,7 @@ _as4_columns = [
     {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
     {'key': 'size', 'label': 'Size', 'type': 'size'},
     {'key': 'data', 'label': 'Data preview', 'type': 'data'},
+    {'key': 'action', 'label': 'Actions', 'type': 'action'},
 ]
 
 _x12_columns = [

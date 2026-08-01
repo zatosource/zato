@@ -40,6 +40,12 @@ _Refused_Run_Every = '0'
 # What the server says about that interval, which is what must reach the screen
 _Refused_Reason = 'Run-every'
 
+# The refusal the test provokes is logged by the Dashboard as it is reported back to the page
+_Refused_Log_Patterns = (
+    'Run-every must be a positive integer',
+    'zato.admin.web.views.outgoing.file_transfer_schedule',
+)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -365,6 +371,7 @@ class TestOutgoingFileTransferSchedules:
 
 # ################################################################################################################################
 
+    @pytest.mark.expect_log_errors(*_Refused_Log_Patterns)
     def test_a_schedule_the_server_refuses_keeps_the_wizard_open(
         self,
         logged_in_page:'Page',

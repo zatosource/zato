@@ -122,9 +122,9 @@ class PMode:
     endpoint_url: str = ''
 
     # PMode[1].BusinessInfo.*
-    service:      str = Default.Test_Service
+    service:      str = Default.Service
     service_type: 'strnone' = None
-    action:       str = Default.Test_Action
+    action:       str = Default.Action
     mpc:          str = Default.MPC
 
     # PMode[1].PayloadService.CompressionType - GZIP is the only type AS4 defines,

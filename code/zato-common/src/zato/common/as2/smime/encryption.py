@@ -12,16 +12,16 @@ CBC algorithms and the AuthEnvelopedData of RFC 5083 for the AES-GCM ones.
 # cryptography
 from cryptography.hazmat.decrepit.ciphers.algorithms import TripleDES
 from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
-from cryptography.hazmat.primitives.ciphers import Cipher
+from cryptography.hazmat.primitives.ciphers import Cipher, CipherAlgorithm
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.ciphers.algorithms import AES
 from cryptography.hazmat.primitives.ciphers.modes import CBC
-from cryptography.hazmat.primitives.serialization import Encoding
-from cryptography.hazmat.primitives.serialization.pkcs7 import PKCS7EnvelopeBuilder, PKCS7Options
 
 # Zato
 from zato.common.as2.common import AS2Exception, Default, EncryptionAlgorithm
-from zato.common.as2.smime.algorithms import CBC_Class_By_Name, DES_Block_Size, DES_IV_Size, DES_Key_Bits_Mask, \
-    DES_Key_Size, DES_Parity_Bit, GCM_Key_Size_By_Name, GCM_Nonce_Size, GCM_OID_By_Name, GCM_Tag_Size, OID
+from zato.common.as2.smime.algorithms import AES_Block_Size, AES_CBC_Key_Size_By_Name, AES_CBC_OID_By_Name, \
+    DES_Block_Size, DES_Key_Bits_Mask, DES_Key_Size, DES_Parity_Bit, GCM_Key_Size_By_Name, \
+    GCM_Nonce_Size, GCM_OID_By_Name, GCM_Tag_Size, OID
 from zato.common.as2.smime.der import Der_Null, encode_der, encode_der_integer, encode_der_octet_string, Tag
 from zato.common.as2.smime.part import encode_base64_lines, serialize_part, SMIMEPart
 from zato.common.crypto.api import CryptoManager
@@ -123,29 +123,33 @@ def _new_3des_key() -> 'bytes':
 
 # ################################################################################################################################
 
-def _add_cbc_padding(content:'bytes') -> 'bytes':
+def _add_cbc_padding(content:'bytes', block_size:'int') -> 'bytes':
     """ Appends the PKCS#7 block padding of a CBC plaintext - the counterpart of strip_cbc_padding.
     """
-    pad_length = DES_Block_Size - (len(content) % DES_Block_Size)
+    pad_length = block_size - (len(content) % block_size)
 
     out = content + bytes([pad_length]) * pad_length
     return out
 
 # ################################################################################################################################
 
-def _encrypt_3des(content:'bytes', certificate:'Certificate') -> 'bytes':
-    """ Builds a CMS EnvelopedData structure with 3DES-CBC content encryption per RFC 5652 -
-    the outbound path for partners that cannot decrypt AES, the exact structure the inbound
-    enveloped-data reader parses on the way in.
+def _encrypt_cbc(
+    content:'bytes',
+    certificate:'Certificate',
+    content_key:'bytes',
+    cipher_algorithm:'CipherAlgorithm',
+    algorithm_oid:'bytes',
+    block_size:'int',
+    ) -> 'bytes':
+    """ Builds a CMS EnvelopedData structure with CBC content encryption per RFC 5652 - the exact
+    structure the inbound enveloped-data reader parses on the way in.
     """
-    # A fresh content encryption key and IV for every message.
-    content_key = _new_3des_key()
-    initialization_vector = CryptoManager.generate_bytes(DES_IV_Size)
+    # A fresh IV for every message.
+    initialization_vector = CryptoManager.generate_bytes(block_size)
 
     # CBC needs the plaintext padded to whole blocks before encryption.
-    padded = _add_cbc_padding(content)
+    padded = _add_cbc_padding(content, block_size)
 
-    cipher_algorithm = TripleDES(content_key)
     cipher_mode = CBC(initialization_vector)
 
     cipher = Cipher(cipher_algorithm, cipher_mode)
@@ -157,7 +161,7 @@ def _encrypt_3des(content:'bytes', certificate:'Certificate') -> 'bytes':
 
     # The algorithm identifier carries the IV as its parameter.
     iv_octets = encode_der_octet_string(initialization_vector)
-    algorithm_identifier = encode_der(Tag.Sequence, OID.DES_EDE3_CBC + iv_octets)
+    algorithm_identifier = encode_der(Tag.Sequence, algorithm_oid + iv_octets)
 
     encrypted_content = encode_der(Tag.Context_0_Implicit, ciphertext)
     encrypted_content_info = encode_der(Tag.Sequence, OID.Data + algorithm_identifier + encrypted_content)
@@ -166,6 +170,29 @@ def _encrypt_3des(content:'bytes', certificate:'Certificate') -> 'bytes':
     enveloped = encode_der(Tag.Sequence, version + recipient_infos + encrypted_content_info)
 
     out = encode_der(Tag.Sequence, OID.Enveloped_Data + encode_der(Tag.Context_0, enveloped))
+    return out
+
+# ################################################################################################################################
+
+def _encrypt_aes_cbc(content:'bytes', certificate:'Certificate', key_size:'int', algorithm_oid:'bytes') -> 'bytes':
+    """ Builds a CMS EnvelopedData structure with AES-CBC content encryption - the interop baseline.
+    """
+    # A fresh content encryption key for every message.
+    content_key = CryptoManager.generate_bytes(key_size)
+
+    out = _encrypt_cbc(content, certificate, content_key, AES(content_key), algorithm_oid, AES_Block_Size)
+    return out
+
+# ################################################################################################################################
+
+def _encrypt_3des(content:'bytes', certificate:'Certificate') -> 'bytes':
+    """ Builds a CMS EnvelopedData structure with 3DES-CBC content encryption per RFC 5652 -
+    the outbound path for partners that cannot decrypt AES.
+    """
+    # A fresh content encryption key for every message, with the parity bits DES keys require.
+    content_key = _new_3des_key()
+
+    out = _encrypt_cbc(content, certificate, content_key, TripleDES(content_key), OID.DES_EDE3_CBC, DES_Block_Size)
     return out
 
 # ################################################################################################################################
@@ -182,13 +209,10 @@ def encrypt(
     """
     content = serialize_part(part, prevent_canonicalization)
 
-    # The CBC baseline goes through the library's envelope builder ..
-    if cbc_class := CBC_Class_By_Name.get(algorithm):
-        builder = PKCS7EnvelopeBuilder()
-        builder = builder.set_data(content)
-        builder = builder.add_recipient(certificate)
-        builder = builder.set_content_encryption_algorithm(cbc_class)
-        envelope = builder.encrypt(Encoding.DER, [PKCS7Options.Binary])
+    # The AES-CBC baseline is built in-house because the library's envelope builder only ever
+    # produces AES-128-CBC and offers no way to pick another algorithm ..
+    if key_size := AES_CBC_Key_Size_By_Name.get(algorithm):
+        envelope = _encrypt_aes_cbc(content, certificate, key_size, AES_CBC_OID_By_Name[algorithm])
 
     # .. the GCM opt-in is built in-house because the library has no AuthEnvelopedData support ..
     elif key_size := GCM_Key_Size_By_Name.get(algorithm):
