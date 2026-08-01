@@ -11,8 +11,8 @@ import pytest
 
 # Zato
 from hl7_client import java_client
-from mllp_channel import create_channel, delete_channel, send_python, wait_for_port, wait_until_rejected, \
-    wait_until_routed, Host
+from mllp_channel import create_channel, delete_channel, save_channel, send_python, wait_for_port, \
+    wait_until_rejected, wait_until_routed, Host
 from zato.common.crypto.api import CryptoManager
 
 # ################################################################################################################################
@@ -48,7 +48,8 @@ class TestChannelHL7MLLPClients:
     with the python-hl7 and Java HAPI clients real senders use, that each message reaches
     exactly the channel its MSH fields say - the acknowledgment's MSA-3 names the channel
     that answered, MSA-2 echoes the control id sent, and a message no route claims is
-    rejected with AR.
+    rejected with AR. The whole matrix runs twice, the second time with every channel saved
+    once more through the wizard's edit action, so routing criteria the edit lost are caught.
     """
 
     @pytest.mark.expect_log_errors('No matching MLLP channel for message')
@@ -75,23 +76,25 @@ class TestChannelHL7MLLPClients:
 
         create_channel(page, base_url, default_channel, service=_Test_Service, is_default=True)
 
+        channel_names = (by_app_channel, by_fac_channel, by_type_channel, default_channel)
+
         # The listener starts with the first channel and each route registers on its own,
         # so the wire tests begin once every channel answers for itself
         wait_for_port(mllp_port)
+        self._wait_until_all_routed(mllp_port, channel_names)
 
-        wait_until_routed(mllp_port, by_app_channel,  _Registration_App)
-        wait_until_routed(mllp_port, by_fac_channel,  _Emergency_App, _Lab_Facility)
-        wait_until_routed(mllp_port, by_type_channel, _Lab_App, 'LAB_CENTER', 'ORU', 'R01')
-        wait_until_routed(mllp_port, default_channel, _Unmatched_App, _Unmatched_Fac)
-
-        # The same matrix runs through both clients, python-hl7 first ..
-        self._run_matrix_python(mllp_port, by_app_channel, by_fac_channel, by_type_channel, default_channel)
-
-        # .. and the Java HAPI client next, wherever there is a Java runtime to run it with.
+        # The matrix runs through both clients, the Java one wherever there is a runtime for it
         has_java = java_client.is_java_available()
+        self._run_both_matrices(mllp_port, channel_names, has_java)
 
-        if has_java:
-            self._run_matrix_java(mllp_port, by_app_channel, by_fac_channel, by_type_channel, default_channel)
+        # Every channel saved once more through the same wizard, with nothing changed, has to
+        # route the way it did before - a criterion the edit dropped would show up here as a
+        # message answered by a channel other than the one its MSH fields name
+        for channel_name in channel_names:
+            save_channel(page, base_url, channel_name)
+
+        self._wait_until_all_routed(mllp_port, channel_names)
+        self._run_both_matrices(mllp_port, channel_names, has_java)
 
         # With the default route gone, a message no route claims is rejected outright
         delete_channel(page, base_url, default_channel)
@@ -110,6 +113,29 @@ class TestChannelHL7MLLPClients:
         delete_channel(page, base_url, by_app_channel)
         delete_channel(page, base_url, by_fac_channel)
         delete_channel(page, base_url, by_type_channel)
+
+# ################################################################################################################################
+
+    def _wait_until_all_routed(self, port:'int', channel_names:'tuple') -> 'None':
+        """ Waits until each of the four channels answers for the messages its own criteria
+        claim, which is when every route has reached the running listener.
+        """
+        by_app_channel, by_fac_channel, by_type_channel, default_channel = channel_names
+
+        wait_until_routed(port, by_app_channel,  _Registration_App)
+        wait_until_routed(port, by_fac_channel,  _Emergency_App, _Lab_Facility)
+        wait_until_routed(port, by_type_channel, _Lab_App, 'LAB_CENTER', 'ORU', 'R01')
+        wait_until_routed(port, default_channel, _Unmatched_App, _Unmatched_Fac)
+
+# ################################################################################################################################
+
+    def _run_both_matrices(self, port:'int', channel_names:'tuple', has_java:'bool') -> 'None':
+        """ The routing matrix as each external client sends it.
+        """
+        self._run_matrix_python(port, *channel_names)
+
+        if has_java:
+            self._run_matrix_java(port, *channel_names)
 
 # ################################################################################################################################
 

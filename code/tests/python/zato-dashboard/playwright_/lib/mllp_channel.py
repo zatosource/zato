@@ -13,7 +13,7 @@ import time
 
 # Zato
 import mllp_outconn
-from hl7_client import python_client
+from hl7_client import java_client, python_client
 from zato.common.crypto.api import CryptoManager
 
 # ################################################################################################################################
@@ -91,7 +91,7 @@ delete_outgoing_connection = mllp_outconn.delete_outgoing_connection
 # ################################################################################################################################
 # ################################################################################################################################
 #
-# Channels, created and deleted through the wizard and the list page
+# Channels, created, saved again and deleted through the wizard and the list page
 #
 # ################################################################################################################################
 # ################################################################################################################################
@@ -201,6 +201,36 @@ def create_channel(
 
 # ################################################################################################################################
 
+def save_channel(page:'Page', base_url:'str', name:'str') -> 'None':
+    """ Opens an existing channel in the same wizard, from its row's Edit link, and walks it
+    to the end with nothing changed. What the channel already stores is what the wizard opens
+    with, so the save posts back exactly what was there - anything the wizard failed to read
+    back is what the channel loses.
+    """
+    navigate_to_channels(page, base_url)
+
+    row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
+
+    page.click(f'{row_selector} a:text-is("Edit")')
+    _ = page.wait_for_selector('#mllp-wizard', state='visible')
+
+    # Step 1 to step 2, step 2 to the review, and the review's own button saves
+    page.click('#mllp-wizard-next')
+    time.sleep(0.2)
+
+    page.click('#mllp-wizard-next')
+    time.sleep(0.2)
+
+    # The wizard page has no data table of its own, so waiting for one is waiting for
+    # the list page the save lands on
+    page.click('#mllp-wizard-next')
+    _ = page.wait_for_selector('#data-table', state='visible', timeout=10000)
+
+    row = page.query_selector(row_selector)
+    assert row is not None, f'Channel "{name}" should be on the list after the edit wizard'
+
+# ################################################################################################################################
+
 def delete_channel(page:'Page', base_url:'str', name:'str') -> 'None':
     """ Deletes a channel through the list page, the way a person does.
     """
@@ -254,6 +284,34 @@ def send_python(
     message = python_client.build_message(control_id, sending_app, sending_facility, message_type, trigger_event)
 
     out = python_client.send_message(Host, port, message)
+    return out
+
+# ################################################################################################################################
+
+def send_with_both_clients(
+    port:'int',
+    sending_app:'str',
+    sending_facility:'str' = '',
+    message_type:'str' = 'ADT',
+    trigger_event:'str' = 'A01',
+    ) -> 'anylist':
+    """ One send through each of the external clients real senders use - python-hl7 always
+    and the Java HAPI client wherever there is a Java runtime to run it with. Each send gets
+    a control id of its own and comes back paired with it, so a caller asserts the same way
+    on every client's answer.
+    """
+    out = []
+
+    control_id = 'py.' + CryptoManager.generate_hex_string()
+    result = send_python(port, control_id, sending_app, sending_facility, message_type, trigger_event)
+    out.append((control_id, result))
+
+    if java_client.is_java_available():
+        control_id = 'java.' + CryptoManager.generate_hex_string()
+        result = java_client.send_message(Host, port, control_id, sending_app, sending_facility,
+            message_type, trigger_event)
+        out.append((control_id, result))
+
     return out
 
 # ################################################################################################################################
