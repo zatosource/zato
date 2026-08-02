@@ -428,7 +428,11 @@ test-server: ## Server unit and integration tests.
 		$(CURDIR)/code/zato-server/test/zato/pattern/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_server -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
-	$(ZATO_PY) $(CURDIR)/code/zato-server/test/zato/commands_/test_commands.py
+# The CLI is driven through sh, which forks, so these tests need a process that gevent has not patched
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/zato-server/test/zato/commands_/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_server_commands -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS)
 	$(MAKE) -C $(CURDIR)/code/zato-server fuzzy timeout=$(timeout)
 
 test-rest: ## REST unit tests and mutation testing.

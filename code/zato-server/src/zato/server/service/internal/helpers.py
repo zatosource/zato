@@ -561,19 +561,19 @@ class CommandsService(Service):
 
         def test_invoke_with_callback_service_class(self):
 
-            # stdlib
-            from zato.server.service.internal.helpers import PubInputLogger
+            # Zato
+            from zato.server.service.internal.helpers import Echo
 
-            self._test_impl(callback=PubInputLogger)
+            self._test_impl(callback=Echo)
 
 # ################################################################################################################################
 
         def test_invoke_with_callback_service_name(self):
 
-            # stdlib
-            from zato.server.service.internal.helpers import PubInputLogger
+            # Zato
+            from zato.server.service.internal.helpers import Echo
 
-            self._test_impl(callback=PubInputLogger.get_name())
+            self._test_impl(callback=Echo.get_name())
 
 # ################################################################################################################################
 

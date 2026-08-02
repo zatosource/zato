@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from gevent import monkey
 
 if not monkey.is_module_patched('threading'):
-    _ = monkey.patch_all()
+    _ = monkey.patch_all(ssl=False)
 
 # stdlib
 import random
