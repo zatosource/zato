@@ -125,6 +125,10 @@ class TestIAMPushDelivery(unittest.TestCase):
 
         self.assertIn('msg_id', response)
 
+        # .. wait for the push delivery to land so it does not spill into the next test.
+        receiver = TestConfig.endpoints[topic_name].receiver
+        _ = receiver.wait_for_delivery(expected_count=1)
+
 # ################################################################################################################################
 # ################################################################################################################################
 

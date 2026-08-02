@@ -161,13 +161,23 @@ def clear_all_outputs() -> 'any_':
     # Zato
     from zato.common.test import pubsub_db
     from zato.common.test.config_pubsub_push import TestConfig
+    from zato.common.test.receiver import receiver_list, wait_until_receivers_quiet
 
     # .. remove all message and delivery rows so no in-flight deliveries leak across tests ..
     pubsub_db.delete_all_messages()
 
-    # .. then clear receiver output directories ..
+    receivers:'receiver_list' = []
+
     for endpoint_config in TestConfig.endpoints.values():
-        endpoint_config.receiver.clear_output()
+        receivers.append(endpoint_config.receiver)
+
+    # .. let whatever the server is already pushing arrive before we clear - a delivery landing
+    # .. after the clear would be counted as a message published by the test that is about to run ..
+    wait_until_receivers_quiet(receivers)
+
+    # .. then clear receiver output directories ..
+    for receiver in receivers:
+        receiver.clear_output()
 
     yield
 
