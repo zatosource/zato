@@ -194,8 +194,8 @@ class EnmasseTestCase(BaseEnmasseTestCase):
                             enmasse_hl7_channels.append(channel)
 
                     enmasse_channel_count = len(enmasse_hl7_channels)
-                    self.assertEqual(enmasse_channel_count, 3,
-                        f'Expected 3 HL7 MLLP channels, found {enmasse_channel_count}')
+                    self.assertEqual(enmasse_channel_count, 4,
+                        f'Expected 4 HL7 MLLP channels, found {enmasse_channel_count}')
 
                     # The channel that names a security definition exports it by name, not by the id
                     # that is stored, because an id means nothing in another environment
