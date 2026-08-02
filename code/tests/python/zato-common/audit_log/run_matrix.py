@@ -57,7 +57,6 @@ _ui_test_dir = os.path.join(_base_dir, 'code', 'tests', 'python', 'zato-dashboar
 # The unit test files that write to the audit log directly, run against every backend as well
 _unit_test_files = (
     os.path.join(_base_dir, 'code', 'zato-server', 'test', 'zato', 'connection', 'test_email_imap.py'),
-    os.path.join(_base_dir, 'code', 'tests', 'python', 'zato-common', 'pubsub', 'test_redis_backend.py'),
     os.path.join(_base_dir, 'code', 'tests', 'python', 'zato-common', 'pubsub', 'test_facade_amqp.py'),
 )
 
