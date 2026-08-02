@@ -39,7 +39,7 @@ warnings.filterwarnings('ignore', category=DeprecationWarning, message='.*multi-
 if 0:
     from pathlib import Path
     from gevent.subprocess import CompletedProcess
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anydict
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -268,6 +268,23 @@ class CommandsFacade:
 
 # ################################################################################################################################
 
+    def _get_pubsub_data(self, result:'CommandResult', target:'str') -> 'anydict':
+        """ Turns a command's result into a message that pub/sub can serialize to JSON.
+        """
+        out = result.to_dict()
+
+        # The datetime objects have no JSON representation and their ISO counterparts
+        # are part of the result already ..
+        del out['start_time']
+        del out['end_time']
+
+        # .. and the callback may be a Python object rather than a name, so it is the target that goes out.
+        out['callback'] = target
+
+        return out
+
+# ################################################################################################################################
+
     def _run_callback(self, cid:'str', callback:'any_', result:'CommandResult', use_pubsub:'bool') -> 'None':
 
         # We need to import it here to avoid circular references
@@ -282,19 +299,6 @@ class CommandsFacade:
 
         else:
 
-            # We are going to publish a message to the target (service or topic) by its name ..
-            if use_pubsub:
-                func = self.server.publish
-                data_key   = 'data'
-                target_key = 'name'
-                result = result.to_dict() # type: ignore
-
-            # We are going to invoke the taret synchronously
-            else:
-                func = self.server.invoke
-                data_key = 'request'
-                target_key = 'service'
-
             # Extract the service's name ..
             if is_service:
                 target = callback.get_name() # type: ignore
@@ -303,12 +307,14 @@ class CommandsFacade:
             else:
                 target = callback
 
-            # Now, we are ready to invoke the callable
-            func(**{
-                data_key:   result,
-                target_key: target,
-                'cid': cid
-            }) # type: ignore
+            # We are going to publish a message to the target topic, which needs the result
+            # in a form that pub/sub can serialize ..
+            if use_pubsub:
+                _ = self.server.pubsub_backend.publish(target, self._get_pubsub_data(result, target), cid=cid, correl_id=cid)
+
+            # .. or we are going to invoke the target service synchronously.
+            else:
+                _ = self.server.invoke(target, result, cid=cid)
 
 # ################################################################################################################################
 
