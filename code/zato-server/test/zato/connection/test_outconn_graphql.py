@@ -34,10 +34,10 @@ class TestGraphQLInvokerExecute(TestCase):
 
     def _get_invoker(self) -> 'GraphQLInvoker':
         outconn_graphql = {
-            'my-graphql': MagicMock(config={
+            'my-graphql': {
                 'address': 'https://graphql.example.com/api',
                 'default_query_timeout': 30,
-            })
+            }
         }
         invoker = GraphQLInvoker('my-graphql', outconn_graphql)
         return invoker
@@ -120,10 +120,10 @@ class TestGraphQLInvokerExecute(TestCase):
     @patch('gql.gql')
     def test_query_timeout(self, mock_gql_parse, mock_transport_class, mock_client_class):
         outconn_graphql = {
-            'my-graphql': MagicMock(config={
+            'my-graphql': {
                 'address': 'https://graphql.example.com/api',
                 'default_query_timeout': 5,
-            })
+            }
         }
         invoker = GraphQLInvoker('my-graphql', outconn_graphql)
 
@@ -139,6 +139,7 @@ class TestGraphQLInvokerExecute(TestCase):
             url='https://graphql.example.com/api',
             timeout=5,
             headers={},
+            auth=None,
         )
 
 # ################################################################################################################################
@@ -213,10 +214,10 @@ class TestGraphQLInvokerExecute(TestCase):
     @patch('gql.gql')
     def test_transport_uses_correct_address(self, mock_gql_parse, mock_transport_class, mock_client_class):
         outconn_graphql = {
-            'custom-conn': MagicMock(config={
+            'custom-conn': {
                 'address': 'https://custom.graphql.io/v1/graphql',
                 'default_query_timeout': 60,
-            })
+            }
         }
         invoker = GraphQLInvoker('custom-conn', outconn_graphql)
 
@@ -232,6 +233,7 @@ class TestGraphQLInvokerExecute(TestCase):
             url='https://custom.graphql.io/v1/graphql',
             timeout=60,
             headers={},
+            auth=None,
         )
 
 # ################################################################################################################################
@@ -241,11 +243,11 @@ class TestGraphQLInvokerExecute(TestCase):
     @patch('gql.gql')
     def test_execute_with_extra_headers(self, mock_gql_parse, mock_transport_class, mock_client_class):
         outconn_graphql = {
-            'headers-conn': MagicMock(config={
+            'headers-conn': {
                 'address': 'https://graphql.example.com/api',
                 'default_query_timeout': 30,
                 'extra': '{"X-Custom": "value", "X-Tenant": "acme"}',
-            })
+            }
         }
         invoker = GraphQLInvoker('headers-conn', outconn_graphql)
 
@@ -261,6 +263,7 @@ class TestGraphQLInvokerExecute(TestCase):
             url='https://graphql.example.com/api',
             timeout=30,
             headers={'X-Custom': 'value', 'X-Tenant': 'acme'},
+            auth=None,
         )
 
 # ################################################################################################################################
@@ -270,10 +273,10 @@ class TestGraphQLInvokerExecute(TestCase):
     @patch('gql.gql')
     def test_execute_with_no_extra_headers(self, mock_gql_parse, mock_transport_class, mock_client_class):
         outconn_graphql = {
-            'no-headers-conn': MagicMock(config={
+            'no-headers-conn': {
                 'address': 'https://graphql.example.com/api',
                 'default_query_timeout': 30,
-            })
+            }
         }
         invoker = GraphQLInvoker('no-headers-conn', outconn_graphql)
 
@@ -289,6 +292,7 @@ class TestGraphQLInvokerExecute(TestCase):
             url='https://graphql.example.com/api',
             timeout=30,
             headers={},
+            auth=None,
         )
 
 # ################################################################################################################################
@@ -345,7 +349,7 @@ class TestGraphQLInvokerExecute(TestCase):
 
     def test_repr(self):
         outconn_graphql = {
-            'my-conn': MagicMock()
+            'my-conn': {}
         }
         invoker = GraphQLInvoker('my-conn', outconn_graphql)
 
@@ -391,10 +395,10 @@ class TestGraphQLFacade(TestCase):
     def test_getitem_returns_invoker(self):
         config_manager = MagicMock()
         config_manager.outconn_graphql = {
-            'test-conn': MagicMock(config={
+            'test-conn': {
                 'address': 'https://example.com/graphql',
                 'default_query_timeout': 30,
-            })
+            }
         }
 
         facade = GraphQLFacade()
