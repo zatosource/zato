@@ -86,6 +86,17 @@ class TestPassthrough:
         assert result.tokens_before == result.tokens_after
         assert result.report == []
 
+    def test_value_at_or_above_the_threshold_is_not_skipped(self) -> 'None':
+
+        document = {'rows': _make_rows(500)}
+        config = _new_config(10, 10, Size_Cap_Mode_Block)
+
+        result = apply_token_cap(document, config)
+
+        assert result.tokens_before >= config.min_threshold_tokens
+        assert result.was_skipped is False
+        assert result.was_blocked is True
+
     def test_value_within_the_cap_passes_through_untouched(self) -> 'None':
 
         document = {'status': 'ok', 'total': 3}
