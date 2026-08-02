@@ -12,16 +12,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import annotations
 
 # stdlib
-import csv
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from io import StringIO
 
 # SQLAlchemy
 from sqlalchemy import and_, select
 
 # Zato
-from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource, event_table, get_audit_engine, \
+from zato.common.audit_log.api import AuditEvent, AuditSource, event_table, get_audit_engine, \
     Retention_Days
 from zato.common.defaults import default_cluster_id
 from zato.common.json_internal import loads

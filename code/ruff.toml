@@ -7,6 +7,8 @@ extend-exclude = [
     "**/src/zato/common/ext",
     "**/src/zato/common/py23_",
     "patches",  # Vendored third-party code (passlib, ntlm, requests etc.) kept close to upstream
+    "**/*_pb2.py",       # protoc output
+    "**/*_pb2_grpc.py",  # protoc output
 ]
 
 [lint]

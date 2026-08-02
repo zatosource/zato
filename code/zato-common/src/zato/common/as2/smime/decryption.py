@@ -30,7 +30,7 @@ from zato.common.as2.smime.algorithms import CBC_Block_Size_By_OID, CBC_Class_By
 from zato.common.as2.smime.der import der_children, element_bytes, element_content, read_content_info, \
     read_der_element, Tag, to_definite_der
 from zato.common.as2.smime.part import parse_part, transfer_decode
-from zato.common.typing_ import cast_, optional
+from zato.common.typing_ import cast_
 from zato.common.util.xml_.keystore import active_decryption_entries
 
 # ################################################################################################################################
