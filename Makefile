@@ -19,7 +19,7 @@
 	test-audit-log test-alerting test-destinations test-analytics test-demo-seed test-logging test-ibm-mq test-mongodb test-es \
 	test-rule-engine test-rule-engine-perf test-rule-engine-jobs \
 	rule-engine-notify rule-engine-retention rule-engine-spike-alerts rule-engine-dashboard \
-	test-all test test-all-reset \
+	test-all test test-all-reset test-perf \
 	health-ruff health-clippy \
 	format format-zato \
 	clippy clippy-zato \
@@ -408,7 +408,13 @@ restart-dashboard:
 # Test targets
 # ############################################################################
 
-COSMIC_RAY := $(CURDIR)/code/bin/cosmic-ray
+COSMIC_RAY         := $(CURDIR)/code/bin/cosmic-ray
+COSMIC_RAY_CONFIG  := $(CURDIR)/code/tests/rust/cosmic-ray/channel.toml
+COSMIC_RAY_SESSION := $(CURDIR)/code/tests/.cr-session.sqlite
+
+# cosmic-ray exec writes its results into the session and prints nothing, so it is
+# run through a wrapper that reports how far it has got while it works
+COSMIC_RAY_EXEC := $(CURDIR)/code/tests/rust/cosmic-ray/exec_with_progress.py
 
 test-server: ## Server unit and integration tests.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
@@ -430,13 +436,16 @@ test-rest: ## REST unit tests and mutation testing.
 		$(CURDIR)/code/tests/python/zato-server/http_soap/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rest -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
-	rm -f $(CURDIR)/code/tests/.cr-session.sqlite
-	$(COSMIC_RAY) init $(CURDIR)/code/tests/rust/cosmic-ray/channel.toml $(CURDIR)/code/tests/.cr-session.sqlite
-	$(COSMIC_RAY) baseline $(CURDIR)/code/tests/rust/cosmic-ray/channel.toml
-	$(COSMIC_RAY) exec $(CURDIR)/code/tests/rust/cosmic-ray/channel.toml $(CURDIR)/code/tests/.cr-session.sqlite
+	rm -f $(COSMIC_RAY_SESSION)
+	@echo ">>> cosmic-ray init - finding the mutants of $(notdir $(COSMIC_RAY_CONFIG))"
+	$(COSMIC_RAY) init $(COSMIC_RAY_CONFIG) $(COSMIC_RAY_SESSION)
+	@echo ">>> cosmic-ray baseline - the suite once with nothing mutated"
+	$(COSMIC_RAY) baseline $(COSMIC_RAY_CONFIG)
+	@echo ">>> cosmic-ray exec - the suite once per mutant, progress every 10s"
+	$(ZATO_PY) $(COSMIC_RAY_EXEC) $(COSMIC_RAY) $(COSMIC_RAY_CONFIG) $(COSMIC_RAY_SESSION)
 	@$(ZATO_PY) -c "\
 	import sqlite3; \
-	conn = sqlite3.connect('$(CURDIR)/code/tests/.cr-session.sqlite'); \
+	conn = sqlite3.connect('$(COSMIC_RAY_SESSION)'); \
 	cur = conn.cursor(); \
 	cur.execute(\"SELECT test_outcome, COUNT(*) FROM work_results GROUP BY test_outcome\"); \
 	results = {r[0]: r[1] for r in cur.fetchall()}; \
@@ -1205,10 +1214,14 @@ Zato_Test_Live := \
 # The browser suite end to end
 Zato_Test_Browser := test-ui
 
-# Mutation, fuzzing and performance, the longest of all
-Zato_Test_Heavy := \
+# Mutation and fuzzing, the longest of all
+Zato_Test_Heavy := test-rest test-server
+
+# Throughput and load suites, left out of test-all because their floors depend on
+# what else the machine is doing - run them on their own with make test-perf
+Zato_Test_Perf := \
 	test-pubsub-backend-amqp-perf test-rule-engine-perf test-pubsub-backend-perf \
-	test-pubsub-system-perf test-hl7-volume test-rest test-server test-pubsub-backend-perf-mass
+	test-pubsub-system-perf test-hl7-volume test-pubsub-backend-perf-mass
 
 Zato_Test_All := \
 	$(Zato_Test_Static) $(Zato_Test_Offline) $(Zato_Test_Toolchain) \
@@ -1241,6 +1254,8 @@ test-all: ## Everything, resuming from the target that last failed. RESTART=1 to
 
 test-all-reset: ## Forget where the last test-all stopped.
 	rm -f $(Zato_Test_Resume_File)
+
+test-perf: $(Zato_Test_Perf) ## Every performance suite - not part of test-all.
 
 test: test-all ## Alias for test-all.
 

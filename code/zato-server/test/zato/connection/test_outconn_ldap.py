@@ -14,6 +14,7 @@ from unittest import main, TestCase
 from zato.common.ext.bunch import bunchify
 
 # Zato
+from zato.common.test.ldap_ import LDAPTestServer
 from zato.server.generic.api.outconn_ldap import LDAPClient
 
 # ################################################################################################################################
@@ -33,14 +34,39 @@ class ModuleCtx:
 
 class OutconnLDAPTestCase(TestCase):
 
+    server: 'LDAPTestServer'
+
+# ################################################################################################################################
+
+    @classmethod
+    def setUpClass(class_) -> 'None':
+        if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
+            return
+
+        class_.server = LDAPTestServer()
+        class_.server.start()
+
+# ################################################################################################################################
+
+    @classmethod
+    def tearDownClass(class_) -> 'None':
+        if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
+            return
+
+        class_.server.stop()
+
+# ################################################################################################################################
+
     def get_config(self, conn_name:'str') -> 'Bunch':
+
+        server = self.__class__.server
 
         config = bunchify({
             'name': conn_name,
             'is_active': True,
-            'server_list': ['localhost:1389'],
-            'username': 'cn=admin,dc=example,dc=org',
-            'secret': 'adminpassword',
+            'server_list': [f'{server.host}:{server.port}'],
+            'username': server.admin_dn,
+            'secret': server.admin_password,
             'is_tls_enabled': False,
             'get_info': None,
             'connect_timeout': 5,
@@ -81,17 +107,17 @@ class OutconnLDAPTestCase(TestCase):
         if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
             return
 
-        conn_name = 'OutconnLDAPTestCase.test_ping'
+        conn_name = 'OutconnLDAPTestCase.test_query'
         config = self.get_config(conn_name)
         client = LDAPClient(config)
 
         # Where in the directory we expect to find the user
-        search_base = 'dc=example, dc=org'
+        search_base = self.__class__.server.root_dn
 
         # Look up users up by either username or email
         # search_filter = '(uid=*)'
         search_filter = '(&(|(uid={user_info})(mail={user_info})))'
-        user_filter = search_filter.format(user_info='user01')
+        user_filter = search_filter.format(user_info=self.__class__.server.username)
 
         # We are looking up these attributes
         query_attributes = ['uid', 'givenName', 'sn', 'mail']

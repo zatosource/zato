@@ -96,6 +96,20 @@ def get_columns_to_visit(columns, is_required):
 
 # ################################################################################################################################
 
+def as_optional_elem(elem):
+    """ Returns an optional version of an I/O element - an IOElem carries its own required flag,
+    which is set from the name it was built with, so it needs to be rebuilt rather than prefixed.
+    """
+    if isinstance(elem, str):
+        return '-' + elem
+
+    if elem.is_required:
+        return type(elem)('-' + elem.name, default=elem.default)
+
+    return elem
+
+# ################################################################################################################################
+
 def get_io_elems(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_cluster_id):
 
     # This can be either a list or an SQLAlchemy object
@@ -301,21 +315,15 @@ class AdminServiceMeta(type):
             if skip_name in merged_output_optional:
                 merged_output_optional.remove(skip_name)
 
-        # Build input tuple: required fields bare, optional fields with '-' prefix
+        # Build input tuple: required fields bare, optional fields marked as optional
         input_elems = list(merged_input_required)
         for elem in merged_input_optional:
-            if isinstance(elem, str):
-                input_elems.append('-' + elem)
-            else:
-                input_elems.append(elem)
+            input_elems.append(as_optional_elem(elem))
 
-        # Build output tuple: required fields bare, optional fields with '-' prefix
+        # Build output tuple: required fields bare, optional fields marked as optional
         output_elems = list(merged_output_required)
         for elem in merged_output_optional:
-            if isinstance(elem, str):
-                output_elems.append('-' + elem)
-            else:
-                output_elems.append(elem)
+            output_elems.append(as_optional_elem(elem))
 
         return {
             'input': tuple(input_elems),
