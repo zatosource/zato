@@ -432,7 +432,7 @@ class CheckSecurityTestCase(unittest.TestCase):
         wsgi_environ = _make_wsgi_environ()
         worker_store = MagicMock()
 
-        with self.assertRaises(Unauthorized):
+        with self.assertRaises(Forbidden):
             ctx.dispatcher._check_security(
                 _test_cid, meta, channel_item, wsgi_environ, b'payload', {}, worker_store)
 
