@@ -9,11 +9,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 # Zato
 from zato.common.broker_message import SECURITY
 from zato.common.json_internal import dumps, loads
+from zato.server.service.internal.security import tier as tier_module
 from zato.server.service.internal.security.rate_limiting import APIKeyRateLimitingSave
 from zato.server.service.internal.security.tier import Create as TierCreate, Delete as TierDelete, \
     Edit as TierEdit, SetForGroup as TierSetForGroup
@@ -68,9 +69,22 @@ def _make_service(class_:'any_', input_data:'any_'):
     return service
 
 # ################################################################################################################################
+
+class _AuditTestCase(unittest.TestCase):
+    """ A base class for services that write config-audit events. The audit trail needs
+    a live database and an identity from the channel the call came in through, neither of
+    which a bare service object has, so the recorder is replaced by a mock here - what it
+    writes has its own tests in tests/python/zato-common/audit_log.
+    """
+    def setUp(self):
+        patcher = patch.object(tier_module, 'record_service_config_change')
+        self.record_config_change = patcher.start()
+        self.addCleanup(patcher.stop)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
-class TierCreateTestCase(unittest.TestCase):
+class TierCreateTestCase(_AuditTestCase):
 
     def test_create_validates_and_saves(self):
         """ Valid rules are passed to the manager and the new id is returned.
@@ -100,7 +114,7 @@ class TierCreateTestCase(unittest.TestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TierEditTestCase(unittest.TestCase):
+class TierEditTestCase(_AuditTestCase):
 
     def test_edit_publishes_config_event(self):
         """ A tier edit publishes the event that makes all workers re-resolve references.
@@ -135,7 +149,7 @@ class TierEditTestCase(unittest.TestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TierDeleteTestCase(unittest.TestCase):
+class TierDeleteTestCase(_AuditTestCase):
 
     def test_delete_refused_while_referenced(self):
         """ Deleting a referenced tier is refused and the error lists the referents by name.
