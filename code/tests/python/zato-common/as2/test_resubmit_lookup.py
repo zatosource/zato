@@ -18,6 +18,14 @@ from zato.common.as2.common import AS2Exception
 from zato.common.as2.reconcile import MDNReconciler
 from zato.common.as2.resubmit import find_connection_name, load_event
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditSource
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,7 +43,7 @@ class TestLoadEvent:
                 'payload': 'ISA*00*Test payload of an 850 order',
                 'filename': 'orders-850.edi',
                 }
-            reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<orders-850@zato>', **options)
+            reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<orders-850@zato>', **cast_('any_', options))
 
             event_id = get_last_event_id()
             event = load_event(event_id)
@@ -74,7 +82,7 @@ class TestLoadEvent:
             use_tmp_audit_db(tmp_path)
             audit_log = AuditLog('test-server')
 
-            options = {'cid': 'cid-raw', 'data': 'Not a JSON document at all'}
+            options = cast_('any_', {'cid': 'cid-raw', 'data': 'Not a JSON document at all'})
             audit_log.insert(AuditSource.AS2, AuditEvent.Message_Sent, 'ZatoRetail:PartnerCorp', **options)
 
             event_id = get_last_event_id()

@@ -13,6 +13,17 @@ from zato.fhir.extensions import (
     set_extension_text,
 )
 from zato.fhir.r4_0_1 import Patient
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 URL_WELLNESS_NOTE = 'http://example.org/fhir/StructureDefinition/wellness-visit-note'
 URL_VITAMIN_FOLLOWUP = 'http://example.org/fhir/StructureDefinition/vitamin-d-routine-followup'
@@ -316,5 +327,5 @@ class TestExtensionFHIRResourcePatient:
                 },
             },
         )
-        value = get_extension(patient, URL_VITAMIN_FOLLOWUP)
+        value = cast_('any_', get_extension(patient, URL_VITAMIN_FOLLOWUP))
         assert value['coding'][0]['display'] == 'Education about balanced nutrition'

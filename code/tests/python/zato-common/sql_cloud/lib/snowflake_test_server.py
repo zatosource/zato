@@ -372,7 +372,7 @@ class _Server(ThreadingHTTPServer):
             if pattern.search(sql_text):
                 break
         else:
-            spec = {
+            spec:'stranydict' = {
                 'is_error': True,
                 'message': f'No canned result matches SQL: {sql_text}',
                 'code': _No_Match_Error_Code,

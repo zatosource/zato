@@ -80,6 +80,8 @@ def _count_channel_events(db_path:'str', channel_name:'str') -> 'int':
         out = count_result.scalar()
 
     engine.dispose()
+
+    assert out is not None
     return out
 
 # ################################################################################################################################
@@ -97,6 +99,8 @@ def _sum_channel_requests(analytics_db_path:'str', channel_name:'str') -> 'int':
         out = sum_result.scalar()
 
     engine.dispose()
+
+    assert out is not None
     return out
 
 # ################################################################################################################################

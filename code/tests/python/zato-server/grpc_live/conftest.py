@@ -93,7 +93,7 @@ class _SessionState:
         if self.quickstart_directory:
             server_log_path = os.path.join(self.quickstart_directory, 'server1', 'logs', 'server.log')
             if os.path.exists(server_log_path):
-                shutil.copy(server_log_path, '/tmp/server-logs-grpc-live.txt')
+                _ = shutil.copy(server_log_path, '/tmp/server-logs-grpc-live.txt')
 
         self.kill_server()
 
@@ -288,7 +288,7 @@ def zato_server() -> 'any_':
     # Copy the test services into the pickup directory so they deploy during server boot -
     # the enmasse import runs only afterwards because the REST channel needs the service to exist.
     pickup_directory = os.path.join(server_directory, 'pickup', 'incoming', 'services')
-    shutil.copy2(_services_path, os.path.join(pickup_directory, 'grpc_test_services.py'))
+    _ = shutil.copy2(_services_path, os.path.join(pickup_directory, 'grpc_test_services.py'))
 
     # Patch server.conf so CLI commands use the dynamic port ..
     server_conf_path = os.path.join(server_directory, 'config', 'repo', 'server.conf')

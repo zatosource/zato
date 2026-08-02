@@ -22,6 +22,12 @@ from zato.server.service import RESTAdapter
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # The code prefix percentage-style discount codes carry, e.g. PCT10 means ten percent.
 Percentage_Prefix = 'PCT'
 
@@ -66,7 +72,7 @@ class _BCLookupAdapter(RESTAdapter):
     """
     input = 'env', 'company', '-entry', '-filter'
 
-    def get_path_params(self, params):
+    def get_path_params(self, params:'any_'):
 
         out = {
             'env': self.request.input.env,
@@ -78,7 +84,7 @@ class _BCLookupAdapter(RESTAdapter):
 
         return out
 
-    def get_query_string(self, params):
+    def get_query_string(self, params:'any_'):
 
         out = {}
 
@@ -98,7 +104,7 @@ class CompatGetDiscounts(_BCLookupAdapter):
     name = 'test.compat.get-discounts'
     conn_name = 'test.compat.discounts'
 
-    def map_response(self, data, **kwargs):
+    def map_response(self, data:'any_', **kwargs:'any_'):
 
         company = self.request.input.company
 
@@ -143,7 +149,7 @@ class CompatGetDiscountEntry(_BCLookupAdapter):
     name = 'test.compat.get-discount-entry'
     conn_name = 'test.compat.discount-entry'
 
-    def map_response(self, data, **kwargs):
+    def map_response(self, data:'any_', **kwargs:'any_'):
 
         company = self.request.input.company
 
@@ -167,7 +173,7 @@ class CompatGetInvoiceRates(_BCLookupAdapter):
     name = 'test.compat.get-invoice-rates'
     conn_name = 'test.compat.invoice-rates'
 
-    def map_response(self, data, **kwargs):
+    def map_response(self, data:'any_', **kwargs:'any_'):
 
         company = self.request.input.company
 
@@ -208,7 +214,7 @@ class CompatCreateOrder(RESTAdapter):
 
     input = 'env', 'company', 'number', 'customer_number', 'lines'
 
-    def get_path_params(self, params):
+    def get_path_params(self, params:'any_'):
         return {
             'env': self.request.input.env,
             'company': self.request.input.company,
@@ -245,7 +251,7 @@ class CompatCreateOrder(RESTAdapter):
 
         return json.dumps(payload)
 
-    def map_response(self, data, **kwargs):
+    def map_response(self, data:'any_', **kwargs:'any_'):
         return json.dumps({'order_number': data['number']})
 
 # ################################################################################################################################
@@ -259,7 +265,7 @@ class CompatImportXML(RESTAdapter):
     conn_name = 'test.compat.xml-import'
     method = 'POST'
 
-    def get_path_params(self, params):
+    def get_path_params(self, params:'any_'):
         payload = self.request.payload
         return {
             'env': payload['env'],
@@ -276,7 +282,7 @@ class CompatImportXML(RESTAdapter):
         payload = self.request.payload
         return payload['body']
 
-    def map_response(self, data, **kwargs):
+    def map_response(self, data:'any_', **kwargs:'any_'):
         return json.dumps({'result': data})
 
 # ################################################################################################################################

@@ -21,13 +21,19 @@ from _client import ZatoClient
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 SERVICE = 'zato.security.basic-auth'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @pytest.fixture(scope='module')
-def client(zato_server):
+def client(zato_server:'any_'):
     return ZatoClient(zato_server['host'], zato_server['port'], zato_server['password'])
 
 # ################################################################################################################################
@@ -37,7 +43,7 @@ class TestPaginationHeaders:
 
     created_ids = []
 
-    def test_01_create_items_for_pagination(self, client):
+    def test_01_create_items_for_pagination(self, client:'any_'):
         """ Create enough items so that pagination has something to paginate.
         """
         for idx in range(1, 6):
@@ -50,7 +56,7 @@ class TestPaginationHeaders:
             assert 'id' in resp
             self.__class__.created_ids.append(resp['id'])
 
-    def test_02_get_list_returns_bare_list_with_pagination_headers(self, client):
+    def test_02_get_list_returns_bare_list_with_pagination_headers(self, client:'any_'):
         """ Invoke get-list with paginate=True, assert body is a bare list
         and pagination headers are present.
         """
@@ -75,10 +81,10 @@ class TestPaginationHeaders:
         total = int(headers['x-zato-result-total'])
         assert total >= 5
 
-    def test_03_get_list_no_meta_in_body(self, client):
+    def test_03_get_list_no_meta_in_body(self, client:'any_'):
         """ Verify that the response body does NOT contain _meta or response wrapper keys.
         """
-        response, headers = client._invoke(f'{SERVICE}.get-list', {
+        response, _ = client._invoke(f'{SERVICE}.get-list', {
             'cluster_id': 1,
             'paginate': True,
             'cur_page': 1,
@@ -89,7 +95,7 @@ class TestPaginationHeaders:
             assert '_meta' not in response, 'Body should not contain _meta'
             assert 'response' not in response, 'Body should not contain response wrapper'
 
-    def test_04_get_list_helper_returns_meta_from_headers(self, client):
+    def test_04_get_list_helper_returns_meta_from_headers(self, client:'any_'):
         """ Verify that the get_list() helper populates meta from headers.
         """
         data, meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, paginate=True, cur_page=1)
@@ -99,7 +105,7 @@ class TestPaginationHeaders:
         assert 'total' in meta
         assert int(meta['total']) >= 5
 
-    def test_99_cleanup(self, client):
+    def test_99_cleanup(self, client:'any_'):
         """ Remove all items created during the test.
         """
         for item_id in self.__class__.created_ids:

@@ -21,6 +21,14 @@ from unittest import main, TestCase
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, anydict
+    anydict = anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,10 +57,10 @@ def _kill_server():
     if _server_proc and _server_proc.poll() is None:
         _server_proc.terminate()
         try:
-            _server_proc.wait(timeout=5)
+            _ = _server_proc.wait(timeout=5)
         except subprocess.TimeoutExpired:
             _server_proc.kill()
-            _server_proc.wait(timeout=5)
+            _ = _server_proc.wait(timeout=5)
     _server_proc = None
 
 # ################################################################################################################################
@@ -61,12 +69,12 @@ def _kill_server():
 def _cleanup():
     _kill_server()
 
-atexit.register(_cleanup)
+_ = atexit.register(_cleanup)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _wait_for_server(host, port, password, timeout=60):
+def _wait_for_server(host:'any_', port:'any_', password:'any_', timeout:'any_' = 60):
     from urllib.request import Request, urlopen
     from base64 import b64encode
 
@@ -107,7 +115,7 @@ class TestODBSQLiteDefault(TestCase):
         _tmpdir = tempfile.mkdtemp(prefix='zato_test_odb_sqlite_')
 
         qs_env = os.environ.copy()
-        qs_env.pop('COVERAGE_PROCESS_START', None)
+        _ = qs_env.pop('COVERAGE_PROCESS_START', None)
 
         qs_cmd = [
             _ZATO_BIN, 'quickstart', 'create', _tmpdir,
@@ -129,7 +137,7 @@ class TestODBSQLiteDefault(TestCase):
         repo_location = os.path.join(cls.server_dir, 'config', 'repo')
 
         from zato.common.util.config import get_config_object, update_config_file
-        config = get_config_object(repo_location, 'server.conf')
+        config = cast_('any_', get_config_object(repo_location, 'server.conf'))
         config['main']['port'] = str(cls.port)
         update_config_file(config, repo_location, 'server.conf')
 
@@ -138,7 +146,7 @@ class TestODBSQLiteDefault(TestCase):
         env = os.environ.copy()
         env['Zato_Config_Bind_Port'] = str(cls.port)
         env['Zato_Broker_HTTP_Port'] = str(broker_port)
-        env.pop('COVERAGE_PROCESS_START', None)
+        _ = env.pop('COVERAGE_PROCESS_START', None)
 
         _server_proc = subprocess.Popen(
             [_ZATO_BIN, 'start', cls.server_dir, '--fg'],
@@ -150,7 +158,7 @@ class TestODBSQLiteDefault(TestCase):
         cls._server_output_lines = []
 
         def _capture():
-            for line in iter(_server_proc.stdout.readline, b''):
+            for line in iter(cast_('any_', _server_proc).stdout.readline, b''):
                 text = line.decode('utf-8', errors='replace').rstrip()
                 cls._server_output_lines.append(text)
 
@@ -187,7 +195,7 @@ class TestODBSQLiteDefault(TestCase):
 # ################################################################################################################################
 
     def test_sqlite_db_file_exists(self):
-        db_path = os.path.join(_tmpdir, 'zato.db')
+        db_path = os.path.join(cast_('any_', _tmpdir), 'zato.db')
         self.assertTrue(os.path.isfile(db_path), f'SQLite DB not found at {db_path}')
         self.assertGreater(os.path.getsize(db_path), 0, 'SQLite DB file is empty')
 
@@ -195,15 +203,15 @@ class TestODBSQLiteDefault(TestCase):
 
     def test_server_conf_engine_is_sqlite(self):
         from zato.common.util.config import get_config_object
-        repo_location = os.path.join(self.server_dir, 'config', 'repo')
-        config = get_config_object(repo_location, 'server.conf')
+        repo_location = os.path.join(cast_('any_', self.server_dir), 'config', 'repo')
+        config = cast_('anydict', get_config_object(repo_location, 'server.conf'))
         engine = config['odb']['engine']
         self.assertEqual(engine, 'sqlite')
 
 # ################################################################################################################################
 
     def test_sqlite_db_has_tables(self):
-        db_path = os.path.join(_tmpdir, 'zato.db')
+        db_path = os.path.join(cast_('any_', _tmpdir), 'zato.db')
         conn = sqlite3.connect(db_path)
         try:
             cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table'")

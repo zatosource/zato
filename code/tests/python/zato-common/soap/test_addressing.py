@@ -21,13 +21,19 @@ from zato.common.util.xml_.core import qname
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # The IHE XCA cross-gateway query action - what TEFCA QHINs dispatch on.
 _action_xca_query = 'urn:ihe:iti:2007:CrossGatewayQuery'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _reparse(envelope):
+def _reparse(envelope:'any_'):
     """ Serializes and reparses an envelope, as would happen over the wire.
     """
     out = etree.fromstring(to_bytes(envelope))
@@ -87,7 +93,7 @@ class TestAddressing:
         envelope = build_envelope(SOAPVersion.V12)
 
         with pytest.raises(SOAPAddressingException):
-            add_addressing(envelope, AddressingInfo())
+            _ = add_addressing(envelope, AddressingInfo())
 
     def test_addressing_is_not_added_twice(self):
         envelope = build_envelope(SOAPVersion.V12)
@@ -98,7 +104,7 @@ class TestAddressing:
         _ = add_addressing(envelope, info)
 
         with pytest.raises(SOAPAddressingException):
-            add_addressing(envelope, info)
+            _ = add_addressing(envelope, info)
 
     def test_duplicate_header_is_refused(self):
         envelope = build_envelope(SOAPVersion.V12)
@@ -115,7 +121,7 @@ class TestAddressing:
         duplicate.text = 'urn:ihe:iti:2007:SomethingElse'
 
         with pytest.raises(SOAPAddressingException):
-            parse_addressing(_reparse(envelope))
+            _ = parse_addressing(_reparse(envelope))
 
     def test_reply_endpoint_without_message_id_is_refused(self):
         envelope = build_envelope(SOAPVersion.V12)
@@ -129,7 +135,7 @@ class TestAddressing:
         address.text = Anonymous_Address
 
         with pytest.raises(SOAPAddressingException):
-            parse_addressing(_reparse(envelope))
+            _ = parse_addressing(_reparse(envelope))
 
     def test_addressing_without_action_is_refused(self):
         envelope = build_envelope(SOAPVersion.V12)
@@ -139,7 +145,7 @@ class TestAddressing:
         message_id.text = new_message_id()
 
         with pytest.raises(SOAPAddressingException):
-            parse_addressing(_reparse(envelope))
+            _ = parse_addressing(_reparse(envelope))
 
     def test_relates_to_on_responses(self):
         request_message_id = new_message_id()

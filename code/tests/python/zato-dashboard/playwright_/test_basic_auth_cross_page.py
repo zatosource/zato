@@ -11,6 +11,7 @@ import time
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,11 +44,11 @@ def _create_definition_via_ui(page:'Page', base_url:'str', suffix:'str') -> 'dic
 
     # Navigate to basic auth page ..
     _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-    page.wait_for_selector('#data-table', state='visible')
+    _ = page.wait_for_selector('#data-table', state='visible')
 
     # .. open and fill the create dialog ..
     page.click('#markup .page_prompt a')
-    page.wait_for_selector('#create-div', state='visible')
+    _ = page.wait_for_selector('#create-div', state='visible')
 
     page.fill('#id_name', name)
     page.fill('#id_username', username)
@@ -56,10 +57,10 @@ def _create_definition_via_ui(page:'Page', base_url:'str', suffix:'str') -> 'dic
 
     # .. submit and wait ..
     page.click('#create-div input[type="submit"]')
-    page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+    _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    page.wait_for_selector(row_selector, state='visible', timeout=5000)
+    _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
     out = {
         'name': name,
@@ -76,7 +77,7 @@ def _get_item_id(page:'Page', name:'str') -> 'str':
     """ Returns the item ID of the row with the given name.
     """
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    row = page.query_selector(row_selector)
+    row = cast_('any_', page.query_selector(row_selector))
     id_cell = row.query_selector('td[class*="item_id_"]')
 
     out = id_cell.inner_text().strip()
@@ -90,14 +91,14 @@ def _delete_definition_via_ui(page:'Page', base_url:'str', name:'str') -> 'None'
 
     # Navigate to basic auth page with query filter so the row is visible ..
     _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={name}')
-    page.wait_for_selector('#data-table', state='visible')
+    _ = page.wait_for_selector('#data-table', state='visible')
 
     # .. trigger delete ..
     item_id = _get_item_id(page, name)
     page.evaluate(f'$.fn.zato.security.basic_auth.delete_("{item_id}")')
 
     # .. wait for the jConfirm popup and click OK ..
-    page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+    _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
     page.click('#popup_ok')
 
     # .. wait for the row to disappear.
@@ -111,12 +112,12 @@ def _edit_definition_name_via_ui(page:'Page', base_url:'str', old_name:'str', ne
 
     # Navigate to basic auth page with query filter so the row is visible ..
     _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={old_name}')
-    page.wait_for_selector('#data-table', state='visible')
+    _ = page.wait_for_selector('#data-table', state='visible')
 
     # .. open edit for the row ..
     item_id = _get_item_id(page, old_name)
     page.evaluate(f'$.fn.zato.security.basic_auth.edit("{item_id}")')
-    page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+    _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
     # .. clear and fill the new name ..
     name_field = page.locator('#id_edit-name')
@@ -125,7 +126,7 @@ def _edit_definition_name_via_ui(page:'Page', base_url:'str', old_name:'str', ne
 
     # .. submit and wait for the dialog to close.
     page.click('#edit-div input[type="submit"]')
-    page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
+    _ = page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
 
 # ################################################################################################################################
 
@@ -167,11 +168,11 @@ class TestBasicAuthCrossPage:
 
         # .. navigate to REST channels ..
         _ = page.goto(f'{base_url}{_Channel_Url_Pattern}', timeout=60000)
-        page.wait_for_selector('#data-table', state='visible', timeout=15000)
+        _ = page.wait_for_selector('#data-table', state='visible', timeout=15000)
 
         # .. open the create dialog ..
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         # .. wait for the security select to be populated (SSE may take a moment) ..
         time.sleep(1)
@@ -196,11 +197,11 @@ class TestBasicAuthCrossPage:
 
         # .. navigate to outgoing REST ..
         _ = page.goto(f'{base_url}{_Outgoing_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. open the create dialog ..
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         time.sleep(1)
 
@@ -221,10 +222,10 @@ class TestBasicAuthCrossPage:
 
         # Navigate to REST channels and open the create dialog ..
         _ = page.goto(f'{base_url}{_Channel_Url_Pattern}', timeout=60000)
-        page.wait_for_selector('#data-table', state='visible', timeout=15000)
+        _ = page.wait_for_selector('#data-table', state='visible', timeout=15000)
 
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         # .. wait for SSE to connect ..
         time.sleep(2)
@@ -263,11 +264,11 @@ class TestBasicAuthCrossPage:
 
         # .. navigate to security groups ..
         _ = page.goto(f'{base_url}{_Groups_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. open the create dialog via the JS function ..
         page.evaluate('$.fn.zato.groups.create()')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         # .. wait for the badge picker to load ..
         time.sleep(2)
@@ -301,10 +302,10 @@ class TestBasicAuthCrossPage:
 
         # .. navigate to REST channels and open create dialog ..
         _ = page.goto(f'{base_url}{_Channel_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
         time.sleep(1)
 
         # .. verify it is present ..
@@ -313,17 +314,17 @@ class TestBasicAuthCrossPage:
 
         # .. close the dialog ..
         page.evaluate('$("#create-div").dialog("close")')
-        page.wait_for_function('!document.querySelector("#create-div").offsetParent')
+        _ = page.wait_for_function('!document.querySelector("#create-div").offsetParent')
 
         # .. delete the definition via UI ..
         _delete_definition_via_ui(page, base_url, defn['name'])
 
         # .. reload the channels page and open the dialog again ..
         _ = page.goto(f'{base_url}{_Channel_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
         time.sleep(1)
 
         # .. verify the def is gone.
@@ -346,10 +347,10 @@ class TestBasicAuthCrossPage:
 
         # .. navigate to REST channels and open create dialog ..
         _ = page.goto(f'{base_url}{_Channel_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
         time.sleep(1)
 
         # .. verify the def is present in the dropdown ..
@@ -393,10 +394,10 @@ class TestBasicAuthCrossPage:
 
         # .. navigate to REST channels and open create dialog ..
         _ = page.goto(f'{base_url}{_Channel_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
         time.sleep(1)
 
         # .. verify old name is in the dropdown ..

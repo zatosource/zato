@@ -18,6 +18,11 @@ struct AppState {
 /// Starts the actix-web HTTP server on 127.0.0.1:35111.
 ///
 /// This function blocks until the server shuts down.
+///
+/// The returned future is not `Send` because actix builds its app factory out of `Rc`,
+/// which is by design - the server is awaited directly on the actix runtime of the main
+/// thread and is never moved to another one.
+#[expect(clippy::future_not_send, reason = "actix HttpServer is Rc-based and stays on its own runtime")]
 pub async fn start_http_server(shared: Arc<BridgeShared>) -> std::io::Result<()> {
     let state = web::Data::new(AppState { shared });
 
@@ -77,13 +82,16 @@ async fn get_connections(state: web::Data<AppState>) -> HttpResponse {
                 ssl: config.ssl,
             });
         }
+
+        // The snapshot is complete, so the lock goes back before the response is built.
+        drop(bridge_state);
         result
     };
 
     HttpResponse::Ok().json(connections)
 }
 
-/// Query parameters for get_connection_status.
+/// Query parameters for `get_connection_status`.
 #[derive(Deserialize)]
 struct ConnectionStatusParams {
     /// Connection name to query.

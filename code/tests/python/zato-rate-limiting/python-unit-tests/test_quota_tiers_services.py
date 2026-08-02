@@ -17,11 +17,18 @@ from zato.common.json_internal import dumps, loads
 from zato.server.service.internal.security.rate_limiting import APIKeyRateLimitingSave
 from zato.server.service.internal.security.tier import Create as TierCreate, Delete as TierDelete, \
     Edit as TierEdit, SetForGroup as TierSetForGroup
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _make_rule_dicts(rate=10, burst=20, limit=100, limit_unit='minute', cidr='10.0.0.0/8'):
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _make_rule_dicts(rate:'any_' = 10, burst:'any_' = 20, limit:'any_' = 100, limit_unit:'any_' = 'minute', cidr:'any_' = '10.0.0.0/8'):
     return [{
         'cidr_list': [cidr],
         'time_range': [{
@@ -40,12 +47,12 @@ def _make_rule_dicts(rate=10, burst=20, limit=100, limit_unit='minute', cidr='10
 class _MockInput(dict):
     """ A dict that also supports attribute access, like a real service input object.
     """
-    def __getattr__(self, name):
+    def __getattr__(self, name:'any_'):
         return self[name]
 
 # ################################################################################################################################
 
-def _make_service(class_, input_data):
+def _make_service(class_:'any_', input_data:'any_'):
     """ Builds a bare service object with just enough state for handle() to work.
     """
     service = object.__new__(class_)
@@ -190,7 +197,7 @@ class TierSetForGroupTestCase(unittest.TestCase):
 
 class SaveMutualExclusivityTestCase(unittest.TestCase):
 
-    def _make_save_service(self, input_data, existing_opaque=None):
+    def _make_save_service(self, input_data:'any_', existing_opaque:'any_' = None):
         service = _make_service(APIKeyRateLimitingSave, input_data)
 
         mock_item = type('MockItem', (), {
@@ -225,7 +232,7 @@ class SaveMutualExclusivityTestCase(unittest.TestCase):
 
         service.handle()
 
-        saved_opaque = loads(mock_item.opaque1)
+        saved_opaque = loads(cast_('any_', mock_item).opaque1)
         self.assertEqual(saved_opaque['quota_tier'], 100)
         self.assertNotIn('rate_limiting', saved_opaque)
 
@@ -241,7 +248,7 @@ class SaveMutualExclusivityTestCase(unittest.TestCase):
 
         service.handle()
 
-        saved_opaque = loads(mock_item.opaque1)
+        saved_opaque = loads(cast_('any_', mock_item).opaque1)
         self.assertNotIn('quota_tier', saved_opaque)
         self.assertEqual(len(saved_opaque['rate_limiting']), 1)
 

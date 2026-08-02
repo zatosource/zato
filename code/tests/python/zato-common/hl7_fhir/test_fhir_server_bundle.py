@@ -19,6 +19,13 @@ from zato.common.test.fhir_ import FHIRTestServer
 
 # Local
 from conftest import convert
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,7 +80,7 @@ def _read_resource(server:'FHIRTestServer', location:'str') -> 'dict':
 
 class TestTransactionBundle:
 
-    def test_transaction_applies_all_entries(self, fhir_server):
+    def test_transaction_applies_all_entries(self, fhir_server:'any_'):
         bundle = convert(MSH, PID, PV1)
         bundle_dict = bundle.to_dict()
 
@@ -92,7 +99,7 @@ class TestTransactionBundle:
             assert entry_response['status'] == '201 Created'
             assert 'location' in entry_response
 
-    def test_urn_references_resolve_to_server_ids(self, fhir_server):
+    def test_urn_references_resolve_to_server_ids(self, fhir_server:'any_'):
         bundle = convert(MSH, PID, PV1)
         bundle_dict = bundle.to_dict()
 
@@ -119,19 +126,19 @@ class TestTransactionBundle:
                 encounter_location = location
 
         # The stored Encounter points at the ID the server assigned to the Patient
-        encounter = _read_resource(fhir_server, encounter_location)
+        encounter = _read_resource(fhir_server, cast_('any_', encounter_location))
         subject = encounter['subject']
 
         assert subject['reference'] == patient_location
 
         # And the Patient itself reads back with the demographics from the message
-        patient = _read_resource(fhir_server, patient_location)
+        patient = _read_resource(fhir_server, cast_('any_', patient_location))
         names = patient['name']
         name = names[0]
 
         assert name['family'] == 'Smith'
 
-    def test_batch_bundle(self, fhir_server):
+    def test_batch_bundle(self, fhir_server:'any_'):
         bundle = convert(MSH, PID, config=None)
         bundle_dict = bundle.to_dict()
 
@@ -141,7 +148,7 @@ class TestTransactionBundle:
         response = _post_bundle(fhir_server, bundle_dict)
         assert response['type'] == 'batch-response'
 
-    def test_non_bundle_is_rejected(self, fhir_server):
+    def test_non_bundle_is_rejected(self, fhir_server:'any_'):
         body = json.dumps({'resourceType': 'Patient'})
         body_bytes = body.encode('utf8')
 
@@ -154,7 +161,7 @@ class TestTransactionBundle:
 
         assert wrapper.value.code == 400
 
-    def test_wrong_bundle_type_is_rejected(self, fhir_server):
+    def test_wrong_bundle_type_is_rejected(self, fhir_server:'any_'):
         body = json.dumps({'resourceType': 'Bundle', 'type': 'collection'})
         body_bytes = body.encode('utf8')
 

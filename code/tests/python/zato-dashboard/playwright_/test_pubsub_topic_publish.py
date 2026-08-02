@@ -12,6 +12,7 @@ import time
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.playwright_pubsub import create_topic, open_publish_overlay, publish_via_overlay
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,7 +37,7 @@ def _open_history_panel(page:'Page') -> 'None':
     page.click('#invoker-modal-history-button')
 
     # .. and wait for the history overlay to become visible.
-    page.wait_for_selector('#invoker-modal-history-overlay:not(.hidden)', state='visible', timeout=5000)
+    _ = page.wait_for_selector('#invoker-modal-history-overlay:not(.hidden)', state='visible', timeout=5000)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -195,7 +196,7 @@ class TestPubSubTopicPublish:
         # .. click "Show response" on the first entry ..
         show_response = page.query_selector(
             '#invoker-modal-history-list .invoker-history-item-wrapper:first-child .invoker-history-item-show-response')
-        show_response.click()
+        cast_('any_', show_response).click()
         time.sleep(0.3)
 
         # .. verify the response detail is visible and contains msg_id.
@@ -291,7 +292,7 @@ class TestPubSubTopicPublish:
 
         first_text_elem = page.query_selector(
             '#invoker-modal-history-list .invoker-history-item-wrapper:first-child .invoker-history-item-text')
-        first_text_elem.click()
+        cast_('any_', first_text_elem).click()
         time.sleep(0.3)
 
         # .. verify the editor is populated with the original payload.

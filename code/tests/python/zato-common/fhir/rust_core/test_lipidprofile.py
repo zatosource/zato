@@ -2,6 +2,17 @@
 
 import zato.fhir_r4_0_1_core
 from zato.fhir.r4_0_1.resources import lipidprofile
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 
 class TestToDictlipidprofile:
@@ -141,7 +152,7 @@ class TestToDictlipidprofile:
         assert 'specimen' in result
 
     def test_to_dict_result(self):
-        resource = lipidprofile()
+        resource = cast_('any_', lipidprofile())
         resource.result = [{'reference': 'Patient/123', 'display': 'Test Patient'}]
         result = zato.fhir_r4_0_1_core.to_dict(resource)
         assert 'result' in result
@@ -449,7 +460,7 @@ class TestGetPathlipidprofile:
         assert result is not None
 
     def test_get_path_result(self):
-        resource = lipidprofile()
+        resource = cast_('any_', lipidprofile())
         resource.result = [{'reference': 'Patient/123', 'display': 'Test Patient'}]
         result = zato.fhir_r4_0_1_core.get_path(resource, 'result')
         assert result is not None

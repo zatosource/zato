@@ -116,14 +116,17 @@ fn chrono_to_py_datetime<'py>(
     clippy::as_conversions,
     reason = "millisecond-to-float conversion for Prometheus histogram - sub-ms precision loss is acceptable"
 )]
-pub fn handle_http_request(
-    py: Python<'_>,
-    server: &Bound<'_, PyAny>,
-    http_environ: &Bound<'_, PyDict>,
-    new_cid_func: &Bound<'_, PyAny>,
+pub fn handle_http_request<'py>(
+    server: &Bound<'py, PyAny>,
+    http_environ: &Bound<'py, PyDict>,
+    new_cid_func: &Bound<'py, PyAny>,
     local_tz_offset_secs: i32,
-    kwargs: Option<&Bound<'_, PyDict>>,
+    kwargs: Option<&Bound<'py, PyDict>>,
 ) -> PyResult<Py<PyTuple>> {
+    // The interpreter handle rides along with any argument already bound to it,
+    // so taking it from `server` keeps the parameter list within the lint's limit.
+    let py = server.py();
+
     let cached = get_cached_attrs(server)?;
 
     let user_agent: String = http_environ

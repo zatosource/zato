@@ -16,6 +16,12 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _find_free_port() -> 'int':
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as tcp_socket:
         tcp_socket.bind(('127.0.0.1', 0))
@@ -24,7 +30,7 @@ def _find_free_port() -> 'int':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def start_http_stub(handler=None):
+def start_http_stub(handler:'any_' = None):
     """ Starts a local HTTP server in a daemon thread and returns (port, server).
 
     By default every request is answered with 200 and an empty JSON object.
@@ -36,10 +42,10 @@ def start_http_stub(handler=None):
 
     class _StubHandler(BaseHTTPRequestHandler):
 
-        def log_message(self, format, *args):
+        def log_message(self, format:'any_', *args:'any_'):
             pass
 
-        def _respond(self, method):
+        def _respond(self, method:'any_'):
             length = int(self.headers.get('Content-Length') or 0)
             body_bytes = self.rfile.read(length) if length else b''
 
@@ -84,7 +90,7 @@ class _ThreadingTCPServer(socketserver.ThreadingTCPServer):
 
 # ################################################################################################################################
 
-def _start_tcp_stub(handler_class):
+def _start_tcp_stub(handler_class:'any_'):
     port = _find_free_port()
     server = _ThreadingTCPServer(('127.0.0.1', port), handler_class)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -101,8 +107,8 @@ def start_smtp_stub():
 
     class _SMTPHandler(socketserver.StreamRequestHandler):
 
-        def _send(self, line):
-            self.wfile.write((line + '\r\n').encode('ascii'))
+        def _send(self, line:'any_'):
+            _ = self.wfile.write((line + '\r\n').encode('ascii'))
 
         def handle(self):
             self._send('220 ping-stub ESMTP')
@@ -153,8 +159,8 @@ def start_imap_stub():
 
     class _IMAPHandler(socketserver.StreamRequestHandler):
 
-        def _send(self, line):
-            self.wfile.write((line + '\r\n').encode('ascii'))
+        def _send(self, line:'any_'):
+            _ = self.wfile.write((line + '\r\n').encode('ascii'))
 
         def handle(self):
             self._send('* OK ping-stub IMAP4rev1 ready')

@@ -20,6 +20,12 @@ from zato.server.connection.http_soap.channel import RequestDispatcher
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_, stranydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # A stand-in file descriptor number for the client socket, socket.fromfd and os.close are mocked so it is never used for real IO
 test_socket_fd = 123
 
@@ -46,10 +52,10 @@ def _make_dispatcher():
 
 # ################################################################################################################################
 
-def _make_wsgi_environ():
+def _make_wsgi_environ() -> 'stranydict':
     """ Returns a minimal WSGI environ dict for testing dispatch.
     """
-    environ = {
+    environ:'stranydict' = {
         'REQUEST_METHOD': 'GET',
         'PATH_INFO': '/test/path',
         'HTTP_ACCEPT': '*/*',
@@ -62,7 +68,7 @@ def _make_wsgi_environ():
 
 # ################################################################################################################################
 
-def _make_url_match_result(channel_id=1, channel_name='test.channel'):
+def _make_url_match_result(channel_id:'any_' = 1, channel_name:'any_' = 'test.channel'):
     """ Returns a mock URL match result that simulates a successful match.
     """
     result = MagicMock()
@@ -84,7 +90,7 @@ def _make_url_match_result(channel_id=1, channel_name='test.channel'):
 
 # ################################################################################################################################
 
-def _make_check_result(is_allowed, is_disallowed=False, retry_after_us=0):
+def _make_check_result(is_allowed:'any_', is_disallowed:'any_' = False, retry_after_us:'any_' = 0):
     """ Builds a SlottedCheckResult with the given values.
     """
     out = SlottedCheckResult()
@@ -110,8 +116,8 @@ class DispatchPassthroughTestCase(unittest.TestCase):
     @patch.object(RequestDispatcher, '_check_security')
     @patch.object(RequestDispatcher, '_match_url')
     @patch.object(RequestDispatcher, '_extract_request_meta')
-    def test_passthrough_when_no_rate_limiting(self, mock_extract_meta, mock_match_url,
-            mock_check_security, mock_invoke, mock_format):
+    def test_passthrough_when_no_rate_limiting(self, mock_extract_meta:'any_', mock_match_url:'any_',
+            mock_check_security:'any_', mock_invoke:'any_', mock_format:'any_'):
         """ When both managers return None (no rules), the service is invoked.
         """
         dispatcher = _make_dispatcher()
@@ -139,8 +145,8 @@ class DispatchPassthroughTestCase(unittest.TestCase):
     @patch.object(RequestDispatcher, '_check_security')
     @patch.object(RequestDispatcher, '_match_url')
     @patch.object(RequestDispatcher, '_extract_request_meta')
-    def test_passthrough_when_allowed(self, mock_extract_meta, mock_match_url,
-            mock_check_security, mock_invoke, mock_format):
+    def test_passthrough_when_allowed(self, mock_extract_meta:'any_', mock_match_url:'any_',
+            mock_check_security:'any_', mock_invoke:'any_', mock_format:'any_'):
         """ When channel rate limiting returns is_allowed=True, the service is invoked.
         """
         dispatcher = _make_dispatcher()
@@ -173,8 +179,8 @@ class DispatchDisallowedTestCase(unittest.TestCase):
     @patch.object(RequestDispatcher, '_check_security')
     @patch.object(RequestDispatcher, '_match_url')
     @patch.object(RequestDispatcher, '_extract_request_meta')
-    def test_channel_disallowed_drops_socket(self, mock_extract_meta, mock_match_url, mock_check_security,
-            mock_fromfd, mock_os_close):
+    def test_channel_disallowed_drops_socket(self, mock_extract_meta:'any_', mock_match_url:'any_', mock_check_security:'any_',
+            mock_fromfd:'any_', mock_os_close:'any_'):
         """ When the channel rate limiting manager returns is_disallowed=True,
         the raw socket gets SO_LINGER set and closed, and empty bytes are returned.
         """
@@ -218,7 +224,7 @@ class DispatchRateLimitedTestCase(unittest.TestCase):
     @patch.object(RequestDispatcher, '_check_security')
     @patch.object(RequestDispatcher, '_match_url')
     @patch.object(RequestDispatcher, '_extract_request_meta')
-    def test_channel_rate_limited_returns_429(self, mock_extract_meta, mock_match_url, mock_check_security):
+    def test_channel_rate_limited_returns_429(self, mock_extract_meta:'any_', mock_match_url:'any_', mock_check_security:'any_'):
         """ When the channel rate limiting manager returns is_allowed=False (not disallowed),
         the response status is 429 and a JSON error payload is returned.
         """
@@ -252,7 +258,7 @@ class DispatchRetryAfterTestCase(unittest.TestCase):
     @patch.object(RequestDispatcher, '_check_security')
     @patch.object(RequestDispatcher, '_match_url')
     @patch.object(RequestDispatcher, '_extract_request_meta')
-    def test_retry_after_header_rounds_up(self, mock_extract_meta, mock_match_url, mock_check_security, mock_utcnow):
+    def test_retry_after_header_rounds_up(self, mock_extract_meta:'any_', mock_match_url:'any_', mock_check_security:'any_', mock_utcnow:'any_'):
         """ When retry_after_us has a remainder after dividing by 1_000_000,
         the Retry-After date is now + rounded-up seconds.
         """
@@ -281,7 +287,7 @@ class DispatchRetryAfterTestCase(unittest.TestCase):
     @patch.object(RequestDispatcher, '_check_security')
     @patch.object(RequestDispatcher, '_match_url')
     @patch.object(RequestDispatcher, '_extract_request_meta')
-    def test_retry_after_header_exact_seconds(self, mock_extract_meta, mock_match_url, mock_check_security, mock_utcnow):
+    def test_retry_after_header_exact_seconds(self, mock_extract_meta:'any_', mock_match_url:'any_', mock_check_security:'any_', mock_utcnow:'any_'):
         """ When retry_after_us is an exact multiple of 1_000_000,
         the Retry-After date is now + exact seconds.
         """
@@ -316,8 +322,8 @@ class DispatchLoggingTestCase(unittest.TestCase):
     @patch.object(RequestDispatcher, '_check_security')
     @patch.object(RequestDispatcher, '_match_url')
     @patch.object(RequestDispatcher, '_extract_request_meta')
-    def test_rate_limited_logs_429(self, mock_extract_meta, mock_match_url, mock_check_security,
-            mock_logger, mock_utcnow):
+    def test_rate_limited_logs_429(self, mock_extract_meta:'any_', mock_match_url:'any_', mock_check_security:'any_',
+            mock_logger:'any_', mock_utcnow:'any_'):
         """ When traffic is rate-limited, a log message with '429' is emitted.
         """
         mock_utcnow.return_value = datetime(2025, 6, 15, 12, 0, 0, tzinfo=timezone.utc)
@@ -351,7 +357,7 @@ class DispatchNoMatchTestCase(unittest.TestCase):
 
     @patch.object(RequestDispatcher, '_match_url')
     @patch.object(RequestDispatcher, '_extract_request_meta')
-    def test_no_url_match_skips_rate_limiting(self, mock_extract_meta, mock_match_url):
+    def test_no_url_match_skips_rate_limiting(self, mock_extract_meta:'any_', mock_match_url:'any_'):
         """ When the URL does not match any channel (404),
         the rate limiting manager must not be called at all.
         """
@@ -390,8 +396,8 @@ class DispatchChannelBeforeAuthTestCase(unittest.TestCase):
     @patch.object(RequestDispatcher, '_check_security')
     @patch.object(RequestDispatcher, '_match_url')
     @patch.object(RequestDispatcher, '_extract_request_meta')
-    def test_channel_denied_skips_authentication(self, mock_extract_meta, mock_match_url, mock_check_security,
-            mock_fromfd, mock_os_close):
+    def test_channel_denied_skips_authentication(self, mock_extract_meta:'any_', mock_match_url:'any_', mock_check_security:'any_',
+            mock_fromfd:'any_', mock_os_close:'any_'):
         """ When the channel check returns disallowed, credentials are never looked at.
         """
         dispatcher = _make_dispatcher()
@@ -428,8 +434,8 @@ class DispatchChannelBeforeAuthTestCase(unittest.TestCase):
     @patch.object(RequestDispatcher, '_check_security')
     @patch.object(RequestDispatcher, '_match_url')
     @patch.object(RequestDispatcher, '_extract_request_meta')
-    def test_channel_denied_returns_429_before_authentication(self, mock_extract_meta, mock_match_url,
-            mock_check_security, mock_utcnow):
+    def test_channel_denied_returns_429_before_authentication(self, mock_extract_meta:'any_', mock_match_url:'any_',
+            mock_check_security:'any_', mock_utcnow:'any_'):
         """ A channel limit reached returns 429 without any credential being checked.
         """
         mock_utcnow.return_value = datetime(2025, 6, 15, 12, 0, 0, tzinfo=timezone.utc)
@@ -461,8 +467,8 @@ class DispatchChannelBeforeAuthTestCase(unittest.TestCase):
     @patch.object(RequestDispatcher, '_check_security')
     @patch.object(RequestDispatcher, '_match_url')
     @patch.object(RequestDispatcher, '_extract_request_meta')
-    def test_channel_allowed_then_sec_def_denied(self, mock_extract_meta, mock_match_url,
-            mock_check_security, mock_utcnow):
+    def test_channel_allowed_then_sec_def_denied(self, mock_extract_meta:'any_', mock_match_url:'any_',
+            mock_check_security:'any_', mock_utcnow:'any_'):
         """ When the channel check allows but the definition's own check denies, 429 is returned.
         """
         mock_utcnow.return_value = datetime(2025, 6, 15, 12, 0, 0, tzinfo=timezone.utc)
@@ -498,8 +504,8 @@ class DispatchChannelBeforeAuthTestCase(unittest.TestCase):
     @patch.object(RequestDispatcher, '_check_security')
     @patch.object(RequestDispatcher, '_match_url')
     @patch.object(RequestDispatcher, '_extract_request_meta')
-    def test_both_pass_invokes_service(self, mock_extract_meta, mock_match_url,
-            mock_check_security, mock_invoke, mock_format):
+    def test_both_pass_invokes_service(self, mock_extract_meta:'any_', mock_match_url:'any_',
+            mock_check_security:'any_', mock_invoke:'any_', mock_format:'any_'):
         """ When both sec_def and channel checks pass, the service is invoked.
         """
         dispatcher = _make_dispatcher()
@@ -528,4 +534,4 @@ class DispatchChannelBeforeAuthTestCase(unittest.TestCase):
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    unittest.main()
+    _ = unittest.main()

@@ -52,11 +52,12 @@ fn deserialize_nullable_bool<'de, D: Deserializer<'de>>(deserializer: D) -> Resu
     Ok(out)
 }
 
-/// Deserializes a JSON value that may be `null` or a string into a `String`,
-/// treating `null` as an empty string. Needed because ODB columns like `username`
-/// are `NULL` for connections that do not use them.
+/// Deserializes a JSON value that may be `null` or a string into a `String`.
+///
+/// A `null` becomes an empty string, which is needed because ODB columns such as
+/// `username` are `NULL` for connections that do not use them.
 fn deserialize_nullable_string<'de, D: Deserializer<'de>>(deserializer: D) -> Result<String, D::Error> {
-    Option::<String>::deserialize(deserializer).map(|opt| opt.unwrap_or_default())
+    Option::<String>::deserialize(deserializer).map(std::option::Option::unwrap_or_default)
 }
 
 /// Default connection type for configs that predate the `type_` field.
@@ -249,7 +250,13 @@ impl BridgeShared {
 
     /// Cancels and removes the token for the given channel name.
     pub fn cancel_channel(&self, name: &str) {
-        if let Some(token) = self.channel_tokens.lock().remove(name) {
+        // The guard is released here rather than inside the branch below, so the lock is not
+        // held while the token is cancelled.
+        let mut tokens = self.channel_tokens.lock();
+        let token = tokens.remove(name);
+        drop(tokens);
+
+        if let Some(token) = token {
             tracing::info!("Cancelling consumer task for channel `{name}`");
             token.cancel();
         }
@@ -270,7 +277,7 @@ impl BridgeShared {
 ///
 /// This function creates a Tokio multi-threaded runtime internally and blocks
 /// until the stop flag is set. It should be called from a dedicated OS thread.
-pub fn bridge_loop(shared: Arc<BridgeShared>, recv_sender: std::sync::mpsc::Sender<RecvEvent>) {
+pub fn bridge_loop(shared: &Arc<BridgeShared>, recv_sender: &std::sync::mpsc::Sender<RecvEvent>) {
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .thread_name("zato-queue-bridge-rt")
@@ -287,7 +294,7 @@ pub fn bridge_loop(shared: Arc<BridgeShared>, recv_sender: std::sync::mpsc::Send
     runtime.block_on(async {
         let (consume_sender, mut consume_receiver) = tokio::sync::mpsc::unbounded_channel::<RecvEvent>();
 
-        spawn_consumers_for_current_config(&shared, &consume_sender);
+        spawn_consumers_for_current_config(shared, &consume_sender);
 
         loop {
             if shared.stop_flag.load(Ordering::Relaxed) {
@@ -306,9 +313,9 @@ pub fn bridge_loop(shared: Arc<BridgeShared>, recv_sender: std::sync::mpsc::Send
                     }
                 }
                 () = shared.config_notify.notified() => {
-                    spawn_consumers_for_current_config(&shared, &consume_sender);
+                    spawn_consumers_for_current_config(shared, &consume_sender);
                 }
-                _ = tokio::time::sleep(std::time::Duration::from_secs(1)) => {}
+                () = tokio::time::sleep(std::time::Duration::from_secs(1)) => {}
             }
         }
     });
@@ -317,7 +324,7 @@ pub fn bridge_loop(shared: Arc<BridgeShared>, recv_sender: std::sync::mpsc::Send
 }
 
 /// Spawns a consumer task for every channel in the current config that does
-/// not already have a running task (i.e. no token in channel_tokens).
+/// not already have a running task (i.e. no token in `channel_tokens`).
 fn spawn_consumers_for_current_config(shared: &Arc<BridgeShared>, consume_sender: &tokio::sync::mpsc::UnboundedSender<RecvEvent>) {
     let channel_configs: Vec<ChannelConfig> = {
         let bridge_state = shared.state.lock();
@@ -357,6 +364,9 @@ fn spawn_consumers_for_current_config(shared: &Arc<BridgeShared>, consume_sender
             }
         }
     }
+
+    // Nothing below needs the map, so the lock is released before returning.
+    drop(tokens);
 }
 
 /// Publishes a message to a named outgoing connection synchronously.
@@ -413,18 +423,28 @@ pub fn ping_sync(shared: &BridgeShared, conn_name: &str) -> Result<(), String> {
     }
 }
 
+/// Where a reply is to be delivered, as carried in the descriptor of the incoming message.
+pub struct ReplyTarget<'msg> {
+    /// Name of the channel that received the message being replied to.
+    pub channel_name: &'msg str,
+
+    /// Queue the reply goes to, taken from the original message's `ReplyToQ`.
+    pub reply_to_queue: &'msg str,
+
+    /// Queue manager owning that queue, taken from the original message's `ReplyToQMgr`.
+    pub reply_to_queue_manager: &'msg str,
+
+    /// Identifier of the original message, used as the reply's correlation ID.
+    pub message_id: &'msg str,
+}
+
 /// Sends a reply through the channel that received the original message.
 ///
-/// Used by IBM MQ channels to deliver `self.response.payload` to the ReplyToQ
-/// and ReplyToQMgr carried in the incoming message descriptor.
-pub fn send_reply_sync(
-    shared: &BridgeShared,
-    channel_name: &str,
-    reply_to_queue: &str,
-    reply_to_queue_manager: &str,
-    message_id: &str,
-    payload: &[u8],
-) -> Result<(), String> {
+/// Used by IBM MQ channels to deliver `self.response.payload` to the `ReplyToQ`
+/// and `ReplyToQMgr` carried in the incoming message descriptor.
+pub fn send_reply_sync(shared: &BridgeShared, target: &ReplyTarget<'_>, payload: &[u8]) -> Result<(), String> {
+    let channel_name = target.channel_name;
+
     let channel_config = {
         let bridge_state = shared.state.lock();
         bridge_state.channels.get(channel_name).cloned()
@@ -434,7 +454,13 @@ pub fn send_reply_sync(
 
     match config.type_.as_str() {
         #[cfg(feature = "ibm-mq")]
-        TYPE_CHANNEL_IBM_MQ => crate::ibm_mq::send_reply(&config, reply_to_queue, reply_to_queue_manager, message_id, payload),
+        TYPE_CHANNEL_IBM_MQ => crate::ibm_mq::send_reply(
+            &config,
+            target.reply_to_queue,
+            target.reply_to_queue_manager,
+            target.message_id,
+            payload,
+        ),
         other => Err(format!("Channel `{channel_name}` of type `{other}` does not support replies")),
     }
 }

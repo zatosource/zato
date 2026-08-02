@@ -14,6 +14,7 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.test.playwright_pubsub import close_dialog_via_jquery, create_basic_auth, create_permission, \
     create_topic, get_table_row_count, navigate_to_page, open_create_dialog, open_create_dialog_via_js, \
     setup_alert_handler, submit_create_form, wait_for_sec_def_dropdown
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -46,12 +47,12 @@ class TestPubSubPermissionCreate:
         navigate_to_page(page, base_url, _Permission_Page_Url)
 
         # .. verify the page heading ..
-        heading = page.query_selector('h2.zato')
+        heading = cast_('any_', page.query_selector('h2.zato'))
         heading_text = heading.inner_text()
         assert 'Pub/sub permissions' in heading_text, f'Expected "Pub/sub permissions" in heading, got: {heading_text}'
 
         # .. verify the create link is present ..
-        create_link = page.query_selector('#markup .page_prompt a')
+        create_link = cast_('any_', page.query_selector('#markup .page_prompt a'))
         create_link_text = create_link.inner_text()
         assert 'Create a new permission' in create_link_text, \
             f'Expected create link text, got: {create_link_text}'
@@ -89,7 +90,7 @@ class TestPubSubPermissionCreate:
 
         # .. verify the new row appears with correct values.
         row_selector = f'#data-table tbody tr:has(td:has(a:text-is("{sec_name}")))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
 
         row_text = row.inner_text()
         assert 'Publisher' in row_text, f'Expected "Publisher" in row, got: "{row_text}"'
@@ -114,7 +115,7 @@ class TestPubSubPermissionCreate:
 
         # .. verify the new row appears with correct values.
         row_selector = f'#data-table tbody tr:has(td:has(a:text-is("{sec_name}")))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
 
         row_text = row.inner_text()
         assert 'Subscriber' in row_text, f'Expected "Subscriber" in row, got: "{row_text}"'
@@ -145,14 +146,14 @@ class TestPubSubPermissionCreate:
         wait_for_sec_def_dropdown(page)
 
         # .. select the security definition ..
-        page.select_option('#id_sec_base_id', label=sec_name)
+        _ = page.select_option('#id_sec_base_id', label=sec_name)
 
         # .. set the access type to publisher-subscriber ..
-        page.select_option('#id_access_type', value='publisher-subscriber')
+        _ = page.select_option('#id_access_type', value='publisher-subscriber')
         time.sleep(0.3)
 
         # .. set the first pattern row to pub ..
-        page.select_option('#create-patterns-container .pattern-row:first-child .pattern-type-select', value='pub')
+        _ = page.select_option('#create-patterns-container .pattern-row:first-child .pattern-type-select', value='pub')
         page.fill('#create-patterns-container .pattern-row:first-child .pattern-input', pub_pattern)
 
         # .. add a second pattern row ..
@@ -160,7 +161,7 @@ class TestPubSubPermissionCreate:
         time.sleep(0.2)
 
         # .. set the second (newly added, prepended to top) row to sub ..
-        page.select_option('#create-patterns-container .pattern-row:first-child .pattern-type-select', value='sub')
+        _ = page.select_option('#create-patterns-container .pattern-row:first-child .pattern-type-select', value='sub')
         page.fill('#create-patterns-container .pattern-row:first-child .pattern-input', sub_pattern)
 
         # .. submit the form ..
@@ -168,7 +169,7 @@ class TestPubSubPermissionCreate:
 
         # .. verify the new row appears with correct values.
         row_selector = f'#data-table tbody tr:has(td:has(a:text-is("{sec_name}")))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
 
         row_text = row.inner_text()
         assert 'Publisher' in row_text, f'Expected "Publisher" in row, got: "{row_text}"'
@@ -197,8 +198,8 @@ class TestPubSubPermissionCreate:
         wait_for_sec_def_dropdown(page)
 
         # .. fill in the form fields ..
-        page.select_option('#id_sec_base_id', label=sec_name)
-        page.select_option('#id_access_type', value='publisher')
+        _ = page.select_option('#id_sec_base_id', label=sec_name)
+        _ = page.select_option('#id_access_type', value='publisher')
         time.sleep(0.2)
         page.fill('#create-patterns-container .pattern-row:first-child .pattern-input', 'test.cancel.*')
 
@@ -237,8 +238,8 @@ class TestPubSubPermissionCreate:
         wait_for_sec_def_dropdown(page)
 
         # .. fill in fields ..
-        page.select_option('#id_sec_base_id', label=sec_name)
-        page.select_option('#id_access_type', value='publisher')
+        _ = page.select_option('#id_sec_base_id', label=sec_name)
+        _ = page.select_option('#id_access_type', value='publisher')
         time.sleep(0.2)
         page.fill('#create-patterns-container .pattern-row:first-child .pattern-input', 'test.norow.*')
 
@@ -266,7 +267,7 @@ class TestPubSubPermissionCreate:
         time.sleep(0.3)
 
         # .. set access type so pattern options are available ..
-        page.select_option('#id_access_type', value='publisher-subscriber')
+        _ = page.select_option('#id_access_type', value='publisher-subscriber')
         time.sleep(0.2)
 
         # .. verify there is initially one pattern row ..
@@ -315,8 +316,8 @@ class TestPubSubPermissionCreate:
         wait_for_sec_def_dropdown(page)
 
         # .. select the sec def and access type, but leave pattern empty ..
-        page.select_option('#id_sec_base_id', label=sec_name)
-        page.select_option('#id_access_type', value='publisher')
+        _ = page.select_option('#id_sec_base_id', label=sec_name)
+        _ = page.select_option('#id_access_type', value='publisher')
         time.sleep(0.2)
 
         # .. set up a listener for the alert dialog ..
@@ -375,16 +376,16 @@ class TestPubSubPermissionCreate:
 
         # .. find the "Show matches" link for our pattern ..
         link_selector = f'.pattern-link[data-pattern="pub={pattern_value}"]'
-        show_matches_link = page.wait_for_selector(link_selector, state='visible', timeout=5000)
+        show_matches_link = cast_('any_', page.wait_for_selector(link_selector, state='visible', timeout=5000))
 
         # .. click it ..
         show_matches_link.click()
 
         # .. wait for the popup dialog to appear ..
-        page.wait_for_selector('[id^="topic-matches-popup-"]', state='visible', timeout=10000)
+        _ = page.wait_for_selector('[id^="topic-matches-popup-"]', state='visible', timeout=10000)
 
         # .. wait for loading to finish ..
-        page.wait_for_function(
+        _ = page.wait_for_function(
             '''() => {
                 let popup = document.querySelector("[id^='topic-matches-popup-']");
                 if (!popup) return false;
@@ -396,7 +397,7 @@ class TestPubSubPermissionCreate:
         )
 
         # .. verify the popup shows all 3 matching topics.
-        popup = page.query_selector('[id^="topic-matches-popup-"]')
+        popup = cast_('any_', page.query_selector('[id^="topic-matches-popup-"]'))
         popup_text = popup.inner_text()
 
         assert topic_name_1 in popup_text, \
@@ -430,16 +431,16 @@ class TestPubSubPermissionCreate:
 
         # .. find the "Show matches" link ..
         link_selector = f'.pattern-link[data-pattern="pub={pattern_value}"]'
-        show_matches_link = page.wait_for_selector(link_selector, state='visible', timeout=5000)
+        show_matches_link = cast_('any_', page.wait_for_selector(link_selector, state='visible', timeout=5000))
 
         # .. click it ..
         show_matches_link.click()
 
         # .. wait for the popup ..
-        page.wait_for_selector('[id^="topic-matches-popup-"]', state='visible', timeout=10000)
+        _ = page.wait_for_selector('[id^="topic-matches-popup-"]', state='visible', timeout=10000)
 
         # .. wait for loading to finish ..
-        page.wait_for_function(
+        _ = page.wait_for_function(
             '''() => {
                 let popup = document.querySelector("[id^='topic-matches-popup-']");
                 if (!popup) return false;
@@ -451,7 +452,7 @@ class TestPubSubPermissionCreate:
         )
 
         # .. verify the popup shows "No matching topics found".
-        popup = page.query_selector('[id^="topic-matches-popup-"]')
+        popup = cast_('any_', page.query_selector('[id^="topic-matches-popup-"]'))
         popup_text = popup.inner_text()
         assert 'No matching topics' in popup_text, \
             f'Expected "No matching topics" in popup, got: "{popup_text}"'

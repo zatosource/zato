@@ -66,6 +66,8 @@ fn load_client_library() -> Result<MqLibrary, String> {
     let lib_path = std::env::var(CLIENT_LIB_ENV).unwrap_or_else(|_| CLIENT_LIB_DEFAULT.to_string());
 
     // Loading a dynamic library is the one place in this crate where unsafe code is required.
+    // SAFETY: the library is a vendor-supplied IBM MQ client whose symbols match the bindings
+    // generated for it, and any initialisers it runs on load are the vendor's own.
     #[expect(unsafe_code, reason = "dlopen of the IBM MQ client library is inherently unsafe")]
     let container = unsafe { MqmContainer::load(&lib_path) };
 
@@ -78,7 +80,6 @@ fn load_client_library() -> Result<MqLibrary, String> {
 
 /// Connection details shared by channels and outgoing connections.
 pub struct ConnDetails {
-
     /// Broker address as `host:port`.
     pub address: String,
 
@@ -150,7 +151,6 @@ impl OutgoingConfig {
 
 /// A PKCS#12 key repository built from PEM files, with the password MQ needs to open it.
 struct KeyRepository {
-
     /// Full path to the `.p12` file.
     path: std::path::PathBuf,
 
@@ -284,13 +284,11 @@ fn connect(details: &ConnDetails) -> Result<MqConnection, String> {
             } else {
                 details.cipher_spec.as_str()
             };
-            let cipher_mqstr =
-                MqStr::from_str(cipher_name).map_err(|err| format!("Invalid cipher spec `{cipher_name}`: {err}"))?;
+            let cipher_mqstr = MqStr::from_str(cipher_name).map_err(|err| format!("Invalid cipher spec `{cipher_name}`: {err}"))?;
             let cipher = CipherSpec(cipher_mqstr);
 
             let repo_path = repository.path.display().to_string();
-            let repo_mqstr =
-                MqStr::from_str(&repo_path).map_err(|err| format!("Key repository path too long `{repo_path}`: {err}"))?;
+            let repo_mqstr = MqStr::from_str(&repo_path).map_err(|err| format!("Key repository path too long `{repo_path}`: {err}"))?;
             let key_repo = KeyRepo(repo_mqstr);
 
             let mut tls = Tls::new(&key_repo, None::<&CertificateLabel>, &cipher);
@@ -315,13 +313,27 @@ fn connect(details: &ConnDetails) -> Result<MqConnection, String> {
 fn mq_field_to_string(field: &[types::MQCHAR]) -> String {
     let mut bytes = Vec::with_capacity(field.len());
     for &character in field {
-        bytes.push(character as u8);
+        // MQ character fields are bytes that Rust models as signed, so the reinterpretation
+        // here is the identity on the underlying data.
+        bytes.push(character.cast_unsigned());
     }
 
     String::from_utf8_lossy(&bytes).trim_end_matches(['\0', ' ']).to_string()
 }
 
-/// Converts a binary MQ identifier (MsgId, CorrelId) to a lowercase hex string.
+/// Length in bytes of an MQ identifier such as `MsgId` or `CorrelId`.
+const IDENTIFIER_LENGTH: usize = 24;
+
+/// Number of hex digits needed to spell out one byte.
+const HEX_DIGITS_PER_BYTE: usize = 2;
+
+/// Length of an MQ identifier once written out in hex.
+const IDENTIFIER_HEX_LENGTH: usize = IDENTIFIER_LENGTH * HEX_DIGITS_PER_BYTE;
+
+/// Base used when parsing hex digits.
+const HEX_RADIX: u32 = 16;
+
+/// Converts a binary MQ identifier (`MsgId`, `CorrelId`) to a lowercase hex string.
 fn identifier_to_hex(identifier: &[u8]) -> String {
     let mut out = String::with_capacity(identifier.len() * 2);
     for byte in identifier {
@@ -332,35 +344,39 @@ fn identifier_to_hex(identifier: &[u8]) -> String {
 }
 
 /// Parses a lowercase hex string back into a 24-byte MQ identifier.
-fn hex_to_identifier(hex: &str) -> Result<[u8; 24], String> {
-    let mut out = [0_u8; 24];
+fn hex_to_identifier(hex: &str) -> Result<[u8; IDENTIFIER_LENGTH], String> {
+    let mut out = [0_u8; IDENTIFIER_LENGTH];
 
-    if hex.len() != 48 {
+    if hex.len() != IDENTIFIER_HEX_LENGTH {
         return Err(format!("Invalid MQ identifier length: {}", hex.len()));
     }
 
-    for (index, chunk) in hex.as_bytes().chunks(2).enumerate() {
+    // The length check above means the two sides pair up exactly, with nothing left over.
+    for (slot, chunk) in out.iter_mut().zip(hex.as_bytes().chunks(HEX_DIGITS_PER_BYTE)) {
         let pair = std::str::from_utf8(chunk).map_err(|err| format!("Invalid MQ identifier: {err}"))?;
-        out[index] = u8::from_str_radix(pair, 16).map_err(|err| format!("Invalid MQ identifier: {err}"))?;
+        *slot = u8::from_str_radix(pair, HEX_RADIX).map_err(|err| format!("Invalid MQ identifier: {err}"))?;
     }
 
     Ok(out)
 }
 
 /// Builds the MQMD-derived headers exposed to services.
-fn build_mqmd_headers(md: &structs::MQMD, headers: &mut Vec<(String, String)>) {
-    headers.push(("mqmd.message_id".to_string(), identifier_to_hex(&md.MsgId)));
-    headers.push(("mqmd.correlation_id".to_string(), identifier_to_hex(&md.CorrelId)));
-    headers.push(("mqmd.reply_to_queue".to_string(), mq_field_to_string(&md.ReplyToQ)));
-    headers.push(("mqmd.reply_to_queue_manager".to_string(), mq_field_to_string(&md.ReplyToQMgr)));
-    headers.push(("mqmd.format".to_string(), mq_field_to_string(&md.Format)));
-    headers.push(("mqmd.priority".to_string(), md.Priority.to_string()));
-    headers.push(("mqmd.persistence".to_string(), md.Persistence.to_string()));
-    headers.push(("mqmd.expiry".to_string(), md.Expiry.to_string()));
+fn build_mqmd_headers(descriptor: &structs::MQMD, headers: &mut Vec<(String, String)>) {
+    headers.push(("mqmd.message_id".to_string(), identifier_to_hex(&descriptor.MsgId)));
+    headers.push(("mqmd.correlation_id".to_string(), identifier_to_hex(&descriptor.CorrelId)));
+    headers.push(("mqmd.reply_to_queue".to_string(), mq_field_to_string(&descriptor.ReplyToQ)));
+    headers.push((
+        "mqmd.reply_to_queue_manager".to_string(),
+        mq_field_to_string(&descriptor.ReplyToQMgr),
+    ));
+    headers.push(("mqmd.format".to_string(), mq_field_to_string(&descriptor.Format)));
+    headers.push(("mqmd.priority".to_string(), descriptor.Priority.to_string()));
+    headers.push(("mqmd.persistence".to_string(), descriptor.Persistence.to_string()));
+    headers.push(("mqmd.expiry".to_string(), descriptor.Expiry.to_string()));
 
     // PutDate is YYYYMMDD and PutTime is HHMMSSTH, combined into one readable value.
-    let put_date = mq_field_to_string(&md.PutDate);
-    let put_time = mq_field_to_string(&md.PutTime);
+    let put_date = mq_field_to_string(&descriptor.PutDate);
+    let put_time = mq_field_to_string(&descriptor.PutTime);
     let put_date_time = if put_date.len() == 8 && put_time.len() == 8 {
         format!(
             "{}-{}-{}T{}:{}:{}.{}",
@@ -391,11 +407,11 @@ fn headers_to_json(headers: &[(String, String)]) -> String {
 // ################################################################################################################################
 
 /// Builds a recv event from one consumed message, parsing MQRFH2 headers when present.
-fn build_recv_event(config: &ChannelConfig, data: Vec<u8>, md: &structs::MQMD) -> RecvEvent {
+fn build_recv_event(config: &ChannelConfig, data: Vec<u8>, descriptor: &structs::MQMD) -> RecvEvent {
     let mut headers = Vec::new();
-    build_mqmd_headers(md, &mut headers);
+    build_mqmd_headers(descriptor, &mut headers);
 
-    let md_format = mq_field_to_string(&md.Format);
+    let md_format = mq_field_to_string(&descriptor.Format);
     let mut payload = data;
 
     // Messages in MQHRF2 format start with an MQRFH2 header holding JMS and user folders ..
@@ -423,9 +439,9 @@ fn build_recv_event(config: &ChannelConfig, data: Vec<u8>, md: &structs::MQMD) -
         service: config.service.clone(),
         payload,
         headers: headers_to_json(&headers),
-        reply_to_queue: mq_field_to_string(&md.ReplyToQ),
-        reply_to_queue_manager: mq_field_to_string(&md.ReplyToQMgr),
-        message_id: identifier_to_hex(&md.MsgId),
+        reply_to_queue: mq_field_to_string(&descriptor.ReplyToQ),
+        reply_to_queue_manager: mq_field_to_string(&descriptor.ReplyToQMgr),
+        message_id: identifier_to_hex(&descriptor.MsgId),
     }
 }
 
@@ -493,13 +509,14 @@ fn consume_loop_blocking(
             );
 
             let buffer = vec![0_u8; GET_BUFFER_SIZE];
-            let result: Result<_, mqi::result::Error> =
-                object.get_as::<(Vec<u8>, structs::MQMD), _, _>(&get_options, buffer).warn_as_error();
+            let result: Result<_, mqi::result::Error> = object
+                .get_as::<(Vec<u8>, structs::MQMD), _, _>(&get_options, buffer)
+                .warn_as_error();
 
             match result {
                 // A message arrived - forward it to the recv publisher.
-                Ok(Some((data, md))) => {
-                    let event = build_recv_event(config, data, &md);
+                Ok(Some((data, descriptor))) => {
+                    let event = build_recv_event(config, data, &descriptor);
                     if message_sender.send(event).is_err() {
                         return;
                     }
@@ -542,7 +559,7 @@ pub async fn consume_loop(
 // ################################################################################################################################
 
 /// Message format used for outgoing text payloads.
-fn text_message_format() -> types::MessageFormat {
+const fn text_message_format() -> types::MessageFormat {
     types::MessageFormat {
         ccsid: mqi::string::CCSID(1208),
         encoding: constants::MQENC_NATIVE,
@@ -557,8 +574,7 @@ pub fn publish_message(config: &OutgoingConfig, payload: &[u8]) -> Result<(), St
     let details = config.mq_details();
     let connection = connect(&details)?;
 
-    let queue_name =
-        QueueName::from_str(&config.queue).map_err(|err| format!("Invalid queue name `{}`: {err}", config.queue))?;
+    let queue_name = QueueName::from_str(&config.queue).map_err(|err| format!("Invalid queue name `{}`: {err}", config.queue))?;
 
     let put_options = constants::MQPMO_NO_SYNCPOINT | constants::MQPMO_FAIL_IF_QUIESCING;
     let format = text_message_format();
@@ -583,6 +599,8 @@ pub fn publish_message(config: &OutgoingConfig, payload: &[u8]) -> Result<(), St
 struct ReplyToQueueManager(QueueManagerName);
 
 // Implementing the option trait is unsafe because it manipulates the MQOD structure directly.
+// SAFETY: the only field written is ObjectQMgrName, which is a plain fixed-size name buffer,
+// so the MQOD stays valid and its object type is left untouched.
 #[expect(unsafe_code, reason = "the open option trait is unsafe by design, only ObjectQMgrName is set here")]
 unsafe impl<T> mqi::open::OpenOption<'_, T> for ReplyToQueueManager {
     fn apply_param(&self, param: &mut mqi::open::OpenParamOption<'_, T>) {
@@ -592,10 +610,10 @@ unsafe impl<T> mqi::open::OpenOption<'_, T> for ReplyToQueueManager {
 
 // ################################################################################################################################
 
-/// Sends a reply to the ReplyToQ and ReplyToQMgr of a previously received message.
+/// Sends a reply to the `ReplyToQ` and `ReplyToQMgr` of a previously received message.
 ///
 /// The reply's correlation ID is set to the original message ID so the requester
-/// can match the reply, and the message type is MQMT_REPLY.
+/// can match the reply, and the message type is `MQMT_REPLY`.
 pub fn send_reply(
     config: &ChannelConfig,
     reply_to_queue: &str,
@@ -606,8 +624,7 @@ pub fn send_reply(
     let details = config.mq_details();
     let connection = connect(&details)?;
 
-    let queue_name =
-        QueueName::from_str(reply_to_queue).map_err(|err| format!("Invalid reply queue `{reply_to_queue}`: {err}"))?;
+    let queue_name = QueueName::from_str(reply_to_queue).map_err(|err| format!("Invalid reply queue `{reply_to_queue}`: {err}"))?;
 
     // An empty reply queue manager means the reply goes to the local queue manager.
     let queue_manager = if reply_to_queue_manager.is_empty() {
@@ -646,8 +663,7 @@ pub fn ping(config: &OutgoingConfig) -> Result<(), String> {
     let details = config.mq_details();
     let connection = connect(&details)?;
 
-    let queue_name =
-        QueueName::from_str(&config.queue).map_err(|err| format!("Invalid queue name `{}`: {err}", config.queue))?;
+    let queue_name = QueueName::from_str(&config.queue).map_err(|err| format!("Invalid queue name `{}`: {err}", config.queue))?;
 
     let open_options = constants::MQOO_INQUIRE | constants::MQOO_FAIL_IF_QUIESCING;
     let object = Object::open(&connection, &(queue_name, open_options))

@@ -29,6 +29,7 @@ from zato.common.util.xml_.core import qname
 from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler, SOAP_Max_Body_Size
 from zato.server.connection.http_soap.channel_soap import build_soap_fault_response, build_soap_response, \
     parse_soap_request, resolve_soap_payload
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -97,7 +98,7 @@ def _make_envelope_bytes(
     _ = attach_body(envelope, _make_request_message(), _test_operation)
 
     if addressing:
-        add_addressing(envelope, addressing)
+        _ = add_addressing(envelope, addressing)
 
     if header_block:
         header = get_header(envelope)
@@ -760,7 +761,7 @@ class BodySizeTestCase(unittest.TestCase):
         with self.assertRaises(BadRequest) as ctx:
             self._check(payload, _make_channel_item())
 
-        self.assertNotIn(str(SOAP_Max_Body_Size), ctx.exception.msg)
+        self.assertNotIn(str(SOAP_Max_Body_Size), cast_('any_', ctx.exception.msg))
 
 # ################################################################################################################################
 

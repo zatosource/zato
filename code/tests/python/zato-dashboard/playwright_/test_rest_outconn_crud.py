@@ -17,7 +17,7 @@ from zato.common.test import rand_string
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import anydict, anylist
+    from zato.common.typing_ import any_, anydict, anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -27,6 +27,7 @@ from rest_outconn import create_outconn, delete_outconn, edit_outconn, find_outc
     submit_create_form_expect_blocked, wait_for_outconn_row
 
 from zato.common.test.playwright_pubsub import open_create_dialog
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -82,13 +83,13 @@ class TestRESTOutconnCRUD:
         open_outconn_page(page, base_url)
 
         # .. verify the page heading ..
-        heading = page.query_selector('h2.zato')
+        heading = cast_('any_', page.query_selector('h2.zato'))
         heading_text = heading.inner_text()
         assert 'REST outgoing connections' in heading_text, \
             f'Expected "REST outgoing connections" in heading, got: {heading_text}'
 
         # .. verify the create link is present ..
-        create_link = page.query_selector('#markup .page_prompt a')
+        create_link = cast_('any_', page.query_selector('#markup .page_prompt a'))
         create_link_text = create_link.inner_text()
         assert 'Create a new REST outgoing connection' in create_link_text, \
             f'Expected create link text, got: {create_link_text}'

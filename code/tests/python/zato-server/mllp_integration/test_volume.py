@@ -163,6 +163,8 @@ def _count_events(audit_db_path:'str', event_type:'str', outcome:'str'='') -> 'i
         out = connection.execute(query).scalar()
 
     engine.dispose()
+
+    assert out is not None
     return out
 
 # ################################################################################################################################
@@ -179,6 +181,8 @@ def _count_all_events(audit_db_path:'str') -> 'int':
         out = connection.execute(query).scalar()
 
     engine.dispose()
+
+    assert out is not None
     return out
 
 # ################################################################################################################################

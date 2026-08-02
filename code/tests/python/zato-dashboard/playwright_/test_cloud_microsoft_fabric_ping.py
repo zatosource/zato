@@ -35,6 +35,7 @@ if _fabric_live_dir not in sys.path:
     sys.path.insert(0, _fabric_live_dir)
 
 from _fabric_server import start_fabric_server
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -112,7 +113,7 @@ def _navigate(page:'Page', base_url:'str') -> 'None':
     """ Opens the Microsoft Fabric connections page and waits for the data table.
     """
     _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-    page.wait_for_selector('#data-table', state='visible')
+    _ = page.wait_for_selector('#data-table', state='visible')
 
 # ################################################################################################################################
 
@@ -123,7 +124,7 @@ def _create_connection(page:'Page', name:'str', address:'str', tenant_id:'str', 
 
     # Open the create dialog ..
     page.click('#markup .page_prompt a')
-    page.wait_for_selector('#create-div', state='visible')
+    _ = page.wait_for_selector('#create-div', state='visible')
 
     # .. fill in the fields, pointing the connection at the simulated server ..
     page.fill('#id_name', name)
@@ -134,11 +135,11 @@ def _create_connection(page:'Page', name:'str', address:'str', tenant_id:'str', 
 
     # .. submit and wait for the dialog to close ..
     page.click('#create-div input[type="submit"]')
-    page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+    _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
     # .. and wait for the row to appear.
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    page.wait_for_selector(row_selector, state='visible', timeout=5000)
+    _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
 # ################################################################################################################################
 
@@ -147,7 +148,7 @@ def _get_item_id(page:'Page', name:'str') -> 'str':
     """
 
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    row = page.query_selector(row_selector)
+    row = cast_('any_', page.query_selector(row_selector))
     id_cell = row.query_selector('td[class*="item_id_"]')
     out = id_cell.inner_text().strip()
 

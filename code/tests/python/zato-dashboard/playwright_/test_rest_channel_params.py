@@ -332,7 +332,7 @@ class TestRESTChannelParams:
 
         # Switch back to the default priority via edit ..
         page.evaluate('$("#edit-div").dialog("close")')
-        page.wait_for_function('!document.querySelector("#edit-div").offsetParent')
+        _ = page.wait_for_function('!document.querySelector("#edit-div").offsetParent')
 
         edit_channel(page, channel_id, {
             'params_pri': 'channel-params-over-msg',

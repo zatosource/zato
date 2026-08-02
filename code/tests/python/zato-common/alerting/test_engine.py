@@ -21,7 +21,9 @@ from zato.common.util.api import utcnow
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anylist, stranydict
+    from zato.common.alerting.model import Finding
+    from zato.common.typing_ import any_, anylist, stranydict
+    any_ = any_
     anylist = anylist
     stranydict = stranydict
 
@@ -55,16 +57,28 @@ class _TransportRecorder:
     def make(self) -> 'AlertTransports':
         out = AlertTransports()
 
-        out.send_email = lambda addresses, subject, body: self.emails.append((addresses, subject, body))
-        out.invoke_service = lambda service, payload: self.invocations.append((service, payload))
-        out.publish = lambda topic, payload: self.publications.append((topic, payload))
-        out.http_post = lambda url, payload: self.posts.append((url, payload))
+        def send_email(addresses:'anylist', subject:'str', body:'str') -> 'None':
+            self.emails.append((addresses, subject, body))
+
+        def invoke_service(service:'str', payload:'stranydict') -> 'None':
+            self.invocations.append((service, payload))
+
+        def publish(topic:'str', payload:'stranydict') -> 'None':
+            self.publications.append((topic, payload))
+
+        def http_post(url:'str', payload:'stranydict') -> 'None':
+            self.posts.append((url, payload))
+
+        out.send_email = send_email
+        out.invoke_service = invoke_service
+        out.publish = publish
+        out.http_post = http_post
 
         return out
 
 # ################################################################################################################################
 
-def _new_finding(*, severity:'str'=AlertSeverity.Warning) -> 'stranydict':
+def _new_finding(*, severity:'str'=AlertSeverity.Warning) -> 'Finding':
     out = new_finding(FindingKind.Feed_Silent, AuditSource.HL7, _channel_name,
         'Feed on `hl7.test.channel` silent for 400s', link='/zato/hl7/channels/', severity=severity)
     return out

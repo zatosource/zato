@@ -11,6 +11,7 @@ import time
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,7 +41,7 @@ def _create_definition(page:'Page', suffix:'str') -> 'dict':
 
     # Open the create dialog ..
     page.click('#markup .page_prompt a')
-    page.wait_for_selector('#create-div', state='visible')
+    _ = page.wait_for_selector('#create-div', state='visible')
 
     # .. fill in the fields ..
     page.fill('#id_name', name)
@@ -50,11 +51,11 @@ def _create_definition(page:'Page', suffix:'str') -> 'dict':
 
     # .. submit and wait for the dialog to close ..
     page.click('#create-div input[type="submit"]')
-    page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+    _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
     # .. wait for the row to appear.
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    page.wait_for_selector(row_selector, state='visible', timeout=5000)
+    _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
     out = {
         'name': name,
@@ -73,13 +74,13 @@ def _click_edit_for_row(page:'Page', name:'str') -> 'None':
 
     # Extract the row's item ID from the hidden td ..
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    row = page.query_selector(row_selector)
+    row = cast_('any_', page.query_selector(row_selector))
     id_cell = row.query_selector('td[class*="item_id_"]')
     item_id = id_cell.inner_text().strip()
 
     # .. call the edit function directly via JS ..
     page.evaluate(f'$.fn.zato.security.spnego.edit("{item_id}")')
-    page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+    _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -98,7 +99,7 @@ class TestSPNEGOEdit:
 
         # Navigate and create a definition ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         defn = _create_definition(page, 'prepopulated')
 
@@ -129,7 +130,7 @@ class TestSPNEGOEdit:
 
         # Navigate and create a definition ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         defn = _create_definition(page, 'save-changes')
 
@@ -147,7 +148,7 @@ class TestSPNEGOEdit:
 
         # .. submit and wait for the dialog to close ..
         page.click('#edit-div input[type="submit"]')
-        page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
+        _ = page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
         time.sleep(0.3)
 
         # .. the old name is gone ..
@@ -176,14 +177,14 @@ class TestSPNEGOEdit:
 
         # Navigate and create two definitions ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         defn_a = _create_definition(page, 'dup-edit-a')
         defn_b = _create_definition(page, 'dup-edit-b')
 
         # .. reload so the server knows about both for the uniqueness check ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. open edit for A ..
         _click_edit_for_row(page, defn_a['name'])
@@ -198,7 +199,7 @@ class TestSPNEGOEdit:
         taken_indicator = page.wait_for_selector(
             '#edit-form .zato-unique-taken', state='visible', timeout=10000)
 
-        taken_text = taken_indicator.inner_text()
+        taken_text = cast_('any_', taken_indicator).inner_text()
         assert 'Already taken' in taken_text, f'Expected "Already taken", got: "{taken_text}"'
 
 # ################################################################################################################################

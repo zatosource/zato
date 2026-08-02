@@ -19,6 +19,12 @@ from zato.hl7.mappings.config import Default_Bundle_Type, Default_Extension_Base
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # A config file with every section populated, the same shape the shipped demo file has
 _full_config = """
 [bundle]
@@ -50,7 +56,7 @@ base_url=http://example.org/fhir/ext
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _write_config(tmp_path, contents:'str') -> 'str':
+def _write_config(tmp_path:'any_', contents:'str') -> 'str':
     """ Writes an .ini file into the test's temporary directory and returns its path.
     """
     file_path = os.path.join(tmp_path, 'test-config.ini')
@@ -83,7 +89,7 @@ class TestDefaults:
 
 class TestLoading:
 
-    def test_full_config(self, tmp_path):
+    def test_full_config(self, tmp_path:'any_'):
         file_path = _write_config(tmp_path, _full_config)
         config = load_mapping_config(file_path)
 
@@ -100,7 +106,7 @@ class TestLoading:
             'patient_class': {'P': 'outpatient', 'A': 'ambulatory'},
         }
 
-    def test_partial_config_keeps_defaults(self, tmp_path):
+    def test_partial_config_keeps_defaults(self, tmp_path:'any_'):
         file_path = _write_config(tmp_path, '[bundle]\ntype=batch\n')
         config = load_mapping_config(file_path)
 
@@ -108,7 +114,7 @@ class TestLoading:
         assert config.default_timezone == Default_Timezone
         assert config.extension_base_url == Default_Extension_Base_URL
 
-    def test_caching_returns_same_object(self, tmp_path):
+    def test_caching_returns_same_object(self, tmp_path:'any_'):
         file_path = _write_config(tmp_path, _full_config)
 
         first = load_mapping_config(file_path)
@@ -116,7 +122,7 @@ class TestLoading:
 
         assert first is second
 
-    def test_name_resolution_through_registered_directory(self, tmp_path):
+    def test_name_resolution_through_registered_directory(self, tmp_path:'any_'):
         file_path = os.path.join(tmp_path, 'my-mappings.ini')
 
         with open(file_path, 'w') as file_object:
@@ -136,49 +142,49 @@ class TestLoading:
 
 class TestValidation:
 
-    def test_unknown_section_rejected(self, tmp_path):
+    def test_unknown_section_rejected(self, tmp_path:'any_'):
         file_path = _write_config(tmp_path, '[nosuch]\nkey=value\n')
 
         with pytest.raises(Exception, match='Unknown section'):
             _ = load_mapping_config(file_path)
 
-    def test_unknown_key_rejected(self, tmp_path):
+    def test_unknown_key_rejected(self, tmp_path:'any_'):
         file_path = _write_config(tmp_path, '[bundle]\nnosuch=value\n')
 
         with pytest.raises(Exception, match='Unknown key'):
             _ = load_mapping_config(file_path)
 
-    def test_key_outside_section_rejected(self, tmp_path):
+    def test_key_outside_section_rejected(self, tmp_path:'any_'):
         file_path = _write_config(tmp_path, 'stray=value\n')
 
         with pytest.raises(Exception, match='outside any section'):
             _ = load_mapping_config(file_path)
 
-    def test_subsection_in_flat_section_rejected(self, tmp_path):
+    def test_subsection_in_flat_section_rejected(self, tmp_path:'any_'):
         file_path = _write_config(tmp_path, '[bundle]\n[[nested]]\nkey=value\n')
 
         with pytest.raises(Exception, match='does not allow subsections'):
             _ = load_mapping_config(file_path)
 
-    def test_loose_key_in_nested_section_rejected(self, tmp_path):
+    def test_loose_key_in_nested_section_rejected(self, tmp_path:'any_'):
         file_path = _write_config(tmp_path, '[identifiers]\nstray=value\n')
 
         with pytest.raises(Exception, match='only allows subsections'):
             _ = load_mapping_config(file_path)
 
-    def test_unknown_bundle_type_rejected(self, tmp_path):
+    def test_unknown_bundle_type_rejected(self, tmp_path:'any_'):
         file_path = _write_config(tmp_path, '[bundle]\ntype=nosuch\n')
 
         with pytest.raises(Exception, match='Unknown bundle type'):
             _ = load_mapping_config(file_path)
 
-    def test_identifier_subsection_missing_system_rejected(self, tmp_path):
+    def test_identifier_subsection_missing_system_rejected(self, tmp_path:'any_'):
         file_path = _write_config(tmp_path, '[identifiers]\n[[mrn]]\nauthority=MYHOSP\n')
 
         with pytest.raises(Exception, match='Missing key `system`'):
             _ = load_mapping_config(file_path)
 
-    def test_identifier_subsection_unknown_key_rejected(self, tmp_path):
+    def test_identifier_subsection_unknown_key_rejected(self, tmp_path:'any_'):
         file_path = _write_config(tmp_path, '[identifiers]\n[[mrn]]\nauthority=A\nsystem=B\nnosuch=C\n')
 
         with pytest.raises(Exception, match='Unknown key `nosuch`'):
@@ -189,7 +195,7 @@ class TestValidation:
 
 class TestDemoFile:
 
-    def test_shipped_demo_contents_load(self, tmp_path):
+    def test_shipped_demo_contents_load(self, tmp_path:'any_'):
         # The very demo file zato create server writes into user-conf must load cleanly
         from zato.cli.create_server import hl7_fhir_demo_contents
 

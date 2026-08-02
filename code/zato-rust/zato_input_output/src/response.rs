@@ -1,6 +1,6 @@
+use crate::payload::Payload;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
-use crate::payload::Payload;
 
 /// Shorthand for a heap-allocated Python object reference.
 type PyObject = Py<PyAny>;
@@ -59,7 +59,6 @@ pub struct Response {
 
 #[pymethods]
 impl Response {
-
     /// Creates a new response with default 200/OK status and empty payload.
     #[new]
     fn new(py: Python<'_>) -> PyResult<Self> {
@@ -87,24 +86,21 @@ impl Response {
         self.data_format.clone_from(&data_format);
 
         if let Some(io_object) = io {
-            let is_dataclass = io_object.getattr("is_dataclass")
+            let is_dataclass = io_object
+                .getattr("is_dataclass")
                 .and_then(|val| val.extract::<bool>())
                 .unwrap_or(false);
 
             if !is_dataclass {
-                let has_output = io_object.getattr("has_output_declared")
+                let has_output = io_object
+                    .getattr("has_output_declared")
                     .and_then(|val| val.extract::<bool>())
                     .unwrap_or(false);
 
                 if has_output {
-                    let output_names = io_object.getattr("all_output_elem_names")?
-                        .extract::<Vec<String>>()?;
+                    let output_names = io_object.getattr("all_output_elem_names")?.extract::<Vec<String>>()?;
 
-                    let payload = Payload::create(
-                        output_names,
-                        self.cid.clone(),
-                        data_format,
-                    );
+                    let payload = Payload::create(output_names, self.cid.clone(), data_format);
                     self.payload_inner = Py::new(py, payload)?.into_any();
                     self.has_io_output = true;
                 }

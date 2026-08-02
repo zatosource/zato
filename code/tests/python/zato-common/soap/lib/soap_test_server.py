@@ -226,7 +226,7 @@ class _Server(ThreadingHTTPServer):
         """ Enforces a WS-Security definition, turning a failure into a fault response.
         """
         try:
-            enforce_wss(envelope, wss_config)
+            _ = enforce_wss(envelope, wss_config)
         except SOAPException as e:
             fault = build_fault(version, FaultCode.Sender, str(e))
             raise _Rejected((BAD_REQUEST, to_bytes(fault), Content_Type[version]))
@@ -279,7 +279,7 @@ class _Server(ThreadingHTTPServer):
                 info = AddressingInfo()
                 info.action = f'{request_addressing.action}Response' if request_addressing.action else 'urn:response'
                 info.relates_to = request_addressing.message_id
-                add_addressing(envelope, info, needs_must_understand=False)
+                _ = add_addressing(envelope, info, needs_must_understand=False)
 
         envelope_bytes = to_bytes(envelope)
 

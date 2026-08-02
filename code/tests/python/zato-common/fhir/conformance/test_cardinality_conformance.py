@@ -8,6 +8,15 @@ import pytest
 from zato.fhir.r4_0_1 import resources as resources_module
 from zato.fhir.r4_0_1.validation_data import REQUIRED_FIELDS
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 
 def _load_cardinality() -> dict:
     path = Path(__file__).parent / "r4_cardinality.json"
@@ -55,7 +64,7 @@ def _required_fields_match(entries: list[dict], spec_field: str, min_v: int, max
 
 
 @pytest.mark.parametrize("resource_name", sorted(R4_CARDINALITY.keys()))
-def test_list_fields_match_cardinality_spec(resource_name):
+def test_list_fields_match_cardinality_spec(resource_name:'any_'):
     data = R4_CARDINALITY[resource_name]
     cls = getattr(resources_module, resource_name, None)
     if cls is None:
@@ -71,15 +80,15 @@ def test_list_fields_match_cardinality_spec(resource_name):
 
 
 @pytest.mark.parametrize("resource_name", sorted(R4_CARDINALITY.keys()))
-def test_required_fields_match_validation_data(resource_name):
+def test_required_fields_match_validation_data(resource_name:'any_'):
     data = R4_CARDINALITY[resource_name]
     required_rows = _required_field_rows(data["fields"])
     if not required_rows:
         return
     if resource_name not in REQUIRED_FIELDS:
         pytest.fail(
-            f"resource {resource_name!r} has required fields in r4_cardinality.json "
-            f"but is absent from REQUIRED_FIELDS"
+            f"resource {resource_name!r} has required fields in r4_cardinality.json " +
+            "but is absent from REQUIRED_FIELDS"
         )
     entries = REQUIRED_FIELDS[resource_name]
     for field, min_v, max_v in required_rows:

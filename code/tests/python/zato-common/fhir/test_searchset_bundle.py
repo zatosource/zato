@@ -7,6 +7,17 @@ import json
 
 from zato.fhir.bundle import build_searchset
 from zato.fhir.r4_0_1.resources import Bundle, BundleEntry, BundleEntrySearch, Patient, Observation
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 
 # ---------------------------------------------------------------------------
@@ -38,7 +49,7 @@ class TestSearchsetBasic:
         assert b.type_ == 'searchset'
 
     def test_total_defaults_to_len(self):
-        resources = [_make_patient('p1'), _make_patient('p2'), _make_patient('p3')]
+        resources = cast_('any_', [_make_patient('p1'), _make_patient('p2'), _make_patient('p3')])
         b = build_searchset(resources)
         assert b.total == 3
 
@@ -51,7 +62,7 @@ class TestSearchsetBasic:
         assert isinstance(b, Bundle)
 
     def test_entry_count(self):
-        resources = [_make_patient('a'), _make_patient('b')]
+        resources = cast_('any_', [_make_patient('a'), _make_patient('b')])
         b = build_searchset(resources)
         assert len(b.entry) == 2
 

@@ -20,7 +20,13 @@ from zato.common.odata.common import ODataError, ODataException, ODataVersion
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _seed_people(server):
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _seed_people(server:'any_'):
     """ Loads a predictable set of SuccessFactors person records and enforces the
     profile's credentials and the $format parameter the real system insists on.
     """
@@ -34,7 +40,7 @@ def _seed_people(server):
 
 # ################################################################################################################################
 
-def _sf_client(server, **extra):
+def _sf_client(server:'any_', **extra:'any_'):
     """ A client for the SuccessFactors profile - V2, basic credentials with a company id.
     """
     config = {
@@ -52,7 +58,7 @@ def _sf_client(server, **extra):
 
 # ################################################################################################################################
 
-def _d365_client(server, **extra):
+def _d365_client(server:'any_', **extra:'any_'):
     """ A client for the Dynamics profile - V4, OAuth2 client credentials.
     """
     config = {
@@ -70,7 +76,7 @@ def _d365_client(server, **extra):
 
 # ################################################################################################################################
 
-def _seed_vendors(server):
+def _seed_vendors(server:'any_'):
     """ Loads a predictable set of Dynamics vendors and configures the token endpoint.
     """
     server.reset()
@@ -86,7 +92,7 @@ class TestBasicAuth:
     """ Basic credentials against the SuccessFactors profile.
     """
 
-    def test_valid_credentials(self, successfactors_server):
+    def test_valid_credentials(self, successfactors_server:'any_'):
         _seed_people(successfactors_server)
 
         client = _sf_client(successfactors_server)
@@ -99,7 +105,7 @@ class TestBasicAuth:
         expected = b64encode(b'sfadmin@COMPANY:sf-pass').decode('ascii')
         assert successfactors_server.last_request['headers']['Authorization'] == f'Basic {expected}'
 
-    def test_wrong_password(self, successfactors_server):
+    def test_wrong_password(self, successfactors_server:'any_'):
         _seed_people(successfactors_server)
 
         client = _sf_client(successfactors_server, secret='wrong')
@@ -111,7 +117,7 @@ class TestBasicAuth:
 
         assert ctx.value.status_code == UNAUTHORIZED
 
-    def test_wrong_username(self, successfactors_server):
+    def test_wrong_username(self, successfactors_server:'any_'):
         _seed_people(successfactors_server)
 
         client = _sf_client(successfactors_server, username='other@COMPANY')
@@ -123,7 +129,7 @@ class TestBasicAuth:
 
         assert ctx.value.status_code == UNAUTHORIZED
 
-    def test_missing_credentials(self, successfactors_server):
+    def test_missing_credentials(self, successfactors_server:'any_'):
         _seed_people(successfactors_server)
 
         config = {
@@ -148,7 +154,7 @@ class TestBearerAuth:
     """ A static bearer token - the Dynamics profile accepts only tokens its endpoint issued.
     """
 
-    def test_issued_token_is_accepted(self, d365fo_server):
+    def test_issued_token_is_accepted(self, d365fo_server:'any_'):
         _seed_vendors(d365fo_server)
 
         # A token obtained out of band, e.g. by an external token manager.
@@ -167,7 +173,7 @@ class TestBearerAuth:
         assert len(items) == 1
         assert d365fo_server.last_request['headers']['Authorization'] == f'Bearer {token}'
 
-    def test_unknown_token_is_rejected(self, d365fo_server):
+    def test_unknown_token_is_rejected(self, d365fo_server:'any_'):
         _seed_vendors(d365fo_server)
 
         config = {
@@ -192,7 +198,7 @@ class TestOAuth2:
     """ The client-credentials grant against the profile's Azure AD style token endpoint.
     """
 
-    def test_token_is_obtained_and_used(self, d365fo_server):
+    def test_token_is_obtained_and_used(self, d365fo_server:'any_'):
         _seed_vendors(d365fo_server)
 
         client = _d365_client(d365fo_server)
@@ -206,7 +212,7 @@ class TestOAuth2:
         token = d365fo_server.issued_tokens[0]
         assert d365fo_server.last_request['headers']['Authorization'] == f'Bearer {token}'
 
-    def test_token_is_cached_between_requests(self, d365fo_server):
+    def test_token_is_cached_between_requests(self, d365fo_server:'any_'):
         _seed_vendors(d365fo_server)
 
         client = _d365_client(d365fo_server)
@@ -218,7 +224,7 @@ class TestOAuth2:
         # Three reads, one token - the cache did its job.
         assert len(d365fo_server.issued_tokens) == 1
 
-    def test_expired_token_is_refreshed_on_401(self, d365fo_server):
+    def test_expired_token_is_refreshed_on_401(self, d365fo_server:'any_'):
         _seed_vendors(d365fo_server)
 
         client = _d365_client(d365fo_server)
@@ -234,7 +240,7 @@ class TestOAuth2:
         assert len(items) == 1
         assert len(d365fo_server.issued_tokens) == 1
 
-    def test_wrong_client_secret(self, d365fo_server):
+    def test_wrong_client_secret(self, d365fo_server:'any_'):
         _seed_vendors(d365fo_server)
 
         client = _d365_client(d365fo_server, client_secret='wrong')
@@ -244,7 +250,7 @@ class TestOAuth2:
 
         client.close()
 
-    def test_scopes_travel_space_separated(self, d365fo_server):
+    def test_scopes_travel_space_separated(self, d365fo_server:'any_'):
         _seed_vendors(d365fo_server)
 
         client = _d365_client(d365fo_server, scopes='https://example.com/.default\noffline_access')
@@ -255,7 +261,7 @@ class TestOAuth2:
         token_request = d365fo_server.recorded_requests[0]
         assert b'scope=https%3A%2F%2Fexample.com%2F.default+offline_access' in token_request['raw_body']
 
-    def test_missing_token_url_and_tenant(self, d365fo_server):
+    def test_missing_token_url_and_tenant(self, d365fo_server:'any_'):
         _seed_vendors(d365fo_server)
 
         client = _d365_client(d365fo_server, token_url=None)
@@ -274,7 +280,7 @@ class TestCSRF:
     """ The SAP CSRF exchange against the S/4HANA profile.
     """
 
-    def test_token_fetched_before_first_write(self, s4hana_server):
+    def test_token_fetched_before_first_write(self, s4hana_server:'any_'):
         s4hana_server.reset()
         s4hana_server.add_entities('A_SalesOrder', 'SalesOrder', [])
 
@@ -298,7 +304,7 @@ class TestCSRF:
         assert write_request['method'] == 'POST'
         assert write_request['headers']['X-CSRF-Token'] == s4hana_server._httpd.csrf_token
 
-    def test_token_reused_across_writes(self, s4hana_server):
+    def test_token_reused_across_writes(self, s4hana_server:'any_'):
         s4hana_server.reset()
         s4hana_server.add_entities('A_SalesOrder', 'SalesOrder', [])
 
@@ -321,7 +327,7 @@ class TestCSRF:
 
         assert len(fetches) == 1
 
-    def test_stale_token_is_refetched_once(self, s4hana_server):
+    def test_stale_token_is_refetched_once(self, s4hana_server:'any_'):
         s4hana_server.reset()
         s4hana_server.add_entities('A_SalesOrder', 'SalesOrder', [])
 
@@ -344,7 +350,7 @@ class TestCSRF:
         assert created['SalesOrder'] == '2'
         assert '2' in s4hana_server.entities['A_SalesOrder']
 
-    def test_reads_never_fetch_a_token(self, s4hana_server):
+    def test_reads_never_fetch_a_token(self, s4hana_server:'any_'):
         s4hana_server.reset()
         s4hana_server.add_entities('A_SalesOrder', 'SalesOrder', [])
 

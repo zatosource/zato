@@ -11,6 +11,7 @@ import time
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,7 +41,7 @@ def _create_definition(page:'Page', suffix:'str') -> 'dict':
 
     # Open the create dialog ..
     page.click('#markup .page_prompt a')
-    page.wait_for_selector('#create-div', state='visible')
+    _ = page.wait_for_selector('#create-div', state='visible')
 
     # .. fill in the fields ..
     page.fill('#id_name', name)
@@ -50,11 +51,11 @@ def _create_definition(page:'Page', suffix:'str') -> 'dict':
 
     # .. submit and wait for the dialog to close ..
     page.click('#create-div input[type="submit"]')
-    page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+    _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
     # .. wait for the row to appear.
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    page.wait_for_selector(row_selector, state='visible', timeout=5000)
+    _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
     out = {
         'name': name,
@@ -72,7 +73,7 @@ def _get_item_id(page:'Page', name:'str') -> 'str':
     """
 
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    row = page.query_selector(row_selector)
+    row = cast_('any_', page.query_selector(row_selector))
     id_cell = row.query_selector('td[class*="item_id_"]')
     out = id_cell.inner_text().strip()
 
@@ -95,17 +96,17 @@ class TestBasicAuthPasswordDelete:
 
         # Navigate and create a definition ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         defn = _create_definition(page, 'pwd-dialog')
 
         # .. open the change password dialog ..
         item_id = _get_item_id(page, defn['name'])
         page.evaluate(f'$.fn.zato.data_table.change_password("{item_id}")')
-        page.wait_for_selector('#change_password-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#change_password-div', state='visible', timeout=5000)
 
         # .. verify the name label ..
-        name_label = page.query_selector('#change-password-name')
+        name_label = cast_('any_', page.query_selector('#change-password-name'))
         name_text = name_label.inner_text().strip()
         assert name_text == defn['name'], f'Expected name "{defn["name"]}", got: "{name_text}"'
 
@@ -125,21 +126,21 @@ class TestBasicAuthPasswordDelete:
 
         # Navigate and create a definition ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         defn = _create_definition(page, 'pwd-submit')
 
         # .. open the change password dialog ..
         item_id = _get_item_id(page, defn['name'])
         page.evaluate(f'$.fn.zato.data_table.change_password("{item_id}")')
-        page.wait_for_selector('#change_password-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#change_password-div', state='visible', timeout=5000)
 
         # .. fill in the password and submit ..
         page.fill('#change_password-div #id_password', 'new-password-123')
         page.click('#change_password-div input[type="submit"]')
 
         # .. wait for the dialog to close ..
-        page.wait_for_function('!document.querySelector("#change_password-div").offsetParent')
+        _ = page.wait_for_function('!document.querySelector("#change_password-div").offsetParent')
 
         # .. verify the row is still present.
         row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{defn["name"]}"))')
@@ -157,24 +158,24 @@ class TestBasicAuthPasswordDelete:
 
         # Navigate and create a definition ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         defn = _create_definition(page, 'pwd-cancel')
         item_id = _get_item_id(page, defn['name'])
 
         # .. open the dialog and type a password ..
         page.evaluate(f'$.fn.zato.data_table.change_password("{item_id}")')
-        page.wait_for_selector('#change_password-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#change_password-div', state='visible', timeout=5000)
 
         page.fill('#change_password-div #id_password', 'typed-then-cancelled')
 
         # .. close the dialog ..
         page.evaluate('$("#change_password-div").dialog("close")')
-        page.wait_for_function('!document.querySelector("#change_password-div").offsetParent')
+        _ = page.wait_for_function('!document.querySelector("#change_password-div").offsetParent')
 
         # .. reopen for the same row ..
         page.evaluate(f'$.fn.zato.data_table.change_password("{item_id}")')
-        page.wait_for_selector('#change_password-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#change_password-div', state='visible', timeout=5000)
 
         # .. verify the password field is empty.
         password_value = page.input_value('#change_password-div #id_password')
@@ -192,7 +193,7 @@ class TestBasicAuthPasswordDelete:
 
         # Navigate and create two definitions ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         defn_a = _create_definition(page, 'pwd-row-a')
         defn_b = _create_definition(page, 'pwd-row-b')
@@ -202,20 +203,20 @@ class TestBasicAuthPasswordDelete:
 
         # .. open for A and verify ..
         page.evaluate(f'$.fn.zato.data_table.change_password("{id_a}")')
-        page.wait_for_selector('#change_password-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#change_password-div', state='visible', timeout=5000)
 
-        name_text_a = page.query_selector('#change-password-name').inner_text().strip()
+        name_text_a = cast_('any_', page.query_selector('#change-password-name')).inner_text().strip()
         assert name_text_a == defn_a['name'], f'Expected A name, got: "{name_text_a}"'
 
         # .. close A ..
         page.evaluate('$("#change_password-div").dialog("close")')
-        page.wait_for_function('!document.querySelector("#change_password-div").offsetParent')
+        _ = page.wait_for_function('!document.querySelector("#change_password-div").offsetParent')
 
         # .. open for B and verify.
         page.evaluate(f'$.fn.zato.data_table.change_password("{id_b}")')
-        page.wait_for_selector('#change_password-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#change_password-div', state='visible', timeout=5000)
 
-        name_text_b = page.query_selector('#change-password-name').inner_text().strip()
+        name_text_b = cast_('any_', page.query_selector('#change-password-name')).inner_text().strip()
         assert name_text_b == defn_b['name'], f'Expected B name "{defn_b["name"]}", got: "{name_text_b}"'
 
 # ################################################################################################################################
@@ -230,7 +231,7 @@ class TestBasicAuthPasswordDelete:
 
         # Navigate and create two definitions ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         defn_a = _create_definition(page, 'pwd-iso-a')
         defn_b = _create_definition(page, 'pwd-iso-b')
@@ -238,11 +239,11 @@ class TestBasicAuthPasswordDelete:
         # .. change A's password ..
         id_a = _get_item_id(page, defn_a['name'])
         page.evaluate(f'$.fn.zato.data_table.change_password("{id_a}")')
-        page.wait_for_selector('#change_password-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#change_password-div', state='visible', timeout=5000)
 
         page.fill('#change_password-div #id_password', 'changed-password-for-a')
         page.click('#change_password-div input[type="submit"]')
-        page.wait_for_function('!document.querySelector("#change_password-div").offsetParent')
+        _ = page.wait_for_function('!document.querySelector("#change_password-div").offsetParent')
 
         # .. verify B's row is still present with original values ..
         row_b = page.query_selector(f'#data-table tbody tr:has(td:text-is("{defn_b["name"]}"))')
@@ -267,7 +268,7 @@ class TestBasicAuthPasswordDelete:
 
         # Navigate and create a definition ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         defn = _create_definition(page, 'delete-confirm')
 
@@ -280,10 +281,10 @@ class TestBasicAuthPasswordDelete:
         page.evaluate(f'$.fn.zato.security.basic_auth.delete_("{item_id}")')
 
         # .. wait for the jConfirm popup ..
-        page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
 
         # .. verify the popup message contains the definition name ..
-        popup_text = page.query_selector('#popup_message').inner_text()
+        popup_text = cast_('any_', page.query_selector('#popup_message')).inner_text()
         assert defn['name'] in popup_text, f'Expected name in popup, got: "{popup_text}"'
 
         # .. click OK ..
@@ -314,7 +315,7 @@ class TestBasicAuthPasswordDelete:
 
         # Navigate and create a definition ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         defn = _create_definition(page, 'delete-cancel')
 
@@ -323,13 +324,13 @@ class TestBasicAuthPasswordDelete:
         page.evaluate(f'$.fn.zato.security.basic_auth.delete_("{item_id}")')
 
         # .. wait for the jConfirm popup ..
-        page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
 
         # .. click Cancel ..
         page.click('#popup_cancel')
 
         # .. wait for the popup to be removed ..
-        page.wait_for_function('!document.querySelector("#popup_container")', timeout=3000)
+        _ = page.wait_for_function('!document.querySelector("#popup_container")', timeout=3000)
 
         # .. verify the row is still present.
         row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{defn["name"]}"))')
@@ -347,7 +348,7 @@ class TestBasicAuthPasswordDelete:
 
         # Navigate to a fresh page ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. create a definition ..
         defn = _create_definition(page, 'delete-empty')
@@ -359,7 +360,7 @@ class TestBasicAuthPasswordDelete:
         # .. delete it ..
         item_id = _get_item_id(page, defn['name'])
         page.evaluate(f'$.fn.zato.security.basic_auth.delete_("{item_id}")')
-        page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
         page.click('#popup_ok')
         time.sleep(0.5)
 
@@ -369,7 +370,7 @@ class TestBasicAuthPasswordDelete:
 
         # .. if the table had only our row, verify "No results" appears.
         if count_before == 1:
-            no_results_cell = page.query_selector('#data-table tbody td')
+            no_results_cell = cast_('any_', page.query_selector('#data-table tbody td'))
             cell_text = no_results_cell.inner_text().strip()
             assert cell_text == 'No results', f'Expected "No results", got: "{cell_text}"'
 

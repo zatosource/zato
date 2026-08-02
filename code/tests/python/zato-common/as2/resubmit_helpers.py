@@ -16,7 +16,7 @@ from sqlalchemy import select
 from zato.common.as2.outbound import SendResult
 from zato.common.audit_log.api import event_table, get_audit_engine
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
-from zato.common.typing_ import dictlist, stranydict
+from zato.common.typing_ import any_, dictlist, stranydict, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -98,12 +98,12 @@ class SendRecorder:
     """
 
     def __init__(self) -> 'None':
-        self.payload = None
-        self.filename = None
+        self.payload:'any_' = None
+        self.filename:'strnone' = None
 
 # ################################################################################################################################
 
-    def __call__(self, payload:'str', filename:'str | None') -> 'SendResult':
+    def __call__(self, payload:'any_', filename:'strnone') -> 'SendResult':
         self.payload = payload
         self.filename = filename
 

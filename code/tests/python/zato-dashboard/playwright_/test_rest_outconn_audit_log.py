@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import json
 import logging
 import os
 import subprocess
@@ -793,7 +792,7 @@ outgoing_rest:
         zato_bin = os.path.join(zato_base_dir, 'code', 'bin', 'zato')
 
         enmasse_env = os.environ.copy()
-        enmasse_env.pop('COVERAGE_PROCESS_START', None)
+        _ = enmasse_env.pop('COVERAGE_PROCESS_START', None)
 
         try:
             import_command = [zato_bin, 'enmasse', server_dir, '--verbose', '--import', '--input', yaml_file.name]

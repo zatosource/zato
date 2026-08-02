@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,7 +40,7 @@ def _create_definition(page:'Page', base_url:'str', suffix:'str') -> 'dict':
 
     # Open the create dialog ..
     page.click('#markup .page_prompt a')
-    page.wait_for_selector('#create-div', state='visible')
+    _ = page.wait_for_selector('#create-div', state='visible')
 
     # .. fill in the fields ..
     page.fill('#id_name', name)
@@ -49,11 +50,11 @@ def _create_definition(page:'Page', base_url:'str', suffix:'str') -> 'dict':
 
     # .. submit and wait for the dialog to close ..
     page.click('#create-div input[type="submit"]')
-    page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+    _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
     # .. wait for the row to appear.
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    page.wait_for_selector(row_selector, state='visible', timeout=5000)
+    _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
     out = {
         'name': name,
@@ -71,13 +72,13 @@ def _click_edit_for_row(page:'Page', name:'str') -> 'None':
 
     # Extract the row's item ID from the hidden td ..
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    row = page.query_selector(row_selector)
+    row = cast_('any_', page.query_selector(row_selector))
     id_cell = row.query_selector('td[class*="item_id_"]')
     item_id = id_cell.inner_text().strip()
 
     # .. call the edit function directly via JS ..
     page.evaluate(f'$.fn.zato.security.basic_auth.edit("{item_id}")')
-    page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+    _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
 # ################################################################################################################################
 
@@ -85,7 +86,7 @@ def _find_definition_via_api(api_client:'anydict', name:'str') -> 'dict':
     """ Finds a basic auth definition by name using the get-list API.
     """
 
-    items, _ = api_client.get_list('zato.security.basic-auth.get-list', cluster_id=1)
+    items, _ = cast_('any_', api_client).get_list('zato.security.basic-auth.get-list', cluster_id=1)
 
     for item in items:
         if item['name'] == name:
@@ -112,7 +113,7 @@ class TestBasicAuthIsActive:
 
         # Navigate to the basic auth page ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. create a definition via the UI ..
         defn = _create_definition(page, base_url, 'active-create')
@@ -135,7 +136,7 @@ class TestBasicAuthIsActive:
 
         # Navigate to the basic auth page ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. create a definition via the UI ..
         defn = _create_definition(page, base_url, 'active-edit')
@@ -151,7 +152,7 @@ class TestBasicAuthIsActive:
 
         # .. submit the edit ..
         page.click('#edit-div input[type="submit"]')
-        page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
+        _ = page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
 
         # .. verify is_active is still True via the server API.
         api_defn = _find_definition_via_api(api_client, defn['name'])
@@ -169,7 +170,7 @@ class TestBasicAuthIsActive:
         for name in self.__class__.created_names:
             try:
                 defn = _find_definition_via_api(api_client, name)
-                api_client.delete('zato.security.basic-auth.delete', id=defn['id'])
+                cast_('any_', api_client).delete('zato.security.basic-auth.delete', id=defn['id'])
             except (AssertionError, Exception):
                 pass
 

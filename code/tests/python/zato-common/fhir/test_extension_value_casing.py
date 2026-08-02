@@ -15,6 +15,16 @@ import pytest
 from zato.fhir.extensions import add_extension, get_extension
 from zato.fhir.r4_0_1 import Patient
 from zato.fhir.r4_0_1.datatypes import Extension
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 
 PRIMITIVE_VALUE_TYPES = [
@@ -81,14 +91,14 @@ COMPLEX_VALUE_TYPES = [
 )
 class TestPrimitiveValueKeyCasing:
 
-    def test_add_extension_produces_correct_key_on_dict(self, value_type, value, expected_key):
+    def test_add_extension_produces_correct_key_on_dict(self, value_type:'any_', value:'any_', expected_key:'any_'):
         resource = {'resourceType': 'Patient'}
         add_extension(resource, 'http://example.org/ext', value, value_type)
-        ext = resource['extension'][0]
+        ext = cast_('any_', resource['extension'][0])
         assert expected_key in ext, f'Expected key {expected_key}, got keys {list(ext.keys())}'
         assert ext[expected_key] == value
 
-    def test_add_extension_produces_correct_key_on_patient(self, value_type, value, expected_key):
+    def test_add_extension_produces_correct_key_on_patient(self, value_type:'any_', value:'any_', expected_key:'any_'):
         p = Patient()
         add_extension(p, 'http://example.org/ext', value, value_type)
         result = get_extension(p, 'http://example.org/ext')
@@ -102,13 +112,13 @@ class TestPrimitiveValueKeyCasing:
 )
 class TestComplexValueKeyCasing:
 
-    def test_add_extension_produces_correct_key_on_dict(self, value_type, value, expected_key):
+    def test_add_extension_produces_correct_key_on_dict(self, value_type:'any_', value:'any_', expected_key:'any_'):
         resource = {'resourceType': 'Patient'}
         add_extension(resource, 'http://example.org/ext', value, value_type)
-        ext = resource['extension'][0]
+        ext = cast_('any_', resource['extension'][0])
         assert expected_key in ext, f'Expected key {expected_key}, got keys {list(ext.keys())}'
 
-    def test_get_extension_returns_complex_value(self, value_type, value, expected_key):
+    def test_get_extension_returns_complex_value(self, value_type:'any_', value:'any_', expected_key:'any_'):
         resource = {'resourceType': 'Patient'}
         add_extension(resource, 'http://example.org/ext', value, value_type)
         result = get_extension(resource, 'http://example.org/ext')

@@ -71,9 +71,7 @@ fn wait_for_initial_reload(conn: &mut redis::Connection, keys: &redis_streams::S
         tracing::info!("Requesting jobs from server (attempt {attempt})");
         redis_streams::request_jobs(conn, keys);
 
-        type StreamReadResult = Vec<(String, Vec<(String, Vec<(String, String)>)>)>;
-
-        let result: Result<StreamReadResult, redis::RedisError> = redis::cmd("XREADGROUP")
+        let result: Result<redis_streams::StreamReadResult, redis::RedisError> = redis::cmd("XREADGROUP")
             .arg("GROUP")
             .arg(redis_streams::CONSUMER_GROUP_NAME)
             .arg(redis_streams::CONSUMER_INSTANCE_NAME)
@@ -191,7 +189,7 @@ async fn main() -> std::io::Result<()> {
     let scheduler_thread = std::thread::Builder::new()
         .name("zato-scheduler".into())
         .spawn(move || {
-            scheduler::scheduler_loop(shared_for_loop, fire_sender, 0.0, Some(heartbeat));
+            scheduler::scheduler_loop(&shared_for_loop, &fire_sender, 0.0, Some(&heartbeat));
         })
         .map_err(|err| std::io::Error::other(format!("Failed to spawn scheduler thread: {err}")))?;
 
@@ -202,7 +200,7 @@ async fn main() -> std::io::Result<()> {
     let command_thread = std::thread::Builder::new()
         .name("zato-cmd-listener".into())
         .spawn(move || {
-            redis_streams::command_listener_loop(&mut command_conn, &keys_for_commands, shared_for_commands);
+            redis_streams::command_listener_loop(&mut command_conn, &keys_for_commands, &shared_for_commands);
         })
         .map_err(|err| std::io::Error::other(format!("Failed to spawn command listener: {err}")))?;
 

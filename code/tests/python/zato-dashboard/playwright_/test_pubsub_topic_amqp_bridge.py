@@ -31,14 +31,17 @@ from zato.common.test.receiver import WebhookReceiver
 from zato.common.util.api import new_cid
 
 # The broker fixture is resolved by pytest through this import
-from amqp_fixtures import deploy_service, rabbitmq_broker # noqa: F401
+from amqp_fixtures import deploy_service, rabbitmq_broker # noqa: F401 # pyright: ignore[reportUnusedImport]
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from collections.abc import Iterator
     from playwright.sync_api import Page
     from zato.common.typing_ import anydict
+
+    receivergen = Iterator[WebhookReceiver]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -362,7 +365,7 @@ class AMQPBridgePublisher(Service):
 # ################################################################################################################################
 
 @pytest.fixture()
-def webhook_receiver() -> 'WebhookReceiver':
+def webhook_receiver() -> 'receivergen':
     """ A local HTTP receiver standing in for the user's push endpoint.
     """
     receiver_port = find_free_port()

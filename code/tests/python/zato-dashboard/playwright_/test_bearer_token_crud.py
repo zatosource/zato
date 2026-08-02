@@ -18,7 +18,7 @@ from zato.common.test.playwright_pubsub import navigate_to_page
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import anydict, anylist
+    from zato.common.typing_ import any_, anydict, anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -26,6 +26,7 @@ if 0:
 from bearer_token import Bearer_Page_Url, Cell_Audience, Cell_Auth_URL, Cell_Claims, Cell_Issuer, Cell_JWKS_URL, \
     Cell_Name, Cell_Token_Type, Cell_Username, create_dynamic_definition, create_static_definition, delete_definition, \
     edit_definition, find_definition_row, get_cell_texts, open_edit_dialog, wait_for_definition_row
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -58,12 +59,12 @@ class TestBearerTokenCRUD:
         navigate_to_page(page, base_url, Bearer_Page_Url)
 
         # .. verify the page heading ..
-        heading = page.query_selector('h2.zato')
+        heading = cast_('any_', page.query_selector('h2.zato'))
         heading_text = heading.inner_text()
         assert 'Bearer tokens' in heading_text, f'Expected "Bearer tokens" in heading, got: {heading_text}'
 
         # .. verify the create link is present ..
-        create_link = page.query_selector('#markup .page_prompt a')
+        create_link = cast_('any_', page.query_selector('#markup .page_prompt a'))
         create_link_text = create_link.inner_text()
         assert 'Create a Bearer token definition' in create_link_text, \
             f'Expected create link text, got: {create_link_text}'
@@ -197,7 +198,7 @@ class TestBearerTokenCRUD:
 
             # .. and close the dialog before the next case.
             page.evaluate('$("#edit-div").dialog("close")')
-            page.wait_for_function('!document.querySelector("#edit-div").offsetParent')
+            _ = page.wait_for_function('!document.querySelector("#edit-div").offsetParent')
 
 # ################################################################################################################################
 

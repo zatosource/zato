@@ -112,7 +112,7 @@ class SlottedCIDRRuleFromDictTestCase(TestCase):
         }
 
         with self.assertRaises(RateLimitError):
-            SlottedCIDRRule.from_dict(data)
+            _ = SlottedCIDRRule.from_dict(data)
 
 # ################################################################################################################################
 
@@ -129,7 +129,7 @@ class SlottedCIDRRuleFromDictTestCase(TestCase):
         }
 
         with self.assertRaises(RateLimitError):
-            SlottedCIDRRule.from_dict(data)
+            _ = SlottedCIDRRule.from_dict(data)
 
 # ################################################################################################################################
 
@@ -145,7 +145,7 @@ class SlottedCIDRRuleFromDictTestCase(TestCase):
         }
 
         with self.assertRaises(RateLimitError):
-            SlottedCIDRRule.from_dict(data)
+            _ = SlottedCIDRRule.from_dict(data)
 
 # ################################################################################################################################
 
@@ -164,7 +164,7 @@ class SlottedCIDRRuleFromDictTestCase(TestCase):
         }
 
         with self.assertRaises(RateLimitError):
-            SlottedCIDRRule.from_dict(data)
+            _ = SlottedCIDRRule.from_dict(data)
 
 # ################################################################################################################################
 

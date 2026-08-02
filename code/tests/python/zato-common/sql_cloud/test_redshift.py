@@ -18,6 +18,7 @@ from sqlalchemy.exc import DBAPIError
 
 # Zato
 from zato.common.odb.api import SQLConnectionPool
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -74,7 +75,7 @@ class TestRedshiftConnection:
 
         assert pool.engine is not None
 
-        response_time = pool.ping(_fs_sql_config)
+        response_time = cast_('any_', pool.ping(_fs_sql_config))
         assert response_time > 0
 
         # The startup exchange carried the configured user and the protocol negotiation parameter.
@@ -89,7 +90,7 @@ class TestRedshiftConnection:
         assert startup_parameters['user'] == redshift_server.user
         assert 'client_protocol_version' in startup_parameters
 
-        pool.engine.dispose()
+        _ = cast_('any_', pool.engine).dispose()
 
 # ################################################################################################################################
 
@@ -104,7 +105,7 @@ class TestRedshiftConnection:
 
         pool = _get_pool(redshift_server, 'ssl=True;sslmode=verify-ca')
 
-        with pool.engine.connect() as connection:
+        with cast_('any_', pool.engine).connect() as connection:
             result = connection.execute(text('select id, flight_number from flights'))
             rows = result.fetchall()
 
@@ -126,7 +127,7 @@ class TestRedshiftConnection:
 
         assert 'select id, flight_number from flights' in recorded_sql
 
-        pool.engine.dispose()
+        _ = cast_('any_', pool.engine).dispose()
 
 # ################################################################################################################################
 
@@ -137,10 +138,10 @@ class TestRedshiftConnection:
         pool = _get_pool(redshift_server, 'ssl=True;sslmode=verify-ca', password=wrong_password)
 
         with pytest.raises(Exception, match='password authentication failed'):
-            with pool.engine.connect() as connection:
+            with cast_('any_', pool.engine).connect() as connection:
                 _ = connection.execute(text('SELECT 1'))
 
-        pool.engine.dispose()
+        _ = cast_('any_', pool.engine).dispose()
 
 # ################################################################################################################################
 
@@ -156,10 +157,10 @@ class TestRedshiftConnection:
         pool = _get_pool(redshift_server, 'ssl=True;sslmode=verify-ca')
 
         with pytest.raises(DBAPIError, match='missing_table.* does not exist'):
-            with pool.engine.connect() as connection:
+            with cast_('any_', pool.engine).connect() as connection:
                 _ = connection.execute(text('select name from missing_table'))
 
-        pool.engine.dispose()
+        _ = cast_('any_', pool.engine).dispose()
 
 # ################################################################################################################################
 
@@ -170,10 +171,10 @@ class TestRedshiftConnection:
         pool = _get_pool(redshift_untrusted_server, 'ssl=True;sslmode=verify-ca')
 
         with pytest.raises(Exception, match='certificate'):
-            with pool.engine.connect() as connection:
+            with cast_('any_', pool.engine).connect() as connection:
                 _ = connection.execute(text('SELECT 1'))
 
-        pool.engine.dispose()
+        _ = cast_('any_', pool.engine).dispose()
 
 # ################################################################################################################################
 
@@ -182,13 +183,13 @@ class TestRedshiftConnection:
         """
         pool = _get_pool(redshift_plain_server, 'ssl=False')
 
-        with pool.engine.connect() as connection:
+        with cast_('any_', pool.engine).connect() as connection:
             result = connection.execute(text('SELECT 1'))
             value = result.scalar()
 
         assert value == 1
 
-        pool.engine.dispose()
+        _ = cast_('any_', pool.engine).dispose()
 
 # ################################################################################################################################
 # ################################################################################################################################

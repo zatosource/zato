@@ -23,6 +23,13 @@ from zato.common.test.client import AdminClient
 
 # Local test helpers
 from _config import TestConfig
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,7 +64,7 @@ def client():
 # ################################################################################################################################
 
 @pytest.fixture(autouse=True)
-def cleanup(client, imap_test_server):
+def cleanup(client:'any_', imap_test_server:'any_'):
     """ Deletes everything a test may have left behind so that each test starts from a clean slate.
     """
     yield
@@ -82,7 +89,7 @@ def cleanup(client, imap_test_server):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _unwrap(response):
+def _unwrap(response:'any_'):
     """ Some services wrap their response in a single zato_* root element.
     """
     if len(response) == 1:
@@ -98,7 +105,7 @@ def _new_conn_name():
 
 # ################################################################################################################################
 
-def _get_imap_item(client, name):
+def _get_imap_item(client:'any_', name:'any_'):
     """ Returns the get-list row of the IMAP connection of the given name.
     """
     data, _meta = client.get_list(f'{_service_imap}.get-list', cluster_id=default_cluster_id, paginate=True, cur_page=1)
@@ -114,7 +121,7 @@ def _get_imap_item(client, name):
 
 # ################################################################################################################################
 
-def _get_job_names(client):
+def _get_job_names(client:'any_'):
     data, _meta = client.get_list(f'{_service_job}.get-list', cluster_id=default_cluster_id)
 
     out = []
@@ -125,13 +132,13 @@ def _get_job_names(client):
 
 # ################################################################################################################################
 
-def _get_job(client, name):
+def _get_job(client:'any_', name:'any_'):
     out = _unwrap(client.invoke(f'{_service_job}.get-by-name', {'cluster_id': default_cluster_id, 'name': name}))
     return out
 
 # ################################################################################################################################
 
-def _conn_payload(imap_test_server, name):
+def _conn_payload(imap_test_server:'any_', name:'any_'):
     """ A base create/edit payload for an IMAP connection pointing to the test IMAP server.
     """
     out = {
@@ -156,7 +163,7 @@ def _conn_payload(imap_test_server, name):
 
 # ################################################################################################################################
 
-def _scheduler_fields(run_every, run_unit, service=_invoked_service, start_date=_start_date, invoke_with=None):
+def _scheduler_fields(run_every:'any_', run_unit:'any_', service:'any_' = _invoked_service, start_date:'any_' = _start_date, invoke_with:'any_' = None):
     out = {
         'scheduler_run_every': run_every,
         'scheduler_run_unit': run_unit,
@@ -171,7 +178,7 @@ def _scheduler_fields(run_every, run_unit, service=_invoked_service, start_date=
 
 # ################################################################################################################################
 
-def _create_conn(client, imap_test_server, name, **extra):
+def _create_conn(client:'any_', imap_test_server:'any_', name:'any_', **extra:'any_'):
     """ Creates an IMAP connection and returns its ID.
     """
     payload = _conn_payload(imap_test_server, name)
@@ -184,7 +191,7 @@ def _create_conn(client, imap_test_server, name, **extra):
 
 # ################################################################################################################################
 
-def _edit_conn(client, imap_test_server, name, conn_id, **extra):
+def _edit_conn(client:'any_', imap_test_server:'any_', name:'any_', conn_id:'any_', **extra:'any_'):
     payload = _conn_payload(imap_test_server, name)
     payload['id'] = conn_id
     payload.update(extra)
@@ -193,7 +200,7 @@ def _edit_conn(client, imap_test_server, name, conn_id, **extra):
 
 # ################################################################################################################################
 
-def _job_extra(conn_id, conn_name, service, invoke_with=None):
+def _job_extra(conn_id:'any_', conn_name:'any_', service:'any_', invoke_with:'any_' = None):
     """ The extra data that an IMAP-linked job carries for the dispatch service.
     """
     out = {
@@ -209,7 +216,7 @@ def _job_extra(conn_id, conn_name, service, invoke_with=None):
 
 # ################################################################################################################################
 
-def _read_evidence(subject):
+def _read_evidence(subject:'any_'):
     """ Returns the entries of the evidence file whose subject matches the given one.
     """
     out = []
@@ -230,7 +237,7 @@ def _read_evidence(subject):
 
 # ################################################################################################################################
 
-def _invoke_dispatch(client, conn_id, conn_name, service, invoke_with=None):
+def _invoke_dispatch(client:'any_', conn_id:'any_', conn_name:'any_', service:'any_', invoke_with:'any_' = None):
     """ Invokes the dispatch service directly, the way a scheduler fire event does it, retrying until the newly
     created connection has propagated to the server's connection store.
     """
@@ -253,7 +260,7 @@ def _invoke_dispatch(client, conn_id, conn_name, service, invoke_with=None):
 
 # ################################################################################################################################
 
-def _prepare_dispatch_conn(client, imap_test_server, service, invoke_with=None):
+def _prepare_dispatch_conn(client:'any_', imap_test_server:'any_', service:'any_', invoke_with:'any_' = None):
     """ Creates a connection whose linked job points to the given per-message service, sets its password
     and returns the connection's name and ID.
     """
@@ -269,7 +276,7 @@ def _prepare_dispatch_conn(client, imap_test_server, service, invoke_with=None):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_create_conn_with_scheduler_fields_creates_job(client, imap_test_server):
+def test_create_conn_with_scheduler_fields_creates_job(client:'any_', imap_test_server:'any_'):
 
     conn_name = _new_conn_name()
     job_name = _scheduler.Job_Prefix + conn_name
@@ -294,7 +301,7 @@ def test_create_conn_with_scheduler_fields_creates_job(client, imap_test_server)
     assert extra[_scheduler.Extra_Invoke_With] == _scheduler.InvokeWith.Message
 
     # The connection's own row points to the job and mirrors its definition
-    item = _get_imap_item(client, conn_name)
+    item = cast_('any_', _get_imap_item(client, conn_name))
 
     assert str(item['scheduler_run_every']) == '2'
     assert item['scheduler_run_unit'] == _unit.Minutes
@@ -305,7 +312,7 @@ def test_create_conn_with_scheduler_fields_creates_job(client, imap_test_server)
 
 # ################################################################################################################################
 
-def test_create_conn_with_each_attachment_mode(client, imap_test_server):
+def test_create_conn_with_each_attachment_mode(client:'any_', imap_test_server:'any_'):
 
     conn_name = _new_conn_name()
     job_name = _scheduler.Job_Prefix + conn_name
@@ -320,13 +327,13 @@ def test_create_conn_with_each_attachment_mode(client, imap_test_server):
     assert extra[_scheduler.Extra_Invoke_With] == _scheduler.InvokeWith.EachAttachment
 
     # .. and so does the connection's own row.
-    item = _get_imap_item(client, conn_name)
+    item = cast_('any_', _get_imap_item(client, conn_name))
 
     assert item['scheduler_invoke_with'] == _scheduler.InvokeWith.EachAttachment
 
 # ################################################################################################################################
 
-def test_create_conn_with_invalid_invoke_with_is_rejected(client, imap_test_server):
+def test_create_conn_with_invalid_invoke_with_is_rejected(client:'any_', imap_test_server:'any_'):
 
     conn_name = _new_conn_name()
     job_name = _scheduler.Job_Prefix + conn_name
@@ -343,7 +350,7 @@ def test_create_conn_with_invalid_invoke_with_is_rejected(client, imap_test_serv
 
 # ################################################################################################################################
 
-def test_ping_reaches_imap_test_server(client, imap_test_server):
+def test_ping_reaches_imap_test_server(client:'any_', imap_test_server:'any_'):
 
     conn_name = _new_conn_name()
     conn_id = _create_conn(client, imap_test_server, conn_name)
@@ -376,7 +383,7 @@ def test_ping_reaches_imap_test_server(client, imap_test_server):
 
 # ################################################################################################################################
 
-def test_imap_edit_updates_job(client, imap_test_server):
+def test_imap_edit_updates_job(client:'any_', imap_test_server:'any_'):
 
     conn_name = _new_conn_name()
     job_name = _scheduler.Job_Prefix + conn_name
@@ -396,7 +403,7 @@ def test_imap_edit_updates_job(client, imap_test_server):
 
 # ################################################################################################################################
 
-def test_job_edit_syncs_back_to_conn(client, imap_test_server):
+def test_job_edit_syncs_back_to_conn(client:'any_', imap_test_server:'any_'):
 
     conn_name = _new_conn_name()
     job_name = _scheduler.Job_Prefix + conn_name
@@ -420,7 +427,7 @@ def test_job_edit_syncs_back_to_conn(client, imap_test_server):
     )
 
     # The connection now shows the job's new definition, including the service read out of the extra data
-    item = _get_imap_item(client, conn_name)
+    item = cast_('any_', _get_imap_item(client, conn_name))
 
     assert str(item['scheduler_run_every']) == '7'
     assert item['scheduler_run_unit'] == _unit.Minutes
@@ -437,7 +444,7 @@ def test_job_edit_syncs_back_to_conn(client, imap_test_server):
 
 # ################################################################################################################################
 
-def test_job_delete_clears_conn(client, imap_test_server):
+def test_job_delete_clears_conn(client:'any_', imap_test_server:'any_'):
 
     conn_name = _new_conn_name()
     job_name = _scheduler.Job_Prefix + conn_name
@@ -449,7 +456,7 @@ def test_job_delete_clears_conn(client, imap_test_server):
     _ = client.delete(f'{_service_job}.delete', id=job_id)
 
     # The connection must not point to the deleted job any longer
-    item = _get_imap_item(client, conn_name)
+    item = cast_('any_', _get_imap_item(client, conn_name))
 
     assert not item['scheduler_job_id']
     assert not item['scheduler_run_every']
@@ -457,7 +464,7 @@ def test_job_delete_clears_conn(client, imap_test_server):
 
 # ################################################################################################################################
 
-def test_imap_edit_recreates_job_after_direct_job_delete(client, imap_test_server):
+def test_imap_edit_recreates_job_after_direct_job_delete(client:'any_', imap_test_server:'any_'):
 
     conn_name = _new_conn_name()
     job_name = _scheduler.Job_Prefix + conn_name
@@ -477,7 +484,7 @@ def test_imap_edit_recreates_job_after_direct_job_delete(client, imap_test_serve
 
 # ################################################################################################################################
 
-def test_imap_edit_clearing_fields_deletes_job(client, imap_test_server):
+def test_imap_edit_clearing_fields_deletes_job(client:'any_', imap_test_server:'any_'):
 
     conn_name = _new_conn_name()
     job_name = _scheduler.Job_Prefix + conn_name
@@ -495,12 +502,12 @@ def test_imap_edit_clearing_fields_deletes_job(client, imap_test_server):
     assert job_name not in _get_job_names(client)
 
     # .. and the connection no longer points to it.
-    item = _get_imap_item(client, conn_name)
+    item = cast_('any_', _get_imap_item(client, conn_name))
     assert not item['scheduler_job_id']
 
 # ################################################################################################################################
 
-def test_partial_scheduler_fields_are_rejected(client, imap_test_server):
+def test_partial_scheduler_fields_are_rejected(client:'any_', imap_test_server:'any_'):
 
     conn_name = _new_conn_name()
     job_name = _scheduler.Job_Prefix + conn_name
@@ -520,7 +527,7 @@ def test_partial_scheduler_fields_are_rejected(client, imap_test_server):
 
 # ################################################################################################################################
 
-def test_conn_delete_removes_job(client, imap_test_server):
+def test_conn_delete_removes_job(client:'any_', imap_test_server:'any_'):
 
     conn_name = _new_conn_name()
     job_name = _scheduler.Job_Prefix + conn_name
@@ -537,7 +544,7 @@ def test_conn_delete_removes_job(client, imap_test_server):
 
 # ################################################################################################################################
 
-def test_conn_without_scheduler_fields_creates_no_job(client, imap_test_server):
+def test_conn_without_scheduler_fields_creates_no_job(client:'any_', imap_test_server:'any_'):
 
     conn_name = _new_conn_name()
     job_name = _scheduler.Job_Prefix + conn_name
@@ -548,7 +555,7 @@ def test_conn_without_scheduler_fields_creates_no_job(client, imap_test_server):
     assert job_name not in _get_job_names(client)
 
     # .. and its row carries no scheduler fields.
-    item = _get_imap_item(client, conn_name)
+    item = cast_('any_', _get_imap_item(client, conn_name))
     assert not item['scheduler_job_id']
     assert not item['scheduler_service']
 
@@ -559,7 +566,7 @@ def test_conn_without_scheduler_fields_creates_no_job(client, imap_test_server):
 
 # ################################################################################################################################
 
-def test_dispatch_invokes_service_per_message(client, imap_test_server):
+def test_dispatch_invokes_service_per_message(client:'any_', imap_test_server:'any_'):
 
     subject_first = 'Test message one ' + uuid4().hex[:8]
     subject_second = 'Test message two ' + uuid4().hex[:8]
@@ -599,7 +606,7 @@ def test_dispatch_invokes_service_per_message(client, imap_test_server):
 
 # ################################################################################################################################
 
-def test_dispatch_skips_seen_messages(client, imap_test_server):
+def test_dispatch_skips_seen_messages(client:'any_', imap_test_server:'any_'):
 
     subject = 'Test message already seen ' + uuid4().hex[:8]
     uid = imap_test_server.add_message(_sender, _recipient, subject, 'Message body to process once')
@@ -619,7 +626,7 @@ def test_dispatch_skips_seen_messages(client, imap_test_server):
 
 # ################################################################################################################################
 
-def test_dispatch_error_leaves_message_unseen(client, imap_test_server):
+def test_dispatch_error_leaves_message_unseen(client:'any_', imap_test_server:'any_'):
 
     subject = 'Test message that fails ' + uuid4().hex[:8]
     uid = imap_test_server.add_message(_sender, _recipient, subject, 'Message body that will not be processed')
@@ -640,7 +647,7 @@ def test_dispatch_error_leaves_message_unseen(client, imap_test_server):
 
 # ################################################################################################################################
 
-def test_dispatch_auto_ack_marks_message_seen(client, imap_test_server):
+def test_dispatch_auto_ack_marks_message_seen(client:'any_', imap_test_server:'any_'):
 
     subject = 'Test message auto ack ' + uuid4().hex[:8]
     uid = imap_test_server.add_message(_sender, _recipient, subject, 'Message body acked by the dispatch service')
@@ -658,7 +665,7 @@ def test_dispatch_auto_ack_marks_message_seen(client, imap_test_server):
 
 # ################################################################################################################################
 
-def test_dispatch_each_attachment_invokes_per_attachment(client, imap_test_server):
+def test_dispatch_each_attachment_invokes_per_attachment(client:'any_', imap_test_server:'any_'):
 
     subject = 'Test message with attachments ' + uuid4().hex[:8]
 
@@ -701,7 +708,7 @@ def test_dispatch_each_attachment_invokes_per_attachment(client, imap_test_serve
 
 # ################################################################################################################################
 
-def test_dispatch_each_attachment_partial_failure_leaves_unseen(client, imap_test_server):
+def test_dispatch_each_attachment_partial_failure_leaves_unseen(client:'any_', imap_test_server:'any_'):
 
     subject = 'Test message with a failing attachment ' + uuid4().hex[:8]
 
@@ -730,7 +737,7 @@ def test_dispatch_each_attachment_partial_failure_leaves_unseen(client, imap_tes
 
 # ################################################################################################################################
 
-def test_dispatch_each_attachment_without_attachments_acks(client, imap_test_server):
+def test_dispatch_each_attachment_without_attachments_acks(client:'any_', imap_test_server:'any_'):
 
     subject = 'Test message without attachments ' + uuid4().hex[:8]
     uid = imap_test_server.add_message(_sender, _recipient, subject, 'Message body without any attachments')
@@ -749,7 +756,7 @@ def test_dispatch_each_attachment_without_attachments_acks(client, imap_test_ser
 
 # ################################################################################################################################
 
-def test_dispatch_via_real_scheduler_fire(client, imap_test_server, scheduler_process):
+def test_dispatch_via_real_scheduler_fire(client:'any_', imap_test_server:'any_', scheduler_process:'any_'):
 
     conn_name = _new_conn_name()
     subject = 'Test message via scheduler ' + uuid4().hex[:8]

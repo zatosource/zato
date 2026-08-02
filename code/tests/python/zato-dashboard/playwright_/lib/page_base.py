@@ -42,7 +42,7 @@ class ZatoListPage:
         _ = page.goto(url)
 
         # .. and wait for the table to appear.
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
 # ################################################################################################################################
 
@@ -93,7 +93,7 @@ class ZatoListPage:
 
         # Click the create link ..
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         # .. fill in each field ..
         for field_name, value in fields.items():
@@ -104,7 +104,7 @@ class ZatoListPage:
         page.click('#create-form input[type="submit"]')
 
         # .. and wait for the dialog to close.
-        page.wait_for_selector('#create-div', state='hidden', timeout=5000)
+        _ = page.wait_for_selector('#create-div', state='hidden', timeout=5000)
 
 # ################################################################################################################################
 
@@ -117,7 +117,7 @@ class ZatoListPage:
         edit_link = row.query_selector('a[href*="edit"]')
         edit_link.click()
 
-        page.wait_for_selector('#edit-div', state='visible')
+        _ = page.wait_for_selector('#edit-div', state='visible')
 
         # .. fill in each field ..
         for field_name, value in fields.items():
@@ -129,7 +129,7 @@ class ZatoListPage:
         page.click('#edit-form input[type="submit"]')
 
         # .. and wait for the dialog to close.
-        page.wait_for_selector('#edit-div', state='hidden', timeout=5000)
+        _ = page.wait_for_selector('#edit-div', state='hidden', timeout=5000)
 
 # ################################################################################################################################
 
@@ -143,7 +143,7 @@ class ZatoListPage:
         delete_link.click()
 
         # .. wait for the confirmation dialog and click OK ..
-        page.wait_for_selector('#popup_container', state='visible')
+        _ = page.wait_for_selector('#popup_container', state='visible')
         page.click('#popup_ok')
 
         # .. and wait for the row removal animation.
@@ -161,12 +161,12 @@ class ZatoListPage:
         password_link.click()
 
         # .. fill in the new password ..
-        page.wait_for_selector('#change_password-div', state='visible')
+        _ = page.wait_for_selector('#change_password-div', state='visible')
         page.fill('#change_password-form #id_password', new_password)
 
         # .. and submit.
         page.click('#change_password-form input[type="submit"]')
-        page.wait_for_selector('#change_password-div', state='hidden', timeout=5000)
+        _ = page.wait_for_selector('#change_password-div', state='hidden', timeout=5000)
 
 # ################################################################################################################################
 
@@ -209,6 +209,25 @@ class ZatoListPage:
 
         # .. nothing was found.
         raise AssertionError(f'Row with name "{name}" not found in table')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def text_of(page:'Page', selector:'str') -> 'str':
+    """ The text of an element the caller expects to be on the page.
+    """
+    out = page.text_content(selector)
+    assert out is not None, f'No element matching `{selector}`'
+    return out
+
+# ################################################################################################################################
+
+def attribute_of(page:'Page', selector:'str', name:'str') -> 'str':
+    """ One attribute of an element the caller expects to be on the page.
+    """
+    out = page.get_attribute(selector, name)
+    assert out is not None, f'No attribute `{name}` on `{selector}`'
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

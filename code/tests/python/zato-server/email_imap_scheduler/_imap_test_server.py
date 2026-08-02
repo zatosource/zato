@@ -11,12 +11,14 @@ import logging
 import socketserver
 import threading
 from email.message import EmailMessage
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import bytesnone, strdictlist, strdictlistnone, strlist
+    from zato.common.typing_ import any_, bytesnone, strdictlist, strdictlistnone, strlist
+    any_ = any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -32,7 +34,7 @@ class IMAPTestRequestHandler(socketserver.StreamRequestHandler):
     """
 
     def _respond(self, data:'bytes') -> 'None':
-        self.wfile.write(data + b'\r\n')
+        _ = self.wfile.write(data + b'\r\n')
 
 # ################################################################################################################################
 
@@ -46,7 +48,7 @@ class IMAPTestRequestHandler(socketserver.StreamRequestHandler):
     def _handle_select(self, tag:'str') -> 'bool':
 
         # The client is told how many messages the mailbox holds at this moment
-        message_count = self.server.get_message_count()
+        message_count = cast_('any_', self.server).get_message_count()
 
         self._respond(f'* {message_count} EXISTS'.encode('utf-8'))
         self._respond(b'* 0 RECENT')
@@ -69,9 +71,9 @@ class IMAPTestRequestHandler(socketserver.StreamRequestHandler):
 
         # The UNSEEN criteria narrows the results down to unseen messages, anything else returns all of them
         if 'UNSEEN' in criteria:
-            uid_list = self.server.get_uid_list(unseen_only=True)
+            uid_list = cast_('any_', self.server).get_uid_list(unseen_only=True)
         else:
-            uid_list = self.server.get_uid_list(unseen_only=False)
+            uid_list = cast_('any_', self.server).get_uid_list(unseen_only=False)
 
         joined = ' '.join(uid_list)
 
@@ -84,7 +86,7 @@ class IMAPTestRequestHandler(socketserver.StreamRequestHandler):
 
         # The UID of the message to fetch comes right after "TAG UID FETCH"
         uid = parts[3]
-        data = self.server.get_message_data(uid)
+        data = cast_('any_', self.server).get_message_data(uid)
 
         # A message that does not exist results in an empty, yet successful, response
         if data is None:
@@ -96,9 +98,9 @@ class IMAPTestRequestHandler(socketserver.StreamRequestHandler):
         data_length = len(data)
         header = f'* {uid} FETCH (UID {uid} BODY[] {{{data_length}}}'.encode('utf-8')
 
-        self.wfile.write(header + b'\r\n')
-        self.wfile.write(data)
-        self.wfile.write(b')\r\n')
+        _ = self.wfile.write(header + b'\r\n')
+        _ = self.wfile.write(data)
+        _ = self.wfile.write(b')\r\n')
 
         self._respond(tag.encode('utf-8') + b' OK UID FETCH completed')
 
@@ -113,7 +115,7 @@ class IMAPTestRequestHandler(socketserver.StreamRequestHandler):
         flags = ' '.join(parts[4:]).upper()
 
         if 'SEEN' in flags:
-            self.server.mark_seen(uid)
+            cast_('any_', self.server).mark_seen(uid)
 
         self._respond(tag.encode('utf-8') + b' OK UID STORE completed')
 
@@ -168,7 +170,7 @@ class IMAPTestRequestHandler(socketserver.StreamRequestHandler):
                 continue
 
             # Every received command is recorded for tests to assert on
-            self.server.received_commands.append(text)
+            cast_('any_', self.server).received_commands.append(text)
             logger.info('IMAP test server received: %s', text)
 
             parts = text.split(' ')
@@ -210,7 +212,7 @@ class IMAPTestServer(socketserver.ThreadingTCPServer):
         super().__init__(('127.0.0.1', 0), IMAPTestRequestHandler)
 
         self.received_commands = []
-        self.host, self.port = self.server_address
+        self.host, self.port = self.server_address[:2]
 
         # The in-memory mailbox - a list of dicts with the uid, raw message bytes and the seen flag,
         # guarded by a lock because each client connection is served in its own thread.

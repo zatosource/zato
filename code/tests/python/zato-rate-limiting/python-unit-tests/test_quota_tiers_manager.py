@@ -14,11 +14,18 @@ from unittest.mock import MagicMock, patch
 from zato.common.api import Groups
 from zato.common.json_internal import dumps
 from zato.server.quota_tiers import QuotaTiersManager
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _make_rule_dicts(rate=10, burst=20, limit=100, limit_unit='minute', cidr='10.0.0.0/8'):
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _make_rule_dicts(rate:'any_' = 10, burst:'any_' = 20, limit:'any_' = 100, limit_unit:'any_' = 'minute', cidr:'any_' = '10.0.0.0/8'):
     return [{
         'cidr_list': [cidr],
         'time_range': [{
@@ -34,7 +41,7 @@ def _make_rule_dicts(rate=10, burst=20, limit=100, limit_unit='minute', cidr='10
 
 # ################################################################################################################################
 
-def _make_sec_row(sec_def_id, name, opaque=None):
+def _make_sec_row(sec_def_id:'any_', name:'any_', opaque:'any_' = None):
     """ Builds a stand-in for a SecurityBase row.
     """
     out = type('MockSecRow', (), {
@@ -47,7 +54,7 @@ def _make_sec_row(sec_def_id, name, opaque=None):
 
 # ################################################################################################################################
 
-def _make_manager(tier_rows, sec_rows, group_rows, member_rows_by_group):
+def _make_manager(tier_rows:'any_', sec_rows:'any_', group_rows:'any_', member_rows_by_group:'any_'):
     """ Builds a QuotaTiersManager whose SQL access is fully mocked.
 
     tier_rows - rows returned for the tier listing (dicts with id, name, description, rules)
@@ -67,7 +74,7 @@ def _make_manager(tier_rows, sec_rows, group_rows, member_rows_by_group):
     mock_session.query.return_value.filter.return_value.all.return_value = sec_rows
 
     # Everything else comes through GenericObjectWrapper.get_list
-    def get_list_side_effect(*args, **kwargs):
+    def get_list_side_effect(*args:'any_', **kwargs:'any_'):
 
         # No arguments means the tier listing
         if not args:
@@ -208,7 +215,7 @@ class InstallTierAssignmentsTestCase(unittest.TestCase):
 
         manager.install_tier_assignments()
 
-        manager.server.rate_limiting_manager.set_sec_def_config.assert_called_once_with(10, tier_rules)
+        cast_('any_', manager.server.rate_limiting_manager.set_sec_def_config).assert_called_once_with(10, tier_rules)
 
     def test_install_clears_definitions_no_longer_governed(self):
         """ A definition that lost its tier reference has its rules cleared on the next pass.
@@ -224,13 +231,13 @@ class InstallTierAssignmentsTestCase(unittest.TestCase):
         manager.install_tier_assignments()
 
         # .. now the definition drops its tier reference ..
-        sec_rows[0].opaque1 = None
-        manager.server.rate_limiting_manager.reset_mock()
+        cast_('any_', sec_rows[0]).opaque1 = None
+        cast_('any_', manager.server.rate_limiting_manager).reset_mock()
 
         # .. and the second pass clears the previously installed rules.
         manager.install_tier_assignments()
 
-        manager.server.rate_limiting_manager.set_sec_def_config.assert_called_once_with(10, [])
+        cast_('any_', manager.server.rate_limiting_manager.set_sec_def_config).assert_called_once_with(10, [])
 
     def test_install_does_not_clear_definitions_that_switched_to_own_rules(self):
         """ A definition that replaced its tier with own rules is left alone by the tier pass.
@@ -246,13 +253,13 @@ class InstallTierAssignmentsTestCase(unittest.TestCase):
         manager.install_tier_assignments()
 
         # .. now the definition switches to its own rules ..
-        sec_rows[0].opaque1 = dumps({'rate_limiting': _make_rule_dicts(rate=1)})
-        manager.server.rate_limiting_manager.reset_mock()
+        cast_('any_', sec_rows[0]).opaque1 = dumps({'rate_limiting': _make_rule_dicts(rate=1)})
+        cast_('any_', manager.server.rate_limiting_manager).reset_mock()
 
         # .. and the second pass must not touch it at all.
         manager.install_tier_assignments()
 
-        manager.server.rate_limiting_manager.set_sec_def_config.assert_not_called()
+        cast_('any_', manager.server.rate_limiting_manager.set_sec_def_config).assert_not_called()
 
     def test_tier_edit_reinstalls_rules(self):
         """ After a tier's rules change, the next pass reinstalls the new rules.
@@ -270,12 +277,12 @@ class InstallTierAssignmentsTestCase(unittest.TestCase):
 
         # .. the tier is edited ..
         tier_rows[0]['rules'] = new_rules
-        manager.server.rate_limiting_manager.reset_mock()
+        cast_('any_', manager.server.rate_limiting_manager).reset_mock()
 
         # .. and the second pass installs the new rules.
         manager.install_tier_assignments()
 
-        manager.server.rate_limiting_manager.set_sec_def_config.assert_called_once_with(10, new_rules)
+        cast_('any_', manager.server.rate_limiting_manager.set_sec_def_config).assert_called_once_with(10, new_rules)
 
 # ################################################################################################################################
 # ################################################################################################################################

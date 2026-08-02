@@ -29,6 +29,13 @@ from zato.common.soap.security.wss import apply_wss, Mode
 # ################################################################################################################################
 
 from certs import certificate_pem_path, private_key_pem_path
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -91,7 +98,7 @@ def _sample_envelope():
 
 # ################################################################################################################################
 
-def _reparse(envelope):
+def _reparse(envelope:'any_'):
     """ Serializes and reparses an envelope, as would happen over the wire.
     """
     out = etree.fromstring(to_bytes(envelope))
@@ -99,13 +106,13 @@ def _reparse(envelope):
 
 # ################################################################################################################################
 
-def _username_token_config(use_digest):
+def _username_token_config(use_digest:'any_'):
     out = {'mode': Mode.UsernameToken, 'username': 'MYUSER', 'password': 'MYPASS', 'use_digest': use_digest}
     return out
 
 # ################################################################################################################################
 
-def _x509_config(parties, sign, encrypt):
+def _x509_config(parties:'any_', sign:'any_', encrypt:'any_'):
     """ The config dict of an outgoing connection's X.509 definition.
     """
     out = {
@@ -137,7 +144,7 @@ def _saml_config():
 
 # ################################################################################################################################
 
-def _security_header_of(wire):
+def _security_header_of(wire:'any_'):
     """ Returns the wsse:Security header of a reparsed envelope.
     """
     out = wire.find(f'.//{_wsse}Security')
@@ -147,14 +154,14 @@ def _security_header_of(wire):
 
 # ################################################################################################################################
 
-def _validate(schema, element):
+def _validate(schema:'any_', element:'any_'):
     """ Validates a subtree against one of the official schemas.
     """
     schema.assertValid(deepcopy(element))
 
 # ################################################################################################################################
 
-def _canonicalize(element):
+def _canonicalize(element:'any_'):
     """ Exclusive canonicalization straight through lxml - independent
     of any canonicalization helper in the code under test.
     """
@@ -163,7 +170,7 @@ def _canonicalize(element):
 
 # ################################################################################################################################
 
-def _find_by_wsu_id(wire, wsu_id):
+def _find_by_wsu_id(wire:'any_', wsu_id:'any_'):
     """ Finds the element a ds:Reference points at, walking the tree directly.
     """
     for element in wire.iter():
@@ -184,13 +191,13 @@ class TestUsernameTokenConformance:
     OASIS schema and the digest recomputes from the profile's own formula.
     """
 
-    def test_text_token_validates_against_wsse_schema(self, wsse_schema):
+    def test_text_token_validates_against_wsse_schema(self, wsse_schema:'any_'):
         envelope = _sample_envelope()
         apply_wss(envelope, _username_token_config(use_digest=False))
 
         _validate(wsse_schema, _security_header_of(_reparse(envelope)))
 
-    def test_digest_token_validates_against_wsse_schema(self, wsse_schema):
+    def test_digest_token_validates_against_wsse_schema(self, wsse_schema:'any_'):
         envelope = _sample_envelope()
         apply_wss(envelope, _username_token_config(use_digest=True))
 
@@ -204,8 +211,8 @@ class TestUsernameTokenConformance:
         digest_envelope = _sample_envelope()
         apply_wss(digest_envelope, _username_token_config(use_digest=True))
 
-        text_password = _reparse(text_envelope).find(f'.//{_wsse}Password')
-        digest_password = _reparse(digest_envelope).find(f'.//{_wsse}Password')
+        text_password = cast_('any_', _reparse(text_envelope).find(f'.//{_wsse}Password'))
+        digest_password = cast_('any_', _reparse(digest_envelope).find(f'.//{_wsse}Password'))
 
         assert text_password.get('Type') == _password_text_uri
         assert digest_password.get('Type') == _password_digest_uri
@@ -214,7 +221,7 @@ class TestUsernameTokenConformance:
         envelope = _sample_envelope()
         apply_wss(envelope, _username_token_config(use_digest=True))
 
-        nonce = _reparse(envelope).find(f'.//{_wsse}Nonce')
+        nonce = cast_('any_', _reparse(envelope).find(f'.//{_wsse}Nonce'))
 
         assert nonce.get('EncodingType') == _nonce_encoding_uri
 
@@ -224,7 +231,7 @@ class TestUsernameTokenConformance:
         envelope = _sample_envelope()
         apply_wss(envelope, _username_token_config(use_digest=True))
 
-        token = _reparse(envelope).find(f'.//{_wsse}UsernameToken')
+        token = cast_('any_', _reparse(envelope).find(f'.//{_wsse}UsernameToken'))
 
         nonce = b64decode(token.find(f'{_wsse}Nonce').text)
         created = token.find(f'{_wsu}Created').text
@@ -244,7 +251,7 @@ class TestX509SignatureConformance:
     independently with lxml c14n and the cryptography library alone.
     """
 
-    def test_signed_security_header_validates_against_wsse_schema(self, parties, wsse_schema):
+    def test_signed_security_header_validates_against_wsse_schema(self, parties:'any_', wsse_schema:'any_'):
         # The secext schema imports wsu and xmldsig, so this validates
         # the BinarySecurityToken, the Timestamp and the whole Signature strictly.
         envelope = _sample_envelope()
@@ -252,7 +259,7 @@ class TestX509SignatureConformance:
 
         _validate(wsse_schema, _security_header_of(_reparse(envelope)))
 
-    def test_signature_validates_against_dsig_schema(self, parties, dsig_schema):
+    def test_signature_validates_against_dsig_schema(self, parties:'any_', dsig_schema:'any_'):
         envelope = _sample_envelope()
         apply_wss(envelope, _x509_config(parties, sign=True, encrypt=False))
 
@@ -260,7 +267,7 @@ class TestX509SignatureConformance:
 
         _validate(dsig_schema, signature)
 
-    def test_timestamp_validates_against_wsu_schema(self, parties, wsu_schema):
+    def test_timestamp_validates_against_wsu_schema(self, parties:'any_', wsu_schema:'any_'):
         envelope = _sample_envelope()
         apply_wss(envelope, _x509_config(parties, sign=True, encrypt=False))
 
@@ -268,18 +275,18 @@ class TestX509SignatureConformance:
 
         _validate(wsu_schema, timestamp)
 
-    def test_signed_envelope_validates_against_soap12_schema(self, parties, soap12_schema):
+    def test_signed_envelope_validates_against_soap12_schema(self, parties:'any_', soap12_schema:'any_'):
         envelope = _sample_envelope()
         apply_wss(envelope, _x509_config(parties, sign=True, encrypt=False))
 
         soap12_schema.assertValid(_reparse(envelope))
 
-    def test_algorithm_identifiers_match_the_specs(self, parties):
+    def test_algorithm_identifiers_match_the_specs(self, parties:'any_'):
         envelope = _sample_envelope()
         apply_wss(envelope, _x509_config(parties, sign=True, encrypt=False))
 
         wire = _reparse(envelope)
-        signed_info = wire.find(f'.//{_dsig}SignedInfo')
+        signed_info = cast_('any_', wire.find(f'.//{_dsig}SignedInfo'))
 
         canonicalization_method = signed_info.find(f'{_dsig}CanonicalizationMethod')
         signature_method = signed_info.find(f'{_dsig}SignatureMethod')
@@ -290,18 +297,18 @@ class TestX509SignatureConformance:
         for digest_method in signed_info.findall(f'.//{_dsig}DigestMethod'):
             assert digest_method.get('Algorithm') == _sha256_uri
 
-    def test_binary_security_token_carries_the_der_certificate(self, parties):
+    def test_binary_security_token_carries_the_der_certificate(self, parties:'any_'):
         # X.509 Token Profile section 3.1 - an X509v3 token is the base64
         # of the DER encoding of the certificate, byte for byte.
         envelope = _sample_envelope()
         apply_wss(envelope, _x509_config(parties, sign=True, encrypt=False))
 
-        token = _reparse(envelope).find(f'.//{_wsse}BinarySecurityToken')
+        token = cast_('any_', _reparse(envelope).find(f'.//{_wsse}BinarySecurityToken'))
 
         assert token.get('ValueType') == _x509v3_uri
         assert b64decode(token.text) == parties.sender.signing_certificate.public_bytes(Encoding.DER)
 
-    def test_reference_digests_recompute_independently(self, parties):
+    def test_reference_digests_recompute_independently(self, parties:'any_'):
         # XML Signature core validation, step one - each ds:Reference digest
         # is the SHA-256 of the exclusive canonical form of its target element.
         envelope = _sample_envelope()
@@ -314,16 +321,16 @@ class TestX509SignatureConformance:
         assert len(references) == 2
 
         for reference in references:
-            wsu_id = reference.get('URI').removeprefix('#')
+            wsu_id = cast_('any_', reference.get('URI')).removeprefix('#')
             target = _find_by_wsu_id(wire, wsu_id)
 
             recomputed_bytes = sha256(_canonicalize(target)).digest()
             recomputed = b64encode(recomputed_bytes).decode('ascii')
 
-            declared = reference.find(f'{_dsig}DigestValue').text
+            declared = cast_('any_', reference.find(f'{_dsig}DigestValue')).text
             assert declared == recomputed
 
-    def test_signature_value_verifies_with_cryptography_alone(self, parties):
+    def test_signature_value_verifies_with_cryptography_alone(self, parties:'any_'):
         # XML Signature core validation, step two - the SignatureValue is
         # an RSASSA-PKCS1-v1_5 SHA-256 signature over the canonical SignedInfo,
         # verified here directly against the signer's public key.
@@ -333,7 +340,7 @@ class TestX509SignatureConformance:
         wire = _reparse(envelope)
 
         signed_info = wire.find(f'.//{_dsig}SignedInfo')
-        signature_value = b64decode(wire.find(f'.//{_dsig}SignatureValue').text)
+        signature_value = b64decode(cast_('any_', wire.find(f'.//{_dsig}SignatureValue')).text)
 
         public_key = parties.sender.signing_certificate.public_key()
 
@@ -349,7 +356,7 @@ class TestX509EncryptionConformance:
     using only what the message itself declares.
     """
 
-    def test_encrypted_elements_validate_against_xenc_schemas(self, parties, xenc11_schema):
+    def test_encrypted_elements_validate_against_xenc_schemas(self, parties:'any_', xenc11_schema:'any_'):
         envelope = _sample_envelope()
         apply_wss(envelope, _x509_config(parties, sign=False, encrypt=True))
 
@@ -360,27 +367,27 @@ class TestX509EncryptionConformance:
         _validate(xenc11_schema, wire.find(f'.//{_xenc}EncryptedKey'))
         _validate(xenc11_schema, wire.find(f'.//{_xenc}EncryptedData'))
 
-    def test_encrypted_envelope_validates_against_soap12_schema(self, parties, soap12_schema):
+    def test_encrypted_envelope_validates_against_soap12_schema(self, parties:'any_', soap12_schema:'any_'):
         envelope = _sample_envelope()
         apply_wss(envelope, _x509_config(parties, sign=True, encrypt=True))
 
         soap12_schema.assertValid(_reparse(envelope))
 
-    def test_encryption_algorithm_identifiers_match_the_specs(self, parties):
+    def test_encryption_algorithm_identifiers_match_the_specs(self, parties:'any_'):
         envelope = _sample_envelope()
         apply_wss(envelope, _x509_config(parties, sign=False, encrypt=True))
 
         wire = _reparse(envelope)
 
-        key_method = wire.find(f'.//{_xenc}EncryptedKey/{_xenc}EncryptionMethod')
-        data_method = wire.find(f'.//{_xenc}EncryptedData/{_xenc}EncryptionMethod')
+        key_method = cast_('any_', wire.find(f'.//{_xenc}EncryptedKey/{_xenc}EncryptionMethod'))
+        data_method = cast_('any_', wire.find(f'.//{_xenc}EncryptedData/{_xenc}EncryptionMethod'))
         mgf = key_method.find(f'{_xenc11}MGF')
 
         assert key_method.get('Algorithm') == _rsa_oaep_uri
         assert mgf.get('Algorithm') == _mgf1_sha256_uri
         assert data_method.get('Algorithm') == _aes128_gcm_uri
 
-    def test_ciphertext_decrypts_with_cryptography_alone(self, parties):
+    def test_ciphertext_decrypts_with_cryptography_alone(self, parties:'any_'):
         # The declared algorithms must match the actual bytes:
         # unwrap the content key with RSA-OAEP over SHA-256, split the GCM IV
         # off the CipherValue per XML Encryption 1.1 and decrypt - all
@@ -390,11 +397,11 @@ class TestX509EncryptionConformance:
 
         wire = _reparse(envelope)
 
-        wrapped_key = b64decode(wire.find(f'.//{_xenc}EncryptedKey//{_xenc}CipherValue').text)
+        wrapped_key = b64decode(cast_('any_', wire.find(f'.//{_xenc}EncryptedKey//{_xenc}CipherValue')).text)
         oaep_padding = OAEP(mgf=MGF1(SHA256()), algorithm=SHA256(), label=None)
         content_key = parties.receiver.decryption_key.decrypt(wrapped_key, oaep_padding)
 
-        cipher_bytes = b64decode(wire.find(f'.//{_xenc}EncryptedData//{_xenc}CipherValue').text)
+        cipher_bytes = b64decode(cast_('any_', wire.find(f'.//{_xenc}EncryptedData//{_xenc}CipherValue')).text)
         nonce = cipher_bytes[:_gcm_nonce_size_bytes]
         ciphertext = cipher_bytes[_gcm_nonce_size_bytes:]
 
@@ -411,7 +418,7 @@ class TestSAMLConformance:
     and its structure matches what the core specification prescribes.
     """
 
-    def test_assertion_validates_against_official_schema(self, saml_schema):
+    def test_assertion_validates_against_official_schema(self, saml_schema:'any_'):
         envelope = _sample_envelope()
         apply_wss(envelope, _saml_config())
 
@@ -423,7 +430,7 @@ class TestSAMLConformance:
         envelope = _sample_envelope()
         apply_wss(envelope, _saml_config())
 
-        assertion = _reparse(envelope).find(f'.//{_saml2}Assertion')
+        assertion = cast_('any_', _reparse(envelope).find(f'.//{_saml2}Assertion'))
 
         # Core section 2.3.3 - Version is always 2.0 and ID and IssueInstant are required.
         assert assertion.get('Version') == '2.0'
@@ -439,7 +446,7 @@ class TestSAMLConformance:
         assert conditions.get('NotBefore')
         assert conditions.get('NotOnOrAfter')
 
-    def test_secured_envelope_validates_against_soap12_schema(self, soap12_schema):
+    def test_secured_envelope_validates_against_soap12_schema(self, soap12_schema:'any_'):
         envelope = _sample_envelope()
         apply_wss(envelope, _saml_config())
 

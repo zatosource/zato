@@ -25,6 +25,7 @@ from zato.common.exception import (
 from zato.server.connection.http_soap.channel import (
     RequestDispatcher, RequestHandler, _RequestMeta, status_response
 )
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -474,7 +475,7 @@ class InvokeServiceTestCase(unittest.TestCase):
         worker_store = MagicMock()
 
         _ = ctx.dispatcher._invoke_service(
-            _test_cid, meta, '/test/path', channel_item, wsgi_environ,
+            _test_cid, meta, cast_('any_', '/test/path'), channel_item, wsgi_environ,
             b'payload', {}, worker_store, {})
 
         ctx.mock_create_channel_params.assert_called_once()
@@ -492,7 +493,7 @@ class InvokeServiceTestCase(unittest.TestCase):
         worker_store = MagicMock()
 
         _ = ctx.dispatcher._invoke_service(
-            _test_cid, meta, '/test/path', channel_item, wsgi_environ,
+            _test_cid, meta, cast_('any_', '/test/path'), channel_item, wsgi_environ,
             b'payload', {}, worker_store, {})
 
         call_args = ctx.mock_handle.call_args[0]
@@ -513,7 +514,7 @@ class InvokeServiceTestCase(unittest.TestCase):
         headers_container = {'x-custom': 'val'}
 
         _ = ctx.dispatcher._invoke_service(
-            _test_cid, meta, '/test/path', channel_item, wsgi_environ,
+            _test_cid, meta, cast_('any_', '/test/path'), channel_item, wsgi_environ,
             b'payload', {'key': 'val'}, worker_store, headers_container)
 
         ctx.mock_handle.assert_called_once_with(
@@ -534,7 +535,7 @@ class InvokeServiceTestCase(unittest.TestCase):
         worker_store = MagicMock()
 
         result = ctx.dispatcher._invoke_service(
-            _test_cid, meta, '/test/path', channel_item, wsgi_environ,
+            _test_cid, meta, cast_('any_', '/test/path'), channel_item, wsgi_environ,
             b'payload', {}, worker_store, {})
 
         self.assertIs(result, response)
@@ -551,7 +552,7 @@ class InvokeServiceTestCase(unittest.TestCase):
         worker_store = MagicMock()
 
         _ = ctx.dispatcher._invoke_service(
-            _test_cid, meta, '/test/path', channel_item, wsgi_environ,
+            _test_cid, meta, cast_('any_', '/test/path'), channel_item, wsgi_environ,
             b'payload', {'post': 'data'}, worker_store, {})
 
         ctx.mock_create_channel_params.assert_called_once_with(
@@ -893,7 +894,7 @@ class InvokeServiceSecDefTestCase(unittest.TestCase):
         worker_store = MagicMock()
 
         _ = ctx.dispatcher._invoke_service(
-            _test_cid, meta, '/test/path', channel_item, wsgi_environ,
+            _test_cid, meta, cast_('any_', '/test/path'), channel_item, wsgi_environ,
             b'payload', {}, worker_store, {})
 
         ctx.mock_create_channel_params.assert_called_once()
@@ -910,7 +911,7 @@ class InvokeServiceSecDefTestCase(unittest.TestCase):
         worker_store = MagicMock()
 
         _ = ctx.dispatcher._invoke_service(
-            _test_cid, meta, '/test/path', channel_item, wsgi_environ,
+            _test_cid, meta, cast_('any_', '/test/path'), channel_item, wsgi_environ,
             b'payload', {}, worker_store, {})
 
         ctx.mock_create_channel_params.assert_not_called()
@@ -1367,21 +1368,21 @@ class HandleDispatchErrorTestCase(unittest.TestCase):
 # ################################################################################################################################
 
     def test_unauthorized_sets_401_status(self) -> 'None':
-        result, env = self._call(Unauthorized(_test_cid, 'No auth', 'Basic realm="test"'))
+        _, env = self._call(Unauthorized(_test_cid, 'No auth', 'Basic realm="test"'))
 
         self.assertIn('401', env['zato.http.response.status'])
 
 # ################################################################################################################################
 
     def test_unauthorized_with_challenge_sets_www_authenticate(self) -> 'None':
-        result, env = self._call(Unauthorized(_test_cid, 'No auth', 'Basic realm="test"'))
+        _, env = self._call(Unauthorized(_test_cid, 'No auth', 'Basic realm="test"'))
 
         self.assertEqual(env['zato.http.response.headers']['WWW-Authenticate'], 'Basic realm="test"')
 
 # ################################################################################################################################
 
     def test_unauthorized_without_challenge_no_www_authenticate(self) -> 'None':
-        result, env = self._call(Unauthorized(_test_cid, 'No auth', ''))
+        _, env = self._call(Unauthorized(_test_cid, 'No auth', ''))
 
         self.assertNotIn('WWW-Authenticate', env['zato.http.response.headers'])
 
@@ -1399,7 +1400,7 @@ class HandleDispatchErrorTestCase(unittest.TestCase):
     def test_bad_request_non_admin_needs_msg_true(self) -> 'None':
         exc = BadRequest(_test_cid, 'Visible msg')
         exc.needs_msg = True
-        result, env = self._call(exc)
+        result, _ = self._call(exc)
 
         self.assertIn('Visible msg', result)
 
@@ -1408,7 +1409,7 @@ class HandleDispatchErrorTestCase(unittest.TestCase):
     def test_bad_request_non_admin_needs_msg_false(self) -> 'None':
         exc = BadRequest(_test_cid, 'Secret msg')
         exc.needs_msg = False
-        result, env = self._call(exc)
+        result, _ = self._call(exc)
 
         self.assertIn('Bad request', result)
         self.assertNotIn('Secret msg', result)
@@ -1416,35 +1417,35 @@ class HandleDispatchErrorTestCase(unittest.TestCase):
 # ################################################################################################################################
 
     def test_not_found_sets_404_status(self) -> 'None':
-        result, env = self._call(NotFound(_test_cid, 'Gone'))
+        _, env = self._call(NotFound(_test_cid, 'Gone'))
 
         self.assertIn('404', env['zato.http.response.status'])
 
 # ################################################################################################################################
 
     def test_method_not_allowed_sets_405_status(self) -> 'None':
-        result, env = self._call(MethodNotAllowed(_test_cid, 'No PUT'))
+        _, env = self._call(MethodNotAllowed(_test_cid, 'No PUT'))
 
         self.assertIn('405', env['zato.http.response.status'])
 
 # ################################################################################################################################
 
     def test_forbidden_sets_403_status(self) -> 'None':
-        result, env = self._call(Forbidden(_test_cid, 'Denied'))
+        _, env = self._call(Forbidden(_test_cid, 'Denied'))
 
         self.assertIn('403', env['zato.http.response.status'])
 
 # ################################################################################################################################
 
     def test_too_many_requests_sets_429_status(self) -> 'None':
-        result, env = self._call(TooManyRequests(_test_cid, 'Slow down'))
+        _, env = self._call(TooManyRequests(_test_cid, 'Slow down'))
 
         self.assertIn('429', env['zato.http.response.status'])
 
 # ################################################################################################################################
 
     def test_backend_invocation_error_sets_400_status(self) -> 'None':
-        result, env = self._call(BackendInvocationError(_test_cid, 'Backend fail'))
+        _, env = self._call(BackendInvocationError(_test_cid, 'Backend fail'))
 
         self.assertIn('400', env['zato.http.response.status'])
 
@@ -1490,7 +1491,7 @@ class HandleDispatchErrorTestCase(unittest.TestCase):
 
     def test_json_data_format_sets_json_content_type(self) -> 'None':
         channel_item = _make_channel_item({'data_format': DATA_FORMAT.JSON})
-        result, env = self._call(RuntimeError('err'), channel_item=channel_item)
+        _, env = self._call(RuntimeError('err'), channel_item=channel_item)
 
         self.assertEqual(env['zato.http.response.headers']['Content-Type'], CONTENT_TYPE['JSON'])
 
@@ -1498,7 +1499,7 @@ class HandleDispatchErrorTestCase(unittest.TestCase):
 
     def test_non_json_data_format_no_json_content_type(self) -> 'None':
         channel_item = _make_channel_item({'data_format': 'xml'})
-        result, env = self._call(RuntimeError('err'), channel_item=channel_item)
+        _, env = self._call(RuntimeError('err'), channel_item=channel_item)
 
         self.assertNotEqual(env['zato.http.response.headers'].get('Content-Type'), CONTENT_TYPE['JSON'])
 
@@ -1507,7 +1508,7 @@ class HandleDispatchErrorTestCase(unittest.TestCase):
     def test_service_missing_exception_no_traceback_logged(self) -> 'None':
         with patch('zato.server.connection.http_soap.channel.logger') as mock_logger:
             mock_logger.isEnabledFor.return_value = False
-            self._call(ServiceMissingException(_test_cid, 'Not deployed'))
+            _ = self._call(ServiceMissingException(_test_cid, 'Not deployed'))
 
             info_calls = [str(c) for c in mock_logger.info.call_args_list]
             traceback_logged = any('Caught an exception' in c for c in info_calls)
@@ -1518,7 +1519,7 @@ class HandleDispatchErrorTestCase(unittest.TestCase):
     @patch('zato.server.connection.http_soap.channel.logger')
     def test_non_service_missing_logs_traceback(self, mock_logger:'MagicMock') -> 'None':
         mock_logger.isEnabledFor.return_value = False
-        self._call(RuntimeError('Crash'))
+        _ = self._call(RuntimeError('Crash'))
 
         info_calls = [str(c) for c in mock_logger.info.call_args_list]
         traceback_logged = any('Caught an exception' in c for c in info_calls)
@@ -1531,7 +1532,7 @@ class HandleDispatchErrorTestCase(unittest.TestCase):
     def test_stack_format_called_when_available(self, mock_logger:'MagicMock', mock_stack_format:'MagicMock') -> 'None':
         mock_logger.isEnabledFor.return_value = False
         mock_stack_format.return_value = 'formatted'
-        self._call(RuntimeError('Err'))
+        _ = self._call(RuntimeError('Err'))
 
         mock_stack_format.assert_called_once()
 
@@ -1541,7 +1542,7 @@ class HandleDispatchErrorTestCase(unittest.TestCase):
     def test_trace1_enabled_logs_no_wrapper_message(self, mock_logger:'MagicMock') -> 'None':
         mock_logger.isEnabledFor.return_value = True
         channel_item = _make_channel_item({'transport': 'unknown', 'data_format': 'unknown'})
-        self._call(RuntimeError('err'), channel_item=channel_item)
+        _ = self._call(RuntimeError('err'), channel_item=channel_item)
 
         mock_logger.log.assert_called()
 
@@ -1551,7 +1552,7 @@ class HandleDispatchErrorTestCase(unittest.TestCase):
     def test_trace1_disabled_no_log(self, mock_logger:'MagicMock') -> 'None':
         mock_logger.isEnabledFor.return_value = False
         channel_item = _make_channel_item({'transport': 'unknown', 'data_format': 'unknown'})
-        self._call(RuntimeError('err'), channel_item=channel_item)
+        _ = self._call(RuntimeError('err'), channel_item=channel_item)
 
         mock_logger.log.assert_not_called()
 
@@ -1559,7 +1560,7 @@ class HandleDispatchErrorTestCase(unittest.TestCase):
 
     def test_error_wrapper_applied_for_json(self) -> 'None':
         channel_item = _make_channel_item({'data_format': DATA_FORMAT.JSON, 'transport': 'plain_http'})
-        result, env = self._call(RuntimeError('err'), channel_item=channel_item)
+        result, _ = self._call(RuntimeError('err'), channel_item=channel_item)
 
         self.assertIsNotNone(result)
 
@@ -1567,4 +1568,4 @@ class HandleDispatchErrorTestCase(unittest.TestCase):
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    unittest.main()
+    _ = unittest.main()

@@ -7,6 +7,7 @@
 
 use std::sync::LazyLock;
 
+use prometheus::core::Collector;
 use prometheus::{Encoder, GaugeVec, HistogramOpts, HistogramVec, IntCounter, IntCounterVec, IntGauge, Opts, Registry, TextEncoder};
 
 /// Duration histogram buckets matching the Python server's `zato_histogram_buckets`.
@@ -15,30 +16,49 @@ const ZATO_HISTOGRAM_BUCKETS: &[f64] = &[0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.
 /// Dedicated registry so we never expose default process metrics.
 static REGISTRY: LazyLock<Registry> = LazyLock::new(Registry::new);
 
+/// Adds a freshly built metric to the scheduler's registry and hands it back.
+///
+/// Every metric in this module is built from a name and a help string that are literals
+/// written a few lines above the call, so the only ways this can fail are a malformed name
+/// or the same metric being registered twice. Both are mistakes in this file rather than
+/// conditions a running scheduler can encounter or recover from, which is why the error is
+/// turned into a panic here instead of being propagated to every metric access.
+///
+/// # Panics
+///
+/// Panics when the metric cannot be built or is already registered.
+#[expect(clippy::expect_used, reason = "an invalid or duplicate metric name is a bug in this file")]
+fn register<M: Collector + Clone + 'static>(built: prometheus::Result<M>) -> M {
+    let metric = built.expect("Scheduler metric could not be built");
+    REGISTRY
+        .register(Box::new(metric.clone()))
+        .expect("Scheduler metric could not be registered");
+    metric
+}
+
 // ############################################################################
 // Gauges
 // ############################################################################
 
 /// Total number of jobs known to the scheduler (active + paused).
 pub static JOBS_TOTAL: LazyLock<IntGauge> = LazyLock::new(|| {
-    let gauge = IntGauge::new("zato_scheduler_jobs_total", "Total number of jobs known to the scheduler").unwrap();
-    REGISTRY.register(Box::new(gauge.clone())).unwrap();
-    gauge
+    register(IntGauge::new(
+        "zato_scheduler_jobs_total",
+        "Total number of jobs known to the scheduler",
+    ))
 });
 
 /// Number of active (enabled) jobs.
 pub static JOBS_ACTIVE: LazyLock<IntGauge> = LazyLock::new(|| {
-    let gauge = IntGauge::new("zato_scheduler_jobs_active", "Number of active (enabled) scheduler jobs").unwrap();
-    REGISTRY.register(Box::new(gauge.clone())).unwrap();
-    gauge
+    register(IntGauge::new(
+        "zato_scheduler_jobs_active",
+        "Number of active (enabled) scheduler jobs",
+    ))
 });
 
 /// Number of jobs currently in flight (dispatched, awaiting completion).
-pub static JOBS_IN_FLIGHT: LazyLock<IntGauge> = LazyLock::new(|| {
-    let gauge = IntGauge::new("zato_scheduler_jobs_in_flight", "Number of jobs currently in flight").unwrap();
-    REGISTRY.register(Box::new(gauge.clone())).unwrap();
-    gauge
-});
+pub static JOBS_IN_FLIGHT: LazyLock<IntGauge> =
+    LazyLock::new(|| register(IntGauge::new("zato_scheduler_jobs_in_flight", "Number of jobs currently in flight")));
 
 // ############################################################################
 // Counters
@@ -46,30 +66,29 @@ pub static JOBS_IN_FLIGHT: LazyLock<IntGauge> = LazyLock::new(|| {
 
 /// Total scheduler ticks (iterations of the main loop).
 pub static TICKS_TOTAL: LazyLock<IntCounter> = LazyLock::new(|| {
-    let counter = IntCounter::new("zato_scheduler_ticks_total", "Total iterations of the scheduler main loop").unwrap();
-    REGISTRY.register(Box::new(counter.clone())).unwrap();
-    counter
+    register(IntCounter::new(
+        "zato_scheduler_ticks_total",
+        "Total iterations of the scheduler main loop",
+    ))
 });
 
 /// Total clock-jump events detected.
 pub static CLOCK_JUMPS_TOTAL: LazyLock<IntCounter> = LazyLock::new(|| {
-    let counter = IntCounter::new("zato_scheduler_clock_jumps_total", "Total wall-clock jump events detected").unwrap();
-    REGISTRY.register(Box::new(counter.clone())).unwrap();
-    counter
+    register(IntCounter::new(
+        "zato_scheduler_clock_jumps_total",
+        "Total wall-clock jump events detected",
+    ))
 });
 
 /// Total job executions, labelled by `job_name` and `outcome`.
 pub static EXECUTIONS_TOTAL: LazyLock<IntCounterVec> = LazyLock::new(|| {
-    let counter = IntCounterVec::new(
+    register(IntCounterVec::new(
         Opts::new(
             "zato_scheduler_executions_total",
             "Total scheduler job executions, by job name and outcome",
         ),
         &["job_name", "outcome"],
-    )
-    .unwrap();
-    REGISTRY.register(Box::new(counter.clone())).unwrap();
-    counter
+    ))
 });
 
 // ############################################################################
@@ -78,17 +97,14 @@ pub static EXECUTIONS_TOTAL: LazyLock<IntCounterVec> = LazyLock::new(|| {
 
 /// Execution duration histogram, labelled by `job_name`.
 pub static EXECUTION_DURATION_SECONDS: LazyLock<HistogramVec> = LazyLock::new(|| {
-    let hist = HistogramVec::new(
+    register(HistogramVec::new(
         HistogramOpts::new(
             "zato_scheduler_execution_duration_seconds",
             "Duration of scheduler job executions in seconds",
         )
         .buckets(ZATO_HISTOGRAM_BUCKETS.to_vec()),
         &["job_name"],
-    )
-    .unwrap();
-    REGISTRY.register(Box::new(hist.clone())).unwrap();
-    hist
+    ))
 });
 
 // ############################################################################
@@ -97,16 +113,13 @@ pub static EXECUTION_DURATION_SECONDS: LazyLock<HistogramVec> = LazyLock::new(||
 
 /// Scheduler uptime in seconds (set by the binary's main loop).
 pub static UPTIME_SECONDS: LazyLock<GaugeVec> = LazyLock::new(|| {
-    let gauge = GaugeVec::new(
+    register(GaugeVec::new(
         Opts::new(
             "zato_scheduler_uptime_seconds",
             "Time in seconds since the scheduler process started",
         ),
         &[],
-    )
-    .unwrap();
-    REGISTRY.register(Box::new(gauge.clone())).unwrap();
-    gauge
+    ))
 });
 
 // ############################################################################
@@ -114,17 +127,26 @@ pub static UPTIME_SECONDS: LazyLock<GaugeVec> = LazyLock::new(|| {
 // ############################################################################
 
 /// Encodes all registered metrics into Prometheus text exposition format.
+///
+/// An encoding failure yields an empty body rather than an error, because the caller is a
+/// scrape endpoint for which a missing sample is a far better outcome than a failed request.
 pub fn encode_metrics() -> String {
     let encoder = TextEncoder::new();
     let metric_families = REGISTRY.gather();
     let mut buffer = Vec::new();
-    encoder.encode(&metric_families, &mut buffer).unwrap();
-    String::from_utf8(buffer).unwrap()
+
+    if let Err(err) = encoder.encode(&metric_families, &mut buffer) {
+        tracing::error!("Could not encode scheduler metrics: {err}");
+        return String::new();
+    }
+
+    // The text encoder emits ASCII only, so the conversion below cannot lose anything.
+    String::from_utf8_lossy(&buffer).into_owned()
 }
 
 /// Returns the shared histogram buckets for tests.
 #[cfg(test)]
-pub fn histogram_buckets() -> &'static [f64] {
+pub const fn histogram_buckets() -> &'static [f64] {
     ZATO_HISTOGRAM_BUCKETS
 }
 

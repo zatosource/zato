@@ -9,12 +9,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Driving the Config DB screens the way a user would - navigating to them, filling
 # the connection forms and clicking Test or Save, waiting for the outcome to render.
 
+# Zato
+from zato.common.typing_ import cast_
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import any_, anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -118,7 +121,7 @@ def run_redis_test(page:'Page', base_url:'str', values:'anydict') -> 'None':
 def expect_redis_test_ok(page:'Page') -> 'None':
     """ Waits for the OK outcome of a connection test.
     """
-    result = page.wait_for_selector('.test-results .result-status.ok', state='visible', timeout=10000)
+    result = cast_('any_', page.wait_for_selector('.test-results .result-status.ok', state='visible', timeout=10000))
     result_text = result.inner_text()
     assert result_text == 'OK', f'Expected "OK", got: {result_text}'
 
@@ -130,7 +133,7 @@ def expect_redis_test_ok(page:'Page') -> 'None':
 def expect_redis_test_error(page:'Page') -> 'None':
     """ Waits for the error outcome of a connection test.
     """
-    result = page.wait_for_selector('.test-results .result-status.error', state='visible', timeout=10000)
+    result = cast_('any_', page.wait_for_selector('.test-results .result-status.error', state='visible', timeout=10000))
     result_text = result.inner_text()
     assert result_text == 'Error', f'Expected "Error", got: {result_text}'
 

@@ -218,7 +218,7 @@ class TestRESTOutconnDeclarative:
             f'Expected the query row to survive the edit, got: {query_rows}'
 
         page.click('#edit-div button:has-text("Cancel")')
-        page.wait_for_selector('#edit-div', state='hidden', timeout=5000)
+        _ = page.wait_for_selector('#edit-div', state='hidden', timeout=5000)
 
         # .. delete the connection ..
         delete_outconn(page, outconn_id)
@@ -461,7 +461,7 @@ class TestRESTOutconnDeclarative:
             'Expected no interval on the connection after the fields were cleared'
 
         page.click('#edit-div button:has-text("Cancel")')
-        page.wait_for_selector('#edit-div', state='hidden', timeout=5000)
+        _ = page.wait_for_selector('#edit-div', state='hidden', timeout=5000)
 
         # Clean up
         delete_outconn(page, outconn_id)

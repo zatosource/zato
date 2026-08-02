@@ -67,6 +67,7 @@ def _count_demo_events(audit_db_path:'str') -> 'int':
 
     engine.dispose()
 
+    assert out is not None
     return out
 
 # ################################################################################################################################

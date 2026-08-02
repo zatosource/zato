@@ -9,22 +9,31 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import pytest
 from zato.common.test.client import AdminClient as ZatoClient
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 SERVICE = 'zato.groups'
 GROUP_TYPE = 'api-clients'
 
 @pytest.fixture(scope='module')
-def client(zato_server):
+def client(zato_server:'any_'):
     base_url = f'http://{zato_server["host"]}:{zato_server["port"]}'
     return ZatoClient(base_url, zato_server['password'])
 
 class TestSecurityGroups:
     created_ids = []
 
-    def test_01_get_list_empty(self, client):
+    def test_01_get_list_empty(self, client:'any_'):
         data, _meta = client.get_list(f'{SERVICE}.get-list', group_type=GROUP_TYPE)
         assert isinstance(data, list)
 
-    def test_02_create_one(self, client):
+    def test_02_create_one(self, client:'any_'):
         resp = client.create(f'{SERVICE}.create',
             group_type=GROUP_TYPE,
             name='test-group-1',
@@ -33,12 +42,12 @@ class TestSecurityGroups:
         assert resp['name'] == 'test-group-1'
         self.__class__.created_ids.append(resp['id'])
 
-    def test_03_get_list_after_create(self, client):
+    def test_03_get_list_after_create(self, client:'any_'):
         data, _meta = client.get_list(f'{SERVICE}.get-list', group_type=GROUP_TYPE)
         names = [item['name'] for item in data]
         assert 'test-group-1' in names
 
-    def test_04_create_batch(self, client):
+    def test_04_create_batch(self, client:'any_'):
         for i in range(2, 6):
             resp = client.create(f'{SERVICE}.create',
                 group_type=GROUP_TYPE,
@@ -47,12 +56,12 @@ class TestSecurityGroups:
             assert 'id' in resp
             self.__class__.created_ids.append(resp['id'])
 
-    def test_05_get_list_batch(self, client):
+    def test_05_get_list_batch(self, client:'any_'):
         data, _meta = client.get_list(f'{SERVICE}.get-list', group_type=GROUP_TYPE)
         test_items = [item for item in data if item['name'].startswith('test-group-')]
         assert len(test_items) >= 5
 
-    def test_06_edit_one(self, client):
+    def test_06_edit_one(self, client:'any_'):
         item_id = self.__class__.created_ids[0]
         resp = client.edit(f'{SERVICE}.edit',
             id=item_id,
@@ -61,33 +70,33 @@ class TestSecurityGroups:
         )
         assert resp['id'] == item_id
 
-    def test_07_get_list_after_edit(self, client):
+    def test_07_get_list_after_edit(self, client:'any_'):
         data, _meta = client.get_list(f'{SERVICE}.get-list', group_type=GROUP_TYPE)
         names = [item['name'] for item in data]
         assert 'test-group-1-edited' in names
         assert 'test-group-1' not in names
 
-    def test_08_ping(self, client):
+    def test_08_ping(self, client:'any_'):
         # There is no ping service for groups so invoking it is an error
         item_id = self.__class__.created_ids[0]
         with pytest.raises(Exception, match='returned HTTP'):
             _ = client.invoke(f'{SERVICE}.ping', {'id': item_id})
 
-    def test_09_delete_one(self, client):
+    def test_09_delete_one(self, client:'any_'):
         item_id = self.__class__.created_ids.pop(0)
         client.delete(f'{SERVICE}.delete', id=item_id)
 
-    def test_10_get_list_after_delete(self, client):
+    def test_10_get_list_after_delete(self, client:'any_'):
         data, _meta = client.get_list(f'{SERVICE}.get-list', group_type=GROUP_TYPE)
         test_items = [item for item in data if item['name'].startswith('test-group-')]
         assert len(test_items) >= 4
 
-    def test_11_delete_rest(self, client):
+    def test_11_delete_rest(self, client:'any_'):
         for item_id in self.__class__.created_ids[:]:
             client.delete(f'{SERVICE}.delete', id=item_id)
             self.__class__.created_ids.remove(item_id)
 
-    def test_12_get_list_final(self, client):
+    def test_12_get_list_final(self, client:'any_'):
         data, _meta = client.get_list(f'{SERVICE}.get-list', group_type=GROUP_TYPE)
         test_items = [item for item in data if item['name'].startswith('test-group-')]
         assert len(test_items) == 0

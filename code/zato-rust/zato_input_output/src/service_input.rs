@@ -8,7 +8,6 @@ type PyObject = Py<PyAny>;
 /// Python iterator that yields key names from a `ServiceInput` snapshot.
 #[pyclass]
 pub struct ServiceInputKeyIter {
-
     /// Pre-collected key names taken at iteration start.
     keys: Vec<String>,
 
@@ -18,19 +17,22 @@ pub struct ServiceInputKeyIter {
 
 #[pymethods]
 impl ServiceInputKeyIter {
-
-    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+    /// Python iterator protocol - the iterator is its own iterable.
+    const fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
         slf
     }
 
+    /// Yields the next key name, or `None` once the snapshot is exhausted.
     fn __next__(&mut self) -> Option<String> {
-        if self.pos < self.keys.len() {
-            let key = self.keys[self.pos].clone();
+        // A key is only handed out while the position is still within the snapshot,
+        // so exhaustion and out-of-range collapse into the same `None` branch.
+        let out = self.keys.get(self.pos).cloned();
+
+        if out.is_some() {
             self.pos += 1;
-            Some(key)
-        } else {
-            None
         }
+
+        out
     }
 }
 
@@ -60,7 +62,6 @@ impl ServiceInput {
 
 #[pymethods]
 impl ServiceInput {
-
     /// Constructs a `ServiceInput` from Python, optionally accepting an initial dict.
     #[new]
     #[pyo3(signature = (data=None))]
@@ -71,9 +72,13 @@ impl ServiceInput {
     /// Returns the value for the given attribute name, raising `AttributeError` if absent.
     fn __getattr__(&self, py: Python<'_>, name: &str) -> PyResult<PyObject> {
         self.data.get(name).map_or_else(
-            || Err(pyo3::exceptions::PyAttributeError::new_err(
-                format!("No such key `{}` among `{:?}`", name, self.data.keys().collect::<Vec<_>>())
-            )),
+            || {
+                Err(pyo3::exceptions::PyAttributeError::new_err(format!(
+                    "No such key `{}` among `{:?}`",
+                    name,
+                    self.data.keys().collect::<Vec<_>>()
+                )))
+            },
             |val| Ok(val.clone_ref(py)),
         )
     }
@@ -154,10 +159,9 @@ impl ServiceInput {
     /// Returns the value for a key, falling back to `default` (or `None`) if absent.
     #[pyo3(signature = (key, default=None))]
     fn get(&self, py: Python<'_>, key: &str, default: Option<PyObject>) -> PyObject {
-        self.data.get(key).map_or_else(
-            || default.unwrap_or_else(|| py.None()),
-            |val| val.clone_ref(py),
-        )
+        self.data
+            .get(key)
+            .map_or_else(|| default.unwrap_or_else(|| py.None()), |val| val.clone_ref(py))
     }
 
     /// Returns all key names as a list of strings.
@@ -172,7 +176,10 @@ impl ServiceInput {
 
     /// Returns all (key, value) pairs as a list of tuples.
     fn items(&self, py: Python<'_>) -> Vec<(String, PyObject)> {
-        self.data.iter().map(|(key_name, val)| (key_name.clone(), val.clone_ref(py))).collect()
+        self.data
+            .iter()
+            .map(|(key_name, val)| (key_name.clone(), val.clone_ref(py)))
+            .collect()
     }
 
     /// Produces a deep copy of this container using Python's `copy.deepcopy`.
@@ -194,7 +201,11 @@ impl ServiceInput {
 
     /// Produces a shallow copy of this container (Python object references are shared).
     fn __copy__(&self, py: Python<'_>) -> Self {
-        let new_data = self.data.iter().map(|(key_name, val)| (key_name.clone(), val.clone_ref(py))).collect();
+        let new_data = self
+            .data
+            .iter()
+            .map(|(key_name, val)| (key_name.clone(), val.clone_ref(py)))
+            .collect();
         Self { data: new_data }
     }
 
@@ -210,12 +221,10 @@ impl ServiceInput {
                 }
             }
         }
-        let names: Vec<String> = elems
-            .iter()
-            .map(|elem| elem.extract::<String>())
-            .collect::<PyResult<_>>()?;
-        Err(pyo3::exceptions::PyValueError::new_err(
-            format!("At least one of `{}` is required", names.join(", "))
-        ))
+        let names: Vec<String> = elems.iter().map(|elem| elem.extract::<String>()).collect::<PyResult<_>>()?;
+        Err(pyo3::exceptions::PyValueError::new_err(format!(
+            "At least one of `{}` is required",
+            names.join(", ")
+        )))
     }
 }

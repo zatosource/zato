@@ -11,6 +11,7 @@ import time
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,7 +41,7 @@ def _create_definition(page:'Page', suffix:'str') -> 'dict':
 
     # Open the create dialog ..
     page.click('#markup .page_prompt a')
-    page.wait_for_selector('#create-div', state='visible')
+    _ = page.wait_for_selector('#create-div', state='visible')
 
     # .. fill in the fields ..
     page.fill('#id_name', name)
@@ -50,11 +51,11 @@ def _create_definition(page:'Page', suffix:'str') -> 'dict':
 
     # .. submit and wait for the dialog to close ..
     page.click('#create-div input[type="submit"]')
-    page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+    _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
     # .. wait for the row to appear.
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    page.wait_for_selector(row_selector, state='visible', timeout=5000)
+    _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
     out = {
         'name': name,
@@ -66,17 +67,6 @@ def _create_definition(page:'Page', suffix:'str') -> 'dict':
     return out
 
 # ################################################################################################################################
-
-def _get_item_id(page:'Page', name:'str') -> 'str':
-    """ Extracts the server-side ID of a row by its name.
-    """
-
-    row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    row = page.query_selector(row_selector)
-    id_cell = row.query_selector('td[class*="item_id_"]')
-
-    out = id_cell.inner_text().strip()
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -97,11 +87,11 @@ class TestBasicAuthInteraction:
 
         # Navigate ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. open the create dialog ..
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         # .. fill in the fields ..
         page.fill('#id_name', name)
@@ -113,7 +103,7 @@ class TestBasicAuthInteraction:
         page.press('#id_password', 'Enter')
 
         # .. wait for the dialog to close and the row to appear.
-        page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+        _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
         row = page.wait_for_selector(
             f'#data-table tbody tr:has(td:text-is("{name}"))', state='visible', timeout=5000)
@@ -135,13 +125,13 @@ class TestBasicAuthInteraction:
 
         # Navigate ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         count_before = len(page.query_selector_all('#data-table tbody tr:not(.ignore)'))
 
         # .. open the create dialog and fill fields ..
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         page.fill('#id_name', name)
         page.fill('#id_username', 'user.' + name)
@@ -159,7 +149,7 @@ class TestBasicAuthInteraction:
 
         # .. close via the dialog API ..
         page.evaluate('$("#create-div").dialog("close")')
-        page.wait_for_function('!document.querySelector("#create-div").offsetParent', timeout=5000)
+        _ = page.wait_for_function('!document.querySelector("#create-div").offsetParent', timeout=5000)
 
         # .. verify no row was added ..
         count_after = len(page.query_selector_all('#data-table tbody tr:not(.ignore)'))
@@ -183,13 +173,13 @@ class TestBasicAuthInteraction:
 
         # Navigate ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         count_before = len(page.query_selector_all('#data-table tbody tr:not(.ignore)'))
 
         # .. open the create dialog and fill fields ..
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         page.fill('#id_name', name)
         page.fill('#id_username', 'user.' + name)
@@ -200,7 +190,7 @@ class TestBasicAuthInteraction:
         page.keyboard.press('Escape')
 
         # .. wait for the dialog to close ..
-        page.wait_for_function('!document.querySelector("#create-div").offsetParent')
+        _ = page.wait_for_function('!document.querySelector("#create-div").offsetParent')
 
         # .. verify no row was added ..
         count_after = len(page.query_selector_all('#data-table tbody tr:not(.ignore)'))
@@ -212,7 +202,7 @@ class TestBasicAuthInteraction:
 
         # .. reopen the dialog and verify the form was reset.
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         name_value = page.input_value('#id_name')
         assert name_value == '', f'Expected empty name after Escape+reopen, got: "{name_value}"'
@@ -231,11 +221,11 @@ class TestBasicAuthInteraction:
 
         # Navigate ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. open the create dialog and fill fields ..
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         page.fill('#id_name', name)
         page.fill('#id_username', 'user.' + name)
@@ -243,7 +233,7 @@ class TestBasicAuthInteraction:
         page.fill('#id_password', 'pwd.' + CryptoManager.generate_hex_string(32))
 
         # .. click submit - the overlay should disable the button immediately ..
-        submit_button = page.query_selector('#create-div input[type="submit"]')
+        submit_button = cast_('any_', page.query_selector('#create-div input[type="submit"]'))
         submit_button.click()
 
         # .. verify the button is disabled after the first click ..
@@ -254,7 +244,7 @@ class TestBasicAuthInteraction:
         submit_button.click(force=True)
 
         # .. wait for the dialog to close ..
-        page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+        _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
         time.sleep(0.5)
 
         # .. count how many rows have this name - should be exactly 1 ..
@@ -274,13 +264,13 @@ class TestBasicAuthInteraction:
 
         # Navigate and create ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         defn = _create_definition(page, 'refresh')
 
         # .. reload with query filter so the row is visible ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={defn["name"]}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. verify the row is still present.
         row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{defn["name"]}"))')
@@ -305,11 +295,11 @@ class TestBasicAuthInteraction:
 
         # Navigate ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. create a definition ..
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         page.fill('#id_name', name)
         page.fill('#id_username', 'user.' + name)
@@ -317,7 +307,7 @@ class TestBasicAuthInteraction:
         page.fill('#id_password', 'pwd.' + CryptoManager.generate_hex_string(32))
 
         page.click('#create-div input[type="submit"]')
-        page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+        _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
         # .. wait for the new row ..
         row = page.wait_for_selector(
@@ -342,7 +332,7 @@ class TestBasicAuthInteraction:
 
         # Navigate ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. check the create form's hidden is_active field ..
         create_is_active = page.query_selector('#create-form input[name="is_active"][type="hidden"]')

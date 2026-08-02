@@ -17,6 +17,7 @@ from zato.common.as2.reconcile import MDNReconciler
 from zato.common.as2.resend import collect_candidates, count_attempts, get_max_retries
 from zato.common.ext.bunch import Bunch
 from zato.common.util.api import utcnow
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -100,7 +101,7 @@ def _record_sent(
         'http_status': http_status,
     }
 
-    reconciler.record_message_sent(_as2_from, _as2_to, message_id, **sent_options)
+    reconciler.record_message_sent(_as2_from, _as2_to, message_id, **cast_('any_', sent_options))
 
 # ################################################################################################################################
 
@@ -390,7 +391,7 @@ class TestDeliveryKind:
             'filename': 'order-850.edi',
         }
 
-        reconciler.record_message_sent(_as2_from, _as2_to, 'msg-1@zato', **sent_options)
+        reconciler.record_message_sent(_as2_from, _as2_to, 'msg-1@zato', **cast_('any_', sent_options))
 
         now = utcnow() + timedelta(seconds=_past_the_window)
         candidates = collect_candidates([_new_config()], now, _server_name)

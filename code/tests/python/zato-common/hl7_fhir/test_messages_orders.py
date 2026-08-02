@@ -21,6 +21,12 @@ from conftest import Samples_Dir, Test_Conversions_Dir, convert, load_message, o
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 MSH_ORU = 'MSH|^~\\&|LAB|LABFAC|EHR|EHRFAC|20240517143055||ORU^R01|MSG00002|P|2.5'
 MSH_ORM = 'MSH|^~\\&|EHR|EHRFAC|LAB|LABFAC|20240517143055||ORM^O01|MSG00003|P|2.5'
 PID = 'PID|1||12345^^^MYHOSP^MR||Smith^John|||M'
@@ -290,7 +296,7 @@ def _iter_samples():
 # ################################################################################################################################
 
 @pytest.mark.parametrize('file_path', _order_sample_paths(), ids=os.path.basename)
-def test_order_samples_end_to_end(file_path):
+def test_order_samples_end_to_end(file_path:'any_'):
     """ Every order and result sample converts to a bundle with a patient.
     """
     raw = load_message(file_path)

@@ -92,12 +92,12 @@ class _SessionState:
         if self.quickstart_directory:
             server_log_path = os.path.join(self.quickstart_directory, 'server1', 'logs', 'server.log')
             if os.path.exists(server_log_path):
-                shutil.copy(server_log_path, '/tmp/hot-deploy-test-server.log')
+                _ = shutil.copy(server_log_path, '/tmp/hot-deploy-test-server.log')
                 logger.info('Copied server logs to /tmp/hot-deploy-test-server.log')
 
             listener_log_path = os.path.join(self.quickstart_directory, 'listener.log')
             if os.path.exists(listener_log_path):
-                shutil.copy(listener_log_path, '/tmp/hot-deploy-test-listener.log')
+                _ = shutil.copy(listener_log_path, '/tmp/hot-deploy-test-listener.log')
                 logger.info('Copied listener logs to /tmp/hot-deploy-test-listener.log')
 
         self.kill_listener()

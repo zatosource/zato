@@ -31,12 +31,13 @@ from _client import MCPClient
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import any_, anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 import pytest
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -118,13 +119,13 @@ def _create_mcp_gateway(page:'Page', base_url:'str', gateway_name:'str', url_pat
 
     # .. assign the echo service via its badge ..
     badge_selector = f'#badge-zone-available-create .badge-zone-body .security-badge[data-name="{_Echo_Service}"]'
-    badge = page.wait_for_selector(badge_selector, state='visible', timeout=10000)
+    badge = cast_('any_', page.wait_for_selector(badge_selector, state='visible', timeout=10000))
     badge.click()
 
     # .. assign the credentials via the security badge picker - the view auto-creates
     # the gateway's security group with this definition as its member ..
     security_badge_selector = f'#badge-zone-available-sec-create .security-badge[data-name="{definition_name}"]'
-    security_badge = page.wait_for_selector(security_badge_selector, state='visible', timeout=10000)
+    security_badge = cast_('any_', page.wait_for_selector(security_badge_selector, state='visible', timeout=10000))
     security_badge.click()
 
     # .. switch to the Response shaping tab ..
@@ -140,7 +141,7 @@ def _create_mcp_gateway(page:'Page', base_url:'str', gateway_name:'str', url_pat
 
     # .. wait for the row to appear ..
     row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-    row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+    row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
 
     # .. and read the gateway's ID out of its hidden cell.
     id_cell = row.query_selector('td[class*="item_id_"]')
@@ -320,7 +321,7 @@ class TestMCPResponseControls:
         security_badge = f'#badge-zone-assigned-sec-edit .security-badge[data-name="{definition_name}"]'
         _ = page.wait_for_selector(security_badge, state='attached', timeout=10000)
 
-        page.select_option('#id_edit-size_cap_mode', 'block')
+        _ = page.select_option('#id_edit-size_cap_mode', 'block')
         submit_edit_form(page)
 
         # .. makes the gateway refuse an oversized response outright, naming the size and the cap.

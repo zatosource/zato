@@ -41,7 +41,7 @@ _declarative_operation = 'connectivityTest'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _rows(*pairs) -> 'str':
+def _rows(*pairs:'any_') -> 'str':
     """ Builds the stored JSON of parameter rows - each entry is a key, a value and a mode.
     """
     out:'anylist' = []
@@ -53,7 +53,7 @@ def _rows(*pairs) -> 'str':
 
 # ################################################################################################################################
 
-def _text_rows(*pairs) -> 'str':
+def _text_rows(*pairs:'any_') -> 'str':
     """ Builds rows whose values are all sent exactly as typed, which is the common case.
     """
     out = _rows(*[(key, value, _value_mode.Text) for key, value in pairs])
@@ -372,8 +372,11 @@ class SOAPCallbackTestCase(unittest.TestCase):
 
         calls:'anylist' = []
 
+        def spawn(*args:'any_') -> 'None':
+            calls.append(args)
+
         original_spawn = invocation.spawn
-        invocation.spawn = lambda *args: calls.append(args)
+        invocation.spawn = spawn
 
         try:
             if is_fault:
@@ -511,8 +514,12 @@ class SOAPFacadeTestCase(unittest.TestCase):
 # ################################################################################################################################
 
     def _facade(self, connections:'anydict') -> 'SOAPFacade':
+
+        def get_connection(_:'any_', name:'str') -> 'any_':
+            return connections[name]
+
         out_soap = MagicMock()
-        out_soap.__getitem__ = lambda _, name: connections[name]
+        out_soap.__getitem__ = get_connection
 
         facade = SOAPFacade()
         facade.init(_test_cid, out_soap)

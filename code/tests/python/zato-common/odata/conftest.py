@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import sys
+from zato.common.typing_ import cast_
 
 # The test server library uses flat imports, the way the soap suite's lib does,
 # and the TLS material builder is shared with the soap suite.
@@ -25,6 +26,12 @@ import pytest
 # ################################################################################################################################
 
 from odata_test_server import ODataTestServer, Profile
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -111,7 +118,7 @@ def validated_server_metadata():
 
             # The EDMX 1.0 wrapper is a plain envelope - what CSDL 2.0 governs
             # is the Schema element embedded in it.
-            schema_element = document.getroot().find('.//' + _v2_schema_tag)
+            schema_element = cast_('any_', document.getroot().find('.//' + _v2_schema_tag))
             csdl_v2.assertValid(schema_element)
 
 # ################################################################################################################################
@@ -126,7 +133,7 @@ def _make_server(profile:'str', tls:'bool'=False) -> 'ODataTestServer':
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def s4hana_server(validated_server_metadata):
+def s4hana_server(validated_server_metadata:'any_'):
     """ A live server simulating SAP S/4HANA - OData V2, CSRF tokens, sap-client checks.
     """
     server = _make_server(Profile.S4HANA)
@@ -138,7 +145,7 @@ def s4hana_server(validated_server_metadata):
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def successfactors_server(validated_server_metadata):
+def successfactors_server(validated_server_metadata:'any_'):
     """ A live server simulating SAP SuccessFactors - OData V2, basic credentials.
     """
     server = _make_server(Profile.SUCCESSFACTORS)
@@ -150,7 +157,7 @@ def successfactors_server(validated_server_metadata):
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def d365fo_server(validated_server_metadata):
+def d365fo_server(validated_server_metadata:'any_'):
     """ A live server simulating Dynamics 365 Finance and Operations - OData V4, OAuth2.
     """
     server = _make_server(Profile.DYNAMICS_365_FO)
@@ -162,7 +169,7 @@ def d365fo_server(validated_server_metadata):
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def business_central_server(validated_server_metadata):
+def business_central_server(validated_server_metadata:'any_'):
     """ A live server simulating Business Central - OData V4, ETag concurrency.
     """
     server = _make_server(Profile.BUSINESS_CENTRAL)
@@ -174,7 +181,7 @@ def business_central_server(validated_server_metadata):
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def business_central_tls_server(validated_server_metadata):
+def business_central_tls_server(validated_server_metadata:'any_'):
     """ A live HTTPS Business Central server, for TLS verification tests.
     """
     server = _make_server(Profile.BUSINESS_CENTRAL, tls=True)

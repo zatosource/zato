@@ -11,12 +11,13 @@ import time
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from playwright.sync_api import Page
+    from playwright.sync_api import Page, Response
     from zato.common.typing_ import anydict
 
 # ################################################################################################################################
@@ -47,7 +48,7 @@ def _create_definition(page:'Page', suffix:'str') -> 'dict':
 
     # Open the create dialog ..
     page.click('#markup .page_prompt a')
-    page.wait_for_selector('#create-div', state='visible')
+    _ = page.wait_for_selector('#create-div', state='visible')
 
     # .. fill in the fields ..
     page.fill('#id_name', name)
@@ -57,11 +58,11 @@ def _create_definition(page:'Page', suffix:'str') -> 'dict':
 
     # .. submit and wait for the dialog to close ..
     page.click('#create-div input[type="submit"]')
-    page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+    _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
     # .. wait for the row to appear.
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    page.wait_for_selector(row_selector, state='visible', timeout=5000)
+    _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
     out = {
         'name': name,
@@ -79,7 +80,7 @@ def _get_item_id(page:'Page', name:'str') -> 'str':
     """
 
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    row = page.query_selector(row_selector)
+    row = cast_('any_', page.query_selector(row_selector))
     id_cell = row.query_selector('td[class*="item_id_"]')
     out = id_cell.inner_text().strip()
 
@@ -93,7 +94,7 @@ def _do_full_crud(page:'Page', base_url:'str', suffix:'str') -> 'None':
 
     # Navigate ..
     _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-    page.wait_for_selector('#data-table', state='visible')
+    _ = page.wait_for_selector('#data-table', state='visible')
 
     # .. create ..
     name = _Test_Name_Prefix + suffix
@@ -102,7 +103,7 @@ def _do_full_crud(page:'Page', base_url:'str', suffix:'str') -> 'None':
     password = 'password.' + CryptoManager.generate_hex_string()
 
     page.click('#markup .page_prompt a')
-    page.wait_for_selector('#create-div', state='visible')
+    _ = page.wait_for_selector('#create-div', state='visible')
 
     page.fill('#id_name', name)
     page.fill('#id_username', username)
@@ -110,35 +111,35 @@ def _do_full_crud(page:'Page', base_url:'str', suffix:'str') -> 'None':
     page.fill('#id_password', password)
 
     page.click('#create-div input[type="submit"]')
-    page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+    _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    page.wait_for_selector(row_selector, state='visible', timeout=5000)
+    _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
     # .. edit ..
     item_id = _get_item_id(page, name)
     page.evaluate(f'$.fn.zato.security.basic_auth.edit("{item_id}")')
-    page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+    _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
     edited_name = name + '-edited'
     page.fill('#id_edit-name', '')
     page.fill('#id_edit-name', edited_name)
 
     page.click('#edit-div input[type="submit"]')
-    page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
+    _ = page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
     time.sleep(0.3)
 
     # .. change password ..
     page.evaluate(f'$.fn.zato.data_table.change_password("{item_id}")')
-    page.wait_for_selector('#change_password-div', state='visible', timeout=5000)
+    _ = page.wait_for_selector('#change_password-div', state='visible', timeout=5000)
 
     page.fill('#change_password-div #id_password', 'new-crud-pwd')
     page.click('#change_password-div input[type="submit"]')
-    page.wait_for_function('!document.querySelector("#change_password-div").offsetParent')
+    _ = page.wait_for_function('!document.querySelector("#change_password-div").offsetParent')
 
     # .. delete.
     page.evaluate(f'$.fn.zato.security.basic_auth.delete_("{item_id}")')
-    page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+    _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
     page.click('#popup_ok')
     time.sleep(0.5)
 
@@ -160,8 +161,8 @@ class TestBasicAuthLifecycle:
         console_errors = [] # type: list
 
         def _on_console(msg:'object') -> 'None':
-            if msg.type == 'error':
-                console_errors.append(msg.text)
+            if cast_('any_', msg).type == 'error':
+                console_errors.append(cast_('any_', msg).text)
 
         page.on('console', _on_console)
 
@@ -196,7 +197,7 @@ class TestBasicAuthLifecycle:
         # Collect server errors ..
         server_errors = [] # type: list
 
-        def _on_response(response:'object') -> 'None':
+        def _on_response(response:'Response') -> 'None':
             if response.status >= 500:
                 server_errors.append(f'{response.status} {response.url}')
 
@@ -219,7 +220,7 @@ class TestBasicAuthLifecycle:
 
         # Navigate ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. create ..
         defn = _create_definition(page, 'crud')
@@ -231,14 +232,14 @@ class TestBasicAuthLifecycle:
         # .. edit the name ..
         item_id = _get_item_id(page, defn['name'])
         page.evaluate(f'$.fn.zato.security.basic_auth.edit("{item_id}")')
-        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         edited_name = defn['name'] + '-edited'
         page.fill('#id_edit-name', '')
         page.fill('#id_edit-name', edited_name)
 
         page.click('#edit-div input[type="submit"]')
-        page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
+        _ = page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
         time.sleep(0.3)
 
         # .. verify old name gone, new name present ..
@@ -250,11 +251,11 @@ class TestBasicAuthLifecycle:
 
         # .. change password ..
         page.evaluate(f'$.fn.zato.data_table.change_password("{item_id}")')
-        page.wait_for_selector('#change_password-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#change_password-div', state='visible', timeout=5000)
 
         page.fill('#change_password-div #id_password', 'new-crud-pwd')
         page.click('#change_password-div input[type="submit"]')
-        page.wait_for_function('!document.querySelector("#change_password-div").offsetParent')
+        _ = page.wait_for_function('!document.querySelector("#change_password-div").offsetParent')
 
         # .. verify row still present after password change ..
         row_after_pwd = page.query_selector(f'#data-table tbody tr:has(td:text-is("{edited_name}"))')
@@ -262,7 +263,7 @@ class TestBasicAuthLifecycle:
 
         # .. delete ..
         page.evaluate(f'$.fn.zato.security.basic_auth.delete_("{item_id}")')
-        page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
         page.click('#popup_ok')
         time.sleep(0.5)
 
@@ -281,14 +282,14 @@ class TestBasicAuthLifecycle:
 
         # Navigate and create a definition ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         defn = _create_definition(page, 'rate-limit')
 
         # .. find the rate limiting link ..
         item_id = _get_item_id(page, defn['name'])
         link_selector = f'#data-table tbody tr:has(td:text-is("{defn["name"]}")) a[href*="rate-limiting"]'
-        link = page.query_selector(link_selector)
+        link = cast_('any_', page.query_selector(link_selector))
         href = link.get_attribute('href')
 
         # .. verify the href pattern ..
@@ -297,7 +298,7 @@ class TestBasicAuthLifecycle:
 
         # .. click the link and wait for the rate limiting page ..
         link.click()
-        page.wait_for_selector('#rate-limiting-container', state='visible', timeout=10000)
+        _ = page.wait_for_selector('#rate-limiting-container', state='visible', timeout=10000)
 
         # .. verify URL ..
         current_url = page.url
@@ -305,13 +306,13 @@ class TestBasicAuthLifecycle:
             f'Expected rate-limiting in URL, got: {current_url}'
 
         # .. verify the heading contains the definition name ..
-        heading = page.query_selector('h2.zato')
+        heading = cast_('any_', page.query_selector('h2.zato'))
         heading_text = heading.inner_text()
         assert defn['name'] in heading_text, f'Expected name in heading, got: "{heading_text}"'
 
         # .. navigate back with query filter so the row is visible ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={defn["name"]}')
-        page.wait_for_selector('#data-table', state='visible', timeout=10000)
+        _ = page.wait_for_selector('#data-table', state='visible', timeout=10000)
 
         # .. verify the row is still present.
         row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{defn["name"]}"))')
@@ -328,7 +329,7 @@ class TestBasicAuthLifecycle:
 
         # Navigate ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. create three definitions in non-alphabetical order ..
         name_b = _create_definition(page, 'sort-b')['name']
@@ -340,7 +341,7 @@ class TestBasicAuthLifecycle:
 
         # .. reload with query filter so all three test rows are visible ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={_Test_Name_Prefix}sort')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. click the Name column header to trigger a sort ..
         page.click('#data-table thead th:nth-child(3)')

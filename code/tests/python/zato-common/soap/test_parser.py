@@ -23,6 +23,12 @@ from zato.common.util.xml_.tokens import add_saml_token
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # The contents of the file the documents below name in an entity declaration. The test writes its own
 # file rather than naming one belonging to the host it happens to run on.
 _external_file_marker = 'zato-external-file-contents'
@@ -122,7 +128,7 @@ class TestExternalEntities:
     """ Entity declarations naming a file or a URL, in the forms the parse rules cover.
     """
 
-    def test_a_file_entity_does_not_read_the_filesystem(self, external_file):
+    def test_a_file_entity_does_not_read_the_filesystem(self, external_file:'any_'):
         doctype = f'<!DOCTYPE root [ <!ENTITY declared SYSTEM "file://{external_file}"> ]>'
         data = _envelope_with_doctype(doctype, '<op><data>&declared;</data></op>')
 
@@ -184,14 +190,14 @@ class TestEveryParsePath:
     confirmed to go through parse_xml rather than a parser of their own.
     """
 
-    def test_parse_envelope(self, external_file):
+    def test_parse_envelope(self, external_file:'any_'):
         doctype = f'<!DOCTYPE root [ <!ENTITY declared SYSTEM "file://{external_file}"> ]>'
         data = _envelope_with_doctype(doctype, '<op><data>&declared;</data></op>')
 
         with pytest.raises(XMLException):
             _ = parse_envelope(data)
 
-    def test_parse_message(self, external_file):
+    def test_parse_message(self, external_file:'any_'):
         doctype = f'<!DOCTYPE root [ <!ENTITY declared SYSTEM "file://{external_file}"> ]>'
         data = f'<?xml version="1.0"?>\n{doctype}\n<op><data>&declared;</data></op>'.encode('utf8')
 

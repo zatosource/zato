@@ -11,6 +11,7 @@ import logging
 
 # Zato
 from zato.common.test.playwright_pubsub import navigate_to_page, open_create_dialog, submit_create_form, submit_edit_form
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -186,7 +187,7 @@ def create_static_definition(page:'Page', base_url:'str', name:'str', token:'str
 
     # .. switch to the static tokens tab ..
     page.click('#create-div .dashboard-tab[data-tab="static"]')
-    page.wait_for_selector('#bearer-create-tab-panel-static', state='visible', timeout=5000)
+    _ = page.wait_for_selector('#bearer-create-tab-panel-static', state='visible', timeout=5000)
 
     # .. the name field on this tab mirrors its value into the main name field ..
     page.fill('#id_create_static_name', name)
@@ -217,7 +218,7 @@ def open_edit_dialog(page:'Page', definition_id:'str') -> 'None':
     page.evaluate(f'$.fn.zato.security.oauth.edit("{definition_id}")')
 
     # .. and wait for the dialog to appear.
-    page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+    _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
 # ################################################################################################################################
 
@@ -245,13 +246,13 @@ def delete_definition(page:'Page', definition_id:'str') -> 'None':
 
     # Trigger the delete confirmation ..
     page.evaluate(f'$.fn.zato.security.oauth.delete_("{definition_id}")')
-    page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+    _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
 
     # .. confirm ..
     page.click('#popup_ok')
 
     # .. and wait for the row removal animation.
-    page.wait_for_selector(f'#tr_{definition_id}', state='detached', timeout=5000)
+    _ = page.wait_for_selector(f'#tr_{definition_id}', state='detached', timeout=5000)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -270,7 +271,7 @@ def get_group_id(page:'Page', base_url:'str', group_name:'str') -> 'str':
 
     # .. find the group's row ..
     row_selector = f'#data-table tbody tr:has(td:text-is("{group_name}"))'
-    row = page.wait_for_selector(row_selector, state='visible', timeout=10000)
+    row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=10000))
 
     # .. and read the ID out of its hidden cell.
     id_cell = row.query_selector('td[class*="item_id_"]')
@@ -294,10 +295,10 @@ def edit_group_members(
     group_id = get_group_id(page, base_url, group_name)
 
     page.evaluate(f'$.fn.zato.groups.edit("{group_id}")')
-    page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+    _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
     # .. wait for the badges to load ..
-    page.wait_for_function(
+    _ = page.wait_for_function(
         'document.querySelectorAll("#badge-picker-edit .badge-zone-body .security-badge").length >= 1',
         timeout=10000
     )
@@ -321,7 +322,7 @@ def _click_badges(page:'Page', zone_id:'str', member_names:'strlist') -> 'None':
 
     for member_name in member_names:
         badge_selector = f'#{zone_id} .badge-zone-body .security-badge[data-name="{member_name}"]'
-        badge = page.wait_for_selector(badge_selector, state='visible', timeout=10000)
+        badge = cast_('any_', page.wait_for_selector(badge_selector, state='visible', timeout=10000))
         badge.click()
 
 # ################################################################################################################################

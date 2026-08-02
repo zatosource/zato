@@ -16,10 +16,19 @@ import pytest
 # Zato - test utilities
 from zato.common.test.client import AdminClient as ZatoClient
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 JOB_SERVICE = 'zato.scheduler.job'
 
 @pytest.fixture(scope='module')
-def client(zato_server):
+def client(zato_server:'any_'):
     out = ZatoClient(zato_server['base_url'], zato_server['password'])
     return out
 
@@ -40,7 +49,7 @@ class TestSchedulerHistory:
 
     # ##############################################################################################################################
 
-    def test_01_create_job_for_history(self, client):
+    def test_01_create_job_for_history(self, client:'any_'):
         resp = client.create(f'{JOB_SERVICE}.create',
             cluster_id=1,
             name='test-hist-job-1',
@@ -55,21 +64,21 @@ class TestSchedulerHistory:
 
     # ##############################################################################################################################
 
-    def test_02_get_history_initially_empty(self, client):
+    def test_02_get_history_initially_empty(self, client:'any_'):
         item_id = self.__class__.created_ids[0]
         response = client.invoke(f'{JOB_SERVICE}.get-history', {'id': item_id})
         assert isinstance(response['rows'], list)
 
     # ##############################################################################################################################
 
-    def test_03_execute_job_and_wait(self, client):
+    def test_03_execute_job_and_wait(self, client:'any_'):
         item_id = self.__class__.created_ids[0]
         client.invoke(f'{JOB_SERVICE}.execute', {'job_id': item_id})
         time.sleep(3)
 
     # ##############################################################################################################################
 
-    def test_04_get_history_after_execute(self, client):
+    def test_04_get_history_after_execute(self, client:'any_'):
         item_id = self.__class__.created_ids[0]
         response = client.invoke(f'{JOB_SERVICE}.get-history', {'id': item_id})
         rows = response['rows']
@@ -82,7 +91,7 @@ class TestSchedulerHistory:
 
     # ##############################################################################################################################
 
-    def test_05_history_per_job(self, client):
+    def test_05_history_per_job(self, client:'any_'):
         item_id = self.__class__.created_ids[0]
         response = client.invoke(f'{JOB_SERVICE}.get-history', {'id': item_id})
         rows = response['rows']
@@ -92,7 +101,7 @@ class TestSchedulerHistory:
 
     # ##############################################################################################################################
 
-    def test_06_execute_multiple_times(self, client):
+    def test_06_execute_multiple_times(self, client:'any_'):
         item_id = self.__class__.created_ids[0]
         for _ in range(3):
             client.invoke(f'{JOB_SERVICE}.execute', {'job_id': item_id})
@@ -100,7 +109,7 @@ class TestSchedulerHistory:
 
     # ##############################################################################################################################
 
-    def test_07_history_grows(self, client):
+    def test_07_history_grows(self, client:'any_'):
         item_id = self.__class__.created_ids[0]
         response = client.invoke(f'{JOB_SERVICE}.get-history', {'id': item_id})
         rows = response['rows']
@@ -109,7 +118,7 @@ class TestSchedulerHistory:
 
     # ##############################################################################################################################
 
-    def test_08_history_records_have_duration(self, client):
+    def test_08_history_records_have_duration(self, client:'any_'):
         item_id = self.__class__.created_ids[0]
         response = client.invoke(f'{JOB_SERVICE}.get-history', {'id': item_id})
         ok_records = []
@@ -124,7 +133,7 @@ class TestSchedulerHistory:
 
     # ##############################################################################################################################
 
-    def test_09_history_filtered_by_since_iso(self, client):
+    def test_09_history_filtered_by_since_iso(self, client:'any_'):
         item_id = self.__class__.created_ids[0]
 
         # Get all history without since_iso
@@ -161,7 +170,7 @@ class TestSchedulerHistory:
 
     # ##############################################################################################################################
 
-    def test_99_cleanup(self, client):
+    def test_99_cleanup(self, client:'any_'):
         for item_id in self.__class__.created_ids[:]:
             client.delete(f'{JOB_SERVICE}.delete', id=item_id)
             self.__class__.created_ids.remove(item_id)

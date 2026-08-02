@@ -82,7 +82,7 @@ def get_config(server:'MongoDBServer', conn_name:'str', **overrides:'any_') -> '
     }
     config.update(overrides)
 
-    out = bunchify(config)
+    out = cast_('Bunch', bunchify(config))
     return out
 
 # ################################################################################################################################

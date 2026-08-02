@@ -20,6 +20,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 # Generated stubs
 import billing_pb2
 import billing_pb2_grpc
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -90,7 +91,7 @@ class BillingServicer(billing_pb2_grpc.BillingServiceServicer):
             code, details = trigger
             context.abort(code, details)
 
-        out = billing_pb2.Invoice(
+        out = cast_('any_', billing_pb2).Invoice(
             invoice_id=request.invoice_id,
             customer=_test_customer,
             amount_cents=_invoice_amount_cents,
@@ -104,7 +105,7 @@ class BillingServicer(billing_pb2_grpc.BillingServiceServicer):
         _check_credentials(context)
 
         for item_index in range(request.max_items):
-            yield billing_pb2.Invoice(
+            yield cast_('any_', billing_pb2).Invoice(
                 invoice_id=f'inv-{item_index}',
                 customer=_test_customer,
                 amount_cents=_invoice_amount_cents + item_index,
@@ -123,7 +124,7 @@ class BillingServicer(billing_pb2_grpc.BillingServiceServicer):
             payment_count += 1
             total_cents += payment.amount_cents
 
-        out = billing_pb2.PaymentSummary(payment_count=payment_count, total_cents=total_cents)
+        out = cast_('any_', billing_pb2).PaymentSummary(payment_count=payment_count, total_cents=total_cents)
         return out
 
 # ################################################################################################################################
@@ -133,7 +134,7 @@ class BillingServicer(billing_pb2_grpc.BillingServiceServicer):
         _check_credentials(context)
 
         for payment in request_iterator:
-            yield billing_pb2.PaymentReceipt(invoice_id=payment.invoice_id, is_settled=True)
+            yield cast_('any_', billing_pb2).PaymentReceipt(invoice_id=payment.invoice_id, is_settled=True)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -184,7 +185,7 @@ def start_grpc_server(port:'int', certificate_pem:'bytes | None'=None, private_k
     billing_pb2_grpc.add_BillingServiceServicer_to_server(BillingServicer(), server)
 
     if certificate_pem:
-        credentials = grpc.ssl_server_credentials([(private_key_pem, certificate_pem)])
+        credentials = grpc.ssl_server_credentials([(cast_('any_', private_key_pem), certificate_pem)])
         _ = server.add_secure_port(f'localhost:{port}', credentials)
     else:
         _ = server.add_insecure_port(f'127.0.0.1:{port}')

@@ -15,6 +15,7 @@ import time
 from zato.common.api import ZATO_NONE
 from zato.common.test.playwright_pubsub import navigate_to_page, open_create_dialog, select_option_by_label, \
     set_select_value, submit_create_form, submit_edit_form
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -234,7 +235,7 @@ def open_edit_dialog(page:'Page', outconn_id:'str') -> 'None':
     page.evaluate(f'$.fn.zato.http_soap.edit("{outconn_id}")')
 
     # .. and wait for the dialog to appear.
-    page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+    _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
 # ################################################################################################################################
 
@@ -259,13 +260,13 @@ def delete_outconn(page:'Page', outconn_id:'str') -> 'None':
 
     # Trigger the delete confirmation ..
     page.evaluate(f'$.fn.zato.http_soap.delete_("{outconn_id}")')
-    page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+    _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
 
     # .. confirm ..
     page.click('#popup_ok')
 
     # .. and wait for the row removal animation.
-    page.wait_for_selector(f'#tr_{outconn_id}', state='detached', timeout=5000)
+    _ = page.wait_for_selector(f'#tr_{outconn_id}', state='detached', timeout=5000)
 
 # ################################################################################################################################
 
@@ -281,7 +282,7 @@ def submit_create_form_expect_blocked(page:'Page') -> 'None':
     page.wait_for_timeout(1000)
 
     # .. and confirm the dialog is still there.
-    dialog = page.query_selector('#create-div')
+    dialog = cast_('any_', page.query_selector('#create-div'))
     assert dialog.is_visible(), 'Expected the create dialog to remain open after a blocked submission'
 
 # ################################################################################################################################
@@ -356,7 +357,7 @@ def invoke_outconn_via_overlay(
 
     # Open the overlay ..
     page.evaluate(f'$.fn.zato.http_soap.invoke("{outconn_id}")')
-    page.wait_for_selector('#invoker-modal-overlay:not(.hidden)', state='visible', timeout=5000)
+    _ = page.wait_for_selector('#invoker-modal-overlay:not(.hidden)', state='visible', timeout=5000)
 
     # .. type in the request ..
     escaped = request_body.replace('\\', '\\\\').replace("'", "\\'")
@@ -377,7 +378,7 @@ def invoke_outconn_via_overlay(
     page.click('#invoker-modal-invoke-button')
 
     # .. wait for the status line to show a result ..
-    page.wait_for_function(
+    _ = page.wait_for_function(
         '''() => {
             let status = document.querySelector("#invoker-modal-status");
             if (!status) return false;

@@ -251,7 +251,7 @@ class TestRESTOutconnJSONata:
 
         # .. submit and wait for the error message to become visible ..
         page.click('#create-div input[type="submit"]')
-        page.wait_for_selector('#user-message-div', state='visible', timeout=10000)
+        _ = page.wait_for_selector('#user-message-div', state='visible', timeout=10000)
 
         # .. the message names the invalid expression ..
         message_text = page.inner_text('#user-message')

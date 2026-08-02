@@ -26,6 +26,15 @@ from zato.common.test.client import AdminClient as ZatoClient
 # Zato - conftest
 import conftest
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 JOB_SERVICE = 'zato.scheduler.job'
 
 _suffix = CryptoManager.generate_hex_string(32)
@@ -71,7 +80,7 @@ conftest._pre_start_service_files.extend([
 # ################################################################################################################################
 
 @pytest.fixture(scope='module')
-def client(zato_server):
+def client(zato_server:'any_'):
     out = ZatoClient(zato_server['base_url'], zato_server['password'])
     return out
 
@@ -87,12 +96,12 @@ class TestSchedulerFullPath:
 
     # ##############################################################################################################################
 
-    def _parse(self, resp):
+    def _parse(self, resp:'any_'):
         if isinstance(resp, str):
             return json.loads(resp)
         return resp
 
-    def test_01_create_jobs(self, client):
+    def test_01_create_jobs(self, client:'any_'):
 
         resp = self._parse(client.create(f'{JOB_SERVICE}.create',
             cluster_id=1,
@@ -149,11 +158,11 @@ class TestSchedulerFullPath:
         for line in lines:
             tag, iso_ts = line.split(',', 1)
             assert tag == 'fast-ok'
-            datetime.fromisoformat(iso_ts)
+            _ = datetime.fromisoformat(iso_ts)
 
     # ##############################################################################################################################
 
-    def test_04_fast_ok_history(self, client):
+    def test_04_fast_ok_history(self, client:'any_'):
         job_id = self.__class__.created_ids[0]
         response = client.invoke(f'{JOB_SERVICE}.get-history', {'id': job_id})
         rows = response['rows']
@@ -167,7 +176,7 @@ class TestSchedulerFullPath:
 
     # ##############################################################################################################################
 
-    def test_05_fast_ok_ran_multiple_times(self, client):
+    def test_05_fast_ok_ran_multiple_times(self, client:'any_'):
         job_id = self.__class__.created_ids[0]
         response = client.invoke(f'{JOB_SERVICE}.get-history', {'id': job_id})
         total = response['total']
@@ -175,7 +184,7 @@ class TestSchedulerFullPath:
 
     # ##############################################################################################################################
 
-    def test_06_timeout_detected(self, client):
+    def test_06_timeout_detected(self, client:'any_'):
         job_id = self.__class__.created_ids[1]
         response = client.invoke(f'{JOB_SERVICE}.get-history', {'id': job_id})
         rows = response['rows']
@@ -191,7 +200,7 @@ class TestSchedulerFullPath:
 
     # ##############################################################################################################################
 
-    def test_07_error_recorded(self, client):
+    def test_07_error_recorded(self, client:'any_'):
         job_id = self.__class__.created_ids[2]
         response = client.invoke(f'{JOB_SERVICE}.get-history', {'id': job_id})
         rows = response['rows']
@@ -207,7 +216,7 @@ class TestSchedulerFullPath:
 
     # ##############################################################################################################################
 
-    def test_99_cleanup(self, client):
+    def test_99_cleanup(self, client:'any_'):
         for job_id in self.__class__.created_ids[:]:
             client.delete(f'{JOB_SERVICE}.delete', id=job_id)
             self.__class__.created_ids.remove(job_id)

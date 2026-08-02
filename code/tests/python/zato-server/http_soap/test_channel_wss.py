@@ -19,12 +19,14 @@ from zato.common.soap.security.usernametoken import add_username_token
 from zato.common.soap.security.wss import Mode
 from zato.server.connection.http_soap.channel_soap import parse_soap_request
 from zato.server.connection.http_soap.url_data import URLData
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, stranydict
+    from zato.common.typing_ import any_, anydict, stranydict
+    any_ = any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,7 +54,7 @@ def _make_envelope(username:'str | None'=None, password:'str | None'=None) -> 'b
     _ = attach_body(envelope, message, _test_operation)
 
     if username is not None:
-        _ = add_username_token(envelope, username, password)
+        _ = add_username_token(envelope, username, cast_('any_', password))
 
     out = to_bytes(envelope)
     return out

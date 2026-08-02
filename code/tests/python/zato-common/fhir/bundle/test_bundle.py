@@ -175,7 +175,7 @@ class TestParseBundle:
 
     def test_parse_bundle_invalid_json_raises(self):
         with pytest.raises(json.JSONDecodeError):
-            parse_bundle('not valid json {{{')
+            _ = parse_bundle('not valid json {{{')
 
 
 class TestCreateBundle:

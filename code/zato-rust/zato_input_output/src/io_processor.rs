@@ -1,7 +1,7 @@
+use crate::compat::{AsIs, Bool, CSV, Date, DateTime, Decimal, Dict, DictList, Elem, Float, Int, List, Secret, Text, UTC, UUID};
+use crate::inference::{ElemType, infer_type};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyString, PyTuple};
-use crate::inference::{infer_type, ElemType};
-use crate::compat::{Elem, Bool, Int, Secret, Text, AsIs, Float, CSV, Date, DateTime, Decimal, Dict, DictList, List, UTC, UUID};
 
 /// Shorthand for a heap-allocated Python object reference.
 type PyObject = Py<PyAny>;
@@ -49,13 +49,18 @@ pub struct IOProcessor {
 }
 
 impl IOProcessor {
-
     /// Resolves the `ElemType` for a bound Python object by checking whether
     /// it is an instance of one of the known I/O element classes.
     fn elem_type_from_instance(item: &Bound<'_, PyAny>) -> Option<ElemType> {
-        if item.is_instance_of::<Bool>() { return Some(ElemType::Bool); }
-        if item.is_instance_of::<Int>() { return Some(ElemType::Int); }
-        if item.is_instance_of::<Secret>() { return Some(ElemType::Secret); }
+        if item.is_instance_of::<Bool>() {
+            return Some(ElemType::Bool);
+        }
+        if item.is_instance_of::<Int>() {
+            return Some(ElemType::Int);
+        }
+        if item.is_instance_of::<Secret>() {
+            return Some(ElemType::Secret);
+        }
         if item.is_instance_of::<AsIs>()
             || item.is_instance_of::<Float>()
             || item.is_instance_of::<CSV>()
@@ -70,8 +75,12 @@ impl IOProcessor {
         {
             return Some(ElemType::AsIs);
         }
-        if item.is_instance_of::<Text>() { return Some(ElemType::Text); }
-        if item.is_instance_of::<Elem>() { return Some(ElemType::Text); }
+        if item.is_instance_of::<Text>() {
+            return Some(ElemType::Text);
+        }
+        if item.is_instance_of::<Elem>() {
+            return Some(ElemType::Text);
+        }
         None
     }
 
@@ -81,13 +90,15 @@ impl IOProcessor {
         if let Some(elem_type) = Self::elem_type_from_instance(item) {
             let name: String = item.getattr("name")?.extract()?;
             let is_required: bool = item.getattr("is_required")?.extract()?;
-            return Ok(ElemInfo { name, elem_type, is_required });
+            return Ok(ElemInfo {
+                name,
+                elem_type,
+                is_required,
+            });
         }
 
         let name_str: String = item.extract().map_err(|_extract_err| {
-            pyo3::exceptions::PyTypeError::new_err(
-                format!("I/O element must be a string or Elem instance, got {}", item.get_type())
-            )
+            pyo3::exceptions::PyTypeError::new_err(format!("I/O element must be a string or Elem instance, got {}", item.get_type()))
         })?;
 
         #[expect(clippy::option_if_let_else, reason = "strip_prefix borrows name_str, preventing move into closure")]
@@ -107,7 +118,6 @@ impl IOProcessor {
     /// Parses a Python value into a list of `ElemInfo` descriptors, handling
     /// single Elem instances, bare strings, and iterables (tuples, lists).
     fn parse_elem_list(_py: Python<'_>, items: &Bound<'_, PyAny>) -> PyResult<Vec<ElemInfo>> {
-
         if Self::elem_type_from_instance(items).is_some() {
             return Ok(vec![Self::parse_single_elem(items)?]);
         }
@@ -127,7 +137,6 @@ impl IOProcessor {
 
 #[pymethods]
 impl IOProcessor {
-
     /// Creates a new, empty I/O processor with no declared elements.
     #[new]
     const fn new() -> Self {
@@ -187,10 +196,7 @@ impl IOProcessor {
     /// (Bool, Int, Secret, or Text) based on name-based type inference.
     #[expect(clippy::unused_self, reason = "PyO3 method signature requires &self")]
     fn convert_to_elem_instance<'py>(&self, py: Python<'py>, name: String, _is_required: bool) -> PyResult<Bound<'py, PyAny>> {
-        let clean_name = name.strip_prefix('-').map_or_else(
-            || name.clone(),
-            ToString::to_string,
-        );
+        let clean_name = name.strip_prefix('-').map_or_else(|| name.clone(), ToString::to_string);
 
         let elem_type = infer_type(&clean_name);
 
@@ -218,14 +224,17 @@ impl IOProcessor {
     /// values to their declared types and raising on missing required elements.
     #[pyo3(signature = (data, data_format, extra=None, service=None))]
     #[expect(unused_variables, reason = "data_format and service parameters reserved for future use")]
-    fn parse_input(
+    fn parse_input<'py>(
         &self,
-        py: Python<'_>,
-        data: &Bound<'_, PyAny>,
+        data: &Bound<'py, PyAny>,
         data_format: &str,
-        extra: Option<&Bound<'_, PyDict>>,
-        service: Option<&Bound<'_, PyAny>>,
+        extra: Option<&Bound<'py, PyDict>>,
+        service: Option<&Bound<'py, PyAny>>,
     ) -> PyResult<PyObject> {
+        // The interpreter handle rides along with the data argument, so taking it
+        // from there keeps the parameter list within the lint's limit.
+        let py = data.py();
+
         if self.input_elems.is_empty() {
             return Ok(py.None());
         }
@@ -245,7 +254,8 @@ impl IOProcessor {
 
         for elem in &self.input_elems {
             let mut value: Option<Bound<'_, PyAny>> = if let Some(extra_dict) = extra
-                && let Some(val) = extra_dict.get_item(&elem.name)? {
+                && let Some(val) = extra_dict.get_item(&elem.name)?
+            {
                 Some(val)
             } else {
                 None
@@ -269,9 +279,10 @@ impl IOProcessor {
                 result_dict.set_item(&elem.name, coerced.bind(py))?;
             } else {
                 if elem.is_required {
-                    return Err(pyo3::exceptions::PyValueError::new_err(
-                        format!("Missing required input element: {}", elem.name)
-                    ));
+                    return Err(pyo3::exceptions::PyValueError::new_err(format!(
+                        "Missing required input element: {}",
+                        elem.name
+                    )));
                 }
                 result_dict.set_item(&elem.name, py.None())?;
             }

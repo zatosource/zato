@@ -102,7 +102,7 @@ class SlottedCIDRRuleConstructionTestCase(TestCase):
         """ An empty time_range list raises RateLimitError.
         """
         with self.assertRaises(RateLimitError):
-            SlottedCIDRRule.from_parts(['10.0.0.0/8'], [])
+            _ = SlottedCIDRRule.from_parts(['10.0.0.0/8'], [])
 
 # ################################################################################################################################
 
@@ -112,7 +112,7 @@ class SlottedCIDRRuleConstructionTestCase(TestCase):
         specific = _make_specific_range()
 
         with self.assertRaises(RateLimitError):
-            SlottedCIDRRule.from_parts(['10.0.0.0/8'], [specific])
+            _ = SlottedCIDRRule.from_parts(['10.0.0.0/8'], [specific])
 
 # ################################################################################################################################
 
@@ -122,7 +122,7 @@ class SlottedCIDRRuleConstructionTestCase(TestCase):
         all_day = _make_all_day_range()
 
         with self.assertRaises(RateLimitError):
-            SlottedCIDRRule.from_parts(['not-a-cidr'], [all_day])
+            _ = SlottedCIDRRule.from_parts(['not-a-cidr'], [all_day])
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -18,12 +18,14 @@ from sqlalchemy import text
 
 # Zato
 from zato.common.odb.api import SQLConnectionPool
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from zato.common.typing_ import strdict
+    any_ = any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -75,10 +77,10 @@ class TestSnowflakeRealAccount:
         """
         pool = self._get_pool()
 
-        response_time = pool.ping({'snowflake': {'ping_query': 'SELECT 1'}})
+        response_time = cast_('any_', pool.ping({'snowflake': {'ping_query': 'SELECT 1'}}))
         assert response_time > 0
 
-        pool.engine.dispose()
+        _ = cast_('any_', pool.engine).dispose()
 
 # ################################################################################################################################
 
@@ -87,13 +89,13 @@ class TestSnowflakeRealAccount:
         """
         pool = self._get_pool()
 
-        with pool.engine.connect() as connection:
+        with cast_('any_', pool.engine).connect() as connection:
             result = connection.execute(text('select current_version()'))
             version = result.scalar()
 
         assert version
 
-        pool.engine.dispose()
+        _ = cast_('any_', pool.engine).dispose()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -128,10 +130,10 @@ class TestRedshiftRealAccount:
         """
         pool = self._get_pool()
 
-        response_time = pool.ping({'redshift+redshift_connector': {'ping_query': 'SELECT 1'}})
+        response_time = cast_('any_', pool.ping({'redshift+redshift_connector': {'ping_query': 'SELECT 1'}}))
         assert response_time > 0
 
-        pool.engine.dispose()
+        _ = cast_('any_', pool.engine).dispose()
 
 # ################################################################################################################################
 
@@ -140,13 +142,13 @@ class TestRedshiftRealAccount:
         """
         pool = self._get_pool()
 
-        with pool.engine.connect() as connection:
+        with cast_('any_', pool.engine).connect() as connection:
             result = connection.execute(text('select version()'))
             version = result.scalar()
 
         assert version
 
-        pool.engine.dispose()
+        _ = cast_('any_', pool.engine).dispose()
 
 # ################################################################################################################################
 # ################################################################################################################################

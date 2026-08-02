@@ -11,11 +11,18 @@ import unittest
 
 # Zato
 from zato.common.rate_limiting.manager import RateLimitingManager
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _make_rule_dicts(rate=10, burst=20, limit=100, limit_unit='minute', cidr='10.0.0.0/8'):
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _make_rule_dicts(rate:'any_' = 10, burst:'any_' = 20, limit:'any_' = 100, limit_unit:'any_' = 'minute', cidr:'any_' = '10.0.0.0/8'):
     return [{
         'cidr_list': [cidr],
         'time_range': [{
@@ -78,7 +85,7 @@ class RateLimitingManagerCheckAllowTestCase(unittest.TestCase):
     def test_check_allows_matching_ip(self):
         manager = RateLimitingManager()
         manager.set_channel_config(1, _make_rule_dicts())
-        result = manager.check(1, '10.0.0.1', 1_000_000)
+        result = cast_('any_', manager.check(1, '10.0.0.1', 1_000_000))
         self.assertIsNotNone(result)
         self.assertTrue(result.is_allowed)
         self.assertFalse(result.is_disallowed)
@@ -94,10 +101,10 @@ class RateLimitingManagerCheckDenyTestCase(unittest.TestCase):
 
         now_us = 1_000_000
 
-        result1 = manager.check(1, '10.0.0.1', now_us)
+        result1 = cast_('any_', manager.check(1, '10.0.0.1', now_us))
         self.assertTrue(result1.is_allowed)
 
-        result2 = manager.check(1, '10.0.0.1', now_us)
+        result2 = cast_('any_', manager.check(1, '10.0.0.1', now_us))
         self.assertFalse(result2.is_allowed)
         self.assertFalse(result2.is_disallowed)
         self.assertGreater(result2.retry_after_us, 0)
@@ -122,7 +129,7 @@ class RateLimitingManagerCheckDisallowedTestCase(unittest.TestCase):
         }]
         manager = RateLimitingManager()
         manager.set_channel_config(1, rule_dicts)
-        result = manager.check(1, '10.0.0.1', 1_000_000)
+        result = cast_('any_', manager.check(1, '10.0.0.1', 1_000_000))
         self.assertIsNotNone(result)
         self.assertTrue(result.is_disallowed)
         self.assertFalse(result.is_allowed)
@@ -147,7 +154,7 @@ class RateLimitingManagerReplaceConfigTestCase(unittest.TestCase):
 
         result = manager.check(1, '192.168.1.1', 1_000_000)
         self.assertIsNotNone(result)
-        self.assertTrue(result.is_allowed)
+        self.assertTrue(cast_('any_', result).is_allowed)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -161,11 +168,11 @@ class RateLimitingManagerMultiChannelTestCase(unittest.TestCase):
 
         now_us = 1_000_000
 
-        manager.check(1, '10.0.0.1', now_us, 'rest1:')
-        result_ch1 = manager.check(1, '10.0.0.1', now_us, 'rest1:')
+        _ = manager.check(1, '10.0.0.1', now_us, 'rest1:')
+        result_ch1 = cast_('any_', manager.check(1, '10.0.0.1', now_us, 'rest1:'))
         self.assertFalse(result_ch1.is_allowed)
 
-        result_ch2 = manager.check(2, '10.0.0.1', now_us, 'rest2:')
+        result_ch2 = cast_('any_', manager.check(2, '10.0.0.1', now_us, 'rest2:'))
         self.assertTrue(result_ch2.is_allowed)
 
 # ################################################################################################################################
@@ -217,7 +224,7 @@ class SecDefCheckAllowTestCase(unittest.TestCase):
     def test_check_sec_def_allows_matching_ip(self):
         manager = RateLimitingManager()
         manager.set_sec_def_config(1, _make_rule_dicts())
-        result = manager.check_sec_def(1, '10.0.0.1', 1_000_000)
+        result = cast_('any_', manager.check_sec_def(1, '10.0.0.1', 1_000_000))
         self.assertIsNotNone(result)
         self.assertTrue(result.is_allowed)
         self.assertFalse(result.is_disallowed)
@@ -233,10 +240,10 @@ class SecDefCheckDenyTestCase(unittest.TestCase):
 
         now_us = 1_000_000
 
-        result1 = manager.check_sec_def(1, '10.0.0.1', now_us)
+        result1 = cast_('any_', manager.check_sec_def(1, '10.0.0.1', now_us))
         self.assertTrue(result1.is_allowed)
 
-        result2 = manager.check_sec_def(1, '10.0.0.1', now_us)
+        result2 = cast_('any_', manager.check_sec_def(1, '10.0.0.1', now_us))
         self.assertFalse(result2.is_allowed)
         self.assertFalse(result2.is_disallowed)
         self.assertGreater(result2.retry_after_us, 0)
@@ -261,7 +268,7 @@ class SecDefCheckDisallowedTestCase(unittest.TestCase):
         }]
         manager = RateLimitingManager()
         manager.set_sec_def_config(1, rule_dicts)
-        result = manager.check_sec_def(1, '10.0.0.1', 1_000_000)
+        result = cast_('any_', manager.check_sec_def(1, '10.0.0.1', 1_000_000))
         self.assertIsNotNone(result)
         self.assertTrue(result.is_disallowed)
         self.assertFalse(result.is_allowed)
@@ -279,12 +286,12 @@ class SecDefIndependenceTestCase(unittest.TestCase):
         now_us = 1_000_000
 
         # Exhaust channel 1
-        manager.check(1, '10.0.0.1', now_us, 'rest1:')
-        result_ch = manager.check(1, '10.0.0.1', now_us, 'rest1:')
+        _ = manager.check(1, '10.0.0.1', now_us, 'rest1:')
+        result_ch = cast_('any_', manager.check(1, '10.0.0.1', now_us, 'rest1:'))
         self.assertFalse(result_ch.is_allowed)
 
         # Sec def 1 must still allow
-        result_sd = manager.check_sec_def(1, '10.0.0.1', now_us, 'basic1:')
+        result_sd = cast_('any_', manager.check_sec_def(1, '10.0.0.1', now_us, 'basic1:'))
         self.assertTrue(result_sd.is_allowed)
 
     def test_sec_defs_have_independent_counters(self):
@@ -294,15 +301,15 @@ class SecDefIndependenceTestCase(unittest.TestCase):
 
         now_us = 1_000_000
 
-        manager.check_sec_def(1, '10.0.0.1', now_us, 'basic1:')
-        result1 = manager.check_sec_def(1, '10.0.0.1', now_us, 'basic1:')
+        _ = manager.check_sec_def(1, '10.0.0.1', now_us, 'basic1:')
+        result1 = cast_('any_', manager.check_sec_def(1, '10.0.0.1', now_us, 'basic1:'))
         self.assertFalse(result1.is_allowed)
 
-        result2 = manager.check_sec_def(2, '10.0.0.1', now_us, 'basic2:')
+        result2 = cast_('any_', manager.check_sec_def(2, '10.0.0.1', now_us, 'basic2:'))
         self.assertTrue(result2.is_allowed)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    unittest.main()
+    _ = unittest.main()

@@ -33,8 +33,19 @@ import pytest
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.process_util import kill_process_tree
 from zato.common.util.config import get_config_object, update_config_file
+from zato.common.typing_ import cast_
 
-def pytest_addoption(parser):
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, anylist
+    anylist = anylist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def pytest_addoption(parser:'any_'):
     parser.addoption('--with-coverage', action='store_true', default=False,
                      help='Enable coverage collection on the Zato server subprocess')
 
@@ -94,7 +105,7 @@ def _find_scheduler_binary():
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _wait_for_scheduler_api(timeout=30):
+def _wait_for_scheduler_api(timeout:'any_' = 30):
     """ Polls the scheduler's HTTP query API until it answers, proving the scheduler
     completed its initial job reload handshake with the server.
     """
@@ -133,9 +144,9 @@ def _delete_stream_keys():
     redis_conn = Redis(host='localhost', port=6379, decode_responses=True)
 
     try:
-        keys = redis_conn.keys(_STREAM_PREFIX + ':stream:*')
+        keys = cast_('anylist', redis_conn.keys(_STREAM_PREFIX + ':stream:*'))
         if keys:
-            redis_conn.delete(*keys)
+            _ = redis_conn.delete(*keys)
     except Exception:
         pass
 
@@ -151,12 +162,12 @@ def _cleanup():
         shutil.rmtree(_tmpdir, ignore_errors=True)
     _tmpdir = None
 
-atexit.register(_cleanup)
+_ = atexit.register(_cleanup)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _wait_for_server(host, port, password, timeout=60):
+def _wait_for_server(host:'any_', port:'any_', password:'any_', timeout:'any_' = 60):
     from base64 import b64encode
     from urllib.request import Request, urlopen
 
@@ -183,13 +194,13 @@ def _wait_for_server(host, port, password, timeout=60):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _setup_coverage(tmpdir):
+def _setup_coverage(tmpdir:'any_'):
     cov_data_dir = os.path.join(tmpdir, 'coverage')
     os.makedirs(cov_data_dir, exist_ok=True)
 
     coveragerc_path = os.path.join(cov_data_dir, '.coveragerc')
     with open(coveragerc_path, 'w') as f:
-        f.write(f"""\
+        _ = f.write(f"""\
 [run]
 source = {_COVERAGE_SOURCE}
 data_file = {cov_data_dir}/.coverage
@@ -211,10 +222,10 @@ title = Scheduler REST Test Coverage
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _generate_coverage_report(cov_data_dir, coveragerc_path):
+def _generate_coverage_report(cov_data_dir:'any_', coveragerc_path:'any_'):
     os.makedirs(_REPORTS_DIR, exist_ok=True)
 
-    subprocess.run(
+    _ = subprocess.run(
         [_ZATO_PY, '-m', 'coverage', 'combine', '--rcfile', coveragerc_path, cov_data_dir],
         capture_output=True,
         timeout=30,
@@ -236,7 +247,7 @@ def _generate_coverage_report(cov_data_dir, coveragerc_path):
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def zato_server(request):
+def zato_server(request:'any_'):
     global _server_proc, _tmpdir
 
     use_coverage = request.config.getoption('--with-coverage')
@@ -245,7 +256,7 @@ def zato_server(request):
     _tmpdir = tempfile.mkdtemp(prefix='zato_sched_test_')
 
     qs_env = os.environ.copy()
-    qs_env.pop('COVERAGE_PROCESS_START', None)
+    _ = qs_env.pop('COVERAGE_PROCESS_START', None)
 
     qs_cmd = [
         _ZATO_BIN, 'quickstart', 'create', _tmpdir,
@@ -260,7 +271,7 @@ def zato_server(request):
     server_dir = os.path.join(_tmpdir, 'server1')
     repo_location = os.path.join(server_dir, 'config', 'repo')
 
-    config = get_config_object(repo_location, 'server.conf')
+    config = cast_('any_', get_config_object(repo_location, 'server.conf'))
     config['main']['bind'] = f'0.0.0.0:{port}'
     update_config_file(config, repo_location, 'server.conf')
 
@@ -269,7 +280,7 @@ def zato_server(request):
         os.makedirs(services_dir, exist_ok=True)
         for filename, content in _pre_start_service_files:
             with open(os.path.join(services_dir, filename), 'w') as f:
-                f.write(content)
+                _ = f.write(content)
 
     coveragerc_path = None
     cov_data_dir = None
@@ -282,8 +293,8 @@ def zato_server(request):
     env['Zato_Config_Bind_Port'] = str(port)
     env['Zato_Broker_HTTP_Port'] = str(broker_port)
     env['Zato_Scheduler_Stream_Prefix'] = _STREAM_PREFIX
-    env.pop('COVERAGE_PROCESS_START', None)
-    if use_coverage:
+    _ = env.pop('COVERAGE_PROCESS_START', None)
+    if coveragerc_path:
         env['COVERAGE_PROCESS_START'] = coveragerc_path
 
     _server_proc = subprocess.Popen(
@@ -301,7 +312,7 @@ def zato_server(request):
     _server_output_lines = []
 
     def _capture_server_output():
-        for line in iter(_server_proc.stdout.readline, b''):
+        for line in iter(cast_('any_', _server_proc).stdout.readline, b''):
             text = line.decode('utf-8', errors='replace').rstrip()
             elapsed = time.monotonic() - t3
             _server_output_lines.append(f'[SERVER {elapsed:6.1f}s] {text}')
@@ -328,7 +339,7 @@ def zato_server(request):
     scheduler_dir = os.path.join(_tmpdir, 'scheduler')
     scheduler_env = os.environ.copy()
     scheduler_env['Zato_Scheduler_Stream_Prefix'] = _STREAM_PREFIX
-    scheduler_env.pop('COVERAGE_PROCESS_START', None)
+    _ = scheduler_env.pop('COVERAGE_PROCESS_START', None)
 
     _scheduler_proc = subprocess.Popen(
         [_find_scheduler_binary()],
@@ -341,7 +352,7 @@ def zato_server(request):
     _scheduler_output_lines = []
 
     def _capture_scheduler_output():
-        for line in iter(_scheduler_proc.stdout.readline, b''):
+        for line in iter(cast_('any_', _scheduler_proc).stdout.readline, b''):
             text = line.decode('utf-8', errors='replace').rstrip()
             _scheduler_output_lines.append(f'[SCHEDULER] {text}')
 

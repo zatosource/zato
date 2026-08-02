@@ -16,7 +16,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, strnone
+    from zato.common.typing_ import any_, anydict, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -97,7 +97,7 @@ class GraphQLTestHandler(BaseHTTPRequestHandler):
     expected_apikey_value:'strnone' = None
     received_headers:'anydict' = {}
 
-    def log_message(self, format, *args) -> 'None':
+    def log_message(self, format:'any_', *args:'any_') -> 'None':
         pass
 
 # ################################################################################################################################

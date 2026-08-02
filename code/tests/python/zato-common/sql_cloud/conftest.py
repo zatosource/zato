@@ -23,6 +23,14 @@ from zato.common.crypto.api import CryptoManager
 
 from redshift_test_server import RedshiftTestServer
 from snowflake_test_server import SnowflakeTestServer
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,7 +46,7 @@ def snowflake_server():
 
     # The Snowflake connector goes through requests, which honours this variable.
     previous_bundle = os.environ.get('REQUESTS_CA_BUNDLE')
-    os.environ['REQUESTS_CA_BUNDLE'] = server.tls_material.ca_path
+    os.environ['REQUESTS_CA_BUNDLE'] = cast_('any_', server.tls_material).ca_path
 
     yield server
 
@@ -90,7 +98,7 @@ def redshift_server():
 
     # redshift_connector loads the default certificates, which honour this variable.
     previous_cert_file = os.environ.get('SSL_CERT_FILE')
-    os.environ['SSL_CERT_FILE'] = server.tls_material.ca_path
+    os.environ['SSL_CERT_FILE'] = cast_('any_', server.tls_material).ca_path
 
     yield server
 

@@ -42,7 +42,7 @@ def _create_definition(page:'Page', suffix:'str') -> 'dict':
 
     # Open the create dialog ..
     page.click('#markup .page_prompt a')
-    page.wait_for_selector('#create-div', state='visible')
+    _ = page.wait_for_selector('#create-div', state='visible')
 
     # .. fill in the fields ..
     page.fill('#id_name', name)
@@ -52,11 +52,11 @@ def _create_definition(page:'Page', suffix:'str') -> 'dict':
 
     # .. submit and wait for the dialog to close ..
     page.click('#create-div input[type="submit"]')
-    page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+    _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
     # .. wait for the row to appear.
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    page.wait_for_selector(row_selector, state='visible', timeout=5000)
+    _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
     out = {
         'name': name,
@@ -84,7 +84,7 @@ class TestBasicAuthPagination:
 
         # Navigate ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. count existing rows to determine how many more we need ..
         existing_rows = page.query_selector_all('#data-table tbody tr:not(.ignore)')
@@ -98,7 +98,7 @@ class TestBasicAuthPagination:
 
         # .. reload without query filter so pagination kicks in ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. verify pagination controls exist ..
         action_panel = page.query_selector('.action-panel')
@@ -122,7 +122,7 @@ class TestBasicAuthPagination:
 
         # Navigate ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. count existing rows to determine how many more we need ..
         existing_rows = page.query_selector_all('#data-table tbody tr:not(.ignore)')
@@ -136,7 +136,7 @@ class TestBasicAuthPagination:
 
         # .. reload without query filter so pagination kicks in ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. collect page 1 names ..
         cells_page1 = page.query_selector_all('#data-table tbody tr:not(.ignore) td:nth-child(3)')
@@ -150,7 +150,7 @@ class TestBasicAuthPagination:
 
         # .. click Next ..
         page.click('.action-panel a:has-text("Next")')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
         time.sleep(0.3)
 
         # .. collect page 2 names ..
@@ -184,7 +184,7 @@ class TestBasicAuthPagination:
 
         # Navigate ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. create 3 definitions with the filter prefix ..
         created_names = []
@@ -194,7 +194,7 @@ class TestBasicAuthPagination:
 
         # .. navigate with query filter ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={filter_prefix}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. collect all visible names ..
         cells = page.query_selector_all('#data-table tbody tr:not(.ignore) td:nth-child(3)')
@@ -220,14 +220,14 @@ class TestBasicAuthPagination:
 
         # Navigate ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. create a definition ..
         defn = _create_definition(page, 'search-find')
 
         # .. navigate with query filter to find it ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={defn["name"]}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. verify the row is found.
         row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{defn["name"]}"))')
@@ -245,7 +245,7 @@ class TestBasicAuthPagination:
 
         # Navigate ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. count existing rows to determine how many more we need ..
         existing_rows = page.query_selector_all('#data-table tbody tr:not(.ignore)')
@@ -259,11 +259,11 @@ class TestBasicAuthPagination:
 
         # .. reload without query filter so pagination kicks in ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. click Next to go to page 2 ..
         page.click('.action-panel a:has-text("Next")')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
         time.sleep(0.3)
 
         # .. click the Name column header to sort ..

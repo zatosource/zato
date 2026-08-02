@@ -26,9 +26,11 @@ const FORMAT_OFFSET: usize = 20;
 /// Byte length of the `Format` field.
 const FORMAT_LENGTH: usize = 8;
 
+/// Byte length of every `u32` field in the structure, including the folder length prefixes.
+const U32_LENGTH: usize = 4;
+
 /// A parsed MQRFH2 header.
 pub struct Rfh2 {
-
     /// Total byte length of the header, i.e. the offset at which the message body starts.
     pub header_length: usize,
 
@@ -40,8 +42,20 @@ pub struct Rfh2 {
 }
 
 /// Reads a `u32` at the given offset with the detected endianness.
+///
+/// Data too short to hold the field reads as zero, which every caller then rejects
+/// through its own range check.
 fn read_u32(data: &[u8], offset: usize, is_big_endian: bool) -> u32 {
-    let bytes = [data[offset], data[offset + 1], data[offset + 2], data[offset + 3]];
+    // The field must be present in full before any byte of it is meaningful ..
+    let Some(field) = data.get(offset..offset + U32_LENGTH) else {
+        return 0;
+    };
+
+    // .. and the slice is exactly four bytes wide here, so the conversion holds.
+    let Ok(bytes) = <[u8; U32_LENGTH]>::try_from(field) else {
+        return 0;
+    };
+
     if is_big_endian {
         u32::from_be_bytes(bytes)
     } else {
@@ -49,9 +63,17 @@ fn read_u32(data: &[u8], offset: usize, is_big_endian: bool) -> u32 {
     }
 }
 
+/// Converts a header field read off the wire into an offset into the message.
+///
+/// A value too large for the target's pointer width cannot address anything the
+/// caller holds, so it maps to `usize::MAX` and fails the caller's range check.
+fn field_as_offset(value: u32) -> usize {
+    usize::try_from(value).unwrap_or(usize::MAX)
+}
+
 /// Returns true if the given message data starts with an MQRFH2 header.
 pub fn has_rfh2(data: &[u8]) -> bool {
-    data.len() >= FIXED_PART_LENGTH && &data[..4] == STRUC_ID
+    data.len() >= FIXED_PART_LENGTH && data.starts_with(STRUC_ID)
 }
 
 /// Parses an MQRFH2 header from the start of the given message data.
@@ -64,7 +86,7 @@ pub fn parse_rfh2(data: &[u8]) -> Result<Rfh2, String> {
     }
 
     // .. and it must carry the well-known structure identifier.
-    if &data[..4] != STRUC_ID {
+    if !data.starts_with(STRUC_ID) {
         return Err("Data does not start with the MQRFH2 StrucId".to_string());
     }
 
@@ -79,7 +101,7 @@ pub fn parse_rfh2(data: &[u8]) -> Result<Rfh2, String> {
     };
 
     // The total header length tells us where the message body starts ..
-    let struc_length = read_u32(data, STRUC_LENGTH_OFFSET, is_big_endian) as usize;
+    let struc_length = field_as_offset(read_u32(data, STRUC_LENGTH_OFFSET, is_big_endian));
 
     // .. and it must fit within the data we actually have.
     if struc_length < FIXED_PART_LENGTH || struc_length > data.len() {
@@ -87,18 +109,18 @@ pub fn parse_rfh2(data: &[u8]) -> Result<Rfh2, String> {
     }
 
     // The Format field describes the body that follows the header.
-    let format_bytes = &data[FORMAT_OFFSET..FORMAT_OFFSET + FORMAT_LENGTH];
+    // The fixed part is present in full at this point, so the field is always in range.
+    let format_bytes = data.get(FORMAT_OFFSET..FORMAT_OFFSET + FORMAT_LENGTH).unwrap_or_default();
     let body_format = String::from_utf8_lossy(format_bytes).trim_end().to_string();
 
     // Walk the name-value area, one length-prefixed folder at a time.
     let mut headers = Vec::new();
     let mut offset = FIXED_PART_LENGTH;
 
-    while offset + 4 <= struc_length {
-
+    while offset + U32_LENGTH <= struc_length {
         // Each folder is preceded by its byte length ..
-        let folder_length = read_u32(data, offset, is_big_endian) as usize;
-        offset += 4;
+        let folder_length = field_as_offset(read_u32(data, offset, is_big_endian));
+        offset += U32_LENGTH;
 
         // .. which must not point past the end of the header.
         if offset + folder_length > struc_length {
@@ -106,7 +128,8 @@ pub fn parse_rfh2(data: &[u8]) -> Result<Rfh2, String> {
         }
 
         // .. extract the folder string and flatten its properties.
-        let folder_bytes = &data[offset..offset + folder_length];
+        // The bound above keeps the folder inside the header, so the range holds.
+        let folder_bytes = data.get(offset..offset + folder_length).unwrap_or_default();
         let folder_string = String::from_utf8_lossy(folder_bytes);
         parse_folder(&folder_string, &mut headers);
 
@@ -162,7 +185,6 @@ fn parse_properties(folder_name: &str, body: &str, out: &mut Vec<(String, String
     let mut rest = body;
 
     while let Some(tag_start) = rest.find('<') {
-
         // A closing tag at this position means a malformed document, stop here.
         let after_open = &rest[tag_start + 1..];
         if after_open.starts_with('/') {
@@ -200,6 +222,7 @@ fn parse_properties(folder_name: &str, body: &str, out: &mut Vec<(String, String
 }
 
 #[cfg(test)]
+#[expect(clippy::indexing_slicing, reason = "test assertions index fixtures the test itself built")]
 mod tests {
     use super::*;
 
@@ -210,13 +233,7 @@ mod tests {
 
     /// Builds an MQRFH2 byte payload with the given folders and body and byte order.
     fn build_rfh2_with_endianness(folders: &[&str], body: &[u8], is_big_endian: bool) -> Vec<u8> {
-        let write_u32 = |value: u32| -> [u8; 4] {
-            if is_big_endian {
-                value.to_be_bytes()
-            } else {
-                value.to_le_bytes()
-            }
-        };
+        let write_u32 = |value: u32| -> [u8; 4] { if is_big_endian { value.to_be_bytes() } else { value.to_le_bytes() } };
 
         // Pad each folder to a multiple of four bytes as the real client does.
         let mut name_value_area = Vec::new();
@@ -225,11 +242,11 @@ mod tests {
             while padded.len() % 4 != 0 {
                 padded.push(b' ');
             }
-            name_value_area.extend_from_slice(&write_u32(padded.len() as u32));
+            name_value_area.extend_from_slice(&write_u32(u32::try_from(padded.len()).unwrap_or(u32::MAX)));
             name_value_area.extend_from_slice(&padded);
         }
 
-        let struc_length = (FIXED_PART_LENGTH + name_value_area.len()) as u32;
+        let struc_length = u32::try_from(FIXED_PART_LENGTH + name_value_area.len()).unwrap_or(u32::MAX);
 
         let mut data = Vec::new();
         data.extend_from_slice(STRUC_ID); // StrucId

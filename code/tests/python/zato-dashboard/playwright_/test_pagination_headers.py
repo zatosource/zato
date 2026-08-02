@@ -11,6 +11,7 @@ import time
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -42,7 +43,7 @@ class TestPaginationHeaders:
         """
 
         for idx in range(25):
-            resp = api_client.create('zato.security.basic-auth.create',
+            resp = cast_('any_', api_client).create('zato.security.basic-auth.create',
                 name=f'{_Test_Name_Prefix}{idx:02d}',
                 is_active=True,
                 username=f'pag-hdr-user-{idx:02d}',
@@ -59,7 +60,7 @@ class TestPaginationHeaders:
 
         # Navigate to the basic-auth list ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. the action panel with pagination info must be present ..
         action_panel = page.query_selector('.action-panel')
@@ -87,15 +88,15 @@ class TestPaginationHeaders:
 
         # Navigate to the list ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. click Next ..
         page.click('.action-panel a:has-text("Next")')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
         time.sleep(0.3)
 
         # .. the action panel should show page 2 ..
-        action_panel = page.query_selector('.action-panel')
+        action_panel = cast_('any_', page.query_selector('.action-panel'))
         panel_text = action_panel.inner_text()
         assert '2' in panel_text, f'Should be on page 2, got: {panel_text}'
 
@@ -116,7 +117,7 @@ class TestPaginationHeaders:
 
         # Navigate to the list ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. the rendered page must not contain _meta anywhere ..
         content = page.content()
@@ -126,7 +127,7 @@ class TestPaginationHeaders:
         """ Removes all definitions created during this test class.
         """
         for item_id in self.__class__.created_ids:
-            api_client.delete('zato.security.basic-auth.delete', id=item_id)
+            cast_('any_', api_client).delete('zato.security.basic-auth.delete', id=item_id)
 
 # ################################################################################################################################
 # ################################################################################################################################

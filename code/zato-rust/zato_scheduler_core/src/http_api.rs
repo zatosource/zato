@@ -8,6 +8,7 @@
 //! All endpoints are GET-only, served on 127.0.0.1 on the port given by the
 //! `Zato_Scheduler_HTTP_Port` environment variable (35100 by default), no authentication.
 
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use actix_web::{App, HttpResponse, HttpServer, web};
@@ -77,9 +78,9 @@ async fn get_job_summaries(state: web::Data<AppState>) -> HttpResponse {
     let response: Vec<JobSummaryResponse> = summaries
         .iter()
         .map(|summary| {
-            let mut outcome_counts = serde_json::Map::new();
+            let mut outcome_counts: BTreeMap<String, usize> = BTreeMap::new();
             for (label, count) in countable.iter().zip(&summary.outcome_counts) {
-                outcome_counts.insert((*label).to_string(), serde_json::Value::from(*count));
+                outcome_counts.insert((*label).to_string(), *count);
             }
             JobSummaryResponse {
                 id: summary.id,
@@ -132,18 +133,18 @@ struct JobSummaryResponse {
     last_run_utc: Option<String>,
     /// Outcome labels of the last 10 executions.
     recent_outcomes: Vec<String>,
-    /// Per-outcome execution counts.
-    outcome_counts: serde_json::Map<String, serde_json::Value>,
+    /// Per-outcome execution counts, keyed by outcome label.
+    outcome_counts: BTreeMap<String, usize>,
 }
 
-/// Query parameters for get_chart_data.
+/// Query parameters for `get_chart_data`.
 #[derive(Deserialize)]
 struct ChartDataParams {
     /// ISO timestamp of the window start. If absent (together with `until_iso`), the server
     /// derives bucket boundaries from the actual data extent (used by the "All" range).
     since_iso: Option<String>,
     /// ISO timestamp of the window end. Must be provided together with `since_iso` to enable
-    /// fixed-grid bucketing. When both are present, records outside [since_iso, until_iso) are
+    /// fixed-grid bucketing. When both are present, records outside [`since_iso`, `until_iso`) are
     /// excluded and the 120 buckets are distributed evenly across this fixed window.
     until_iso: Option<String>,
 }
@@ -156,7 +157,8 @@ struct ChartBucket {
     /// ISO timestamp of the bucket end.
     end_iso: String,
     /// Count of successful executions in this bucket.
-    ok: u64,
+    #[serde(rename = "ok")]
+    ok_count: u64,
     /// Count of failed executions in this bucket.
     error: u64,
     /// Count of timed-out executions in this bucket.
@@ -179,6 +181,27 @@ struct ChartDataResponse {
 /// Number of fixed buckets returned by the chart data endpoint.
 const CHART_BUCKET_COUNT: usize = 120;
 
+/// The same bucket count in the integer type the millisecond arithmetic below uses.
+const CHART_BUCKET_COUNT_MS: i64 = 120;
+
+/// Number of outcomes counted per bucket.
+const CHART_OUTCOME_COUNT: usize = 4;
+
+/// Position of the successful executions counter within a bucket.
+const CHART_INDEX_OK: usize = 0;
+
+/// Position of the failed executions counter within a bucket.
+const CHART_INDEX_ERROR: usize = 1;
+
+/// Position of the timed-out executions counter within a bucket.
+const CHART_INDEX_TIMEOUT: usize = 2;
+
+/// Position of the skipped executions counter within a bucket.
+const CHART_INDEX_SKIPPED: usize = 3;
+
+/// Window the chart falls back to when every event carries the same timestamp,
+/// or when the caller asks for a range of zero length.
+const DEFAULT_CHART_RANGE_MS: i64 = 3_600_000;
 
 /// Returns pre-aggregated chart data as 120 time buckets with per-outcome counts.
 ///
@@ -229,15 +252,10 @@ const CHART_BUCKET_COUNT: usize = 120;
 /// the actual data extent (min/max of all records). This is the only mode where the chart
 /// can shift on every poll, which is acceptable because "All" has no fixed span to anchor to.
 async fn get_chart_data(state: web::Data<AppState>, params: web::Query<ChartDataParams>) -> HttpResponse {
-
     let fixed_window = match (params.since_iso.as_deref(), params.until_iso.as_deref()) {
         (Some(since), Some(until)) if !since.is_empty() && !until.is_empty() => {
-            let since_ms = DateTime::parse_from_rfc3339(since)
-                .map(|dt| dt.timestamp_millis())
-                .unwrap_or(0);
-            let until_ms = DateTime::parse_from_rfc3339(until)
-                .map(|dt| dt.timestamp_millis())
-                .unwrap_or(0);
+            let since_ms = DateTime::parse_from_rfc3339(since).map_or(0, |dt| dt.timestamp_millis());
+            let until_ms = DateTime::parse_from_rfc3339(until).map_or(0, |dt| dt.timestamp_millis());
             if since_ms > 0 && until_ms > since_ms {
                 Some((since_ms, until_ms))
             } else {
@@ -247,7 +265,7 @@ async fn get_chart_data(state: web::Data<AppState>, params: web::Query<ChartData
         _ => None,
     };
 
-    // outcome_index: 0=ok, 1=error, 2=timeout, 3=skipped
+    // Each collected event pairs its timestamp with one of the CHART_INDEX_* positions.
     let (window_min, window_max, events) = {
         let scheduler_state = state.shared.state.lock();
 
@@ -256,26 +274,29 @@ async fn get_chart_data(state: web::Data<AppState>, params: web::Query<ChartData
         for running_job in scheduler_state.jobs.values() {
             for rec in &running_job.history {
                 let outcome_index = match rec.outcome.as_str() {
-                    outcome::EXECUTED => 0,
-                    outcome::ERROR => 1,
-                    outcome::TIMEOUT => 2,
-                    outcome::SKIPPED_ALREADY_IN_FLIGHT => 3,
+                    outcome::EXECUTED => CHART_INDEX_OK,
+                    outcome::ERROR => CHART_INDEX_ERROR,
+                    outcome::TIMEOUT => CHART_INDEX_TIMEOUT,
+                    outcome::SKIPPED_ALREADY_IN_FLIGHT => CHART_INDEX_SKIPPED,
                     _ => continue,
                 };
 
                 if let Ok(parsed) = DateTime::parse_from_rfc3339(&rec.actual_fire_time_iso) {
-                    let ms = parsed.timestamp_millis();
+                    let event_ms = parsed.timestamp_millis();
 
-                    if let Some((since_ms, until_ms)) = fixed_window {
-                        if ms < since_ms || ms >= until_ms {
-                            continue;
-                        }
+                    if let Some((since_ms, until_ms)) = fixed_window
+                        && (event_ms < since_ms || event_ms >= until_ms)
+                    {
+                        continue;
                     }
 
-                    collected.push((ms, outcome_index));
+                    collected.push((event_ms, outcome_index));
                 }
             }
         }
+
+        // Every record has been read, so the scheduler can carry on while the chart is built.
+        drop(scheduler_state);
 
         if let Some((since_ms, until_ms)) = fixed_window {
             (since_ms, until_ms, collected)
@@ -285,12 +306,16 @@ async fn get_chart_data(state: web::Data<AppState>, params: web::Query<ChartData
         } else {
             let mut min_ms: i64 = i64::MAX;
             let mut max_ms: i64 = i64::MIN;
-            for (ms, _) in &collected {
-                if *ms < min_ms { min_ms = *ms; }
-                if *ms > max_ms { max_ms = *ms; }
+            for (event_ms, _) in &collected {
+                if *event_ms < min_ms {
+                    min_ms = *event_ms;
+                }
+                if *event_ms > max_ms {
+                    max_ms = *event_ms;
+                }
             }
             if max_ms == min_ms {
-                (min_ms - 3_600_000, max_ms, collected)
+                (min_ms - DEFAULT_CHART_RANGE_MS, max_ms, collected)
             } else {
                 (min_ms, max_ms, collected)
             }
@@ -298,46 +323,53 @@ async fn get_chart_data(state: web::Data<AppState>, params: web::Query<ChartData
     };
 
     let time_range = window_max - window_min;
-    let effective_range = if time_range == 0 { 3_600_000 } else { time_range };
-    let bucket_size_ms = effective_range as f64 / CHART_BUCKET_COUNT as f64;
+    let effective_range = if time_range == 0 { DEFAULT_CHART_RANGE_MS } else { time_range };
 
-    let mut bucket_counts = vec![[0u64; 4]; CHART_BUCKET_COUNT];
+    let mut bucket_counts = vec![[0_u64; CHART_OUTCOME_COUNT]; CHART_BUCKET_COUNT];
 
-    for (ms, outcome_index) in &events {
-        let bucket_index = ((*ms - window_min) as f64 / bucket_size_ms) as i64;
-        let bucket_index = bucket_index.clamp(0, (CHART_BUCKET_COUNT - 1) as i64) as usize;
-        bucket_counts[bucket_index][*outcome_index] += 1;
+    // Bucket boundaries are worked out in whole milliseconds throughout. Dividing after
+    // multiplying keeps every boundary exact, which floating point could not promise.
+    for (event_ms, outcome_index) in &events {
+        let offset_ms = *event_ms - window_min;
+        let raw_index = offset_ms.saturating_mul(CHART_BUCKET_COUNT_MS) / effective_range;
+        let bucket_index = raw_index.clamp(0, CHART_BUCKET_COUNT_MS - 1);
+
+        // The clamp above keeps the index inside the vector allocated with that same length.
+        let Ok(bucket_index) = usize::try_from(bucket_index) else {
+            continue;
+        };
+
+        if let Some(counts) = bucket_counts.get_mut(bucket_index)
+            && let Some(count) = counts.get_mut(*outcome_index)
+        {
+            *count += 1;
+        }
     }
 
     let mut buckets: Vec<ChartBucket> = Vec::with_capacity(CHART_BUCKET_COUNT);
-    for bucket_index in 0..CHART_BUCKET_COUNT {
-        let start_ms = window_min + (bucket_index as f64 * bucket_size_ms) as i64;
-        let end_ms = window_min + ((bucket_index + 1) as f64 * bucket_size_ms) as i64;
 
-        let start_iso = DateTime::from_timestamp_millis(start_ms)
-            .unwrap_or_else(|| Utc::now())
-            .to_rfc3339();
-        let end_iso = DateTime::from_timestamp_millis(end_ms)
-            .unwrap_or_else(|| Utc::now())
-            .to_rfc3339();
+    for (bucket_index, counts) in bucket_counts.iter().enumerate() {
+        // A bucket index never exceeds CHART_BUCKET_COUNT, so it always fits in an i64.
+        let bucket_index = i64::try_from(bucket_index).unwrap_or(0);
 
-        let counts = &bucket_counts[bucket_index];
+        let start_ms = window_min + bucket_index * effective_range / CHART_BUCKET_COUNT_MS;
+        let end_ms = window_min + (bucket_index + 1) * effective_range / CHART_BUCKET_COUNT_MS;
+
+        let start_iso = DateTime::from_timestamp_millis(start_ms).unwrap_or_else(Utc::now).to_rfc3339();
+        let end_iso = DateTime::from_timestamp_millis(end_ms).unwrap_or_else(Utc::now).to_rfc3339();
+
         buckets.push(ChartBucket {
             start_iso,
             end_iso,
-            ok: counts[0],
-            error: counts[1],
-            timeout: counts[2],
-            skipped_already_in_flight: counts[3],
+            ok_count: counts[CHART_INDEX_OK],
+            error: counts[CHART_INDEX_ERROR],
+            timeout: counts[CHART_INDEX_TIMEOUT],
+            skipped_already_in_flight: counts[CHART_INDEX_SKIPPED],
         });
     }
 
-    let min_time_iso = DateTime::from_timestamp_millis(window_min)
-        .unwrap_or_else(|| Utc::now())
-        .to_rfc3339();
-    let max_time_iso = DateTime::from_timestamp_millis(window_max)
-        .unwrap_or_else(|| Utc::now())
-        .to_rfc3339();
+    let min_time_iso = DateTime::from_timestamp_millis(window_min).unwrap_or_else(Utc::now).to_rfc3339();
+    let max_time_iso = DateTime::from_timestamp_millis(window_max).unwrap_or_else(Utc::now).to_rfc3339();
 
     let response = ChartDataResponse {
         buckets,
@@ -348,7 +380,7 @@ async fn get_chart_data(state: web::Data<AppState>, params: web::Query<ChartData
     HttpResponse::Ok().json(response)
 }
 
-/// Query parameters for get_timeline_events_since.
+/// Query parameters for `get_timeline_events_since`.
 #[derive(Deserialize)]
 struct TimelineEventsSinceParams {
     /// ISO timestamp cutoff - only return events strictly after this time.
@@ -380,7 +412,7 @@ struct TimelineEventResponse {
     planned_fire_time_iso: String,
 }
 
-/// Returns timeline events, optionally filtered by since_iso and capped by limit.
+/// Returns timeline events, optionally filtered by `since_iso` and capped by limit.
 async fn get_timeline_events_since(state: web::Data<AppState>, params: web::Query<TimelineEventsSinceParams>) -> HttpResponse {
     let since_cutoff = params.since_iso.as_deref().unwrap_or("");
 
@@ -390,10 +422,8 @@ async fn get_timeline_events_since(state: web::Data<AppState>, params: web::Quer
 
         for (job_id, running_job) in &scheduler_state.jobs {
             for rec in &running_job.history {
-                if !since_cutoff.is_empty() {
-                    if rec.actual_fire_time_iso.as_str() <= since_cutoff {
-                        continue;
-                    }
+                if !since_cutoff.is_empty() && rec.actual_fire_time_iso.as_str() <= since_cutoff {
+                    continue;
                 }
                 events.push(job::TimelineEvent {
                     job_id: *job_id,
@@ -434,7 +464,7 @@ async fn get_timeline_events_since(state: web::Data<AppState>, params: web::Quer
     HttpResponse::Ok().json(response)
 }
 
-/// Query parameters for get_history_page.
+/// Query parameters for `get_history_page`.
 #[derive(Deserialize)]
 struct HistoryPageParams {
     /// Job identifier.
@@ -478,10 +508,10 @@ async fn get_history_page(state: web::Data<AppState>, params: web::Query<History
                         continue;
                     }
 
-                    if let Some(allowed) = &filter {
-                        if !allowed.iter().any(|allowed_val| allowed_val == &rec.outcome) {
-                            continue;
-                        }
+                    if let Some(allowed) = &filter
+                        && !allowed.iter().any(|allowed_val| allowed_val == &rec.outcome)
+                    {
+                        continue;
                     }
 
                     if rec.outcome != outcome::RUNNING {
@@ -510,7 +540,7 @@ async fn get_history_page(state: web::Data<AppState>, params: web::Query<History
     HttpResponse::Ok().json(response)
 }
 
-/// Query parameters for get_history_since.
+/// Query parameters for `get_history_since`.
 #[derive(Deserialize)]
 struct HistorySinceParams {
     /// Job identifier.
@@ -560,10 +590,11 @@ async fn get_history_since(state: web::Data<AppState>, params: web::Query<Histor
                         .as_ref()
                         .is_none_or(|allowed| allowed.iter().any(|allowed_val| allowed_val == &rec.outcome));
 
-                    if outcome_allowed && rec.outcome != outcome::RUNNING {
-                        if range_cutoff.is_empty() || rec.actual_fire_time_iso.as_str() >= range_cutoff {
-                            total += 1;
-                        }
+                    if outcome_allowed
+                        && rec.outcome != outcome::RUNNING
+                        && (range_cutoff.is_empty() || rec.actual_fire_time_iso.as_str() >= range_cutoff)
+                    {
+                        total += 1;
                     }
 
                     let run_override = running_runs.contains(&rec.current_run);
@@ -587,7 +618,7 @@ async fn get_history_since(state: web::Data<AppState>, params: web::Query<Histor
     HttpResponse::Ok().json(response)
 }
 
-/// Query parameters for get_run_detail.
+/// Query parameters for `get_run_detail`.
 #[derive(Deserialize)]
 struct RunDetailParams {
     /// Job identifier.
@@ -649,7 +680,7 @@ async fn get_run_detail(state: web::Data<AppState>, params: web::Query<RunDetail
     HttpResponse::Ok().json(response)
 }
 
-/// Query parameters for get_log_entries.
+/// Query parameters for `get_log_entries`.
 #[derive(Deserialize)]
 struct LogEntriesParams {
     /// Job identifier.
@@ -754,7 +785,10 @@ mod tests {
     async fn test_get_chart_data_empty() {
         let shared = make_shared(HashMap::new());
         let state = web::Data::new(AppState { shared });
-        let params = web::Query(ChartDataParams { since_iso: None, until_iso: None });
+        let params = web::Query(ChartDataParams {
+            since_iso: None,
+            until_iso: None,
+        });
 
         let response = get_chart_data(state, params).await;
         assert_eq!(response.status(), 200);
@@ -773,21 +807,24 @@ mod tests {
 
         let shared = make_shared(jobs);
         let state = web::Data::new(AppState { shared });
-        let params = web::Query(ChartDataParams { since_iso: None, until_iso: None });
+        let params = web::Query(ChartDataParams {
+            since_iso: None,
+            until_iso: None,
+        });
 
         let response = get_chart_data(state, params).await;
         assert_eq!(response.status(), 200);
 
         let body = response.into_body();
         let bytes = actix_web::body::to_bytes(body).await.unwrap();
-        let data: ChartDataResponse = serde_json::from_slice(&bytes).unwrap();
+        let data: ChartDataResponse = crate::wire::parse_body(&bytes).unwrap();
         assert_eq!(data.buckets.len(), CHART_BUCKET_COUNT);
 
         let mut total_ok: u64 = 0;
         let mut total_error: u64 = 0;
         let mut total_timeout: u64 = 0;
         for bucket in &data.buckets {
-            total_ok += bucket.ok;
+            total_ok += bucket.ok_count;
             total_error += bucket.error;
             total_timeout += bucket.timeout;
         }
@@ -815,12 +852,12 @@ mod tests {
         let response = get_chart_data(state, params).await;
         let body = response.into_body();
         let bytes = actix_web::body::to_bytes(body).await.unwrap();
-        let data: ChartDataResponse = serde_json::from_slice(&bytes).unwrap();
+        let data: ChartDataResponse = crate::wire::parse_body(&bytes).unwrap();
 
         // Only the 12:00 record falls inside [10:00, 13:00), the 08:00 one is excluded.
         let mut total_ok: u64 = 0;
         for bucket in &data.buckets {
-            total_ok += bucket.ok;
+            total_ok += bucket.ok_count;
         }
         assert_eq!(total_ok, 1);
 
@@ -848,12 +885,12 @@ mod tests {
         let response = get_chart_data(state, params).await;
         let body = response.into_body();
         let bytes = actix_web::body::to_bytes(body).await.unwrap();
-        let data: ChartDataResponse = serde_json::from_slice(&bytes).unwrap();
+        let data: ChartDataResponse = crate::wire::parse_body(&bytes).unwrap();
 
         // Without until_iso there is no fixed window, so all records are counted.
         let mut total_ok: u64 = 0;
         for bucket in &data.buckets {
-            total_ok += bucket.ok;
+            total_ok += bucket.ok_count;
         }
         assert_eq!(total_ok, 2);
     }
@@ -870,15 +907,18 @@ mod tests {
 
         let shared = make_shared(jobs);
         let state = web::Data::new(AppState { shared });
-        let params = web::Query(TimelineEventsSinceParams { since_iso: None, limit: None });
+        let params = web::Query(TimelineEventsSinceParams {
+            since_iso: None,
+            limit: None,
+        });
 
         let response = get_timeline_events_since(state, params).await;
         let body = response.into_body();
         let bytes = actix_web::body::to_bytes(body).await.unwrap();
-        let events: Vec<TimelineEventResponse> = serde_json::from_slice(&bytes).unwrap();
+        let events: Vec<TimelineEventResponse> = crate::wire::parse_body(&bytes).unwrap();
 
         assert_eq!(events.len(), 3);
-        assert_eq!(events[0].actual_fire_time_iso, "2026-01-01T10:02:00+00:00");
+        assert_eq!(events.first().unwrap().actual_fire_time_iso, "2026-01-01T10:02:00+00:00");
     }
 
     #[actix_web::test]
@@ -901,10 +941,10 @@ mod tests {
         let response = get_timeline_events_since(state, params).await;
         let body = response.into_body();
         let bytes = actix_web::body::to_bytes(body).await.unwrap();
-        let events: Vec<TimelineEventResponse> = serde_json::from_slice(&bytes).unwrap();
+        let events: Vec<TimelineEventResponse> = crate::wire::parse_body(&bytes).unwrap();
 
         assert_eq!(events.len(), 1);
-        assert_eq!(events[0].actual_fire_time_iso, "2026-01-01T10:02:00+00:00");
+        assert_eq!(events.first().unwrap().actual_fire_time_iso, "2026-01-01T10:02:00+00:00");
     }
 
     #[actix_web::test]
@@ -927,7 +967,7 @@ mod tests {
         let response = get_timeline_events_since(state, params).await;
         let body = response.into_body();
         let bytes = actix_web::body::to_bytes(body).await.unwrap();
-        let events: Vec<TimelineEventResponse> = serde_json::from_slice(&bytes).unwrap();
+        let events: Vec<TimelineEventResponse> = crate::wire::parse_body(&bytes).unwrap();
 
         assert_eq!(events.len(), 2);
     }

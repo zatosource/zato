@@ -18,12 +18,14 @@ from zato.common.audit_log.api import event_attr_table, event_table, get_audit_e
     AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.config_audit import build_change_summary, is_secret_field, mask_secrets, \
     record_config_change, record_view_event, ConfigScope, Secret_Mask
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anylist
+    from zato.common.typing_ import any_, anydict, anylist
+    any_ = any_
 
     # Dummy assignments to satisfy type checkers
     anydict = anydict
@@ -172,7 +174,7 @@ def _run_config_change_checks(audit_log:'AuditLog') -> 'None':
         after={'address': 'example.com', 'password': 'abc'},
     )
 
-    row = _get_event_row(create_id)
+    row = _get_event_row(cast_('any_', create_id))
     assert row['source'] == AuditSource.Config
     assert row['event_type'] == AuditEvent.Config_Created
     assert row['object_name'] == _object_name
@@ -184,7 +186,7 @@ def _run_config_change_checks(audit_log:'AuditLog') -> 'None':
     assert summary['object_type'] == _object_type
 
     # .. with no escalation the effective actor is the original one ..
-    attr_map = _get_attr_map(create_id)
+    attr_map = _get_attr_map(cast_('any_', create_id))
     assert attr_map['actor'][0] == _actor
     assert attr_map['effective_actor'][0] == _actor
     assert attr_map['scope'][0] == ConfigScope.Persistent
@@ -203,12 +205,12 @@ def _run_config_change_checks(audit_log:'AuditLog') -> 'None':
         after={'address': 'example.net', 'password': 'abc'},
     )
 
-    attr_map = _get_attr_map(edit_id)
+    attr_map = _get_attr_map(cast_('any_', edit_id))
     assert attr_map['actor'][0] == _actor
     assert attr_map['effective_actor'][0] == _effective_actor
 
     # .. the summary carries only the changed field, the unchanged secret stays out ..
-    summary = loads(_get_event_row(edit_id)['data'])
+    summary = loads(_get_event_row(cast_('any_', edit_id))['data'])
     assert summary['before'] == {'address': 'example.com'}, summary
     assert summary['after'] == {'address': 'example.net'}, summary
 
@@ -225,7 +227,7 @@ def _run_config_change_checks(audit_log:'AuditLog') -> 'None':
         after={'is_active': False},
     )
 
-    attr_map = _get_attr_map(suspend_id)
+    attr_map = _get_attr_map(cast_('any_', suspend_id))
     assert attr_map['scope'][0] == ConfigScope.Ephemeral
 
     # .. a deletion has an empty after ..
@@ -239,7 +241,7 @@ def _run_config_change_checks(audit_log:'AuditLog') -> 'None':
         before={'address': 'example.net'},
     )
 
-    summary = loads(_get_event_row(delete_id)['data'])
+    summary = loads(_get_event_row(cast_('any_', delete_id))['data'])
     assert summary['before'] == {'address': 'example.net'}, summary
     assert summary['after'] == {}, summary
 
@@ -266,13 +268,13 @@ def _run_view_event_checks(audit_log:'AuditLog') -> 'None':
         cid='cid-view-1',
     )
 
-    row = _get_event_row(view_id)
+    row = _get_event_row(cast_('any_', view_id))
     assert row['source'] == AuditSource.Config
     assert row['event_type'] == AuditEvent.Content_Viewed
     assert row['object_name'] == 'details-overlay'
 
     # The viewer and the viewed event are both searchable ..
-    attr_map = _get_attr_map(view_id)
+    attr_map = _get_attr_map(cast_('any_', view_id))
     assert attr_map['actor'][0] == _viewer
     assert attr_map['screen'][0] == 'details-overlay'
 

@@ -72,7 +72,7 @@ def _start_smtp_capture() -> 'tuple':
     class _SMTPHandler(socketserver.StreamRequestHandler):
 
         def _send(self, line:'str') -> 'None':
-            self.wfile.write((line + '\r\n').encode('ascii'))
+            _ = self.wfile.write((line + '\r\n').encode('ascii'))
 
         def handle(self) -> 'None':
             self._send('220 alerting-capture ESMTP')

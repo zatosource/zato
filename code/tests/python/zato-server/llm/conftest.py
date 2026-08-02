@@ -22,7 +22,10 @@ import pytest
 # ################################################################################################################################
 
 if 0:
+    from collections.abc import Iterator
     from zato.common.typing_ import any_, anydict
+
+    anydictgen = Iterator[anydict]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -96,7 +99,7 @@ def clear_llm_test_server(llm_test_server:'any_') -> 'any_':
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def redis_server() -> 'anydict':
+def redis_server() -> 'anydictgen':
     """ A session-scoped, test-managed Redis on its own port - started here and stopped when the session ends.
     """
     port = _find_free_port()

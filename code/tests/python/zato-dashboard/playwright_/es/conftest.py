@@ -138,7 +138,7 @@ def zato_dashboard() -> 'any_':
     # .. 1) create a quickstart environment with both server and dashboard ..
 
     quickstart_env = os.environ.copy()
-    quickstart_env.pop('COVERAGE_PROCESS_START', None)
+    _ = quickstart_env.pop('COVERAGE_PROCESS_START', None)
 
     quickstart_command = [
         _Zato_Bin, 'quickstart', 'create', temporary_dir,
@@ -193,7 +193,7 @@ def zato_dashboard() -> 'any_':
     server_env = os.environ.copy()
     server_env['Zato_Config_Bind_Port'] = str(server_port)
     server_env['Zato_Broker_HTTP_Port'] = str(broker_port)
-    server_env.pop('COVERAGE_PROCESS_START', None)
+    _ = server_env.pop('COVERAGE_PROCESS_START', None)
 
     server_process = subprocess.Popen(
         [_Zato_Bin, 'start', server_dir, '--fg'],
@@ -213,7 +213,7 @@ def zato_dashboard() -> 'any_':
     # .. 5) start the dashboard ..
 
     dashboard_env = os.environ.copy()
-    dashboard_env.pop('COVERAGE_PROCESS_START', None)
+    _ = dashboard_env.pop('COVERAGE_PROCESS_START', None)
     dashboard_env['Zato_Server_Address'] = f'http://127.0.0.1:{server_port}'
     dashboard_env['Zato_Server_Dir'] = server_dir
 

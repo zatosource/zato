@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,7 +40,7 @@ def _create_definition(page:'Page', suffix:'str') -> 'dict':
 
     # Open the create dialog ..
     page.click('#markup .page_prompt a')
-    page.wait_for_selector('#create-div', state='visible')
+    _ = page.wait_for_selector('#create-div', state='visible')
 
     # .. fill in the fields ..
     page.fill('#id_name', name)
@@ -49,11 +50,11 @@ def _create_definition(page:'Page', suffix:'str') -> 'dict':
 
     # .. submit and wait for the dialog to close ..
     page.click('#create-div input[type="submit"]')
-    page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+    _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
     # .. wait for the row to appear.
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    page.wait_for_selector(row_selector, state='visible', timeout=5000)
+    _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
     out = {
         'name': name,
@@ -71,7 +72,7 @@ def _get_item_id(page:'Page', name:'str') -> 'str':
     """
 
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    row = page.query_selector(row_selector)
+    row = cast_('any_', page.query_selector(row_selector))
     id_cell = row.query_selector('td[class*="item_id_"]')
 
     out = id_cell.inner_text().strip()
@@ -94,7 +95,7 @@ class TestBasicAuthNavigation:
 
         # Navigate and create a definition ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         defn = _create_definition(page, 'back-btn')
 
@@ -102,7 +103,7 @@ class TestBasicAuthNavigation:
         item_id = _get_item_id(page, defn['name'])
         link_selector = f'#data-table tbody tr:has(td:text-is("{defn["name"]}")) a[href*="rate-limiting"]'
         page.click(link_selector)
-        page.wait_for_selector('#rate-limiting-container', state='visible', timeout=10000)
+        _ = page.wait_for_selector('#rate-limiting-container', state='visible', timeout=10000)
 
         # .. verify we are on the rate limiting page ..
         current_url = page.url
@@ -110,10 +111,10 @@ class TestBasicAuthNavigation:
 
         # .. navigate back with query filter so the row is visible ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={defn["name"]}')
-        page.wait_for_selector('#data-table', state='visible', timeout=10000)
+        _ = page.wait_for_selector('#data-table', state='visible', timeout=10000)
 
         # .. verify we are back on the basic auth list page ..
-        heading = page.query_selector('h2.zato')
+        heading = cast_('any_', page.query_selector('h2.zato'))
         heading_text = heading.inner_text()
         assert 'Basic Auth' in heading_text, f'Expected "Basic Auth" in heading, got: "{heading_text}"'
 
@@ -133,14 +134,14 @@ class TestBasicAuthNavigation:
 
         # Navigate and create two definitions with distinct suffixes ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         defn_alpha = _create_definition(page, 'search-alpha')
         defn_beta = _create_definition(page, 'search-beta')
 
         # .. reload with query filter so both test rows are visible ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={_Test_Name_Prefix}search')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. verify both exist before searching ..
         row_alpha = page.query_selector(f'#data-table tbody tr:has(td:text-is("{defn_alpha["name"]}"))')
@@ -154,7 +155,7 @@ class TestBasicAuthNavigation:
 
         page.fill('#id_query', defn_alpha['name'])
         page.click('#main_page_form input[type="submit"]')
-        page.wait_for_selector('#data-table', state='visible', timeout=10000)
+        _ = page.wait_for_selector('#data-table', state='visible', timeout=10000)
 
         # .. verify alpha is in the results ..
         row_alpha_after = page.query_selector(f'#data-table tbody tr:has(td:text-is("{defn_alpha["name"]}"))')
@@ -176,13 +177,13 @@ class TestBasicAuthNavigation:
 
         # Navigate to basic auth and create a definition ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         defn = _create_definition(page, 'cross-page')
 
         # .. navigate to API keys page ..
         _ = page.goto(f'{base_url}/zato/security/apikey/?cluster=1')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. verify the basic auth definition name is not in the API keys table ..
         ba_row_on_apikey = page.query_selector(f'#data-table tbody tr:has(td:text-is("{defn["name"]}"))')
@@ -190,7 +191,7 @@ class TestBasicAuthNavigation:
 
         # .. navigate back to basic auth with query filter ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={defn["name"]}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. verify the definition is still there ..
         row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{defn["name"]}"))')
@@ -243,15 +244,15 @@ class TestBasicAuthNavigation:
 
         # Navigate and create three definitions ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
-        _create_definition(page, 'num-a')
-        _create_definition(page, 'num-b')
-        _create_definition(page, 'num-c')
+        _ = _create_definition(page, 'num-a')
+        _ = _create_definition(page, 'num-b')
+        _ = _create_definition(page, 'num-c')
 
         # .. reload so the server renders all rows ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. verify the CSS counter setup is correct ..
         counter_setup = page.evaluate("""

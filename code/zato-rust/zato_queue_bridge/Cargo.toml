@@ -5,7 +5,7 @@ edition = "2024"
 license = "AGPL-3.0-only"
 description = "Queue bridge for Zato - connects Kafka, AWS SQS, and IBM MQ to the Zato integration platform"
 repository = "https://github.com/zatosource/zato"
-readme = false
+readme = "README.md"
 keywords = ["zato", "api", "integration-platform", "ipaas", "rule-engine"]
 categories = ["development-tools"]
 

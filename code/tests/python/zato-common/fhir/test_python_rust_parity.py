@@ -8,9 +8,18 @@ from zato import fhir_r4_0_1_core as rust_core
 import zato.fhir.r4_0_1 as r4
 from zato.fhir.tests.fakers import resources as fakers_module
 
+# ################################################################################################################################
+# ################################################################################################################################
 
-def _get_faker_pairs() -> 'list[tuple]':
-    pairs = [] # type: list[tuple]
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+
+def _get_faker_pairs() -> 'list[tuple[str, any_]]':
+    pairs:'list[tuple[str, any_]]' = []
     for name, func in inspect.getmembers(fakers_module, inspect.isfunction):
         if not name.startswith('fake_'):
             continue
@@ -25,7 +34,7 @@ _FAKER_IDS = [p[0] for p in _FAKER_PAIRS]
 class TestPythonRustDictParity:
 
     @pytest.mark.parametrize('name,faker', _FAKER_PAIRS, ids=_FAKER_IDS)
-    def test_to_dict_parity(self, name, faker):
+    def test_to_dict_parity(self, name:'any_', faker:'any_'):
         resource = faker()
         py_dict = resource.to_dict()
         rust_dict = rust_core.to_dict(resource)
@@ -34,7 +43,7 @@ class TestPythonRustDictParity:
         )
 
     @pytest.mark.parametrize('name,faker', _FAKER_PAIRS, ids=_FAKER_IDS)
-    def test_from_dict_roundtrip_parity(self, name, faker):
+    def test_from_dict_roundtrip_parity(self, name:'any_', faker:'any_'):
         resource = faker()
         d = rust_core.to_dict(resource)
         resource_type = d.get('resourceType', '')
@@ -51,7 +60,7 @@ class TestPythonRustDictParity:
 class TestEmptyResourceParity:
 
     @pytest.mark.parametrize('name,faker', _FAKER_PAIRS, ids=_FAKER_IDS)
-    def test_empty_resource_parity(self, name, faker):
+    def test_empty_resource_parity(self, name:'any_', faker:'any_'):
         resource = faker()
         resource_type = resource._resource_type
         cls = getattr(r4, resource_type, None)
@@ -83,7 +92,7 @@ class TestRustHandledResources:
             try:
                 obj = cls()
                 obj.id = 'rust-dispatch-test'
-                rust_core.to_dict(obj)
+                _ = rust_core.to_dict(obj)
             except Exception as exc:
                 failures.append(f'{rt}: {exc}')
 

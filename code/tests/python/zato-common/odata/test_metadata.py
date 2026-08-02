@@ -23,13 +23,19 @@ from zato.common.odata.metadata import parse_metadata
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # The real published $metadata documents live in the fixture tree.
 Metadata_Fixtures_Dir = os.path.join(os.path.dirname(__file__), 'fixtures', 'metadata')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _load_fixture(file_name):
+def _load_fixture(file_name:'any_'):
     """ Reads one golden $metadata document from the fixture tree.
     """
     path = os.path.join(Metadata_Fixtures_Dir, file_name)
@@ -138,7 +144,7 @@ class TestServedMetadata:
     """ The documents the four simulation profiles serve, retrieved live through the client.
     """
 
-    def test_s4hana(self, s4hana_server):
+    def test_s4hana(self, s4hana_server:'any_'):
         s4hana_server.reset()
 
         config = {
@@ -163,7 +169,7 @@ class TestServedMetadata:
         # The V2 function import is marked POST, so it surfaces as an action.
         assert sorted(metadata.actions) == ['ReleaseApprovalRequest']
 
-    def test_successfactors(self, successfactors_server):
+    def test_successfactors(self, successfactors_server:'any_'):
         successfactors_server.reset()
 
         config = {
@@ -183,7 +189,7 @@ class TestServedMetadata:
         # The V2 function import is a GET, so it surfaces as a function.
         assert sorted(metadata.functions) == ['getUserRolesByUserId']
 
-    def test_d365fo(self, d365fo_server):
+    def test_d365fo(self, d365fo_server:'any_'):
         d365fo_server.reset()
         d365fo_server.set_oauth_client('client-1', 'secret-1')
 
@@ -208,7 +214,7 @@ class TestServedMetadata:
         assert sorted(metadata.functions) == ['GetKeys']
         assert sorted(metadata.actions) == ['calculateBalance']
 
-    def test_business_central(self, business_central_server):
+    def test_business_central(self, business_central_server:'any_'):
         business_central_server.reset()
 
         config = {
@@ -236,12 +242,12 @@ class TestGoldenFilesAreSchemaValid:
     is only ever proven against schema-valid documents.
     """
 
-    def test_trippin(self, edmx_v4_schema):
+    def test_trippin(self, edmx_v4_schema:'any_'):
         document = etree.fromstring(_load_fixture('trippin-v4.xml'))
 
         edmx_v4_schema.assertValid(document)
 
-    def test_northwind(self, csdl_v3_schema):
+    def test_northwind(self, csdl_v3_schema:'any_'):
         document = etree.fromstring(_load_fixture('northwind-v2.xml'))
 
         # The EDMX 1.0 wrapper is a plain envelope - what the CSDL schema governs

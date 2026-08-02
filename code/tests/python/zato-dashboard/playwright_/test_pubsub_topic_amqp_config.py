@@ -14,7 +14,8 @@ from zato.common.test.playwright_pubsub import collect_console_errors, collect_h
 from zato.common.util.api import new_cid
 
 # The broker fixture is resolved by pytest through this import
-from amqp_fixtures import rabbitmq_broker # noqa: F401
+from amqp_fixtures import rabbitmq_broker # noqa: F401 # pyright: ignore[reportUnusedImport]
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -78,7 +79,7 @@ class TestPubSubTopicAMQPConfig:
 
         # .. and the edit dialog shows the stored address.
         page.evaluate(f'$.fn.zato.outgoing.amqp.edit("{item_id}")')
-        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         stored_address = page.input_value('#id_edit-address')
         assert stored_address == address, f'Expected address `{address}`, got `{stored_address}`'
@@ -114,7 +115,7 @@ class TestPubSubTopicAMQPConfig:
 
         # .. and the edit dialog shows the stored values.
         page.evaluate(f'$.fn.zato.channel.amqp.edit("{item_id}")')
-        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         stored_address = page.input_value('#id_edit-address')
         assert stored_address == address, f'Expected address `{address}`, got `{stored_address}`'
@@ -164,7 +165,7 @@ class TestPubSubTopicAMQPConfig:
 
         # .. select the AMQP backend ..
         set_select_value(page, '#id_backend_type', 'amqp')
-        page.wait_for_selector('.zato-topic-amqp-row-create', state='visible', timeout=5000)
+        _ = page.wait_for_selector('.zato-topic-amqp-row-create', state='visible', timeout=5000)
 
         # .. all four AMQP rows are now visible ..
         amqp_rows = page.query_selector_all('.zato-topic-amqp-row-create')
@@ -174,7 +175,7 @@ class TestPubSubTopicAMQPConfig:
 
         # .. switch back to built-in ..
         set_select_value(page, '#id_backend_type', 'builtin')
-        page.wait_for_selector('.zato-topic-amqp-row-create', state='hidden', timeout=5000)
+        _ = page.wait_for_selector('.zato-topic-amqp-row-create', state='hidden', timeout=5000)
 
         # .. and the rows are hidden again.
         for amqp_row in amqp_rows:
@@ -279,7 +280,7 @@ class TestPubSubTopicAMQPConfig:
         page.fill('#id_name', topic_name)
 
         set_select_value(page, '#id_backend_type', 'amqp')
-        page.wait_for_selector('.zato-topic-amqp-row-create', state='visible', timeout=5000)
+        _ = page.wait_for_selector('.zato-topic-amqp-row-create', state='visible', timeout=5000)
 
         # .. fill in the exchange but leave the connection unselected ..
         page.fill('#id_amqp_exchange', exchange)
@@ -288,11 +289,11 @@ class TestPubSubTopicAMQPConfig:
         page.click('#create-div input[type="submit"]')
 
         # .. the required-field indicator appears and the dialog stays open ..
-        indicator = page.wait_for_selector('#create-form .zato-name-invalid', state='visible', timeout=5000)
+        indicator = cast_('any_', page.wait_for_selector('#create-form .zato-name-invalid', state='visible', timeout=5000))
         indicator_text = indicator.inner_text()
         assert 'required' in indicator_text, f'Expected a required-field indication, got `{indicator_text}`'
 
-        dialog = page.query_selector('#create-div')
+        dialog = cast_('any_', page.query_selector('#create-div'))
         assert dialog.is_visible(), 'Expected the create dialog to stay open'
 
         # .. and no row was added.
@@ -329,7 +330,7 @@ class TestPubSubTopicAMQPConfig:
         page.fill('#id_name', topic_name)
 
         set_select_value(page, '#id_backend_type', 'amqp')
-        page.wait_for_selector('.zato-topic-amqp-row-create', state='visible', timeout=5000)
+        _ = page.wait_for_selector('.zato-topic-amqp-row-create', state='visible', timeout=5000)
 
         # .. select the connection but leave the exchange empty ..
         set_select_value(page, '#id_amqp_outconn_name', outconn_name)
@@ -338,11 +339,11 @@ class TestPubSubTopicAMQPConfig:
         page.click('#create-div input[type="submit"]')
 
         # .. the required-field indicator appears and the dialog stays open ..
-        indicator = page.wait_for_selector('#create-form .zato-name-invalid', state='visible', timeout=5000)
+        indicator = cast_('any_', page.wait_for_selector('#create-form .zato-name-invalid', state='visible', timeout=5000))
         indicator_text = indicator.inner_text()
         assert 'required' in indicator_text, f'Expected a required-field indication, got `{indicator_text}`'
 
-        dialog = page.query_selector('#create-div')
+        dialog = cast_('any_', page.query_selector('#create-div'))
         assert dialog.is_visible(), 'Expected the create dialog to stay open'
 
         # .. and no row was added.
@@ -381,7 +382,7 @@ class TestPubSubTopicAMQPConfig:
         open_edit_dialog(page, 'topic', item_id)
 
         set_select_value(page, '#id_edit-backend_type', 'amqp')
-        page.wait_for_selector('.zato-topic-amqp-row-edit', state='visible', timeout=5000)
+        _ = page.wait_for_selector('.zato-topic-amqp-row-edit', state='visible', timeout=5000)
 
         set_select_value(page, '#id_edit-amqp_outconn_name', outconn_name)
         page.fill('#id_edit-amqp_exchange', exchange)
@@ -400,7 +401,7 @@ class TestPubSubTopicAMQPConfig:
         open_edit_dialog(page, 'topic', item_id)
 
         set_select_value(page, '#id_edit-backend_type', 'builtin')
-        page.wait_for_selector('.zato-topic-amqp-row-edit', state='hidden', timeout=5000)
+        _ = page.wait_for_selector('.zato-topic-amqp-row-edit', state='hidden', timeout=5000)
 
         # .. the AMQP rows are hidden and submission needs no AMQP values ..
         submit_edit_form(page)

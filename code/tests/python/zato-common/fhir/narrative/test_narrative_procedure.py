@@ -4,6 +4,17 @@ from xml.etree import ElementTree
 
 from zato.fhir.r4_0_1 import Procedure
 from zato.fhir.narrative import generate_narrative, NarrativeTemplate
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 
 XHTML_NS = '{http://www.w3.org/1999/xhtml}'
@@ -63,7 +74,7 @@ class TestNarrativeProcedure:
         assert found_field, "Field 'Identifier' not found in narrative"
 
     def test_narrative_procedure_instantiatesCanonical(self):
-        r = Procedure()
+        r = cast_('any_', Procedure())
         r.id = 'test-1'
         r.instantiatesCanonical = {'value': 'test'}
         narrative = generate_narrative(r)

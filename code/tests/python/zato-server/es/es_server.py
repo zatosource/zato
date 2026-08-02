@@ -17,6 +17,7 @@ from typing import NamedTuple
 
 # Elasticsearch
 from elasticsearch import Elasticsearch
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -25,6 +26,7 @@ if 0:
     from subprocess import Popen
     from certificates import CertificatePaths
     from zato.common.typing_ import optional, stranydict
+    any_ = any_
 
     CertificatePaths = CertificatePaths
     certificatepathsnone = optional[CertificatePaths]
@@ -234,14 +236,14 @@ def start_es(
 
     # Start from the distribution's own config directory - it has the JVM options
     # and logging configuration that the server needs - and only replace elasticsearch.yml.
-    copytree(os.path.join(es_home, 'config'), config_dir)
+    _ = copytree(os.path.join(es_home, 'config'), config_dir)
 
     # The server may only read SSL resources from inside its config directory,
     # which is why the throwaway certificates are copied there.
     if needs_tls:
         certs_dir = os.path.join(config_dir, 'certs-zato')
         os.makedirs(certs_dir)
-        for path in [certificates.server_key, certificates.server_cert, certificates.ca_cert]:
+        for path in [cast_('any_', certificates).server_key, cast_('any_', certificates).server_cert, cast_('any_', certificates).ca_cert]:
             _ = copy2(path, certs_dir)
 
     config_yaml = _build_config_yaml(port=port, data_dir=data_dir, logs_dir=logs_dir, has_tls=needs_tls)

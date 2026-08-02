@@ -14,6 +14,14 @@ from zato.common.soap.common import Content_Type, FaultCode, NS, SOAPFault, SOAP
 from zato.common.soap.envelope import attach_body, build_envelope, build_fault, get_body, get_header, get_version, \
     parse_body, parse_envelope, parse_fault, raise_for_fault, to_bytes
 from zato.common.soap.message import SOAPMessage
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -87,7 +95,7 @@ class TestFaults:
 
         envelope = build_fault(SOAPVersion.V12, FaultCode.Sender, 'Invalid credentials', detail)
 
-        fault = parse_fault(envelope)
+        fault = cast_('any_', parse_fault(envelope))
 
         assert fault.code == 'Sender'
         assert fault.reason == 'Invalid credentials'
@@ -96,7 +104,7 @@ class TestFaults:
     def test_soap11_fault(self):
         envelope = build_fault(SOAPVersion.V11, FaultCode.Receiver, 'Internal error')
 
-        fault = parse_fault(envelope)
+        fault = cast_('any_', parse_fault(envelope))
 
         # The version-independent Receiver maps to Server in the 1.1 dialect.
         assert fault.code == 'Server'
@@ -122,7 +130,7 @@ class TestFaults:
         wire = to_bytes(envelope)
         parsed = parse_envelope(wire)
 
-        fault = parse_fault(parsed)
+        fault = cast_('any_', parse_fault(parsed))
         assert fault.code == 'Sender'
         assert fault.reason == 'Message too large'
 

@@ -7,6 +7,15 @@ import pytest
 
 from zato.fhir.r4_0_1 import resources as resources_module
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 
 def _load_choice_fields() -> dict:
     path = Path(__file__).parent / "r4_choice_fields.json"
@@ -18,7 +27,7 @@ R4_CHOICE_FIELDS = _load_choice_fields()
 
 
 @pytest.mark.parametrize("resource_name", sorted(R4_CHOICE_FIELDS.keys()))
-def test_choice_fields_exist_on_class(resource_name):
+def test_choice_fields_exist_on_class(resource_name:'any_'):
     cls = getattr(resources_module, resource_name, None)
     if cls is None:
         pytest.fail(f"no class {resource_name!r} in zato.fhir.r4_0_1.resources")
@@ -32,7 +41,7 @@ def test_choice_fields_exist_on_class(resource_name):
 
 
 @pytest.mark.parametrize("resource_name", sorted(R4_CHOICE_FIELDS.keys()))
-def test_choice_fields_class_attribute_matches_spec(resource_name):
+def test_choice_fields_class_attribute_matches_spec(resource_name:'any_'):
     cls = getattr(resources_module, resource_name, None)
     if cls is None:
         pytest.fail(f"no class {resource_name!r} in zato.fhir.r4_0_1.resources")
@@ -54,13 +63,13 @@ def test_choice_fields_class_attribute_matches_spec(resource_name):
 
 
 @pytest.mark.parametrize("resource_name", sorted(R4_CHOICE_FIELDS.keys()))
-def test_choice_fields_default_to_none(resource_name):
+def test_choice_fields_default_to_none(resource_name:'any_'):
     cls = getattr(resources_module, resource_name, None)
     if cls is None:
         pytest.fail(f"no class {resource_name!r} in zato.fhir.r4_0_1.resources")
     instance = cls()
     spec_choices = R4_CHOICE_FIELDS[resource_name]
-    for base_name, suffixed_names in spec_choices.items():
+    for suffixed_names in spec_choices.values():
         for suffixed in suffixed_names:
             assert getattr(instance, suffixed) is None, (
                 f"{resource_name}.{suffixed} should default to None"

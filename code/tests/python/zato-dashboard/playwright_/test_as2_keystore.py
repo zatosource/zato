@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from as4_keys import new_party
+from page_base import attribute_of, text_of
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,7 +37,7 @@ def _open_keystore_page(page:'Page', base_url:'str') -> 'None':
     """ Navigates to the keystore page and waits for its form.
     """
     _ = page.goto(f'{base_url}{_Keystore_Page_Url}')
-    page.wait_for_selector('#keystore-form', state='visible')
+    _ = page.wait_for_selector('#keystore-form', state='visible')
 
 # ################################################################################################################################
 
@@ -49,9 +50,9 @@ def _save_keystore_form(page:'Page') -> 'None':
     _ = page.evaluate("$('#user-message-div').hide()")
 
     page.click('#keystore-form input[type="submit"]')
-    page.wait_for_selector('#user-message-div', state='visible')
+    _ = page.wait_for_selector('#user-message-div', state='visible')
 
-    message = page.text_content('#user-message')
+    message = text_of(page, '#user-message')
     assert 'Keystore saved' in message
 
 # ################################################################################################################################
@@ -97,23 +98,23 @@ class TestAS2Keystore:
         assert page.input_value('#id_as2_decryption_key') == ''
         assert page.input_value('#id_as2_next_decryption_key') == ''
 
-        assert 'A key is stored' in page.text_content('#signing-key-hint')
-        assert 'A key is stored' in page.text_content('#decryption-key-hint')
-        assert 'A key is stored' in page.text_content('#next-key-hint')
+        assert 'A key is stored' in text_of(page, '#signing-key-hint')
+        assert 'A key is stored' in text_of(page, '#decryption-key-hint')
+        assert 'A key is stored' in text_of(page, '#next-key-hint')
 
         # .. the certificates are stored as pasted ..
         assert page.input_value('#id_as2_signing_cert_chain').strip() == signing_party.certificate.strip()
         assert page.input_value('#id_as2_next_decryption_cert').strip() == next_party.certificate.strip()
 
         # .. the soon-to-expire signing certificate is shown with the red warning ..
-        signing_expiry_class = page.get_attribute('#signing-expiry', 'class')
+        signing_expiry_class = attribute_of(page, '#signing-expiry', 'class')
         assert 'cert-expiry-warning' in signing_expiry_class
 
-        signing_expiry_text = page.text_content('#signing-expiry')
+        signing_expiry_text = text_of(page, '#signing-expiry')
         assert 'days left' in signing_expiry_text
 
         # .. while the long-lived next certificate is not.
-        next_expiry_class = page.get_attribute('#next-cert-expiry', 'class')
+        next_expiry_class = attribute_of(page, '#next-cert-expiry', 'class')
         assert 'cert-expiry-warning' not in next_expiry_class
 
         # The backend view of the keystore matches what the page shows - the keys are
@@ -148,8 +149,8 @@ class TestAS2Keystore:
 
         assert page.input_value('#id_as2_next_decryption_key') == ''
         assert page.input_value('#id_as2_next_decryption_cert') == ''
-        assert 'No key is stored yet' in page.text_content('#next-key-hint')
-        assert page.text_content('#next-cert-expiry').strip() == '---'
+        assert 'No key is stored yet' in text_of(page, '#next-key-hint')
+        assert text_of(page, '#next-cert-expiry').strip() == '---'
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -2,6 +2,17 @@
 
 import zato.fhir_r4_0_1_core
 from zato.fhir.r4_0_1.resources import hlaresult
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 
 class TestToDicthlaresult:
@@ -63,7 +74,7 @@ class TestToDicthlaresult:
         assert 'contained' in result
 
     def test_to_dict_extension(self):
-        resource = hlaresult()
+        resource = cast_('any_', hlaresult())
         resource.extension = [{'url': 'http://example.org/ext', 'valueString': 'test'}]
         result = zato.fhir_r4_0_1_core.to_dict(resource)
         assert 'extension' in result
@@ -371,7 +382,7 @@ class TestGetPathhlaresult:
         assert result is not None
 
     def test_get_path_extension(self):
-        resource = hlaresult()
+        resource = cast_('any_', hlaresult())
         resource.extension = [{'url': 'http://example.org/ext', 'valueString': 'test'}]
         result = zato.fhir_r4_0_1_core.get_path(resource, 'extension')
         assert result is not None

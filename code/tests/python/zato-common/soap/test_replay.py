@@ -29,13 +29,19 @@ from zato.common.util.xml_.xmlsec import decode_base64
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 _username = 'MYUSER'
 _password = 'MYPASS'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def fail_message(expected):
+def fail_message(expected:'any_'):
     """ Asserts that the block raises a security exception whose message names the expected reason.
 
     Every case here has a specific reason for being refused, and a test that only checks that
@@ -47,7 +53,7 @@ def fail_message(expected):
 
 # ################################################################################################################################
 
-def _recompute_digest(token, created_text):
+def _recompute_digest(token:'any_', created_text:'any_'):
     """ Recomputes a digest token's password over a creation time that has been changed.
 
     The digest covers the creation time, so a test that moves the time has to recompute it - which
@@ -60,7 +66,7 @@ def _recompute_digest(token, created_text):
 
 # ################################################################################################################################
 
-def _reparse(envelope):
+def _reparse(envelope:'any_'):
     """ Serializes and reparses an envelope, as would happen over the wire.
     """
     out = etree.fromstring(to_bytes(envelope))
@@ -82,7 +88,7 @@ def _sample_envelope():
 
 # ################################################################################################################################
 
-def _set_window(timestamp, created_offset_seconds, ttl_seconds=Timestamp_TTL_Seconds):
+def _set_window(timestamp:'any_', created_offset_seconds:'any_', ttl_seconds:'any_' = Timestamp_TTL_Seconds):
     """ Rewrites a wsu:Timestamp so its window opens the given number of seconds from now -
     negative for the past, positive for the future.
     """
@@ -94,7 +100,7 @@ def _set_window(timestamp, created_offset_seconds, ttl_seconds=Timestamp_TTL_Sec
 
 # ################################################################################################################################
 
-def _timestamp_of(envelope):
+def _timestamp_of(envelope:'any_'):
     out = envelope.find(f'.//{qname(NS.WSU, "Timestamp")}')
     return out
 
@@ -202,7 +208,7 @@ class TestTimestampValidation:
         with pytest.raises(SOAPSecurityException):
             validate_timestamp(timestamp)
 
-    def test_an_expired_message_is_refused_by_verification(self, parties):
+    def test_an_expired_message_is_refused_by_verification(self, parties:'any_'):
         # The window is checked as part of verifying, not only in isolation, and it is checked after
         # the signature - an unsigned timestamp says whatever the sender wants it to say, so reading
         # one before it is known to be covered would be reading the attacker's own claim.

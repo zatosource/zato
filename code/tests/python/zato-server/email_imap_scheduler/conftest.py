@@ -236,10 +236,10 @@ def scheduler_process(zato_server:'any_') -> 'any_':
     binary = os.path.join(zato_base, 'code', 'zato-rust', 'zato_scheduler_core', 'target', 'release', '_zato_scheduler')
 
     environment = os.environ.copy()
-    environment.setdefault('Zato_Scheduler_Redis_Host', 'localhost')
-    environment.setdefault('Zato_Scheduler_Redis_Port', '6379')
-    environment.setdefault('Zato_Scheduler_Redis_Password', '')
-    environment.setdefault('Zato_Scheduler_Log_Level', 'info')
+    _ = environment.setdefault('Zato_Scheduler_Redis_Host', 'localhost')
+    _ = environment.setdefault('Zato_Scheduler_Redis_Port', '6379')
+    _ = environment.setdefault('Zato_Scheduler_Redis_Password', '')
+    _ = environment.setdefault('Zato_Scheduler_Log_Level', 'info')
 
     log_file = open('/tmp/zato-imap-scheduler-test-scheduler.log', 'w')
 

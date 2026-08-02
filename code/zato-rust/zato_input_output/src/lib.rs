@@ -28,7 +28,7 @@ use pyo3::prelude::*;
 #[pyfunction]
 fn is_io_bool(value: &Bound<'_, PyAny>) -> bool {
     if let Ok(elem) = value.extract::<compat::Elem>() {
-        elem.elem_type == inference::ElemType::Bool
+        elem.kind == inference::ElemType::Bool
     } else {
         false
     }
@@ -38,7 +38,7 @@ fn is_io_bool(value: &Bound<'_, PyAny>) -> bool {
 #[pyfunction]
 fn is_io_int(value: &Bound<'_, PyAny>) -> bool {
     if let Ok(elem) = value.extract::<compat::Elem>() {
-        elem.elem_type == inference::ElemType::Int
+        elem.kind == inference::ElemType::Int
     } else {
         false
     }

@@ -18,6 +18,7 @@ from sqlalchemy.exc import DBAPIError
 
 # Zato
 from zato.common.odb.api import SQLConnectionPool
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -70,7 +71,7 @@ def _tls_extra(server:'any_') -> 'str':
     OCSP checks are off because no OCSP responder exists for a test CA,
     while the certificate chain validation itself stays on.
     """
-    out = f'host={server.host};port={server.port};disable_ocsp_checks=True;{_timeouts};' \
+    out = f'host={server.host};port={server.port};disable_ocsp_checks=True;{_timeouts};' + \
         'warehouse=COMPUTE_WH;role=ANALYST;schema=PUBLIC'
     return out
 
@@ -95,7 +96,7 @@ class TestSnowflakeConnection:
 
         assert pool.engine is not None
 
-        response_time = pool.ping(_fs_sql_config)
+        response_time = cast_('any_', pool.ping(_fs_sql_config))
         assert response_time > 0
 
         # The login request carried the configured credentials and account.
@@ -110,7 +111,7 @@ class TestSnowflakeConnection:
         assert login_data['LOGIN_NAME'].lower() == snowflake_server.user
         assert login_data['ACCOUNT_NAME'].lower() == snowflake_server.account
 
-        pool.engine.dispose()
+        _ = cast_('any_', pool.engine).dispose()
 
 # ################################################################################################################################
 
@@ -125,7 +126,7 @@ class TestSnowflakeConnection:
 
         pool = _get_pool(snowflake_server, _tls_extra(snowflake_server))
 
-        with pool.engine.connect() as connection:
+        with cast_('any_', pool.engine).connect() as connection:
             result = connection.execute(text('select id, flight_number from flights'))
             rows = result.fetchall()
 
@@ -139,7 +140,7 @@ class TestSnowflakeConnection:
         assert second_row[0] == 2
         assert second_row[1] == 'ZA-102'
 
-        pool.engine.dispose()
+        _ = cast_('any_', pool.engine).dispose()
 
 # ################################################################################################################################
 
@@ -150,10 +151,10 @@ class TestSnowflakeConnection:
         pool = _get_pool(snowflake_server, _tls_extra(snowflake_server), password=wrong_password)
 
         with pytest.raises(Exception, match='Incorrect username or password'):
-            with pool.engine.connect() as connection:
+            with cast_('any_', pool.engine).connect() as connection:
                 _ = connection.execute(text('SELECT 1'))
 
-        pool.engine.dispose()
+        _ = cast_('any_', pool.engine).dispose()
 
 # ################################################################################################################################
 
@@ -170,10 +171,10 @@ class TestSnowflakeConnection:
         pool = _get_pool(snowflake_server, _tls_extra(snowflake_server))
 
         with pytest.raises(DBAPIError, match='MISSING_TABLE does not exist'):
-            with pool.engine.connect() as connection:
+            with cast_('any_', pool.engine).connect() as connection:
                 _ = connection.execute(text('select name from missing_table'))
 
-        pool.engine.dispose()
+        _ = cast_('any_', pool.engine).dispose()
 
 # ################################################################################################################################
 
@@ -186,10 +187,10 @@ class TestSnowflakeConnection:
         # The handshake fails with a certificate verification error which the connector retries on
         # and then reports as being unable to connect at all.
         with pytest.raises(Exception, match='Could not connect to Snowflake backend'):
-            with pool.engine.connect() as connection:
+            with cast_('any_', pool.engine).connect() as connection:
                 _ = connection.execute(text('SELECT 1'))
 
-        pool.engine.dispose()
+        _ = cast_('any_', pool.engine).dispose()
 
 # ################################################################################################################################
 
@@ -198,13 +199,13 @@ class TestSnowflakeConnection:
         """
         pool = _get_pool(snowflake_http_server, _http_extra(snowflake_http_server))
 
-        with pool.engine.connect() as connection:
+        with cast_('any_', pool.engine).connect() as connection:
             result = connection.execute(text('SELECT 1'))
             value = result.scalar()
 
         assert value == 1
 
-        pool.engine.dispose()
+        _ = cast_('any_', pool.engine).dispose()
 
 # ################################################################################################################################
 # ################################################################################################################################

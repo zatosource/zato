@@ -21,7 +21,7 @@ from zato.common.crypto.api import CryptoManager
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, strnone
+    from zato.common.typing_ import any_, anydict, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -177,7 +177,7 @@ class FabricTestHandler(BaseHTTPRequestHandler):
     # How many workspaces, items and jobs were created so far, used to build new IDs
     object_counter = 0
 
-    def log_message(self, format, *args) -> 'None':
+    def log_message(self, format:'any_', *args:'any_') -> 'None':
         pass
 
 # ################################################################################################################################

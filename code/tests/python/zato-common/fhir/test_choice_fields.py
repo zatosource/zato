@@ -9,6 +9,17 @@ from zato.fhir.r4_0_1.resources import (
     MedicationRequest,
 )
 from zato.fhir.validation import validate
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 
 class TestChoiceFieldDictAssignment:
@@ -70,14 +81,14 @@ class TestChoiceFieldTypedAccess:
     def test_quantity_value_access(self):
         o = Observation()
         o.valueQuantity = {'value': 72, 'unit': 'kg'}
-        assert o.valueQuantity.value == 72
-        assert o.valueQuantity.unit == 'kg'
+        assert cast_('any_', o.valueQuantity).value == 72
+        assert cast_('any_', o.valueQuantity).unit == 'kg'
 
     def test_period_access(self):
         o = Observation()
         o.effectivePeriod = {'start': '2024-01-01', 'end': '2024-12-31'}
-        assert o.effectivePeriod.start == '2024-01-01'
-        assert o.effectivePeriod.end == '2024-12-31'
+        assert cast_('any_', o.effectivePeriod).start == '2024-01-01'
+        assert cast_('any_', o.effectivePeriod).end == '2024-12-31'
 
     def test_codeable_concept_access(self):
         o = Observation()
@@ -85,21 +96,21 @@ class TestChoiceFieldTypedAccess:
             'coding': [{'system': 'http://example.org', 'code': 'A', 'display': 'All good'}],
             'text': 'All good'
         }
-        assert o.valueCodeableConcept.text == 'All good'
+        assert cast_('any_', o.valueCodeableConcept).text == 'All good'
 
     def test_condition_onset_age_access(self):
         c = Condition()
         c.onsetAge = {'value': 40, 'unit': 'a', 'system': 'http://unitsofmeasure.org'}
-        assert c.onsetAge.value == 40
-        assert c.onsetAge.unit == 'a'
+        assert cast_('any_', c.onsetAge).value == 40
+        assert cast_('any_', c.onsetAge).unit == 'a'
 
     def test_range_access(self):
         o = Observation()
         o.valueRange = {'low': {'value': 60, 'unit': 'kg'}, 'high': {'value': 80, 'unit': 'kg'}}
-        assert o.valueRange.low.value == 60
-        assert o.valueRange.low.unit == 'kg'
-        assert o.valueRange.high.value == 80
-        assert o.valueRange.high.unit == 'kg'
+        assert cast_('any_', o.valueRange).low.value == 60
+        assert cast_('any_', o.valueRange).low.unit == 'kg'
+        assert cast_('any_', o.valueRange).high.value == 80
+        assert cast_('any_', o.valueRange).high.unit == 'kg'
 
     def test_ratio_access(self):
         o = Observation()
@@ -107,10 +118,10 @@ class TestChoiceFieldTypedAccess:
             'numerator': {'value': 1, 'unit': 'mg'},
             'denominator': {'value': 1, 'unit': 'mL'},
         }
-        assert o.valueRatio.numerator.value == 1
-        assert o.valueRatio.numerator.unit == 'mg'
-        assert o.valueRatio.denominator.value == 1
-        assert o.valueRatio.denominator.unit == 'mL'
+        assert cast_('any_', o.valueRatio).numerator.value == 1
+        assert cast_('any_', o.valueRatio).numerator.unit == 'mg'
+        assert cast_('any_', o.valueRatio).denominator.value == 1
+        assert cast_('any_', o.valueRatio).denominator.unit == 'mL'
 
 
 class TestChoiceFieldFromDict:

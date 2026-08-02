@@ -40,7 +40,6 @@ const STREAM_MAXLEN: usize = 100_000;
 /// Redis stream keys, all namespaced by the per-environment prefix.
 #[derive(Clone)]
 pub struct StreamKeys {
-
     /// Stream where the server publishes commands for the scheduler.
     pub command: String,
 
@@ -58,7 +57,6 @@ pub struct StreamKeys {
 }
 
 impl StreamKeys {
-
     /// Builds stream keys from the `Zato_Scheduler_Stream_Prefix` environment variable.
     pub fn from_env() -> Self {
         // The prefix is genuinely optional - a standalone production environment runs with the default.
@@ -131,7 +129,15 @@ pub fn process_startup_reload(
 
 /// Publishes a fire event to the fire stream via XADD.
 pub fn publish_fire_event(conn: &mut redis::Connection, keys: &StreamKeys, batch: &FireBatch) {
-    let payload = serde_json::to_string(batch).unwrap_or_default();
+    // A batch that cannot be rendered would be published as an empty field, so it is logged
+    // and skipped instead - the server has nothing to act on either way.
+    let payload = match crate::wire::render_payload(batch) {
+        Ok(payload) => payload,
+        Err(err) => {
+            tracing::error!("Could not render fire event for job '{}': {err}", batch.name);
+            return;
+        }
+    };
     let result: Result<String, redis::RedisError> = redis::cmd("XADD")
         .arg(&keys.fire)
         .arg("MAXLEN")
@@ -155,15 +161,25 @@ pub fn publish_fire_event(conn: &mut redis::Connection, keys: &StreamKeys, batch
     }
 }
 
+/// A run that overran its `max_execution_time_ms` and was given up on.
+pub struct TimeoutEvent<'run> {
+    /// Identifier of the job whose run timed out.
+    pub job_id: i64,
+
+    /// Run counter of the attempt that timed out.
+    pub current_run: u32,
+
+    /// How long the run had been in flight when it was abandoned.
+    pub elapsed_ms: u64,
+
+    /// Message describing the timeout, as shown to the user.
+    pub error_msg: &'run str,
+}
+
 /// Publishes a timeout event to the timeout stream via XADD.
-pub fn publish_timeout_event(
-    conn: &mut redis::Connection,
-    keys: &StreamKeys,
-    job_id: i64,
-    current_run: u32,
-    elapsed_ms: u64,
-    error_msg: &str,
-) {
+pub fn publish_timeout_event(conn: &mut redis::Connection, keys: &StreamKeys, event: &TimeoutEvent<'_>) {
+    let job_id = event.job_id;
+
     let result: Result<String, redis::RedisError> = redis::cmd("XADD")
         .arg(&keys.timeout)
         .arg("MAXLEN")
@@ -173,11 +189,11 @@ pub fn publish_timeout_event(
         .arg("job_id")
         .arg(job_id)
         .arg("current_run")
-        .arg(current_run)
+        .arg(event.current_run)
         .arg("elapsed_ms")
-        .arg(elapsed_ms)
+        .arg(event.elapsed_ms)
         .arg("error")
-        .arg(error_msg)
+        .arg(event.error_msg)
         .query(conn);
 
     if let Err(err) = result {
@@ -204,10 +220,14 @@ fn publish_reply(conn: &mut redis::Connection, keys: &StreamKeys, correlation_id
     }
 }
 
+/// Shape of an `XREADGROUP` reply: one entry per stream, each holding its message IDs
+/// paired with the field and value pairs of that message.
+pub type StreamReadResult = Vec<(String, Vec<(String, Vec<(String, String)>)>)>;
+
 /// Reads and processes commands from the command stream in a blocking loop.
 ///
 /// This function blocks on XREADGROUP and should be run on its own thread.
-pub fn command_listener_loop(conn: &mut redis::Connection, keys: &StreamKeys, shared: Arc<SchedulerShared>) {
+pub fn command_listener_loop(conn: &mut redis::Connection, keys: &StreamKeys, shared: &Arc<SchedulerShared>) {
     tracing::info!("Command listener started on '{}'", keys.command);
 
     loop {
@@ -215,8 +235,6 @@ pub fn command_listener_loop(conn: &mut redis::Connection, keys: &StreamKeys, sh
             tracing::info!("Command listener exiting (stop flag set)");
             break;
         }
-
-        type StreamReadResult = Vec<(String, Vec<(String, Vec<(String, String)>)>)>;
 
         let result: Result<StreamReadResult, redis::RedisError> = redis::cmd("XREADGROUP")
             .arg("GROUP")
@@ -246,20 +264,22 @@ pub fn command_listener_loop(conn: &mut redis::Connection, keys: &StreamKeys, sh
 
         for (_stream_name, messages) in &streams {
             for (msg_id, fields) in messages {
-                let mut command = String::new();
-                let mut correlation_id = String::new();
-                let mut payload = String::new();
+                let mut incoming = IncomingCommand {
+                    command: String::new(),
+                    correlation_id: String::new(),
+                    payload: String::new(),
+                };
 
                 for (key, value) in fields {
                     match key.as_str() {
-                        "command" => command.clone_from(value),
-                        "correlation_id" => correlation_id.clone_from(value),
-                        "payload" => payload.clone_from(value),
+                        "command" => incoming.command.clone_from(value),
+                        "correlation_id" => incoming.correlation_id.clone_from(value),
+                        "payload" => incoming.payload.clone_from(value),
                         _ => {}
                     }
                 }
 
-                process_command(conn, keys, &shared, &command, &correlation_id, &payload);
+                process_command(conn, keys, shared, &incoming);
 
                 let ack_result: Result<u32, redis::RedisError> = redis::cmd("XACK")
                     .arg(&keys.command)
@@ -274,15 +294,24 @@ pub fn command_listener_loop(conn: &mut redis::Connection, keys: &StreamKeys, sh
     }
 }
 
+/// One command as it arrives on the command stream, before it is dispatched.
+struct IncomingCommand {
+    /// Name of the command, which selects the handler.
+    command: String,
+
+    /// Identifier the server uses to match a reply to its request.
+    correlation_id: String,
+
+    /// JSON body of the command, empty for the ones that take no arguments.
+    payload: String,
+}
+
 /// Dispatches a single command to the appropriate handler.
-fn process_command(
-    conn: &mut redis::Connection,
-    keys: &StreamKeys,
-    shared: &SchedulerShared,
-    command: &str,
-    correlation_id: &str,
-    payload: &str,
-) {
+fn process_command(conn: &mut redis::Connection, keys: &StreamKeys, shared: &SchedulerShared, incoming: &IncomingCommand) {
+    let command = incoming.command.as_str();
+    let correlation_id = incoming.correlation_id.as_str();
+    let payload = incoming.payload.as_str();
+
     tracing::info!("Command received: {command} correlation_id={correlation_id} payload={payload}");
     match command {
         "create_job" => handle_create_job(shared, payload),
@@ -307,7 +336,7 @@ fn process_command(
     }
 }
 
-/// Payload for create_job and edit_job commands.
+/// Payload for `create_job` and `edit_job` commands.
 #[derive(Deserialize)]
 struct JobCommandPayload {
     /// The ODB job identifier.
@@ -316,14 +345,14 @@ struct JobCommandPayload {
     job_data: SchedulerJob,
 }
 
-/// Payload for the delete_job command.
+/// Payload for the `delete_job` command.
 #[derive(Deserialize)]
 struct JobIdPayload {
     /// The ODB job identifier.
     job_id: i64,
 }
 
-/// Payload for the execute_job command.
+/// Payload for the `execute_job` command.
 #[derive(Deserialize)]
 struct ExecuteJobPayload {
     /// The ODB job identifier.
@@ -333,7 +362,7 @@ struct ExecuteJobPayload {
     name: String,
 }
 
-/// Payload for mark_complete command.
+/// Payload for `mark_complete` command.
 #[derive(Deserialize)]
 struct MarkCompletePayload {
     /// The ODB job identifier.
@@ -348,7 +377,7 @@ struct MarkCompletePayload {
     error: String,
 }
 
-/// Payload for append_log_entry command.
+/// Payload for `append_log_entry` command.
 #[derive(Deserialize)]
 struct AppendLogPayload {
     /// The ODB job identifier.
@@ -370,8 +399,9 @@ struct ReloadPayload {
     jobs: Vec<SchedulerJob>,
 }
 
+/// Adds a job the server has just created to the running set.
 fn handle_create_job(shared: &SchedulerShared, payload: &str) {
-    let parsed: JobCommandPayload = match serde_json::from_str(payload) {
+    let parsed: JobCommandPayload = match crate::wire::parse_payload(payload) {
         Ok(parsed) => parsed,
         Err(err) => {
             tracing::error!("Failed to parse create_job payload: {err}");
@@ -387,8 +417,9 @@ fn handle_create_job(shared: &SchedulerShared, payload: &str) {
     tracing::info!("Created job: id={} name={}", parsed.job_id, parsed.job_data.name);
 }
 
+/// Replaces the definition of an existing job with the edited one.
 fn handle_edit_job(shared: &SchedulerShared, payload: &str) {
-    let parsed: JobCommandPayload = match serde_json::from_str(payload) {
+    let parsed: JobCommandPayload = match crate::wire::parse_payload(payload) {
         Ok(parsed) => parsed,
         Err(err) => {
             tracing::error!("Failed to parse edit_job payload: {err}");
@@ -430,8 +461,9 @@ fn handle_edit_job(shared: &SchedulerShared, payload: &str) {
     tracing::info!("Edited job: id={} name={}", parsed.job_id, parsed.job_data.name);
 }
 
+/// Removes a job from the running set so it stops being scheduled.
 fn handle_delete_job(shared: &SchedulerShared, payload: &str) {
-    let parsed: JobIdPayload = match serde_json::from_str(payload) {
+    let parsed: JobIdPayload = match crate::wire::parse_payload(payload) {
         Ok(parsed) => parsed,
         Err(err) => {
             tracing::error!("Failed to parse delete_job payload: {err}");
@@ -446,8 +478,9 @@ fn handle_delete_job(shared: &SchedulerShared, payload: &str) {
     tracing::info!("Deleted job: id={}", parsed.job_id);
 }
 
+/// Fires a job immediately, outside its own schedule, at the server's request.
 pub fn handle_execute_job(shared: &SchedulerShared, payload: &str) {
-    let parsed: ExecuteJobPayload = match serde_json::from_str(payload) {
+    let parsed: ExecuteJobPayload = match crate::wire::parse_payload(payload) {
         Ok(parsed) => parsed,
         Err(err) => {
             tracing::error!("Failed to parse execute_job payload: {err}");
@@ -467,10 +500,7 @@ pub fn handle_execute_job(shared: &SchedulerShared, payload: &str) {
     // e.g. after a redeployment recreated the ODB rows, fall back to a name match.
     let mut job_key = parsed.job_id;
     if !state.jobs.contains_key(&job_key) {
-        let name_match_key = state
-            .jobs
-            .iter()
-            .find_map(|(key, job)| (job.name == parsed.name).then_some(*key));
+        let name_match_key = state.jobs.iter().find_map(|(key, job)| (job.name == parsed.name).then_some(*key));
         if let Some(matched_key) = name_match_key {
             job_key = matched_key;
         }
@@ -518,12 +548,19 @@ pub fn handle_execute_job(shared: &SchedulerShared, payload: &str) {
     if let Err(err) = sender.send(batch) {
         tracing::error!("Failed to send forced fire event for job `{job_name}`: {err}");
     } else {
-        tracing::info!("Forced execution of job: name={job_name} run={current_run} job_id={}", parsed.job_id);
+        tracing::info!(
+            "Forced execution of job: name={job_name} run={current_run} job_id={}",
+            parsed.job_id
+        );
     }
 }
 
+/// Records the outcome and duration of a run the server has finished invoking.
+///
+/// The history entry created when the job fired is patched in place, so a run keeps one
+/// record from start to finish rather than gaining a second one on completion.
 fn handle_mark_complete(shared: &SchedulerShared, payload: &str) {
-    let parsed: MarkCompletePayload = match serde_json::from_str(payload) {
+    let parsed: MarkCompletePayload = match crate::wire::parse_payload(payload) {
         Ok(parsed) => parsed,
         Err(err) => {
             tracing::error!("Failed to parse mark_complete payload: {err}");
@@ -545,7 +582,7 @@ fn handle_mark_complete(shared: &SchedulerShared, payload: &str) {
             .with_label_values(&[&running_job.name, &parsed.outcome])
             .inc();
 
-        let duration_secs = parsed.duration_ms as f64 / 1000.0;
+        let duration_secs = crate::convert::ms_to_seconds(parsed.duration_ms);
         crate::metrics::EXECUTION_DURATION_SECONDS
             .with_label_values(&[&running_job.name])
             .observe(duration_secs);
@@ -599,8 +636,9 @@ fn handle_mark_complete(shared: &SchedulerShared, payload: &str) {
     shared.condvar.notify_one();
 }
 
+/// Appends one log line emitted by a running service to the matching history record.
 fn handle_append_log_entry(shared: &SchedulerShared, payload: &str) {
-    let parsed: AppendLogPayload = match serde_json::from_str(payload) {
+    let parsed: AppendLogPayload = match crate::wire::parse_payload(payload) {
         Ok(parsed) => parsed,
         Err(err) => {
             tracing::error!("Failed to parse append_log_entry payload: {err}");
@@ -624,8 +662,9 @@ fn handle_append_log_entry(shared: &SchedulerShared, payload: &str) {
     drop(state);
 }
 
+/// Replaces the whole job set with a freshly loaded list from the ODB.
 fn handle_reload(shared: &SchedulerShared, payload: &str) {
-    let parsed: ReloadPayload = match serde_json::from_str(payload) {
+    let parsed: ReloadPayload = match crate::wire::parse_payload(payload) {
         Ok(parsed) => parsed,
         Err(err) => {
             tracing::error!("Failed to parse reload payload: {err}");

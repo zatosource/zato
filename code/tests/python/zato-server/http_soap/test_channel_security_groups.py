@@ -19,6 +19,12 @@ from zato.server.service.internal.http_soap import Edit
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 _channel_id = 4001
 _channel_name = 'api.orders'
 _url_path = '/api/orders'
@@ -42,7 +48,7 @@ def _make_url_data() -> 'URLData':
 
 # ################################################################################################################################
 
-def _make_msg(**kwargs) -> 'Bunch':
+def _make_msg(**kwargs:'any_') -> 'Bunch':
     """ The shape of a channel create or edit message. Every field the channel item is built from
     is optional in the message, so only the ones a test cares about are set.
     """
@@ -61,7 +67,7 @@ def _make_msg(**kwargs) -> 'Bunch':
 
 # ################################################################################################################################
 
-def _make_old_data(**kwargs) -> 'Bunch':
+def _make_old_data(**kwargs:'any_') -> 'Bunch':
     """ The channel item a channel held until the edit arrived.
     """
     out = Bunch()

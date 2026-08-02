@@ -91,7 +91,7 @@ class _SessionState:
         if self.quickstart_directory:
             server_log_path = os.path.join(self.quickstart_directory, 'server1', 'logs', 'server.log')
             if os.path.exists(server_log_path):
-                shutil.copy(server_log_path, '/tmp/server-logs-odata-live.txt')
+                _ = shutil.copy(server_log_path, '/tmp/server-logs-odata-live.txt')
 
         self.kill_server()
 
@@ -296,8 +296,8 @@ def zato_server() -> 'any_':
 
     # Hot-deploy the test services ..
     pickup_directory = os.path.join(server_directory, 'pickup', 'incoming', 'services')
-    shutil.copy2(_services_path, os.path.join(pickup_directory, 'odata_test_services.py'))
-    shutil.copy2(_compat_services_path, os.path.join(pickup_directory, 'odata_compat_services.py'))
+    _ = shutil.copy2(_services_path, os.path.join(pickup_directory, 'odata_test_services.py'))
+    _ = shutil.copy2(_compat_services_path, os.path.join(pickup_directory, 'odata_compat_services.py'))
 
     # Patch server.conf so CLI commands use the dynamic port ..
     server_conf_path = os.path.join(server_directory, 'config', 'repo', 'server.conf')
