@@ -28,7 +28,7 @@ from zato.common.as2.smime.algorithms import Digest_By_Name, Digest_Name_By_OID,
 from zato.common.as2.smime.der import der_children, der_element_list, element_bytes, element_content, \
     read_content_info, read_der_element, Tag, to_definite_der
 from zato.common.as2.smime.part import CRLF, parse_part
-from zato.common.typing_ import cast_, optional
+from zato.common.typing_ import cast_
 from zato.common.util.xml_.core import XMLSecurityException
 from zato.common.util.xml_.mime_ import parse_header_parameters, parse_mime_part
 from zato.common.util.xml_.trust import validate_certificate_chain
