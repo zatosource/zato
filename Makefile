@@ -3,21 +3,28 @@
 	server-clean scheduler-clean io-clean common-core-clean queue-bridge-clean \
 	server-install scheduler-install io-install common-core-install queue-bridge-install \
 	health-install health-build health-clean \
-	ruff pyright qa-reqs-install unify \
+	ruff pyright test-lint qa-reqs-install unify \
 	analytics update cron-update stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard scheduler queue-bridge file-listener openapi-console \
 	help install-deps \
-	test-server test-rest test-scheduler test-rate-limiting test-pubsub _test-pubsub test-pubsub-backend test-pubsub-outgoing test-pubsub-backend-perf test-pubsub-backend-perf-mass test-pubsub-system-perf test-enmasse \
-	test-cli test-mcp _test-mcp test-bearer _test-bearer test-graphql test-grpc test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-llm test-hl7 test-hl7-mllp-channels test-hl7-mllp-outconns test-hl7-languages test-hl7-volume test-ui test-ui-pubsub test-ui-openapi _test-ui test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
-	test-audit-log test-audit-log-ui test-alerting test-destinations test-analytics test-analytics-ui test-demo-seed test-logging test-ibm-mq test-mongodb test-es \
-	test-rule-engine test-rule-engine-perf test-rule-engine-jobs test-rule-engine-dashboard-ui test-webapp-ui \
+	test-server test-rest test-scheduler test-rate-limiting test-enmasse test-cli \
+	test-pubsub _test-pubsub test-pubsub-core test-pubsub-backend test-pubsub-backend-amqp test-pubsub-outgoing \
+	test-pubsub-backend-perf test-pubsub-backend-amqp-perf test-pubsub-backend-perf-mass test-pubsub-system-perf \
+	test-mcp _test-mcp test-bearer _test-bearer test-graphql test-grpc \
+	test-as2 test-as2-interop test-as2-live test-as4 test-edifact test-x12 test-soap test-llm \
+	test-sql-cloud test-sql-cloud-live test-aws test-sdk test-microsoft-cloud \
+	test-hl7 test-hl7-fhir test-hl7-mllp-channels test-hl7-mllp-outconns test-hl7-languages test-hl7-volume \
+	test-ui _test-ui test-ui-pubsub test-ui-openapi test-ui-analytics test-ui-audit-log test-ui-webapp test-ui-rule-engine-dashboard \
+	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
+	test-audit-log test-alerting test-destinations test-analytics test-demo-seed test-logging test-ibm-mq test-mongodb test-es \
+	test-rule-engine test-rule-engine-perf test-rule-engine-jobs \
 	rule-engine-notify rule-engine-retention rule-engine-spike-alerts rule-engine-dashboard \
 	test-all test \
 	health-ruff health-clippy \
 	format format-zato \
 	clippy clippy-zato \
 	dylint dylint-zato \
-	deny deny-zato \
+	rust-deny rust-deny-zato \
 	vet vet-zato \
 	geiger geiger-zato \
 	rust-lint lint \
@@ -303,6 +310,8 @@ pyright:
 	@echo "Running pyright from $(CURDIR)/code on zato-common/src/zato/hl7v2/ tests/python/"
 	cd $(CURDIR)/code && pyright zato-common/src/zato/hl7v2/ tests/python/
 
+test-lint: ruff pyright format clippy ## Static analysis only - no test is executed. The first stage of test-all.
+
 CYCLONEDX_BOM_VERSION := 7.3.0
 
 sbom: ## Generate a CycloneDX SBOM of the Python environment.
@@ -355,7 +364,7 @@ css: ## Format every rule engine css file with prettier - the dashboard's screen
 	npx --yes prettier@$(PRETTIER_VERSION) --config $(PRETTIER_CONFIG) --write $$files
 
 help:
-	grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
+	grep -hE '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  %-32s %s\n", $$1, $$2}'
 
 # ############################################################################
@@ -458,6 +467,10 @@ _test-pubsub:
 	$(MAKE) test-pubsub-backend 2>&1 | $(TS)
 	$(MAKE) test-pubsub-backend-amqp 2>&1 | $(TS)
 	$(MAKE) test-pubsub-outgoing 2>&1 | $(TS)
+	$(MAKE) test-pubsub-core 2>&1 | $(TS)
+	$(MAKE) test-ui-pubsub 2>&1 | $(TS)
+
+test-pubsub-core: ## Pub/sub core suites through a real server - the client library, the services and the config store entries.
 	ruff check \
 		$(CURDIR)/code/tests/python/zato-common/pubsub/ \
 		$(CURDIR)/code/tests/python/zato-common/rabbitmq_/ \
@@ -488,8 +501,7 @@ _test-pubsub:
 		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_subscription.py \
 		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_permission.py \
 		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_permission_revoke.py \
-		$(CURDIR)/code/tests/python/zato-server/service/test_service_publish.py \
-		2>&1 | $(TS)
+		$(CURDIR)/code/tests/python/zato-server/service/test_service_publish.py
 	pyright \
 		$(CURDIR)/code/tests/python/zato-common/pubsub/ \
 		$(CURDIR)/code/tests/python/zato-common/rabbitmq_/ \
@@ -520,8 +532,7 @@ _test-pubsub:
 		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_subscription.py \
 		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_permission.py \
 		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_permission_revoke.py \
-		$(CURDIR)/code/tests/python/zato-server/service/test_service_publish.py \
-		2>&1 | $(TS)
+		$(CURDIR)/code/tests/python/zato-server/service/test_service_publish.py
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/pubsub/ \
 		$(CURDIR)/code/tests/python/zato-common/rabbitmq_/ \
@@ -549,8 +560,7 @@ _test-pubsub:
 		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_rename_atomic/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_unsub_atomic/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) \
-		2>&1 | $(TS)
+		$(FAIL_FAST) $(PYTEST_ARGS)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_topic.py \
 		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_subscription.py \
@@ -558,9 +568,7 @@ _test-pubsub:
 		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_permission_revoke.py \
 		$(CURDIR)/code/tests/python/zato-server/service/test_service_publish.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_config_store -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) \
-		2>&1 | $(TS)
-	$(MAKE) test-ui-pubsub 2>&1 | $(TS)
+		$(FAIL_FAST) $(PYTEST_ARGS)
 
 test-pubsub-backend: ## Pub/sub SQL backend contract tests, no server needed.
 	$(CURDIR)/code/bin/ruff check \
@@ -757,13 +765,13 @@ test-as2: ## AS2 messaging tests - fully offline, no external services needed.
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_as2 -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-as2-interop: ## AS2 interop tests against a real counterparty in docker - opt-in, never part of test-all.
+test-as2-interop: ## AS2 interop tests against a real counterparty in docker.
 	$(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/as2_interop/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_as2_interop -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-as2-live: ## AS2 live tests - a real server and dashboard driven with Playwright, opt-in.
+test-as2-live: ## AS2 live tests - a real server and dashboard driven with Playwright.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/as2_live/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_as2_live -W ignore::DeprecationWarning \
@@ -876,7 +884,7 @@ test-hl7-languages: ## MLLP channels proven from other languages, through real H
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7_languages -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-hl7-volume: ## HL7 volume proof - sustained MLLP load against a real server through the buffered audit writer, opt-in.
+test-hl7-volume: ## HL7 volume proof - sustained MLLP load against a real server through the buffered audit writer.
 	ZATO_TEST_BASE_DIR=$(CURDIR) \
 	Zato_Test_HL7_Volume=1 \
 	Zato_Audit_Log_Flush_Max_Size=200 \
@@ -893,10 +901,9 @@ test-hl7-fhir: ## HL7 to FHIR conversion tests - fully offline, proven against d
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7_fhir -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-ui: ## Dashboard backend and Playwright tests.
-	$(MAKE) test-ui-pubsub 2>&1 | tee /tmp/logs-test-ui-pubsub.txt
-	$(MAKE) test-ui-openapi 2>&1 | tee /tmp/logs-test-ui-openapi.txt
-	$(MAKE) test-analytics-ui 2>&1 | tee /tmp/logs-test-analytics-ui.txt
+# The whole of playwright_/ is one run - test-ui-openapi, test-ui-pubsub and test-ui-analytics
+# are slices of that same directory, kept as separate targets for day to day work only
+test-ui: ## Every dashboard test - the whole Playwright suite plus the web-admin access checks.
 	$(MAKE) _test-ui 2>&1 | tee /tmp/logs-test-ui.txt
 	$(MAKE) -C $(CURDIR)/code/zato-web-admin test
 
@@ -1021,7 +1028,7 @@ test-es: ## Elasticsearch connection tests against a live server, plain and TLS.
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_es \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-audit-log-ui: ## Audit log dashboard and unit tests against every database backend.
+test-ui-audit-log: ## Audit log dashboard and unit tests against every database backend.
 	$(ZATO_PY) $(CURDIR)/code/tests/python/zato-common/audit_log/run_matrix.py
 
 test-rule-engine: ## Rule engine tests - grammar, matching, round trip, the SQL backend and the dashboard views, fully offline.
@@ -1044,7 +1051,7 @@ test-rule-engine: ## Rule engine tests - grammar, matching, round trip, the SQL 
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rule_views \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-webapp-ui: ## Web application UI kit tests - the theme contract over the generated themes and the converter, fully offline.
+test-ui-webapp: ## Web application UI kit tests - the theme contract over the generated themes and the converter, fully offline.
 	$(CURDIR)/code/bin/ruff check \
 		$(CURDIR)/code/tests/python/zato-common/webapp_ui/
 	pyright \
@@ -1054,7 +1061,7 @@ test-webapp-ui: ## Web application UI kit tests - the theme contract over the ge
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_webapp_ui \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-rule-engine-dashboard-ui: test-webapp-ui ## Rule engine dashboard UI smokes - every screen in jsdom against live views, scale budgets and the theme contract, fully offline.
+test-ui-rule-engine-dashboard: test-ui-webapp ## Rule engine dashboard UI smokes - every screen in jsdom against live views, scale budgets and the theme contract, fully offline.
 	$(CURDIR)/code/bin/ruff check \
 		$(CURDIR)/code/tests/python/zato-rule-engine-dashboard/ui/
 	pyright \
@@ -1103,7 +1110,7 @@ test-analytics: ## Analytics rollup, view and baseline tests against live SQLite
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_analytics \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-analytics-ui: ## Traffic analytics live tests - a real server and dashboard driven with Playwright.
+test-ui-analytics: ## Traffic analytics live tests - a real server and dashboard driven with Playwright.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_traffic_analytics_ui.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright_analytics -W ignore::DeprecationWarning \
@@ -1166,8 +1173,43 @@ test-request-response: ## Unified service I/O tests - messages, request.raw, req
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_request_response -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS)
 
-test-all: test-server test-rest test-scheduler test-rate-limiting test-pubsub test-enmasse \
-	test-cli test-mcp test-bearer test-graphql test-grpc test-as2 test-as4 test-edifact test-x12 test-llm test-hl7 test-ui test-audit-log test-audit-log-ui test-alerting test-destinations test-analytics test-demo-seed test-logging test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response test-rule-engine test-rule-engine-jobs test-rule-engine-dashboard-ui ## Everything.
+# Every test target, ordered from the cheapest to the most expensive. Only leaves are listed -
+# test-pubsub, test-ui-pubsub, test-ui-openapi, test-ui-analytics, test-hl7-mllp-channels and
+# test-enmasse are aggregates or slices of what the leaves below already cover, so naming them here
+# as well would run the same tests two or three times over. Prerequisites, not recursive make calls,
+# so that a target reached twice - test-ui-webapp, which test-ui-rule-engine-dashboard also needs -
+# runs once.
+
+# Static analysis, nothing is executed
+Zato_Test_Static := test-lint
+
+# Offline unit suites, no server, no container, no browser
+Zato_Test_Offline := \
+	test-ui-webapp test-message-filters test-demo-seed test-sql-cloud test-truncate test-safeguards \
+	test-edifact test-rule-engine-jobs test-alerting test-x12 test-request-response test-destinations \
+	test-as4 test-soap test-as2 test-rule-engine test-hl7-fhir test-llm
+
+# Rust toolchain suites and the database matrices
+Zato_Test_Toolchain := \
+	test-distlock test-common test-rate-limiting test-cli test-scheduler \
+	test-ui-rule-engine-dashboard test-audit-log test-analytics test-ui-audit-log
+
+# Suites needing a live server or an external service
+Zato_Test_Live := \
+	test-mcp test-logging test-graphql test-grpc test-aws test-pubsub-backend test-mongodb test-es \
+	test-sql-cloud-live test-microsoft-cloud test-bearer test-pubsub-backend-amqp test-as2-live \
+	test-as2-interop test-ibm-mq test-sdk test-hl7-languages test-pubsub-outgoing \
+	test-hl7-mllp-outconns test-pubsub-core test-hl7
+
+# The browser suite end to end
+Zato_Test_Browser := test-ui
+
+# Mutation, fuzzing and performance, the longest of all
+Zato_Test_Heavy := \
+	test-pubsub-backend-amqp-perf test-rule-engine-perf test-pubsub-backend-perf \
+	test-pubsub-system-perf test-hl7-volume test-rest test-server test-pubsub-backend-perf-mass
+
+test-all: $(Zato_Test_Static) $(Zato_Test_Offline) $(Zato_Test_Toolchain) $(Zato_Test_Live) $(Zato_Test_Browser) $(Zato_Test_Heavy) ## Everything.
 
 test: test-all ## Alias for test-all.
 
@@ -1300,7 +1342,7 @@ geiger-zato: ## Report unsafe usage in public crate dependency trees.
 
 geiger: geiger-zato ## Report unsafe usage everywhere.
 
-rust-lint: format clippy dylint deny vet geiger ## Full Rust static analysis pipeline.
+rust-lint: format clippy dylint rust-deny vet geiger ## Full Rust static analysis pipeline.
 
 health-ruff: ## Run ruff inside the health repo.
 	@if [ -z "$(Zato_Health)" ]; then echo "ERROR: Zato_Health_Root is not set"; exit 1; fi
