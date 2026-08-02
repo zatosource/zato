@@ -19,6 +19,9 @@ import jwt as pyjwt
 # Requests
 import requests
 
+# Zato
+from zato.common.bearer_token_verifier import JWKS_Fetch_Interval
+
 # Zato - test helpers
 import keycloak_
 
@@ -42,6 +45,14 @@ _expiry_wait_extra = 1.5
 # How long to wait after key rotation for Keycloak to publish the new key, in seconds
 _rotation_settle_seconds = 1
 
+# How long the server may take to pick up a rotated key, in seconds. The verifier fetches one JWKS
+# URL at most once per JWKS_Fetch_Interval, so a key rotated to right after a fetch only becomes
+# visible once that interval has passed, with a margin for the fetch itself.
+_rotation_pickup_timeout = JWKS_Fetch_Interval + 15
+
+# How often to retry while waiting for a rotated key to be picked up, in seconds
+_rotation_poll_interval = 2
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -52,6 +63,29 @@ def _get(url:'str', token:'str') -> 'any_':
 
     out = requests.get(url, headers=headers, timeout=_http_timeout)
     return out
+
+# ################################################################################################################################
+
+def _get_until_ok(url:'str', client_id:'str', secret:'str', timeout:'int') -> 'any_':
+    """ Invokes a channel with a freshly issued token until it answers 200 or the timeout expires,
+    returning the last response either way.
+    """
+    deadline = time.monotonic() + timeout
+
+    while True:
+
+        token = keycloak_.get_token(client_id, secret)
+        response = _get(url, token)
+
+        # The channel accepted the token, so there is nothing left to wait for ..
+        if response.status_code == OK:
+            return response
+
+        # .. and once the deadline has passed the last response is what the caller asserts on.
+        if time.monotonic() >= deadline:
+            return response
+
+        time.sleep(_rotation_poll_interval)
 
 # ################################################################################################################################
 
@@ -182,13 +216,18 @@ def test_jwt_unknown_signing_key(zato_server:'stranydict') -> 'None':
 
 def test_jwt_key_rotation(zato_server:'stranydict') -> 'None':
 
-    # A new realm key means new tokens carry a key ID the server has never cached,
-    # which must trigger a JWKS refetch rather than a rejection
+    # A new realm key means new tokens carry a key ID the server has never cached, which must
+    # trigger a JWKS refetch rather than a permanent rejection - the refetch is held back until
+    # the interval that follows the previous fetch has passed.
     keycloak_.rotate_keys()
     time.sleep(_rotation_settle_seconds)
 
-    token = keycloak_.get_token(keycloak_.Client_Accounting, keycloak_.Secret_Accounting)
-    response = _get(zato_server['jwt_url'], token)
+    response = _get_until_ok(
+        zato_server['jwt_url'],
+        keycloak_.Client_Accounting,
+        keycloak_.Secret_Accounting,
+        _rotation_pickup_timeout,
+    )
 
     assert response.status_code == OK, response.text
 
@@ -208,9 +247,14 @@ def test_definition_edit_propagates(zato_server:'stranydict') -> 'None':
         response = _get(zato_server['jwt_url'], token)
         _assert_unauthorized(response)
 
-        # .. while a Sales one now does - all without a server restart.
-        token = keycloak_.get_token(keycloak_.Client_Sales, keycloak_.Secret_Sales)
-        response = _get(zato_server['jwt_url'], token)
+        # .. while a Sales one now does - all without a server restart. Keys rotated by the test
+        # .. before this one may still be waiting for the JWKS fetch interval to pass.
+        response = _get_until_ok(
+            zato_server['jwt_url'],
+            keycloak_.Client_Sales,
+            keycloak_.Secret_Sales,
+            _rotation_pickup_timeout,
+        )
         assert response.status_code == OK, response.text
 
     finally:
