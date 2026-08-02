@@ -64,6 +64,7 @@ from login import login as login_to_dashboard
 
 # Zato
 from zato.common.test.process_util import kill_process_tree
+from zato.common.typing_ import cast_
 
 logger = logging.getLogger('zato.test.playwright')
 
@@ -128,7 +129,7 @@ def _cleanup() -> 'None':
         shutil.rmtree(tmp, ignore_errors=True)
     _cleanup_refs['temporary_dir'] = None
 
-atexit.register(_cleanup)
+_ = atexit.register(_cleanup)
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item:'any_', call:'any_') -> 'any_':
@@ -153,7 +154,7 @@ def pytest_internalerror(excrepr:'any_', excinfo:'any_') -> 'None':
     for line in str(excrepr).split('\n'):
         _ = sys.stdout.write(f'INTERNALERROR> {line}\n')
 
-    sys.stdout.flush()
+    _ = sys.stdout.flush()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -234,7 +235,7 @@ def _stream_output(
     the given event once the process prints the line that says it is ready.
     """
 
-    for line in iter(process.stdout.readline, b''):
+    for line in iter(cast_('any_', process.stdout).readline, b''):
         text = line.decode('utf-8', errors='replace').rstrip()
         elapsed = time.monotonic() - time_reference
         logger.info(f'[{label} {elapsed:6.1f}s] {text}')
@@ -281,7 +282,7 @@ def zato_dashboard() -> 'any_':
     # .. 1) create a quickstart environment with both server and dashboard ..
 
     quickstart_env = os.environ.copy()
-    quickstart_env.pop('COVERAGE_PROCESS_START', None)
+    _ = quickstart_env.pop('COVERAGE_PROCESS_START', None)
 
     quickstart_command = [
         _Zato_Bin, 'quickstart', 'create', temporary_dir,
@@ -359,7 +360,7 @@ def zato_dashboard() -> 'any_':
     # The internal MLLP listener binds to this port, which is how the tests that
     # speak to MLLP channels over the wire know where to connect upfront.
     server_env['Zato_HL7_MLLP_Port'] = str(mllp_port)
-    server_env.pop('COVERAGE_PROCESS_START', None)
+    _ = server_env.pop('COVERAGE_PROCESS_START', None)
 
     # The pub/sub database lives inside this test server's own directory,
     # which is also where tests that read it directly find it.
@@ -393,7 +394,7 @@ def zato_dashboard() -> 'any_':
     # .. 5) start the dashboard ..
 
     dashboard_env = os.environ.copy()
-    dashboard_env.pop('COVERAGE_PROCESS_START', None)
+    _ = dashboard_env.pop('COVERAGE_PROCESS_START', None)
     dashboard_env['Zato_Server_Address'] = f'http://127.0.0.1:{server_port}'
 
     # The OpenAPI import runs enmasse against this server directory ..
@@ -444,7 +445,7 @@ def zato_dashboard() -> 'any_':
     listener_env['Zato_Config_Bind_Port'] = str(server_port)
     listener_env['Zato_Web_Admin_Repo_Dir'] = os.path.join(dashboard_dir, 'config', 'repo')
     listener_env['Zato_Server_Dir'] = server_dir
-    listener_env.pop('COVERAGE_PROCESS_START', None)
+    _ = listener_env.pop('COVERAGE_PROCESS_START', None)
 
     listener_process = subprocess.Popen(
         ['make', 'listener'],
@@ -572,9 +573,9 @@ def logged_in_page(
     browser_contexts = len(playwright_browser.contexts)
 
     logger.info(
-        f'[FIXTURE-SETUP] {test_name}: '
-        f'dashboard_pid={getattr(dashboard_process, "pid", None)} poll={dashboard_poll}, '
-        f'server_pid={getattr(server_process, "pid", None)} poll={server_poll}, '
+        f'[FIXTURE-SETUP] {test_name}: ' +
+        f'dashboard_pid={getattr(dashboard_process, "pid", None)} poll={dashboard_poll}, ' +
+        f'server_pid={getattr(server_process, "pid", None)} poll={server_poll}, ' +
         f'browser_connected={browser_connected} contexts={browser_contexts}'
     )
 
@@ -633,11 +634,11 @@ def logged_in_page(
     except Exception as login_exc:
         # Dump full diagnostic state on login failure
         logger.error(
-            f'[FIXTURE-SETUP] {test_name}: LOGIN FAILED: {login_exc}, '
-            f'page.is_closed={page.is_closed()}, '
-            f'close_reasons={_close_reasons}, '
-            f'dashboard_poll={dashboard_process.poll() if dashboard_process else "no-process"}, '
-            f'server_poll={server_process.poll() if server_process else "no-process"}, '
+            f'[FIXTURE-SETUP] {test_name}: LOGIN FAILED: {login_exc}, ' +
+            f'page.is_closed={page.is_closed()}, ' +
+            f'close_reasons={_close_reasons}, ' +
+            f'dashboard_poll={dashboard_process.poll() if dashboard_process else "no-process"}, ' +
+            f'server_poll={server_process.poll() if server_process else "no-process"}, ' +
             f'browser_connected={playwright_browser.is_connected()}'
         )
         raise

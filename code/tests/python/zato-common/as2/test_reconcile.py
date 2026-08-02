@@ -22,6 +22,7 @@ from zato.common.as2.reconcile import MDNReconciler, process_incoming_mdn, Recon
 from zato.common.audit_log.api import AuditEvent, AuditSource, event_attr_table, event_table
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
 from zato.common.util.api import utcnow
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -142,7 +143,7 @@ class TestMatching:
                 'cid': 'cid-1',
             }
 
-            reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<abc@zato>', **sent_options)
+            reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<abc@zato>', **cast_('any_', sent_options))
 
             # Everything recorded at send time comes back - the angle brackets are normalized away.
             pending = reconciler.match('abc@zato')
@@ -262,7 +263,7 @@ class TestReconciliationAttributes:
             values = {'mic': _mic, 'async_mdn_url': _async_mdn_url, 'payload': payload,
                 'delivery_kind': DeliveryKind.Resend, 'http_status': OK}
 
-            reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<abc@zato>', **values)
+            reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<abc@zato>', **cast_('any_', values))
 
             attrs = _read_attrs(reconciler, 'abc@zato')
 
@@ -280,7 +281,7 @@ class TestReconciliationAttributes:
         try:
             reconciler = _make_reconciler(tmp_path)
 
-            values = {'mic': _mic, 'delivery_kind': DeliveryKind.Resend, 'http_status': BAD_GATEWAY}
+            values = cast_('any_', {'mic': _mic, 'delivery_kind': DeliveryKind.Resend, 'http_status': BAD_GATEWAY})
 
             reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<abc@zato>', **values)
 
@@ -449,7 +450,7 @@ class TestProcessIncomingMDN:
             rotated = make_rotated_pair('as2-receiver-rotation')
             accepted = [rotated.certificate, parties.receiver.signing_certificate]
 
-            mdn_options = {'accepted_certificates': accepted}
+            mdn_options = cast_('any_', {'accepted_certificates': accepted})
 
             result = process_incoming_mdn(body, content_type, reconciler, parties.sender, **mdn_options)
 
@@ -479,7 +480,7 @@ class TestProcessIncomingMDN:
             rotated = make_rotated_pair('as2-receiver-rotation')
             accepted = [rotated.certificate]
 
-            mdn_options = {'accepted_certificates': accepted}
+            mdn_options = cast_('any_', {'accepted_certificates': accepted})
 
             result = process_incoming_mdn(body, content_type, reconciler, parties.sender, **mdn_options)
 

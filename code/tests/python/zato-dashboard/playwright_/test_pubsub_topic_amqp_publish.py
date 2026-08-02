@@ -28,14 +28,18 @@ from zato.common.test.receiver import WebhookReceiver
 from zato.common.util.api import new_cid
 
 # The broker fixture is resolved by pytest through this import
-from amqp_fixtures import deploy_service, rabbitmq_broker # noqa: F401
+from amqp_fixtures import deploy_service, rabbitmq_broker # noqa: F401 # pyright: ignore[reportUnusedImport]
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from collections.abc import Iterator
     from playwright.sync_api import Page
     from zato.common.typing_ import anydict
+
+    anydictgen = Iterator[anydict]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -133,7 +137,7 @@ def _post_json(url:'str', payload:'anydict') -> 'anydict':
 # ################################################################################################################################
 
 @pytest.fixture(scope='module')
-def publisher_service(zato_dashboard:'anydict') -> 'anydict':
+def publisher_service(zato_dashboard:'anydict') -> 'anydictgen':
     """ Hot-deploys a service whose handler calls self.publish, for the tests
     that publish from within the server.
     """
@@ -315,16 +319,16 @@ class TestPubSubTopicAMQPPublish:
 
         # .. open the history panel ..
         page.click('#invoker-modal-history-button')
-        page.wait_for_selector('#invoker-modal-history-overlay:not(.hidden)', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#invoker-modal-history-overlay:not(.hidden)', state='visible', timeout=5000)
 
         # .. show the response of the first entry ..
         show_response = page.query_selector(
             '#invoker-modal-history-list .invoker-history-item-wrapper:first-child .invoker-history-item-show-response')
-        show_response.click()
+        cast_('any_', show_response).click()
         time.sleep(0.3)
 
         # .. and the msg_id with the standard prefix is in it.
-        response_detail = page.query_selector('.invoker-history-response-detail.visible')
+        response_detail = cast_('any_', page.query_selector('.invoker-history-response-detail.visible'))
         response_text = response_detail.inner_text()
 
         assert 'msg_id' in response_text, f'Expected `msg_id` in the response detail, got: {response_text}'

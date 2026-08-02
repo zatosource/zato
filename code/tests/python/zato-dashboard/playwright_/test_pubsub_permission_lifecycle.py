@@ -14,6 +14,7 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.test.playwright_pubsub import close_dialog_via_jquery, collect_console_errors, collect_http_errors, \
     confirm_delete, create_basic_auth, create_permission, create_permission_with_two_patterns, create_topic, \
     filter_console_noise, navigate_to_page, open_edit_dialog, submit_edit_form, trigger_delete
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -56,7 +57,7 @@ def _do_full_crud(page:'Page', base_url:'str', suffix:'str') -> 'None':
     # .. edit - change access type to subscriber ..
     open_edit_dialog(page, 'permission', item_id)
 
-    page.select_option('#id_edit-access_type', value='subscriber')
+    _ = page.select_option('#id_edit-access_type', value='subscriber')
     time.sleep(0.3)
 
     submit_edit_form(page)
@@ -134,7 +135,7 @@ class TestPubSubPermissionLifecycle:
         # .. edit - change access type to subscriber ..
         open_edit_dialog(page, 'permission', item_id)
 
-        page.select_option('#id_edit-access_type', value='subscriber')
+        _ = page.select_option('#id_edit-access_type', value='subscriber')
         time.sleep(0.3)
 
         submit_edit_form(page)
@@ -142,7 +143,7 @@ class TestPubSubPermissionLifecycle:
 
         # .. verify the row now shows Subscriber ..
         row = page.query_selector(row_selector)
-        row_text = row.inner_text()
+        row_text = cast_('any_', row).inner_text()
         assert 'Subscriber' in row_text, f'Expected "Subscriber" after edit, got: "{row_text}"'
 
         # .. delete ..
@@ -173,13 +174,13 @@ class TestPubSubPermissionLifecycle:
         # .. verify it shows Publisher ..
         row_selector = f'#data-table tbody tr:has(td:has(a:text-is("{sec_name}")))'
         row = page.query_selector(row_selector)
-        row_text = row.inner_text()
+        row_text = cast_('any_', row).inner_text()
         assert 'Publisher' in row_text, f'Expected "Publisher", got: "{row_text}"'
 
         # .. edit to publisher-subscriber ..
         open_edit_dialog(page, 'permission', item_id)
 
-        page.select_option('#id_edit-access_type', value='publisher-subscriber')
+        _ = page.select_option('#id_edit-access_type', value='publisher-subscriber')
         time.sleep(0.3)
 
         submit_edit_form(page)
@@ -187,7 +188,7 @@ class TestPubSubPermissionLifecycle:
 
         # .. verify it now shows Publisher and Subscriber.
         row = page.query_selector(row_selector)
-        row_text = row.inner_text()
+        row_text = cast_('any_', row).inner_text()
         assert 'Publisher' in row_text, f'Expected "Publisher" in row, got: "{row_text}"'
         assert 'Subscriber' in row_text, f'Expected "Subscriber" in row, got: "{row_text}"'
 
@@ -211,7 +212,7 @@ class TestPubSubPermissionLifecycle:
         # .. verify original pattern is visible ..
         row_selector = f'#data-table tbody tr:has(td:has(a:text-is("{sec_name}")))'
         row = page.query_selector(row_selector)
-        row_text = row.inner_text()
+        row_text = cast_('any_', row).inner_text()
         assert original_pattern in row_text, f'Expected "{original_pattern}" in row, got: "{row_text}"'
 
         # .. edit to change the pattern ..
@@ -231,7 +232,7 @@ class TestPubSubPermissionLifecycle:
 
         # .. verify the updated pattern is visible.
         row = page.query_selector(row_selector)
-        row_text = row.inner_text()
+        row_text = cast_('any_', row).inner_text()
         assert new_pattern in row_text, f'Expected "{new_pattern}" in row after edit, got: "{row_text}"'
         assert original_pattern not in row_text, \
             f'Original pattern "{original_pattern}" should be gone, got: "{row_text}"'
@@ -248,11 +249,11 @@ class TestPubSubPermissionLifecycle:
 
         # .. open the create dialog ..
         page.evaluate('$.fn.zato.pubsub.permission.create()')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
         time.sleep(0.3)
 
         # .. set access type to Publisher and check options ..
-        page.select_option('#id_access_type', value='publisher')
+        _ = page.select_option('#id_access_type', value='publisher')
         time.sleep(0.3)
 
         pub_options = page.evaluate(
@@ -269,7 +270,7 @@ class TestPubSubPermissionLifecycle:
         assert 'sub' not in pub_options, f'Expected no "sub" in options for Publisher, got: {pub_options}'
 
         # .. set access type to Subscriber and check options ..
-        page.select_option('#id_access_type', value='subscriber')
+        _ = page.select_option('#id_access_type', value='subscriber')
         time.sleep(0.3)
 
         sub_options = page.evaluate(
@@ -286,7 +287,7 @@ class TestPubSubPermissionLifecycle:
         assert 'pub' not in sub_options, f'Expected no "pub" in options for Subscriber, got: {sub_options}'
 
         # .. set access type to Publisher and Subscriber and check options.
-        page.select_option('#id_access_type', value='publisher-subscriber')
+        _ = page.select_option('#id_access_type', value='publisher-subscriber')
         time.sleep(0.3)
 
         both_options = page.evaluate(
@@ -329,7 +330,7 @@ class TestPubSubPermissionLifecycle:
 
         # .. fill the new row (prepended to top) with a sub pattern ..
         second_pattern = 'second.pattern.*'
-        page.select_option('#edit-patterns-container .pattern-row:first-child .pattern-type-select', value='sub')
+        _ = page.select_option('#edit-patterns-container .pattern-row:first-child .pattern-type-select', value='sub')
         page.fill('#edit-patterns-container .pattern-row:first-child .pattern-input', second_pattern)
 
         # .. submit ..
@@ -342,7 +343,7 @@ class TestPubSubPermissionLifecycle:
 
         # .. verify both patterns are visible.
         row_selector = f'#data-table tbody tr:has(td:has(a:text-is("{sec_name}")))'
-        row = page.query_selector(row_selector)
+        row = cast_('any_', page.query_selector(row_selector))
         row_text = row.inner_text()
 
         assert first_pattern in row_text, f'Expected "{first_pattern}" in row, got: "{row_text}"'
@@ -373,7 +374,7 @@ class TestPubSubPermissionLifecycle:
         # .. verify both patterns are present ..
         row_selector = f'#data-table tbody tr:has(td:has(a:text-is("{sec_name}")))'
         row = page.query_selector(row_selector)
-        row_text = row.inner_text()
+        row_text = cast_('any_', row).inner_text()
         assert pub_pattern in row_text, f'Expected "{pub_pattern}" before edit, got: "{row_text}"'
         assert sub_pattern in row_text, f'Expected "{sub_pattern}" before edit, got: "{row_text}"'
 
@@ -394,7 +395,7 @@ class TestPubSubPermissionLifecycle:
 
         # .. verify only one pattern remains.
         row = page.query_selector(row_selector)
-        row_text = row.inner_text()
+        row_text = cast_('any_', row).inner_text()
 
         pattern_count = 0
         if pub_pattern in row_text:
@@ -429,13 +430,13 @@ class TestPubSubPermissionLifecycle:
         # .. verify the original state ..
         row_selector = f'#data-table tbody tr:has(td:has(a:text-is("{sec_name}")))'
         row = page.query_selector(row_selector)
-        row_text = row.inner_text()
+        row_text = cast_('any_', row).inner_text()
         assert 'Publisher' in row_text, f'Expected "Publisher" before edit, got: "{row_text}"'
 
         # .. open edit and change values ..
         open_edit_dialog(page, 'permission', item_id)
 
-        page.select_option('#id_edit-access_type', value='publisher-subscriber')
+        _ = page.select_option('#id_edit-access_type', value='publisher-subscriber')
         time.sleep(0.2)
         page.fill('#edit-patterns-container .pattern-row:first-child .pattern-input', 'changed.pattern.*')
 
@@ -444,7 +445,7 @@ class TestPubSubPermissionLifecycle:
 
         # .. verify the row is unchanged.
         row = page.query_selector(row_selector)
-        row_text = row.inner_text()
+        row_text = cast_('any_', row).inner_text()
         assert 'Publisher' in row_text, f'Expected "Publisher" still after cancel, got: "{row_text}"'
         assert pattern_value in row_text, f'Expected original pattern after cancel, got: "{row_text}"'
 
@@ -567,7 +568,7 @@ class TestPubSubPermissionLifecycle:
         open_edit_dialog(page, 'permission', item_id)
         time.sleep(0.3)
 
-        page.select_option('#id_edit-access_type', value='publisher')
+        _ = page.select_option('#id_edit-access_type', value='publisher')
         time.sleep(0.5)
 
         # .. verify that the sub pattern row's inputs are disabled.
@@ -611,7 +612,7 @@ class TestPubSubPermissionLifecycle:
 
         # .. find the row and verify the sec def link ..
         row_selector = f'#data-table tbody tr:has(td:has(a:text-is("{sec_name}")))'
-        row = page.query_selector(row_selector)
+        row = cast_('any_', page.query_selector(row_selector))
         link = row.query_selector(f'a:text-is("{sec_name}")')
 
         assert link is not None, f'Expected a link with text "{sec_name}" in row'

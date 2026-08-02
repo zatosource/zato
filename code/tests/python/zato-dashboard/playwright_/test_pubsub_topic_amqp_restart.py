@@ -33,7 +33,7 @@ from zato.common.test.process_util import kill_process_tree
 from zato.common.util.api import new_cid
 
 # The broker fixture is resolved by pytest through this import
-from amqp_fixtures import rabbitmq_broker # noqa: F401
+from amqp_fixtures import rabbitmq_broker # noqa: F401 # pyright: ignore[reportUnusedImport]
 
 # The conftest's atexit cleanup reads this dict, so handing the new process over here means it will be killed at exit
 from cleanup_refs import cleanup_refs
@@ -45,8 +45,11 @@ from server_restart import start_orphan_watchdog
 # ################################################################################################################################
 
 if 0:
+    from collections.abc import Iterator
     from playwright.sync_api import Page
     from zato.common.typing_ import anydict
+
+    receivergen = Iterator[WebhookReceiver]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -192,7 +195,7 @@ def _restart_server(zato_dashboard:'anydict') -> 'None':
 # ################################################################################################################################
 
 @pytest.fixture(scope='module')
-def module_receiver() -> 'WebhookReceiver':
+def module_receiver() -> 'receivergen':
     """ A module-scoped local HTTP receiver so it survives across the restart tests.
     """
     receiver_port = find_free_port()

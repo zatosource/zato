@@ -21,13 +21,19 @@ from zato.common.odata.common import ODataError, ODataVersion, extract_entity, e
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # The normative payload examples live in the fixture tree.
 Payloads_Dir = os.path.join(os.path.dirname(__file__), 'fixtures', 'payloads')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _load_payload(file_name):
+def _load_payload(file_name:'any_'):
     """ Reads one normative payload example from the fixture tree.
     """
     path = os.path.join(Payloads_Dir, file_name)
@@ -39,7 +45,7 @@ def _load_payload(file_name):
 
 # ################################################################################################################################
 
-def _bc_client(server, **extra):
+def _bc_client(server:'any_', **extra:'any_'):
     config = {
         'address': server.service_root + '/',
         'odata_version': ODataVersion.V4,
@@ -52,7 +58,7 @@ def _bc_client(server, **extra):
 
 # ################################################################################################################################
 
-def _seed(server):
+def _seed(server:'any_'):
     server.reset()
     server.add_entities('customers', 'id', [
         {'id': 'aaaa0001-0000-0000-0000-000000000001', 'displayName': 'Adatum'},
@@ -68,7 +74,7 @@ class TestMustClauses:
     per numbered MUST requirement.
     """
 
-    def test_13_3_1_odata_maxversion_header(self, business_central_server):
+    def test_13_3_1_odata_maxversion_header(self, business_central_server:'any_'):
         """ 13.3 clause 1 - clients MUST specify the OData-MaxVersion header in requests
         (section 8.2.7).
         """
@@ -80,7 +86,7 @@ class TestMustClauses:
 
         assert business_central_server.last_request['headers']['OData-MaxVersion'] == '4.0'
 
-    def test_13_3_2_odata_version_and_content_type_with_payload(self, business_central_server):
+    def test_13_3_2_odata_version_and_content_type_with_payload(self, business_central_server:'any_'):
         """ 13.3 clause 2 - clients MUST specify OData-Version (section 8.1.5) and
         Content-Type (section 8.1.1) in any request with a payload.
         """
@@ -112,7 +118,7 @@ class TestMustClauses:
         assert entity['CompanyName'] == 'Alfreds Futterkiste'
         assert entity['@odata.etag'] == 'W/"MjAxMy0wNS0yN1QxMTo1OFo="'
 
-    def test_13_3_4_follows_redirects(self, business_central_server):
+    def test_13_3_4_follows_redirects(self, business_central_server:'any_'):
         """ 13.3 clause 4 - clients MUST follow redirects (section 9.1.5).
         """
         _seed(business_central_server)
@@ -128,7 +134,7 @@ class TestMustClauses:
 
         assert len(items) == 3
 
-    def test_13_3_5_handles_next_links(self, business_central_server):
+    def test_13_3_5_handles_next_links(self, business_central_server:'any_'):
         """ 13.3 clause 5 - clients MUST correctly handle next links (section 11.2.6.7),
         proven both against the normative example and against a live paging server.
         """
@@ -164,7 +170,7 @@ class TestMustClauses:
         assert entity['Orders@odata.navigationLink'] == "Customers('ALFKI')/Orders"
         assert entity['@odata.editLink'] == "Customers('ALFKI')"
 
-    def test_13_3_7_updates_use_patch(self, business_central_server):
+    def test_13_3_7_updates_use_patch(self, business_central_server:'any_'):
         """ 13.3 clause 7 - clients that support updates MUST generate PATCH requests
         (section 11.4.3).
         """
@@ -183,7 +189,7 @@ class TestShouldClauses:
     """ The section 13.3 SHOULD requirement.
     """
 
-    def test_13_3_8_basic_authentication_over_https(self, business_central_tls_server):
+    def test_13_3_8_basic_authentication_over_https(self, business_central_tls_server:'any_'):
         """ 13.3 clause 8 - clients SHOULD support basic authentication as defined in
         [RFC7617] over HTTPS.
         """
@@ -215,7 +221,7 @@ class TestMayClauses:
     """ The section 13.3 MAY requirements this client chooses to support.
     """
 
-    def test_13_3_13_search_query_option(self, business_central_server):
+    def test_13_3_13_search_query_option(self, business_central_server:'any_'):
         """ 13.3 clause 13 - clients MAY support the $search system query option
         (section 11.2.5.6).
         """
@@ -302,7 +308,7 @@ class TestETagHandling:
     and a stale one is rejected with 412.
     """
 
-    def test_etag_round_trip(self, business_central_server):
+    def test_etag_round_trip(self, business_central_server:'any_'):
         _seed(business_central_server)
 
         client = _bc_client(business_central_server)

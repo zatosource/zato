@@ -17,6 +17,13 @@ from zato.common.sdk import Connector, ConnectionLost, Field
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_, stranydict
+    any_ = any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class PaymentsClient:
     """ A client for a payment switch that multiplexes many in-flight requests over one persistent
     socket - each request carries a correlation ID, replies can arrive in any order and a reader
@@ -77,7 +84,7 @@ class PaymentsClient:
             raise ConnectionLost('The payment switch connection is down')
 
         corr_id = str(next(self.counter))
-        holder = {'event': threading.Event(), 'response': None}
+        holder:'stranydict' = {'event': threading.Event(), 'response': None}
 
         # Register the call and send its request under one lock, so the reply cannot
         # arrive before the call is registered.

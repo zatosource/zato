@@ -9,6 +9,15 @@ import pytest
 from zato.fhir.base import FHIRResource
 from zato.fhir.r4_0_1 import resources as resources_module
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 
 def _load_resource_names() -> list[str]:
     path = Path(__file__).parent / "r4_resource_names.json"
@@ -45,7 +54,7 @@ def test_python_classes_are_in_spec():
 
 
 @pytest.mark.parametrize("cls", _RESOURCE_CLASSES, ids=lambda c: c.__name__)
-def test_resource_type_equals_class_name(cls):
+def test_resource_type_equals_class_name(cls:'any_'):
     assert cls._resource_type == cls.__name__, (
         f"class {cls.__name__!r}: _resource_type is {cls._resource_type!r}, expected {cls.__name__!r}"
     )

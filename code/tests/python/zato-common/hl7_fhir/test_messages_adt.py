@@ -18,6 +18,13 @@ from zato.hl7v2 import parse_hl7
 
 # Local
 from conftest import Samples_Dir, Test_Conversions_Dir, list_messages, load_message, one_resource, resources_of_type
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -94,14 +101,14 @@ class TestIGTestConversion:
                 agreed_patient = resource
 
         # The demographics agree with the published conversion
-        assert our_patient['gender'] == agreed_patient['gender']
+        assert our_patient['gender'] == cast_('any_', agreed_patient)['gender']
 
         # The agreed birthDate carries a time part, ours is the date FHIR asks for
-        agreed_birth = agreed_patient['birthDate']
+        agreed_birth = cast_('any_', agreed_patient)['birthDate']
         assert agreed_birth.startswith(our_patient['birthDate'])
 
         our_names = our_patient['name']
-        agreed_names = agreed_patient['name']
+        agreed_names = cast_('any_', agreed_patient)['name']
 
         our_first_name = our_names[0]
         agreed_first_name = agreed_names[0]
@@ -150,7 +157,7 @@ def _adt_sample_paths():
 # ################################################################################################################################
 
 @pytest.mark.parametrize('file_path', _adt_sample_paths(), ids=os.path.basename)
-def test_adt_samples_end_to_end(file_path):
+def test_adt_samples_end_to_end(file_path:'any_'):
     """ Every ADT sample converts to a bundle with a message header and a patient.
     """
     raw = load_message(file_path)

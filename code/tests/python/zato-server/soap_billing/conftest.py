@@ -34,6 +34,7 @@ import pytest
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.process_util import kill_process_tree
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -113,7 +114,7 @@ def _cleanup() -> 'None':
         shutil.rmtree(tmp, ignore_errors=True)
     _cleanup_refs['temporary_dir'] = None
 
-atexit.register(_cleanup)
+_ = atexit.register(_cleanup)
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item:'any_', call:'any_') -> 'any_':
@@ -163,7 +164,7 @@ def _stream_output(process:'subprocess.Popen', label:'str', time_reference:'floa
     """ Streams subprocess stdout to the test console with timing information.
     """
 
-    for line in iter(process.stdout.readline, b''):
+    for line in iter(cast_('any_', process.stdout).readline, b''):
         text = line.decode('utf-8', errors='replace').rstrip()
         elapsed = time.monotonic() - time_reference
         logger.info(f'[{label} {elapsed:6.1f}s] {text}')
@@ -188,7 +189,7 @@ def zato_server() -> 'any_':
     # .. 1) create a quickstart environment ..
 
     quickstart_env = os.environ.copy()
-    quickstart_env.pop('COVERAGE_PROCESS_START', None)
+    _ = quickstart_env.pop('COVERAGE_PROCESS_START', None)
 
     quickstart_command = [
         _Zato_Bin, 'quickstart', 'create', temporary_dir,
@@ -243,7 +244,7 @@ def zato_server() -> 'any_':
     server_env = os.environ.copy()
     server_env['Zato_Config_Bind_Port'] = str(server_port)
     server_env['Zato_Broker_HTTP_Port'] = str(broker_port)
-    server_env.pop('COVERAGE_PROCESS_START', None)
+    _ = server_env.pop('COVERAGE_PROCESS_START', None)
 
     server_process = subprocess.Popen(
         [_Zato_Bin, 'start', server_dir, '--fg'],
@@ -404,7 +405,7 @@ def billing_config(zato_server:'anydict', soap_test_server:'any_', soap_test_ser
     enmasse_env = os.environ.copy()
     enmasse_env[_Gateway_Password_Env_Name]   = gateway_password
     enmasse_env[_Submitter_Password_Env_Name] = submitter_password
-    enmasse_env.pop('COVERAGE_PROCESS_START', None)
+    _ = enmasse_env.pop('COVERAGE_PROCESS_START', None)
 
     # .. run the import ..
     result = subprocess.run(enmasse_command, capture_output=True, text=True,

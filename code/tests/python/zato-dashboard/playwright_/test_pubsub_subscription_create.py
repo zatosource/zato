@@ -13,7 +13,8 @@ import time
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.playwright_pubsub import close_dialog_via_jquery, create_all_subscription_prerequisites, \
     create_outgoing_rest, get_table_row_count, navigate_to_page, open_create_dialog_via_js, \
-    select_sec_def_and_wait_for_topics, setup_alert_handler, submit_create_form, wait_for_sec_def_dropdown
+    select_sec_def_and_wait_for_topics, setup_alert_handler, submit_create_form
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,12 +56,12 @@ class TestPubSubSubscriptionCreate:
         navigate_to_page(page, base_url, _Subscription_Page_Url)
 
         # .. verify the page heading ..
-        heading = page.query_selector('h2.zato')
+        heading = cast_('any_', page.query_selector('h2.zato'))
         heading_text = heading.inner_text()
         assert 'Pub/sub subscriptions' in heading_text, f'Expected "Pub/sub subscriptions" in heading, got: {heading_text}'
 
         # .. verify the create link is present ..
-        create_link = page.query_selector('#markup .page_prompt a')
+        create_link = cast_('any_', page.query_selector('#markup .page_prompt a'))
         create_link_text = create_link.inner_text()
         assert 'Create a new pub/sub subscription' in create_link_text, \
             f'Expected create link text, got: {create_link_text}'
@@ -101,14 +102,14 @@ class TestPubSubSubscriptionCreate:
         page.click(f'#multi-select-div input[name="topic_name"][value="{topic_name}"]')
 
         # .. set delivery type to pull ..
-        page.select_option('#id_delivery_type', value='pull')
+        _ = page.select_option('#id_delivery_type', value='pull')
 
         # .. submit the form ..
         submit_create_form(page)
 
         # .. verify the new row appears with correct values.
         row_selector = f'#data-table tbody tr:has(td:has(a:text-is("{sec_name}")))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=10000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=10000))
 
         row_text = row.inner_text()
         assert 'Pull' in row_text, f'Expected "Pull" in row, got: "{row_text}"'
@@ -140,16 +141,16 @@ class TestPubSubSubscriptionCreate:
         page.click(f'#multi-select-div input[name="topic_name"][value="{topic_name}"]')
 
         # .. set delivery type to push ..
-        page.select_option('#id_delivery_type', value='push')
+        _ = page.select_option('#id_delivery_type', value='push')
         time.sleep(0.3)
 
         # .. set push type to REST ..
-        page.select_option('#id_push_type', value='rest')
+        _ = page.select_option('#id_push_type', value='rest')
         time.sleep(0.3)
 
         # .. wait for REST endpoint dropdown to populate ..
-        page.wait_for_function(
-            'document.querySelector("#id_rest_push_endpoint_id") && '
+        _ = page.wait_for_function(
+            'document.querySelector("#id_rest_push_endpoint_id") && ' +
             'document.querySelector("#id_rest_push_endpoint_id").options.length > 1',
             timeout=10000
         )
@@ -157,16 +158,16 @@ class TestPubSubSubscriptionCreate:
         # .. select the REST endpoint - the select is hidden by Chosen.js,
         # .. so we find the option by label text and set it via JS ..
         page.evaluate(
-            '(() => {'
-            '  var sel = document.querySelector("#id_rest_push_endpoint_id");'
-            '  for (var i = 0; i < sel.options.length; i++) {'
-            '    if (sel.options[i].text === ' + repr(rest_name) + ') {'
-            '      sel.value = sel.options[i].value;'
-            '      $(sel).trigger("chosen:updated").trigger("change");'
-            '      return true;'
-            '    }'
-            '  }'
-            '  return false;'
+            '(() => {' +
+            '  var sel = document.querySelector("#id_rest_push_endpoint_id");' +
+            '  for (var i = 0; i < sel.options.length; i++) {' +
+            '    if (sel.options[i].text === ' + repr(rest_name) + ') {' +
+            '      sel.value = sel.options[i].value;' +
+            '      $(sel).trigger("chosen:updated").trigger("change");' +
+            '      return true;' +
+            '    }' +
+            '  }' +
+            '  return false;' +
             '})()'
         )
 
@@ -175,7 +176,7 @@ class TestPubSubSubscriptionCreate:
 
         # .. verify the new row appears with correct values.
         row_selector = f'#data-table tbody tr:has(td:has(a:text-is("{sec_name}")))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=10000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=10000))
 
         row_text = row.inner_text()
         assert 'Push' in row_text, f'Expected "Push" in row, got: "{row_text}"'
@@ -204,16 +205,16 @@ class TestPubSubSubscriptionCreate:
         page.click(f'#multi-select-div input[name="topic_name"][value="{topic_name}"]')
 
         # .. set delivery type to push ..
-        page.select_option('#id_delivery_type', value='push')
+        _ = page.select_option('#id_delivery_type', value='push')
         time.sleep(0.3)
 
         # .. set push type to service ..
-        page.select_option('#id_push_type', value='service')
+        _ = page.select_option('#id_push_type', value='service')
         time.sleep(0.3)
 
         # .. wait for service dropdown to populate ..
-        page.wait_for_function(
-            'document.querySelector("#id_push_service_name") && '
+        _ = page.wait_for_function(
+            'document.querySelector("#id_push_service_name") && ' +
             'document.querySelector("#id_push_service_name").options.length > 1',
             timeout=10000
         )
@@ -232,7 +233,7 @@ class TestPubSubSubscriptionCreate:
 
         # .. verify the new row appears with correct values.
         row_selector = f'#data-table tbody tr:has(td:has(a:text-is("{sec_name}")))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=10000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=10000))
 
         row_text = row.inner_text()
         assert 'Push' in row_text, f'Expected "Push" in row, got: "{row_text}"'
@@ -347,7 +348,7 @@ class TestPubSubSubscriptionCreate:
         assert is_rest_hidden, 'REST endpoint should be hidden when Pull selected'
 
         # .. switch to push ..
-        page.select_option('#id_delivery_type', value='push')
+        _ = page.select_option('#id_delivery_type', value='push')
         time.sleep(0.3)
 
         # .. verify push type field appears.
@@ -365,11 +366,11 @@ class TestPubSubSubscriptionCreate:
         _open_subscription_create_dialog(page, base_url)
 
         # .. switch to push ..
-        page.select_option('#id_delivery_type', value='push')
+        _ = page.select_option('#id_delivery_type', value='push')
         time.sleep(0.3)
 
         # .. set push type to REST ..
-        page.select_option('#id_push_type', value='rest')
+        _ = page.select_option('#id_push_type', value='rest')
         time.sleep(0.3)
 
         # .. verify REST endpoint is visible and service is hidden ..
@@ -380,7 +381,7 @@ class TestPubSubSubscriptionCreate:
         assert is_service_hidden, 'Service should be hidden for push type REST'
 
         # .. switch push type to service ..
-        page.select_option('#id_push_type', value='service')
+        _ = page.select_option('#id_push_type', value='service')
         time.sleep(0.3)
 
         # .. verify service is visible and REST is hidden.
@@ -453,12 +454,12 @@ class TestPubSubSubscriptionCreate:
         _open_subscription_create_dialog(page, base_url)
         select_sec_def_and_wait_for_topics(page, sec_name)
         page.click(f'#multi-select-div input[name="topic_name"][value="{topic_name}"]')
-        page.select_option('#id_delivery_type', value='pull')
+        _ = page.select_option('#id_delivery_type', value='pull')
         submit_create_form(page)
 
         # .. verify the sub_key span is present in the row.
         row_selector = f'#data-table tbody tr:has(td:has(a:text-is("{sec_name}")))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=10000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=10000))
 
         sub_key_span = row.query_selector('.ps-sub-key')
         assert sub_key_span, 'Expected sub_key span to be present in the row'
@@ -482,12 +483,12 @@ class TestPubSubSubscriptionCreate:
         _open_subscription_create_dialog(page, base_url)
         select_sec_def_and_wait_for_topics(page, sec_name)
         page.click(f'#multi-select-div input[name="topic_name"][value="{topic_name}"]')
-        page.select_option('#id_delivery_type', value='pull')
+        _ = page.select_option('#id_delivery_type', value='pull')
         submit_create_form(page)
 
         # .. find the row and click the pending messages link ..
         row_selector = f'#data-table tbody tr:has(td:has(a:text-is("{sec_name}")))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=10000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=10000))
 
         # .. the pending messages link is the last visible <a> with an href to the queue page ..
         pending_link = row.query_selector('td a[href*="pubsub/subscription/queue"]')
@@ -524,7 +525,7 @@ class TestPubSubSubscriptionCreate:
             page.once('dialog', lambda dialog: dialog.accept())
 
             # .. click the Delete link in that row ..
-            delete_link = demo_row.query_selector('a:text-is("Delete")')
+            delete_link = cast_('any_', demo_row.query_selector('a:text-is("Delete")'))
             delete_link.click()
             time.sleep(1.0)
 

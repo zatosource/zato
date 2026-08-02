@@ -14,6 +14,7 @@ from zato.common.api import AS2
 from zato.common.as2.async_mdn import AsyncMDNQueue, deliver, deliver_due, get_retry_delay
 from zato.common.as2.inbound import PendingAsyncMDN
 from zato.common.util.api import utcnow
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -97,7 +98,7 @@ class TestEnqueue:
 
         assert row_id
 
-        item = queue.get(row_id)
+        item = cast_('any_', queue.get(row_id))
 
         # The bytes of a signed receipt cannot be rebuilt, so they have to survive
         # the round trip through the queue unchanged.
@@ -177,7 +178,7 @@ class TestDelivery:
 
         row_id = queue.enqueue(_as2_from, _as2_to, _orders_id, pending, 'as2-channel', 'cid-1', now=now)
 
-        item = queue.get(row_id)
+        item = cast_('any_', queue.get(row_id))
         post = _PostRecorder(200)
 
         is_delivered = deliver(queue, item, post, now)
@@ -196,7 +197,7 @@ class TestDelivery:
 
         row_id = queue.enqueue(_as2_from, _as2_to, _orders_id, pending, 'as2-channel', 'cid-1', now=now)
 
-        item = queue.get(row_id)
+        item = cast_('any_', queue.get(row_id))
         post = _PostRecorder(500)
 
         is_delivered = deliver(queue, item, post, now)
@@ -204,7 +205,7 @@ class TestDelivery:
         assert is_delivered is False
 
         # The receipt is still there with one failure behind it ..
-        stored = queue.get(row_id)
+        stored = cast_('any_', queue.get(row_id))
         assert stored.attempt_count == 1
 
         # .. and it is no longer due right away, so the next run of the drain
@@ -230,7 +231,7 @@ class TestDelivery:
 
         row_id = queue.enqueue(_as2_from, _as2_to, _orders_id, pending, 'as2-channel', 'cid-1', now=now)
 
-        item = queue.get(row_id)
+        item = cast_('any_', queue.get(row_id))
         error = Exception('Connection refused')
         post = _PostRecorder(exception=error)
 
@@ -238,7 +239,7 @@ class TestDelivery:
 
         assert is_delivered is False
 
-        stored = queue.get(row_id)
+        stored = cast_('any_', queue.get(row_id))
         assert stored.attempt_count == 1
 
 # ################################################################################################################################

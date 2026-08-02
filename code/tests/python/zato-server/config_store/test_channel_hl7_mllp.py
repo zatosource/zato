@@ -11,6 +11,15 @@ import json
 import pytest
 from zato.common.test.client import AdminClient as ZatoClient
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 SERVICE = 'zato.generic.connection'
 TYPE = 'channel-hl7-mllp'
 
@@ -26,18 +35,18 @@ DESTINATIONS = [
 ]
 
 @pytest.fixture(scope='module')
-def client(zato_server):
+def client(zato_server:'any_'):
     base_url = f'http://{zato_server["host"]}:{zato_server["port"]}'
     return ZatoClient(base_url, zato_server['password'])
 
 class TestChannelHL7MLLP:
     created_ids = []
 
-    def test_01_get_list_empty(self, client):
+    def test_01_get_list_empty(self, client:'any_'):
         data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)
         assert isinstance(data, list)
 
-    def test_02_create_one(self, client):
+    def test_02_create_one(self, client:'any_'):
         resp = client.create(f'{SERVICE}.create',
             cluster_id=1,
             name='test-ch-hl7mllp-1',
@@ -55,7 +64,7 @@ class TestChannelHL7MLLP:
         assert resp['name'] == 'test-ch-hl7mllp-1'
         self.__class__.created_ids.append(resp['id'])
 
-    def test_02a_create_with_security_id(self, client):
+    def test_02a_create_with_security_id(self, client:'any_'):
         # The Dashboard's MLLP view sends security_id as a plain integer,
         # with no security-type prefix in front of it
         resp = client.create(f'{SERVICE}.create',
@@ -113,12 +122,12 @@ class TestChannelHL7MLLP:
         assert item['respond_from'] == 'forward-ehr'
         assert item['delivery_mode'] == 'in-order'
 
-    def test_03_get_list_after_create(self, client):
+    def test_03_get_list_after_create(self, client:'any_'):
         data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)
         names = [item['name'] for item in data]
         assert 'test-ch-hl7mllp-1' in names
 
-    def test_04_create_batch(self, client):
+    def test_04_create_batch(self, client:'any_'):
         for i in range(2, 6):
             resp = client.create(f'{SERVICE}.create',
                 cluster_id=1,
@@ -136,12 +145,12 @@ class TestChannelHL7MLLP:
             assert 'id' in resp
             self.__class__.created_ids.append(resp['id'])
 
-    def test_05_get_list_batch(self, client):
+    def test_05_get_list_batch(self, client:'any_'):
         data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)
         test_items = [item for item in data if item['name'].startswith('test-ch-hl7mllp-')]
         assert len(test_items) >= 5
 
-    def test_06_edit_one(self, client):
+    def test_06_edit_one(self, client:'any_'):
         item_id = self.__class__.created_ids[0]
         resp = client.edit(f'{SERVICE}.edit',
             id=item_id,
@@ -159,33 +168,33 @@ class TestChannelHL7MLLP:
         )
         assert resp['id'] == item_id
 
-    def test_07_get_list_after_edit(self, client):
+    def test_07_get_list_after_edit(self, client:'any_'):
         data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)
         names = [item['name'] for item in data]
         assert 'test-ch-hl7mllp-1-edited' in names
         assert 'test-ch-hl7mllp-1' not in names
 
-    def test_08_ping(self, client):
+    def test_08_ping(self, client:'any_'):
         # The HL7 MLLP channel wrapper implements a no-op ping so it always succeeds
         item_id = self.__class__.created_ids[0]
         result = client.invoke('zato.generic.connection.ping', {'id': item_id})
         assert result['is_success'] is True, result['info']
 
-    def test_09_delete_one(self, client):
+    def test_09_delete_one(self, client:'any_'):
         item_id = self.__class__.created_ids.pop(0)
         client.delete(f'{SERVICE}.delete', id=item_id)
 
-    def test_10_get_list_after_delete(self, client):
+    def test_10_get_list_after_delete(self, client:'any_'):
         data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)
         test_items = [item for item in data if item['name'].startswith('test-ch-hl7mllp-')]
         assert len(test_items) >= 4
 
-    def test_11_delete_rest(self, client):
+    def test_11_delete_rest(self, client:'any_'):
         for item_id in self.__class__.created_ids[:]:
             client.delete(f'{SERVICE}.delete', id=item_id)
             self.__class__.created_ids.remove(item_id)
 
-    def test_12_get_list_final(self, client):
+    def test_12_get_list_final(self, client:'any_'):
         data, _meta = client.get_list(f'{SERVICE}.get-list', cluster_id=1, type_=TYPE)
         test_items = [item for item in data if item['name'].startswith('test-ch-hl7mllp-')]
         assert len(test_items) == 0

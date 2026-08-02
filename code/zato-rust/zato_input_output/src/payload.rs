@@ -36,11 +36,7 @@ pub struct Payload {
 
 impl Payload {
     /// Creates a new `Payload` with the given output element names and optional metadata fields.
-    pub fn create(
-        output_elem_names: Vec<String>,
-        cid: Option<String>,
-        data_format: Option<String>,
-    ) -> Self {
+    pub fn create(output_elem_names: Vec<String>, cid: Option<String>, data_format: Option<String>) -> Self {
         Self {
             output_elem_names,
             user_attrs_dict: HashMap::new(),
@@ -55,14 +51,9 @@ impl Payload {
 
 #[pymethods]
 impl Payload {
-
     /// Constructs a `Payload` from Python with declared output element names.
     #[new]
-    fn new(
-        output_elem_names: Vec<String>,
-        cid: Option<String>,
-        data_format: Option<String>,
-    ) -> Self {
+    fn new(output_elem_names: Vec<String>, cid: Option<String>, data_format: Option<String>) -> Self {
         Self {
             output_elem_names,
             user_attrs_dict: HashMap::new(),
@@ -201,9 +192,13 @@ impl Payload {
     /// Returns the value for the given attribute key, raising `KeyError` if absent.
     fn __getattr__(&self, py: Python<'_>, key: &str) -> PyResult<PyObject> {
         self.user_attrs_dict.get(key).map_or_else(
-            || Err(pyo3::exceptions::PyKeyError::new_err(
-                format!("No such key `{}` among `{:?}`", key, self.user_attrs_dict.keys().collect::<Vec<_>>())
-            )),
+            || {
+                Err(pyo3::exceptions::PyKeyError::new_err(format!(
+                    "No such key `{}` among `{:?}`",
+                    key,
+                    self.user_attrs_dict.keys().collect::<Vec<_>>()
+                )))
+            },
             |val| Ok(val.clone_ref(py)),
         )
     }
@@ -219,7 +214,11 @@ impl Payload {
             let indices = slice.indices(list_len)?;
             let start = indices.start as usize;
             let stop = indices.stop as usize;
-            let items: Vec<PyObject> = value.bind(py).try_iter()?.map(|result| result.map(Bound::unbind)).collect::<PyResult<_>>()?;
+            let items: Vec<PyObject> = value
+                .bind(py)
+                .try_iter()?
+                .map(|result| result.map(Bound::unbind))
+                .collect::<PyResult<_>>()?;
             self.user_attrs_list.splice(start..stop, items);
             self.is_list_output = true;
         } else {

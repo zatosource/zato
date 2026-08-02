@@ -23,6 +23,12 @@ from zato.common.util.xml_.message import parse, serialize, XMLMessage
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # A generic, non-SOAP namespace - the base class knows nothing about envelopes.
 _ns_order = 'urn:example:order'
 _ns_invoice = 'urn:example:invoice'
@@ -30,7 +36,7 @@ _ns_invoice = 'urn:example:invoice'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _roundtrip(message, tag, default_namespace=None):
+def _roundtrip(message:'any_', tag:'any_', default_namespace:'any_' = None):
     """ Serializes a message and parses the resulting wire bytes back.
     """
     element = serialize(message, tag, default_namespace)

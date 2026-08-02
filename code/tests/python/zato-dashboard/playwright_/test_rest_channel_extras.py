@@ -123,7 +123,7 @@ class TestRESTChannelExtras:
 
         # .. open the Invoke overlay for its row ..
         page.evaluate(f'$.fn.zato.http_soap.invoke("{channel_id}")')
-        page.wait_for_selector('#invoker-modal-overlay:not(.hidden)', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#invoker-modal-overlay:not(.hidden)', state='visible', timeout=5000)
 
         # .. type in the request ..
         escaped = request_body.replace('\\', '\\\\').replace("'", "\\'")
@@ -133,7 +133,7 @@ class TestRESTChannelExtras:
         page.click('#invoker-modal-invoke-button')
 
         # .. wait for the status line to show a result ..
-        page.wait_for_function(
+        _ = page.wait_for_function(
             '''() => {
                 let status = document.querySelector("#invoker-modal-status");
                 if (!status) return false;
@@ -183,22 +183,22 @@ class TestRESTChannelExtras:
 
         # .. open the rate limiting page for the channel ..
         _ = page.goto(f'{base_url}/zato/http-soap/rate-limiting/{channel_id}/?cluster=1')
-        page.wait_for_selector('#rate-limiting-container .rate-limiting-rule', state='visible', timeout=10000)
+        _ = page.wait_for_selector('#rate-limiting-container .rate-limiting-rule', state='visible', timeout=10000)
 
         # .. add the loopback CIDR as a pill ..
         page.fill('.rate-limiting-pill-input', '127.0.0.0/8')
         page.press('.rate-limiting-pill-input', 'Enter')
-        page.wait_for_selector('.rate-limiting-pill', state='visible', timeout=5000)
+        _ = page.wait_for_selector('.rate-limiting-pill', state='visible', timeout=5000)
 
         # .. configure a generous token bucket and a tiny fixed window ..
         page.fill('[data-field="rate"]', '100')
         page.fill('[data-field="burst"]', '100')
         page.fill('[data-field="limit"]', str(_Rate_Limit_Per_Minute))
-        page.select_option('[data-field="window_unit"]', 'minute')
+        _ = page.select_option('[data-field="window_unit"]', 'minute')
 
         # .. save and wait for the confirmation ..
         page.click('.rate-limiting-save-group input[type="submit"]')
-        page.wait_for_selector('#rate-limiting-status:has-text("OK, saved")', state='visible', timeout=10000)
+        _ = page.wait_for_selector('#rate-limiting-status:has-text("OK, saved")', state='visible', timeout=10000)
 
         # .. keep sending requests until the limit kicks in ..
         response = _invoke_until_rate_limited(server_port, url_path)
@@ -253,7 +253,7 @@ class TestRESTChannelExtras:
             })
 
             # .. the JS reveals the gateway services textarea ..
-            page.wait_for_selector('#gateway-service-list-row-create', state='visible', timeout=5000)
+            _ = page.wait_for_selector('#gateway-service-list-row-create', state='visible', timeout=5000)
 
             # .. and rewrites the URL path ..
             url_path_value = page.input_value('#id_url_path')

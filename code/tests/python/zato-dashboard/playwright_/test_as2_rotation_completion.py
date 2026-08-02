@@ -17,13 +17,14 @@ from zato.common.test.playwright_pubsub import close_dialog_via_jquery
 from as2_outconn import create_as2_outconn, delete_as2_outconn, open_as2_outconn_page, open_edit_dialog, \
     wait_for_as2_outconn_row
 from as4_keys import new_test_parties
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import any_, anydict
     from client import ZatoClient
 
 # ################################################################################################################################
@@ -175,7 +176,7 @@ class TestAS2RotationCompletion:
     def test_rotation_completion_job_exists(self, logged_in_page:'Page', api_client:'ZatoClient') -> 'None':
         """ Server startup creates the interval job that runs the sweep in production.
         """
-        jobs, _ = api_client.get_list('zato.scheduler.job.get-list', cluster_id=default_cluster_id)
+        jobs, _ = api_client.get_list('zato.scheduler.job.get-list', cluster_id=cast_('any_', default_cluster_id))
 
         job_names = []
         for job in jobs:

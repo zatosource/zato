@@ -11,6 +11,7 @@ import time
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,7 +38,7 @@ def _create_tier(page:'Page', base_url:'str', name:'str') -> 'None':
 
     # Open the editor ..
     _ = page.goto(f'{base_url}{_Tier_Create_Url}')
-    page.wait_for_selector('#rate-limiting-container .rate-limiting-rule', state='visible')
+    _ = page.wait_for_selector('#rate-limiting-container .rate-limiting-rule', state='visible')
 
     # .. fill in the tier's details ..
     page.fill('#tier-name', name)
@@ -60,17 +61,17 @@ def _delete_tier(page:'Page', base_url:'str', name:'str') -> 'None':
 
     _ = page.goto(f'{base_url}{_Tier_List_Url}')
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    page.wait_for_selector(row_selector, state='visible')
+    _ = page.wait_for_selector(row_selector, state='visible')
 
     # The delete link asks for confirmation through a browser dialog
     page.once('dialog', lambda dialog: dialog.accept())
 
-    row = page.query_selector(row_selector)
+    row = cast_('any_', page.query_selector(row_selector))
     delete_link = row.query_selector('a:text("Delete")')
     delete_link.click()
 
     # The page reloads after a successful delete
-    page.wait_for_selector(row_selector, state='detached', timeout=10000)
+    _ = page.wait_for_selector(row_selector, state='detached', timeout=10000)
 
 # ################################################################################################################################
 
@@ -79,11 +80,11 @@ def _create_apikey(page:'Page', base_url:'str', name:'str') -> 'str':
     """
 
     _ = page.goto(f'{base_url}{_APIKey_List_Url}')
-    page.wait_for_selector('#data-table', state='visible')
+    _ = page.wait_for_selector('#data-table', state='visible')
 
     # Open the create dialog ..
     page.click('#markup .page_prompt a')
-    page.wait_for_selector('#create-div', state='visible')
+    _ = page.wait_for_selector('#create-div', state='visible')
 
     # .. fill in the fields ..
     page.fill('#id_name', name)
@@ -91,13 +92,13 @@ def _create_apikey(page:'Page', base_url:'str', name:'str') -> 'str':
 
     # .. submit and wait for the row to appear ..
     page.click('#create-div input[type="submit"]')
-    page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+    _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    page.wait_for_selector(row_selector, state='visible', timeout=5000)
+    _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
     # .. and extract the new row's id.
-    row = page.query_selector(row_selector)
+    row = cast_('any_', page.query_selector(row_selector))
     id_cell = row.query_selector('td[class*="item_id_"]')
     out = id_cell.inner_text().strip()
 
@@ -110,10 +111,10 @@ def _delete_apikey(page:'Page', base_url:'str', item_id:'str') -> 'None':
     """
 
     _ = page.goto(f'{base_url}{_APIKey_List_Url}')
-    page.wait_for_selector('#data-table', state='visible')
+    _ = page.wait_for_selector('#data-table', state='visible')
 
     page.evaluate(f'$.fn.zato.security.apikey.delete_("{item_id}")')
-    page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+    _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
     page.click('#popup_ok')
     time.sleep(0.5)
 
@@ -141,9 +142,9 @@ class TestQuotaTierLifecycle:
             # .. the tier appears on the list page with its limits ..
             _ = page.goto(f'{base_url}{_Tier_List_Url}')
             tier_row_selector = f'#data-table tbody tr:has(td:text-is("{tier_name}"))'
-            page.wait_for_selector(tier_row_selector, state='visible')
+            _ = page.wait_for_selector(tier_row_selector, state='visible')
 
-            tier_row = page.query_selector(tier_row_selector)
+            tier_row = cast_('any_', page.query_selector(tier_row_selector))
             row_text = tier_row.inner_text()
             assert '100/sec' in row_text, f'Expected "100/sec" in the tier row, got: "{row_text}"'
             assert '1000/minute' in row_text, f'Expected "1000/minute" in the tier row, got: "{row_text}"'
@@ -151,7 +152,7 @@ class TestQuotaTierLifecycle:
             # .. open the definition's rate limiting page ..
             rate_limiting_url = f'{base_url}/zato/security/apikey/rate-limiting/{apikey_id}/?cluster=1&name={apikey_name}'
             _ = page.goto(rate_limiting_url)
-            page.wait_for_selector('.dashboard-tab[data-mode="tier"]', state='visible')
+            _ = page.wait_for_selector('.dashboard-tab[data-mode="tier"]', state='visible')
 
             # .. with no tier assigned, the custom rules tab is active and the rule builder is visible ..
             assert page.is_visible('.dashboard-tab[data-mode="custom"].dashboard-tab-active'), \
@@ -160,19 +161,19 @@ class TestQuotaTierLifecycle:
 
             # .. switch to the quota tier tab and pick the tier - the rule builder hides ..
             page.click('.dashboard-tab[data-mode="tier"]')
-            page.wait_for_selector('#quota-tier-select', state='visible')
+            _ = page.wait_for_selector('#quota-tier-select', state='visible')
 
             _ = page.select_option('#quota-tier-select', label=tier_name)
             assert not page.is_visible('#rate-limiting-container'), 'Rule builder should hide when a tier is selected'
 
             # .. save and wait for the confirmation ..
             page.click('.rate-limiting-actions input[type="submit"]')
-            page.wait_for_selector('#rate-limiting-status:has-text("OK, saved")', timeout=10000)
+            _ = page.wait_for_selector('#rate-limiting-status:has-text("OK, saved")', timeout=10000)
 
             # .. reload - the tier tab round-trips as the active one and the builder stays hidden ..
             _ = page.goto(rate_limiting_url)
-            page.wait_for_selector('.dashboard-tab[data-mode="tier"].dashboard-tab-active', state='visible')
-            page.wait_for_selector('#quota-tier-select', state='visible')
+            _ = page.wait_for_selector('.dashboard-tab[data-mode="tier"].dashboard-tab-active', state='visible')
+            _ = page.wait_for_selector('#quota-tier-select', state='visible')
 
             selected_label = page.eval_on_selector(
                 '#quota-tier-select', 'select => select.options[select.selectedIndex].text')
@@ -181,24 +182,24 @@ class TestQuotaTierLifecycle:
 
             # .. a referenced tier must not be deletable ..
             _ = page.goto(f'{base_url}{_Tier_List_Url}')
-            page.wait_for_selector(tier_row_selector, state='visible')
+            _ = page.wait_for_selector(tier_row_selector, state='visible')
 
-            referent_count = page.query_selector(f'{tier_row_selector} td.text-center').inner_text().strip()
+            referent_count = cast_('any_', page.query_selector(f'{tier_row_selector} td.text-center')).inner_text().strip()
             assert referent_count == '1', f'Expected a referent count of 1, got: "{referent_count}"'
 
             # .. switch the definition back to custom rules ..
             _ = page.goto(rate_limiting_url)
-            page.wait_for_selector('.dashboard-tab[data-mode="custom"]', state='visible')
+            _ = page.wait_for_selector('.dashboard-tab[data-mode="custom"]', state='visible')
 
             page.click('.dashboard-tab[data-mode="custom"]')
             assert page.is_visible('#rate-limiting-container'), 'Rule builder should show for custom rules'
 
             page.click('.rate-limiting-actions input[type="submit"]')
-            page.wait_for_selector('#rate-limiting-status:has-text("OK, saved")', timeout=10000)
+            _ = page.wait_for_selector('#rate-limiting-status:has-text("OK, saved")', timeout=10000)
 
             # .. and the switch round-trips too.
             _ = page.goto(rate_limiting_url)
-            page.wait_for_selector('.dashboard-tab[data-mode="custom"].dashboard-tab-active', state='visible')
+            _ = page.wait_for_selector('.dashboard-tab[data-mode="custom"].dashboard-tab-active', state='visible')
 
             assert page.is_visible('#rate-limiting-container'), 'Rule builder should stay visible after a reload'
 

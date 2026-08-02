@@ -21,6 +21,14 @@ from zato.common.as2.resubmit import load_event, resend
 from zato.common.audit_log.api import AuditEvent
 from zato.common.json_internal import loads
 from zato.common.util.api import utcnow
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,7 +45,7 @@ class TestResend:
                 'payload': 'ISA*00*Test payload of an 850 order',
                 'filename': 'orders-850.edi',
                 }
-            reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<orders-850@zato>', **options)
+            reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<orders-850@zato>', **cast_('any_', options))
 
             event_id = get_last_event_id()
             event = load_event(event_id)
@@ -81,7 +89,7 @@ class TestResend:
                 'cid': 'cid-original',
                 'payload': 'ISA*00*Test payload of an 850 order',
                 }
-            reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<orders-850@zato>', **options)
+            reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<orders-850@zato>', **cast_('any_', options))
 
             # The original message reconciles once its MDN arrives ..
             reconciler.record_mdn_received('<orders-850@zato>')

@@ -34,6 +34,7 @@ from zato.common.test.playwright_pubsub import create_amqp_topic, create_basic_a
 from zato.common.test.rabbitmq_ import drain_queue
 from zato.common.test.receiver import WebhookReceiver
 from zato.common.util.api import new_cid
+from zato.common.typing_ import cast_
 
 # The certificate generator lives in the zato-common test lib, shared with the redis_ suite
 _zato_common_lib_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'zato-common', 'lib'))
@@ -58,7 +59,7 @@ from rest_channel import create_channel, invoke_until_status
 from server_restart import restart_server
 
 # The broker fixture is resolved by pytest through this import
-from amqp_fixtures import rabbitmq_broker # noqa: F401
+from amqp_fixtures import rabbitmq_broker # noqa: F401 # pyright: ignore[reportUnusedImport]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -359,7 +360,7 @@ class TestConfigDBRedisLive:
         server_conf_path = os.path.join(server_dir, 'config', 'repo', 'server.conf')
         server_conf = ConfigObj(server_conf_path)
 
-        redis_section = server_conf['redis']
+        redis_section = cast_('anydict', server_conf['redis'])
 
         assert redis_section['host'] == '127.0.0.1', f'Expected host 127.0.0.1 on disk, got: {redis_section["host"]}'
         assert redis_section['port'] == session_redis_port, \

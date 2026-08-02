@@ -34,12 +34,13 @@ from _client import MCPClient
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import anydict, anylist, any_
+    from zato.common.typing_ import any_, anydict, anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 import pytest
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -95,13 +96,13 @@ def _create_mcp_gateway(page:'Page', base_url:'str', gateway_name:'str', url_pat
 
     # .. assign the echo service via its badge ..
     badge_selector = f'#badge-zone-available-create .badge-zone-body .security-badge[data-name="{_Echo_Service}"]'
-    badge = page.wait_for_selector(badge_selector, state='visible', timeout=10000)
+    badge = cast_('any_', page.wait_for_selector(badge_selector, state='visible', timeout=10000))
     badge.click()
 
     # .. assign the credentials via the security badge picker - the view auto-creates
     # the gateway's security group with this definition as its member ..
     security_badge_selector = f'#badge-zone-available-sec-create .security-badge[data-name="{definition_name}"]'
-    security_badge = page.wait_for_selector(security_badge_selector, state='visible', timeout=10000)
+    security_badge = cast_('any_', page.wait_for_selector(security_badge_selector, state='visible', timeout=10000))
     security_badge.click()
 
     # .. submit and wait for the dialog to close ..

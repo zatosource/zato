@@ -8,6 +8,16 @@ from zato.fhir.r4_0_1 import (
 )
 from zato.fhir.r4_0_1.validation_data import REQUIRED_FIELDS
 from zato.fhir.validation import validate, ValidationResult
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 
 class TestValidationRequiredFields:
@@ -107,7 +117,7 @@ class TestValidationDataIntegrity:
 class TestValidationAllResources:
 
     @pytest.mark.parametrize('resource_name', list(REQUIRED_FIELDS.keys())[:20])
-    def test_resource_validation_runs(self, resource_name):
+    def test_resource_validation_runs(self, resource_name:'any_'):
         import zato.fhir.r4_0_1 as r4
         cls = getattr(r4, resource_name, None)
         if cls:
@@ -128,7 +138,7 @@ class TestCardinalityValidation:
 
     def test_cardinality_list_exceeds_max(self):
         from zato.fhir.r4_0_1 import Patient
-        p = Patient()
+        p = cast_('any_', Patient())
         p.id = 'test-1'
         p.gender = ['male', 'female']
         result = validate(p)
@@ -299,7 +309,7 @@ class TestChoiceTypeValidation:
 class TestMaxCardinalityEdgeCases:
 
     def test_single_cardinality_list_errors(self):
-        p = Patient()
+        p = cast_('any_', Patient())
         p.id = 'vitamins-member-1'
         p.gender = ['male', 'female']
         result = validate(p)
@@ -317,7 +327,7 @@ class TestMaxCardinalityEdgeCases:
 class TestRequiredFieldsParametrized:
 
     @pytest.mark.parametrize('resource_name', list(REQUIRED_FIELDS.keys()))
-    def test_validation_returns_validation_result(self, resource_name):
+    def test_validation_returns_validation_result(self, resource_name:'any_'):
         import zato.fhir.r4_0_1 as r4
         cls = getattr(r4, resource_name)
         obj = cls()

@@ -18,6 +18,7 @@ from sqlalchemy import select
 # Zato
 from zato.common.pubsub.sql.config import get_pubsub_engine
 from zato.common.pubsub.sql.schema import message_table
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -383,7 +384,7 @@ def job_row_exists(page:'Page', base_url:'str', job_name:'str') -> 'bool':
     """ Returns True if the scheduler page shows a job of the given name.
     """
     _ = page.goto(f'{base_url}/zato/scheduler/?cluster=1')
-    page.wait_for_selector('#data-table', state='visible')
+    _ = page.wait_for_selector('#data-table', state='visible')
 
     row = page.query_selector(f'#data-table tbody tr:has(td a:text-is("{job_name}"))')
     out = row is not None
@@ -396,9 +397,9 @@ def get_job_row_id(page:'Page', base_url:'str', job_name:'str') -> 'str':
     """ Returns the server-side ID of a scheduler job row identified by name.
     """
     _ = page.goto(f'{base_url}/zato/scheduler/?cluster=1')
-    page.wait_for_selector('#data-table', state='visible')
+    _ = page.wait_for_selector('#data-table', state='visible')
 
-    row = page.query_selector(f'#data-table tbody tr:has(td a:text-is("{job_name}"))')
+    row = cast_('any_', page.query_selector(f'#data-table tbody tr:has(td a:text-is("{job_name}"))'))
     id_cell = row.query_selector('td[class*="job_id_"]')
 
     out = id_cell.inner_text().strip()
@@ -411,7 +412,7 @@ def edit_job_interval_minutes(page:'Page', job_id:'str', minutes:'str') -> 'None
     interval with the given number of minutes and submits the form.
     """
     _ = page.evaluate(f'$.fn.zato.scheduler.edit("interval_based", "{job_id}")')
-    page.wait_for_selector('#edit-interval_based', state='visible', timeout=5000)
+    _ = page.wait_for_selector('#edit-interval_based', state='visible', timeout=5000)
 
     # An empty interval field counts as zero on the backend so the new interval is minutes only
     for field_name in ('weeks', 'days', 'hours', 'seconds'):
@@ -420,7 +421,7 @@ def edit_job_interval_minutes(page:'Page', job_id:'str', minutes:'str') -> 'None
     page.fill('#id_edit-interval_based-minutes', minutes)
 
     page.click('#edit-interval_based input[type="submit"]')
-    page.wait_for_selector('#edit-interval_based', state='hidden', timeout=10000)
+    _ = page.wait_for_selector('#edit-interval_based', state='hidden', timeout=10000)
 
 # ################################################################################################################################
 # ################################################################################################################################

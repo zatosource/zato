@@ -2,6 +2,17 @@
 
 import zato.fhir_r4_0_1_core
 from zato.fhir.r4_0_1.resources import bodyheight
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 
 class TestToDictbodyheight:
@@ -99,7 +110,7 @@ class TestToDictbodyheight:
         assert 'status' in result
 
     def test_to_dict_category(self):
-        resource = bodyheight()
+        resource = cast_('any_', bodyheight())
         resource.category = [{'coding': [{'system': 'http://example.org', 'code': 'test-code', 'display': 'Test'}], 'text': 'Test concept'}]
         result = zato.fhir_r4_0_1_core.to_dict(resource)
         assert 'category' in result
@@ -468,7 +479,7 @@ class TestGetPathbodyheight:
         assert result is not None
 
     def test_get_path_category(self):
-        resource = bodyheight()
+        resource = cast_('any_', bodyheight())
         resource.category = [{'coding': [{'system': 'http://example.org', 'code': 'test-code', 'display': 'Test'}], 'text': 'Test concept'}]
         result = zato.fhir_r4_0_1_core.get_path(resource, 'category')
         assert result is not None

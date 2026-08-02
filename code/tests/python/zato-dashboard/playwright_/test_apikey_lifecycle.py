@@ -12,12 +12,13 @@ import time
 # Zato
 from zato.common.api import API_Key
 from zato.common.crypto.api import CryptoManager
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from playwright.sync_api import Page
+    from playwright.sync_api import Page, Response
     from zato.common.typing_ import anydict
 
 # ################################################################################################################################
@@ -48,7 +49,7 @@ def _create_definition(page:'Page', suffix:'str', header:'str'=API_Key.Default_H
 
     # Open the create dialog ..
     page.click('#markup .page_prompt a')
-    page.wait_for_selector('#create-div', state='visible')
+    _ = page.wait_for_selector('#create-div', state='visible')
 
     # .. fill in the fields ..
     page.fill('#id_name', name)
@@ -57,11 +58,11 @@ def _create_definition(page:'Page', suffix:'str', header:'str'=API_Key.Default_H
 
     # .. submit and wait for the dialog to close ..
     page.click('#create-div input[type="submit"]')
-    page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+    _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
     # .. wait for the row to appear.
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    page.wait_for_selector(row_selector, state='visible', timeout=5000)
+    _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
     out = {
         'name': name,
@@ -78,7 +79,7 @@ def _get_item_id(page:'Page', name:'str') -> 'str':
     """
 
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    row = page.query_selector(row_selector)
+    row = cast_('any_', page.query_selector(row_selector))
     id_cell = row.query_selector('td[class*="item_id_"]')
     out = id_cell.inner_text().strip()
 
@@ -90,7 +91,7 @@ def _get_header_cell_text(page:'Page', item_id:'str') -> 'str':
     """ Returns the text of the header column cell for a row of the given ID.
     """
 
-    cell = page.query_selector(f'#item_header_{item_id}')
+    cell = cast_('any_', page.query_selector(f'#item_header_{item_id}'))
     out = cell.inner_text().strip()
 
     return out
@@ -103,7 +104,7 @@ def _do_full_crud(page:'Page', base_url:'str', suffix:'str') -> 'None':
 
     # Navigate ..
     _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-    page.wait_for_selector('#data-table', state='visible')
+    _ = page.wait_for_selector('#data-table', state='visible')
 
     # .. create with a custom header ..
     definition = _create_definition(page, suffix, _Custom_Header)
@@ -112,26 +113,26 @@ def _do_full_crud(page:'Page', base_url:'str', suffix:'str') -> 'None':
     # .. edit the header ..
     item_id = _get_item_id(page, name)
     page.evaluate(f'$.fn.zato.security.apikey.edit("{item_id}")')
-    page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+    _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
     page.fill('#id_edit-header', '')
     page.fill('#id_edit-header', API_Key.Default_Header)
 
     page.click('#edit-div input[type="submit"]')
-    page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
+    _ = page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
     time.sleep(0.3)
 
     # .. change the key ..
     page.evaluate(f'$.fn.zato.data_table.change_password("{item_id}")')
-    page.wait_for_selector('#change_password-div', state='visible', timeout=5000)
+    _ = page.wait_for_selector('#change_password-div', state='visible', timeout=5000)
 
     page.fill('#change_password-div #id_password', 'new-crud-key')
     page.click('#change_password-div input[type="submit"]')
-    page.wait_for_function('!document.querySelector("#change_password-div").offsetParent')
+    _ = page.wait_for_function('!document.querySelector("#change_password-div").offsetParent')
 
     # .. delete.
     page.evaluate(f'$.fn.zato.security.apikey.delete_("{item_id}")')
-    page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+    _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
     page.click('#popup_ok')
     time.sleep(0.5)
 
@@ -153,8 +154,8 @@ class TestAPIKeyLifecycle:
         console_errors = [] # type: list
 
         def _on_console(msg:'object') -> 'None':
-            if msg.type == 'error':
-                console_errors.append(msg.text)
+            if cast_('any_', msg).type == 'error':
+                console_errors.append(cast_('any_', msg).text)
 
         page.on('console', _on_console)
 
@@ -189,7 +190,7 @@ class TestAPIKeyLifecycle:
         # Collect server errors ..
         server_errors = [] # type: list
 
-        def _on_response(response:'object') -> 'None':
+        def _on_response(response:'Response') -> 'None':
             if response.status >= 500:
                 server_errors.append(f'{response.status} {response.url}')
 
@@ -213,7 +214,7 @@ class TestAPIKeyLifecycle:
 
         # Navigate ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. create with the default header ..
         default_defn = _create_definition(page, 'crud-default')
@@ -234,7 +235,7 @@ class TestAPIKeyLifecycle:
 
         # .. reload the page and confirm the server-rendered rows show the same headers ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={_Test_Name_Prefix}crud')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         header_text = _get_header_cell_text(page, default_id)
         assert header_text == API_Key.Default_Header, \
@@ -245,7 +246,7 @@ class TestAPIKeyLifecycle:
 
         # .. the edit dialog shows the stored header ..
         page.evaluate(f'$.fn.zato.security.apikey.edit("{custom_id}")')
-        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         edit_header_value = page.input_value('#id_edit-header')
         assert edit_header_value == _Custom_Header, \
@@ -260,7 +261,7 @@ class TestAPIKeyLifecycle:
         page.fill('#id_edit-header', 'X-Another-Token')
 
         page.click('#edit-div input[type="submit"]')
-        page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
+        _ = page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
         time.sleep(0.3)
 
         # .. verify old name gone, new name present ..
@@ -276,11 +277,11 @@ class TestAPIKeyLifecycle:
 
         # .. change the key ..
         page.evaluate(f'$.fn.zato.data_table.change_password("{custom_id}")')
-        page.wait_for_selector('#change_password-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#change_password-div', state='visible', timeout=5000)
 
         page.fill('#change_password-div #id_password', 'new-crud-key')
         page.click('#change_password-div input[type="submit"]')
-        page.wait_for_function('!document.querySelector("#change_password-div").offsetParent')
+        _ = page.wait_for_function('!document.querySelector("#change_password-div").offsetParent')
 
         # .. verify the row still present after the key change ..
         row_after_pwd = page.query_selector(f'#data-table tbody tr:has(td:text-is("{edited_name}"))')
@@ -289,7 +290,7 @@ class TestAPIKeyLifecycle:
         # .. delete both definitions ..
         for item_id, name in ((custom_id, edited_name), (default_id, default_defn['name'])):
             page.evaluate(f'$.fn.zato.security.apikey.delete_("{item_id}")')
-            page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+            _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
             page.click('#popup_ok')
             time.sleep(0.5)
 

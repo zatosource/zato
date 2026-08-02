@@ -87,10 +87,10 @@ impl SchedulerShared {
 /// Fires due jobs by sending `FireBatch` items through the provided sender.
 /// The receiver end publishes them to Redis.
 pub fn scheduler_loop(
-    shared: Arc<SchedulerShared>,
-    fire_sender: std::sync::mpsc::Sender<FireBatch>,
+    shared: &Arc<SchedulerShared>,
+    fire_sender: &std::sync::mpsc::Sender<FireBatch>,
     initial_sleep_time: f64,
-    heartbeat: Option<crate::watchdog::HeartbeatHandle>,
+    heartbeat: Option<&crate::watchdog::HeartbeatHandle>,
 ) {
     if initial_sleep_time > 0.0 {
         std::thread::sleep(Duration::from_secs_f64(initial_sleep_time));
@@ -105,7 +105,7 @@ pub fn scheduler_loop(
     let mut last_wall = Utc::now();
     let mut last_mono = Instant::now();
     let mut last_status_log = Instant::now();
-    let status_log_interval = Duration::from_secs(60);
+    let status_log_interval = Duration::from_mins(1);
 
     loop {
         if let Some(handle) = &heartbeat {
@@ -119,7 +119,9 @@ pub fn scheduler_loop(
         {
             let mut state = shared.state.lock();
             let sleep_duration = compute_sleep_duration(&state);
-            let sleep_ms = sleep_duration.as_millis() as u64;
+            // A sleep never spans more than a few minutes, so it always fits in a u64,
+            // and saturating keeps a wildly out-of-range value from wrapping to a short nap.
+            let sleep_ms = u64::try_from(sleep_duration.as_millis()).unwrap_or(u64::MAX);
             if sleep_ms > 100 {
                 tracing::debug!("Sleeping for {}", crate::humanize_ms(sleep_ms));
             }
@@ -172,12 +174,12 @@ pub fn scheduler_loop(
                 let mut total: i64 = 0;
                 let mut active: i64 = 0;
                 let mut in_flight: i64 = 0;
-                for rj in state.jobs.values() {
+                for running_job in state.jobs.values() {
                     total += 1;
-                    if rj.is_active {
+                    if running_job.is_active {
                         active += 1;
                     }
-                    if rj.in_flight {
+                    if running_job.in_flight {
                         in_flight += 1;
                     }
                 }
@@ -185,6 +187,9 @@ pub fn scheduler_loop(
                 crate::metrics::JOBS_ACTIVE.set(active);
                 crate::metrics::JOBS_IN_FLIGHT.set(in_flight);
 
+                // The counts are taken, so the state lock goes back before the deferred log
+                // is flushed, which does its own I/O.
+                drop(state);
                 batch
             };
             deferred.flush();
@@ -345,7 +350,9 @@ pub fn check_in_flight_timeouts(state: &mut SchedulerState, deferred: &mut Defer
                 .with_label_values(&[&running_job.name, outcome::TIMEOUT])
                 .inc();
 
-            let duration_secs = elapsed_ms as f64 / 1000.0;
+            // Durations here are wall-clock milliseconds of a single job run, far below the
+            // point where f64 stops representing whole milliseconds exactly.
+            let duration_secs = crate::convert::ms_to_seconds(elapsed_ms);
             crate::metrics::EXECUTION_DURATION_SECONDS
                 .with_label_values(&[&running_job.name])
                 .observe(duration_secs);

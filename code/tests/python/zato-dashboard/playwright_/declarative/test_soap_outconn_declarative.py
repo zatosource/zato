@@ -228,7 +228,7 @@ class TestSOAPOutconnDeclarative:
         assert page.input_value('#id_edit-callback_service') == Callback_Store_Service
 
         page.click('#edit-div button:has-text("Cancel")')
-        page.wait_for_selector('#edit-div', state='hidden', timeout=5000)
+        _ = page.wait_for_selector('#edit-div', state='hidden', timeout=5000)
 
         # .. delete the connection ..
         delete_soap_outconn(page, outconn_id)

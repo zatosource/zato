@@ -18,6 +18,7 @@ import requests
 from zato.common.api import API_Key, ZATO_NONE
 from zato.common.test.playwright_pubsub import navigate_to_page, open_create_dialog, select_option_by_label, \
     set_select_value, submit_create_form, submit_edit_form
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -132,12 +133,12 @@ def _ensure_block_visible(page:'Page', dialog_id:'str', toggler_fragment:'str', 
     """ Makes sure a collapsible options block inside a dialog is visible, clicking its toggler if needed.
     """
 
-    probe = page.query_selector(probe_selector)
+    probe = cast_('any_', page.query_selector(probe_selector))
 
     # The block may have been toggled by a previous dialog interaction, only click when it is hidden.
     if not probe.is_visible():
         page.click(f'#{dialog_id} a[href*="{toggler_fragment}"]')
-        page.wait_for_selector(probe_selector, state='visible', timeout=5000)
+        _ = page.wait_for_selector(probe_selector, state='visible', timeout=5000)
 
 # ################################################################################################################################
 
@@ -148,7 +149,7 @@ def check_security_group(page:'Page', dialog_id:'str', group_name:'str', should_
     # The multi-select div is populated asynchronously so wait for the checkboxes first ..
     suffix = 'create' if dialog_id == 'create-div' else 'edit'
     container = f'#multi-select-div-{suffix}'
-    page.wait_for_selector(f'{container} input[type="checkbox"]', state='attached', timeout=10000)
+    _ = page.wait_for_selector(f'{container} input[type="checkbox"]', state='attached', timeout=10000)
 
     # .. the block with the checkboxes starts out collapsed ..
     _ensure_block_visible(page, dialog_id, 'api-client-groups-options-block', f'{container} input[type="checkbox"]')
@@ -352,7 +353,7 @@ def open_edit_dialog(page:'Page', channel_id:'str') -> 'None':
     page.evaluate(f'$.fn.zato.http_soap.edit("{channel_id}")')
 
     # .. and wait for the dialog to appear.
-    page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+    _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
 # ################################################################################################################################
 
@@ -377,13 +378,13 @@ def delete_channel(page:'Page', channel_id:'str') -> 'None':
 
     # Trigger the delete confirmation ..
     page.evaluate(f'$.fn.zato.http_soap.delete_("{channel_id}")')
-    page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+    _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
 
     # .. confirm ..
     page.click('#popup_ok')
 
     # .. and wait for the row removal animation.
-    page.wait_for_selector(f'#tr_{channel_id}', state='detached', timeout=5000)
+    _ = page.wait_for_selector(f'#tr_{channel_id}', state='detached', timeout=5000)
 
 # ################################################################################################################################
 
@@ -399,7 +400,7 @@ def submit_create_form_expect_blocked(page:'Page') -> 'None':
     page.wait_for_timeout(1000)
 
     # .. and confirm the dialog is still there.
-    dialog = page.query_selector('#create-div')
+    dialog = cast_('any_', page.query_selector('#create-div'))
     assert dialog.is_visible(), 'Expected the create dialog to remain open after a blocked submission'
 
 # ################################################################################################################################
@@ -565,7 +566,7 @@ def wait_for_service_in_dialog(page:'Page', base_url:'str', service_name:'str') 
 
         # .. close the dialog either way ..
         page.evaluate('$("#create-div").dialog("close")')
-        page.wait_for_function('!document.querySelector("#create-div").offsetParent')
+        _ = page.wait_for_function('!document.querySelector("#create-div").offsetParent')
 
         if found:
             logger.info('[wait_for_service_in_dialog] found %s', service_name)
@@ -603,7 +604,7 @@ def _create_definition_on_page(page:'Page', base_url:'str', page_url:'str', fiel
     # .. and wait for the row to appear.
     name = fields['name']
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    page.wait_for_selector(row_selector, state='visible', timeout=5000)
+    _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
 # ################################################################################################################################
 
@@ -733,7 +734,7 @@ def create_security_group(page:'Page', base_url:'str', name:'str', member_names:
 
     # .. open the create dialog ..
     page.evaluate('$.fn.zato.groups.create()')
-    page.wait_for_selector('#create-div', state='visible', timeout=5000)
+    _ = page.wait_for_selector('#create-div', state='visible', timeout=5000)
 
     # .. fill in the name ..
     page.fill('#id_name', name)
@@ -742,7 +743,7 @@ def create_security_group(page:'Page', base_url:'str', name:'str', member_names:
     if member_names:
 
         # Wait for the badges to load first ..
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-available-create .badge-zone-body .security-badge").length >= 1',
             timeout=10000
         )
@@ -759,7 +760,7 @@ def create_security_group(page:'Page', base_url:'str', name:'str', member_names:
 
     # .. and wait for the group's row to appear.
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    page.wait_for_selector(row_selector, state='visible', timeout=5000)
+    _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
 # ################################################################################################################################
 # ################################################################################################################################

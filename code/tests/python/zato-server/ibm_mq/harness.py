@@ -17,6 +17,9 @@ from uuid import uuid4
 # redis
 from redis import Redis
 
+# Zato
+from zato.common.typing_ import cast_
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -105,7 +108,7 @@ class QueueBridgeHarness:
         deadline = monotonic() + ModuleCtx.Startup_Timeout
 
         while monotonic() < deadline:
-            result = self.redis.xread({ModuleCtx.Request_Stream: self.request_last_id}, count=10, block=1000)
+            result = cast_('anylist', self.redis.xread({ModuleCtx.Request_Stream: self.request_last_id}, count=10, block=1000))
 
             for _stream_name, messages in result:
                 for message_id, fields in messages:
@@ -178,13 +181,13 @@ class QueueBridgeHarness:
         deadline = monotonic() + ModuleCtx.Reply_Timeout
 
         while monotonic() < deadline:
-            result = self.redis.xreadgroup(
+            result = cast_('anylist', self.redis.xreadgroup(
                 groupname=ModuleCtx.Consumer_Group,
                 consumername=ModuleCtx.Consumer_Name,
                 streams={ModuleCtx.Reply_Stream: '>'},
                 count=10,
                 block=1000,
-            )
+            ))
 
             if not result:
                 continue
@@ -249,7 +252,7 @@ class QueueBridgeHarness:
         deadline = monotonic() + ModuleCtx.Recv_Timeout
 
         while monotonic() < deadline:
-            result = self.redis.xread({ModuleCtx.Recv_Stream: self.recv_last_id}, count=1, block=1000)
+            result = cast_('anylist', self.redis.xread({ModuleCtx.Recv_Stream: self.recv_last_id}, count=1, block=1000))
 
             for _stream_name, messages in result:
                 for message_id, fields in messages:

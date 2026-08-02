@@ -14,12 +14,14 @@ from unittest.mock import MagicMock
 from zato.common.api import SEC_DEF_TYPE
 from zato.common.ext.bunch import Bunch
 from zato.server.connection.http_soap.url_data import URLData
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import any_, anydict
+    any_ = any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -99,13 +101,13 @@ class SecretCarryingEditTestCase(TestCase):
 
     def test_an_edit_carries_the_secret_over(self) -> 'None':
         url_data = _make_url_data()
-        url_data.basic_auth_config[_old_name] = _make_definition(_old_name)
+        cast_('anydict', url_data.basic_auth_config)[_old_name] = _make_definition(_old_name)
 
         url_data.on_config_event_SECURITY_BASIC_AUTH_EDIT(_make_edit_msg())
 
-        self.assertNotIn(_old_name, url_data.basic_auth_config)
+        self.assertNotIn(_old_name, cast_('any_', url_data.basic_auth_config))
 
-        config = url_data.basic_auth_config[_new_name]['config']
+        config = cast_('any_', url_data.basic_auth_config)[_new_name]['config']
         self.assertEqual(config['password'], _password)
         self.assertEqual(config['name'], _new_name)
 
@@ -125,25 +127,25 @@ class SecretCarryingEditTestCase(TestCase):
         url_data = _make_url_data()
 
         other_name = 'test.definition.other'
-        url_data.basic_auth_config[other_name] = _make_definition(other_name)
+        cast_('anydict', url_data.basic_auth_config)[other_name] = _make_definition(other_name)
 
         url_data.on_config_event_SECURITY_BASIC_AUTH_EDIT(_make_edit_msg())
 
         # The handler returned rather than raising part way through it
-        self.assertIn(other_name, url_data.basic_auth_config)
+        self.assertIn(other_name, cast_('any_', url_data.basic_auth_config))
 
 # ################################################################################################################################
 
     def test_an_edit_that_does_not_rename_still_works(self) -> 'None':
         url_data = _make_url_data()
-        url_data.basic_auth_config[_old_name] = _make_definition(_old_name)
+        cast_('anydict', url_data.basic_auth_config)[_old_name] = _make_definition(_old_name)
 
         msg = _make_edit_msg()
         msg.name = _old_name
 
         url_data.on_config_event_SECURITY_BASIC_AUTH_EDIT(msg)
 
-        config = url_data.basic_auth_config[_old_name]['config']
+        config = cast_('any_', url_data.basic_auth_config)[_old_name]['config']
         self.assertEqual(config['password'], _password)
 
 # ################################################################################################################################
@@ -166,8 +168,8 @@ class SelfContainedEditTestCase(TestCase):
         url_data.on_config_event_SECURITY_APIKEY_EDIT(msg)
 
         # The edit brought everything with it, so the server has the definition under its new name
-        self.assertIn(_new_name, url_data.apikey_config)
-        self.assertNotIn(_old_name, url_data.apikey_config)
+        self.assertIn(_new_name, cast_('any_', url_data.apikey_config))
+        self.assertNotIn(_old_name, cast_('any_', url_data.apikey_config))
 
 # ################################################################################################################################
 
@@ -179,11 +181,11 @@ class SelfContainedEditTestCase(TestCase):
         msg.password = 'key-value-0001'
         msg.sec_type = SEC_DEF_TYPE.APIKEY
 
-        url_data.apikey_config[_old_name] = _make_definition(_old_name)
+        cast_('anydict', url_data.apikey_config)[_old_name] = _make_definition(_old_name)
         url_data.on_config_event_SECURITY_APIKEY_EDIT(msg)
 
-        self.assertIn(_new_name, url_data.apikey_config)
-        self.assertNotIn(_old_name, url_data.apikey_config)
+        self.assertIn(_new_name, cast_('any_', url_data.apikey_config))
+        self.assertNotIn(_old_name, cast_('any_', url_data.apikey_config))
 
 # ################################################################################################################################
 
@@ -197,7 +199,7 @@ class SelfContainedEditTestCase(TestCase):
 
         url_data.on_config_event_SECURITY_APIKEY_EDIT(msg)
 
-        sec_def = url_data.apikey_get_by_id(_security_id)
+        sec_def = cast_('any_', url_data.apikey_get_by_id(_security_id))
         self.assertEqual(sec_def['name'], _new_name)
 
 # ################################################################################################################################

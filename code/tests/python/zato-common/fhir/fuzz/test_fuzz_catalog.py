@@ -4,6 +4,17 @@ from hypothesis import given, strategies as st, settings, HealthCheck
 
 from zato.fhir.r4_0_1 import catalog
 from zato.fhir.validation import validate
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 
 fhir_safe_text = st.text(
@@ -44,7 +55,7 @@ class TestFuzzcatalog:
     @given(st.lists(fhir_safe_text, min_size=0, max_size=10))
     @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow])
     def test_fuzz_catalog_extension_values(self, values: list[str]) -> None:
-        r = catalog()
+        r = cast_('any_', catalog())
         r.id = 'fuzz-test'
         r.extension = [{'url': f'http://example.org/ext{i}', 'valueString': v} for i, v in enumerate(values)]
         d = r.to_dict()

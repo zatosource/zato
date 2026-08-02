@@ -67,7 +67,7 @@ class TestRedshiftEngineURL:
 
         url = get_engine_url(config)
 
-        expected = 'redshift+redshift_connector://test_user:test_password' \
+        expected = 'redshift+redshift_connector://test_user:test_password' + \
             '@examplecluster.abc123xyz789.us-west-2.redshift.amazonaws.com:5439/testdb'
 
         assert url == expected

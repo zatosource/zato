@@ -30,6 +30,9 @@ pub const CONSUMER_INSTANCE_NAME: &str = "queue_bridge-0";
 /// Maximum number of entries in each stream before trimming.
 const STREAM_MAXLEN: usize = 100_000;
 
+/// What XREADGROUP returns - per stream, a list of entries, each a list of field-value pairs.
+type StreamReadResult = Vec<(String, Vec<(String, Vec<(String, String)>)>)>;
+
 /// Ensures the consumer group exists on the command stream.
 ///
 /// Creates the stream and group if they do not exist.
@@ -150,7 +153,7 @@ fn publish_reply_with_data(conn: &mut redis::Connection, correlation_id: &str, s
 /// Reads and processes commands from the command stream in a blocking loop.
 ///
 /// This function blocks on XREADGROUP and should be run on its own thread.
-pub fn command_listener_loop(conn: &mut redis::Connection, shared: Arc<BridgeShared>) {
+pub fn command_listener_loop(conn: &mut redis::Connection, shared: &Arc<BridgeShared>) {
     tracing::info!("Command listener started on '{COMMAND_STREAM}'");
 
     loop {
@@ -158,8 +161,6 @@ pub fn command_listener_loop(conn: &mut redis::Connection, shared: Arc<BridgeSha
             tracing::info!("Command listener exiting (stop flag set)");
             break;
         }
-
-        type StreamReadResult = Vec<(String, Vec<(String, Vec<(String, String)>)>)>;
 
         let result: Result<StreamReadResult, redis::RedisError> = redis::cmd("XREADGROUP")
             .arg("GROUP")
@@ -202,7 +203,7 @@ pub fn command_listener_loop(conn: &mut redis::Connection, shared: Arc<BridgeSha
                     }
                 }
 
-                process_command(conn, &shared, &command, &correlation_id, &payload);
+                process_command(conn, shared, &command, &correlation_id, &payload);
 
                 let ack_result: Result<u32, redis::RedisError> = redis::cmd("XACK")
                     .arg(COMMAND_STREAM)
@@ -256,24 +257,24 @@ struct ReloadPayload {
     outgoing: Vec<OutgoingConfig>,
 }
 
-/// Payload for ping and send_message commands.
+/// Payload for the `ping` and `send_message` commands.
 #[derive(Deserialize)]
 struct ConnPayload {
     /// Outgoing connection name to target.
     conn_name: String,
-    /// Optional base64-encoded payload for send_message.
+    /// Optional base64-encoded payload for `send_message`.
     #[serde(default)]
     data: String,
 }
 
-/// Payload for delete_channel and delete_outgoing commands.
+/// Payload for the `delete_channel` and `delete_outgoing` commands.
 #[derive(Deserialize)]
 struct DeletePayload {
     /// Connection name to remove.
     name: String,
 }
 
-/// Payload for the send_reply command.
+/// Payload for the `send_reply` command.
 #[derive(Deserialize)]
 struct SendReplyPayload {
     /// Channel that received the original message.
@@ -289,9 +290,10 @@ struct SendReplyPayload {
     data: String,
 }
 
+/// Replaces the whole connection configuration with the one carried by the payload.
 fn handle_reload(shared: &BridgeShared, payload: &str) {
     tracing::info!("Reload payload: {payload}");
-    let parsed: ReloadPayload = match serde_json::from_str(payload) {
+    let parsed: ReloadPayload = match crate::wire::parse_payload(payload) {
         Ok(parsed) => parsed,
         Err(err) => {
             tracing::error!("Failed to parse reload payload: {err}, payload: {payload}");
@@ -316,14 +318,19 @@ fn handle_reload(shared: &BridgeShared, payload: &str) {
     let outgoing_count = parsed.outgoing.len();
 
     let ch_noun = if channel_count == 1 { "channel" } else { "channels" };
-    let out_noun = if outgoing_count == 1 { "outgoing connection" } else { "outgoing connections" };
+    let out_noun = if outgoing_count == 1 {
+        "outgoing connection"
+    } else {
+        "outgoing connections"
+    };
     tracing::info!("Reloaded {channel_count} {ch_noun} and {outgoing_count} {out_noun}");
 
     shared.config_notify.notify_one();
 }
 
+/// Adds one channel (consumer) connection from the payload.
 fn handle_add_channel(shared: &BridgeShared, payload: &str) {
-    let config: ChannelConfig = match serde_json::from_str(payload) {
+    let config: ChannelConfig = match crate::wire::parse_payload(payload) {
         Ok(config) => config,
         Err(err) => {
             tracing::error!("Failed to parse add_channel payload: {err}");
@@ -336,8 +343,9 @@ fn handle_add_channel(shared: &BridgeShared, payload: &str) {
     shared.config_notify.notify_one();
 }
 
+/// Adds one outgoing (producer) connection from the payload.
 fn handle_add_outgoing(shared: &BridgeShared, payload: &str) {
-    let config: OutgoingConfig = match serde_json::from_str(payload) {
+    let config: OutgoingConfig = match crate::wire::parse_payload(payload) {
         Ok(config) => config,
         Err(err) => {
             tracing::error!("Failed to parse add_outgoing payload: {err}");
@@ -349,8 +357,9 @@ fn handle_add_outgoing(shared: &BridgeShared, payload: &str) {
     tracing::info!("Added outgoing: {name}");
 }
 
+/// Cancels and removes the channel named in the payload.
 fn handle_delete_channel(shared: &BridgeShared, payload: &str) {
-    let parsed: DeletePayload = match serde_json::from_str(payload) {
+    let parsed: DeletePayload = match crate::wire::parse_payload(payload) {
         Ok(parsed) => parsed,
         Err(err) => {
             tracing::error!("Failed to parse delete_channel payload: {err}");
@@ -362,8 +371,9 @@ fn handle_delete_channel(shared: &BridgeShared, payload: &str) {
     tracing::info!("Deleted channel: {}", parsed.name);
 }
 
+/// Removes the outgoing connection named in the payload.
 fn handle_delete_outgoing(shared: &BridgeShared, payload: &str) {
-    let parsed: DeletePayload = match serde_json::from_str(payload) {
+    let parsed: DeletePayload = match crate::wire::parse_payload(payload) {
         Ok(parsed) => parsed,
         Err(err) => {
             tracing::error!("Failed to parse delete_outgoing payload: {err}");
@@ -374,8 +384,9 @@ fn handle_delete_outgoing(shared: &BridgeShared, payload: &str) {
     tracing::info!("Deleted outgoing: {}", parsed.name);
 }
 
+/// Replaces one channel's configuration, cancelling its current consumer first.
 fn handle_edit_channel(shared: &BridgeShared, payload: &str) {
-    let config: ChannelConfig = match serde_json::from_str(payload) {
+    let config: ChannelConfig = match crate::wire::parse_payload(payload) {
         Ok(config) => config,
         Err(err) => {
             tracing::error!("Failed to parse edit_channel payload: {err}");
@@ -389,8 +400,9 @@ fn handle_edit_channel(shared: &BridgeShared, payload: &str) {
     shared.config_notify.notify_one();
 }
 
+/// Replaces one outgoing connection's configuration.
 fn handle_edit_outgoing(shared: &BridgeShared, payload: &str) {
-    let config: OutgoingConfig = match serde_json::from_str(payload) {
+    let config: OutgoingConfig = match crate::wire::parse_payload(payload) {
         Ok(config) => config,
         Err(err) => {
             tracing::error!("Failed to parse edit_outgoing payload: {err}");
@@ -402,8 +414,9 @@ fn handle_edit_outgoing(shared: &BridgeShared, payload: &str) {
     tracing::info!("Edited outgoing: {name}");
 }
 
+/// Pings the outgoing connection named in the payload and replies with the outcome.
 fn handle_ping(conn: &mut redis::Connection, shared: &BridgeShared, correlation_id: &str, payload: &str) {
-    let parsed: ConnPayload = match serde_json::from_str(payload) {
+    let parsed: ConnPayload = match crate::wire::parse_payload(payload) {
         Ok(parsed) => parsed,
         Err(err) => {
             tracing::error!("Failed to parse ping payload: {err}");
@@ -417,8 +430,9 @@ fn handle_ping(conn: &mut redis::Connection, shared: &BridgeShared, correlation_
     }
 }
 
+/// Sends one message through the outgoing connection named in the payload.
 fn handle_send_message(conn: &mut redis::Connection, shared: &BridgeShared, correlation_id: &str, payload: &str) {
-    let parsed: ConnPayload = match serde_json::from_str(payload) {
+    let parsed: ConnPayload = match crate::wire::parse_payload(payload) {
         Ok(parsed) => parsed,
         Err(err) => {
             tracing::error!("Failed to parse send_message payload: {err}");
@@ -433,8 +447,9 @@ fn handle_send_message(conn: &mut redis::Connection, shared: &BridgeShared, corr
     }
 }
 
+/// Sends a reply to the queue the original message nominated.
 fn handle_send_reply(conn: &mut redis::Connection, shared: &BridgeShared, correlation_id: &str, payload: &str) {
-    let parsed: SendReplyPayload = match serde_json::from_str(payload) {
+    let parsed: SendReplyPayload = match crate::wire::parse_payload(payload) {
         Ok(parsed) => parsed,
         Err(err) => {
             tracing::error!("Failed to parse send_reply payload: {err}");
@@ -443,52 +458,84 @@ fn handle_send_reply(conn: &mut redis::Connection, shared: &BridgeShared, correl
         }
     };
     let data = base64_decode(&parsed.data);
-    let result = crate::bridge::send_reply_sync(
-        shared,
-        &parsed.channel_name,
-        &parsed.reply_to_queue,
-        &parsed.reply_to_queue_manager,
-        &parsed.message_id,
-        &data,
-    );
+
+    let target = crate::bridge::ReplyTarget {
+        channel_name: &parsed.channel_name,
+        reply_to_queue: &parsed.reply_to_queue,
+        reply_to_queue_manager: &parsed.reply_to_queue_manager,
+        message_id: &parsed.message_id,
+    };
+
+    let result = crate::bridge::send_reply_sync(shared, &target, &data);
     match result {
         Ok(()) => publish_reply_with_data(conn, correlation_id, "ok", ""),
         Err(err) => publish_reply_with_data(conn, correlation_id, "error", &err),
     }
 }
 
+/// The base64 alphabet, indexed by the value of one six-bit group.
+const BASE64_ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+/// Keeps only the six bits one base64 character encodes.
+const SIX_BIT_MASK: u32 = 0x3F;
+
+/// Keeps only the eight bits one decoded byte holds.
+const BYTE_MASK: u32 = 0xFF;
+
+/// Number of input bytes encoded by one group of four base64 characters.
+const BYTES_PER_GROUP: usize = 3;
+
+/// Number of base64 characters produced per group of input bytes.
+const CHARS_PER_GROUP: usize = 4;
+
+/// Maps one six-bit group onto its base64 character.
+fn base64_char(group: u32) -> char {
+    // The mask keeps the index inside the 64-entry alphabet, so the lookup always hits.
+    let index = usize::try_from(group & SIX_BIT_MASK).unwrap_or(0);
+    BASE64_ALPHABET.get(index).copied().map_or('=', char::from)
+}
+
+/// Takes the low eight bits of a decoded group as one output byte.
+fn base64_byte(group: u32) -> u8 {
+    // The mask leaves a value that always fits in a byte.
+    u8::try_from(group & BYTE_MASK).unwrap_or(0)
+}
+
 /// Simple base64 encoder for binary payloads in Redis stream fields.
 fn base64_encode(data: &[u8]) -> String {
-    use std::fmt::Write;
-    const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let mut result = String::with_capacity(data.len().div_ceil(3) * 4);
-    for chunk in data.chunks(3) {
-        let triple = match chunk.len() {
-            3 => (u32::from(chunk[0]) << 16) | (u32::from(chunk[1]) << 8) | u32::from(chunk[2]),
-            2 => (u32::from(chunk[0]) << 16) | (u32::from(chunk[1]) << 8),
-            1 => u32::from(chunk[0]) << 16,
-            _ => continue,
-        };
-        result.push(char::from(ALPHABET[((triple >> 18) & 0x3F) as usize]));
-        result.push(char::from(ALPHABET[((triple >> 12) & 0x3F) as usize]));
+    let mut result = String::with_capacity(data.len().div_ceil(BYTES_PER_GROUP) * CHARS_PER_GROUP);
+
+    for chunk in data.chunks(BYTES_PER_GROUP) {
+        // Bytes missing from a trailing partial chunk count as zero, which is what
+        // the padding characters below stand for.
+        let first = u32::from(chunk.first().copied().unwrap_or(0));
+        let second = u32::from(chunk.get(1).copied().unwrap_or(0));
+        let third = u32::from(chunk.get(2).copied().unwrap_or(0));
+
+        let triple = (first << 16) | (second << 8) | third;
+
+        result.push(base64_char(triple >> 18));
+        result.push(base64_char(triple >> 12));
+
         if chunk.len() > 1 {
-            result.push(char::from(ALPHABET[((triple >> 6) & 0x3F) as usize]));
+            result.push(base64_char(triple >> 6));
         } else {
             result.push('=');
         }
+
         if chunk.len() > 2 {
-            result.push(char::from(ALPHABET[(triple & 0x3F) as usize]));
+            result.push(base64_char(triple));
         } else {
             result.push('=');
         }
     }
-    let _ = write!(result, "");
+
     result
 }
 
 /// Simple base64 decoder for binary payloads from Redis stream fields.
 fn base64_decode(encoded: &str) -> Vec<u8> {
-    fn decode_char(chr: u8) -> Option<u8> {
+    const fn decode_char(chr: u8) -> Option<u8> {
         match chr {
             b'A'..=b'Z' => Some(chr - b'A'),
             b'a'..=b'z' => Some(chr - b'a' + 26),
@@ -500,26 +547,33 @@ fn base64_decode(encoded: &str) -> Vec<u8> {
     }
 
     let bytes: Vec<u8> = encoded.bytes().filter(|&byte| byte != b'=').collect();
-    let mut result = Vec::with_capacity(bytes.len() * 3 / 4);
+    let mut result = Vec::with_capacity(bytes.len() * BYTES_PER_GROUP / CHARS_PER_GROUP);
 
-    for chunk in bytes.chunks(4) {
+    for chunk in bytes.chunks(CHARS_PER_GROUP) {
         let mut buf: u32 = 0;
-        let mut count: u8 = 0;
+        let mut count: u32 = 0;
+
         for &byte in chunk {
             if let Some(val) = decode_char(byte) {
                 buf = (buf << 6) | u32::from(val);
                 count += 1;
             }
         }
+
+        // A single character carries too few bits to yield a byte, so such a group is dropped.
         if count >= 2 {
+            // A partial group is left-aligned first, so its bits sit where a full group's would.
             let shift = (4 - count) * 6;
             buf <<= shift;
-            result.push((buf >> 16) as u8);
+
+            result.push(base64_byte(buf >> 16));
+
             if count >= 3 {
-                result.push((buf >> 8) as u8);
+                result.push(base64_byte(buf >> 8));
             }
+
             if count >= 4 {
-                result.push(buf as u8);
+                result.push(base64_byte(buf));
             }
         }
     }

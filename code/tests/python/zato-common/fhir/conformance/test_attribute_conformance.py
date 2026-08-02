@@ -7,6 +7,15 @@ import pytest
 
 from zato.fhir.r4_0_1 import resources as resources_module
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 
 def _load_field_info() -> dict:
     path = Path(__file__).parent / "r4_field_info.json"
@@ -17,7 +26,7 @@ def _load_field_info() -> dict:
 R4_FIELD_INFO = _load_field_info()
 
 
-def _public_resource_field_names(cls) -> set[str]:
+def _public_resource_field_names(cls:'any_') -> set[str]:
     names = set()
     for key in getattr(cls, "__annotations__", {}):
         if key.startswith("_"):
@@ -31,7 +40,7 @@ def _public_resource_field_names(cls) -> set[str]:
 
 
 @pytest.mark.parametrize("resource_name", sorted(R4_FIELD_INFO.keys()))
-def test_field_names_match_spec(resource_name):
+def test_field_names_match_spec(resource_name:'any_'):
     spec_fields = set(R4_FIELD_INFO[resource_name]["field_types"].keys())
     cls = getattr(resources_module, resource_name, None)
     if cls is None:
@@ -45,7 +54,7 @@ def test_field_names_match_spec(resource_name):
 
 
 @pytest.mark.parametrize("resource_name", sorted(R4_FIELD_INFO.keys()))
-def test_list_fields_match_spec(resource_name):
+def test_list_fields_match_spec(resource_name:'any_'):
     spec_list = set(R4_FIELD_INFO[resource_name]["list_fields"])
     cls = getattr(resources_module, resource_name, None)
     if cls is None:

@@ -16,10 +16,19 @@ import pytest
 # Zato - test utilities
 from zato.common.test.client import AdminClient as ZatoClient
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 SERVICE = 'zato.scheduler.job'
 
 @pytest.fixture(scope='module')
-def client(zato_server):
+def client(zato_server:'any_'):
     out = ZatoClient(zato_server['base_url'], zato_server['password'])
     return out
 
@@ -38,7 +47,7 @@ class TestGetCurrentStateResponse:
 
     # ##############################################################################################################################
 
-    def test_01_create_job(self, client) -> 'None':
+    def test_01_create_job(self, client:'any_') -> 'None':
         response = client.create(f'{SERVICE}.create',
             cluster_id=1,
             name='test-incremental-poll-job',
@@ -53,14 +62,14 @@ class TestGetCurrentStateResponse:
 
     # ##############################################################################################################################
 
-    def test_02_execute_job(self, client) -> 'None':
+    def test_02_execute_job(self, client:'any_') -> 'None':
         item_id = self.__class__.created_ids[0]
         client.invoke(f'{SERVICE}.execute', {'job_id': item_id})
         time.sleep(2)
 
     # ##############################################################################################################################
 
-    def test_03_get_current_state_has_chart_buckets(self, client) -> 'None':
+    def test_03_get_current_state_has_chart_buckets(self, client:'any_') -> 'None':
         response = client.invoke(f'{SERVICE}.get-current-state', {})
         assert 'chart_buckets' in response
         chart_buckets = response['chart_buckets']
@@ -69,7 +78,7 @@ class TestGetCurrentStateResponse:
 
     # ##############################################################################################################################
 
-    def test_04_get_current_state_has_recent_events(self, client) -> 'None':
+    def test_04_get_current_state_has_recent_events(self, client:'any_') -> 'None':
         response = client.invoke(f'{SERVICE}.get-current-state', {})
         assert 'recent_events' in response
         recent_events = response['recent_events']
@@ -78,13 +87,13 @@ class TestGetCurrentStateResponse:
 
     # ##############################################################################################################################
 
-    def test_05_get_current_state_no_history_timeline(self, client) -> 'None':
+    def test_05_get_current_state_no_history_timeline(self, client:'any_') -> 'None':
         response = client.invoke(f'{SERVICE}.get-current-state', {})
         assert 'history_timeline' not in response
 
     # ##############################################################################################################################
 
-    def test_06_chart_buckets_have_outcome_counts(self, client) -> 'None':
+    def test_06_chart_buckets_have_outcome_counts(self, client:'any_') -> 'None':
         response = client.invoke(f'{SERVICE}.get-current-state', {})
         bucket = response['chart_buckets']['buckets'][0]
         assert 'ok' in bucket
@@ -96,7 +105,7 @@ class TestGetCurrentStateResponse:
 
     # ##############################################################################################################################
 
-    def test_07_recent_events_have_expected_fields(self, client) -> 'None':
+    def test_07_recent_events_have_expected_fields(self, client:'any_') -> 'None':
         response = client.invoke(f'{SERVICE}.get-current-state', {})
         recent_events = response['recent_events']
         assert len(recent_events) >= 1
@@ -108,7 +117,7 @@ class TestGetCurrentStateResponse:
 
     # ##############################################################################################################################
 
-    def test_08_chart_since_iso_filters(self, client) -> 'None':
+    def test_08_chart_since_iso_filters(self, client:'any_') -> 'None':
         response = client.invoke(f'{SERVICE}.get-current-state', {
             'chart_since_iso': '2099-01-01T00:00:00+00:00',
             'chart_until_iso': '2099-01-01T02:00:00+00:00',
@@ -121,7 +130,7 @@ class TestGetCurrentStateResponse:
 
     # ##############################################################################################################################
 
-    def test_09_recent_since_iso_filters(self, client) -> 'None':
+    def test_09_recent_since_iso_filters(self, client:'any_') -> 'None':
         response = client.invoke(f'{SERVICE}.get-current-state', {
             'recent_since_iso': '2099-01-01T00:00:00+00:00',
         })
@@ -130,7 +139,7 @@ class TestGetCurrentStateResponse:
 
     # ##############################################################################################################################
 
-    def test_99_cleanup(self, client) -> 'None':
+    def test_99_cleanup(self, client:'any_') -> 'None':
         for item_id in self.__class__.created_ids[:]:
             client.delete(f'{SERVICE}.delete', id=item_id)
             self.__class__.created_ids.remove(item_id)

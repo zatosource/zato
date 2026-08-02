@@ -19,6 +19,7 @@ from jwt.algorithms import RSAAlgorithm
 # Zato
 from zato.common.bearer_token_verifier import BearerTokenVerifier, _jwks_cache_key_prefix, _jwks_fetch_key_prefix
 from zato.common.model.security import BearerTokenVerifyConfig
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -176,7 +177,7 @@ def make_verifier(keys:'anylist | None'=None) -> 'TestVerifier':
 def has_cached_document(verifier:'TestVerifier') -> 'bool':
     """ Whether the JWKS document of the test URL is in the verifier's cache.
     """
-    out = _jwks_cache_key_prefix + JWKS_URL in verifier.cache.data
+    out = _jwks_cache_key_prefix + JWKS_URL in cast_('any_', verifier.cache).data
 
     return out
 
@@ -186,7 +187,7 @@ def let_fetch_interval_pass(verifier:'TestVerifier') -> 'None':
     """ Drops the fetch interval marker of the test URL, which is what the passing of
     JWKS_Fetch_Interval seconds amounts to.
     """
-    _ = verifier.cache.data.pop(_jwks_fetch_key_prefix + JWKS_URL, None)
+    _ = cast_('any_', verifier.cache).data.pop(_jwks_fetch_key_prefix + JWKS_URL, None)
 
 # ################################################################################################################################
 # ################################################################################################################################

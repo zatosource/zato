@@ -17,7 +17,23 @@ from zato.common.odata.common import ODataVersion
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _read_request(url):
+if 0:
+    from zato.common.odata.batch import BatchResponse
+    from zato.common.typing_ import any_, anydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _body(response:'BatchResponse') -> 'anydict':
+    """ The parsed body of a response that the test knows carries one.
+    """
+    out = response.body
+    assert out is not None
+    return out
+
+# ################################################################################################################################
+
+def _read_request(url:'any_'):
     """ One GET request for a batch.
     """
     out = BatchRequest()
@@ -27,7 +43,7 @@ def _read_request(url):
 
 # ################################################################################################################################
 
-def _write_request(method, url, body):
+def _write_request(method:'any_', url:'any_', body:'any_'):
     """ One modifying request for a batch.
     """
     out = BatchRequest()
@@ -38,7 +54,7 @@ def _write_request(method, url, body):
 
 # ################################################################################################################################
 
-def _seed(server):
+def _seed(server:'any_'):
     """ Loads a predictable set of Business Central customers.
     """
     server.reset()
@@ -49,7 +65,7 @@ def _seed(server):
 
 # ################################################################################################################################
 
-def _bc_client(server):
+def _bc_client(server:'any_'):
     config = {
         'address': server.service_root + '/',
         'odata_version': ODataVersion.V4,
@@ -215,7 +231,7 @@ class TestBatchLive:
     """ Batches against the live test server, in both formats and both versions.
     """
 
-    def test_multipart_reads_v4(self, business_central_server):
+    def test_multipart_reads_v4(self, business_central_server:'any_'):
         _seed(business_central_server)
 
         client = _bc_client(business_central_server)
@@ -225,12 +241,12 @@ class TestBatchLive:
         assert len(responses) == 2
 
         assert responses[0].status_code == OK
-        assert len(responses[0].body['value']) == 2
+        assert len(_body(responses[0])['value']) == 2
 
         assert responses[1].status_code == OK
-        assert responses[1].body['displayName'] == 'Adatum'
+        assert _body(responses[1])['displayName'] == 'Adatum'
 
-    def test_multipart_changeset_v4(self, business_central_server):
+    def test_multipart_changeset_v4(self, business_central_server:'any_'):
         _seed(business_central_server)
 
         requests = [
@@ -244,7 +260,7 @@ class TestBatchLive:
 
         assert responses[0].status_code == OK
         assert responses[1].status_code == CREATED
-        assert responses[1].body['displayName'] == 'Batch Co'
+        assert _body(responses[1])['displayName'] == 'Batch Co'
 
         # The server recorded the batch's inner requests separately.
         batch_requests = business_central_server.last_request['batch_requests']
@@ -252,7 +268,7 @@ class TestBatchLive:
         assert batch_requests[1]['method'] == 'POST'
         assert batch_requests[1]['json'] == {'displayName': 'Batch Co'}
 
-    def test_json_batch_v4(self, business_central_server):
+    def test_json_batch_v4(self, business_central_server:'any_'):
         _seed(business_central_server)
 
         requests = [
@@ -266,9 +282,9 @@ class TestBatchLive:
 
         assert responses[0].status_code == OK
         assert responses[1].status_code == CREATED
-        assert responses[1].body['displayName'] == 'JSON Co'
+        assert _body(responses[1])['displayName'] == 'JSON Co'
 
-    def test_multipart_v2(self, s4hana_server):
+    def test_multipart_v2(self, s4hana_server:'any_'):
         s4hana_server.reset()
         s4hana_server.add_entities('A_SalesOrder', 'SalesOrder', [
             {'SalesOrder': '1', 'SalesOrderType': 'OR'},
@@ -290,7 +306,7 @@ class TestBatchLive:
         client.close()
 
         assert responses[0].status_code == OK
-        assert responses[0].body['d']['results'][0]['SalesOrder'] == '1'
+        assert _body(responses[0])['d']['results'][0]['SalesOrder'] == '1'
 
         assert responses[1].status_code == NO_CONTENT
         assert s4hana_server.entities['A_SalesOrder']['1']['SalesOrderType'] == 'RE'

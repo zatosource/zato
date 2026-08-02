@@ -16,11 +16,18 @@ from zato.common.rate_limiting.common import Window_Unit_Second
 from zato.common.rate_limiting.manager import RateLimitingManager
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.config import ConfigDict
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _all_day_range(**overrides):
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _all_day_range(**overrides:'any_'):
     out = {
         'is_all_day':  True,
         'disabled':    False,
@@ -35,7 +42,7 @@ def _all_day_range(**overrides):
 
 # ################################################################################################################################
 
-def _make_rule(cidr_list, time_range):
+def _make_rule(cidr_list:'any_', time_range:'any_'):
     return {
         'cidr_list': cidr_list,
         'time_range': time_range,
@@ -61,9 +68,9 @@ class StartupLoadingTestCase(unittest.TestCase):
         ]
 
         for hs_item in http_soap:
-            rate_limiting = hs_item.get('rate_limiting')
+            rate_limiting = cast_('any_', hs_item.get('rate_limiting'))
             if rate_limiting:
-                channel_id = hs_item['id']
+                channel_id = cast_('any_', hs_item['id'])
                 manager.set_channel_config(channel_id, rate_limiting)
 
         self.assertTrue(manager.has_channel(1))
@@ -81,9 +88,9 @@ class StartupLoadingTestCase(unittest.TestCase):
         ]
 
         for hs_item in http_soap:
-            rate_limiting = hs_item.get('rate_limiting')
+            rate_limiting = cast_('any_', hs_item.get('rate_limiting'))
             if rate_limiting:
-                channel_id = hs_item['id']
+                channel_id = cast_('any_', hs_item['id'])
                 manager.set_channel_config(channel_id, rate_limiting)
 
         self.assertFalse(manager.has_channel(1))
@@ -92,7 +99,7 @@ class StartupLoadingTestCase(unittest.TestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _make_config_dict(name, entries):
+def _make_config_dict(name:'any_', entries:'any_'):
     """ Builds a ConfigDict with the given entries, each a dict with 'id', 'name', and optionally 'opaque1'.
     """
     config_dict = ConfigDict(name, Bunch())
@@ -105,10 +112,10 @@ def _make_config_dict(name, entries):
 
 # ################################################################################################################################
 
-def _make_loader(manager):
+def _make_loader(manager:'any_'):
     """ Builds a minimal object that has _load_sec_def_rate_limiting bound.
     """
-    loader = object.__new__(ConfigLoader)
+    loader = cast_('any_', object.__new__(ConfigLoader))
     loader.rate_limiting_manager = manager
     return loader
 
@@ -204,4 +211,4 @@ class SecDefStartupLoadingTestCase(unittest.TestCase):
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    unittest.main()
+    _ = unittest.main()

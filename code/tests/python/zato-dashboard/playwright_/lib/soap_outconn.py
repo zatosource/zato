@@ -16,13 +16,14 @@ from urllib.parse import urlparse
 from zato.common.api import ZATO_NONE
 from zato.common.test.playwright_pubsub import navigate_to_page, open_create_dialog, select_option_by_label, \
     set_select_value, submit_create_form, submit_edit_form
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import any_, anydict
+    from zato.common.typing_ import any_, anydict, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -137,7 +138,7 @@ def _ensure_more_options_visible(page:'Page', prefix:'str') -> 'None':
     container = '#edit-div' if prefix else '#create-div'
     probe_selector = f'#id_{prefix}ping_method'
 
-    probe = page.query_selector(probe_selector)
+    probe = cast_('any_', page.query_selector(probe_selector))
 
     # The block may have been toggled by a previous dialog interaction, only click when it is hidden.
     if not probe.is_visible():
@@ -154,7 +155,7 @@ def fill_soap_outconn_form(page:'Page', options:'anydict', prefix:'str'='') -> '
 
     # Plain text inputs, switching to the tab each field lives on; the first field
     # always clicks its tab so the form's current tab does not matter ..
-    current_tab = None
+    current_tab:'strnone' = None
 
     for field_name in _Text_Fields:
         if field_name in options:

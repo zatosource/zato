@@ -1,9 +1,9 @@
 use chrono::Utc;
 use proptest::prelude::*;
 use std::time::Instant;
+use zato_scheduler_core::DeferredLog;
 use zato_scheduler_core::job::{ExecutionRecord, RunningJob};
 use zato_scheduler_core::model::SchedulerJob;
-use zato_scheduler_core::DeferredLog;
 use zato_scheduler_core::scheduler::{SchedulerState, check_in_flight_timeouts};
 
 fn make_active_job() -> SchedulerJob {

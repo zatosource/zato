@@ -40,6 +40,13 @@ from zato.common.util.xml_.mime_ import new_content_id, Part
 # ################################################################################################################################
 
 from certs import certificate_pem_path, private_key_pem_path
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -61,7 +68,7 @@ def _record_audit(client:'SOAPClient') -> 'list':
     """
     recorded = []
 
-    def callback(cid, event, endpoint, outcome, data):
+    def callback(cid:'any_', event:'any_', endpoint:'any_', outcome:'any_', data:'any_'):
         recorded.append((event, data))
 
     client.audit_callback = callback
@@ -93,13 +100,13 @@ def _build_response_envelope(text:'str'='ok', encoding:'str'='utf-8', declare:'b
     envelope = build_envelope(SOAPVersion.V12)
     _ = attach_body(envelope, response, 'opResponse')
 
-    out = etree.tostring(envelope, xml_declaration=declare, encoding=encoding)
+    out = cast_('bytes', etree.tostring(envelope, xml_declaration=declare, encoding=encoding))
     return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _sender_x509(parties, sign, encrypt):
+def _sender_x509(parties:'any_', sign:'any_', encrypt:'any_'):
     """ The X.509 security config an outgoing connection presents - paths to our key material
     plus the receiver's certificate.
     """
@@ -115,7 +122,7 @@ def _sender_x509(parties, sign, encrypt):
 
 # ################################################################################################################################
 
-def _receiver_x509(parties, sign, encrypt):
+def _receiver_x509(parties:'any_', sign:'any_', encrypt:'any_'):
     """ The X.509 config the server enforces - paths to our decryption key plus the sender's pinned certificate.
     """
     out = {
@@ -146,7 +153,7 @@ class TestBodyCredentials:
     and the wrapper injects them as elements of the operation, in the order the endpoint requires.
     """
 
-    def test_default_order_first(self, soap_server):
+    def test_default_order_first(self, soap_server:'any_'):
         soap_server.configure('/imm-default', expect_credentials={'username': 'prod.client', 'password': 's3cret'})
 
         config = {
@@ -165,7 +172,7 @@ class TestBodyCredentials:
         operation = soap_server.last_request['body'].submitSingleMessage
         assert list(operation._children) == ['username', 'password', 'facilityID', 'hl7Message']
 
-    def test_explicit_positions(self, soap_server):
+    def test_explicit_positions(self, soap_server:'any_'):
         soap_server.configure('/imm-positions', expect_credentials={'username': 'u', 'password': 'p'})
 
         config = {
@@ -194,7 +201,7 @@ class TestBodyCredentials:
         operation = soap_server.last_request['body'].uploadDocument
         assert list(operation._children) == ['facilityID', 'username', 'password', 'hl7Message']
 
-    def test_credentials_never_in_service_message(self, soap_server):
+    def test_credentials_never_in_service_message(self, soap_server:'any_'):
         soap_server.configure('/imm-clean', expect_credentials={'username': 'u', 'password': 'p'})
 
         message = _cdc_message()
@@ -212,7 +219,7 @@ class TestBodyCredentials:
         _ = client.invoke('submitSingleMessage', message)
         client.close()
 
-    def test_wrong_credentials_rejected(self, soap_server):
+    def test_wrong_credentials_rejected(self, soap_server:'any_'):
         soap_server.configure('/imm-bad', expect_credentials={'username': 'right', 'password': 'right'})
 
         config = {
@@ -238,7 +245,7 @@ class TestCustomSOAPHeaders:
     calls the connection.
     """
 
-    def test_a_plain_header_is_injected(self, soap_server):
+    def test_a_plain_header_is_injected(self, soap_server:'any_'):
         soap_server.configure('/hdr-plain')
 
         config = {
@@ -255,7 +262,7 @@ class TestCustomSOAPHeaders:
         assert element is not None
         assert element.text == '4.1'
 
-    def test_a_namespaced_header_keeps_its_namespace(self, soap_server):
+    def test_a_namespaced_header_keeps_its_namespace(self, soap_server:'any_'):
         # A name in Clark notation carries its own namespace, which is how a header belonging to a
         # specification the endpoint names is emitted rather than one in no namespace at all.
         soap_server.configure('/hdr-ns')
@@ -320,7 +327,7 @@ class TestCustomSOAPHeaders:
 
         assert b'ClientVersion' not in body
 
-    def test_custom_headers_coexist_with_ws_security(self, parties, soap_server):
+    def test_custom_headers_coexist_with_ws_security(self, parties:'any_', soap_server:'any_'):
         # Both write into soap:Header, so a connection doing both has two things appending to the
         # same element - the custom header must arrive and the message must still verify.
         soap_server.configure('/hdr-signed', security=_receiver_x509(parties, sign=True, encrypt=False))
@@ -353,7 +360,7 @@ class TestClientCertificate:
     which is what CDC IIS client-certificate auth, NHS Spine and IHE ATNA node auth require.
     """
 
-    def test_separate_cert_and_key_files(self, soap_mtls_server):
+    def test_separate_cert_and_key_files(self, soap_mtls_server:'any_'):
         material = soap_mtls_server.tls_material
         soap_mtls_server.configure('/mtls-a')
 
@@ -369,7 +376,7 @@ class TestClientCertificate:
 
         assert response.opResponse.status == 'ok'
 
-    def test_combined_cert_and_key_file(self, soap_mtls_server):
+    def test_combined_cert_and_key_file(self, soap_mtls_server:'any_'):
         material = soap_mtls_server.tls_material
         soap_mtls_server.configure('/mtls-b')
 
@@ -384,7 +391,7 @@ class TestClientCertificate:
 
         assert response.opResponse.status == 'ok'
 
-    def test_missing_client_certificate_rejected(self, soap_mtls_server):
+    def test_missing_client_certificate_rejected(self, soap_mtls_server:'any_'):
         material = soap_mtls_server.tls_material
         soap_mtls_server.configure('/mtls-c')
 
@@ -399,7 +406,7 @@ class TestClientCertificate:
 
         client.close()
 
-    def test_body_credentials_over_mutual_tls(self, soap_mtls_server):
+    def test_body_credentials_over_mutual_tls(self, soap_mtls_server:'any_'):
         material = soap_mtls_server.tls_material
         soap_mtls_server.configure('/mtls-both', expect_credentials={'username': 'u', 'password': 'p'})
 
@@ -419,7 +426,7 @@ class TestClientCertificate:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _independent_saml_verify(envelope, ca_certificate):
+def _independent_saml_verify(envelope:'any_', ca_certificate:'any_'):
     """ Verifies an enveloped SAML signature straight from the wire using only lxml, hashlib
     and cryptography - the digest, the signature value and the signer's chain to the CA.
     """
@@ -429,11 +436,11 @@ def _independent_saml_verify(envelope, ca_certificate):
 
     # Recompute the reference digest over the assertion with its signature removed.
     assertion_copy = etree.fromstring(etree.tostring(assertion))
-    signature_copy = assertion_copy.find(f'{{{NS.DS}}}Signature')
+    signature_copy = cast_('any_', assertion_copy.find(f'{{{NS.DS}}}Signature'))
     assertion_copy.remove(signature_copy)
 
     buffer = BytesIO()
-    etree.ElementTree(assertion_copy).write_c14n(buffer, exclusive=True, with_comments=False)
+    etree.ElementTree(assertion_copy).write(buffer, method='c14n', exclusive=True, with_comments=False)
     recomputed = b64encode(sha256(buffer.getvalue()).digest()).decode('ascii')
 
     declared = signature.find(f'{{{NS.DS}}}SignedInfo/{{{NS.DS}}}Reference/{{{NS.DS}}}DigestValue').text
@@ -442,13 +449,13 @@ def _independent_saml_verify(envelope, ca_certificate):
     # Verify the signature value over the canonical SignedInfo with the certificate's public key.
     signed_info = signature.find(f'{{{NS.DS}}}SignedInfo')
     signed_info_buffer = BytesIO()
-    etree.ElementTree(signed_info).write_c14n(signed_info_buffer, exclusive=True, with_comments=False)
+    etree.ElementTree(signed_info).write(signed_info_buffer, method='c14n', exclusive=True, with_comments=False)
 
     signature_value = b64decode(signature.find(f'{{{NS.DS}}}SignatureValue').text)
     certificate_bytes = b64decode(signature.find(f'.//{{{NS.DS}}}X509Certificate').text)
     certificate = load_der_x509_certificate(certificate_bytes)
 
-    certificate.public_key().verify(signature_value, signed_info_buffer.getvalue(), PKCS1v15(), SHA256())
+    _ = cast_('any_', certificate.public_key()).verify(signature_value, signed_info_buffer.getvalue(), PKCS1v15(), SHA256())
 
     # And the signer must chain to the trusted CA.
     certificate.verify_directly_issued_by(ca_certificate)
@@ -460,7 +467,7 @@ class TestSignedSAML:
     to be signed by the issuer, with SHA-1 forbidden.
     """
 
-    def test_signed_assertion_independently_verified(self, soap_server, parties):
+    def test_signed_assertion_independently_verified(self, soap_server:'any_', parties:'any_'):
         channel = {'mode': Mode.SAML, 'issuer': 'urn:qhin:example', 'sign': True,
             'trust_anchors': certificate_pem_path(parties.ca_certificate)}
         soap_server.configure('/xua-signed', enforce_wss=channel)
@@ -486,7 +493,7 @@ class TestSignedSAML:
         # Re-verify the signature from the recorded wire bytes, independently of our own code.
         _independent_saml_verify(soap_server.last_request['envelope'], parties.ca_certificate)
 
-    def test_unsigned_assertion_rejected(self, soap_server):
+    def test_unsigned_assertion_rejected(self, soap_server:'any_'):
         """ An unsigned assertion is trusted on its Issuer text alone, which the sender writes,
         so it has to be refused however the channel is configured.
         """
@@ -505,7 +512,7 @@ class TestSignedSAML:
 
         client.close()
 
-    def test_tampered_signed_assertion_rejected(self, soap_server, parties):
+    def test_tampered_signed_assertion_rejected(self, soap_server:'any_', parties:'any_'):
         channel = {'mode': Mode.SAML, 'issuer': 'urn:qhin:example', 'sign': True,
             'trust_anchors': certificate_pem_path(parties.ca_certificate)}
 
@@ -539,7 +546,7 @@ class TestUsernameToken:
     """ WS-Security UsernameToken, in both its text and digest password forms.
     """
 
-    def test_text_password(self, soap_server):
+    def test_text_password(self, soap_server:'any_'):
         channel = {'mode': Mode.UsernameToken, 'username': 'MYUSER', 'password': 'MYPASS', 'use_digest': False}
         soap_server.configure('/ut-text', enforce_wss=channel)
 
@@ -554,7 +561,7 @@ class TestUsernameToken:
 
         assert response.opResponse.status == 'ok'
 
-    def test_digest_password(self, soap_server):
+    def test_digest_password(self, soap_server:'any_'):
         channel = {'mode': Mode.UsernameToken, 'username': 'MYUSER', 'password': 'MYPASS', 'use_digest': True}
         soap_server.configure('/ut-digest', enforce_wss=channel)
 
@@ -570,7 +577,7 @@ class TestUsernameToken:
         # The digest form never puts the password on the wire.
         assert b'MYPASS' not in soap_server.last_request['raw_body']
 
-    def test_wrong_password_rejected(self, soap_server):
+    def test_wrong_password_rejected(self, soap_server:'any_'):
         channel = {'mode': Mode.UsernameToken, 'username': 'MYUSER', 'password': 'MYPASS', 'use_digest': False}
         soap_server.configure('/ut-bad', enforce_wss=channel)
 
@@ -593,7 +600,7 @@ class TestX509:
     """ WS-Security X.509 - signing the body and, on top of it, encrypting it for the recipient.
     """
 
-    def test_sign_only(self, soap_server, parties):
+    def test_sign_only(self, soap_server:'any_', parties:'any_'):
         soap_server.configure('/x509-sign', enforce_wss=_receiver_x509(parties, sign=True, encrypt=False))
 
         config = {
@@ -607,7 +614,7 @@ class TestX509:
 
         assert response.submitSingleMessageResponse.status == 'ok'
 
-    def test_sign_and_encrypt(self, soap_server, parties):
+    def test_sign_and_encrypt(self, soap_server:'any_', parties:'any_'):
         soap_server.configure('/x509-both', enforce_wss=_receiver_x509(parties, sign=True, encrypt=True))
 
         config = {
@@ -631,7 +638,7 @@ class TestAddressing:
     """ WS-Addressing headers on the request and their echo in the reply.
     """
 
-    def test_headers_injected_and_reply_relates(self, soap_server):
+    def test_headers_injected_and_reply_relates(self, soap_server:'any_'):
         soap_server.configure('/wsa')
 
         config = {
@@ -661,7 +668,7 @@ class TestMTOM:
     """ MTOM/XOP - bytes travel as optimized binary parts, not inline base64.
     """
 
-    def test_request_bytes_become_xop(self, soap_server):
+    def test_request_bytes_become_xop(self, soap_server:'any_'):
         soap_server.configure('/mtom-request')
 
         config = {
@@ -687,7 +694,7 @@ class TestMTOM:
         # The server resolves the reference straight back into the original bytes.
         assert soap_server.last_request['body'].ProvideAndRegisterDocumentSet.Document == b'BINARY-DOCUMENT-BYTES'
 
-    def test_response_parts_land_in_attachments(self, soap_server):
+    def test_response_parts_land_in_attachments(self, soap_server:'any_'):
         soap_server.configure('/mtom-response', respond_attachment=b'RETRIEVED-PDF-BYTES')
 
         config = {
@@ -709,7 +716,7 @@ class TestEbXML:
     the enterprise-certificate signing and encryption those frameworks put on the payloads.
     """
 
-    def test_message_and_acknowledgment_over_mutual_tls(self, soap_mtls_server):
+    def test_message_and_acknowledgment_over_mutual_tls(self, soap_mtls_server:'any_'):
         material = soap_mtls_server.tls_material
         soap_mtls_server.configure('/ebxml-mtls', ebxml=True)
 
@@ -739,7 +746,7 @@ class TestEbXML:
         assert acknowledgment.ref_to_message_id == info.message_id
         assert len(soap_mtls_server.last_request['parts']) == 1
 
-    def test_signed_and_encrypted_payload_roundtrip(self, soap_server, parties):
+    def test_signed_and_encrypted_payload_roundtrip(self, soap_server:'any_', parties:'any_'):
         soap_server.configure('/ebxml-secure', ebxml=True)
 
         config = {
@@ -783,7 +790,7 @@ class TestEbXML:
         assert received_part.data == original
         _ = verify_payload(signature, received_part, receiver_keystore)
 
-    def test_reply_payloads_reach_the_caller(self, soap_server):
+    def test_reply_payloads_reach_the_caller(self, soap_server:'any_'):
         """ An ebXML reply keeps its business document in a payload part, the body carrying only a
         Manifest that points at it, so a caller that is handed the header alone is handed nothing of
         what it asked for. The parts used to be parsed and then dropped, which silently lost the
@@ -819,7 +826,7 @@ class TestEbXML:
         assert reply.attachments[0].data == first_payload
         assert reply.attachments[1].data == second_payload
 
-    def test_a_bare_acknowledgment_has_no_attachments(self, soap_server):
+    def test_a_bare_acknowledgment_has_no_attachments(self, soap_server:'any_'):
         """ A reply that carries no payloads leaves the attachments empty rather than absent, so a
         caller can loop over them without first asking whether there are any.
         """
@@ -850,7 +857,7 @@ class TestEbXML:
 
 # ################################################################################################################################
 
-def _make_receiver_keystore(parties):
+def _make_receiver_keystore(parties:'any_'):
     """ The receiver's keystore, holding its decryption key and the sender's pinned certificate.
     """
     from zato.common.util.xml_.keystore import new_keystore
@@ -868,7 +875,7 @@ class TestTransport:
     and the ping used to check a connection is reachable.
     """
 
-    def test_fault_becomes_exception(self, soap_server):
+    def test_fault_becomes_exception(self, soap_server:'any_'):
         soap_server.configure('/fault', respond_fault=(FaultCode.Receiver, 'Backend unavailable'))
 
         config = {'address': soap_server.url('/fault'), 'soap_version': SOAPVersion.V12}
@@ -881,7 +888,7 @@ class TestTransport:
 
         assert exception_info.value.reason == 'Backend unavailable'
 
-    def test_timeout(self, soap_server):
+    def test_timeout(self, soap_server:'any_'):
         soap_server.configure('/slow', delay=1)
 
         config = {'address': soap_server.url('/slow'), 'soap_version': SOAPVersion.V12, 'timeout': 0.3}
@@ -892,7 +899,7 @@ class TestTransport:
 
         client.close()
 
-    def test_tls_verification_against_ca(self, soap_tls_server):
+    def test_tls_verification_against_ca(self, soap_tls_server:'any_'):
         soap_tls_server.configure('/tls-ok')
 
         config = {
@@ -906,7 +913,7 @@ class TestTransport:
 
         assert response.opResponse.status == 'ok'
 
-    def test_tls_verification_rejects_untrusted(self, soap_tls_server):
+    def test_tls_verification_rejects_untrusted(self, soap_tls_server:'any_'):
         soap_tls_server.configure('/tls-untrusted')
 
         # Verifying against the system trust store fails - the test CA is not in it.
@@ -922,7 +929,7 @@ class TestTransport:
 
         client.close()
 
-    def test_tls_verification_disabled(self, soap_tls_server):
+    def test_tls_verification_disabled(self, soap_tls_server:'any_'):
         soap_tls_server.configure('/tls-off')
 
         config = {
@@ -945,7 +952,7 @@ class TestAuditMasking:
     in plaintext for as long as the log is kept - while the wire still has to carry the real thing.
     """
 
-    def test_username_token_password_is_masked(self, soap_server):
+    def test_username_token_password_is_masked(self, soap_server:'any_'):
         channel = {'mode': Mode.UsernameToken, 'username': 'MYUSER', 'password': 'MYPASS', 'use_digest': False}
         soap_server.configure('/audit-ut', enforce_wss=channel)
 
@@ -973,7 +980,7 @@ class TestAuditMasking:
         # The endpoint still received the real password, otherwise it would have faulted.
         assert b'MYPASS' in soap_server.last_request['raw_body']
 
-    def test_body_credentials_are_masked(self, soap_server):
+    def test_body_credentials_are_masked(self, soap_server:'any_'):
         expected = {'username': 'BODYUSER', 'password': 'BODYPASS'}
         soap_server.configure('/audit-body', expect_credentials=expected)
 
@@ -995,7 +1002,7 @@ class TestAuditMasking:
         assert b'BODYPASS' not in request_data
         assert b'BODYPASS' in soap_server.last_request['raw_body']
 
-    def test_a_message_without_credentials_is_recorded_whole(self, soap_server):
+    def test_a_message_without_credentials_is_recorded_whole(self, soap_server:'any_'):
         soap_server.configure('/audit-plain')
 
         config = {'address': soap_server.url('/audit-plain'), 'soap_version': SOAPVersion.V12}
@@ -1020,7 +1027,7 @@ class TestResponseStatus:
     each one has to say so rather than surface as whatever the XML parser makes of it.
     """
 
-    def test_gateway_error_page_is_refused(self, soap_server):
+    def test_gateway_error_page_is_refused(self, soap_server:'any_'):
         page = b'<html><head><title>502 Bad Gateway</title></head><body>nginx</body></html>'
         soap_server.configure('/bad-gateway', respond_raw=(BAD_GATEWAY, page, 'text/html'))
 
@@ -1040,7 +1047,7 @@ class TestResponseStatus:
         assert 'text/html' in message
         assert '502 Bad Gateway' in message
 
-    def test_non_fault_envelope_on_an_error_status_is_refused(self, soap_server):
+    def test_non_fault_envelope_on_an_error_status_is_refused(self, soap_server:'any_'):
         envelope = _build_response_envelope()
         soap_server.configure('/error-body',
             respond_raw=(INTERNAL_SERVER_ERROR, envelope, Content_Type[SOAPVersion.V12]))
@@ -1055,7 +1062,7 @@ class TestResponseStatus:
 
         assert 'Non-fault envelope on HTTP 500' in str(exception_info.value)
 
-    def test_fault_on_an_error_status_is_still_a_fault(self, soap_server):
+    def test_fault_on_an_error_status_is_still_a_fault(self, soap_server:'any_'):
         soap_server.configure('/fault-status', respond_fault=(FaultCode.Receiver, 'Backend unavailable'))
 
         config = {'address': soap_server.url('/fault-status'), 'soap_version': SOAPVersion.V12}
@@ -1069,7 +1076,7 @@ class TestResponseStatus:
 
         assert exception_info.value.reason == 'Backend unavailable'
 
-    def test_mislabelled_successful_response_is_still_parsed(self, soap_server):
+    def test_mislabelled_successful_response_is_still_parsed(self, soap_server:'any_'):
         envelope = _build_response_envelope()
         soap_server.configure('/mislabelled', respond_raw=(OK, envelope, 'text/plain'))
 
@@ -1090,7 +1097,7 @@ class TestResponseCharset:
     mangled.
     """
 
-    def test_charset_from_the_transport_is_honoured(self, soap_server):
+    def test_charset_from_the_transport_is_honoured(self, soap_server:'any_'):
         envelope = _build_response_envelope(text=_non_ascii_text, encoding='iso-8859-2', declare=False)
         content_type = 'application/soap+xml; charset=iso-8859-2'
         soap_server.configure('/latin2', respond_raw=(OK, envelope, content_type))
@@ -1102,7 +1109,7 @@ class TestResponseCharset:
 
         assert response.opResponse.status == _non_ascii_text
 
-    def test_own_declaration_wins_over_the_transport(self, soap_server):
+    def test_own_declaration_wins_over_the_transport(self, soap_server:'any_'):
         envelope = _build_response_envelope(text=_non_ascii_text, encoding='iso-8859-2', declare=True)
 
         # The transport is wrong and the document is right - a document saying what it is in is
@@ -1117,7 +1124,7 @@ class TestResponseCharset:
 
         assert response.opResponse.status == _non_ascii_text
 
-    def test_unknown_charset_falls_back_to_the_bytes_as_they_arrived(self, soap_server):
+    def test_unknown_charset_falls_back_to_the_bytes_as_they_arrived(self, soap_server:'any_'):
         envelope = _build_response_envelope(declare=False)
         content_type = 'application/soap+xml; charset=not-a-real-charset'
         soap_server.configure('/bad-charset', respond_raw=(OK, envelope, content_type))

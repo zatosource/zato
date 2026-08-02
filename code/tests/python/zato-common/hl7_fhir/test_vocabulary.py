@@ -20,6 +20,13 @@ from zato.hl7.mappings.config import _new_config
 
 # Local
 from conftest import V2_Mappings_Dir
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -68,7 +75,7 @@ _map_names = sorted(vocabulary.table_sources)
 # ################################################################################################################################
 
 @pytest.mark.parametrize('map_name', _map_names)
-def test_vocabulary_matches_spec(map_name):
+def test_vocabulary_matches_spec(map_name:'any_'):
     """ Proof - every map in vocabulary.py covers exactly what its IG ConceptMap defines.
     """
     fixture_id = vocabulary.table_sources[map_name]
@@ -102,14 +109,14 @@ def test_all_maps_have_fixture_sources():
 
 class TestLookup:
 
-    def test_known_code(self, default_config):
+    def test_known_code(self, default_config:'any_'):
         out = lookup('administrative_sex', 'F', default_config)
         assert out == {'code': 'female', 'system': 'http://hl7.org/fhir/administrative-gender'}
 
-    def test_unknown_code(self, default_config):
+    def test_unknown_code(self, default_config:'any_'):
         assert lookup('administrative_sex', 'ZZ', default_config) is None
 
-    def test_empty_code(self, default_config):
+    def test_empty_code(self, default_config:'any_'):
         assert lookup('administrative_sex', None, default_config) is None
         assert lookup('administrative_sex', '', default_config) is None
 
@@ -117,7 +124,7 @@ class TestLookup:
         config = _new_config()
         config.code_mappings = {'patient_class': {'P': 'AMB'}}
 
-        out = lookup('patient_class', 'P', config)
+        out = cast_('any_', lookup('patient_class', 'P', config))
         assert out['code'] == 'AMB'
 
     def test_config_override_new_code(self):
@@ -125,7 +132,7 @@ class TestLookup:
         config = _new_config()
         config.code_mappings = {'patient_class': {'X': 'IMP'}}
 
-        out = lookup('patient_class', 'X', config)
+        out = cast_('any_', lookup('patient_class', 'X', config))
         assert out['code'] == 'IMP'
 
 # ################################################################################################################################

@@ -12,6 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.playwright_pubsub import close_dialog_via_jquery, get_table_row_count, navigate_to_page, \
     open_create_dialog, submit_create_form
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,12 +44,12 @@ class TestPubSubTopicCreate:
         navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. verify the page heading ..
-        heading = page.query_selector('h2.zato')
+        heading = cast_('any_', page.query_selector('h2.zato'))
         heading_text = heading.inner_text()
         assert 'Pub/sub topics' in heading_text, f'Expected "Pub/sub topics" in heading, got: {heading_text}'
 
         # .. verify the create link is present ..
-        create_link = page.query_selector('#markup .page_prompt a')
+        create_link = cast_('any_', page.query_selector('#markup .page_prompt a'))
         create_link_text = create_link.inner_text()
         assert 'Create a new pub/sub topic' in create_link_text, \
             f'Expected create link text, got: {create_link_text}'
@@ -91,7 +92,7 @@ class TestPubSubTopicCreate:
 
         # .. verify the new row appears in the table ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{topic_name}"))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
 
         # .. extract cell texts from the row ..
         cells = row.query_selector_all('td')
@@ -141,7 +142,7 @@ class TestPubSubTopicCreate:
         for name, description in topics:
 
             row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-            row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+            row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
 
             cells = row.query_selector_all('td')
 
@@ -282,7 +283,7 @@ class TestPubSubTopicCreate:
             '#create-form .zato-unique-taken', state='visible', timeout=10000)
 
         # .. verify the indicator text.
-        taken_text = taken_indicator.inner_text()
+        taken_text = cast_('any_', taken_indicator).inner_text()
         assert 'Already taken' in taken_text, f'Expected "Already taken", got: "{taken_text}"'
 
 # ################################################################################################################################
@@ -310,7 +311,7 @@ class TestPubSubTopicCreate:
             '#create-form .zato-unique-ok', state='visible', timeout=10000)
 
         # .. verify the checkmark is present.
-        ok_text = ok_indicator.inner_text()
+        ok_text = cast_('any_', ok_indicator).inner_text()
         assert '\u2713' in ok_text, f'Expected checkmark in indicator, got: "{ok_text}"'
 
 # ################################################################################################################################
@@ -336,7 +337,7 @@ class TestPubSubTopicCreate:
 
         # .. verify the new row appears ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{topic_name}"))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
 
         # .. verify description cell shows the form_hint placeholder.
         cells = row.query_selector_all('td')

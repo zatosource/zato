@@ -3,6 +3,12 @@
 
 use std::time::Duration;
 
+/// Numeric conversions that have no lossless form, kept in one place.
+pub mod convert;
+
+/// Typed encoding and parsing of the JSON payloads carried in Redis stream fields.
+pub mod wire;
+
 /// Execution-history serialization helpers.
 pub mod history;
 
@@ -87,13 +93,14 @@ pub fn humanize_ms(millis: u64) -> String {
 
 /// Returns the singular or plural form of a word based on the count.
 #[must_use]
-pub fn plural<'a>(n: usize, singular: &'a str, plural_form: &'a str) -> &'a str {
-    if n == 1 { singular } else { plural_form }
+pub const fn plural<'word>(count: usize, singular: &'word str, plural_form: &'word str) -> &'word str {
+    if count == 1 { singular } else { plural_form }
 }
 
 /// Reconciles the running-job map with a freshly loaded list of scheduler jobs.
+///
 /// A reload means the server (re)started, so any previously in-flight jobs
-/// will never receive completion callbacks - clear their in_flight state.
+/// will never receive completion callbacks - clear their `in_flight` state.
 pub fn reload_jobs(state: &mut scheduler::SchedulerState, new_jobs: &[crate::model::SchedulerJob]) {
     let new_ids: std::collections::HashSet<i64> = new_jobs.iter().map(|job| job.id).collect();
     let old_ids: std::collections::HashSet<i64> = state.jobs.keys().copied().collect();

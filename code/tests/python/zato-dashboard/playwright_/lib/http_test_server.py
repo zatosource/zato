@@ -443,7 +443,7 @@ class _SPNEGOHandler(_RecordingHandler):
         if auth_header and auth_header.startswith('Negotiate '):
 
             # Imported here because the module is loaded lazily, only by suites that use it
-            from gssapi.exceptions import GSSError
+            from gssapi.raw.misc import GSSError
 
             # .. verify the token with the service credentials - a token that cannot
             # be verified, e.g. one minted against stale keys, counts as no token at all ..

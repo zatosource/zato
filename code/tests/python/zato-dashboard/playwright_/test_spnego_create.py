@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -68,15 +69,15 @@ class TestSPNEGOCreate:
 
         # Navigate to the Kerberos page ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. verify the page heading ..
-        heading = page.query_selector('h2.zato')
+        heading = cast_('any_', page.query_selector('h2.zato'))
         heading_text = heading.inner_text()
         assert 'Kerberos' in heading_text, f'Expected "Kerberos" in heading, got: {heading_text}'
 
         # .. verify the create link is present ..
-        create_link = page.query_selector('#markup .page_prompt a')
+        create_link = cast_('any_', page.query_selector('#markup .page_prompt a'))
         create_link_text = create_link.inner_text()
         assert 'Create a Kerberos definition' in create_link_text, \
             f'Expected create link text, got: {create_link_text}'
@@ -110,11 +111,11 @@ class TestSPNEGOCreate:
 
         # Navigate to the Kerberos page ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. click the create link to open the dialog ..
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         # .. fill in the form fields ..
         defn = _fill_definition_fields(page, definition_name)
@@ -123,11 +124,11 @@ class TestSPNEGOCreate:
         page.click('#create-div input[type="submit"]')
 
         # .. wait for the dialog to close ..
-        page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+        _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
         # .. verify the new row appears in the table ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{definition_name}"))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
 
         # .. extract cell texts from the row ..
         cells = row.query_selector_all('td')
@@ -158,7 +159,7 @@ class TestSPNEGOCreate:
 
         # Navigate to the Kerberos page ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. create each definition ..
         definitions = [] # type: list
@@ -168,7 +169,7 @@ class TestSPNEGOCreate:
 
             # .. open the create dialog ..
             page.click('#markup .page_prompt a')
-            page.wait_for_selector('#create-div', state='visible')
+            _ = page.wait_for_selector('#create-div', state='visible')
 
             # .. fill in the form fields ..
             defn = _fill_definition_fields(page, name)
@@ -176,13 +177,13 @@ class TestSPNEGOCreate:
 
             # .. submit and wait for the dialog to close ..
             page.click('#create-div input[type="submit"]')
-            page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+            _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
         # .. verify all 3 rows are present with correct values.
         for defn in definitions:
 
             row_selector = f'#data-table tbody tr:has(td:text-is("{defn["name"]}"))'
-            row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+            row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
 
             cells = row.query_selector_all('td')
 
@@ -209,20 +210,20 @@ class TestSPNEGOCreate:
 
         # Navigate to the Kerberos page ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. create a definition first ..
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         _ = _fill_definition_fields(page, definition_name)
 
         page.click('#create-div input[type="submit"]')
-        page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+        _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
         # .. reopen the create dialog ..
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         # .. verify all fields are empty ..
         for field_id in ('#id_name', '#id_principal', '#id_keytab_path', '#id_target_spn'):
@@ -248,24 +249,24 @@ class TestSPNEGOCreate:
 
         # Navigate and create a definition to have a known name ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         _ = _fill_definition_fields(page, existing_name)
 
         page.click('#create-div input[type="submit"]')
-        page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+        _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
         # .. reload the page so the server's check_attr_exists picks up the new definition ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. reopen the create dialog and type the same name character by character
         # .. so that the input event handler triggers the uniqueness check ..
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         name_field = page.locator('#id_name')
         name_field.click()
@@ -276,7 +277,7 @@ class TestSPNEGOCreate:
             '#create-form .zato-unique-taken', state='visible', timeout=10000)
 
         # .. verify the indicator text.
-        taken_text = taken_indicator.inner_text()
+        taken_text = cast_('any_', taken_indicator).inner_text()
         assert 'Already taken' in taken_text, f'Expected "Already taken", got: "{taken_text}"'
 
 # ################################################################################################################################

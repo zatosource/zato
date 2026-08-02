@@ -164,7 +164,7 @@ class FromDictTestCase(TestCase):
         }
 
         with self.assertRaises(RateLimitError):
-            TimeRange.from_dict(data)
+            _ = TimeRange.from_dict(data)
 
 # ################################################################################################################################
 
@@ -181,7 +181,7 @@ class FromDictTestCase(TestCase):
         }
 
         with self.assertRaises(KeyError):
-            TimeRange.from_dict(data)
+            _ = TimeRange.from_dict(data)
 
 # ################################################################################################################################
 
@@ -199,7 +199,7 @@ class FromDictTestCase(TestCase):
         }
 
         with self.assertRaises(RateLimitError):
-            TimeRange.from_dict(data)
+            _ = TimeRange.from_dict(data)
 
 # ################################################################################################################################
 
@@ -218,7 +218,7 @@ class FromDictTestCase(TestCase):
         }
 
         with self.assertRaises(KeyError):
-            TimeRange.from_dict(data)
+            _ = TimeRange.from_dict(data)
 
 # ################################################################################################################################
 
@@ -237,7 +237,7 @@ class FromDictTestCase(TestCase):
         }
 
         with self.assertRaises(KeyError):
-            TimeRange.from_dict(data)
+            _ = TimeRange.from_dict(data)
 
 # ################################################################################################################################
 
@@ -257,7 +257,7 @@ class FromDictTestCase(TestCase):
         }
 
         with self.assertRaises(RateLimitError):
-            TimeRange.from_dict(data)
+            _ = TimeRange.from_dict(data)
 
 # ################################################################################################################################
 

@@ -11,6 +11,7 @@ import time
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,7 +40,7 @@ def _create_definition(page:'Page', name:'str') -> 'dict':
 
     # Open the create dialog ..
     page.click('#markup .page_prompt a')
-    page.wait_for_selector('#create-div', state='visible')
+    _ = page.wait_for_selector('#create-div', state='visible')
 
     # .. fill in the fields ..
     page.fill('#id_name', name)
@@ -49,11 +50,11 @@ def _create_definition(page:'Page', name:'str') -> 'dict':
 
     # .. submit and wait for the dialog to close ..
     page.click('#create-div input[type="submit"]')
-    page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+    _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
     # .. wait for the row to appear.
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    page.wait_for_selector(row_selector, state='visible', timeout=5000)
+    _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
     out = {
         'name': name,
@@ -75,7 +76,7 @@ def _create_definition_with_realm(page:'Page', name:'str', realm:'str') -> 'dict
 
     # Open the create dialog ..
     page.click('#markup .page_prompt a')
-    page.wait_for_selector('#create-div', state='visible')
+    _ = page.wait_for_selector('#create-div', state='visible')
 
     # .. fill in the fields ..
     page.fill('#id_name', name)
@@ -85,11 +86,11 @@ def _create_definition_with_realm(page:'Page', name:'str', realm:'str') -> 'dict
 
     # .. submit and wait for the dialog to close ..
     page.click('#create-div input[type="submit"]')
-    page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+    _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
     # .. wait for the row to appear.
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    page.wait_for_selector(row_selector, state='visible', timeout=5000)
+    _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
     out = {
         'name': name,
@@ -110,7 +111,7 @@ def _count_data_rows(page:'Page') -> 'int':
     count = 0
 
     for row in rows:
-        first_cell = row.query_selector('td')
+        first_cell = cast_('any_', row.query_selector('td'))
         text = first_cell.inner_text().strip()
         if text != 'No results':
             count += 1
@@ -134,13 +135,13 @@ class TestBasicAuthBoundary:
 
         # Navigate ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         count_before = _count_data_rows(page)
 
         # .. open the create dialog and fill all fields except name ..
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         page.fill('#id_username', 'user.empty-name')
         page.fill('#id_realm', 'realm.empty-name')
@@ -178,13 +179,13 @@ class TestBasicAuthBoundary:
 
         # Navigate ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         count_before = _count_data_rows(page)
 
         # .. open the create dialog and fill all fields except username ..
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         page.fill('#id_name', _Test_Name_Prefix + 'empty-username')
         page.fill('#id_realm', 'realm.empty-username')
@@ -224,11 +225,11 @@ class TestBasicAuthBoundary:
 
         # Navigate ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. create the definition ..
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         page.fill('#id_name', name)
         page.fill('#id_username', 'user.special')
@@ -236,12 +237,12 @@ class TestBasicAuthBoundary:
         page.fill('#id_password', 'pwd123')
 
         page.click('#create-div input[type="submit"]')
-        page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+        _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
         time.sleep(0.5)
 
         # .. reload so Django template escaping applies ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. find the row by text content using JS since the name breaks CSS selectors ..
         js_find = """
@@ -286,9 +287,9 @@ class TestBasicAuthBoundary:
 
         # Navigate and create ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
-        _create_definition(page, name)
+        _ = _create_definition(page, name)
 
         # .. verify the row is present with correct text.
         row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{name}"))')
@@ -311,9 +312,9 @@ class TestBasicAuthBoundary:
 
         # Navigate and create ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
-        _create_definition(page, name)
+        _ = _create_definition(page, name)
 
         # .. verify the row is present ..
         row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{name}"))')
@@ -339,11 +340,11 @@ class TestBasicAuthBoundary:
 
         # Navigate ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. open and fill the form with spaces-only name ..
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         page.fill('#id_name', '   ')
         page.fill('#id_username', 'user.whitespace')
@@ -380,9 +381,9 @@ class TestBasicAuthBoundary:
 
         # Navigate and create ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
-        _create_definition_with_realm(page, name, realm)
+        _ = _create_definition_with_realm(page, name, realm)
 
         # .. find the row ..
         row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{name}"))')
@@ -410,11 +411,11 @@ class TestBasicAuthBoundary:
 
         # Navigate ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. create with the known password ..
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         page.fill('#id_name', name)
         page.fill('#id_username', 'user.' + name)
@@ -422,10 +423,10 @@ class TestBasicAuthBoundary:
         page.fill('#id_password', password)
 
         page.click('#create-div input[type="submit"]')
-        page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+        _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
         row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-        page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
         # .. get the full page HTML ..
         page_html = page.content()

@@ -82,7 +82,7 @@ def _wait_for_table(page:'Page') -> 'None':
     """ Waits until the audit log table has finished loading its current page of events,
     i.e. until the table body exists, has rows and none of them is the loading placeholder.
     """
-    page.wait_for_function(
+    _ = page.wait_for_function(
         '''() => {
             let body = document.querySelector('#audit-log-table-body');
             if (!body) return false;
@@ -200,7 +200,7 @@ def _wait_for_body_text(page:'Page', text:'str', diagnostics:'anydictnone' = Non
     On timeout, the assertion message includes everything the browser and Django reported.
     """
     try:
-        page.wait_for_function(
+        _ = page.wait_for_function(
             f'document.querySelector("#audit-log-table-body").innerText.includes(\'{text}\')', timeout=10000)
     except PlaywrightTimeoutError:
         body_text = page.inner_text('#audit-log-table-body')
@@ -214,7 +214,7 @@ def _wait_for_body_without_text(page:'Page', text:'str', diagnostics:'anydictnon
     On timeout, the assertion message includes everything the browser and Django reported.
     """
     try:
-        page.wait_for_function(
+        _ = page.wait_for_function(
             f'!document.querySelector("#audit-log-table-body").innerText.includes(\'{text}\')', timeout=10000)
     except PlaywrightTimeoutError:
         body_text = page.inner_text('#audit-log-table-body')

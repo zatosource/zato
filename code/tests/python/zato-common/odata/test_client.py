@@ -18,11 +18,18 @@ import pytest
 # Zato
 from zato.common.odata.client import ODataClient
 from zato.common.odata.common import ODataError, ODataVersion
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _bc_client(server, **extra):
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _bc_client(server:'any_', **extra:'any_'):
     """ A client for the Business Central profile - V4, no auth unless a test adds it.
     """
     config = {
@@ -37,7 +44,7 @@ def _bc_client(server, **extra):
 
 # ################################################################################################################################
 
-def _s4_client(server, **extra):
+def _s4_client(server:'any_', **extra:'any_'):
     """ A client for the S/4HANA profile - V2, basic credentials, sap-client and CSRF.
     """
     config = {
@@ -56,7 +63,7 @@ def _s4_client(server, **extra):
 
 # ################################################################################################################################
 
-def _seed_customers(server):
+def _seed_customers(server:'any_'):
     """ Loads a small, predictable set of Business Central customers.
     """
     server.reset()
@@ -68,7 +75,7 @@ def _seed_customers(server):
 
 # ################################################################################################################################
 
-def _seed_sales_orders(server):
+def _seed_sales_orders(server:'any_'):
     """ Loads a small, predictable set of S/4HANA sales orders and enforces the profile's
     credentials and required parameters.
     """
@@ -88,7 +95,7 @@ class TestReadV4:
     """ Reads against the V4 Business Central profile.
     """
 
-    def test_read_all(self, business_central_server):
+    def test_read_all(self, business_central_server:'any_'):
         _seed_customers(business_central_server)
 
         client = _bc_client(business_central_server)
@@ -97,7 +104,7 @@ class TestReadV4:
 
         assert len(items) == 3
 
-    def test_read_with_filter(self, business_central_server):
+    def test_read_with_filter(self, business_central_server:'any_'):
         _seed_customers(business_central_server)
 
         client = _bc_client(business_central_server)
@@ -113,7 +120,7 @@ class TestReadV4:
         # The filter travels as one $filter parameter.
         assert business_central_server.last_request['query']['$filter'] == "city eq 'Atlanta'"
 
-    def test_read_with_orderby_top_skip(self, business_central_server):
+    def test_read_with_orderby_top_skip(self, business_central_server:'any_'):
         _seed_customers(business_central_server)
 
         client = _bc_client(business_central_server)
@@ -123,7 +130,7 @@ class TestReadV4:
         assert len(items) == 1
         assert items[0]['displayName'] == 'Trey Research'
 
-    def test_read_with_select(self, business_central_server):
+    def test_read_with_select(self, business_central_server:'any_'):
         _seed_customers(business_central_server)
 
         client = _bc_client(business_central_server)
@@ -133,7 +140,7 @@ class TestReadV4:
         assert 'city' not in items[0]
         assert items[0]['displayName'] == 'Adatum'
 
-    def test_get_by_key(self, business_central_server):
+    def test_get_by_key(self, business_central_server:'any_'):
         _seed_customers(business_central_server)
 
         client = _bc_client(business_central_server)
@@ -146,7 +153,7 @@ class TestReadV4:
         path = business_central_server.last_request['path']
         assert path.endswith("customers('aaaa0001-0000-0000-0000-000000000001')")
 
-    def test_get_missing_is_404(self, business_central_server):
+    def test_get_missing_is_404(self, business_central_server:'any_'):
         _seed_customers(business_central_server)
 
         client = _bc_client(business_central_server)
@@ -158,7 +165,7 @@ class TestReadV4:
 
         assert ctx.value.status_code == NOT_FOUND
 
-    def test_count(self, business_central_server):
+    def test_count(self, business_central_server:'any_'):
         _seed_customers(business_central_server)
 
         client = _bc_client(business_central_server)
@@ -169,7 +176,7 @@ class TestReadV4:
         assert count == 3
         assert filtered == 2
 
-    def test_ping(self, business_central_server):
+    def test_ping(self, business_central_server:'any_'):
         _seed_customers(business_central_server)
 
         client = _bc_client(business_central_server)
@@ -185,7 +192,7 @@ class TestReadV2:
     """ Reads against the V2 S/4HANA profile - the 'd' wrapper and V2 spellings.
     """
 
-    def test_read_all(self, s4hana_server):
+    def test_read_all(self, s4hana_server:'any_'):
         _seed_sales_orders(s4hana_server)
 
         client = _s4_client(s4hana_server)
@@ -197,7 +204,7 @@ class TestReadV2:
         # The configured sap-client parameter rides on every request.
         assert s4hana_server.last_request['query']['sap-client'] == '100'
 
-    def test_read_with_inlinecount(self, s4hana_server):
+    def test_read_with_inlinecount(self, s4hana_server:'any_'):
         _seed_sales_orders(s4hana_server)
 
         client = _s4_client(s4hana_server)
@@ -210,7 +217,7 @@ class TestReadV2:
         assert s4hana_server.last_request['query']['$inlinecount'] == 'allpages'
         assert '$count' not in s4hana_server.last_request['query']
 
-    def test_get_by_key(self, s4hana_server):
+    def test_get_by_key(self, s4hana_server:'any_'):
         _seed_sales_orders(s4hana_server)
 
         client = _s4_client(s4hana_server)
@@ -219,7 +226,7 @@ class TestReadV2:
 
         assert entity['TotalNetAmount'] == 250
 
-    def test_count(self, s4hana_server):
+    def test_count(self, s4hana_server:'any_'):
         _seed_sales_orders(s4hana_server)
 
         client = _s4_client(s4hana_server)
@@ -235,7 +242,7 @@ class TestWrites:
     """ Creates, updates and deletes against both versions.
     """
 
-    def test_create_v4(self, business_central_server):
+    def test_create_v4(self, business_central_server:'any_'):
         _seed_customers(business_central_server)
 
         client = _bc_client(business_central_server)
@@ -247,7 +254,7 @@ class TestWrites:
         assert created['id']
         assert created['id'] in business_central_server.entities['customers']
 
-    def test_update_v4_needs_etag(self, business_central_server):
+    def test_update_v4_needs_etag(self, business_central_server:'any_'):
         _seed_customers(business_central_server)
 
         client = _bc_client(business_central_server)
@@ -276,7 +283,7 @@ class TestWrites:
         stored = business_central_server.entities['customers']['aaaa0001-0000-0000-0000-000000000001']
         assert stored['city'] == 'Chicago'
 
-    def test_update_uses_patch_in_v4(self, business_central_server):
+    def test_update_uses_patch_in_v4(self, business_central_server:'any_'):
         _seed_customers(business_central_server)
 
         client = _bc_client(business_central_server)
@@ -285,7 +292,7 @@ class TestWrites:
 
         assert business_central_server.last_request['method'] == 'PATCH'
 
-    def test_delete_v4(self, business_central_server):
+    def test_delete_v4(self, business_central_server:'any_'):
         _seed_customers(business_central_server)
 
         client = _bc_client(business_central_server)
@@ -294,7 +301,7 @@ class TestWrites:
 
         assert 'aaaa0003-0000-0000-0000-000000000003' not in business_central_server.entities['customers']
 
-    def test_create_v2(self, s4hana_server):
+    def test_create_v2(self, s4hana_server:'any_'):
         _seed_sales_orders(s4hana_server)
 
         client = _s4_client(s4hana_server)
@@ -304,7 +311,7 @@ class TestWrites:
         assert created['SalesOrder'] == '9'
         assert '9' in s4hana_server.entities['A_SalesOrder']
 
-    def test_update_uses_merge_in_v2(self, s4hana_server):
+    def test_update_uses_merge_in_v2(self, s4hana_server:'any_'):
         _seed_sales_orders(s4hana_server)
 
         client = _s4_client(s4hana_server)
@@ -317,7 +324,7 @@ class TestWrites:
 
         assert s4hana_server.entities['A_SalesOrder']['1']['SalesOrderType'] == 'RE'
 
-    def test_delete_v2(self, s4hana_server):
+    def test_delete_v2(self, s4hana_server:'any_'):
         _seed_sales_orders(s4hana_server)
 
         client = _s4_client(s4hana_server)
@@ -333,7 +340,7 @@ class TestPaging:
     """ Transparent iteration over server-driven pages in both versions.
     """
 
-    def test_iter_v4_follows_next_links(self, business_central_server):
+    def test_iter_v4_follows_next_links(self, business_central_server:'any_'):
         _seed_customers(business_central_server)
         business_central_server.set_page_size(1)
 
@@ -351,7 +358,7 @@ class TestPaging:
 
         assert len(feed_requests) == 3
 
-    def test_iter_v2_follows_next_links(self, s4hana_server):
+    def test_iter_v2_follows_next_links(self, s4hana_server:'any_'):
         _seed_sales_orders(s4hana_server)
         s4hana_server.set_page_size(2)
 
@@ -361,7 +368,7 @@ class TestPaging:
 
         assert len(items) == 3
 
-    def test_iter_respects_max_pages(self, business_central_server):
+    def test_iter_respects_max_pages(self, business_central_server:'any_'):
         _seed_customers(business_central_server)
         business_central_server.set_page_size(1)
 
@@ -372,7 +379,7 @@ class TestPaging:
         # Two pages of one item each - the third page was never requested.
         assert len(items) == 2
 
-    def test_iter_sends_maxpagesize_preference(self, business_central_server):
+    def test_iter_sends_maxpagesize_preference(self, business_central_server:'any_'):
         _seed_customers(business_central_server)
 
         client = _bc_client(business_central_server, page_size=2)
@@ -382,7 +389,7 @@ class TestPaging:
         # The page size travels as the V4 Prefer header.
         assert business_central_server.last_request['headers']['Prefer'] == 'odata.maxpagesize=2'
 
-    def test_read_returns_single_page_only(self, business_central_server):
+    def test_read_returns_single_page_only(self, business_central_server:'any_'):
         _seed_customers(business_central_server)
         business_central_server.set_page_size(2)
 
@@ -400,7 +407,7 @@ class TestSubResources:
     """ Business Central style nested paths - companies(guid)/customers(id).
     """
 
-    def test_read_nested(self, business_central_server):
+    def test_read_nested(self, business_central_server:'any_'):
         business_central_server.reset()
         business_central_server.add_entities('companies', 'id', [
             {'id': 'cccc0001-0000-0000-0000-000000000001', 'name': 'CRONUS'},
@@ -415,7 +422,7 @@ class TestSubResources:
 
         assert len(items) == 1
 
-    def test_nested_with_unknown_company_is_404(self, business_central_server):
+    def test_nested_with_unknown_company_is_404(self, business_central_server:'any_'):
         business_central_server.reset()
         business_central_server.add_entities('companies', 'id', [
             {'id': 'cccc0001-0000-0000-0000-000000000001', 'name': 'CRONUS'},
@@ -431,7 +438,7 @@ class TestSubResources:
 
         assert ctx.value.status_code == NOT_FOUND
 
-    def test_get_nested_entity(self, business_central_server):
+    def test_get_nested_entity(self, business_central_server:'any_'):
         business_central_server.reset()
         business_central_server.add_entities('companies', 'id', [
             {'id': 'cccc0001-0000-0000-0000-000000000001', 'name': 'CRONUS'},
@@ -454,7 +461,7 @@ class TestErrors:
     """ Error payloads of both versions surface as one exception type.
     """
 
-    def test_v4_error_shape(self, business_central_server):
+    def test_v4_error_shape(self, business_central_server:'any_'):
         business_central_server.reset()
         business_central_server.configure(
             '/v2.0/test-tenant/sandbox/api/v2.0/customers',
@@ -472,7 +479,7 @@ class TestErrors:
         assert ctx.value.code == 'Internal_ServerError'
         assert ctx.value.message == 'Something went wrong'
 
-    def test_v2_error_shape(self, s4hana_server):
+    def test_v2_error_shape(self, s4hana_server:'any_'):
         _seed_sales_orders(s4hana_server)
         s4hana_server.configure(
             '/sap/opu/odata/sap/API_SALES_ORDER_SRV/A_SalesOrder',
@@ -491,7 +498,7 @@ class TestErrors:
         assert ctx.value.code == 'SY/530'
         assert ctx.value.message == 'Order is locked'
 
-    def test_missing_required_param(self, s4hana_server):
+    def test_missing_required_param(self, s4hana_server:'any_'):
         _seed_sales_orders(s4hana_server)
 
         # A client without the sap-client parameter the profile insists on.
@@ -505,7 +512,7 @@ class TestErrors:
         assert ctx.value.status_code == BAD_REQUEST
         assert ctx.value.code == 'MissingParameter'
 
-    def test_exception_message_carries_all_parts(self, business_central_server):
+    def test_exception_message_carries_all_parts(self, business_central_server:'any_'):
         business_central_server.reset()
 
         client = _bc_client(business_central_server)
@@ -524,7 +531,7 @@ class TestTimeouts:
     """ The configured timeout limits how long a response may take.
     """
 
-    def test_timeout_raises(self, business_central_server):
+    def test_timeout_raises(self, business_central_server:'any_'):
         _seed_customers(business_central_server)
         business_central_server.configure('/v2.0/test-tenant/sandbox/api/v2.0/customers', delay=2)
 
@@ -535,7 +542,7 @@ class TestTimeouts:
 
         client.close()
 
-    def test_slow_response_within_timeout(self, business_central_server):
+    def test_slow_response_within_timeout(self, business_central_server:'any_'):
         _seed_customers(business_central_server)
         business_central_server.configure('/v2.0/test-tenant/sandbox/api/v2.0/customers', delay=0.2)
 
@@ -552,7 +559,7 @@ class TestTLS:
     """ HTTPS connections verify or skip verification per configuration.
     """
 
-    def test_verified_with_ca_bundle(self, business_central_tls_server):
+    def test_verified_with_ca_bundle(self, business_central_tls_server:'any_'):
         business_central_tls_server.reset()
         business_central_tls_server.add_entities('customers', 'id', [
             {'id': 'aaaa0001-0000-0000-0000-000000000001', 'displayName': 'Adatum'},
@@ -566,7 +573,7 @@ class TestTLS:
 
         assert len(items) == 1
 
-    def test_unverified_self_signed_is_rejected(self, business_central_tls_server):
+    def test_unverified_self_signed_is_rejected(self, business_central_tls_server:'any_'):
         business_central_tls_server.reset()
 
         # Verification against the system trust store is the default - the test CA is not in it.
@@ -577,7 +584,7 @@ class TestTLS:
 
         client.close()
 
-    def test_verification_disabled(self, business_central_tls_server):
+    def test_verification_disabled(self, business_central_tls_server:'any_'):
         business_central_tls_server.reset()
         business_central_tls_server.add_entities('customers', 'id', [
             {'id': 'aaaa0001-0000-0000-0000-000000000001', 'displayName': 'Adatum'},
@@ -596,7 +603,7 @@ class TestOperations:
     """ Function and action calls in both versions.
     """
 
-    def test_v4_function_params_in_path(self, d365fo_server):
+    def test_v4_function_params_in_path(self, d365fo_server:'any_'):
         d365fo_server.reset()
         d365fo_server.set_oauth_client('client-1', 'secret-1')
         d365fo_server.configure("/data/GetKeys(entity='CustomersV3')", operation=(OK, {'value': 'dataAreaId'}))
@@ -617,7 +624,7 @@ class TestOperations:
         assert result == {'value': 'dataAreaId'}
         assert d365fo_server.last_request['path'] == "/data/GetKeys(entity='CustomersV3')"
 
-    def test_v2_function_params_in_query_string(self, s4hana_server):
+    def test_v2_function_params_in_query_string(self, s4hana_server:'any_'):
         _seed_sales_orders(s4hana_server)
         s4hana_server.configure(
             '/sap/opu/odata/sap/API_SALES_ORDER_SRV/ReleaseApprovalRequest',
@@ -632,7 +639,7 @@ class TestOperations:
         assert result == {'SalesOrder': '1', 'Released': True}
         assert s4hana_server.last_request['query']['SalesOrder'] == "'1'"
 
-    def test_action_posts_json_body(self, d365fo_server):
+    def test_action_posts_json_body(self, d365fo_server:'any_'):
         d365fo_server.reset()
         d365fo_server.set_oauth_client('client-1', 'secret-1')
         d365fo_server.configure('/data/CalculateBalance', operation=(OK, {'value': 250.5}))
@@ -660,7 +667,7 @@ class TestRequestShape:
     """ The headers and parameters every request carries.
     """
 
-    def test_v4_version_headers(self, business_central_server):
+    def test_v4_version_headers(self, business_central_server:'any_'):
         _seed_customers(business_central_server)
 
         client = _bc_client(business_central_server)
@@ -673,7 +680,7 @@ class TestRequestShape:
         assert headers['OData-MaxVersion'] == '4.0'
         assert headers['Accept'] == 'application/json;odata.metadata=minimal'
 
-    def test_v2_accept_header(self, s4hana_server):
+    def test_v2_accept_header(self, s4hana_server:'any_'):
         _seed_sales_orders(s4hana_server)
 
         client = _s4_client(s4hana_server)
@@ -685,7 +692,7 @@ class TestRequestShape:
         assert headers['Accept'] == 'application/json'
         assert 'OData-Version' not in headers
 
-    def test_custom_headers_ride_along(self, business_central_server):
+    def test_custom_headers_ride_along(self, business_central_server:'any_'):
         _seed_customers(business_central_server)
 
         client = _bc_client(business_central_server, custom_headers={'X-Correlation-ID': 'abc-123'})
@@ -694,7 +701,7 @@ class TestRequestShape:
 
         assert business_central_server.last_request['headers']['X-Correlation-ID'] == 'abc-123'
 
-    def test_write_body_is_json(self, business_central_server):
+    def test_write_body_is_json(self, business_central_server:'any_'):
         _seed_customers(business_central_server)
 
         client = _bc_client(business_central_server)
@@ -713,15 +720,15 @@ class TestAuditCallback:
     """ The audit callback sees each request and response, including error payloads.
     """
 
-    def test_request_and_response_recorded(self, business_central_server):
+    def test_request_and_response_recorded(self, business_central_server:'any_'):
         _seed_customers(business_central_server)
 
         events = []
 
-        def _callback(cid, event, endpoint, outcome, payload):
+        def _callback(cid:'any_', event:'any_', endpoint:'any_', outcome:'any_', payload:'any_'):
             events.append((cid, event, endpoint, outcome, payload))
 
-        client = _bc_client(business_central_server)
+        client = cast_('any_', _bc_client(business_central_server))
         client.audit_callback = _callback
 
         _ = client.read('customers', cid='cid-1')
@@ -734,15 +741,15 @@ class TestAuditCallback:
         assert events[1][0] == 'cid-1'
         assert events[0][2] == events[1][2]
 
-    def test_error_payload_recorded(self, business_central_server):
+    def test_error_payload_recorded(self, business_central_server:'any_'):
         business_central_server.reset()
 
         events = []
 
-        def _callback(cid, event, endpoint, outcome, payload):
+        def _callback(cid:'any_', event:'any_', endpoint:'any_', outcome:'any_', payload:'any_'):
             events.append((cid, event, endpoint, outcome, payload))
 
-        client = _bc_client(business_central_server)
+        client = cast_('any_', _bc_client(business_central_server))
         client.audit_callback = _callback
 
         with pytest.raises(ODataError):

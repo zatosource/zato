@@ -49,7 +49,7 @@ proptest! {
     #[test]
     fn execute_active_job_sends_fire_batch(_n in 0u32..10) {
         let (shared, receiver) = setup_shared(true);
-        let original_fire = shared.state.lock().jobs[&1].next_fire_utc;
+        let original_fire = shared.state.lock().jobs.get(&1).unwrap().next_fire_utc;
 
         handle_execute_job(&shared, r#"{"job_id": 1}"#);
 
@@ -58,10 +58,13 @@ proptest! {
         prop_assert_eq!(batch.service.0, "svc");
 
         let state = shared.state.lock();
-        let job = &state.jobs[&1];
-        prop_assert_eq!(job.next_fire_utc, original_fire);
-        prop_assert!(job.in_flight);
-        prop_assert_eq!(job.current_run, 1);
+        let job = state.jobs.get(&1).unwrap();
+        let (next_fire_utc, in_flight, current_run) = (job.next_fire_utc, job.in_flight, job.current_run);
+        drop(state);
+
+        prop_assert_eq!(next_fire_utc, original_fire);
+        prop_assert!(in_flight);
+        prop_assert_eq!(current_run, 1);
     }
 
     #[test]
@@ -74,20 +77,23 @@ proptest! {
         prop_assert_eq!(batch.job_id.0, 1);
 
         let state = shared.state.lock();
-        let job = &state.jobs[&1];
-        prop_assert!(job.next_fire_utc.is_none());
-        prop_assert!(job.in_flight);
-        prop_assert_eq!(job.current_run, 1);
+        let job = state.jobs.get(&1).unwrap();
+        let (next_fire_utc, in_flight, current_run) = (job.next_fire_utc, job.in_flight, job.current_run);
+        drop(state);
+
+        prop_assert!(next_fire_utc.is_none());
+        prop_assert!(in_flight);
+        prop_assert_eq!(current_run, 1);
     }
 
     #[test]
     fn execute_preserves_next_fire_utc(_n in 0u32..10) {
         let (shared, _receiver) = setup_shared(true);
-        let original_fire = shared.state.lock().jobs[&1].next_fire_utc;
+        let original_fire = shared.state.lock().jobs.get(&1).unwrap().next_fire_utc;
 
         handle_execute_job(&shared, r#"{"job_id": 1}"#);
 
-        let after_fire = shared.state.lock().jobs[&1].next_fire_utc;
+        let after_fire = shared.state.lock().jobs.get(&1).unwrap().next_fire_utc;
         prop_assert_eq!(original_fire, after_fire);
     }
 
@@ -113,9 +119,12 @@ proptest! {
         prop_assert_eq!(batch.service.0, "svc");
 
         let state = shared.state.lock();
-        let job = &state.jobs[&1];
-        prop_assert!(job.in_flight);
-        prop_assert_eq!(job.current_run, 1);
+        let job = state.jobs.get(&1).unwrap();
+        let (in_flight, current_run) = (job.in_flight, job.current_run);
+        drop(state);
+
+        prop_assert!(in_flight);
+        prop_assert_eq!(current_run, 1);
     }
 
     #[test]
@@ -125,12 +134,15 @@ proptest! {
         handle_execute_job(&shared, r#"{"job_id": 1}"#);
 
         let state = shared.state.lock();
-        let job = &state.jobs[&1];
-        prop_assert_eq!(job.history.len(), 1);
-        let rec = &job.history[0];
-        prop_assert_eq!(&rec.outcome, "running");
-        prop_assert_eq!(rec.current_run, 1);
-        prop_assert_eq!(rec.log_entries.len(), 1);
-        prop_assert!(rec.log_entries[0].message.contains("forced execute"));
+        let job = state.jobs.get(&1).unwrap();
+        let history_len = job.history.len();
+        let record = job.history.front().unwrap().clone();
+        drop(state);
+
+        prop_assert_eq!(history_len, 1);
+        prop_assert_eq!(&record.outcome, "running");
+        prop_assert_eq!(record.current_run, 1);
+        prop_assert_eq!(record.log_entries.len(), 1);
+        prop_assert!(record.log_entries.first().unwrap().message.contains("forced execute"));
     }
 }

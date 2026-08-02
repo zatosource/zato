@@ -267,7 +267,7 @@ def zato_dashboard() -> 'any_':
     # it at our Redis so the server-side console listener connects there too ..
 
     quickstart_env = os.environ.copy()
-    quickstart_env.pop('COVERAGE_PROCESS_START', None)
+    _ = quickstart_env.pop('COVERAGE_PROCESS_START', None)
 
     quickstart_command = [
         _Zato_Bin, 'quickstart', 'create', temporary_dir,
@@ -345,7 +345,7 @@ def zato_dashboard() -> 'any_':
 
     server_env['Zato_OpenAPI_Stream_Prefix'] = stream_prefix
     server_env.update(_Auto_Channel_Env)
-    server_env.pop('COVERAGE_PROCESS_START', None)
+    _ = server_env.pop('COVERAGE_PROCESS_START', None)
 
     server_process = subprocess.Popen(
         [_Zato_Bin, 'start', server_dir, '--fg'],
@@ -362,7 +362,7 @@ def zato_dashboard() -> 'any_':
     # .. 6) start the dashboard ..
 
     dashboard_env = os.environ.copy()
-    dashboard_env.pop('COVERAGE_PROCESS_START', None)
+    _ = dashboard_env.pop('COVERAGE_PROCESS_START', None)
     dashboard_env['Zato_Server_Address'] = f'http://127.0.0.1:{server_port}'
     dashboard_env['Zato_Server_Dir'] = server_dir
 
@@ -380,7 +380,7 @@ def zato_dashboard() -> 'any_':
     # .. 7) start the OpenAPI console, pointing it at the same Redis and stream prefix as the server ..
 
     console_env = os.environ.copy()
-    console_env.pop('COVERAGE_PROCESS_START', None)
+    _ = console_env.pop('COVERAGE_PROCESS_START', None)
     console_env['Zato_OpenAPI_Console_Host'] = '127.0.0.1'
     console_env['Zato_OpenAPI_Console_Port'] = str(console_port)
     console_env['Zato_OpenAPI_Redis_Host'] = '127.0.0.1'
@@ -426,7 +426,7 @@ def zato_dashboard() -> 'any_':
     listener_env['Zato_Config_Bind_Port'] = str(server_port)
     listener_env['Zato_Web_Admin_Repo_Dir'] = os.path.join(dashboard_dir, 'config', 'repo')
     listener_env['Zato_Server_Dir'] = server_dir
-    listener_env.pop('COVERAGE_PROCESS_START', None)
+    _ = listener_env.pop('COVERAGE_PROCESS_START', None)
 
     listener_process = subprocess.Popen(
         ['make', 'listener'],

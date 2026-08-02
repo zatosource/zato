@@ -25,6 +25,7 @@ from zato.common.test import rand_string
 from zato.common.test.mcp_ import make_jsonrpc_initialize
 from zato.common.test.playwright_pubsub import create_basic_auth, navigate_to_page, open_create_dialog, \
     submit_create_form, submit_edit_form
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -83,12 +84,12 @@ class TestMCPGatewayCreate:
         navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. verify the page heading ..
-        heading = page.query_selector('h2.zato')
+        heading = cast_('any_', page.query_selector('h2.zato'))
         heading_text = heading.inner_text()
         assert 'MCP gateways' in heading_text, f'Expected "MCP gateways" in heading, got: {heading_text}'
 
         # .. verify the create link is present ..
-        create_link = page.query_selector('#markup .page_prompt a')
+        create_link = cast_('any_', page.query_selector('#markup .page_prompt a'))
         create_link_text = create_link.inner_text()
         assert 'Create a new MCP gateway' in create_link_text, \
             f'Expected create link text, got: {create_link_text}'
@@ -138,7 +139,7 @@ class TestMCPGatewayCreate:
 
         # .. verify the new row appears in the table ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
 
         # .. extract cell texts from the row ..
         cells = row.query_selector_all('td')
@@ -192,7 +193,7 @@ class TestMCPGatewayCreate:
         page.fill('#id_url_path', url_path)
 
         # .. wait for the service badge picker to load ..
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-available-create .badge-zone-body .security-badge").length >= 2',
             timeout=10000
         )
@@ -218,7 +219,7 @@ class TestMCPGatewayCreate:
 
         # .. verify the new row appears with service count = 2 ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
         cells = row.query_selector_all('td')
 
         service_count_text = cells[5].inner_text().strip()
@@ -232,10 +233,10 @@ class TestMCPGatewayCreate:
         item_id = item_id_cell.inner_text().strip()
 
         page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         # .. wait for the badge picker to load in edit mode ..
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-assigned-edit .badge-zone-body .security-badge").length === 2',
             timeout=10000
         )
@@ -327,7 +328,7 @@ class TestMCPGatewayCreate:
         page.fill('#id_url_path', url_path)
 
         # .. wait for the security badge picker to load ..
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
             timeout=10000
         )
@@ -348,7 +349,7 @@ class TestMCPGatewayCreate:
 
         # .. verify the new row appears with security count = 1 ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
         cells = row.query_selector_all('td')
 
         # Column index 6 is the security members count
@@ -520,7 +521,7 @@ class TestMCPGatewayCreate:
 
         # .. verify it appears ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{old_name}"))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
 
         # .. confirm old URL is routable (403 = no security but gateway exists) ..
         response = _post_mcp(server_port, old_url_path)
@@ -531,7 +532,7 @@ class TestMCPGatewayCreate:
         item_id = item_id_cell.inner_text().strip()
 
         page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         # .. change name and url_path ..
         page.fill('#edit-div #id_edit-name', new_name)
@@ -542,7 +543,7 @@ class TestMCPGatewayCreate:
 
         # .. verify the row now shows the new name ..
         new_row_selector = f'#data-table tbody tr:has(td:text-is("{new_name}"))'
-        page.wait_for_selector(new_row_selector, state='visible', timeout=5000)
+        _ = page.wait_for_selector(new_row_selector, state='visible', timeout=5000)
 
         logger.info('[test_edit_rename] renamed %s -> %s, %s -> %s', old_name, new_name, old_url_path, new_url_path)
 
@@ -584,7 +585,7 @@ class TestMCPGatewayCreate:
         page.fill('#id_url_path', old_url_path)
 
         # .. wait for the security badge picker ..
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
             timeout=10000
         )
@@ -599,7 +600,7 @@ class TestMCPGatewayCreate:
 
         # .. verify the gateway works with valid creds at old URL ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
 
         response = _post_mcp(server_port, old_url_path, auth=(security_username, security_password))
         assert response.status_code == OK, f'Expected OK at old URL with valid creds, got {response.status_code}'
@@ -609,7 +610,7 @@ class TestMCPGatewayCreate:
         item_id = item_id_cell.inner_text().strip()
 
         page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         # .. change only the url_path ..
         page.fill('#edit-div #id_edit-url_path', new_url_path)
@@ -618,7 +619,7 @@ class TestMCPGatewayCreate:
         submit_edit_form(page)
 
         # .. wait for the table to refresh ..
-        page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
+        _ = page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
 
         logger.info('[test_edit_rename_preserves_security] renamed url_path %s -> %s', old_url_path, new_url_path)
 
@@ -660,7 +661,7 @@ class TestMCPGatewayCreate:
 
         # .. verify it appears and is active ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
 
         # .. confirm URL is routable while active ..
         response = _post_mcp(server_port, url_path)
@@ -671,7 +672,7 @@ class TestMCPGatewayCreate:
         item_id = item_id_cell.inner_text().strip()
 
         page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         # .. uncheck is_active ..
         page.uncheck('#edit-div #id_edit-is_active')
@@ -714,11 +715,11 @@ class TestMCPGatewayCreate:
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
         # .. open edit and deactivate ..
-        item_id_cell = row.query_selector('td[class*="item_id_"]')
+        item_id_cell = cast_('any_', row).query_selector('td[class*="item_id_"]')
         item_id = item_id_cell.inner_text().strip()
 
         page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
         page.uncheck('#edit-div #id_edit-is_active')
         submit_edit_form(page)
 
@@ -729,7 +730,7 @@ class TestMCPGatewayCreate:
         # .. reopen edit and reactivate ..
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
         page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
         page.check('#edit-div #id_edit-is_active')
         submit_edit_form(page)
 
@@ -768,7 +769,7 @@ class TestMCPGatewayCreate:
         page.fill('#id_url_path', url_path)
 
         # .. wait for service badges ..
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-available-create .badge-zone-body .security-badge").length >= 2',
             timeout=10000
         )
@@ -779,19 +780,19 @@ class TestMCPGatewayCreate:
         available_services[0].click()
 
         # .. assign security ..
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
             timeout=10000
         )
         badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name}"]'
-        security_badge = page.query_selector(badge_selector)
+        security_badge = cast_('any_', page.query_selector(badge_selector))
         security_badge.click()
 
         submit_create_form(page)
 
         # .. verify row appears ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
 
         # .. initialize to confirm gateway is live ..
         response = _post_mcp(server_port, url_path, auth=(security_username, security_password))
@@ -802,10 +803,10 @@ class TestMCPGatewayCreate:
         item_id = item_id_cell.inner_text().strip()
 
         page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         # .. wait for service badges in edit mode ..
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-available-edit .badge-zone-body .security-badge").length >= 1',
             timeout=10000
         )
@@ -879,7 +880,7 @@ class TestMCPGatewayCreate:
         page.fill('#id_url_path', url_path)
 
         # .. wait for service badges ..
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-available-create .badge-zone-body .security-badge").length >= 2',
             timeout=10000
         )
@@ -892,29 +893,29 @@ class TestMCPGatewayCreate:
         available_services[1].click()
 
         # .. assign security ..
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
             timeout=10000
         )
         badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name}"]'
-        security_badge = page.query_selector(badge_selector)
+        security_badge = cast_('any_', page.query_selector(badge_selector))
         security_badge.click()
 
         submit_create_form(page)
 
         # .. verify row appears ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
 
         # .. open edit dialog ..
         item_id_cell = row.query_selector('td[class*="item_id_"]')
         item_id = item_id_cell.inner_text().strip()
 
         page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         # .. wait for assigned badges in edit mode ..
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-assigned-edit .badge-zone-body .security-badge").length === 2',
             timeout=10000
         )
@@ -993,7 +994,7 @@ class TestMCPGatewayCreate:
         page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 2',
             timeout=10000
         )
@@ -1007,7 +1008,7 @@ class TestMCPGatewayCreate:
 
         # .. verify row appears ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
 
         # .. confirm first creds work, second does not ..
         response = _post_mcp(server_port, url_path, auth=(security_username_1, security_password_1))
@@ -1021,10 +1022,10 @@ class TestMCPGatewayCreate:
         item_id = item_id_cell.inner_text().strip()
 
         page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         # .. wait for the security badge picker in edit mode ..
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-available-sec-edit .badge-zone-body .security-badge").length >= 1',
             timeout=10000
         )
@@ -1079,7 +1080,7 @@ class TestMCPGatewayCreate:
         page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 2',
             timeout=10000
         )
@@ -1097,7 +1098,7 @@ class TestMCPGatewayCreate:
 
         # .. verify row appears ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
 
         # .. confirm both work ..
         response = _post_mcp(server_port, url_path, auth=(security_username_1, security_password_1))
@@ -1111,10 +1112,10 @@ class TestMCPGatewayCreate:
         item_id = item_id_cell.inner_text().strip()
 
         page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         # .. wait for assigned sec badges in edit mode ..
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-assigned-sec-edit .badge-zone-body .security-badge").length === 2',
             timeout=10000
         )
@@ -1165,7 +1166,7 @@ class TestMCPGatewayCreate:
         page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
             timeout=10000
         )
@@ -1179,7 +1180,7 @@ class TestMCPGatewayCreate:
 
         # .. verify row appears ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
 
         # .. confirm creds work ..
         response = _post_mcp(server_port, url_path, auth=(security_username, security_password))
@@ -1190,10 +1191,10 @@ class TestMCPGatewayCreate:
         item_id = item_id_cell.inner_text().strip()
 
         page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         # .. wait for assigned sec badges in edit mode ..
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-assigned-sec-edit .badge-zone-body .security-badge").length === 1',
             timeout=10000
         )
@@ -1244,7 +1245,7 @@ class TestMCPGatewayCreate:
 
         # .. verify it appears ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
         # .. try to create a second gateway with the same name ..
         open_create_dialog(page)
@@ -1255,7 +1256,7 @@ class TestMCPGatewayCreate:
         page.click('#create-div input[type="submit"]')
 
         # .. the dialog should stay open because the name is taken ..
-        page.wait_for_selector('.zato-unique-taken', state='visible', timeout=5000)
+        _ = page.wait_for_selector('.zato-unique-taken', state='visible', timeout=5000)
 
         # .. verify the dialog is still visible ..
         dialog_visible = page.is_visible('#create-div')
@@ -1288,7 +1289,7 @@ class TestMCPGatewayCreate:
 
         # .. verify it appears ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name_1}"))'
-        page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
         # .. try to create a second gateway with the same url_path ..
         open_create_dialog(page)
@@ -1299,7 +1300,7 @@ class TestMCPGatewayCreate:
         page.click('#create-div input[type="submit"]')
 
         # .. the dialog should stay open because the url_path is taken ..
-        page.wait_for_selector('.zato-unique-taken', state='visible', timeout=5000)
+        _ = page.wait_for_selector('.zato-unique-taken', state='visible', timeout=5000)
 
         # .. verify the dialog is still visible ..
         dialog_visible = page.is_visible('#create-div')
@@ -1337,7 +1338,7 @@ class TestMCPGatewayCreate:
         page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-available-create .badge-zone-body .security-badge").length >= 1',
             timeout=10000
         )
@@ -1349,12 +1350,12 @@ class TestMCPGatewayCreate:
         service_badge.click()
 
         # .. assign security ..
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
             timeout=10000
         )
         badge_selector = f'#badge-zone-available-sec-create .badge-zone-body .security-badge[data-name="{security_name}"]'
-        security_badge = page.query_selector(badge_selector)
+        security_badge = cast_('any_', page.query_selector(badge_selector))
         security_badge.click()
 
         submit_create_form(page)
@@ -1386,11 +1387,11 @@ class MCPTestHotDeployTools(Service):
         time.sleep(5)
 
         # .. open the edit dialog to add the hot-deployed service ..
-        item_id_cell = row.query_selector('td[class*="item_id_"]')
+        item_id_cell = cast_('any_', row).query_selector('td[class*="item_id_"]')
         item_id = item_id_cell.inner_text().strip()
 
         page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         # .. wait for the hot-deployed service to appear in the available services badge picker ..
         badge_selector_edit = f'#badge-zone-available-edit .badge-zone-body .security-badge[data-name="{hot_deploy_service_name}"]'
@@ -1403,10 +1404,10 @@ class MCPTestHotDeployTools(Service):
                 break
             # .. close and reopen edit to refresh the badge list ..
             page.keyboard.press('Escape')
-            page.wait_for_selector('#edit-div', state='hidden', timeout=3000)
+            _ = page.wait_for_selector('#edit-div', state='hidden', timeout=3000)
             time.sleep(1)
             page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-            page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+            _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
         else:
             os.remove(service_file_path)
             raise AssertionError(
@@ -1450,27 +1451,27 @@ class MCPTestHotDeployTools(Service):
         navigate_to_page(page, base_url, mcp_list_url)
 
         row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
-        item_id_cell = row.query_selector('td[class*="item_id_"]')
+        item_id_cell = cast_('any_', row).query_selector('td[class*="item_id_"]')
         item_id = item_id_cell.inner_text().strip()
 
         page.evaluate(f'$.fn.zato.gateway.mcp.delete_("{item_id}")')
-        page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
         page.click('#popup_ok')
-        page.wait_for_selector(row_selector, state='hidden', timeout=5000)
+        _ = page.wait_for_selector(row_selector, state='hidden', timeout=5000)
 
         # .. delete the basic auth definition ..
         basic_auth_page_url = f'/zato/security/basic-auth/?cluster=1&query={security_name}'
         navigate_to_page(page, base_url, basic_auth_page_url)
 
         row_selector_security = f'#data-table tbody tr:has(td:text-is("{security_name}"))'
-        row_security = page.wait_for_selector(row_selector_security, state='visible', timeout=5000)
+        row_security = cast_('any_', page.wait_for_selector(row_selector_security, state='visible', timeout=5000))
         item_id_cell_security = row_security.query_selector('td[class*="item_id_"]')
         item_id_security = item_id_cell_security.inner_text().strip()
 
         page.evaluate(f'$.fn.zato.security.basic_auth.delete_("{item_id_security}")')
-        page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
         page.click('#popup_ok')
-        page.wait_for_selector(row_selector_security, state='hidden', timeout=5000)
+        _ = page.wait_for_selector(row_selector_security, state='hidden', timeout=5000)
 
         # .. and only now remove the deployed service file.
         os.remove(service_file_path)
@@ -1505,7 +1506,7 @@ class MCPTestHotDeployTools(Service):
         page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
             timeout=10000
         )
@@ -1518,7 +1519,7 @@ class MCPTestHotDeployTools(Service):
         submit_create_form(page)
 
         row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
         # .. verify the original password works ..
         response = _post_mcp(server_port, url_path, auth=(security_username, old_password))
@@ -1533,17 +1534,17 @@ class MCPTestHotDeployTools(Service):
         navigate_to_page(page, base_url, basic_auth_page_url)
 
         row_selector_basic_auth = f'#data-table tbody tr:has(td:text-is("{security_name}"))'
-        row = page.wait_for_selector(row_selector_basic_auth, state='visible', timeout=5000)
+        row = cast_('any_', page.wait_for_selector(row_selector_basic_auth, state='visible', timeout=5000))
 
         id_cell = row.query_selector('td[class*="item_id_"]')
         item_id = id_cell.inner_text().strip()
 
         page.evaluate(f'$.fn.zato.data_table.change_password("{item_id}")')
-        page.wait_for_selector('#change_password-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#change_password-div', state='visible', timeout=5000)
 
         page.fill('#change_password-div #id_password', new_password)
         page.click('#change_password-div input[type="submit"]')
-        page.wait_for_function('!document.querySelector("#change_password-div").offsetParent')
+        _ = page.wait_for_function('!document.querySelector("#change_password-div").offsetParent')
 
         logger.info('[test_sec_def_password_change] password changed for %s', security_name)
 
@@ -1594,7 +1595,7 @@ class MCPTestHotDeployTools(Service):
         page.fill('#id_name', gateway_name_a)
         page.fill('#id_url_path', url_path_a)
 
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 2',
             timeout=10000
         )
@@ -1607,14 +1608,14 @@ class MCPTestHotDeployTools(Service):
         submit_create_form(page)
 
         row_selector_a = f'#data-table tbody tr:has(td:text-is("{gateway_name_a}"))'
-        page.wait_for_selector(row_selector_a, state='visible', timeout=5000)
+        _ = page.wait_for_selector(row_selector_a, state='visible', timeout=5000)
 
         # .. create gateway B with security B ..
         open_create_dialog(page)
         page.fill('#id_name', gateway_name_b)
         page.fill('#id_url_path', url_path_b)
 
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
             timeout=10000
         )
@@ -1627,7 +1628,7 @@ class MCPTestHotDeployTools(Service):
         submit_create_form(page)
 
         row_selector_b = f'#data-table tbody tr:has(td:text-is("{gateway_name_b}"))'
-        page.wait_for_selector(row_selector_b, state='visible', timeout=5000)
+        _ = page.wait_for_selector(row_selector_b, state='visible', timeout=5000)
 
         # .. verify own creds work on own gateway ..
         response = _post_mcp(server_port, url_path_a, auth=(security_username_a, security_password_a))
@@ -1724,7 +1725,7 @@ class MCPTestAllowListB(Service):
         page.fill('#id_url_path', url_path_a)
 
         # .. wait for service badges to load ..
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-available-create .badge-zone-body .security-badge").length >= 1',
             timeout=10000
         )
@@ -1736,7 +1737,7 @@ class MCPTestAllowListB(Service):
         service_badge_a.click()
 
         # .. assign security ..
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
             timeout=10000
         )
@@ -1749,14 +1750,14 @@ class MCPTestAllowListB(Service):
         submit_create_form(page)
 
         row_selector_a = f'#data-table tbody tr:has(td:text-is("{gateway_name_a}"))'
-        page.wait_for_selector(row_selector_a, state='visible', timeout=5000)
+        _ = page.wait_for_selector(row_selector_a, state='visible', timeout=5000)
 
         # .. create gateway B restricted to service B ..
         open_create_dialog(page)
         page.fill('#id_name', gateway_name_b)
         page.fill('#id_url_path', url_path_b)
 
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-available-create .badge-zone-body .security-badge").length >= 1',
             timeout=10000
         )
@@ -1768,7 +1769,7 @@ class MCPTestAllowListB(Service):
         service_badge_b.click()
 
         # .. assign the same security ..
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
             timeout=10000
         )
@@ -1780,7 +1781,7 @@ class MCPTestAllowListB(Service):
         submit_create_form(page)
 
         row_selector_b = f'#data-table tbody tr:has(td:text-is("{gateway_name_b}"))'
-        page.wait_for_selector(row_selector_b, state='visible', timeout=5000)
+        _ = page.wait_for_selector(row_selector_b, state='visible', timeout=5000)
 
         # .. verify gateway A only exposes service A ..
         url_a = f'http://127.0.0.1:{server_port}{url_path_a}'
@@ -1848,38 +1849,38 @@ class MCPTestAllowListB(Service):
         mcp_list_url = f'{_Page_Url_Pattern}&query={_Test_Name_Prefix}allow-'
         navigate_to_page(page, base_url, mcp_list_url)
 
-        row_a = page.wait_for_selector(row_selector_a, state='visible', timeout=5000)
+        row_a = cast_('any_', page.wait_for_selector(row_selector_a, state='visible', timeout=5000))
         item_id_cell_a = row_a.query_selector('td[class*="item_id_"]')
         item_id_a = item_id_cell_a.inner_text().strip()
 
         page.evaluate(f'$.fn.zato.gateway.mcp.delete_("{item_id_a}")')
-        page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
         page.click('#popup_ok')
-        page.wait_for_selector(row_selector_a, state='hidden', timeout=5000)
+        _ = page.wait_for_selector(row_selector_a, state='hidden', timeout=5000)
 
         # .. then delete gateway B ..
-        row_b = page.wait_for_selector(row_selector_b, state='visible', timeout=5000)
+        row_b = cast_('any_', page.wait_for_selector(row_selector_b, state='visible', timeout=5000))
         item_id_cell_b = row_b.query_selector('td[class*="item_id_"]')
         item_id_b = item_id_cell_b.inner_text().strip()
 
         page.evaluate(f'$.fn.zato.gateway.mcp.delete_("{item_id_b}")')
-        page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
         page.click('#popup_ok')
-        page.wait_for_selector(row_selector_b, state='hidden', timeout=5000)
+        _ = page.wait_for_selector(row_selector_b, state='hidden', timeout=5000)
 
         # .. delete the shared basic auth definition ..
         basic_auth_page_url = f'/zato/security/basic-auth/?cluster=1&query={security_name}'
         navigate_to_page(page, base_url, basic_auth_page_url)
 
         row_selector_security = f'#data-table tbody tr:has(td:text-is("{security_name}"))'
-        row_security = page.wait_for_selector(row_selector_security, state='visible', timeout=5000)
+        row_security = cast_('any_', page.wait_for_selector(row_selector_security, state='visible', timeout=5000))
         item_id_cell_security = row_security.query_selector('td[class*="item_id_"]')
         item_id_security = item_id_cell_security.inner_text().strip()
 
         page.evaluate(f'$.fn.zato.security.basic_auth.delete_("{item_id_security}")')
-        page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
         page.click('#popup_ok')
-        page.wait_for_selector(row_selector_security, state='hidden', timeout=5000)
+        _ = page.wait_for_selector(row_selector_security, state='hidden', timeout=5000)
 
         # .. and only now remove the deployed service files.
         os.remove(service_file_path_a)
@@ -1913,7 +1914,7 @@ class MCPTestAllowListB(Service):
         page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
             timeout=10000
         )
@@ -1926,7 +1927,7 @@ class MCPTestAllowListB(Service):
         submit_create_form(page)
 
         row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
 
         # .. verify the gateway is live ..
         response = _post_mcp(server_port, url_path, auth=(security_username, security_password))
@@ -1938,11 +1939,11 @@ class MCPTestAllowListB(Service):
 
         # .. delete the gateway via UI ..
         page.evaluate(f'$.fn.zato.gateway.mcp.delete_("{item_id}")')
-        page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
         page.click('#popup_ok')
 
         # .. wait for the row to disappear ..
-        page.wait_for_selector(row_selector, state='hidden', timeout=5000)
+        _ = page.wait_for_selector(row_selector, state='hidden', timeout=5000)
 
         # .. verify the row is gone ..
         row_after_delete = page.query_selector(row_selector)
@@ -1980,7 +1981,7 @@ class MCPTestAllowListB(Service):
         page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
             timeout=10000
         )
@@ -1993,7 +1994,7 @@ class MCPTestAllowListB(Service):
         submit_create_form(page)
 
         row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
 
         # .. verify the REST channel exists before deletion ..
         api_url = f'http://127.0.0.1:{server_port}/zato/api/invoke/zato.http-soap.get-list'
@@ -2019,9 +2020,9 @@ class MCPTestAllowListB(Service):
         item_id = item_id_cell.inner_text().strip()
 
         page.evaluate(f'$.fn.zato.gateway.mcp.delete_("{item_id}")')
-        page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
         page.click('#popup_ok')
-        page.wait_for_selector(row_selector, state='hidden', timeout=5000)
+        _ = page.wait_for_selector(row_selector, state='hidden', timeout=5000)
 
         # .. wait for cleanup to propagate ..
         page.wait_for_timeout(1000)
@@ -2068,7 +2069,7 @@ class MCPTestAllowListB(Service):
         page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
             timeout=10000
         )
@@ -2081,7 +2082,7 @@ class MCPTestAllowListB(Service):
         submit_create_form(page)
 
         row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
 
         # .. get the item id ..
         item_id_cell = row.query_selector('td[class*="item_id_"]')
@@ -2089,11 +2090,11 @@ class MCPTestAllowListB(Service):
 
         # .. click delete but cancel ..
         page.evaluate(f'$.fn.zato.gateway.mcp.delete_("{item_id}")')
-        page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
         page.click('#popup_cancel')
 
         # .. wait for the popup to close ..
-        page.wait_for_selector('#popup_container', state='hidden', timeout=5000)
+        _ = page.wait_for_selector('#popup_container', state='hidden', timeout=5000)
 
         # .. verify the row is still there ..
         row_after_cancel = page.query_selector(row_selector)
@@ -2131,7 +2132,7 @@ class MCPTestAllowListB(Service):
             submit_create_form(page)
 
             row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-            page.wait_for_selector(row_selector, state='visible', timeout=5000)
+            _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
         logger.info('[test_mcp_list_pagination] created %d gateways', _gateway_count)
 
@@ -2139,7 +2140,7 @@ class MCPTestAllowListB(Service):
         # otherwise gateways left over from other tests in this file would add extra pages ..
         pagination_list_url = f'{_Page_Url_Pattern}&query={_Test_Name_Prefix}pag-'
         navigate_to_page(page, base_url, pagination_list_url)
-        page.wait_for_selector('#data-table', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#data-table', state='visible', timeout=5000)
 
         # .. verify page 1 ..
         action_panel = page.query_selector('.action-panel')
@@ -2156,10 +2157,10 @@ class MCPTestAllowListB(Service):
 
         # .. navigate to page 2 ..
         next_link.click()
-        page.wait_for_selector('#data-table', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#data-table', state='visible', timeout=5000)
 
         action_panel = page.query_selector('.action-panel')
-        panel_text = action_panel.inner_text()
+        panel_text = cast_('any_', action_panel).inner_text()
         assert 'Page 2' in panel_text, f'Should be on page 2, got: {panel_text}'
 
         rows_page_2 = page.query_selector_all('#data-table tbody tr:not(.ignore)')
@@ -2173,10 +2174,10 @@ class MCPTestAllowListB(Service):
 
         # .. navigate to page 3 ..
         next_link.click()
-        page.wait_for_selector('#data-table', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#data-table', state='visible', timeout=5000)
 
         action_panel = page.query_selector('.action-panel')
-        panel_text = action_panel.inner_text()
+        panel_text = cast_('any_', action_panel).inner_text()
         assert 'Page 3' in panel_text, f'Should be on page 3, got: {panel_text}'
 
         rows_page_3 = page.query_selector_all('#data-table tbody tr:not(.ignore)')
@@ -2191,10 +2192,10 @@ class MCPTestAllowListB(Service):
 
         # .. navigate back to page 2 ..
         prev_link.click()
-        page.wait_for_selector('#data-table', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#data-table', state='visible', timeout=5000)
 
         action_panel = page.query_selector('.action-panel')
-        panel_text = action_panel.inner_text()
+        panel_text = cast_('any_', action_panel).inner_text()
         assert 'Page 2' in panel_text, f'Should be back on page 2, got: {panel_text}'
 
         prev_link = page.query_selector('.action-panel a:has-text("Prev")')
@@ -2202,10 +2203,10 @@ class MCPTestAllowListB(Service):
 
         # .. navigate back to page 1 ..
         prev_link.click()
-        page.wait_for_selector('#data-table', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#data-table', state='visible', timeout=5000)
 
         action_panel = page.query_selector('.action-panel')
-        panel_text = action_panel.inner_text()
+        panel_text = cast_('any_', action_panel).inner_text()
         assert 'Page 1' in panel_text, f'Should be back on page 1, got: {panel_text}'
 
         # .. no Previous link on page 1 ..
@@ -2236,7 +2237,7 @@ class MCPTestAllowListB(Service):
         submit_create_form(page)
 
         row_selector_match = f'#data-table tbody tr:has(td:text-is("{gateway_name_match}"))'
-        page.wait_for_selector(row_selector_match, state='visible', timeout=5000)
+        _ = page.wait_for_selector(row_selector_match, state='visible', timeout=5000)
 
         # .. create another gateway without the token ..
         open_create_dialog(page)
@@ -2245,7 +2246,7 @@ class MCPTestAllowListB(Service):
         submit_create_form(page)
 
         row_selector_other = f'#data-table tbody tr:has(td:text-is("{gateway_name_other}"))'
-        page.wait_for_selector(row_selector_other, state='visible', timeout=5000)
+        _ = page.wait_for_selector(row_selector_other, state='visible', timeout=5000)
 
         # .. search for the unique token ..
         search_input = page.query_selector('input[name="query"]')
@@ -2253,7 +2254,7 @@ class MCPTestAllowListB(Service):
 
         search_input.fill(unique_token)
         page.click('input[type="submit"][value="Show gateways"]')
-        page.wait_for_selector('#data-table', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#data-table', state='visible', timeout=5000)
 
         # .. the matching gateway should appear ..
         row_match = page.query_selector(row_selector_match)
@@ -2298,7 +2299,7 @@ class MCPTestAllowListB(Service):
         page.fill('#id_name', gateway_name)
         page.fill('#id_url_path', url_path)
 
-        page.wait_for_function(
+        _ = page.wait_for_function(
             'document.querySelectorAll("#badge-zone-available-sec-create .badge-zone-body .security-badge").length >= 1',
             timeout=10000
         )
@@ -2318,18 +2319,18 @@ class MCPTestAllowListB(Service):
         assert response.status_code == OK, f'Expected OK with member creds, got {response.status_code}'
 
         # 3. EDIT RENAME via UI ..
-        item_id_cell = row.query_selector('td[class*="item_id_"]')
+        item_id_cell = cast_('any_', row).query_selector('td[class*="item_id_"]')
         item_id = item_id_cell.inner_text().strip()
 
         page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         page.fill('#edit-div #id_edit-name', new_name)
         page.fill('#edit-div #id_edit-url_path', new_url_path)
         submit_edit_form(page)
 
         new_row_selector = f'#data-table tbody tr:has(td:text-is("{new_name}"))'
-        page.wait_for_selector(new_row_selector, state='visible', timeout=5000)
+        _ = page.wait_for_selector(new_row_selector, state='visible', timeout=5000)
 
         # 4. POST new URL with member creds -> 200 ..
         response = _post_mcp(server_port, new_url_path, auth=(security_username_member, security_password_member))
@@ -2346,7 +2347,7 @@ class MCPTestAllowListB(Service):
         # 7. EDIT DEACTIVATE via UI ..
         row = page.wait_for_selector(new_row_selector, state='visible', timeout=5000)
         page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
         page.uncheck('#edit-div #id_edit-is_active')
         submit_edit_form(page)
 
@@ -2357,7 +2358,7 @@ class MCPTestAllowListB(Service):
         # 9. EDIT REACTIVATE via UI ..
         row = page.wait_for_selector(new_row_selector, state='visible', timeout=5000)
         page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
         page.check('#edit-div #id_edit-is_active')
         submit_edit_form(page)
 
@@ -2368,9 +2369,9 @@ class MCPTestAllowListB(Service):
         # 11. DELETE via UI ..
         row = page.wait_for_selector(new_row_selector, state='visible', timeout=5000)
         page.evaluate(f'$.fn.zato.gateway.mcp.delete_("{item_id}")')
-        page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
         page.click('#popup_ok')
-        page.wait_for_selector(new_row_selector, state='hidden', timeout=5000)
+        _ = page.wait_for_selector(new_row_selector, state='hidden', timeout=5000)
 
         # 12. URL -> 404 ..
         page.wait_for_timeout(1000)
@@ -2405,7 +2406,7 @@ class MCPTestAllowListB(Service):
         submit_create_form(page)
 
         row_selector = f'#data-table tbody tr:has(td:text-is("{gateway_name}"))'
-        page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
         # .. get the gateway's ID from the API ..
         api_url = f'http://127.0.0.1:{server_port}/zato/api/invoke/zato.generic.connection.get-list'
@@ -2443,10 +2444,10 @@ class MCPTestAllowListB(Service):
 
         # .. refresh the UI page ..
         navigate_to_page(page, base_url, _Page_Url_Pattern)
-        page.wait_for_selector('#data-table', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#data-table', state='visible', timeout=5000)
 
         # .. the table should show the API-set url_path ..
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
         row_text = row.inner_text()
         assert api_url_path in row_text, \
             f'Expected API url_path "{api_url_path}" in row, got: {row_text}'
@@ -2464,7 +2465,7 @@ class MCPTestAllowListB(Service):
         item_id = item_id_cell.inner_text().strip()
 
         page.evaluate(f'$.fn.zato.gateway.mcp.edit("{item_id}")')
-        page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
         page.fill('#edit-div #id_edit-url_path', ui_url_path)
         submit_edit_form(page)

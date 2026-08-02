@@ -4,6 +4,17 @@ from xml.etree import ElementTree
 
 from zato.fhir.r4_0_1 import MeasureReport
 from zato.fhir.narrative import generate_narrative, NarrativeTemplate
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 
 XHTML_NS = '{http://www.w3.org/1999/xhtml}'
@@ -101,7 +112,7 @@ class TestNarrativeMeasureReport:
         assert found_field, "Field 'Type' not found in narrative"
 
     def test_narrative_measure_report_measure(self):
-        r = MeasureReport()
+        r = cast_('any_', MeasureReport())
         r.id = 'test-1'
         r.measure = {'value': 'test'}
         narrative = generate_narrative(r)

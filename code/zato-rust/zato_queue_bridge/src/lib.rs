@@ -15,6 +15,9 @@ pub mod kafka;
 /// Pure-Rust parser for the IBM MQ MQRFH2 header.
 pub mod rfh2;
 
+/// Typed parsing of the JSON payloads carried in Redis stream fields.
+pub mod wire;
+
 /// Redis Streams integration for command ingestion and recv event publishing.
 pub mod redis_streams;
 

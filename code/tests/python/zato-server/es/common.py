@@ -77,7 +77,7 @@ def get_config(server:'ESServer', conn_name:'str', **overrides:'any_') -> 'Bunch
     }
     config.update(overrides)
 
-    out = bunchify(config)
+    out = cast_('Bunch', bunchify(config))
     return out
 
 # ################################################################################################################################

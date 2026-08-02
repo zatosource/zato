@@ -273,7 +273,7 @@ def _wait_for_audit_flag(server_port:'int', url_path:'str', conn_name:'str', exp
 
         time.sleep(_Propagation_Poll_Interval)
 
-    raise Exception(f'The audit flag of `{conn_name}` did not become {expected} ' \
+    raise Exception(f'The audit flag of `{conn_name}` did not become {expected} ' + \
         f'within {_Propagation_Timeout}s, last value: {last_value}')
 
 # ################################################################################################################################

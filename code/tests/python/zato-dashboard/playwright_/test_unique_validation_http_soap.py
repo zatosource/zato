@@ -19,6 +19,7 @@ from rest_channel import create_channel, delete_channel, fill_channel_form, get_
 from rest_outconn import create_outconn, delete_outconn, open_outconn_page
 from soap_channel import create_soap_channel, delete_soap_channel, open_soap_channel_page
 from soap_outconn import create_soap_outconn, delete_soap_outconn, open_soap_outconn_page
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -64,13 +65,13 @@ def _type_into_field(page:'Page', selector:'str', value:'str') -> 'None':
 
 def _close_create_dialog(page:'Page') -> 'None':
     page.evaluate('$("#create-div").dialog("close")')
-    page.wait_for_function('!document.querySelector("#create-div").offsetParent')
+    _ = page.wait_for_function('!document.querySelector("#create-div").offsetParent')
 
 # ################################################################################################################################
 
 def _close_edit_dialog(page:'Page') -> 'None':
     page.evaluate('$("#edit-div").dialog("close")')
-    page.wait_for_function('!document.querySelector("#edit-div").offsetParent')
+    _ = page.wait_for_function('!document.querySelector("#edit-div").offsetParent')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -105,7 +106,7 @@ class TestUniqueValidationHTTPSOAP:
         _type_into_field(page, '#id_url_path', url_path)
 
         # .. and expect the taken indicator.
-        taken_indicator = page.wait_for_selector(_Taken_In_Create, state='visible', timeout=_Indicator_Timeout)
+        taken_indicator = cast_('any_', page.wait_for_selector(_Taken_In_Create, state='visible', timeout=_Indicator_Timeout))
         taken_text = taken_indicator.inner_text()
         assert 'Already taken' in taken_text, f'Expected "Already taken", got: "{taken_text}"'
 
@@ -141,7 +142,7 @@ class TestUniqueValidationHTTPSOAP:
         _type_into_field(page, '#id_url_path', url_path)
 
         # .. and expect the taken indicator.
-        taken_indicator = page.wait_for_selector(_Taken_In_Create, state='visible', timeout=_Indicator_Timeout)
+        taken_indicator = cast_('any_', page.wait_for_selector(_Taken_In_Create, state='visible', timeout=_Indicator_Timeout))
         taken_text = taken_indicator.inner_text()
         assert 'Already taken' in taken_text, f'Expected "Already taken", got: "{taken_text}"'
 
@@ -182,7 +183,7 @@ class TestUniqueValidationHTTPSOAP:
         submit_create_form_expect_blocked(page)
 
         # .. with the taken indicator rendered on the url_path field ..
-        taken_indicator = page.wait_for_selector(_Taken_In_Create, state='visible', timeout=_Indicator_Timeout)
+        taken_indicator = cast_('any_', page.wait_for_selector(_Taken_In_Create, state='visible', timeout=_Indicator_Timeout))
         taken_text = taken_indicator.inner_text()
         assert 'Already taken' in taken_text, f'Expected "Already taken", got: "{taken_text}"'
 
@@ -231,7 +232,7 @@ class TestUniqueValidationHTTPSOAP:
         _type_into_field(page, '#id_url_path', url_path)
 
         # .. expect the ok indicator since the methods differ ..
-        ok_indicator = page.wait_for_selector(_Ok_In_Create, state='visible', timeout=_Indicator_Timeout)
+        ok_indicator = cast_('any_', page.wait_for_selector(_Ok_In_Create, state='visible', timeout=_Indicator_Timeout))
         ok_text = ok_indicator.inner_text()
         assert '\u2713' in ok_text, f'Expected checkmark in indicator, got: "{ok_text}"'
 
@@ -277,7 +278,7 @@ class TestUniqueValidationHTTPSOAP:
         _type_into_field(page, '#id_name', channel_name)
 
         # .. and expect the taken indicator.
-        taken_indicator = page.wait_for_selector(_Taken_In_Create, state='visible', timeout=_Indicator_Timeout)
+        taken_indicator = cast_('any_', page.wait_for_selector(_Taken_In_Create, state='visible', timeout=_Indicator_Timeout))
         taken_text = taken_indicator.inner_text()
         assert 'Already taken' in taken_text, f'Expected "Already taken", got: "{taken_text}"'
 
@@ -314,7 +315,7 @@ class TestUniqueValidationHTTPSOAP:
         _type_into_field(page, '#id_name', shared_name)
 
         # .. expect the ok indicator since names are per transport ..
-        ok_indicator = page.wait_for_selector(_Ok_In_Create, state='visible', timeout=_Indicator_Timeout)
+        ok_indicator = cast_('any_', page.wait_for_selector(_Ok_In_Create, state='visible', timeout=_Indicator_Timeout))
         ok_text = ok_indicator.inner_text()
         assert '\u2713' in ok_text, f'Expected checkmark in indicator, got: "{ok_text}"'
 
@@ -358,7 +359,7 @@ class TestUniqueValidationHTTPSOAP:
         _type_into_field(page, '#id_name', outconn_name)
 
         # .. and expect the taken indicator.
-        taken_indicator = page.wait_for_selector(_Taken_In_Create, state='visible', timeout=_Indicator_Timeout)
+        taken_indicator = cast_('any_', page.wait_for_selector(_Taken_In_Create, state='visible', timeout=_Indicator_Timeout))
         taken_text = taken_indicator.inner_text()
         assert 'Already taken' in taken_text, f'Expected "Already taken", got: "{taken_text}"'
 
@@ -391,7 +392,7 @@ class TestUniqueValidationHTTPSOAP:
         # .. type the same name and expect the taken indicator ..
         _type_into_field(page, '#id_name', outconn_name)
 
-        taken_indicator = page.wait_for_selector(_Taken_In_Create, state='visible', timeout=_Indicator_Timeout)
+        taken_indicator = cast_('any_', page.wait_for_selector(_Taken_In_Create, state='visible', timeout=_Indicator_Timeout))
         taken_text = taken_indicator.inner_text()
         assert 'Already taken' in taken_text, f'Expected "Already taken", got: "{taken_text}"'
 
@@ -399,7 +400,7 @@ class TestUniqueValidationHTTPSOAP:
         _type_into_field(page, '#id_name', unique_name)
 
         # .. and expect the ok indicator.
-        ok_indicator = page.wait_for_selector(_Ok_In_Create, state='visible', timeout=_Indicator_Timeout)
+        ok_indicator = cast_('any_', page.wait_for_selector(_Ok_In_Create, state='visible', timeout=_Indicator_Timeout))
         ok_text = ok_indicator.inner_text()
         assert '\u2713' in ok_text, f'Expected checkmark in indicator, got: "{ok_text}"'
 
@@ -444,7 +445,7 @@ class TestUniqueValidationHTTPSOAP:
         _type_into_field(page, '#id_edit-url_path', owner_url_path)
 
         # .. expect the taken indicator ..
-        taken_indicator = page.wait_for_selector(_Taken_In_Edit, state='visible', timeout=_Indicator_Timeout)
+        taken_indicator = cast_('any_', page.wait_for_selector(_Taken_In_Edit, state='visible', timeout=_Indicator_Timeout))
         taken_text = taken_indicator.inner_text()
         assert 'Already taken' in taken_text, f'Expected "Already taken", got: "{taken_text}"'
 
@@ -452,7 +453,7 @@ class TestUniqueValidationHTTPSOAP:
         page.click('#edit-div input[type="submit"]')
         page.wait_for_timeout(1000)
 
-        edit_dialog = page.query_selector('#edit-div')
+        edit_dialog = cast_('any_', page.query_selector('#edit-div'))
         assert edit_dialog.is_visible(), 'Expected the edit dialog to remain open after a blocked submission'
 
         # Clean up.

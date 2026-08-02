@@ -39,12 +39,13 @@ import keycloak_
 if 0:
     from playwright.sync_api import Page
     from requests import Response
-    from zato.common.typing_ import anydict, strnone
+    from zato.common.typing_ import any_, anydict, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 from bearer_token import create_dynamic_definition, edit_group_members
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -147,7 +148,7 @@ def _create_mcp_gateway(page:'Page', base_url:'str', gateway_name:'str', url_pat
 
     # .. assign the echo service via its badge ..
     badge_selector = f'#badge-zone-available-create .badge-zone-body .security-badge[data-name="{_Echo_Service}"]'
-    badge = page.wait_for_selector(badge_selector, state='visible', timeout=10000)
+    badge = cast_('any_', page.wait_for_selector(badge_selector, state='visible', timeout=10000))
     badge.click()
 
     # .. submit and wait for the dialog to close ..

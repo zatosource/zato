@@ -27,11 +27,18 @@ from zato.common.util.xml_.core import qname
 from zato.common.util.xml_.keystore import new_keystore
 from zato.common.util.xml_.signature import compute_signature_value
 from zato.common.util.xml_.xmlsec import encode_base64
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _reparse(envelope):
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _reparse(envelope:'any_'):
     """ Serializes and reparses an envelope, as would happen over the wire.
     """
     out = etree.fromstring(to_bytes(envelope))
@@ -39,7 +46,7 @@ def _reparse(envelope):
 
 # ################################################################################################################################
 
-def _drop_reference(envelope, element_id):
+def _drop_reference(envelope:'any_', element_id:'any_'):
     """ Removes one ds:Reference from an envelope's SignedInfo, narrowing what the signature says
     it covers.
     """
@@ -51,7 +58,7 @@ def _drop_reference(envelope, element_id):
 
 # ################################################################################################################################
 
-def _resign(envelope, keystore):
+def _resign(envelope:'any_', keystore:'any_'):
     """ Recomputes an envelope's signature value over its SignedInfo as it now stands.
 
     This is what a sender holding a trusted key does when it chooses to cover less than it should,
@@ -162,7 +169,7 @@ class TestX509:
     and government gateways demand from message signatures.
     """
 
-    def test_sign_verify_roundtrip(self, parties):
+    def test_sign_verify_roundtrip(self, parties:'any_'):
         envelope = _sample_envelope()
         _ = sign(envelope, parties.sender)
 
@@ -170,7 +177,7 @@ class TestX509:
 
         assert verified.certificate == parties.sender.signing_certificate
 
-    def test_tampered_body_is_detected(self, parties):
+    def test_tampered_body_is_detected(self, parties:'any_'):
         envelope = _sample_envelope()
         _ = sign(envelope, parties.sender)
 
@@ -183,7 +190,7 @@ class TestX509:
         with pytest.raises(SOAPSecurityException):
             _ = verify(wire, parties.receiver)
 
-    def test_wrong_signer_is_rejected_by_pinning(self, parties):
+    def test_wrong_signer_is_rejected_by_pinning(self, parties:'any_'):
         # The receiver signs but the verifier expects the sender's certificate.
         envelope = _sample_envelope()
         _ = sign(envelope, parties.receiver)
@@ -194,7 +201,7 @@ class TestX509:
         with pytest.raises(SOAPSecurityException):
             _ = verify(_reparse(envelope), verifier)
 
-    def test_trust_anchor_chain_validation(self, parties):
+    def test_trust_anchor_chain_validation(self, parties:'any_'):
         envelope = _sample_envelope()
         _ = sign(envelope, parties.sender)
 
@@ -205,13 +212,13 @@ class TestX509:
         verified = verify(_reparse(envelope), verifier)
         assert verified.certificate == parties.sender.signing_certificate
 
-    def test_unsigned_message_is_rejected(self, parties):
+    def test_unsigned_message_is_rejected(self, parties:'any_'):
         envelope = _sample_envelope()
 
         with pytest.raises(SOAPSecurityException):
             _ = verify(envelope, parties.receiver)
 
-    def test_signature_covers_a_timestamp(self, parties):
+    def test_signature_covers_a_timestamp(self, parties:'any_'):
         envelope = _sample_envelope()
         _ = sign(envelope, parties.sender)
 
@@ -235,7 +242,7 @@ class TestSignatureWrapping:
     to say what it verified, and the caller has to check that against what it uses.
     """
 
-    def test_a_relocated_signed_body_is_refused(self, parties):
+    def test_a_relocated_signed_body_is_refused(self, parties:'any_'):
         # The classic form. The signed body is moved somewhere the receiver does not read from and an
         # attacker-authored body takes its place, keeping the original's id so the reference still
         # resolves to genuinely signed content.
@@ -248,7 +255,7 @@ class TestSignatureWrapping:
 
         # The signed body is parked inside the security header, where a naive receiver never looks ..
         signed_copy = deepcopy(body)
-        security = wire.find(f'.//{qname(NS.WSSE, "Security")}')
+        security = cast_('any_', wire.find(f'.//{qname(NS.WSSE, "Security")}'))
         security.append(signed_copy)
 
         # .. and what remains in the body's place is the attacker's content under the same id.
@@ -268,7 +275,7 @@ class TestSignatureWrapping:
 
         assert 'is carried by 2 elements' in str(e.value)
 
-    def test_a_duplicate_id_is_refused_on_its_own(self, parties):
+    def test_a_duplicate_id_is_refused_on_its_own(self, parties:'any_'):
         # No relocation at all, just a second element carrying the same id as the signed body. The
         # ambiguity is the vulnerability - which of the two a reference points at is then a matter
         # of which one the resolver happens to find first.
@@ -279,7 +286,7 @@ class TestSignatureWrapping:
         body = get_body(wire)
         signed_id = body.get(qname(NS.WSU, 'Id'))
 
-        security = wire.find(f'.//{qname(NS.WSSE, "Security")}')
+        security = cast_('any_', wire.find(f'.//{qname(NS.WSSE, "Security")}'))
         decoy = etree.SubElement(security, '{urn:example:invoicing}Decoy')
         decoy.set(qname(NS.WSU, 'Id'), signed_id)
 
@@ -288,7 +295,7 @@ class TestSignatureWrapping:
 
         assert 'is carried by 2 elements' in str(e.value)
 
-    def test_the_verified_body_is_the_processed_body(self, parties):
+    def test_the_verified_body_is_the_processed_body(self, parties:'any_'):
         # The property the whole defence rests on. What comes back names the element that was
         # verified, so a caller can hold it against the body it is about to process rather than
         # trusting that a pass means the right thing was covered.
@@ -302,14 +309,14 @@ class TestSignatureWrapping:
         assert verified.body is get_body(wire)
         assert any(element is get_body(wire) for element in verified.elements)
 
-    def test_a_second_signature_is_refused(self, parties):
+    def test_a_second_signature_is_refused(self, parties:'any_'):
         # With two signatures there is no way to report which of them covered a given element, so a
         # receiver would have to guess, and an attacker gets to choose what the second one covers.
         envelope = _sample_envelope()
         _ = sign(envelope, parties.sender)
 
         wire = _reparse(envelope)
-        security = wire.find(f'.//{qname(NS.WSSE, "Security")}')
+        security = cast_('any_', wire.find(f'.//{qname(NS.WSSE, "Security")}'))
         signature = security.find(qname(NS.DS, 'Signature'))
         security.append(deepcopy(signature))
 
@@ -331,7 +338,7 @@ class TestSignatureCoverage:
     wrong with it is what it leaves out.
     """
 
-    def test_a_signature_that_omits_the_body_is_refused(self, parties):
+    def test_a_signature_that_omits_the_body_is_refused(self, parties:'any_'):
         envelope = _sample_envelope()
         _ = sign(envelope, parties.sender)
 
@@ -346,7 +353,7 @@ class TestSignatureCoverage:
 
         assert 'does not cover the SOAP body' in str(e.value)
 
-    def test_a_signature_that_omits_the_timestamp_is_refused(self, parties):
+    def test_a_signature_that_omits_the_timestamp_is_refused(self, parties:'any_'):
         # An uncovered timestamp says whatever the sender wants it to say, so a message whose
         # validity window is not signed has no validity window at all and could be replayed
         # indefinitely.
@@ -354,7 +361,7 @@ class TestSignatureCoverage:
         _ = sign(envelope, parties.sender)
 
         wire = _reparse(envelope)
-        timestamp = wire.find(f'.//{qname(NS.WSU, "Timestamp")}')
+        timestamp = cast_('any_', wire.find(f'.//{qname(NS.WSU, "Timestamp")}'))
         timestamp_id = timestamp.get(qname(NS.WSU, 'Id'))
 
         _drop_reference(wire, timestamp_id)
@@ -365,7 +372,7 @@ class TestSignatureCoverage:
 
         assert 'does not cover a Timestamp' in str(e.value)
 
-    def test_narrowing_the_reference_set_without_resigning_is_refused(self, parties):
+    def test_narrowing_the_reference_set_without_resigning_is_refused(self, parties:'any_'):
         # Without the sender's key an attacker can still delete a reference, and then the signature
         # value no longer matches the SignedInfo it covers. This is the case the coverage check is
         # not needed for, and it is here to show the two defences are independent.
@@ -390,7 +397,7 @@ class TestBodyEncryption:
     mandates it for bodies rather than attachments.
     """
 
-    def test_encrypt_decrypt_roundtrip(self, parties):
+    def test_encrypt_decrypt_roundtrip(self, parties:'any_'):
         envelope = _sample_envelope()
 
         encrypt_body(envelope, parties.sender)
@@ -405,7 +412,7 @@ class TestBodyEncryption:
         body = parse_body(received)
         assert body.SubmitInvoice.InvoiceNumber == 'INV-2026-0401'
 
-    def test_wrong_key_cannot_decrypt(self, parties):
+    def test_wrong_key_cannot_decrypt(self, parties:'any_'):
         envelope = _sample_envelope()
         encrypt_body(envelope, parties.sender)
 

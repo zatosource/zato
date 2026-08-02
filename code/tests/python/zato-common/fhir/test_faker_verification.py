@@ -7,6 +7,15 @@ import pytest
 from zato.fhir.base import FHIRResource
 from zato.fhir.tests.fakers import resources as fakers_module
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 
 def _iter_fake_callables():
     members = inspect.getmembers(fakers_module, inspect.isfunction)
@@ -23,7 +32,7 @@ _FAKE_PARAMS = list(_iter_fake_callables())
     [fn for _, fn in _FAKE_PARAMS],
     ids=[name for name, _ in _FAKE_PARAMS],
 )
-def test_fake_resource_roundtrip(fake_fn):
+def test_fake_resource_roundtrip(fake_fn:'any_'):
     result = fake_fn()
     assert isinstance(result, FHIRResource)
     assert getattr(result, '_resource_type', None)

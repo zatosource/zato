@@ -17,6 +17,14 @@ from zato.common.as2.reconcile import MDNReconciler
 from zato.common.as2.resubmit import load_event, record_message_received, reprocess, resend
 from zato.common.audit_log.api import AuditEvent, AuditLog
 from zato.common.json_internal import loads
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,7 +51,7 @@ class TestPayloadFidelity:
                 'cid': 'cid-received',
                 'payloads': [document],
                 }
-            record_message_received(audit_log, 'PartnerCorp', 'ZatoRetail', '<bol@partnercorp>', **options)
+            record_message_received(audit_log, 'PartnerCorp', 'ZatoRetail', '<bol@partnercorp>', **cast_('any_', options))
 
             event = load_event(1)
 
@@ -79,7 +87,7 @@ class TestPayloadFidelity:
                 'filename': 'bill-of-lading.pdf',
                 'payloads': [document],
                 }
-            reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<bol@zato>', **options)
+            reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<bol@zato>', **cast_('any_', options))
 
             event = load_event(1)
 
@@ -125,7 +133,7 @@ class TestPayloadFidelity:
                 'cid': 'cid-received',
                 'payloads': [edi_document, pdf_document],
                 }
-            record_message_received(audit_log, 'PartnerCorp', 'ZatoRetail', '<ship-notice@partnercorp>', **options)
+            record_message_received(audit_log, 'PartnerCorp', 'ZatoRetail', '<ship-notice@partnercorp>', **cast_('any_', options))
 
             event = load_event(1)
 
@@ -179,7 +187,7 @@ class TestPayloadFidelity:
                 'filename': 'ship-notice-856.edi',
                 'payloads': [edi_document, pdf_document],
                 }
-            reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<ship-notice@zato>', **options)
+            reconciler.record_message_sent('ZatoRetail', 'PartnerCorp', '<ship-notice@zato>', **cast_('any_', options))
 
             event = load_event(1)
 
@@ -188,18 +196,18 @@ class TestPayloadFidelity:
 
             # The message goes back out as one multi-attachment delivery, each document keeping
             # its own content type and filename, which is what the partner received originally.
-            item_count = len(send.payload)
+            item_count = len(cast_('any_', send.payload))
             assert item_count == 2
 
             first, second = send.payload
 
-            assert first.data == edi
-            assert first.content_type == 'application/edi-x12'
-            assert first.filename == 'ship-notice-856.edi'
+            assert cast_('any_', first).data == edi
+            assert cast_('any_', first).content_type == 'application/edi-x12'
+            assert cast_('any_', first).filename == 'ship-notice-856.edi'
 
-            assert second.data == Binary_Payload
-            assert second.content_type == 'application/pdf'
-            assert second.filename == 'bill-of-lading.pdf'
+            assert cast_('any_', second).data == Binary_Payload
+            assert cast_('any_', second).content_type == 'application/pdf'
+            assert cast_('any_', second).filename == 'bill-of-lading.pdf'
 
             # A multi-document payload carries its filenames inside, so none travels separately.
             assert send.filename is None

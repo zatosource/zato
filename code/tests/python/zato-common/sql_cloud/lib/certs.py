@@ -19,11 +19,14 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
 from cryptography.x509.oid import NameOID
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
     from cryptography.x509 import Certificate
     from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 
@@ -100,14 +103,14 @@ def _server_certificate(
     alternative_names = [x509.DNSName(host), x509.DNSName('localhost')]
 
     try:
-        alternative_names.append(x509.IPAddress(ipaddress.ip_address(host)))
+        alternative_names.append(cast_('any_', x509.IPAddress(ipaddress.ip_address(host))))
     except ValueError:
         pass
 
     builder = x509.CertificateBuilder()
     builder = builder.subject_name(_name(common_name))
     builder = builder.issuer_name(ca_name)
-    builder = builder.public_key(public_key)
+    builder = builder.public_key(cast_('any_', public_key))
     builder = builder.serial_number(x509.random_serial_number())
     builder = builder.not_valid_before(now - timedelta(days=1))
     builder = builder.not_valid_after(now + timedelta(days=365))

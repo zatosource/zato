@@ -12,6 +12,17 @@ from zato.fhir.r4_0_1.resources import (
     OperationOutcomeIssue,
     Patient,
 )
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 
 # ---------------------------------------------------------------------------
@@ -145,8 +156,8 @@ class TestSerialization:
         j = oo1.to_json()
         oo2 = OperationOutcome.from_json(j)
         assert isinstance(oo2, OperationOutcome)
-        assert len(oo2.issue) == len(oo1.issue)
-        for i1, i2 in zip(oo1.issue, oo2.issue):
+        assert len(cast_('any_', oo2.issue)) == len(oo1.issue)
+        for i1, i2 in zip(oo1.issue, cast_('any_', oo2.issue)):
             assert i1.severity == i2.severity
             assert i1.code == i2.code
             assert i1.diagnostics == i2.diagnostics
@@ -168,4 +179,4 @@ class TestIncludeValueset:
     def test_without_valueset(self):
         oo = validate_to_outcome(_valid_patient(), include_valueset=False)
         assert isinstance(oo, OperationOutcome)
-        assert oo.issue.severity == 'information'
+        assert cast_('any_', oo.issue).severity == 'information'

@@ -124,10 +124,10 @@ class TestRESTOutconnOpenAPI:
 
         # .. open the import popover and choose the copy/paste flow ..
         page.click('#openapi-import-link')
-        page.wait_for_selector('#openapi-from-copy-paste', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#openapi-from-copy-paste', state='visible', timeout=5000)
         page.click('#openapi-from-copy-paste')
 
-        page.wait_for_selector('#openapi-copy-paste-overlay:not(.hidden)', state='visible', timeout=5000)
+        _ = page.wait_for_selector('#openapi-copy-paste-overlay:not(.hidden)', state='visible', timeout=5000)
 
         # .. paste the document ..
         page.fill('#openapi-copy-paste-textarea', openapi_document)
@@ -144,7 +144,7 @@ class TestRESTOutconnOpenAPI:
         assert parse_response['success'], f'Expected the document to parse, got: {parse_response}'
 
         # .. the overlay now shows the table with both operations ..
-        page.wait_for_selector('#openapi-data-table-container-table tbody tr', state='visible', timeout=10000)
+        _ = page.wait_for_selector('#openapi-data-table-container-table tbody tr', state='visible', timeout=10000)
 
         table_text = page.inner_text('#openapi-data-table-container-table')
 

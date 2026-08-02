@@ -18,6 +18,12 @@ from zato.server.service import Service
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class InvokeSOAPOutconnForTests(Service):
     """ Invokes an outgoing SOAP connection on behalf of outgoing SOAP connection tests.
     """
@@ -60,7 +66,7 @@ class InvokeSOAPOutconnForTests(Service):
 
 # ################################################################################################################################
 
-    def _invoke_outconn_declarative(self, request):
+    def _invoke_outconn_declarative(self, request:'any_'):
 
         outconn_name = request['outconn_name']
 
@@ -91,7 +97,7 @@ class InvokeSOAPOutconnForTests(Service):
 
 # ################################################################################################################################
 
-    def _invoke_outconn(self, request):
+    def _invoke_outconn(self, request:'any_'):
 
         outconn_name = request['outconn_name']
         operation = request['operation']

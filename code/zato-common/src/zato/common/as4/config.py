@@ -17,11 +17,15 @@ from zato.common.util.xml_.keystore import load_certificates_pem, load_private_k
 # ################################################################################################################################
 
 if 0:
+    from collections.abc import Callable
     from zato.common.as4.pmode import PMode
     from zato.common.typing_ import callable_, stranydict
     from zato.common.util.xml_.keystore import Keystore
     callable_ = callable_
     stranydict = stranydict
+
+    # What the keys stored encrypted at rest are decrypted with
+    decryptfunc = Callable[[str], str]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,7 +54,7 @@ token_types = {
 # ################################################################################################################################
 # ################################################################################################################################
 
-def build_keystore(config:'stranydict', decrypt_func:'callable_') -> 'Keystore':
+def build_keystore(config:'stranydict', decrypt_func:'decryptfunc') -> 'Keystore':
     """ Builds a keystore out of configuration whose entries are pasted PEM strings,
     with the private keys stored encrypted at rest.
     """

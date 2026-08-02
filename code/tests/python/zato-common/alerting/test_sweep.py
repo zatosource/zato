@@ -25,7 +25,7 @@ from zato.common.util.api import utcnow
 
 if 0:
     from datetime import datetime
-    from zato.common.typing_ import anylist
+    from zato.common.typing_ import anylist, stranydict
     anylist = anylist
     datetime = datetime
 
@@ -57,10 +57,22 @@ class _TransportRecorder:
     def make(self) -> 'AlertTransports':
         out = AlertTransports()
 
-        out.send_email = lambda addresses, subject, body: self.emails.append((addresses, subject, body))
-        out.invoke_service = lambda service, payload: self.invocations.append((service, payload))
-        out.publish = lambda topic, payload: self.publications.append((topic, payload))
-        out.http_post = lambda url, payload: self.posts.append((url, payload))
+        def send_email(addresses:'anylist', subject:'str', body:'str') -> 'None':
+            self.emails.append((addresses, subject, body))
+
+        def invoke_service(service:'str', payload:'stranydict') -> 'None':
+            self.invocations.append((service, payload))
+
+        def publish(topic:'str', payload:'stranydict') -> 'None':
+            self.publications.append((topic, payload))
+
+        def http_post(url:'str', payload:'stranydict') -> 'None':
+            self.posts.append((url, payload))
+
+        out.send_email = send_email
+        out.invoke_service = invoke_service
+        out.publish = publish
+        out.http_post = http_post
 
         return out
 

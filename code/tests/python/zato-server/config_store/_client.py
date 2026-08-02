@@ -13,6 +13,15 @@ from base64 import b64encode
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
@@ -20,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 class ZatoClient:
 
-    def __init__(self, host, port, password):
+    def __init__(self, host:'any_', port:'any_', password:'any_'):
         self.host = host
         self.port = port
         self._auth = b64encode(f'admin.invoke:{password}'.encode()).decode()
@@ -28,7 +37,7 @@ class ZatoClient:
 
 # ################################################################################################################################
 
-    def _invoke(self, service_name, payload=None):
+    def _invoke(self, service_name:'any_', payload:'any_' = None):
         """ Invokes a service and returns both the parsed body and response headers.
         """
         url = f'{self.base_url}/{service_name}'
@@ -69,13 +78,13 @@ class ZatoClient:
 
 # ################################################################################################################################
 
-    def invoke(self, service_name, payload=None):
+    def invoke(self, service_name:'any_', payload:'any_' = None):
         result, _ = self._invoke(service_name, payload)
         return result
 
 # ################################################################################################################################
 
-    def get_list(self, service_name, **params):
+    def get_list(self, service_name:'any_', **params:'any_'):
         response, headers = self._invoke(service_name, params or None)
 
         meta = {}
@@ -94,22 +103,22 @@ class ZatoClient:
 
 # ################################################################################################################################
 
-    def create(self, service_name, **params):
+    def create(self, service_name:'any_', **params:'any_'):
         return self.invoke(service_name, params)
 
 # ################################################################################################################################
 
-    def edit(self, service_name, **params):
+    def edit(self, service_name:'any_', **params:'any_'):
         return self.invoke(service_name, params)
 
 # ################################################################################################################################
 
-    def delete(self, service_name, **params):
+    def delete(self, service_name:'any_', **params:'any_'):
         return self.invoke(service_name, params)
 
 # ################################################################################################################################
 
-    def ping(self, service_name, **params):
+    def ping(self, service_name:'any_', **params:'any_'):
         return self.invoke(service_name, params)
 
 # ################################################################################################################################

@@ -27,6 +27,12 @@ import conftest
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 _job_service_prefix = 'zato.scheduler.job'
 
 _suffix = CryptoManager.generate_hex_string(32)
@@ -58,14 +64,14 @@ conftest._pre_start_service_files.extend([
 # ################################################################################################################################
 
 @pytest.fixture(scope='module')
-def client(zato_server):
+def client(zato_server:'any_'):
     out = AdminClient(zato_server['base_url'], zato_server['password'])
     return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _parse(response):
+def _parse(response:'any_'):
     if isinstance(response, str):
         return json.loads(response)
     return response
@@ -82,7 +88,7 @@ class TestSchedulerLogEntries:
 
 # ##############################################################################################################################
 
-    def test_01_create_job(self, client):
+    def test_01_create_job(self, client:'any_'):
 
         start_date = datetime.now(timezone.utc).isoformat()
 
@@ -106,7 +112,7 @@ class TestSchedulerLogEntries:
 
 # ##############################################################################################################################
 
-    def test_03_log_entries_are_captured(self, client):
+    def test_03_log_entries_are_captured(self, client:'any_'):
 
         job_id = self.__class__.job_id
 
@@ -151,7 +157,7 @@ class TestSchedulerLogEntries:
 
 # ##############################################################################################################################
 
-    def test_99_cleanup(self, client):
+    def test_99_cleanup(self, client:'any_'):
         client.delete(f'{_job_service_prefix}.delete', id=self.__class__.job_id)
 
 # ################################################################################################################################

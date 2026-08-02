@@ -19,6 +19,13 @@ from zato.common.soap.ebxml import build_message, EbXMLInfo
 from zato.common.soap.envelope import attach_body, build_envelope, build_fault, to_bytes
 from zato.common.soap.message import SOAPMessage
 from zato.common.util.xml_.mime_ import new_content_id, Part
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,7 +67,7 @@ def _cdc_request():
 
 # ################################################################################################################################
 
-def _reparse(envelope):
+def _reparse(envelope:'any_'):
     out = etree.fromstring(to_bytes(envelope))
     return out
 
@@ -72,36 +79,36 @@ class TestSchemaConformance:
     proven here so that no schema machinery is ever needed at runtime.
     """
 
-    def test_soap12_envelope_validates(self, soap12_schema):
+    def test_soap12_envelope_validates(self, soap12_schema:'any_'):
         envelope = build_envelope(SOAPVersion.V12)
         _ = attach_body(envelope, _cdc_request(), 'submitSingleMessage')
 
         soap12_schema.assertValid(_reparse(envelope))
 
-    def test_soap11_envelope_validates(self, soap11_schema):
+    def test_soap11_envelope_validates(self, soap11_schema:'any_'):
         envelope = build_envelope(SOAPVersion.V11)
         _ = attach_body(envelope, _cdc_request(), 'submitSingleMessage')
 
         soap11_schema.assertValid(_reparse(envelope))
 
-    def test_soap12_envelope_with_addressing_validates(self, soap12_schema):
+    def test_soap12_envelope_with_addressing_validates(self, soap12_schema:'any_'):
         envelope = build_envelope(SOAPVersion.V12)
 
         info = AddressingInfo()
         info.action = 'urn:cdc:iisb:2011:submitSingleMessage'
         info.to = 'https://iis.example.gov/soap'
 
-        add_addressing(envelope, info)
+        _ = add_addressing(envelope, info)
         _ = attach_body(envelope, _cdc_request(), 'submitSingleMessage')
 
         soap12_schema.assertValid(_reparse(envelope))
 
-    def test_soap12_fault_validates(self, soap12_schema):
+    def test_soap12_fault_validates(self, soap12_schema:'any_'):
         envelope = build_fault(SOAPVersion.V12, FaultCode.Sender, 'Invalid credentials')
 
         soap12_schema.assertValid(_reparse(envelope))
 
-    def test_soap11_fault_validates(self, soap11_schema):
+    def test_soap11_fault_validates(self, soap11_schema:'any_'):
         envelope = build_fault(SOAPVersion.V11, FaultCode.Receiver, 'Internal error')
 
         soap11_schema.assertValid(_reparse(envelope))
@@ -125,15 +132,16 @@ class TestAddressingConformance:
         info.reply_to = _wsa_anonymous
         info.relates_to = 'urn:uuid:11111111-2222-3333-4444-555555555555'
 
-        add_addressing(envelope, info)
+        _ = add_addressing(envelope, info)
         _ = attach_body(envelope, _cdc_request(), 'submitSingleMessage')
 
         out = _reparse(envelope)
         return out
 
-    def test_each_header_block_validates(self, wsa_schema):
+    def test_each_header_block_validates(self, wsa_schema:'any_'):
         wire = self._addressed_wire()
         header = wire.find(f'{_soap12}Header')
+        assert header is not None
 
         header_blocks = [element for element in header if element.tag.startswith(_wsa)]
         local_names = {etree.QName(element).localname for element in header_blocks}
@@ -180,7 +188,7 @@ class TestXOPConformance:
         out = _reparse(envelope)
         return out, xop_parts
 
-    def test_include_validates_against_the_official_schema(self, xop_schema):
+    def test_include_validates_against_the_official_schema(self, xop_schema:'any_'):
         wire, _ = self._optimized_wire()
 
         include = wire.find(f'.//{_xop}Include')
@@ -191,14 +199,14 @@ class TestXOPConformance:
     def test_href_is_a_cid_uri_matching_the_part(self):
         wire, xop_parts = self._optimized_wire()
 
-        include = wire.find(f'.//{_xop}Include')
+        include = cast_('any_', wire.find(f'.//{_xop}Include'))
         href = include.get('href')
 
         # The recommendation requires a cid URL resolving to the part's Content-ID.
         assert href.startswith('cid:')
         assert href[4:] == xop_parts[0].content_id
 
-    def test_optimized_envelope_validates(self, soap12_schema):
+    def test_optimized_envelope_validates(self, soap12_schema:'any_'):
         wire, _ = self._optimized_wire()
 
         soap12_schema.assertValid(wire)
@@ -235,7 +243,7 @@ class TestEbXMLConformance:
         out = _reparse(envelope)
         return out
 
-    def test_message_header_validates(self, ebms2_schema):
+    def test_message_header_validates(self, ebms2_schema:'any_'):
         wire = self._spine_wire()
 
         message_header = wire.find(f'{_soap11}Header/{_eb}MessageHeader')
@@ -243,7 +251,7 @@ class TestEbXMLConformance:
 
         ebms2_schema.assertValid(deepcopy(message_header))
 
-    def test_manifest_validates(self, ebms2_schema):
+    def test_manifest_validates(self, ebms2_schema:'any_'):
         wire = self._spine_wire()
 
         manifest = wire.find(f'{_soap11}Body/{_eb}Manifest')
@@ -251,7 +259,7 @@ class TestEbXMLConformance:
 
         ebms2_schema.assertValid(deepcopy(manifest))
 
-    def test_envelope_validates(self, soap11_schema):
+    def test_envelope_validates(self, soap11_schema:'any_'):
         wire = self._spine_wire()
 
         soap11_schema.assertValid(wire)

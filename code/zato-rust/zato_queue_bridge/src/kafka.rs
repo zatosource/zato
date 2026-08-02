@@ -83,7 +83,7 @@ pub async fn consume_loop(
                 tracing::warn!("Kafka consumer `{}`: waiting for broker: {err}", config.name);
                 tokio::select! {
                     () = cancel.cancelled() => return,
-                    _ = tokio::time::sleep(std::time::Duration::from_secs(5)) => continue,
+                    () = tokio::time::sleep(std::time::Duration::from_secs(5)) => continue,
                 }
             }
         };
@@ -92,7 +92,7 @@ pub async fn consume_loop(
             tracing::warn!("Kafka consumer `{}`: cannot subscribe to `{}`: {err}", config.name, config.topic);
             tokio::select! {
                 () = cancel.cancelled() => return,
-                _ = tokio::time::sleep(std::time::Duration::from_secs(5)) => continue,
+                () = tokio::time::sleep(std::time::Duration::from_secs(5)) => continue,
             }
         }
 

@@ -27,6 +27,7 @@ import pytest
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.process_util import kill_process_tree
+from zato.common.typing_ import cast_
 
 # Make this directory importable so test modules can use the helpers defined below
 _suite_dir = os.path.dirname(__file__)
@@ -145,7 +146,7 @@ def _cleanup() -> 'None':
         shutil.rmtree(tmp, ignore_errors=True)
     _cleanup_refs['temporary_dir'] = None
 
-atexit.register(_cleanup)
+_ = atexit.register(_cleanup)
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item:'any_', call:'any_') -> 'any_':
@@ -194,7 +195,7 @@ def _stream_output(process:'subprocess.Popen', label:'str', time_reference:'floa
     """ Streams subprocess stdout to the test console with timing information.
     """
 
-    for line in iter(process.stdout.readline, b''):
+    for line in iter(cast_('any_', process.stdout).readline, b''):
         text = line.decode('utf-8', errors='replace').rstrip()
         elapsed = time.monotonic() - time_reference
         logger.info(f'[{label} {elapsed:6.1f}s] {text}')
@@ -222,7 +223,7 @@ def zato_server() -> 'any_':
     # .. 1) create a quickstart environment with the creation-time variables under test ..
 
     quickstart_env = os.environ.copy()
-    quickstart_env.pop('COVERAGE_PROCESS_START', None)
+    _ = quickstart_env.pop('COVERAGE_PROCESS_START', None)
     quickstart_env['Zato_Server_Log_Max_Size']     = Log_Max_Size
     quickstart_env['Zato_Server_Log_Backup_Count'] = Log_Backup_Count
 
@@ -281,7 +282,7 @@ def zato_server() -> 'any_':
     server_env['Zato_Broker_HTTP_Port'] = str(broker_port)
     server_env['Zato_Log_Level']        = Log_Level_Global
     server_env['Zato_Log_Level_REST']   = Log_Level_Rest
-    server_env.pop('COVERAGE_PROCESS_START', None)
+    _ = server_env.pop('COVERAGE_PROCESS_START', None)
 
     server_process = subprocess.Popen(
         [_Zato_Bin, 'start', server_dir, '--fg'],

@@ -11,6 +11,7 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.test.playwright_pubsub import close_dialog_via_jquery, open_create_dialog
 from ibm_mq_outconn import create_ibm_mq_outconn, delete_ibm_mq_outconn, edit_ibm_mq_outconn, find_ibm_mq_outconn_row, \
     open_edit_dialog, open_ibm_mq_outconn_page, wait_for_ibm_mq_outconn_row
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -131,7 +132,7 @@ class TestIBMMQOutconnLifecycle:
         open_create_dialog(page)
 
         # .. the badge is there ..
-        badge = page.wait_for_selector('#create-how-it-works', state='visible', timeout=5000)
+        badge = cast_('any_', page.wait_for_selector('#create-how-it-works', state='visible', timeout=5000))
         assert badge.text_content().strip() == 'How does it work?'
 
         # .. clicking it enters the help mode ..
@@ -139,7 +140,7 @@ class TestIBMMQOutconnLifecycle:
         _ = page.wait_for_selector('#create-how-it-works.how-it-works-active', state='attached', timeout=5000)
 
         # .. which shows the hint for the first field right away.
-        tooltip = page.wait_for_selector('.tippy-box', state='visible', timeout=5000)
+        tooltip = cast_('any_', page.wait_for_selector('.tippy-box', state='visible', timeout=5000))
         assert 'A unique name' in tooltip.text_content()
 
         # Leave the help mode and close the dialog.

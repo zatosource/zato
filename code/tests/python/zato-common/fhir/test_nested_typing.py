@@ -10,6 +10,17 @@ from zato.fhir.r4_0_1.datatypes import (
     Address, CodeableConcept, Coding, ContactPoint, HumanName,
     Identifier, Meta, Period, Quantity, Reference,
 )
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 
 class TestSingleComplexField:
@@ -132,8 +143,8 @@ class TestDeepNesting:
         })
         assert type(p.identifier[0]) is Identifier
         assert type(p.identifier[0].type_) is CodeableConcept
-        assert type(p.identifier[0].type_.coding[0]) is Coding
-        assert p.identifier[0].type_.coding[0].code == 'MR'
+        assert type(cast_('any_', p.identifier[0].type_.coding)[0]) is Coding
+        assert cast_('any_', p.identifier[0].type_.coding)[0].code == 'MR'
 
 
 class TestChoiceFieldTyping:

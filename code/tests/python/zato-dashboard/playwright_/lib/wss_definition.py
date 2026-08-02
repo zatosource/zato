@@ -19,7 +19,7 @@ from zato.common.test.playwright_pubsub import navigate_to_page, open_create_dia
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import any_, anydict
+    from zato.common.typing_ import any_, anydict, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -126,7 +126,7 @@ def fill_wss_form(page:'Page', options:'anydict', prefix:'str'='') -> 'None':
 
     # .. plain text inputs, switching to the tab each field lives on;
     # the first field always clicks its tab so the form's current tab does not matter ..
-    current_tab = None
+    current_tab:'strnone' = None
 
     for field_name in _Text_Fields:
         if field_name in options:

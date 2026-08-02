@@ -25,8 +25,18 @@ import pytest
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.process_util import kill_process_tree
 from zato.common.util.config import get_config_object, update_config_file
+from zato.common.typing_ import cast_
 
-def pytest_addoption(parser):
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def pytest_addoption(parser:'any_'):
     parser.addoption('--with-coverage', action='store_true', default=False,
                      help='Enable coverage collection on the Zato server subprocess')
 
@@ -70,12 +80,12 @@ def _cleanup():
         shutil.rmtree(_tmpdir, ignore_errors=True)
     _tmpdir = None
 
-atexit.register(_cleanup)
+_ = atexit.register(_cleanup)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _wait_for_server(host, port, timeout=60):
+def _wait_for_server(host:'any_', port:'any_', timeout:'any_' = 60):
     from urllib.request import Request, urlopen
 
     url = f'http://{host}:{port}/zato/ping'
@@ -102,7 +112,7 @@ def _wait_for_server(host, port, timeout=60):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _setup_coverage(tmpdir):
+def _setup_coverage(tmpdir:'any_'):
     """Set up .coveragerc for subprocess instrumentation via the installed a1_coverage.pth."""
 
     cov_data_dir = os.path.join(tmpdir, 'coverage')
@@ -110,7 +120,7 @@ def _setup_coverage(tmpdir):
 
     coveragerc_path = os.path.join(cov_data_dir, '.coveragerc')
     with open(coveragerc_path, 'w') as f:
-        f.write(f"""\
+        _ = f.write(f"""\
 [run]
 source = {_COVERAGE_SOURCE}
 data_file = {cov_data_dir}/.coverage
@@ -132,12 +142,12 @@ title = ConfigStore REST Test Coverage
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _generate_coverage_report(cov_data_dir, coveragerc_path):
+def _generate_coverage_report(cov_data_dir:'any_', coveragerc_path:'any_'):
     """Combine coverage data and generate the HTML report."""
 
     os.makedirs(_REPORTS_DIR, exist_ok=True)
 
-    subprocess.run(
+    _ = subprocess.run(
         [_ZATO_PY, '-m', 'coverage', 'combine', '--rcfile', coveragerc_path, cov_data_dir],
         capture_output=True,
         timeout=30,
@@ -159,7 +169,7 @@ def _generate_coverage_report(cov_data_dir, coveragerc_path):
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def zato_server(request):
+def zato_server(request:'any_'):
     global _server_proc, _tmpdir
 
     use_coverage = request.config.getoption('--with-coverage')
@@ -171,7 +181,7 @@ def zato_server(request):
 
     # 1) Create quickstart (with a clean env to avoid stale COVERAGE_PROCESS_START interference)
     qs_env = os.environ.copy()
-    qs_env.pop('COVERAGE_PROCESS_START', None)
+    _ = qs_env.pop('COVERAGE_PROCESS_START', None)
 
     qs_cmd = [
         _ZATO_BIN, 'quickstart', 'create', _tmpdir,
@@ -191,7 +201,7 @@ def zato_server(request):
     server_dir = os.path.join(_tmpdir, 'server1')
     repo_location = os.path.join(server_dir, 'config', 'repo')
 
-    config = get_config_object(repo_location, 'server.conf')
+    config = cast_('any_', get_config_object(repo_location, 'server.conf'))
     config['main']['port'] = str(port)
     update_config_file(config, repo_location, 'server.conf')
 
@@ -215,8 +225,8 @@ def zato_server(request):
     env = os.environ.copy()
     env['Zato_Config_Bind_Port'] = str(port)
     env['Zato_Broker_HTTP_Port'] = str(broker_port)
-    env.pop('COVERAGE_PROCESS_START', None)
-    if use_coverage:
+    _ = env.pop('COVERAGE_PROCESS_START', None)
+    if coveragerc_path:
         env['COVERAGE_PROCESS_START'] = coveragerc_path
 
     _server_proc = subprocess.Popen(
@@ -234,7 +244,7 @@ def zato_server(request):
     import threading
 
     def _stream_server_output():
-        for line in iter(_server_proc.stdout.readline, b''):
+        for line in iter(cast_('any_', _server_proc).stdout.readline, b''):
             text = line.decode('utf-8', errors='replace').rstrip()
             elapsed = time.monotonic() - t3
             print(f'[SERVER {elapsed:6.1f}s] {text}')

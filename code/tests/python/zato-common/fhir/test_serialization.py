@@ -5,6 +5,17 @@ import json
 
 from zato.fhir.r4_0_1 import Patient, Observation, Encounter, Practitioner, Organization
 from zato.fhir.r4_0_1.datatypes import Identifier, CodeableConcept, Coding
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 
 class TestSerializationRoundtrip:
@@ -12,8 +23,8 @@ class TestSerializationRoundtrip:
     def test_roundtrip_patient(self):
         p = Patient()
         p.id = 'test-patient-001'
-        p.name.family = 'Smith'
-        p.name.given = 'John'
+        cast_('any_', p.name).family = 'Smith'
+        cast_('any_', p.name).given = 'John'
         p.gender = 'male'
         p.birthDate = '1980-01-15'
 
@@ -49,8 +60,8 @@ class TestSerializationRoundtrip:
     def test_roundtrip_practitioner(self):
         pr = Practitioner()
         pr.id = 'test-pract-001'
-        pr.name.family = 'Jones'
-        pr.name.given = 'Mary'
+        cast_('any_', pr.name).family = 'Jones'
+        cast_('any_', pr.name).given = 'Mary'
 
         json_str = pr.to_json()
         pr2 = Practitioner.from_json(json_str)
@@ -74,9 +85,9 @@ class TestSerializationPreservesData:
     def test_preserves_nested_objects(self):
         p = Patient()
         p.id = 'nested-test'
-        p.name.family = 'Doe'
-        p.name.given = 'Jane'
-        p.name.prefix = 'Dr'
+        cast_('any_', p.name).family = 'Doe'
+        cast_('any_', p.name).given = 'Jane'
+        cast_('any_', p.name).prefix = 'Dr'
 
         d = p.to_dict()
         assert d['name'][0]['family'] == 'Doe'
@@ -128,7 +139,7 @@ class TestSerializationJson:
     def test_to_json_valid_json(self):
         p = Patient()
         p.id = 'json-test'
-        p.name.family = 'Test'
+        cast_('any_', p.name).family = 'Test'
 
         json_str = p.to_json()
         parsed = json.loads(json_str)

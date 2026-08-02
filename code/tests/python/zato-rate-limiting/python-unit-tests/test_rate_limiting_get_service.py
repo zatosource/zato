@@ -18,7 +18,13 @@ from zato.server.service.internal.http_soap import RateLimitingGet
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _make_service(channel_id, existing_opaque=None):
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _make_service(channel_id:'any_', existing_opaque:'any_' = None):
     """ Builds a bare object with just enough state for handle() to work.
     """
     service = object.__new__(RateLimitingGet)
@@ -128,4 +134,4 @@ class RateLimitingGetTestCase(unittest.TestCase):
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    unittest.main()
+    _ = unittest.main()

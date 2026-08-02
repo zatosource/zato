@@ -1,8 +1,8 @@
 use chrono::{Duration, Utc};
 use proptest::prelude::*;
+use zato_scheduler_core::DeferredLog;
 use zato_scheduler_core::job::RunningJob;
 use zato_scheduler_core::model::SchedulerJob;
-use zato_scheduler_core::DeferredLog;
 use zato_scheduler_core::scheduler::{SchedulerState, collect_due_jobs};
 
 fn make_due_job(id: i64, minutes_ago: u32) -> SchedulerJob {

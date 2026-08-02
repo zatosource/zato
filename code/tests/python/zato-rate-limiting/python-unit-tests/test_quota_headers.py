@@ -14,6 +14,13 @@ from unittest.mock import MagicMock, patch
 from zato.common.rate_limiting.cidr import SlottedCheckResult
 from zato.common.rate_limiting.manager import RateLimitingManager
 from zato.server.connection.http_soap.channel import RequestDispatcher
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,10 +45,10 @@ def _make_dispatcher():
 
 # ################################################################################################################################
 
-def _make_wsgi_environ():
+def _make_wsgi_environ() -> 'stranydict':
     """ Returns a minimal WSGI environ dict for testing dispatch.
     """
-    environ = {
+    environ:'stranydict' = {
         'REQUEST_METHOD': 'GET',
         'PATH_INFO': '/test/path',
         'HTTP_ACCEPT': '*/*',
@@ -77,7 +84,7 @@ def _make_url_match_result():
 
 # ################################################################################################################################
 
-def _make_check_result(is_allowed, limit=100, remaining=42, retry_after_us=0):
+def _make_check_result(is_allowed:'any_', limit:'any_' = 100, remaining:'any_' = 42, retry_after_us:'any_' = 0):
     """ Builds a SlottedCheckResult with the given values.
     """
     out = SlottedCheckResult()
@@ -92,7 +99,7 @@ def _make_check_result(is_allowed, limit=100, remaining=42, retry_after_us=0):
 
 # ################################################################################################################################
 
-def _dispatch(dispatcher, wsgi_environ):
+def _dispatch(dispatcher:'any_', wsgi_environ:'any_'):
     out = dispatcher.dispatch('cid123', '2026-01-01', wsgi_environ, MagicMock(), 'test-agent', '10.0.0.1')
     return out
 
@@ -106,8 +113,8 @@ class QuotaHeadersAllowedTestCase(unittest.TestCase):
     @patch.object(RequestDispatcher, '_check_security')
     @patch.object(RequestDispatcher, '_match_url')
     @patch.object(RequestDispatcher, '_extract_request_meta')
-    def test_headers_present_on_allowed_response(self, mock_extract_meta, mock_match_url,
-            mock_check_security, mock_invoke, mock_format):
+    def test_headers_present_on_allowed_response(self, mock_extract_meta:'any_', mock_match_url:'any_',
+            mock_check_security:'any_', mock_invoke:'any_', mock_format:'any_'):
         """ An allowed request governed by a sec-def limit carries both X-RateLimit headers.
         """
         dispatcher = _make_dispatcher()
@@ -135,8 +142,8 @@ class QuotaHeadersAllowedTestCase(unittest.TestCase):
     @patch.object(RequestDispatcher, '_check_security')
     @patch.object(RequestDispatcher, '_match_url')
     @patch.object(RequestDispatcher, '_extract_request_meta')
-    def test_no_headers_without_sec_def_limits(self, mock_extract_meta, mock_match_url,
-            mock_check_security, mock_invoke, mock_format):
+    def test_no_headers_without_sec_def_limits(self, mock_extract_meta:'any_', mock_match_url:'any_',
+            mock_check_security:'any_', mock_invoke:'any_', mock_format:'any_'):
         """ Without sec-def limits there are no X-RateLimit headers.
         """
         dispatcher = _make_dispatcher()
@@ -165,7 +172,7 @@ class QuotaHeadersRateLimitedTestCase(unittest.TestCase):
     @patch.object(RequestDispatcher, '_check_security')
     @patch.object(RequestDispatcher, '_match_url')
     @patch.object(RequestDispatcher, '_extract_request_meta')
-    def test_headers_present_on_429(self, mock_extract_meta, mock_match_url, mock_check_security):
+    def test_headers_present_on_429(self, mock_extract_meta:'any_', mock_match_url:'any_', mock_check_security:'any_'):
         """ A 429 from a sec-def limit carries the X-RateLimit headers next to Retry-After.
         """
         dispatcher = _make_dispatcher()
@@ -192,7 +199,7 @@ class QuotaHeadersRateLimitedTestCase(unittest.TestCase):
     @patch.object(RequestDispatcher, '_check_security')
     @patch.object(RequestDispatcher, '_match_url')
     @patch.object(RequestDispatcher, '_extract_request_meta')
-    def test_channel_429_stays_silent(self, mock_extract_meta, mock_match_url, mock_check_security):
+    def test_channel_429_stays_silent(self, mock_extract_meta:'any_', mock_match_url:'any_', mock_check_security:'any_'):
         """ A 429 from a channel-level limit carries Retry-After but no X-RateLimit headers.
         """
         dispatcher = _make_dispatcher()
@@ -238,8 +245,8 @@ class QuotaHeadersDecreasingTestCase(unittest.TestCase):
             }],
         }])
 
-        first = manager.check_sec_def(20, '10.0.0.1', 1_000_000, 'apikey20:')
-        second = manager.check_sec_def(20, '10.0.0.1', 1_000_001, 'apikey20:')
+        first = cast_('any_', manager.check_sec_def(20, '10.0.0.1', 1_000_000, 'apikey20:'))
+        second = cast_('any_', manager.check_sec_def(20, '10.0.0.1', 1_000_001, 'apikey20:'))
 
         self.assertTrue(first.is_allowed)
         self.assertTrue(second.is_allowed)

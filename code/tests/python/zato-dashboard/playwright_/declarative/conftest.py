@@ -184,7 +184,7 @@ def zato_dashboard() -> 'any_':
     # it at our Redis so it wipes the scheduler keys there and not anywhere else ..
 
     quickstart_env = os.environ.copy()
-    quickstart_env.pop('COVERAGE_PROCESS_START', None)
+    _ = quickstart_env.pop('COVERAGE_PROCESS_START', None)
 
     quickstart_command = [
         _Zato_Bin, 'quickstart', 'create', temporary_dir,
@@ -260,7 +260,7 @@ def zato_dashboard() -> 'any_':
     server_env['Zato_Queue_Bridge_Redis_Port'] = str(redis_port)
 
     server_env.update(scheduler_env_config)
-    server_env.pop('COVERAGE_PROCESS_START', None)
+    _ = server_env.pop('COVERAGE_PROCESS_START', None)
 
     server_process = subprocess.Popen(
         [_Zato_Bin, 'start', server_dir, '--fg'],
@@ -302,7 +302,7 @@ def zato_dashboard() -> 'any_':
     # .. 5) start the dashboard ..
 
     dashboard_env = os.environ.copy()
-    dashboard_env.pop('COVERAGE_PROCESS_START', None)
+    _ = dashboard_env.pop('COVERAGE_PROCESS_START', None)
     dashboard_env['Zato_Server_Address'] = f'http://127.0.0.1:{server_port}'
     dashboard_env['Zato_Server_Dir'] = server_dir
 

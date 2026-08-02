@@ -13,7 +13,8 @@ import time
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.playwright_pubsub import collect_console_errors, collect_http_errors, confirm_delete, create_topic, \
     filter_console_noise, get_item_id, get_table_row_count, navigate_to_page, open_create_dialog, open_edit_dialog, \
-    open_publish_overlay, submit_create_form, submit_edit_form, trigger_delete
+    open_publish_overlay, submit_edit_form, trigger_delete
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -224,7 +225,7 @@ class TestPubSubTopicLifecycle:
         # .. verify the description cell shows the placeholder ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{topic["name"]}"))'
         row = page.query_selector(row_selector)
-        cells = row.query_selector_all('td')
+        cells = cast_('any_', row).query_selector_all('td')
         desc_text = cells[4].inner_text().strip()
         assert desc_text == '---', f'Expected "---" for empty description, got: "{desc_text}"'
 
@@ -238,7 +239,7 @@ class TestPubSubTopicLifecycle:
 
         # .. verify the description cell is updated.
         row = page.query_selector(row_selector)
-        cells = row.query_selector_all('td')
+        cells = cast_('any_', row).query_selector_all('td')
         desc_text = cells[4].inner_text().strip()
         assert desc_text == 'Added description', \
             f'Expected "Added description", got: "{desc_text}"'
@@ -262,7 +263,7 @@ class TestPubSubTopicLifecycle:
         # .. verify the description is shown ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{topic["name"]}"))'
         row = page.query_selector(row_selector)
-        cells = row.query_selector_all('td')
+        cells = cast_('any_', row).query_selector_all('td')
         desc_text = cells[4].inner_text().strip()
         assert desc_text == 'Has a description', \
             f'Expected "Has a description", got: "{desc_text}"'
@@ -277,7 +278,7 @@ class TestPubSubTopicLifecycle:
 
         # .. verify the description cell now shows the form_hint placeholder.
         row = page.query_selector(row_selector)
-        cells = row.query_selector_all('td')
+        cells = cast_('any_', row).query_selector_all('td')
         desc_text = cells[4].inner_text().strip()
         desc_html = cells[4].inner_html()
 
@@ -304,7 +305,7 @@ class TestPubSubTopicLifecycle:
         open_publish_overlay(page, topic['item_id'])
 
         # .. verify the title contains the topic name.
-        title_elem = page.query_selector('#invoker-modal-title')
+        title_elem = cast_('any_', page.query_selector('#invoker-modal-title'))
         title_text = title_elem.inner_text()
         assert topic['name'] in title_text, \
             f'Expected topic name "{topic["name"]}" in overlay title, got: "{title_text}"'
@@ -370,7 +371,7 @@ class TestPubSubTopicLifecycle:
 
         # .. click Next to page 2 ..
         page.click('.action-panel a:has-text("Next")')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
         time.sleep(0.3)
 
         cells_p2 = page.query_selector_all('#data-table tbody tr:not(.ignore) td:nth-child(3)')
@@ -381,7 +382,7 @@ class TestPubSubTopicLifecycle:
 
         # .. click Next to page 3 ..
         page.click('.action-panel a:has-text("Next")')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
         time.sleep(0.3)
 
         cells_p3 = page.query_selector_all('#data-table tbody tr:not(.ignore) td:nth-child(3)')
@@ -391,7 +392,7 @@ class TestPubSubTopicLifecycle:
 
         # .. click Previous back to page 2 ..
         page.click('.action-panel a:has-text("Previous")')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
         time.sleep(0.3)
 
         cells_back = page.query_selector_all('#data-table tbody tr:not(.ignore) td:nth-child(3)')
@@ -452,7 +453,7 @@ class TestPubSubTopicLifecycle:
         navigate_to_page(page, base_url, _Page_Url_Pattern)
 
         # .. verify info text ..
-        action_panel = page.query_selector('.action-panel')
+        action_panel = cast_('any_', page.query_selector('.action-panel'))
         panel_text = action_panel.inner_text()
 
         assert 'Page 1 of' in panel_text, f'Expected "Page 1 of" in panel, got: "{panel_text}"'
@@ -481,7 +482,7 @@ class TestPubSubTopicLifecycle:
         response = response_info.value
         assert response.status == 200, f'Import demo config returned {response.status}'
 
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. verify topics appeared.
         count_after = get_table_row_count(page)
@@ -515,7 +516,7 @@ class TestPubSubTopicLifecycle:
         indicator = page.wait_for_selector(
             '#create-form .zato-name-invalid', state='visible', timeout=10000)
 
-        indicator_text = indicator.inner_text()
+        indicator_text = cast_('any_', indicator).inner_text()
         assert 'Name cannot be used' in indicator_text, \
             f'Expected "Name cannot be used", got: "{indicator_text}"'
 
@@ -551,7 +552,7 @@ class TestPubSubTopicLifecycle:
         indicator = page.wait_for_selector(
             '#create-form .zato-name-invalid', state='visible', timeout=10000)
 
-        indicator_text = indicator.inner_text()
+        indicator_text = cast_('any_', indicator).inner_text()
         assert 'Name cannot be used' in indicator_text, \
             f'Expected "Name cannot be used", got: "{indicator_text}"'
 
@@ -584,7 +585,7 @@ class TestPubSubTopicLifecycle:
         indicator = page.wait_for_selector(
             '#create-form .zato-name-invalid', state='visible', timeout=10000)
 
-        indicator_text = indicator.inner_text()
+        indicator_text = cast_('any_', indicator).inner_text()
         assert 'Name cannot be used' in indicator_text, \
             f'Expected "Name cannot be used", got: "{indicator_text}"'
 
@@ -640,7 +641,7 @@ class TestPubSubTopicLifecycle:
         indicator = page.wait_for_selector(
             '#edit-form .zato-name-invalid', state='visible', timeout=10000)
 
-        indicator_text = indicator.inner_text()
+        indicator_text = cast_('any_', indicator).inner_text()
         assert 'Name cannot be used' in indicator_text, \
             f'Expected "Name cannot be used", got: "{indicator_text}"'
 
@@ -680,7 +681,7 @@ class TestPubSubTopicLifecycle:
         taken_indicator = page.wait_for_selector(
             '#edit-form .zato-unique-taken', state='visible', timeout=10000)
 
-        taken_text = taken_indicator.inner_text()
+        taken_text = cast_('any_', taken_indicator).inner_text()
         assert 'Already taken' in taken_text, f'Expected "Already taken", got: "{taken_text}"'
 
 # ################################################################################################################################

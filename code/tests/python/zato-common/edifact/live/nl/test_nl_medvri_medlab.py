@@ -12,10 +12,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import unittest
 
 # Zato
-import zato.edifact.nl  # noqa: F401 - registers the Dutch message classes
+import zato.edifact.nl  # noqa: F401 # pyright: ignore[reportUnusedImport] - registers the Dutch message classes
 from zato.edifact import parse_edifact
 from zato.edifact.syntax import parse_una, split_segments
 from zato.edifact.testing.live_util import load_message, md_path_for
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
 
 # ##################################################################################################################################
 # ##################################################################################################################################
@@ -73,7 +81,7 @@ class TestMsg01(unittest.TestCase):
 
     def test_navigate(self) -> None:
         raw = load_message(_md_path, 1)
-        msg = parse_edifact(raw).message
+        msg = cast_('any_', parse_edifact(raw).message)
 
         self.assertEqual(msg.det.date.day, '14')
         self.assertEqual(msg.det.date.month, '02')
@@ -149,7 +157,7 @@ class TestMsg02(unittest.TestCase):
 
     def test_navigate(self) -> None:
         raw = load_message(_md_path, 2)
-        msg = parse_edifact(raw).message
+        msg = cast_('any_', parse_edifact(raw).message)
 
         self.assertEqual(msg.det.date.day, '12')
         self.assertEqual(msg.det.date.month, '02')
@@ -227,7 +235,7 @@ class TestMsg03(unittest.TestCase):
 
     def test_navigate(self) -> None:
         raw = load_message(_md_path, 3)
-        msg = parse_edifact(raw).message
+        msg = cast_('any_', parse_edifact(raw).message)
 
         self.assertEqual(msg.det.date.day, '14')
         self.assertEqual(msg.det.date.month, '02')
@@ -299,7 +307,7 @@ class TestMsg04(unittest.TestCase):
 
     def test_navigate(self) -> None:
         raw = load_message(_md_path, 4)
-        msg = parse_edifact(raw).message
+        msg = cast_('any_', parse_edifact(raw).message)
 
         self.assertEqual(msg.department.department, 'LAB KLINISCHE CHEMIE')
         self.assertEqual(msg.department.phone, '038-4445566')

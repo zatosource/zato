@@ -33,6 +33,13 @@ from zato.common.util.xml_.keystore import Keystore, new_keystore
 # ################################################################################################################################
 
 from soap_test_server import SOAPTestServer
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -64,15 +71,15 @@ class _LocalSchemaResolver(etree.Resolver):
         'http://www.oasis-open.org/committees/ebxml-msg/schema/envelope.xsd': 'soap-envelope-1.1.xsd',
     }
 
-    def resolve(self, url, public_id, context):
+    def resolve(self, url:'any_', public_id:'any_', context:'any_'):
         if url in self.url_map:
             path = os.path.join(Schemas_Dir, self.url_map[url])
-            return self.resolve_filename(path, context)
+            return cast_('any_', self).resolve_filename(path, context)
         return None
 
 # ################################################################################################################################
 
-def load_schema(file_name):
+def load_schema(file_name:'any_'):
     """ Loads one of the official XSDs with offline import resolution.
     """
     parser = etree.XMLParser()
@@ -197,7 +204,7 @@ def ebms2_schema():
 
     for element in document.iter('{http://www.w3.org/2001/XMLSchema}element'):
         if element.get('ref') == 'ds:Reference':
-            element.getparent().remove(element)
+            _ = cast_('any_', element.getparent()).remove(element)
 
     out = etree.XMLSchema(document)
     return out
@@ -205,13 +212,13 @@ def ebms2_schema():
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _make_name(common_name):
+def _make_name(common_name:'any_'):
     out = Name([NameAttribute(NameOID.COMMON_NAME, common_name)])
     return out
 
 # ################################################################################################################################
 
-def make_certificate(common_name, public_key, signer_name, signer_key, is_ca=False):
+def make_certificate(common_name:'any_', public_key:'any_', signer_name:'any_', signer_key:'any_', is_ca:'any_' = False):
     """ Issues a test certificate valid around the current moment.
     """
     now = datetime.now(timezone.utc)

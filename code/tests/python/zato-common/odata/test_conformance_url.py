@@ -17,6 +17,14 @@ from abnf import Rule
 # Zato
 from zato.common.odata.client import ODataClient
 from zato.common.odata.common import ODataVersion
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from collections.abc import Callable
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -62,13 +70,13 @@ class _CapturingSession:
     def __init__(self):
         self.urls = []
 
-    def request(self, method, url, **kwargs):
+    def request(self, method:'any_', url:'any_', **kwargs:'any_'):
         self.urls.append(url)
 
         out = _CapturingResponse()
         return out
 
-    def get(self, url, **kwargs):
+    def get(self, url:'any_', **kwargs:'any_'):
         out = self.request('GET', url)
         return out
 
@@ -82,7 +90,7 @@ Service_Root = 'http://host/service/'
 
 # ################################################################################################################################
 
-def _capture(odata_version, invoke, **config_extra):
+def _capture(odata_version:'ODataVersion | str', invoke:'Callable[[ODataClient], any_]', **config_extra:'any_'):
     """ Runs one client call against the capturing session and returns the generated
     URLs with the service root stripped - the odataRelativeUri of each request.
     """
@@ -93,7 +101,7 @@ def _capture(odata_version, invoke, **config_extra):
     }
     config.update(config_extra)
 
-    client = ODataClient(config)
+    client = cast_('any_', ODataClient(config))
 
     session = _CapturingSession()
     client.session = session
@@ -113,7 +121,7 @@ def _capture(odata_version, invoke, **config_extra):
 
 # ################################################################################################################################
 
-def _assert_valid(relative_uri):
+def _assert_valid(relative_uri:'any_'):
     """ Parses one relative URI against the normative grammar - a ParseError means
     the client generated something the OData specification does not allow.
     """
@@ -166,7 +174,7 @@ class TestSystemQueryOptions:
         _assert_valid(urls[0])
 
     def test_everything_at_once(self):
-        def invoke(client):
+        def invoke(client:'any_'):
             _ = client.read(
                 'Customers',
                 filter="City eq 'Berlin'",
@@ -288,7 +296,7 @@ class TestCustomParameters:
         _assert_valid(urls[0])
 
     def test_write_paths(self):
-        def invoke(client):
+        def invoke(client:'any_'):
             _ = client.create('Customers', {'CompanyName': 'New Co'})
             _ = client.update('Customers', 'ALFKI', {'City': 'Berlin'}, etag='*')
             client.delete('Customers', 'ALFKI', etag='*')
@@ -307,7 +315,7 @@ class TestV2URLs:
     """
 
     def test_paths_and_shared_options(self):
-        def invoke(client):
+        def invoke(client:'any_'):
             _ = client.read('Customers', filter="City eq 'Berlin'", top=10, skip=20)
             _ = client.get('Customers', 'ALFKI')
             _ = client.count('Customers')

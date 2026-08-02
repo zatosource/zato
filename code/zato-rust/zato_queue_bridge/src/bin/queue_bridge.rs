@@ -53,6 +53,10 @@ impl QueueBridgeConfig {
     }
 }
 
+/// Shape of an `XREADGROUP` reply: one entry per stream, each holding its message IDs
+/// paired with the field and value pairs of that message.
+type StreamReadResult = Vec<(String, Vec<(String, Vec<(String, String)>)>)>;
+
 /// Waits for the server to send a `reload` command with initial connection configs.
 ///
 /// Retries indefinitely, requesting config every 10 seconds until the server responds.
@@ -62,8 +66,6 @@ fn wait_for_initial_reload(conn: &mut redis::Connection, shared: &bridge::Bridge
         attempt += 1;
         tracing::info!("Requesting config from server (attempt {attempt})");
         redis_streams::request_config(conn);
-
-        type StreamReadResult = Vec<(String, Vec<(String, Vec<(String, String)>)>)>;
 
         let result: Result<StreamReadResult, redis::RedisError> = redis::cmd("XREADGROUP")
             .arg("GROUP")
@@ -174,7 +176,7 @@ async fn main() -> std::io::Result<()> {
     let bridge_thread = std::thread::Builder::new()
         .name("zato-bridge-loop".into())
         .spawn(move || {
-            bridge::bridge_loop(shared_for_loop, recv_sender);
+            bridge::bridge_loop(&shared_for_loop, &recv_sender);
         })
         .map_err(|err| std::io::Error::other(format!("Failed to spawn bridge loop thread: {err}")))?;
 
@@ -182,7 +184,7 @@ async fn main() -> std::io::Result<()> {
     let command_thread = std::thread::Builder::new()
         .name("zato-cmd-listener".into())
         .spawn(move || {
-            redis_streams::command_listener_loop(&mut command_conn, shared_for_commands);
+            redis_streams::command_listener_loop(&mut command_conn, &shared_for_commands);
         })
         .map_err(|err| std::io::Error::other(format!("Failed to spawn command listener: {err}")))?;
 

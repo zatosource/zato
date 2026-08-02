@@ -143,7 +143,7 @@ def console_logout(page:'Page', console_url:'str') -> 'None':
     _ = page.goto(console_url + Console_Logout_Path)
 
     # .. and a session that carries no identity always gets the form itself, never a redirect.
-    page.wait_for_selector('#username', state='visible', timeout=_Render_Timeout_MS)
+    _ = page.wait_for_selector('#username', state='visible', timeout=_Render_Timeout_MS)
 
 # ################################################################################################################################
 
@@ -166,7 +166,7 @@ def console_login(page:'Page', console_url:'str', username:'str', password:'str'
         # .. submit the form - a success redirects to the console page,
         # a failure re-renders the form with an error message ..
         page.click('.console-login-button')
-        page.wait_for_selector('.console-header, .console-login-error', state='visible', timeout=_Render_Timeout_MS)
+        _ = page.wait_for_selector('.console-header, .console-login-error', state='visible', timeout=_Render_Timeout_MS)
 
         # .. the console header renders only after a successful sign-in ..
         if page.query_selector('.console-header'):

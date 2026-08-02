@@ -32,10 +32,6 @@ if 0:
     from zato.common.odata.metadata import ServiceMetadata
     from zato.common.odata.query import Query
     from zato.common.typing_ import any_, anydict, anylist, stranydict, strdict, strstrdict
-    batch_request_list = batch_request_list
-    batch_response_list = batch_response_list
-    Query = Query
-    ServiceMetadata = ServiceMetadata
 
 # ################################################################################################################################
 # ################################################################################################################################

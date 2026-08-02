@@ -21,7 +21,7 @@ from zato.common.test import rand_string
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import anydict, anylist
+    from zato.common.typing_ import any_, anydict, anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -31,6 +31,7 @@ from rest_channel import create_channel, delete_channel, edit_channel, find_chan
     wait_for_channel_row
 
 from zato.common.test.playwright_pubsub import open_create_dialog
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -69,12 +70,12 @@ class TestRESTChannelCRUD:
         open_channel_page(page, base_url)
 
         # .. verify the page heading ..
-        heading = page.query_selector('h2.zato')
+        heading = cast_('any_', page.query_selector('h2.zato'))
         heading_text = heading.inner_text()
         assert 'REST API endpoints' in heading_text, f'Expected "REST API endpoints" in heading, got: {heading_text}'
 
         # .. verify the create link is present ..
-        create_link = page.query_selector('#markup .page_prompt a')
+        create_link = cast_('any_', page.query_selector('#markup .page_prompt a'))
         create_link_text = create_link.inner_text()
         assert 'Create a new REST API endpoint' in create_link_text, \
             f'Expected create link text, got: {create_link_text}'

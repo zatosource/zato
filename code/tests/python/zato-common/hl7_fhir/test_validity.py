@@ -22,6 +22,12 @@ from conftest import Real_World_Dir, Samples_Dir, Test_Conversions_Dir, list_mes
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _all_fixture_paths():
     """ Every fixture message the conversion is proven against - the IG test conversions,
     the sample tree and the real-world vendor messages.
@@ -63,7 +69,7 @@ def _fixture_id(file_path:'str') -> 'str':
 # ################################################################################################################################
 
 @pytest.mark.parametrize('file_path', _all_fixture_paths(), ids=_fixture_id)
-def test_bundle_is_valid_r4(file_path):
+def test_bundle_is_valid_r4(file_path:'any_'):
     """ Validity proof - every produced bundle passes the R4 validator.
     """
     msg = _parse_or_skip(file_path)
@@ -75,7 +81,7 @@ def test_bundle_is_valid_r4(file_path):
 # ################################################################################################################################
 
 @pytest.mark.parametrize('file_path', _all_fixture_paths(), ids=_fixture_id)
-def test_references_resolve_inside_bundle(file_path):
+def test_references_resolve_inside_bundle(file_path:'any_'):
     """ Integrity proof - every urn:uuid reference points at an entry of the same bundle.
     """
     msg = _parse_or_skip(file_path)
@@ -100,7 +106,7 @@ def test_references_resolve_inside_bundle(file_path):
 
 # ################################################################################################################################
 
-def _collect_references(node, out):
+def _collect_references(node:'any_', out:'any_'):
     """ Walks a resource dict and gathers every reference value it carries.
     """
     if isinstance(node, dict):
@@ -122,7 +128,7 @@ def _collect_references(node, out):
 # ################################################################################################################################
 
 @pytest.mark.parametrize('file_path', _all_fixture_paths(), ids=_fixture_id)
-def test_full_urls_are_unique(file_path):
+def test_full_urls_are_unique(file_path:'any_'):
     """ Dedup proof - no two entries share a full URL, one resource per real-world entity.
     """
     msg = _parse_or_skip(file_path)

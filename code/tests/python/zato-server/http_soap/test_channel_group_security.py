@@ -20,7 +20,8 @@ from zato.server.connection.http_soap.channel import RequestDispatcher
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import stranydict
+    from zato.common.typing_ import any_, stranydict
+    any_ = any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -108,7 +109,7 @@ class MatchedCredentialWithoutADefinitionTestCase(TestCase):
         dispatcher.url_data.basic_auth_get_by_id.return_value = None
 
         ctx = _make_ctx()
-        wsgi_environ = {'HTTP_AUTHORIZATION': _make_basic_auth_header()}
+        wsgi_environ:'stranydict' = {'HTTP_AUTHORIZATION': _make_basic_auth_header()}
 
         with self.assertRaises(Forbidden):
             dispatcher.check_security_via_groups(_cid, _channel_name, ctx, wsgi_environ)
@@ -123,7 +124,7 @@ class MatchedCredentialWithoutADefinitionTestCase(TestCase):
         dispatcher.url_data.apikey_get_by_id.return_value = None
 
         ctx = _make_ctx(apikey_header=_apikey_header)
-        wsgi_environ = {_apikey_header: _apikey}
+        wsgi_environ:'stranydict' = {_apikey_header: _apikey}
 
         with self.assertRaises(Forbidden):
             dispatcher.check_security_via_groups(_cid, _channel_name, ctx, wsgi_environ)
@@ -137,7 +138,7 @@ class MatchedCredentialWithoutADefinitionTestCase(TestCase):
         dispatcher.url_data.oauth_get_by_id.return_value = None
 
         ctx = _make_ctx()
-        wsgi_environ = {'HTTP_AUTHORIZATION': 'Bearer test-token-0001'}
+        wsgi_environ:'stranydict' = {'HTTP_AUTHORIZATION': 'Bearer test-token-0001'}
 
         with self.assertRaises(Forbidden):
             dispatcher.check_security_via_groups(_cid, _channel_name, ctx, wsgi_environ)
@@ -151,7 +152,7 @@ class MatchedCredentialWithoutADefinitionTestCase(TestCase):
         dispatcher.url_data.basic_auth_get_by_id.return_value = _make_sec_def()
 
         ctx = _make_ctx()
-        wsgi_environ = {'HTTP_AUTHORIZATION': _make_basic_auth_header()}
+        wsgi_environ:'stranydict' = {'HTTP_AUTHORIZATION': _make_basic_auth_header()}
 
         dispatcher.check_security_via_groups(_cid, _channel_name, ctx, wsgi_environ)
 

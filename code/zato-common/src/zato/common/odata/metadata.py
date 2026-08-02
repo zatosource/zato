@@ -45,12 +45,12 @@ _v2_http_method_attribute = '{http://schemas.microsoft.com/ado/2007/08/dataservi
 # ################################################################################################################################
 # ################################################################################################################################
 
-property_dict = 'dict[str, EntityProperty]'
-navigation_dict = 'dict[str, NavigationProperty]'
-entity_type_dict = 'dict[str, EntityType]'
-entity_set_dict = 'dict[str, EntitySet]'
-operation_dict = 'dict[str, Operation]'
-parameter_list = 'list[OperationParameter]'
+property_dict = dict[str, 'EntityProperty']
+navigation_dict = dict[str, 'NavigationProperty']
+entity_type_dict = dict[str, 'EntityType']
+entity_set_dict = dict[str, 'EntitySet']
+operation_dict = dict[str, 'Operation']
+parameter_list = list['OperationParameter']
 
 # ################################################################################################################################
 # ################################################################################################################################

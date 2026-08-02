@@ -52,19 +52,19 @@ def _quoted_action(action:'str') -> 'str':
     return out
 
 # The static bodies the ERP answers with - consumed by the services as raw strings
-_Raw_Header_Result = b'<CreateInvoiceHeader_Result xmlns="urn:example-erp/codeunit/InvoiceEntryService">' \
+_Raw_Header_Result = b'<CreateInvoiceHeader_Result xmlns="urn:example-erp/codeunit/InvoiceEntryService">' + \
     b'<return_value>INV-2026-0001</return_value></CreateInvoiceHeader_Result>'
 
-_Raw_Lines_Result = b'<CreateInvoiceLines_Result xmlns="urn:example-erp/codeunit/InvoiceEntryService">' \
+_Raw_Lines_Result = b'<CreateInvoiceLines_Result xmlns="urn:example-erp/codeunit/InvoiceEntryService">' + \
     b'<return_value>2</return_value></CreateInvoiceLines_Result>'
 
-_Raw_Payment_Result = b'<RegisterPayment_Result xmlns="urn:example-erp/codeunit/PaymentEntryService">' \
+_Raw_Payment_Result = b'<RegisterPayment_Result xmlns="urn:example-erp/codeunit/PaymentEntryService">' + \
     b'<return_value>PAY-2026-0001</return_value></RegisterPayment_Result>'
 
-_Raw_Invoice_Ack = b'<InvoiceImport_Result xmlns="urn:example-erp/codeunit/InvoiceEntryService">' \
+_Raw_Invoice_Ack = b'<InvoiceImport_Result xmlns="urn:example-erp/codeunit/InvoiceEntryService">' + \
     b'<status>Accepted</status></InvoiceImport_Result>'
 
-_Raw_Payment_Status = b'<GetPaymentStatus_Result xmlns="urn:example-erp/page/PaymentStatus">' \
+_Raw_Payment_Status = b'<GetPaymentStatus_Result xmlns="urn:example-erp/page/PaymentStatus">' + \
     b'<status>Settled</status></GetPaymentStatus_Result>'
 
 # A complete invoice the tests post to the JSON channels

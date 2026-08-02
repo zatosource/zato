@@ -10,8 +10,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import sqlite3
 
 # Zato
+from page_base import text_of
 from zato.common.crypto.api import CryptoManager
 from zato.x12.control import ControlNumberStore, Kind_Group, Kind_Interchange, Kind_Transaction_Set, get_control_db_path
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,7 +37,7 @@ def _open_control_numbers_page(page:'Page', base_url:'str') -> 'None':
     """ Navigates to the control numbers page and waits for its table.
     """
     _ = page.goto(f'{base_url}{_Control_Numbers_Page_Url}')
-    page.wait_for_selector('#data-table', state='visible')
+    _ = page.wait_for_selector('#data-table', state='visible')
 
 # ################################################################################################################################
 
@@ -99,30 +101,30 @@ class TestB2BControlNumbers:
             set_row = page.locator(_row_selector(sender, Kind_Transaction_Set))
 
             # .. the interchange sequence handed out 1 and 2, so the next number is 3 ..
-            assert interchange_row.locator('td.control-number-next').text_content().strip() == '3'
-            assert interchange_row.locator('td').nth(4).text_content().strip() == '2'
+            assert cast_('any_', interchange_row.locator('td.control-number-next').text_content()).strip() == '3'
+            assert cast_('any_', interchange_row.locator('td').nth(4).text_content()).strip() == '2'
 
             # .. its last-used timestamp is a real ISO timestamp ..
-            last_used_time = interchange_row.locator('td').nth(5).text_content().strip()
+            last_used_time = cast_('any_', interchange_row.locator('td').nth(5).text_content()).strip()
             assert 'T' in last_used_time
 
             # .. the group sequence advanced once ..
-            assert group_row.locator('td.control-number-next').text_content().strip() == '2'
-            assert group_row.locator('td').nth(4).text_content().strip() == '1'
+            assert cast_('any_', group_row.locator('td.control-number-next').text_content()).strip() == '2'
+            assert cast_('any_', group_row.locator('td').nth(4).text_content()).strip() == '1'
 
             # .. and the hand-made transaction set sequence has no last-used information.
-            assert set_row.locator('td.control-number-next').text_content().strip() == '77'
-            assert set_row.locator('td').nth(4).text_content().strip() == '---'
-            assert set_row.locator('td').nth(5).text_content().strip() == '---'
+            assert cast_('any_', set_row.locator('td.control-number-next').text_content()).strip() == '77'
+            assert cast_('any_', set_row.locator('td').nth(4).text_content()).strip() == '---'
+            assert cast_('any_', set_row.locator('td').nth(5).text_content()).strip() == '---'
 
             # A value that is not a number is rejected and the row is restored ..
             interchange_row.locator('a.control-number-edit').click()
             interchange_row.locator('input.control-number-input').fill('not-a-number')
             interchange_row.locator('a.control-number-save').click()
 
-            page.wait_for_selector('#user-message-div', state='visible')
-            assert 'must be an integer' in page.text_content('#user-message')
-            assert interchange_row.locator('td.control-number-next').text_content().strip() == '3'
+            _ = page.wait_for_selector('#user-message-div', state='visible')
+            assert 'must be an integer' in text_of(page, '#user-message')
+            assert cast_('any_', interchange_row.locator('td.control-number-next').text_content()).strip() == '3'
 
             # .. while a real number is saved in place - the message left by the error
             # is hidden first so the wait below only passes once this save comes back.
@@ -132,10 +134,10 @@ class TestB2BControlNumbers:
             interchange_row.locator('input.control-number-input').fill('500')
             interchange_row.locator('a.control-number-save').click()
 
-            page.wait_for_selector('#user-message-div', state='visible')
-            assert 'Next number saved' in page.text_content('#user-message')
+            _ = page.wait_for_selector('#user-message-div', state='visible')
+            assert 'Next number saved' in text_of(page, '#user-message')
 
-            assert interchange_row.locator('td.control-number-next').text_content().strip() == '500'
+            assert cast_('any_', interchange_row.locator('td.control-number-next').text_content()).strip() == '500'
 
             # What the page saved is what the store now hands out.
             store = ControlNumberStore(get_control_db_path())

@@ -21,13 +21,14 @@ from zato.common.test.playwright_pubsub import close_dialog_via_jquery, navigate
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import any_, anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 from declarative import activate_rest_tab
 from rest_outconn import fill_outconn_form, get_outconn_id, open_edit_dialog, open_outconn_page, wait_for_outconn_row
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -97,7 +98,7 @@ class TestRESTOutconnTabsUI:
         open_create_dialog(page)
 
         # .. the plain form is there ..
-        name_input = page.query_selector('#create-div #id_name')
+        name_input = cast_('any_', page.query_selector('#create-div #id_name'))
         assert name_input.is_visible(), 'Expected the plain create form on the channels page'
 
         # .. with no tab headers and no tab panels anywhere in the dialog.
@@ -169,7 +170,7 @@ class TestRESTOutconnTabsUI:
             f'Expected only the remaining row to be saved, got: {query_rows}'
 
         page.click('#edit-div button:has-text("Cancel")')
-        page.wait_for_selector('#edit-div', state='hidden', timeout=5000)
+        _ = page.wait_for_selector('#edit-div', state='hidden', timeout=5000)
 
 # ################################################################################################################################
 
@@ -226,7 +227,7 @@ class TestRESTOutconnTabsUI:
             f'Expected the JSONata mode to be saved, got: {query_rows}'
 
         page.click('#edit-div button:has-text("Cancel")')
-        page.wait_for_selector('#edit-div', state='hidden', timeout=5000)
+        _ = page.wait_for_selector('#edit-div', state='hidden', timeout=5000)
 
 # ################################################################################################################################
 # ################################################################################################################################

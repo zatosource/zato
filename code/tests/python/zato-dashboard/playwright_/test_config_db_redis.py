@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -97,7 +98,7 @@ class TestConfigDBRedis:
         page.click('#check-button')
 
         # .. and verify the OK result with the response time appears.
-        result = page.wait_for_selector('.test-results .result-status.ok', state='visible', timeout=10000)
+        result = cast_('any_', page.wait_for_selector('.test-results .result-status.ok', state='visible', timeout=10000))
         result_text = result.inner_text()
         assert result_text == 'OK', f'Expected "OK", got: {result_text}'
 

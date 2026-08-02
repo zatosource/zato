@@ -170,7 +170,7 @@ class TestMLLPRestBridgePersistence:
     def test_07_cleanup(self, client:'ZatoClient') -> 'None':
         """ Deletes the test channel.
         """
-        client.delete(f'{_GENERIC_SERVICE}.delete', id=self.__class__.mllp_id)
+        _ = client.delete(f'{_GENERIC_SERVICE}.delete', id=self.__class__.mllp_id)
 
 # ################################################################################################################################
 

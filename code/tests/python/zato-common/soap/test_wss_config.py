@@ -26,11 +26,18 @@ from zato.common.util.xml_.core import qname, to_timestamp
 # ################################################################################################################################
 
 from certs import certificate_pem_path, private_key_pem_path
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _reparse(envelope):
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _reparse(envelope:'any_'):
     """ Serializes and reparses an envelope, as would happen over the wire.
     """
     out = etree.fromstring(to_bytes(envelope))
@@ -54,7 +61,7 @@ def _sample_envelope():
 
 # ################################################################################################################################
 
-def _sender_x509_config(parties, sign, encrypt):
+def _sender_x509_config(parties:'any_', sign:'any_', encrypt:'any_'):
     """ The config dict of an outgoing connection's X.509 definition -
     paths to our own key material plus the other side's certificate.
     """
@@ -71,7 +78,7 @@ def _sender_x509_config(parties, sign, encrypt):
 
 # ################################################################################################################################
 
-def _receiver_x509_config(parties, sign, encrypt):
+def _receiver_x509_config(parties:'any_', sign:'any_', encrypt:'any_'):
     """ The config dict of a channel's X.509 definition - paths to our own decryption key
     plus the sender's pinned certificate.
     """
@@ -87,7 +94,7 @@ def _receiver_x509_config(parties, sign, encrypt):
 
 # ################################################################################################################################
 
-def _sender_saml_config(parties, issuer='urn:qhin:example', audience=None):
+def _sender_saml_config(parties:'any_', issuer:'any_' = 'urn:qhin:example', audience:'any_' = None):
     """ The config dict of an outgoing connection's SAML definition - an XUA-style assertion
     signed with our own key.
     """
@@ -111,7 +118,7 @@ def _sender_saml_config(parties, issuer='urn:qhin:example', audience=None):
 
 # ################################################################################################################################
 
-def _receiver_saml_config(parties, issuer='urn:qhin:example', audience=None):
+def _receiver_saml_config(parties:'any_', issuer:'any_' = 'urn:qhin:example', audience:'any_' = None):
     """ The config dict of a channel's SAML definition - the issuer it expects and the CA the
     issuer's signing certificate has to chain to.
     """
@@ -128,7 +135,7 @@ def _receiver_saml_config(parties, issuer='urn:qhin:example', audience=None):
 
 # ################################################################################################################################
 
-def _reissue_assertion_window(assertion, parties, seconds_ago):
+def _reissue_assertion_window(assertion:'any_', parties:'any_', seconds_ago:'any_'):
     """ Moves an assertion's validity window into the past and re-signs it, which is what an
     issuer with a badly-set clock produces and what a captured assertion looks like once its
     window has closed.
@@ -159,7 +166,7 @@ class TestKeystoreFromConfig:
     """ PEM files out of a plain config dict of paths - the exact shape the server keeps in RAM.
     """
 
-    def test_all_fields(self, parties):
+    def test_all_fields(self, parties:'any_'):
         config = {
             'signing_key': private_key_pem_path(parties.sender.signing_key),
             'signing_certificate_chain': certificate_pem_path(parties.sender.signing_certificate),
@@ -203,7 +210,7 @@ class TestUsernameTokenMode:
         envelope = _sample_envelope()
         apply_wss(envelope, config)
 
-        enforce_wss(_reparse(envelope), config)
+        _ = enforce_wss(_reparse(envelope), config)
 
     def test_digest_roundtrip(self):
         config = {'mode': Mode.UsernameToken, 'username': 'MYUSER', 'password': 'MYPASS', 'use_digest': True}
@@ -215,7 +222,7 @@ class TestUsernameTokenMode:
         wire = to_bytes(envelope)
         assert b'MYPASS' not in wire
 
-        enforce_wss(etree.fromstring(wire), config)
+        _ = enforce_wss(etree.fromstring(wire), config)
 
     def test_wrong_password_is_rejected(self):
         sender_config = {'mode': Mode.UsernameToken, 'username': 'MYUSER', 'password': 'WRONG', 'use_digest': False}
@@ -225,7 +232,7 @@ class TestUsernameTokenMode:
         apply_wss(envelope, sender_config)
 
         with pytest.raises(SOAPSecurityException):
-            enforce_wss(_reparse(envelope), channel_config)
+            _ = enforce_wss(_reparse(envelope), channel_config)
 
     def test_a_definition_without_the_digest_flag_uses_clear_text(self):
         # The flag is an optional field kept in a definition's opaque attributes, so a definition
@@ -239,7 +246,7 @@ class TestUsernameTokenMode:
         envelope = _sample_envelope()
         apply_wss(envelope, config)
 
-        enforce_wss(_reparse(envelope), config)
+        _ = enforce_wss(_reparse(envelope), config)
 
     def test_a_definition_without_the_digest_flag_still_refuses_a_wrong_password(self):
         sender_config = {'mode': Mode.UsernameToken, 'username': 'MYUSER', 'password': 'WRONG'}
@@ -249,7 +256,7 @@ class TestUsernameTokenMode:
         apply_wss(envelope, sender_config)
 
         with pytest.raises(SOAPSecurityException):
-            enforce_wss(_reparse(envelope), channel_config)
+            _ = enforce_wss(_reparse(envelope), channel_config)
 
     def test_missing_header_is_rejected(self):
         config = {'mode': Mode.UsernameToken, 'username': 'MYUSER', 'password': 'MYPASS', 'use_digest': False}
@@ -257,7 +264,7 @@ class TestUsernameTokenMode:
         envelope = _sample_envelope()
 
         with pytest.raises(SOAPSecurityException):
-            enforce_wss(envelope, config)
+            _ = enforce_wss(envelope, config)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -266,13 +273,13 @@ class TestX509Mode:
     """ The X.509 mode - signatures and body encryption out of the PEM files the config points to.
     """
 
-    def test_sign_verify_roundtrip(self, parties):
+    def test_sign_verify_roundtrip(self, parties:'any_'):
         envelope = _sample_envelope()
         apply_wss(envelope, _sender_x509_config(parties, sign=True, encrypt=False))
 
-        enforce_wss(_reparse(envelope), _receiver_x509_config(parties, sign=True, encrypt=False))
+        _ = enforce_wss(_reparse(envelope), _receiver_x509_config(parties, sign=True, encrypt=False))
 
-    def test_sign_and_encrypt_roundtrip(self, parties):
+    def test_sign_and_encrypt_roundtrip(self, parties:'any_'):
         envelope = _sample_envelope()
         apply_wss(envelope, _sender_x509_config(parties, sign=True, encrypt=True))
 
@@ -281,23 +288,23 @@ class TestX509Mode:
         assert b'FL0001' not in wire
 
         received = etree.fromstring(wire)
-        enforce_wss(received, _receiver_x509_config(parties, sign=True, encrypt=True))
+        _ = enforce_wss(received, _receiver_x509_config(parties, sign=True, encrypt=True))
 
         # After enforcement the body reads back in the clear.
         body = parse_body(received)
         assert body.submitSingleMessage.facilityID == 'FL0001'
 
-    def test_encrypt_only_roundtrip(self, parties):
+    def test_encrypt_only_roundtrip(self, parties:'any_'):
         envelope = _sample_envelope()
         apply_wss(envelope, _sender_x509_config(parties, sign=False, encrypt=True))
 
         received = _reparse(envelope)
-        enforce_wss(received, _receiver_x509_config(parties, sign=False, encrypt=True))
+        _ = enforce_wss(received, _receiver_x509_config(parties, sign=False, encrypt=True))
 
         body = parse_body(received)
         assert body.submitSingleMessage.facilityID == 'FL0001'
 
-    def test_tampered_body_is_rejected(self, parties):
+    def test_tampered_body_is_rejected(self, parties:'any_'):
         envelope = _sample_envelope()
         apply_wss(envelope, _sender_x509_config(parties, sign=True, encrypt=False))
 
@@ -308,9 +315,9 @@ class TestX509Mode:
         facility_id.text = 'FL9999'
 
         with pytest.raises(SOAPSecurityException):
-            enforce_wss(wire, _receiver_x509_config(parties, sign=True, encrypt=False))
+            _ = enforce_wss(wire, _receiver_x509_config(parties, sign=True, encrypt=False))
 
-    def test_untrusted_signer_is_rejected(self, parties):
+    def test_untrusted_signer_is_rejected(self, parties:'any_'):
         # The receiver signs but the channel's definition pins the sender's certificate.
         signer_config = {
             'mode': Mode.X509,
@@ -324,9 +331,9 @@ class TestX509Mode:
         apply_wss(envelope, signer_config)
 
         with pytest.raises(SOAPSecurityException):
-            enforce_wss(_reparse(envelope), _receiver_x509_config(parties, sign=True, encrypt=False))
+            _ = enforce_wss(_reparse(envelope), _receiver_x509_config(parties, sign=True, encrypt=False))
 
-    def test_trust_anchor_chain_validation(self, parties):
+    def test_trust_anchor_chain_validation(self, parties:'any_'):
         envelope = _sample_envelope()
         apply_wss(envelope, _sender_x509_config(parties, sign=True, encrypt=False))
 
@@ -338,13 +345,13 @@ class TestX509Mode:
             'trust_anchors': certificate_pem_path(parties.ca_certificate),
         }
 
-        enforce_wss(_reparse(envelope), channel_config)
+        _ = enforce_wss(_reparse(envelope), channel_config)
 
-    def test_unsigned_message_is_rejected(self, parties):
+    def test_unsigned_message_is_rejected(self, parties:'any_'):
         envelope = _sample_envelope()
 
         with pytest.raises(SOAPSecurityException):
-            enforce_wss(envelope, _receiver_x509_config(parties, sign=True, encrypt=False))
+            _ = enforce_wss(envelope, _receiver_x509_config(parties, sign=True, encrypt=False))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -357,14 +364,14 @@ class TestX509WithNothingToEnforce:
     one that predates that refusal is met here.
     """
 
-    def test_a_definition_that_neither_signs_nor_encrypts_is_refused(self, parties):
+    def test_a_definition_that_neither_signs_nor_encrypts_is_refused(self, parties:'any_'):
         envelope = _sample_envelope()
         apply_wss(envelope, _sender_x509_config(parties, sign=True, encrypt=False))
 
         channel_config = _receiver_x509_config(parties, sign=False, encrypt=False)
 
         with pytest.raises(SOAPSecurityException) as e:
-            enforce_wss(_reparse(envelope), channel_config)
+            _ = enforce_wss(_reparse(envelope), channel_config)
 
         assert No_X509_Operation_Message in str(e.value)
 
@@ -374,7 +381,7 @@ class TestX509WithNothingToEnforce:
         config = {'mode': Mode.X509}
 
         with pytest.raises(SOAPSecurityException) as e:
-            enforce_wss(_sample_envelope(), config)
+            _ = enforce_wss(_sample_envelope(), config)
 
         assert No_X509_Operation_Message in str(e.value)
 
@@ -384,19 +391,19 @@ class TestX509WithNothingToEnforce:
         config = {'mode': Mode.X509, 'sign': False, 'encrypt': False}
 
         with pytest.raises(SOAPSecurityException):
-            enforce_wss(_sample_envelope(), config)
+            _ = enforce_wss(_sample_envelope(), config)
 
-    def test_signing_alone_is_enough_to_have_something_to_enforce(self, parties):
+    def test_signing_alone_is_enough_to_have_something_to_enforce(self, parties:'any_'):
         envelope = _sample_envelope()
         apply_wss(envelope, _sender_x509_config(parties, sign=True, encrypt=False))
 
-        enforce_wss(_reparse(envelope), _receiver_x509_config(parties, sign=True, encrypt=False))
+        _ = enforce_wss(_reparse(envelope), _receiver_x509_config(parties, sign=True, encrypt=False))
 
-    def test_encryption_alone_is_enough_to_have_something_to_enforce(self, parties):
+    def test_encryption_alone_is_enough_to_have_something_to_enforce(self, parties:'any_'):
         envelope = _sample_envelope()
         apply_wss(envelope, _sender_x509_config(parties, sign=False, encrypt=True))
 
-        enforce_wss(_reparse(envelope), _receiver_x509_config(parties, sign=False, encrypt=True))
+        _ = enforce_wss(_reparse(envelope), _receiver_x509_config(parties, sign=False, encrypt=True))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -411,7 +418,7 @@ class TestTrustMaterial:
     question a signature is asked.
     """
 
-    def test_a_definition_with_no_trust_material_refuses_a_signed_message(self, parties):
+    def test_a_definition_with_no_trust_material_refuses_a_signed_message(self, parties:'any_'):
         envelope = _sample_envelope()
         apply_wss(envelope, _sender_x509_config(parties, sign=True, encrypt=False))
 
@@ -423,11 +430,11 @@ class TestTrustMaterial:
         }
 
         with pytest.raises(SOAPSecurityException) as e:
-            enforce_wss(_reparse(envelope), channel_config)
+            _ = enforce_wss(_reparse(envelope), channel_config)
 
         assert 'No trust anchors and no pinned peer certificate' in str(e.value)
 
-    def test_a_self_signed_certificate_is_not_accepted_in_place_of_trust(self, parties):
+    def test_a_self_signed_certificate_is_not_accepted_in_place_of_trust(self, parties:'any_'):
         # The attack the rule exists for. An attacker signs with a certificate it generated itself
         # and attaches it to the message, so the signature is internally consistent and verifies
         # against the key it travels with.
@@ -449,9 +456,9 @@ class TestTrustMaterial:
         }
 
         with pytest.raises(SOAPSecurityException):
-            enforce_wss(_reparse(envelope), channel_config)
+            _ = enforce_wss(_reparse(envelope), channel_config)
 
-    def test_trust_anchors_alone_are_enough(self, parties):
+    def test_trust_anchors_alone_are_enough(self, parties:'any_'):
         envelope = _sample_envelope()
         apply_wss(envelope, _sender_x509_config(parties, sign=True, encrypt=False))
 
@@ -462,9 +469,9 @@ class TestTrustMaterial:
             'trust_anchors': certificate_pem_path(parties.ca_certificate),
         }
 
-        enforce_wss(_reparse(envelope), channel_config)
+        _ = enforce_wss(_reparse(envelope), channel_config)
 
-    def test_a_pinned_certificate_alone_is_enough(self, parties):
+    def test_a_pinned_certificate_alone_is_enough(self, parties:'any_'):
         envelope = _sample_envelope()
         apply_wss(envelope, _sender_x509_config(parties, sign=True, encrypt=False))
 
@@ -475,16 +482,16 @@ class TestTrustMaterial:
             'peer_certificate': certificate_pem_path(parties.sender.signing_certificate),
         }
 
-        enforce_wss(_reparse(envelope), channel_config)
+        _ = enforce_wss(_reparse(envelope), channel_config)
 
-    def test_encryption_without_verification_needs_no_trust_material(self, parties):
+    def test_encryption_without_verification_needs_no_trust_material(self, parties:'any_'):
         # An encrypt-only definition verifies no signature, so it has nothing to establish trust
         # for and must not be refused for lacking the means to do it.
         envelope = _sample_envelope()
         apply_wss(envelope, _sender_x509_config(parties, sign=False, encrypt=True))
 
         received = _reparse(envelope)
-        enforce_wss(received, _receiver_x509_config(parties, sign=False, encrypt=True))
+        _ = enforce_wss(received, _receiver_x509_config(parties, sign=False, encrypt=True))
 
         body = parse_body(received)
         assert body.submitSingleMessage.facilityID == 'FL0001'
@@ -496,7 +503,7 @@ class TestSAMLMode:
     """ The SAML mode - XUA-style assertions with attributes and an audience.
     """
 
-    def test_roundtrip_with_attributes_and_audience(self, parties):
+    def test_roundtrip_with_attributes_and_audience(self, parties:'any_'):
         sender_config = _sender_saml_config(parties, audience='urn:qhin:other')
         channel_config = _receiver_saml_config(parties, audience='urn:qhin:other')
 
@@ -504,7 +511,7 @@ class TestSAMLMode:
         apply_wss(envelope, sender_config)
 
         received = _reparse(envelope)
-        enforce_wss(received, channel_config)
+        _ = enforce_wss(received, channel_config)
 
         # The role and organization travel as assertion attributes.
         attributes = received.findall(f'.//{qname(NS.SAML2, "Attribute")}')
@@ -512,10 +519,10 @@ class TestSAMLMode:
         assert attributes[1].get('Name') == 'urn:oasis:names:tc:xacml:2.0:subject:role'
 
         # The audience restriction names the other side.
-        audience = received.find(f'.//{qname(NS.SAML2, "Audience")}')
+        audience = cast_('any_', received.find(f'.//{qname(NS.SAML2, "Audience")}'))
         assert audience.text == 'urn:qhin:other'
 
-    def test_wrong_issuer_is_rejected(self, parties):
+    def test_wrong_issuer_is_rejected(self, parties:'any_'):
         sender_config = _sender_saml_config(parties, issuer='urn:idp:untrusted')
         channel_config = _receiver_saml_config(parties)
 
@@ -523,17 +530,17 @@ class TestSAMLMode:
         apply_wss(envelope, sender_config)
 
         with pytest.raises(SOAPSecurityException):
-            enforce_wss(_reparse(envelope), channel_config)
+            _ = enforce_wss(_reparse(envelope), channel_config)
 
-    def test_missing_assertion_is_rejected(self, parties):
+    def test_missing_assertion_is_rejected(self, parties:'any_'):
         channel_config = _receiver_saml_config(parties)
 
         envelope = _sample_envelope()
 
         with pytest.raises(SOAPSecurityException):
-            enforce_wss(envelope, channel_config)
+            _ = enforce_wss(envelope, channel_config)
 
-    def test_unsigned_assertion_is_rejected(self, parties):
+    def test_unsigned_assertion_is_rejected(self, parties:'any_'):
         """ The Issuer is a string the sender writes, so an unsigned assertion proves nothing
         and has to be refused however the channel is configured.
         """
@@ -546,9 +553,9 @@ class TestSAMLMode:
         apply_wss(envelope, sender_config)
 
         with pytest.raises(SOAPSecurityException):
-            enforce_wss(_reparse(envelope), channel_config)
+            _ = enforce_wss(_reparse(envelope), channel_config)
 
-    def test_assertion_for_another_audience_is_rejected(self, parties):
+    def test_assertion_for_another_audience_is_rejected(self, parties:'any_'):
         """ An assertion minted for a different service is valid, just not addressed to us.
         """
         sender_config = _sender_saml_config(parties, audience='urn:qhin:somebody-else')
@@ -558,9 +565,9 @@ class TestSAMLMode:
         apply_wss(envelope, sender_config)
 
         with pytest.raises(SOAPSecurityException):
-            enforce_wss(_reparse(envelope), channel_config)
+            _ = enforce_wss(_reparse(envelope), channel_config)
 
-    def test_assertion_without_audience_restriction_is_rejected(self, parties):
+    def test_assertion_without_audience_restriction_is_rejected(self, parties:'any_'):
         """ A channel that names an audience will not take an assertion that restricts none.
         """
         sender_config = _sender_saml_config(parties)
@@ -570,9 +577,9 @@ class TestSAMLMode:
         apply_wss(envelope, sender_config)
 
         with pytest.raises(SOAPSecurityException):
-            enforce_wss(_reparse(envelope), channel_config)
+            _ = enforce_wss(_reparse(envelope), channel_config)
 
-    def test_expired_assertion_is_rejected(self, parties):
+    def test_expired_assertion_is_rejected(self, parties:'any_'):
         """ An assertion whose validity window has closed is a captured credential.
         """
         sender_config = _sender_saml_config(parties)
@@ -589,9 +596,9 @@ class TestSAMLMode:
         _reissue_assertion_window(assertion, parties, seconds_ago=Assertion_TTL_Seconds * 10)
 
         with pytest.raises(SOAPSecurityException):
-            enforce_wss(received, channel_config)
+            _ = enforce_wss(received, channel_config)
 
-    def test_replayed_assertion_is_rejected(self, parties):
+    def test_replayed_assertion_is_rejected(self, parties:'any_'):
         """ An assertion is a bearer credential for the length of its window, so it is accepted
         once and once only.
         """
@@ -603,10 +610,10 @@ class TestSAMLMode:
 
         wire = to_bytes(envelope)
 
-        enforce_wss(etree.fromstring(wire), channel_config)
+        _ = enforce_wss(etree.fromstring(wire), channel_config)
 
         with pytest.raises(SOAPSecurityException):
-            enforce_wss(etree.fromstring(wire), channel_config)
+            _ = enforce_wss(etree.fromstring(wire), channel_config)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -625,7 +632,7 @@ class TestUnknownMode:
         config = {'mode': 'kerberos'}
 
         with pytest.raises(SOAPSecurityException):
-            enforce_wss(_sample_envelope(), config)
+            _ = enforce_wss(_sample_envelope(), config)
 
 # ################################################################################################################################
 # ################################################################################################################################

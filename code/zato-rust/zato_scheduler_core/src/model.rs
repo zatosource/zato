@@ -11,7 +11,7 @@ where
     T: std::str::FromStr + Deserialize<'de>,
     T::Err: std::fmt::Display,
 {
-    use serde::de;
+    use serde::de::Error as _;
 
     #[derive(Deserialize)]
     #[serde(untagged)]
@@ -28,7 +28,7 @@ where
             if trimmed.is_empty() {
                 Ok(None)
             } else {
-                trimmed.parse::<T>().map(Some).map_err(de::Error::custom)
+                trimmed.parse::<T>().map(Some).map_err(D::Error::custom)
             }
         }
         NumberOrString::Null => Ok(None),

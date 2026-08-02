@@ -14,6 +14,14 @@ import billing_pb2
 
 # Zato
 from zato.server.service import Service
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,7 +37,7 @@ class GRPCTestGetInvoice(Service):
         invoice_id = self.request.raw_request['invoice_id']
 
         client = self.grpc[conn_name]
-        request = billing_pb2.InvoiceRequest(invoice_id=invoice_id)
+        request = cast_('any_', billing_pb2).InvoiceRequest(invoice_id=invoice_id)
         invoice = client.GetInvoice(request)
 
         self.response.payload = json.dumps({
@@ -53,7 +61,7 @@ class GRPCTestListInvoices(Service):
         max_items = self.request.raw_request['max_items']
 
         client = self.grpc[conn_name]
-        request = billing_pb2.InvoiceListRequest(max_items=max_items)
+        request = cast_('any_', billing_pb2).InvoiceListRequest(max_items=max_items)
         response = client.ListInvoices(request)
 
         # The response streams - it is a generator, not a list
@@ -87,7 +95,7 @@ class GRPCTestSubmitPayments(Service):
 
         def _payment_stream():
             for payment in payments:
-                yield billing_pb2.Payment(invoice_id=payment['invoice_id'], amount_cents=payment['amount_cents'])
+                yield cast_('any_', billing_pb2).Payment(invoice_id=payment['invoice_id'], amount_cents=payment['amount_cents'])
 
         client = self.grpc[conn_name]
         summary = client.SubmitPayments(_payment_stream())
@@ -112,7 +120,7 @@ class GRPCTestReconcilePayments(Service):
 
         def _payment_stream():
             for payment in payments:
-                yield billing_pb2.Payment(invoice_id=payment['invoice_id'], amount_cents=payment['amount_cents'])
+                yield cast_('any_', billing_pb2).Payment(invoice_id=payment['invoice_id'], amount_cents=payment['amount_cents'])
 
         client = self.grpc[conn_name]
         response = client.ReconcilePayments(_payment_stream())
@@ -160,7 +168,7 @@ class GRPCTestChannelGetInvoice(Service):
         invoice_id = data['invoice_id']
 
         client = self.grpc['test.grpc.stubs']
-        request = billing_pb2.InvoiceRequest(invoice_id=invoice_id)
+        request = cast_('any_', billing_pb2).InvoiceRequest(invoice_id=invoice_id)
         invoice = client.GetInvoice(request)
 
         self.response.payload = json.dumps({'invoice_id': invoice.invoice_id})

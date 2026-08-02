@@ -19,6 +19,13 @@ from zato.server.service import Service
 from zato.x12.envelope import X12Interchange
 from zato.x12.retail import PurchaseOrder850
 from zato.x12.retail.messages import PurchaseOrderLine
+from zato.common.typing_ import cast_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,7 +48,7 @@ def build_purchase_order():
     """ Builds a typed 850 with the retail dictionary, the way a production service would -
     the envelope computes its counts and control numbers when serialized.
     """
-    order = PurchaseOrder850()
+    order = cast_('any_', PurchaseOrder850())
     order.beg.purpose_code = '00'
     order.beg.po_type = 'NE'
     order.beg.po_number = 'PO-4529'
@@ -130,7 +137,7 @@ class AS2LiveInvoker(Service):
 
 # ################################################################################################################################
 
-    def _send(self, request, payload):
+    def _send(self, request:'any_', payload:'any_'):
         """ Delivers one payload over the named connection and reports the MDN outcome
         along with the raw MIME body that went over the wire. Errors go back as a reply
         field - the caller retries while the pair configured a moment ago in the browser
@@ -151,7 +158,7 @@ class AS2LiveInvoker(Service):
 
 # ################################################################################################################################
 
-    def _send_tampered(self, request):
+    def _send_tampered(self, request:'any_'):
         """ Builds one AS2 message with the named connection's own partnership and keystore,
         corrupts the signed content after signing and delivers it over the real wire -
         the receiving channel has to answer with an integrity failure MDN.
@@ -165,8 +172,8 @@ class AS2LiveInvoker(Service):
 
         # Building the message needs the partnership and keystore of one pooled connection.
         with wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as connection:
-            body, headers, message_id, _ = build_message(connection.partnership, connection.keystore, payload.encode('utf8'))
-            endpoint_url = connection.partnership.endpoint_url
+            body, headers, message_id, _ = build_message(cast_('any_', connection).partnership, cast_('any_', connection).keystore, payload.encode('utf8'))
+            endpoint_url = cast_('any_', connection).partnership.endpoint_url
 
         # The signature stays as it is while the signed content changes underneath it.
         tampered = body.replace(token.encode('utf8'), replacement.encode('utf8'))

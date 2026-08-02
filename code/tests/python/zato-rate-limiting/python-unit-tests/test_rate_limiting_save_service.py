@@ -17,11 +17,18 @@ from zato.common.ext.bunch import Bunch
 from zato.common.json_internal import dumps, loads
 from zato.common.rate_limiting.common import RateLimitError, Window_Unit_Second
 from zato.server.service.internal.http_soap import RateLimitingSave
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _all_day_range(**overrides):
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _all_day_range(**overrides:'any_'):
     out = {
         'is_all_day':  True,
         'disabled':    False,
@@ -36,7 +43,7 @@ def _all_day_range(**overrides):
 
 # ################################################################################################################################
 
-def _make_rule(cidr_list, time_range):
+def _make_rule(cidr_list:'any_', time_range:'any_'):
     return {
         'cidr_list': cidr_list,
         'time_range': time_range,
@@ -44,7 +51,7 @@ def _make_rule(cidr_list, time_range):
 
 # ################################################################################################################################
 
-def _make_service(channel_id, rules, existing_opaque=None):
+def _make_service(channel_id:'any_', rules:'any_', existing_opaque:'any_' = None):
     """ Builds a bare object with just enough state for handle() to work.
     """
     service = object.__new__(RateLimitingSave)
@@ -84,7 +91,7 @@ class RateLimitingSaveTestCase(unittest.TestCase):
 
         service.handle()
 
-        saved_opaque = loads(mock_item.opaque1)
+        saved_opaque = loads(cast_('any_', mock_item).opaque1)
         self.assertIn('rate_limiting', saved_opaque)
         self.assertEqual(len(saved_opaque['rate_limiting']), 1)
         self.assertEqual(saved_opaque['rate_limiting'][0]['cidr_list'], ['10.0.0.0/8'])
@@ -101,7 +108,7 @@ class RateLimitingSaveTestCase(unittest.TestCase):
 
         service.handle()
 
-        saved_opaque = loads(mock_item.opaque1)
+        saved_opaque = loads(cast_('any_', mock_item).opaque1)
         self.assertEqual(saved_opaque['http_accept'], 'application/json')
         self.assertTrue(saved_opaque['some_flag'])
         self.assertIn('rate_limiting', saved_opaque)
@@ -114,7 +121,7 @@ class RateLimitingSaveTestCase(unittest.TestCase):
 
         service.handle()
 
-        saved_opaque = loads(mock_item.opaque1)
+        saved_opaque = loads(cast_('any_', mock_item).opaque1)
         self.assertIn('rate_limiting', saved_opaque)
 
     def test_save_invalid_cidr_rejected(self):
@@ -150,7 +157,7 @@ class RateLimitingSaveTestCase(unittest.TestCase):
 
         service.handle()
 
-        saved_opaque = loads(mock_item.opaque1)
+        saved_opaque = loads(cast_('any_', mock_item).opaque1)
         self.assertEqual(len(saved_opaque['rate_limiting']), 2)
 
     def test_save_publishes_config_event(self):
@@ -183,4 +190,4 @@ class RateLimitingSaveTestCase(unittest.TestCase):
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    unittest.main()
+    _ = unittest.main()

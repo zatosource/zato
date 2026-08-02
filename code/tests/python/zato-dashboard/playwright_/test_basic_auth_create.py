@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,15 +46,15 @@ class TestBasicAuthCreate:
 
         # Navigate to the basic auth page ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. verify the page heading ..
-        heading = page.query_selector('h2.zato')
+        heading = cast_('any_', page.query_selector('h2.zato'))
         heading_text = heading.inner_text()
         assert 'Basic Auth' in heading_text, f'Expected "Basic Auth" in heading, got: {heading_text}'
 
         # .. verify the create link is present ..
-        create_link = page.query_selector('#markup .page_prompt a')
+        create_link = cast_('any_', page.query_selector('#markup .page_prompt a'))
         create_link_text = create_link.inner_text()
         assert 'Create a Basic Auth definition' in create_link_text, \
             f'Expected create link text, got: {create_link_text}'
@@ -89,11 +90,11 @@ class TestBasicAuthCreate:
 
         # Navigate to the basic auth page ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. click the create link to open the dialog ..
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         # .. fill in the form fields ..
         page.fill('#id_name', definition_name)
@@ -105,11 +106,11 @@ class TestBasicAuthCreate:
         page.click('#create-div input[type="submit"]')
 
         # .. wait for the dialog to close ..
-        page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+        _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
         # .. verify the new row appears in the table ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{definition_name}"))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
 
         # .. extract cell texts from the row ..
         cells = row.query_selector_all('td')
@@ -150,14 +151,14 @@ class TestBasicAuthCreate:
 
         # Navigate to the basic auth page ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. create each definition ..
         for name, username, realm, password in definitions:
 
             # .. open the create dialog ..
             page.click('#markup .page_prompt a')
-            page.wait_for_selector('#create-div', state='visible')
+            _ = page.wait_for_selector('#create-div', state='visible')
 
             # .. fill in the form fields ..
             page.fill('#id_name', name)
@@ -167,13 +168,13 @@ class TestBasicAuthCreate:
 
             # .. submit and wait for the dialog to close ..
             page.click('#create-div input[type="submit"]')
-            page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+            _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
         # .. verify all 3 rows are present with correct values.
         for name, username, realm, _ in definitions:
 
             row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-            row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+            row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
 
             cells = row.query_selector_all('td')
 
@@ -205,11 +206,11 @@ class TestBasicAuthCreate:
 
         # Navigate to the basic auth page ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. create a definition first ..
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         page.fill('#id_name', definition_name)
         page.fill('#id_username', 'user.' + definition_name)
@@ -217,11 +218,11 @@ class TestBasicAuthCreate:
         page.fill('#id_password', definition_password)
 
         page.click('#create-div input[type="submit"]')
-        page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+        _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
         # .. reopen the create dialog ..
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         # .. verify all fields are empty ..
         name_value = page.input_value('#id_name')
@@ -251,11 +252,11 @@ class TestBasicAuthCreate:
 
         # Navigate to the basic auth page ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. open the create dialog and fill fields ..
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         page.fill('#id_name', _Test_Name_Prefix + 'cancel-test')
         page.fill('#id_username', 'cancel-user')
@@ -264,11 +265,11 @@ class TestBasicAuthCreate:
 
         # .. close the dialog via jQuery UI ..
         page.evaluate('$("#create-div").dialog("close")')
-        page.wait_for_function('!document.querySelector("#create-div").offsetParent')
+        _ = page.wait_for_function('!document.querySelector("#create-div").offsetParent')
 
         # .. reopen the dialog ..
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         # .. verify all fields are empty.
         name_value = page.input_value('#id_name')
@@ -295,7 +296,7 @@ class TestBasicAuthCreate:
 
         # Navigate to the basic auth page ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. count rows before ..
         rows_before = page.query_selector_all('#data-table tbody tr:not(.ignore)')
@@ -303,7 +304,7 @@ class TestBasicAuthCreate:
 
         # .. open the create dialog and fill fields ..
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         page.fill('#id_name', cancelled_name)
         page.fill('#id_username', 'user.' + cancelled_name)
@@ -312,7 +313,7 @@ class TestBasicAuthCreate:
 
         # .. close the dialog via jQuery UI ..
         page.evaluate('$("#create-div").dialog("close")')
-        page.wait_for_function('!document.querySelector("#create-div").offsetParent')
+        _ = page.wait_for_function('!document.querySelector("#create-div").offsetParent')
 
         # .. verify row count is unchanged ..
         rows_after = page.query_selector_all('#data-table tbody tr:not(.ignore)')
@@ -341,10 +342,10 @@ class TestBasicAuthCreate:
 
         # Navigate and create a definition to have a known name ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         page.fill('#id_name', existing_name)
         page.fill('#id_username', 'user.' + existing_name)
@@ -352,16 +353,16 @@ class TestBasicAuthCreate:
         page.fill('#id_password', existing_password)
 
         page.click('#create-div input[type="submit"]')
-        page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+        _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
         # .. reload the page so the server's check_attr_exists picks up the new definition ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. reopen the create dialog and type the same name character by character
         # .. so that the input event handler triggers the uniqueness check ..
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         name_field = page.locator('#id_name')
         name_field.click()
@@ -372,7 +373,7 @@ class TestBasicAuthCreate:
             '#create-form .zato-unique-taken', state='visible', timeout=10000)
 
         # .. verify the indicator text.
-        taken_text = taken_indicator.inner_text()
+        taken_text = cast_('any_', taken_indicator).inner_text()
         assert 'Already taken' in taken_text, f'Expected "Already taken", got: "{taken_text}"'
 
 # ################################################################################################################################
@@ -389,12 +390,12 @@ class TestBasicAuthCreate:
 
         # Navigate to the basic auth page ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. open the create dialog and type a unique name character by character
         # .. so that the input event handler triggers the uniqueness check ..
         page.click('#markup .page_prompt a')
-        page.wait_for_selector('#create-div', state='visible')
+        _ = page.wait_for_selector('#create-div', state='visible')
 
         name_field = page.locator('#id_name')
         name_field.click()
@@ -405,7 +406,7 @@ class TestBasicAuthCreate:
             '#create-form .zato-unique-ok', state='visible', timeout=10000)
 
         # .. verify the checkmark is present.
-        ok_text = ok_indicator.inner_text()
+        ok_text = cast_('any_', ok_indicator).inner_text()
         assert '\u2713' in ok_text, f'Expected checkmark in indicator, got: "{ok_text}"'
 
 # ################################################################################################################################

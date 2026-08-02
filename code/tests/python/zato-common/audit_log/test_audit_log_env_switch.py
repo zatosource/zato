@@ -42,6 +42,8 @@ def _count_events_in_file(db_path:'str') -> 'int':
         out = count_result.scalar()
 
     engine.dispose()
+
+    assert out is not None
     return out
 
 # ################################################################################################################################

@@ -11,6 +11,7 @@ import time
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,7 +41,7 @@ def _create_definition(page:'Page', base_url:'str', suffix:'str') -> 'dict':
 
     # Open the create dialog ..
     page.click('#markup .page_prompt a')
-    page.wait_for_selector('#create-div', state='visible')
+    _ = page.wait_for_selector('#create-div', state='visible')
 
     # .. fill in the fields ..
     page.fill('#id_name', name)
@@ -50,11 +51,11 @@ def _create_definition(page:'Page', base_url:'str', suffix:'str') -> 'dict':
 
     # .. submit and wait for the dialog to close ..
     page.click('#create-div input[type="submit"]')
-    page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+    _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
     # .. wait for the row to appear.
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    page.wait_for_selector(row_selector, state='visible', timeout=5000)
+    _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
     out = {
         'name': name,
@@ -72,13 +73,13 @@ def _click_edit_for_row(page:'Page', name:'str') -> 'None':
 
     # Extract the row's item ID from the hidden td ..
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    row = page.query_selector(row_selector)
+    row = cast_('any_', page.query_selector(row_selector))
     id_cell = row.query_selector('td[class*="item_id_"]')
     item_id = id_cell.inner_text().strip()
 
     # .. call the edit function directly via JS ..
     page.evaluate(f'$.fn.zato.security.basic_auth.edit("{item_id}")')
-    page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+    _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -97,14 +98,14 @@ class TestBasicAuthEdit:
 
         # Navigate and create two definitions ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         defn_a = _create_definition(page, base_url, 'dup-edit-a')
         defn_b = _create_definition(page, base_url, 'dup-edit-b')
 
         # .. reload so the server knows about both for the uniqueness check ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. open edit for A ..
         _click_edit_for_row(page, defn_a['name'])
@@ -119,7 +120,7 @@ class TestBasicAuthEdit:
         taken_indicator = page.wait_for_selector(
             '#edit-form .zato-unique-taken', state='visible', timeout=10000)
 
-        taken_text = taken_indicator.inner_text()
+        taken_text = cast_('any_', taken_indicator).inner_text()
         assert 'Already taken' in taken_text, f'Expected "Already taken", got: "{taken_text}"'
 
 # ################################################################################################################################
@@ -134,13 +135,13 @@ class TestBasicAuthEdit:
 
         # Navigate and create a definition ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         defn = _create_definition(page, base_url, 'keep-same')
 
         # .. reload so the server knows about it ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. open edit ..
         _click_edit_for_row(page, defn['name'])
@@ -168,7 +169,7 @@ class TestBasicAuthEdit:
 
         # Navigate and create a definition ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         defn = _create_definition(page, base_url, 'edit-name')
 
@@ -186,11 +187,11 @@ class TestBasicAuthEdit:
 
         # .. submit ..
         page.click('#edit-div input[type="submit"]')
-        page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
+        _ = page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
 
         # .. verify the row now shows the new name ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{new_name}"))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
         cells = row.query_selector_all('td')
 
         name_cell_text = cells[2].inner_text().strip()
@@ -212,7 +213,7 @@ class TestBasicAuthEdit:
 
         # Navigate and create a definition ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         defn = _create_definition(page, base_url, 'edit-user-realm')
 
@@ -228,11 +229,11 @@ class TestBasicAuthEdit:
 
         # .. submit ..
         page.click('#edit-div input[type="submit"]')
-        page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
+        _ = page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
 
         # .. verify the row ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{defn["name"]}"))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
         cells = row.query_selector_all('td')
 
         assert cells[2].inner_text().strip() == defn['name'], 'Name should be unchanged'
@@ -253,7 +254,7 @@ class TestBasicAuthEdit:
 
         # Navigate and create a definition ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         defn = _create_definition(page, base_url, 'edit-all')
 
@@ -271,11 +272,11 @@ class TestBasicAuthEdit:
 
         # .. submit ..
         page.click('#edit-div input[type="submit"]')
-        page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
+        _ = page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
 
         # .. verify all three cells ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{new_name}"))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
         cells = row.query_selector_all('td')
 
         assert cells[2].inner_text().strip() == new_name
@@ -298,7 +299,7 @@ class TestBasicAuthEdit:
 
         # Navigate and create a definition ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         defn = _create_definition(page, base_url, 'tooltip')
 
@@ -308,16 +309,16 @@ class TestBasicAuthEdit:
 
         # .. submit ..
         page.click('#edit-div input[type="submit"]')
-        page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
+        _ = page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
 
         # .. find the row and verify it has the 'updated' class ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{defn["name"]}"))'
-        row = page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        row = cast_('any_', page.wait_for_selector(row_selector, state='visible', timeout=5000))
         row_class = row.get_attribute('class')
         assert 'updated' in row_class, f'Expected "updated" in row class, got: "{row_class}"'
 
         # .. verify the tippy tooltip appears with 'OK, saved' ..
-        tooltip = page.wait_for_selector('.tippy-content', state='visible', timeout=3000)
+        tooltip = cast_('any_', page.wait_for_selector('.tippy-content', state='visible', timeout=3000))
         tooltip_text = tooltip.inner_text()
         assert 'OK, saved' in tooltip_text, f'Expected "OK, saved" in tooltip, got: "{tooltip_text}"'
 
@@ -333,7 +334,7 @@ class TestBasicAuthEdit:
 
         # Navigate and create a definition ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         defn = _create_definition(page, base_url, 'edit-cancel')
 
@@ -344,7 +345,7 @@ class TestBasicAuthEdit:
 
         # .. close the dialog without submitting ..
         page.evaluate('$("#edit-div").dialog("close")')
-        page.wait_for_function('!document.querySelector("#edit-div").offsetParent')
+        _ = page.wait_for_function('!document.querySelector("#edit-div").offsetParent')
 
         # .. verify the row still has the original name ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{defn["name"]}"))'
@@ -370,7 +371,7 @@ class TestBasicAuthEdit:
 
         # Navigate and create a definition ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         defn = _create_definition(page, base_url, 'reopen-edit')
 
@@ -381,11 +382,11 @@ class TestBasicAuthEdit:
 
         # .. submit ..
         page.click('#edit-div input[type="submit"]')
-        page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
+        _ = page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
 
         # .. wait for the row with the new name ..
         row_selector = f'#data-table tbody tr:has(td:text-is("{new_name}"))'
-        page.wait_for_selector(row_selector, state='visible', timeout=5000)
+        _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
         # .. open edit again on the same row ..
         _click_edit_for_row(page, new_name)
@@ -406,7 +407,7 @@ class TestBasicAuthEdit:
 
         # Navigate and create two definitions ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         defn_a = _create_definition(page, base_url, 'switch-a')
         defn_b = _create_definition(page, base_url, 'switch-b')
@@ -417,7 +418,7 @@ class TestBasicAuthEdit:
 
         # .. close A's dialog ..
         page.evaluate('$("#edit-div").dialog("close")')
-        page.wait_for_function('!document.querySelector("#edit-div").offsetParent')
+        _ = page.wait_for_function('!document.querySelector("#edit-div").offsetParent')
 
         # .. open edit for B ..
         _click_edit_for_row(page, defn_b['name'])
@@ -443,14 +444,14 @@ class TestBasicAuthEdit:
 
         # Navigate and create two definitions ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         defn_a = _create_definition(page, base_url, 'indicator-a')
         defn_b = _create_definition(page, base_url, 'indicator-b')
 
         # .. reload with query filter so both test rows are visible ..
         _ = page.goto(f'{base_url}{_Page_Url_Pattern}&query={_Test_Name_Prefix}indicator')
-        page.wait_for_selector('#data-table', state='visible')
+        _ = page.wait_for_selector('#data-table', state='visible')
 
         # .. open edit for A and type B's name to trigger the taken indicator ..
         _click_edit_for_row(page, defn_a['name'])
@@ -460,11 +461,11 @@ class TestBasicAuthEdit:
         name_field.click()
         name_field.press_sequentially(defn_b['name'], delay=10)
 
-        page.wait_for_selector('#edit-form .zato-unique-taken', state='visible', timeout=10000)
+        _ = page.wait_for_selector('#edit-form .zato-unique-taken', state='visible', timeout=10000)
 
         # .. close the dialog ..
         page.evaluate('$("#edit-div").dialog("close")')
-        page.wait_for_function('!document.querySelector("#edit-div").offsetParent')
+        _ = page.wait_for_function('!document.querySelector("#edit-div").offsetParent')
 
         # .. open edit for B ..
         _click_edit_for_row(page, defn_b['name'])

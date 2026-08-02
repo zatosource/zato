@@ -1,5 +1,5 @@
-use pyo3::prelude::*;
 use pyo3::Borrowed;
+use pyo3::prelude::*;
 
 use crate::inference::ElemType;
 
@@ -7,7 +7,6 @@ use crate::inference::ElemType;
 /// is required, and the inferred (or explicit) element type.
 #[pyclass(subclass, skip_from_py_object)]
 pub struct Elem {
-
     /// Element name as declared by the Zato service.
     #[pyo3(get, set)]
     pub name: String,
@@ -17,7 +16,7 @@ pub struct Elem {
     pub is_required: bool,
 
     /// Resolved I/O type for this element.
-    pub elem_type: ElemType,
+    pub kind: ElemType,
 
     /// Optional default value provided by the service declaration.
     #[pyo3(get, set)]
@@ -25,13 +24,13 @@ pub struct Elem {
 }
 
 impl Elem {
-
     /// Creates a deep copy, cloning the `default` Python object under the GIL.
+    #[must_use]
     pub fn clone_ref(&self, py: Python<'_>) -> Self {
         Self {
             name: self.name.clone(),
             is_required: self.is_required,
-            elem_type: self.elem_type,
+            kind: self.kind,
             default: self.default.as_ref().map(|obj| obj.clone_ref(py)),
         }
     }
@@ -50,7 +49,6 @@ impl<'obj, 'py> FromPyObject<'obj, 'py> for Elem {
 
 #[pymethods]
 impl Elem {
-
     /// Creates a new `Elem`, stripping a leading `-` to mark the element as optional.
     #[new]
     #[pyo3(signature = (name, *, default=None))]
@@ -64,7 +62,7 @@ impl Elem {
         Self {
             name: clean_name,
             is_required,
-            elem_type: ElemType::Text,
+            kind: ElemType::Text,
             default,
         }
     }
@@ -92,12 +90,15 @@ macro_rules! define_elem_type {
                 } else {
                     (true, name)
                 };
-                ($name, Elem {
-                    name: clean_name,
-                    is_required,
-                    elem_type: $variant,
-                    default,
-                })
+                (
+                    $name,
+                    Elem {
+                        name: clean_name,
+                        is_required,
+                        kind: $variant,
+                        default,
+                    },
+                )
             }
         }
 

@@ -12,12 +12,13 @@ import time
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.smb_ import SMBTestServer
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from playwright.sync_api import Page
+    from playwright.sync_api import Page, Response
     from zato.common.typing_ import anydict
 
 # ################################################################################################################################
@@ -47,7 +48,7 @@ def _navigate(page:'Page', base_url:'str', url_suffix:'str'='') -> 'None':
     """ Opens the outgoing SMB page and waits for the data table.
     """
     _ = page.goto(f'{base_url}{_Page_Url_Pattern}{url_suffix}')
-    page.wait_for_selector('#data-table', state='visible')
+    _ = page.wait_for_selector('#data-table', state='visible')
 
 # ################################################################################################################################
 
@@ -57,7 +58,7 @@ def _create_connection(page:'Page', name:'str', host:'str', port:'int', username
 
     # Open the create dialog ..
     page.click('#markup .page_prompt a')
-    page.wait_for_selector('#create-div', state='visible')
+    _ = page.wait_for_selector('#create-div', state='visible')
 
     # .. fill in the fields ..
     page.fill('#id_name', name)
@@ -68,11 +69,11 @@ def _create_connection(page:'Page', name:'str', host:'str', port:'int', username
 
     # .. submit and wait for the dialog to close ..
     page.click('#create-div input[type="submit"]')
-    page.wait_for_selector('#create-div', state='hidden', timeout=10000)
+    _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
 
     # .. and wait for the row to appear.
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    page.wait_for_selector(row_selector, state='visible', timeout=5000)
+    _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
 
 # ################################################################################################################################
 
@@ -81,7 +82,7 @@ def _get_item_id(page:'Page', name:'str') -> 'str':
     """
 
     row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    row = page.query_selector(row_selector)
+    row = cast_('any_', page.query_selector(row_selector))
     id_cell = row.query_selector('td[class*="item_id_"]')
     out = id_cell.inner_text().strip()
 
@@ -91,20 +92,20 @@ def _get_item_id(page:'Page', name:'str') -> 'str':
 
 def _open_edit_dialog(page:'Page', item_id:'str') -> 'None':
     page.evaluate(f'$.fn.zato.outgoing.smb.edit("{item_id}")')
-    page.wait_for_selector('#edit-div', state='visible', timeout=5000)
+    _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
 
 # ################################################################################################################################
 
 def _submit_edit_form(page:'Page') -> 'None':
     page.click('#edit-div input[type="submit"]')
-    page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
+    _ = page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
     time.sleep(0.3)
 
 # ################################################################################################################################
 
 def _delete_connection(page:'Page', item_id:'str') -> 'None':
     page.evaluate(f'$.fn.zato.outgoing.smb.delete_("{item_id}")')
-    page.wait_for_selector('#popup_container', state='visible', timeout=5000)
+    _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
     page.click('#popup_ok')
     time.sleep(0.5)
 
@@ -159,8 +160,8 @@ class TestOutgoingSMBLifecycle:
         console_errors = [] # type: list
 
         def _on_console(msg:'object') -> 'None':
-            if msg.type == 'error':
-                console_errors.append(msg.text)
+            if cast_('any_', msg).type == 'error':
+                console_errors.append(cast_('any_', msg).text)
 
         page.on('console', _on_console)
 
@@ -195,7 +196,7 @@ class TestOutgoingSMBLifecycle:
         # Collect server errors ..
         server_errors = [] # type: list
 
-        def _on_response(response:'object') -> 'None':
+        def _on_response(response:'Response') -> 'None':
             if response.status >= 500:
                 server_errors.append(f'{response.status} {response.url}')
 

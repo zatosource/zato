@@ -25,6 +25,7 @@ from .test_audit import audit_db
 from .test_security import _new_holder_of_key_assertion
 from .test_server_connection import _channel_config, _connect, _make_channel, _make_wrapper, _outgoing_config, \
     Payload, Test_CID
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -78,7 +79,7 @@ def _find_token(body:'bytes') -> 'any_':
     end = body.index(b'--', start)
 
     envelope = etree.fromstring(body[start:end])
-    security = envelope.find(f'.//{qname(NS.WSSE, "Security")}')
+    security = cast_('any_', envelope.find(f'.//{qname(NS.WSSE, "Security")}'))
 
     out = security.find(qname(NS.WSSE, 'UsernameToken'))
     return out
