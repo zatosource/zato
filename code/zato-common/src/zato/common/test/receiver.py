@@ -26,7 +26,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-anydict_list = list['anydict']
+anydict_list  = list['anydict']
+receiver_list = list['WebhookReceiver']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,6 +40,11 @@ logger = logging.getLogger('zato.test.pubsub_push.receiver')
 _Mode_Accept     = 'accept'
 _Mode_Reject_503 = 'reject_503'
 _Mode_Hang       = 'hang'
+
+# How long the delivered file count has to stay unchanged before receivers count as quiet
+# and for how long we keep observing them at most.
+_Quiet_Settle_Time = 1.0
+_Quiet_Timeout     = 15.0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -349,6 +355,41 @@ class WebhookReceiver:
 
         out = self.get_delivered_messages()
         return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def wait_until_receivers_quiet(
+    receivers:'receiver_list',
+    settle_time:'float'=_Quiet_Settle_Time,
+    timeout:'float'=_Quiet_Timeout,
+    ) -> 'None':
+    """ Blocks until no new message has been delivered to any of the receivers for settle_time seconds.
+    """
+    deadline = time.monotonic() + timeout
+
+    # A count no observation can match, so we always sleep at least once - a delivery
+    # the server already accepted may not have reached its receiver yet.
+    previous_count = -1
+    is_quiet = False
+
+    while time.monotonic() < deadline:
+
+        current_count = 0
+
+        for receiver in receivers:
+            current_count += receiver.delivered_count()
+
+        # .. two consecutive observations agreeing mean nothing else is in flight ..
+        if current_count == previous_count:
+            is_quiet = True
+            break
+
+        previous_count = current_count
+        time.sleep(settle_time)
+
+    if not is_quiet:
+        logger.info('Receivers still receiving after %s seconds, last count -> %d', timeout, previous_count)
 
 # ################################################################################################################################
 # ################################################################################################################################
