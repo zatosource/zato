@@ -19,7 +19,7 @@
 	test-audit-log test-alerting test-destinations test-analytics test-demo-seed test-logging test-ibm-mq test-mongodb test-es \
 	test-rule-engine test-rule-engine-perf test-rule-engine-jobs \
 	rule-engine-notify rule-engine-retention rule-engine-spike-alerts rule-engine-dashboard \
-	test-all test \
+	test-all test test-all-reset \
 	health-ruff health-clippy \
 	format format-zato \
 	clippy clippy-zato \
@@ -1183,9 +1183,10 @@ test-request-response: ## Unified service I/O tests - messages, request.raw, req
 # Static analysis, nothing is executed
 Zato_Test_Static := test-lint
 
-# Offline unit suites, no server, no container, no browser
+# Offline unit suites, no server, no container, no browser. test-ui-webapp is missing on purpose,
+# test-ui-rule-engine-dashboard has it as a prerequisite and would otherwise run it a second time.
 Zato_Test_Offline := \
-	test-ui-webapp test-message-filters test-demo-seed test-sql-cloud test-truncate test-safeguards \
+	test-message-filters test-demo-seed test-sql-cloud test-truncate test-safeguards \
 	test-edifact test-rule-engine-jobs test-alerting test-x12 test-request-response test-destinations \
 	test-as4 test-soap test-as2 test-rule-engine test-hl7-fhir test-llm
 
@@ -1209,7 +1210,37 @@ Zato_Test_Heavy := \
 	test-pubsub-backend-amqp-perf test-rule-engine-perf test-pubsub-backend-perf \
 	test-pubsub-system-perf test-hl7-volume test-rest test-server test-pubsub-backend-perf-mass
 
-test-all: $(Zato_Test_Static) $(Zato_Test_Offline) $(Zato_Test_Toolchain) $(Zato_Test_Live) $(Zato_Test_Browser) $(Zato_Test_Heavy) ## Everything.
+Zato_Test_All := \
+	$(Zato_Test_Static) $(Zato_Test_Offline) $(Zato_Test_Toolchain) \
+	$(Zato_Test_Live) $(Zato_Test_Browser) $(Zato_Test_Heavy)
+
+# Which target the run is currently on - written before the target starts, so a target that
+# fails or is interrupted leaves its own name behind and the next run picks up from there.
+# Removed once the list has been walked to the end.
+Zato_Test_Resume_File := $(CURDIR)/code/tests/.test-all-resume
+
+# Set to anything to ignore the resume file and walk the list from the beginning
+RESTART ?=
+
+test-all: ## Everything, resuming from the target that last failed. RESTART=1 to start from scratch.
+	@if [ -n "$(RESTART)" ]; then rm -f $(Zato_Test_Resume_File); fi
+	@resume=''; \
+	if [ -f $(Zato_Test_Resume_File) ]; then \
+		resume=$$(cat $(Zato_Test_Resume_File)); \
+		echo ">>> Resuming from $$resume"; \
+	fi; \
+	for target in $(Zato_Test_All); do \
+		if [ -n "$$resume" ]; then \
+			if [ "$$target" != "$$resume" ]; then continue; fi; \
+			resume=''; \
+		fi; \
+		echo "$$target" > $(Zato_Test_Resume_File); \
+		$(MAKE) $$target || exit $$?; \
+	done; \
+	rm -f $(Zato_Test_Resume_File)
+
+test-all-reset: ## Forget where the last test-all stopped.
+	rm -f $(Zato_Test_Resume_File)
 
 test: test-all ## Alias for test-all.
 

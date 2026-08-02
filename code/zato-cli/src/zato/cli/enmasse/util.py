@@ -773,10 +773,51 @@ def _write_scalar_field(file_handle:'any_', line_prefix:'str', field_name:'str',
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _write_mapping_entry(
+    file_handle:'any_',
+    line_prefix:'str',
+    key:'str',
+    value:'any_',
+    content_indent:'int',
+    ) -> 'None':
+    """ Writes one key of a mapping and whatever it holds. A nested mapping and a list of them
+    are written out as YAML structures of their own, no matter how deep they go - written as the
+    text they happen to render as they would read back as that text rather than as what they are.
+    """
+    nested_indent = content_indent + 2
+    nested_prefix = ' ' * nested_indent
+
+    # A nested mapping (e.g. the options one destination needs) becomes a block of its own ..
+    if isinstance(value, dict):
+        _ = file_handle.write(f'{line_prefix}{key}:\n')
+
+        for sub_key, sub_value in value.items():
+            _write_mapping_entry(file_handle, nested_prefix, sub_key, sub_value, nested_indent)
+
+    # .. nested lists (e.g. cidr_list, time_range, destinations) get their own sub-items ..
+    elif isinstance(value, list):
+        _ = file_handle.write(f'{line_prefix}{key}:\n')
+
+        for sub_item in value:
+            if isinstance(sub_item, dict):
+                _write_dict_list_item(file_handle, sub_item, nested_indent)
+            else:
+                quoted_sub_item = _yaml_quote(sub_item)
+                _ = file_handle.write(f'{nested_prefix}- {quoted_sub_item}\n')
+
+    # .. and everything else is one scalar.
+    else:
+        quoted_value = _yaml_quote(value)
+        _ = file_handle.write(f'{line_prefix}{key}: {quoted_value}\n')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _write_dict_list_item(file_handle:'any_', item:'anydict', indent:'int'=6) -> 'None':
     """ Writes a dict as a YAML list item with nested keys.
     """
     prefix = ' ' * indent
+    content_indent = indent + 2
     is_first = True
 
     for key, value in item.items():
@@ -790,18 +831,39 @@ def _write_dict_list_item(file_handle:'any_', item:'anydict', indent:'int'=6) ->
         else:
             line_prefix = f'{prefix}  '
 
-        # Nested lists (e.g. cidr_list, time_range) get their own sub-items
-        if isinstance(value, list):
-            _ = file_handle.write(f'{line_prefix}{key}:\n')
-            for sub_item in value:
-                if isinstance(sub_item, dict):
-                    _write_dict_list_item(file_handle, sub_item, indent + 4)
-                else:
-                    quoted_sub_item = _yaml_quote(sub_item)
-                    _ = file_handle.write(f'{prefix}    - {quoted_sub_item}\n')
+        _write_mapping_entry(file_handle, line_prefix, key, value, content_indent)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The markers a pub/sub permission is stored with, which are not part of the pattern itself
+_pubsub_prefixes_to_remove = ['pub=', 'sub=']
+
+def _write_list_field(file_handle:'any_', element:'str', field_name:'str', value:'anylist') -> 'None':
+    """ Writes one list-valued field of a top-level item, its items being either dicts of their
+    own or scalars.
+    """
+    _ = file_handle.write(f'    {field_name}:\n')
+
+    for list_item in value:
+
+        if isinstance(list_item, dict):
+            _write_dict_list_item(file_handle, list_item, indent=6)
+
         else:
-            quoted_value = _yaml_quote(value)
-            _ = file_handle.write(f'{line_prefix}{key}: {quoted_value}\n')
+            cleaned_item = str(list_item)
+
+            # A permission is stored with the direction it applies to prefixed, which the
+            # section it is written to already says
+            if element == 'pubsub_permission':
+                if field_name in ['pub', 'sub']:
+                    for prefix in _pubsub_prefixes_to_remove:
+                        if cleaned_item.startswith(prefix):
+                            cleaned_item = cleaned_item[len(prefix):]
+                            break
+
+            quoted_cleaned = _yaml_quote(cleaned_item)
+            _ = file_handle.write(f'      - {quoted_cleaned}\n')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -813,16 +875,11 @@ def _write_dict_field(file_handle:'any_', field_name:'str', value:'anydict', ind
     prefix = ' ' * indent
     _ = file_handle.write(f'{prefix}{field_name}:\n')
 
-    for key, sub_value in value.items():
+    content_indent = indent + 2
+    content_prefix = ' ' * content_indent
 
-        if isinstance(sub_value, list):
-            _ = file_handle.write(f'{prefix}  {key}:\n')
-            for list_item in sub_value:
-                quoted_item = _yaml_quote(list_item)
-                _ = file_handle.write(f'{prefix}    - {quoted_item}\n')
-        else:
-            quoted_value = _yaml_quote(sub_value)
-            _ = file_handle.write(f'{prefix}  {key}: {quoted_value}\n')
+    for key, sub_value in value.items():
+        _write_mapping_entry(file_handle, content_prefix, key, sub_value, content_indent)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -835,9 +892,6 @@ class FileWriter:
 # ################################################################################################################################
 
     def write(self, data_dict:'anydict') -> 'None':
-
-        # Prefixes to remove from list items
-        prefixes_to_remove = ['pub=', 'sub=']
 
         top_level = get_top_level_order()
 
@@ -902,23 +956,7 @@ class FileWriter:
 
                                     # Check if it's actually a list
                                     if isinstance(field_value, list):
-
-                                        # Write the field name as a list header
-                                        _ = f.write(f'    {actual_field}:\n')
-
-                                        # Write each list item with proper indentation
-                                        for list_item in field_value:
-                                            if isinstance(list_item, dict):
-                                                _write_dict_list_item(f, list_item, indent=6)
-                                            else:
-                                                cleaned_item = str(list_item)
-                                                if element == 'pubsub_permission' and actual_field in ['pub', 'sub']:
-                                                    for prefix in prefixes_to_remove:
-                                                        if cleaned_item.startswith(prefix):
-                                                            cleaned_item = cleaned_item[len(prefix):]
-                                                            break
-                                                quoted_cleaned = _yaml_quote(cleaned_item)
-                                                _ = f.write(f'      - {quoted_cleaned}\n')
+                                        _write_list_field(f, element, actual_field, field_value)
                                     else:
                                         _write_scalar_field(f, '    ', actual_field, field_value, 6)
 
@@ -926,16 +964,9 @@ class FileWriter:
                             elif field in item:
                                 field_value = item[field]
                                 if isinstance(field_value, list):
-                                    _ = f.write(f'    {field}:\n')
-                                    for list_item in field_value:
-                                        cleaned_item = str(list_item)
-                                        if element == 'pubsub_permission' and field in ['pub', 'sub']:
-                                            for prefix in prefixes_to_remove:
-                                                if cleaned_item.startswith(prefix):
-                                                    cleaned_item = cleaned_item[len(prefix):]
-                                                    break
-                                        quoted_cleaned = _yaml_quote(cleaned_item)
-                                        _ = f.write(f'      - {quoted_cleaned}\n')
+                                    _write_list_field(f, element, field, field_value)
+                                elif isinstance(field_value, dict):
+                                    _write_dict_field(f, field, field_value)
                                 else:
                                     _write_scalar_field(f, '    ', field, field_value, 6)
 

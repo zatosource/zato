@@ -228,7 +228,10 @@ class TestEnmasseCLI(TestCase):
             capture_output=True, text=True, timeout=30,
         )
         if result.returncode != 0:
-            self.fail(f'enmasse failed (exit {result.returncode}):\n{result.stdout[:500]}')
+
+            # The reason enmasse gives up is logged last, so it is the tail that is needed here
+            self.fail(f'enmasse failed (exit {result.returncode}):\n{result.stdout[-3000:]}\n{result.stderr[-3000:]}')
+
         return result
 
     def _import_file(self, path):

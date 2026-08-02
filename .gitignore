@@ -90,6 +90,9 @@ vscode
 # Playwright
 .pytest_cache_playwright/
 
+# Where test-all remembers which target it stopped on
+.test-all-resume
+
 # Cosmic-ray mutation testing
 *.py.meta
 
