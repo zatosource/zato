@@ -171,6 +171,22 @@ class TestCleanerCache:
 
         assert first is second
 
+    def test_empty_selection_builds_the_default_cleaner(self) -> 'None':
+
+        # remove_pii returns early on an empty selection, so building the cleaner directly
+        # is the only way to reach the underlying library's full default detector set.
+        config = _new_config([], [], [])
+
+        cleaner = get_cleaner(config)
+        matches = cleaner.scan(f'Wire to {_valid_iban} and write to {_email}')
+
+        names = [match.name for match in matches]
+
+        assert 'intl_iban' in names
+        assert 'intl_email' in names
+
+        _cache.clear()
+
     def test_full_cache_evicts_the_oldest_entry(self) -> 'None':
 
         # The cache is filled to the brim with entries sharing one cleaner -

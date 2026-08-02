@@ -57,7 +57,7 @@ Valid_Samples:'sample_dict' = {
     'nz_nhi':              ['ZAC0009', 'ZAC53LA'],
     'ph_psn':              ['1234 5678 9012'],
     'ph_pcn':              ['1234 5678 9012 3456'],
-    'sg_nric':             ['S1234567D', 'F2345678T'],
+    'sg_nric':             ['S1234567D', 'F2345678T', 'T1234567J', 'G1234567X', 'M1234567K'],
     'za_id':               ['7503305044089'],
     'za_passport':         ['A12345678'],
 }
@@ -76,11 +76,11 @@ Broken_Samples:'sample_dict' = {
     'jp_my_number':        ['123456789019'],
     'jp_corporate_number': ['5835678256247'],
     'kr_rrn':              ['9001011000007'],
-    'lu_matricule':        ['1983040575002'],
+    'lu_matricule':        ['1983040575002', '1983040575011'],
     'mx_curp':             ['BOXW310820HNERXN08'],
     'no_fnr':              ['15108695089'],
     'nz_ird':              ['49091851'],
-    'nz_nhi':              ['ZAC0018'],
+    'nz_nhi':              ['ZAC0018', 'AAA0080'],
     'sg_nric':             ['S1234567A'],
     'za_id':               ['7503305044080'],
 }
@@ -92,10 +92,10 @@ Negative_Text = 'Order ORD-2026-000123 shipped on 2026-07-15 at 11:32 for 1,099.
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _new_scrubber(name:'str') -> 'Scrubber':
+def _new_scrubber(name:'str', stable_tokens:'bool'=False) -> 'Scrubber':
     """ Returns a scrubber running just the one named detector.
     """
-    out = Scrubber(detectors=[name])
+    out = Scrubber(detectors=[name], stable_tokens=stable_tokens)
     return out
 
 # ################################################################################################################################
@@ -142,6 +142,25 @@ class TestBrokenSamples:
             for sample in sample_list:
                 text = f'Customer identifier {sample} received in the payload'
                 assert not _has_valid_match(scrubber, text, name), f'{name} wrongly accepted {sample}'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestStableTokens:
+
+    def test_every_valid_sample_gets_a_numbered_token(self) -> 'None':
+
+        # Stable tokens number each identifier by its normalized form, which is what every detector's
+        # normalize method produces - one fresh token map per call, so the first identifier is always number one.
+        for name, sample_list in Valid_Samples.items():
+            scrubber = _new_scrubber(name, stable_tokens=True)
+
+            for sample in sample_list:
+                text = f'Customer identifier {sample} received in the payload'
+                cleaned = scrubber.clean(text)
+
+                assert sample not in cleaned, f'{name} left {sample} in place'
+                assert '_1}}' in cleaned, f'{name} did not number {sample}'
 
 # ################################################################################################################################
 # ################################################################################################################################
