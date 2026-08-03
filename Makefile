@@ -223,6 +223,7 @@ haproxy:
 	Zato_Port_OpenAPI_Console=$(Zato_Port_OpenAPI_Console) \
 	Zato_Port_Load_Balancer=$(Zato_Port_Load_Balancer) \
 	Zato_Port_MLLP=$(Zato_Port_MLLP) \
+	Zato_HL7_MLLP_Port=$(Zato_HL7_MLLP_Port) \
 	Zato_Load_Balancer_Stats_Password=dev \
 	Zato_Load_Balancer_Metrics_Password=dev \
 	haproxy -d -f $(HAPROXY_DEV_DIR)/haproxy.cfg
@@ -1423,6 +1424,9 @@ Zato_Port_Dashboard ?= 8183
 Zato_Port_OpenAPI_Console ?= 8185
 Zato_Port_Load_Balancer ?= 11223
 Zato_Port_MLLP ?= 11553
+
+# Where the server's own MLLP listener sits on loopback, which is what the MLLP backend points at
+Zato_HL7_MLLP_Port ?= 31312
 
 MLLP_TESTS            := $(CURDIR)/code/tests/python/zato-common/mllp
 HL7_DEV_DIR           := /tmp/zato-hl7-dev

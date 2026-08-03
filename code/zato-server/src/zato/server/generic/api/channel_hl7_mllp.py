@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 from logging import getLogger
 from threading import Lock
 from traceback import format_exc
@@ -16,7 +15,7 @@ from traceback import format_exc
 from zato.common.api import CHANNEL
 from zato.common.audit_log.api import AuditLog
 from zato.common.hl7.mllp.fields import Channel_Defaults, Channel_Int_Names, resolve_max_msg_size, Tolerance_Names
-from zato.common.hl7.mllp.haproxy import ensure_mllp_backend_server, find_haproxy_config, resolve_internal_port
+from zato.common.hl7.mllp.haproxy import resolve_internal_port
 from zato.common.hl7.mllp.preprocess import build_tolerance_config
 from zato.common.hl7.mllp.router import HL7MessageRouter
 from zato.common.hl7.mllp.server import HL7MLLPServer
@@ -88,7 +87,6 @@ class _SharedMLLPState:
         self.router:'HL7MessageRouter' = HL7MessageRouter()
         self.lock = Lock()
         self.internal_port = 0
-        self.haproxy_config_path = ''
         self.listener_config = ListenerConfig()
 
         # How many channels actually use the listener, which is what decides when it can stop.
@@ -418,35 +416,11 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
         _ = spawn_greenlet(server.start)
 
-        # The port is only worth reporting once there is something behind it
+        # The port is only worth reporting once there is something behind it. The load balancer
+        # already points at it, that being a fixed number its own configuration file carries.
         _shared_state.internal_port = internal_port
 
-        self._ensure_haproxy_backend_line(internal_port)
-
         logger.info('Started shared MLLP server on %s', _shared_state.listener_config.address)
-
-# ################################################################################################################################
-
-    def _ensure_haproxy_backend_line(self, internal_port:'int') -> 'None':
-        """ Makes sure this server's line is in the load balancer's MLLP backend. The port follows
-        from the server's own port, so on every start after the first there is nothing to write
-        and nothing downstream to tell.
-        """
-        server_base_directory = self.parallel_server.base_dir
-        config_path = find_haproxy_config(server_base_directory)
-        _shared_state.haproxy_config_path = config_path
-
-        if not os.path.exists(config_path):
-            logger.info('No load balancer configuration at %s, nothing to update', config_path)
-            return
-
-        server_name = self.parallel_server.name
-        was_changed = ensure_mllp_backend_server(config_path, server_name, internal_port)
-
-        # A line that was already right needed no write, and a file that did not change needs
-        # nothing reloaded - which is the case from the second start of a server onward
-        if was_changed:
-            logger.info('Added the MLLP backend line for `%s`, it applies from the next reload', server_name)
 
 # ################################################################################################################################
 
