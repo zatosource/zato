@@ -118,7 +118,7 @@
 
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.url_path }}</td>
-                        <td><a href="{% url "service-overview" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
+                        <td><a href="{% url "service-ide" "service" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
                         <td>
                             {% if item.security_name %}
                                 {{ item.sec_type_name }}
