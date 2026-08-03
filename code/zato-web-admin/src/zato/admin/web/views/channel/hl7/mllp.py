@@ -22,7 +22,7 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.forms import populate_form_initial
-from zato.admin.web.forms.channel.hl7.mllp import CreateForm, EditForm
+from zato.admin.web.forms.channel.hl7.mllp import CreateForm, EditForm, RowEditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, \
     get_http_channel_security_id, get_security_id_from_select, SecurityList
 from zato.common.api import GENERIC, generic_attrs, Groups, HL7, SEC_DEF_TYPE, ZATO_NONE
@@ -75,12 +75,17 @@ _Any_Message_Label = 'All messages'
 # .. the two flags a row turns over on the list itself ..
 _Inline_Flag_Names = ['is_active', 'is_default']
 
-# .. everything a row may change without the wizard being opened ..
-_Inline_Field_Names = [name for name, _ in _Matcher_Labels] + _Inline_Flag_Names
+# .. what a message is handed to, which the list edits in the wizard's own panels ..
+_Inline_Target_Names = ['service', 'destinations', 'respond_from', 'delivery_mode']
 
-# .. and what the page is told when a channel became the default without taking the flag
-# .. off anyone, there having been no default until then.
+# .. everything a row may change without the wizard being opened ..
+_Inline_Field_Names = [name for name, _ in _Matcher_Labels] + _Inline_Flag_Names + _Inline_Target_Names
+
+# .. what the page is told when no other channel held the default flag ..
 _No_Previous_Default = 0
+
+# .. and what the fields a row is edited through are named after.
+_Row_Edit_Prefix = 'mllp-row'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -175,11 +180,13 @@ class Index(_Index):
         # Creating and editing happen on their own pages, so the list renders no dialog and
         # needs neither the forms nor the security definitions a dialog would be built from.
         # The two ports go to the page so it can tell a sending system where to connect -
-        # the address itself is the browser's to say, it being the one that got here.
+        # the address itself is the browser's to say, it being the one that got here. The row
+        # form is what the wizard's panels edit one row's target through.
         return {
             'show_search_form': True,
             'mllp_port': os.environ['Zato_Port_MLLP'],
             'mllps_port': os.environ['Zato_Port_MLLP_SSL'],
+            'row_form': RowEditForm(self.req, _Row_Edit_Prefix),
         }
 
 # ################################################################################################################################
@@ -715,8 +722,7 @@ def wizard_edit(req:'any_', id:'str') -> 'TemplateResponse':
 # ################################################################################################################################
 
 def _save_channel(req:'any_', item_dict:'stranydict') -> 'None':
-    """ Saves a channel the way any other edit of it would, the caller having changed
-    whatever it came for and left the rest of the channel as it found it.
+    """ Saves a channel the way any other edit of it would.
     """
     channel_id = item_dict['id']
     response = req.zato.client.invoke('zato.generic.connection.edit', item_dict)
@@ -740,9 +746,7 @@ def _read_channel(req:'any_', id:'str') -> 'stranydict':
 # ################################################################################################################################
 
 def _clear_other_default(req:'any_', id:'str') -> 'int':
-    """ Takes the default flag off whichever other channel was holding it and says which one
-    that was, zero when there was none. Only one channel is the default at a time, which is
-    what the router does with its routes as well - a new default clears the previous one.
+    """ Takes the default flag off whichever other channel held it, returning its id, zero if none did.
     """
     response = req.zato.client.invoke('zato.generic.connection.get-list', {
         'cluster_id': req.zato.cluster_id,
@@ -751,7 +755,7 @@ def _clear_other_default(req:'any_', id:'str') -> 'int':
 
     for item in response.data:
 
-        # The channel just made the default is the one channel this is not about
+        # The channel just made the default is not the one being cleared
         if str(item['id']) == str(id):
             continue
 
@@ -769,9 +773,7 @@ def _clear_other_default(req:'any_', id:'str') -> 'int':
 
 @method_allowed('POST')
 def inline_edit(req:'any_', id:'str') -> 'JsonResponse':
-    """ Stores what the channel list edited without leaving the page - the two flags of a row
-    and the matchers its Match column opens. Only the fields posted change, so the channel is
-    read as it stands, they are put in and the whole of it goes back the way any edit would.
+    """ Stores what the channel list edited without leaving the page - only the fields posted change.
     """
     item_dict = _read_channel(req, id)
 
@@ -779,33 +781,41 @@ def inline_edit(req:'any_', id:'str') -> 'JsonResponse':
         if name in req.POST:
             value = req.POST[name]
 
-            # A flag travels as the word it is written with, a matcher as itself
+            # A flag travels as the word it is written with, everything else as itself
             if name in _Inline_Flag_Names:
                 value = asbool(value)
 
             item_dict[name] = value
 
+    # There is nowhere for the messages of a channel with neither of the two to go
+    service = item_dict['service']
+    destination_count = count_entries(item_dict['destinations'])
+
+    if not service:
+        if not destination_count:
+            name = item_dict['name']
+            raise Exception(f'HL7 MLLP channel `{name}` needs a service or at least one destination')
+
     _save_channel(req, item_dict)
 
-    # A flag comes back from storage as the word it was written with as readily as
-    # as the thing itself, and what the page is told it must be able to act on
+    # A flag comes back from storage as the word it was written with as readily as the thing itself
     is_active = asbool(item_dict['is_active'])
     is_default = asbool(item_dict['is_default'])
 
-    # A channel made the default takes the flag off the one that had it, and the page is told
-    # which row that was so that it can turn its cell over too
+    # Only one channel is the default, and the page is told which row lost it
     if is_default:
         default_cleared_id = _clear_other_default(req, id)
     else:
         default_cleared_id = _No_Previous_Default
 
-    # What the row now says of itself - the flags as they stand and the one line
-    # the whole of its match comes to, worded the way the list words it
+    # What the row now says of itself
     out = JsonResponse({
         'is_active': is_active,
         'is_default': is_default,
         'match_label': get_match_label(get_match_values(lambda name: item_dict[name])),
         'default_cleared_id': default_cleared_id,
+        'service': service,
+        'destination_count': destination_count,
     })
 
     return out

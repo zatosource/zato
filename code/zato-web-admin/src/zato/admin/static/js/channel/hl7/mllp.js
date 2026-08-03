@@ -17,6 +17,8 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.HL7MLLPChannel;
     $.fn.zato.data_table.parse();
     $.fn.zato.channel.hl7.mllp.init_copy_address_link();
+    $.fn.zato.channel.hl7.mllp.row_edit.init();
+    $.fn.zato.channel.hl7.mllp.init_hints();
 })
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -54,6 +56,17 @@ $.fn.zato.channel.hl7.mllp.config = {
 
     // Where a row goes when it is edited where it stands, its id following it
     inline_edit_url: '/zato/channel/hl7/mllp/inline-edit/',
+
+    // Where a service is opened, and what a cell with nothing in it says instead
+    service_ide_url: '/zato/service/ide/service/{name}/?cluster=1',
+    empty_cell_label: 'Click to add',
+
+    // What a cell says in passing when the pointer rests on it, and how patiently
+    open_hint_label: 'Click to open',
+    paused_hint_label: ' (paused)',
+    hint_theme: 'zato-hint',
+    hint_placement: 'right',
+    hint_delay: [250, 100],
 
     // How long a confirmation takes to fade once it has been read
     confirmation_fade_ms: 200,
@@ -106,9 +119,7 @@ $.fn.zato.channel.hl7.mllp.init_copy_address_link = function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Everything a row changes without leaving the page goes through here - the two flags and
-// the matchers alike. The words, the delay before a spinner appears and the side the
-// confirmation goes on are the ones every inline edit in the Dashboard uses.
+// Everything a row changes without leaving the page, worded the way every inline edit is
 $.fn.zato.channel.hl7.mllp.inline = {};
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -129,7 +140,7 @@ $.fn.zato.channel.hl7.mllp.inline.flash = function(link, message) {
 
     instance.show();
 
-    // The row keeps what it was given, so the tooltip leaves nothing of itself behind
+    // The tooltip leaves nothing of itself behind
     setTimeout(function() {
         instance.hide();
         setTimeout(function() {
@@ -154,8 +165,7 @@ $.fn.zato.channel.hl7.mllp.inline.save = function(link, id, data, on_saved, save
         details_modal_title: config.details_modal_title,
         show_delay_ms: config.saving_lead_in_ms,
 
-        // The endpoint answers with JSON when it saved and with an error page when it did not,
-        // so what the answer says of itself is its status code rather than a field of its own
+        // The endpoint answers with JSON when it saved and with an error page when it did not
         parse: function(jqXHR) {
 
             var is_http_ok = (jqXHR.status >= 200 && jqXHR.status < 300);
@@ -171,8 +181,7 @@ $.fn.zato.channel.hl7.mllp.inline.save = function(link, id, data, on_saved, save
 
         on_success: function(instance, result) {
 
-            // The spinner makes way for the confirmation, which goes to the side of the link
-            // so that it never covers the value that has just changed
+            // The spinner makes way for the confirmation
             instance.hide();
             instance.destroy();
 
@@ -193,8 +202,7 @@ $.fn.zato.channel.hl7.mllp.flag_label = function(value) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Turns one flag of one row over - what the row stands at is what the page already holds
-// of it, so the opposite of that is what is sent and what comes back is what it now shows
+// Turns one flag of one row over, the opposite of what the row stands at being what is sent
 $.fn.zato.channel.hl7.mllp.toggle_flag = function(id, link, name, after_saved) {
 
     var mllp = $.fn.zato.channel.hl7.mllp;
@@ -205,7 +213,7 @@ $.fn.zato.channel.hl7.mllp.toggle_flag = function(id, link, name, after_saved) {
 
     var on_saved = function(saved) {
 
-        // The row stands at what came back, both to the eye and to whoever clicks it next
+        // The row stands at what came back
         instance[name] = saved[name];
         link.textContent = mllp.flag_label(saved[name]);
 
@@ -219,7 +227,7 @@ $.fn.zato.channel.hl7.mllp.toggle_flag = function(id, link, name, after_saved) {
 
 $.fn.zato.channel.hl7.mllp.toggle_active = function(id, link) {
 
-    // Nothing about the rest of the list changes when one channel is switched on or off
+    // Nothing else on the list changes when one channel is switched on or off
     var after_saved = function() {};
 
     $.fn.zato.channel.hl7.mllp.toggle_flag(id, link, 'is_active', after_saved);
@@ -234,8 +242,7 @@ $.fn.zato.channel.hl7.mllp.toggle_default = function(id, link) {
 
     var after_saved = function(saved) {
 
-        // Only one channel is the default at a time, so the row that held it before
-        // has just lost it and says so without the list having to be read again
+        // The row that held the flag before has just lost it
         if(saved.default_cleared_id) {
             mllp.clear_default_cell(saved.default_cleared_id);
         }
@@ -246,7 +253,7 @@ $.fn.zato.channel.hl7.mllp.toggle_default = function(id, link) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Turns another row's Default cell over, that row having lost the flag to the one just saved
+// Turns another row's Default cell over, it having lost the flag to the one just saved
 $.fn.zato.channel.hl7.mllp.clear_default_cell = function(id) {
 
     var mllp = $.fn.zato.channel.hl7.mllp;
@@ -258,6 +265,303 @@ $.fn.zato.channel.hl7.mllp.clear_default_cell = function(id) {
     var cell_link = row.find('a[onclick*="toggle_default"]');
 
     cell_link.text(mllp.flag_label(false));
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// The Service and Destinations columns - a row's target is edited in the wizard's own panels,
+// which read their state and their fields off one object, so this page fills that object in.
+$.fn.zato.channel.hl7.mllp.row_edit = {
+
+    config: {
+
+        // What the fields the panels read and write are named after
+        field_prefix: 'mllp-row',
+
+        // Where the panels draw their chips, out of sight - the cells say it all
+        slots: {
+            destinations: 'mllp-row-slot-destinations',
+            service: 'mllp-row-slot-service',
+            delivery: 'mllp-row-slot-delivery',
+            reply: 'mllp-row-slot-reply'
+        },
+
+        // What a row that says nothing of either falls back on, the delivery modes
+        // being named in the module that draws them
+        default_delivery: 'same-time',
+
+        // The row being edited, the cell its panel hangs off, and what it opened on
+        row: null,
+        link: null,
+        baseline: null
+    }
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// What the panels hold, filled in from the row each time one is opened
+$.fn.zato.channel.hl7.mllp.wizard.state = {
+    destinationList: [],
+    delivery: $.fn.zato.channel.hl7.mllp.row_edit.config.default_delivery,
+    respondFrom: $.fn.zato.destinations.config.respondFromService
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// The fields the wizard's panels edit a row through
+$.fn.zato.channel.hl7.mllp.wizard.field = function(name) {
+    var out = $('#id_' + $.fn.zato.channel.hl7.mllp.row_edit.config.field_prefix + '-' + name);
+    return out;
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Every panel ends in a render, which is where the page learns the row changed
+$.fn.zato.channel.hl7.mllp.wizard.review.refreshSummaries = function() {
+    $.fn.zato.channel.hl7.mllp.row_edit.on_changed();
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.channel.hl7.mllp.row_edit.init = function() {
+
+    var mllp = $.fn.zato.channel.hl7.mllp;
+    var destinations = mllp.wizard.destinations;
+
+    destinations.config.slots = mllp.row_edit.config.slots;
+
+    // The connections are on their way before the first panel opens
+    destinations.init();
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// What the fields hold, which is what a row is saved with
+$.fn.zato.channel.hl7.mllp.row_edit.read_target = function() {
+
+    var wizard = $.fn.zato.channel.hl7.mllp.wizard;
+
+    var out = {
+        service: wizard.field('service').val(),
+        destinations: wizard.field('destinations').val(),
+        respond_from: wizard.field('respond_from').val(),
+        delivery_mode: wizard.field('delivery_mode').val()
+    };
+
+    return out;
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Opens one of the two panels on the row the cell belongs to
+$.fn.zato.channel.hl7.mllp.row_edit.open = function(link, panel) {
+
+    var mllp = $.fn.zato.channel.hl7.mllp;
+    var wizard = mllp.wizard;
+    var row_edit = mllp.row_edit;
+    var config = row_edit.config;
+
+    var row = document.getElementById('tr_' + link.dataset.id);
+
+    wizard.field('service').val(row.dataset.service);
+    wizard.field('destinations').val(row.dataset.destinations);
+    wizard.field('respond_from').val(row.dataset.respondFrom);
+    wizard.field('delivery_mode').val(row.dataset.deliveryMode);
+
+    // A row saying nothing of either is not left with what the row before it said
+    wizard.state.delivery = config.default_delivery;
+    wizard.state.respondFrom = $.fn.zato.destinations.config.respondFromService;
+
+    wizard.destinations.deserialize();
+    wizard.destinations.serialize();
+
+    config.row = row;
+    config.link = link;
+    config.baseline = row_edit.read_target();
+
+    $.fn.zato.wizard_kit.lines.openPanel(link, panel);
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.channel.hl7.mllp.row_edit.open_service = function(link) {
+    var panels = $.fn.zato.channel.hl7.mllp.wizard.destinations.panels;
+    $.fn.zato.channel.hl7.mllp.row_edit.open(link, panels.servicePanel());
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.channel.hl7.mllp.row_edit.open_destinations = function(link) {
+    var panels = $.fn.zato.channel.hl7.mllp.wizard.destinations.panels;
+    $.fn.zato.channel.hl7.mllp.row_edit.open(link, panels.destinationsPanel());
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Saves the row whose panel has just answered, a panel closed on what it opened with saving nothing
+$.fn.zato.channel.hl7.mllp.row_edit.on_changed = function() {
+
+    var mllp = $.fn.zato.channel.hl7.mllp;
+    var row_edit = mllp.row_edit;
+    var config = row_edit.config;
+    var baseline = config.baseline;
+
+    // The page renders once on its own, before any row has been opened
+    if(!baseline) {
+        return;
+    }
+
+    mllp.wizard.destinations.serialize();
+
+    var data = row_edit.read_target();
+
+    var is_same = data.service === baseline.service &&
+        data.destinations === baseline.destinations &&
+        data.respond_from === baseline.respond_from &&
+        data.delivery_mode === baseline.delivery_mode;
+
+    if(is_same) {
+        return;
+    }
+
+    var row = config.row;
+    var link = config.link;
+
+    var on_saved = function(saved) {
+        config.baseline = data;
+        row_edit.update_row(link.dataset.id, row, data, saved);
+    };
+
+    mllp.inline.save(link, link.dataset.id, data, on_saved, $.fn.zato.inline_edit.config.saved_label);
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// What the two cells and the row now stand at
+$.fn.zato.channel.hl7.mllp.row_edit.update_row = function(id, row, data, saved) {
+
+    var empty = $.fn.zato.channel.hl7.mllp.config.empty_cell_label;
+
+    row.dataset.service = saved.service;
+    row.dataset.destinations = data.destinations;
+    row.dataset.respondFrom = data.respond_from;
+    row.dataset.deliveryMode = data.delivery_mode;
+
+    var service_cell = document.getElementById('mllp-service-' + id);
+    service_cell.textContent = saved.service ? saved.service : empty;
+
+    var destinations_cell = document.getElementById('mllp-destinations-' + id);
+    destinations_cell.textContent = saved.destination_count ? saved.destination_count : empty;
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// The link a service is opened by, which is nowhere in the cell, so no column changes width
+$.fn.zato.channel.hl7.mllp.service_hint = function(link) {
+
+    var config = $.fn.zato.channel.hl7.mllp.config;
+    var row = document.getElementById('tr_' + link.dataset.id);
+    var name = row.dataset.service;
+
+    if(!name) {
+        return null;
+    }
+
+    var out = document.createElement('a');
+    out.className = 'zato-hint-line';
+    out.href = config.service_ide_url.replace('{name}', encodeURIComponent(name));
+    out.textContent = config.open_hint_label;
+
+    return out;
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// What a destination is called where it is listed, the shared module naming the kinds
+$.fn.zato.channel.hl7.mllp.destination_type_label = function(type) {
+
+    var typeList = $.fn.zato.destinations.config.typeList;
+    var out = '';
+
+    for(var typeIdx = 0; typeIdx < typeList.length; typeIdx++) {
+        if(typeList[typeIdx].id === type) {
+            out = typeList[typeIdx].label;
+        }
+    }
+
+    return out;
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// What the channel delivers to, one line each
+$.fn.zato.channel.hl7.mllp.destinations_hint = function(link) {
+
+    var mllp = $.fn.zato.channel.hl7.mllp;
+    var row = document.getElementById('tr_' + link.dataset.id);
+    var stored = row.dataset.destinations;
+
+    if(!stored) {
+        return null;
+    }
+
+    var entries = JSON.parse(stored);
+    var out = document.createElement('div');
+
+    for(var entryIdx = 0; entryIdx < entries.length; entryIdx++) {
+
+        var entry = entries[entryIdx];
+        var text = mllp.destination_type_label(entry.type) + ' - ' + entry.connection;
+
+        if(!entry.is_active) {
+            text += mllp.config.paused_hint_label;
+        }
+
+        var line = document.createElement('span');
+        line.className = 'zato-hint-line';
+        line.textContent = text;
+
+        out.appendChild(line);
+    }
+
+    return out;
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.channel.hl7.mllp.init_hints = function() {
+
+    var mllp = $.fn.zato.channel.hl7.mllp;
+    var config = mllp.config;
+
+    // A cell with nothing in it has nothing to say, so its hint never opens
+    var build = function(get_content) {
+
+        var out = function(instance) {
+
+            var content = get_content(instance.reference);
+
+            if(!content) {
+                return false;
+            }
+
+            instance.setContent(content);
+        };
+
+        return out;
+    };
+
+    var options = {
+        theme: config.hint_theme,
+        placement: config.hint_placement,
+        delay: config.hint_delay,
+        interactive: true,
+        arrow: true,
+        appendTo: document.body
+    };
+
+    tippy('#data-table a.mllp-service-cell', $.extend({}, options, {onShow: build(mllp.service_hint)}));
+    tippy('#data-table a.mllp-destinations-cell', $.extend({}, options, {onShow: build(mllp.destinations_hint)}));
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
