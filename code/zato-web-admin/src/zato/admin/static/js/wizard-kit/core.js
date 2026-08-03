@@ -59,9 +59,12 @@
 //                                 and a data-step attribute
 //      #<idPrefix>-step-body-N  - one body per step, N counted from 0
 //      #<idPrefix>-name-badge   - the header badge mirroring the name
-//      #<idPrefix>-back, -next, -cancel, -status - the footer, with Back
-//                       rendered disabled, the first step having nothing
-//                       behind it
+//      #<idPrefix>-back, -next, -cancel, -save, -status - the footer, with
+//                       Back rendered disabled, the first step having nothing
+//                       behind it, and Save rendered hidden, a create being
+//                       a walk that ends in one. An edit hides Back and Next
+//                       and shows Save instead, so every step is saved from
+//                       where it is, and it drops the review step's tab.
 //      #<idPrefix>-how-it-works - the page-wide help badge
 //      #<idPrefix>-review       - where the review step renders
 //
@@ -119,6 +122,9 @@ kit.core.setup = function(wizard, config) {
         // Where the list page is
         listUrl: '',
 
+        // Whether the page opened on an object that already exists
+        isEdit: false,
+
         // Whether the last uniqueness check found the name already taken
         isNameTaken: false
 
@@ -152,6 +158,7 @@ kit.core.setup = function(wizard, config) {
         var wizardConfig = wizard.config;
 
         wizard.state.listUrl = options.list_url;
+        wizard.state.isEdit = options.is_edit;
 
         // Mark the fields that must not be empty ..
         for(var fieldIdx = 0; fieldIdx < wizardConfig.requiredFields.length; fieldIdx++) {
@@ -212,6 +219,24 @@ kit.core.setup = function(wizard, config) {
         $('#' + idPrefix + '-cancel').on('click', function() {
             window.location.href = wizard.state.listUrl;
         });
+
+        $('#' + idPrefix + '-save').on('click', function() {
+            wizard.save();
+        });
+
+        // An edit is not a walk from one end to the other - each step stands on its own,
+        // is reached from the step strip and is saved from where it is, so the walk's
+        // buttons come off the footer and Save joins Cancel.
+        if(wizard.state.isEdit) {
+            $('#' + idPrefix + '-back').prop('hidden', true);
+            $('#' + idPrefix + '-next').prop('hidden', true);
+            $('#' + idPrefix + '-save').prop('hidden', false);
+
+            // .. and the review is where a create looks over what it is about to make,
+            // which an edit has in front of it already, so its step is not offered.
+            var reviewStep = wizardConfig.stepCount - 1;
+            $('#' + idPrefix + '-steps .wizard-step[data-step="' + reviewStep + '"]').prop('hidden', true);
+        }
 
         // .. the name badge follows the name as the user types ..
         wizard.field(wizardConfig.nameField).on('input', function() {
@@ -392,10 +417,12 @@ kit.core.setup = function(wizard, config) {
             wizard.review.render();
         }
 
-        // .. and the footer follows the position - there is nothing
-        // to go back to from the first step.
-        $('#' + idPrefix + '-back').prop('disabled', stepIndex === 0);
-        $('#' + idPrefix + '-next').text(isLastStep ? wizardConfig.finishLabel : wizardConfig.nextLabel);
+        // .. and the footer follows the position - there is nothing to go back to from
+        // the first step. An edit has no walk in its footer for the position to follow.
+        if(!wizard.state.isEdit) {
+            $('#' + idPrefix + '-back').prop('disabled', stepIndex === 0);
+            $('#' + idPrefix + '-next').text(isLastStep ? wizardConfig.finishLabel : wizardConfig.nextLabel);
+        }
     };
 
 // ////////////////////////////////////////////////////////////////////////
