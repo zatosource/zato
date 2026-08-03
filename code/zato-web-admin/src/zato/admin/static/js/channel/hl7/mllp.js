@@ -50,7 +50,16 @@ $.fn.zato.channel.hl7.mllp.config = {
     // What the popup hangs off, and which side of a button in it the copy flash goes on,
     // the button having the popup's own arrow directly above it
     copy_address_link_id: 'mllp-copy-address-link',
-    copied_flash_placement: 'right'
+    copied_flash_placement: 'right',
+
+    // Where a row goes when it is edited where it stands, its id following it
+    inline_edit_url: '/zato/channel/hl7/mllp/inline-edit/',
+
+    // How long a confirmation takes to fade once it has been read
+    confirmation_fade_ms: 200,
+
+    // What the two flags read as, in the order a boolean puts them
+    flag_labels: ['No', 'Yes']
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -97,6 +106,162 @@ $.fn.zato.channel.hl7.mllp.init_copy_address_link = function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// Everything a row changes without leaving the page goes through here - the two flags and
+// the matchers alike. The words, the delay before a spinner appears and the side the
+// confirmation goes on are the ones every inline edit in the Dashboard uses.
+$.fn.zato.channel.hl7.mllp.inline = {};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Says beside a row that it went through, for as long as that takes to read
+$.fn.zato.channel.hl7.mllp.inline.flash = function(link, message) {
+
+    var config = $.fn.zato.inline_edit.config;
+
+    var instance = tippy(link, {
+        content: message,
+        theme: 'dark',
+        trigger: 'manual',
+        placement: config.confirmation_placement,
+        hideOnClick: false,
+        allowHTML: false
+    });
+
+    instance.show();
+
+    // The row keeps what it was given, so the tooltip leaves nothing of itself behind
+    setTimeout(function() {
+        instance.hide();
+        setTimeout(function() {
+            instance.destroy();
+        }, $.fn.zato.channel.hl7.mllp.config.confirmation_fade_ms);
+    }, config.saved_hide_ms);
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Sends what one row changed and hands the answer over to whoever asked for the save
+$.fn.zato.channel.hl7.mllp.inline.save = function(link, id, data, on_saved, saved_label) {
+
+    var config = $.fn.zato.inline_edit.config;
+    var url = $.fn.zato.channel.hl7.mllp.config.inline_edit_url + id + '/';
+
+    $.fn.zato.action_runner.run({
+        link_elem: link,
+        url: url,
+        data: data,
+        spinner_label: config.saving_label,
+        details_modal_title: config.details_modal_title,
+        show_delay_ms: config.saving_lead_in_ms,
+
+        // The endpoint answers with JSON when it saved and with an error page when it did not,
+        // so what the answer says of itself is its status code rather than a field of its own
+        parse: function(jqXHR) {
+
+            var is_http_ok = (jqXHR.status >= 200 && jqXHR.status < 300);
+
+            return {
+                is_success: is_http_ok,
+                label: is_http_ok ? saved_label : config.error_label,
+                details_title: config.error_label,
+                details_body: jqXHR.responseText,
+                jqXHR: jqXHR
+            };
+        },
+
+        on_success: function(instance, result) {
+
+            // The spinner makes way for the confirmation, which goes to the side of the link
+            // so that it never covers the value that has just changed
+            instance.hide();
+            instance.destroy();
+
+            on_saved(JSON.parse(result.jqXHR.responseText));
+
+            $.fn.zato.channel.hl7.mllp.inline.flash(link, saved_label);
+        }
+    });
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Yes or No, the way a row shows a flag of its own
+$.fn.zato.channel.hl7.mllp.flag_label = function(value) {
+    var out = $.fn.zato.channel.hl7.mllp.config.flag_labels[value ? 1 : 0];
+    return out;
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Turns one flag of one row over - what the row stands at is what the page already holds
+// of it, so the opposite of that is what is sent and what comes back is what it now shows
+$.fn.zato.channel.hl7.mllp.toggle_flag = function(id, link, name, after_saved) {
+
+    var mllp = $.fn.zato.channel.hl7.mllp;
+    var instance = $.fn.zato.data_table.data[id];
+
+    var data = {};
+    data[name] = !$.fn.zato.to_bool(instance[name]);
+
+    var on_saved = function(saved) {
+
+        // The row stands at what came back, both to the eye and to whoever clicks it next
+        instance[name] = saved[name];
+        link.textContent = mllp.flag_label(saved[name]);
+
+        after_saved(saved);
+    };
+
+    mllp.inline.save(link, id, data, on_saved, $.fn.zato.inline_edit.config.saved_label);
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.channel.hl7.mllp.toggle_active = function(id, link) {
+
+    // Nothing about the rest of the list changes when one channel is switched on or off
+    var after_saved = function() {};
+
+    $.fn.zato.channel.hl7.mllp.toggle_flag(id, link, 'is_active', after_saved);
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Says which row another channel's messages go to when none of the matchers takes them
+$.fn.zato.channel.hl7.mllp.toggle_default = function(id, link) {
+
+    var mllp = $.fn.zato.channel.hl7.mllp;
+
+    var after_saved = function(saved) {
+
+        // Only one channel is the default at a time, so the row that held it before
+        // has just lost it and says so without the list having to be read again
+        if(saved.default_cleared_id) {
+            mllp.clear_default_cell(saved.default_cleared_id);
+        }
+    };
+
+    mllp.toggle_flag(id, link, 'is_default', after_saved);
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Turns another row's Default cell over, that row having lost the flag to the one just saved
+$.fn.zato.channel.hl7.mllp.clear_default_cell = function(id) {
+
+    var mllp = $.fn.zato.channel.hl7.mllp;
+    var instance = $.fn.zato.data_table.data[id];
+
+    instance.is_default = false;
+
+    var row = $('.item_id_' + id).closest('tr');
+    var cell_link = row.find('a[onclick*="toggle_default"]');
+
+    cell_link.text(mllp.flag_label(false));
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // The Match column - each row's matchers are edited in the very popover the wizard
 // edits them in, hosted here on a handful of hidden fields instead of on a wizard form.
 $.fn.zato.channel.hl7.mllp.match = {
@@ -109,22 +274,11 @@ $.fn.zato.channel.hl7.mllp.match = {
         // Every element the popover makes is named after this
         idPrefix: 'mllp-match',
 
-        // Where a saved row goes, the channel's id following it
-        save_url: '/zato/channel/hl7/mllp/match/',
-
         // Which micro-form of the ones the kit was given is the one this page opens
         form_name: 'routing',
 
-        // What a saved row is told beside itself, on which side of it, and for how long -
-        // the same word a job executed from the scheduler gets
+        // What a saved row is told beside itself
         saved_message: 'OK, matchers saved',
-        saved_placement: 'left',
-        saved_theme: 'dark',
-        saved_visible_ms: 1200,
-        saved_fade_ms: 300,
-
-        // A failure is not said in passing, so it goes where the page says everything else
-        save_error_message: 'Message matchers could not be saved',
 
         // The row being edited, held while its popover is open
         link: null
@@ -170,31 +324,6 @@ $.fn.zato.channel.hl7.mllp.match.open = function(link) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Says beside the row that its matchers went through, for as long as that takes to read
-$.fn.zato.channel.hl7.mllp.match.flash_saved = function(link) {
-
-    var config = $.fn.zato.channel.hl7.mllp.match.config;
-
-    var instance = tippy(link, {
-        content: config.saved_message,
-        theme: config.saved_theme,
-        trigger: 'manual',
-        placement: config.saved_placement,
-        arrow: true,
-        inertia: true
-    });
-
-    instance.show();
-
-    // The row keeps the line it was given, so the tooltip leaves nothing of itself behind
-    setTimeout(function() {
-        instance.hide();
-        setTimeout(function() { instance.destroy(); }, config.saved_fade_ms);
-    }, config.saved_visible_ms);
-};
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Stores what the popover answered - the whole of a channel is not the page's to send,
 // so only the matchers travel and the endpoint puts them into the channel it names
 $.fn.zato.channel.hl7.mllp.match.save = function() {
@@ -214,23 +343,14 @@ $.fn.zato.channel.hl7.mllp.match.save = function() {
         values[name] = value;
     }
 
-    var callback = function(response, status) {
-
-        if(status !== 'success') {
-            $.fn.zato.user_message(false, match.config.save_error_message);
-            return;
-        }
+    var on_saved = function(saved) {
 
         // The row now matches on what was just sent, so it says so and opens on it next time
-        var saved = JSON.parse(response.responseText);
-
         link.textContent = saved.match_label;
         link.dataset.match = JSON.stringify(values);
-
-        match.flash_saved(link);
     };
 
-    $.fn.zato.post(match.config.save_url + link.dataset.id + '/', callback, data);
+    $.fn.zato.channel.hl7.mllp.inline.save(link, link.dataset.id, data, on_saved, match.config.saved_message);
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

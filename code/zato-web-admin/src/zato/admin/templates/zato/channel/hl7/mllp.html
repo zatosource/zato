@@ -64,6 +64,8 @@
             '_delete',
             '_invoke',
             'id',
+            'is_active',
+            'is_default',
         ]
     }
     </script>
@@ -138,8 +140,9 @@
                                 {% endif %}
                             {% endif %}
                         </td>
-                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                        <td>{{ item.is_default|yesno:'Yes,No' }}</td>
+                        {# Both flags are turned over where they are read, the way a scheduler job's is #}
+                        <td><a href="javascript:void(0)" onclick="$.fn.zato.channel.hl7.mllp.toggle_active('{{ item.id }}', this)">{{ item.is_active|yesno:'Yes,No' }}</a></td>
+                        <td><a href="javascript:void(0)" onclick="$.fn.zato.channel.hl7.mllp.toggle_default('{{ item.id }}', this)">{{ item.is_default|yesno:'Yes,No' }}</a></td>
 
                         {# Which messages the channel takes, the line opening the very editor the wizard uses #}
                         <td><a href="javascript:void(0)" class="zato-table-note" data-id="{{ item.id }}" data-match="{{ item.match_json }}"
@@ -165,11 +168,15 @@
                         <td><a href="javascript:$.fn.zato.channel.hl7.mllp.invoke('{{ item.id }}')">Invoke</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
 
+                        {# What the two flags stand at, which is what a click on either of them turns over #}
+                        <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.is_default }}</td>
+
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='13'>No results</td>
+                        <td colspan='15'>No results</td>
                     </tr>
                 {% endif %}
 

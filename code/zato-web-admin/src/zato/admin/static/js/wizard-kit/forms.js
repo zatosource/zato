@@ -562,6 +562,28 @@ kit.forms.setup = function(wizard, config) {
 
         var pageIndex = 0;
 
+        // The button the page is answered with, whichever page is on show at the time
+        var forwardButton = null;
+
+        // Enter answers the page the way that button does - whoever has just typed the last
+        // matcher of a form is done with it and has no reason to reach for the mouse
+        container.addEventListener('keydown', function(event) {
+
+            if(event.key !== 'Enter') {
+                return;
+            }
+
+            // A button answers to Enter on its own, and a multi-line field takes it as text
+            var tagName = event.target.tagName;
+
+            if(tagName === 'BUTTON' || tagName === 'TEXTAREA') {
+                return;
+            }
+
+            event.preventDefault();
+            forwardButton.click();
+        });
+
         var renderPage = function() {
 
             pageContainer.innerHTML = '';
@@ -632,7 +654,7 @@ kit.forms.setup = function(wizard, config) {
                 buttons.appendChild(cancelButton);
             }
 
-            var forwardButton = document.createElement('button');
+            forwardButton = document.createElement('button');
             forwardButton.type = 'button';
             forwardButton.className = 'action-button';
             forwardButton.textContent = hasMorePages ? formsConfig.nextLabel : formsConfig.doneLabel;
