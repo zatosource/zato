@@ -266,14 +266,10 @@ wizard._has_target = function() {
 wizard.helpDescriptions = function() {
 
     var shared = $.fn.zato.channel.hl7.mllp.field_descriptions;
-    var out = $.extend({}, shared);
 
-    // The popover micro-forms name their inputs mllp-wizard-tippy-<field>
-    for(var key in shared) {
-        if(key.indexOf('id_') === 0) {
-            out['mllp-wizard-tippy-' + key.substring(3)] = shared[key];
-        }
-    }
+    // The popover micro-forms name their inputs after the fields they mirror,
+    // so the kit says each text again under the id its input takes
+    var out = wizard.forms.helpDescriptions(shared);
 
     // The page title carries the wizard-wide overview
     out['mllp-wizard-title'] = wizard.titleHelp();

@@ -52,6 +52,13 @@ $.fn.zato.wizard_kit.review.setup(wizard);
 
 The page then calls `wizard.init({list_url: ...})` when the DOM is ready.
 
+## Init options
+
+| Key | Meaning |
+|---|---|
+| `list_url` | Where Cancel and a finished save go back to |
+| `is_edit` | Whether the page was opened on an object that already exists |
+
 ## Core config contract
 
 | Key | Meaning |
@@ -96,6 +103,8 @@ The namespace must provide:
 Each micro-form is described by a descriptor - `{title, width, pages}`, each page a list of entries. An entry is either one field spec, shown on its own line, or a list of field specs, shown side by side in one row. A field spec points at one of the hidden Django form inputs by name, so opening a micro-form seeds its inputs from the form and pressing OK writes the answers back. Selects clone their choices from the underlying Django select, which keeps the wizard and the matching full-page editor on the same single list of options.
 
 A spec's keys: `field` (the Django form field name), `label`, `kind` - one of `text`, `number`, `select`, `checkbox` or a kind the instance registered - plus the optional `unitField`, `width`, `placeholder` and `hint`.
+
+`forms.setup` asks its host for `config.idPrefix`, `field(name)`, `helpDescriptions()` and, unless the host says otherwise, a review to refresh, so a page that is no wizard at all can host one of these popovers on a few hidden inputs of its own - the HL7 MLLP channel list opens the wizard's Message matchers straight from its Match column that way. Such a host passes `onDone`, what accepting the last page comes to, and `showCancel: true`, its popover being the whole of the save rather than one answer on a page saved later on, which puts a Cancel next to the button that accepts it. `forms.helpDescriptions(shared)` says the host's field help again under the ids the popover inputs take.
 
 A `number` field is stepped with the arrows the browser draws on it and is only as wide as a count needs, whatever the label above it says. A `checkbox` puts its switch at the end of the line its label takes, so a page of them reads as one column of switches rather than as one switch per length of text.
 

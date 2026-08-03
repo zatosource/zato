@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from http import HTTPStatus
+from json import dumps
 from logging import getLogger
 from socket import AF_INET, SOCK_STREAM, socket as socket_
 from time import time
@@ -54,6 +55,55 @@ _Wizard_Template = 'zato/channel/hl7/mllp-wizard.html'
 # .. what a channel stores under security_id ..
 _MTLS_Select_Prefix = SEC_DEF_TYPE.MTLS + '/'
 
+# .. the fields a channel matches incoming messages on, in MSH order, each with what the list
+# .. calls it - the wizard's Match row is written the same way ..
+_Matcher_Labels = [
+    ('msh3_sending_app', 'MSH-3'),
+    ('msh4_sending_facility', 'MSH-4'),
+    ('msh5_receiving_app', 'MSH-5'),
+    ('msh6_receiving_facility', 'MSH-6'),
+    ('msh9_message_type', 'MSH-9.1'),
+    ('msh9_trigger_event', 'MSH-9.2'),
+    ('msh11_processing_id', 'MSH-11'),
+    ('msh12_version_id', 'MSH-12'),
+]
+
+# .. and what a channel with no matcher of its own is said to take.
+_Any_Message_Label = 'All messages'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_match_values(get_value:'any_') -> 'stranydict':
+    """ The matchers of one channel, gathered from wherever they are kept - a list row,
+    a stored channel or what a page posted back, the caller saying how one is read.
+    """
+    out = {}
+
+    for name, _ in _Matcher_Labels:
+        out[name] = get_value(name)
+
+    return out
+
+# ################################################################################################################################
+
+def get_match_label(values:'stranydict') -> 'str':
+    """ Says in one line which messages a channel takes - each matcher it fills in narrows
+    what reaches it, and a channel that fills in none of them takes everything.
+    """
+    parts = []
+
+    for name, label in _Matcher_Labels:
+        value = values[name]
+        if value:
+            parts.append(f'{label} = {value}')
+
+    if not parts:
+        return _Any_Message_Label
+
+    out = ', '.join(parts)
+    return out
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -94,9 +144,17 @@ class Index(_Index):
 
     def on_before_append_item(self, item:'any_') -> 'any_':
         """ Counts the channel's destinations so the list can say how many there are without
-        each row's stored list having to be read again by the page itself.
+        each row's stored list having to be read again by the page itself, and writes out
+        the channel's match both as the line the row shows and as what the row's own
+        editor opens on.
         """
         item.destination_count = count_entries(item.destinations)
+
+        match_values = get_match_values(lambda name: getattr(item, name))
+
+        item.match_label = get_match_label(match_values)
+        item.match_json = dumps(match_values)
+
         return item
 
 # ################################################################################################################################
@@ -641,6 +699,36 @@ def wizard_edit(req:'any_', id:'str') -> 'TemplateResponse':
     }
 
     out = TemplateResponse(req, _Wizard_Template, return_data)
+    return out
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def match_edit(req:'any_', id:'str') -> 'JsonResponse':
+    """ Stores what the channel list edited in its Match column. Which messages a channel
+    takes is all that changes here, so the channel is read as it stands, the matchers
+    posted are put in and the whole of it goes back the way any other edit would.
+    """
+    response = req.zato.client.invoke('zato.generic.connection.get-by-id', {'id': id})
+
+    if not response.ok:
+        raise Exception(f'HL7 MLLP channel with id `{id}` could not be read')
+
+    item_dict = response.data
+
+    # What the popup answered replaces what the channel had, everything else about it
+    # travelling on untouched - a matcher left empty is a matcher that matches anything
+    match_values = get_match_values(lambda name: req.POST[name])
+    item_dict.update(match_values)
+
+    response = req.zato.client.invoke('zato.generic.connection.edit', item_dict)
+
+    if not response.ok:
+        raise Exception(f'HL7 MLLP channel with id `{id}` could not be saved')
+
+    # The row says in one line what it now matches on, which is the page's to show
+    # and this one's to word, both lists being written the same way
+    out = JsonResponse({'match_label': get_match_label(match_values)})
     return out
 
 # ################################################################################################################################

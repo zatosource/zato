@@ -26,6 +26,18 @@ class HL7MLLPChannelConfigObject:
     destinations: str = ''
     destination_count: int = 0
 
+    # The MSH fields the channel matches incoming messages on, a field left empty matching
+    # anything, plus the one line the whole match comes to when it is written out.
+    msh3_sending_app: str = ''
+    msh4_sending_facility: str = ''
+    msh5_receiving_app: str = ''
+    msh6_receiving_facility: str = ''
+    msh9_message_type: str = ''
+    msh9_trigger_event: str = ''
+    msh11_processing_id: str = ''
+    msh12_version_id: str = ''
+    match_label: str = ''
+
 # ################################################################################################################################
 # ################################################################################################################################
 

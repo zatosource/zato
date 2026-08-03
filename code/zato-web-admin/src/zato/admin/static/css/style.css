@@ -1413,6 +1413,12 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
     color: #999;
 }
 
+/* The small print of a table cell - what a row says in passing rather than
+   what it is about, like the MSH matchers an HL7 MLLP channel takes. */
+.zato-table-note {
+    font-size: 10.5px;
+}
+
 /* The countdown to the next refresh - a soft hint that additionally keeps
    a fixed minimum width and only toggles its opacity while the spinner is
    shown, so it never shifts the layout around it. */

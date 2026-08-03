@@ -78,6 +78,12 @@
 // fieldSelector, init, goToStep, save, updateNameBadge, initNameBadge,
 // onNameCheckResult.
 // The page then calls wizard.init({list_url: ...}) when the DOM is ready.
+//
+// The init options:
+//
+//      list_url       - where Cancel and a finished save go back to
+//      is_edit        - whether the page was opened on an object that
+//                       already exists
 
 (function($) {
 
