@@ -52,7 +52,7 @@ $.fn.zato.channel.hl7.mllp.init_endpoint_badge = function(badge_id, label, host,
     var address = host + ':' + port;
     var badge = $('#' + badge_id);
 
-    badge.text(label + ': ' + address);
+    badge.text(label + ' ' + address);
 
     // Pressed, the badge hands the address over and says so above itself for a moment
     badge.on('click', function() {
