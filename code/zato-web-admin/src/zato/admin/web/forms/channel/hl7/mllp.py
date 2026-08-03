@@ -165,6 +165,22 @@ class CreateForm(forms.Form):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class RowEditForm(forms.Form):
+    """ What the channel list edits one row's target through, the wizard's panels reading form fields.
+    """
+    service = forms.ChoiceField(required=False, widget=forms.Select())
+
+    destinations  = forms.CharField(required=False, widget=forms.HiddenInput())
+    respond_from  = forms.CharField(required=False, widget=forms.HiddenInput())
+    delivery_mode = forms.CharField(required=False, widget=forms.HiddenInput())
+
+    def __init__(self, req:'any_', prefix:'str') -> 'None':
+        super(RowEditForm, self).__init__(prefix=prefix)
+        add_services(self, req)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 

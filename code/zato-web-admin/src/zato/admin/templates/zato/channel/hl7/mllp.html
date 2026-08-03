@@ -16,6 +16,12 @@
     <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
+
+    {% comment %} The Service and Destinations columns edit in the wizard's own panels {% endcomment %}
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-lines.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/hint-tippy.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/channel/hl7/mllp-wizard-controls.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -41,7 +47,15 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-descriptions.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-matchers.js"></script>
 
+    {% comment %} mllp.js stands in for the wizard the two files below read {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/destinations.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/badge-picker.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/lines.js"></script>
+
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-wizard/destinations.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-wizard/destination-panels.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
     $.fn.zato.channel.hl7.mllp.config.mllp_port = '{{ mllp_port }}';
@@ -125,7 +139,9 @@
                 <tbody>
                 {% if items %}
                 {% for item in items %}
-                    <tr id='tr_{{ item.id }}'>
+                    {# What the row's editor opens on #}
+                    <tr id='tr_{{ item.id }}' data-service="{{ item.service }}" data-destinations="{{ item.destinations }}"
+                        data-respond-from="{{ item.respond_from }}" data-delivery-mode="{{ item.delivery_mode }}">
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
 
@@ -140,7 +156,7 @@
                                 {% endif %}
                             {% endif %}
                         </td>
-                        {# Both flags are turned over where they are read, the way a scheduler job's is #}
+                        {# Both flags are turned over where they are read #}
                         <td><a href="javascript:void(0)" onclick="$.fn.zato.channel.hl7.mllp.toggle_active('{{ item.id }}', this)">{{ item.is_active|yesno:'Yes,No' }}</a></td>
                         <td><a href="javascript:void(0)" onclick="$.fn.zato.channel.hl7.mllp.toggle_default('{{ item.id }}', this)">{{ item.is_default|yesno:'Yes,No' }}</a></td>
 
@@ -148,19 +164,13 @@
                         <td><a href="javascript:void(0)" class="zato-table-note" data-id="{{ item.id }}" data-match="{{ item.match_json }}"
                             onclick="$.fn.zato.channel.hl7.mllp.match.open(this)">{{ item.match_label }}</a></td>
 
-                        {# A channel that only delivers to its destinations has no service to link to #}
-                        {% if item.service %}
-                        <td><a href="{% url "service-ide" "service" item.service %}?cluster={{ cluster_id }}">{{ item.service }}</a></td>
-                        {% else %}
-                        <td>---</td>
-                        {% endif %}
+                        {# The service each message is handed to, picked in the wizard's own panel #}
+                        <td><a href="javascript:void(0)" class="mllp-service-cell" id="mllp-service-{{ item.id }}" data-id="{{ item.id }}"
+                            onclick="$.fn.zato.channel.hl7.mllp.row_edit.open_service(this)">{% if item.service %}{{ item.service }}{% else %}Click to add{% endif %}</a></td>
 
                         {# How many outgoing connections each message is delivered to on top of the service #}
-                        {% if item.destination_count %}
-                        <td><a href="{% url "channel-hl7-mllp-wizard-edit" item.id %}?cluster={{ cluster_id }}">{{ item.destination_count }}</a></td>
-                        {% else %}
-                        <td>---</td>
-                        {% endif %}
+                        <td><a href="javascript:void(0)" class="mllp-destinations-cell" id="mllp-destinations-{{ item.id }}" data-id="{{ item.id }}"
+                            onclick="$.fn.zato.channel.hl7.mllp.row_edit.open_destinations(this)">{% if item.destination_count %}{{ item.destination_count }}{% else %}Click to add{% endif %}</a></td>
 
                         <td><a href="/zato/audit-log/?source=hl7&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a></td>
                         <td><a href="{% url "channel-hl7-mllp-wizard-edit" item.id %}?cluster={{ cluster_id }}">Edit</a></td>
@@ -168,7 +178,7 @@
                         <td><a href="javascript:$.fn.zato.channel.hl7.mllp.invoke('{{ item.id }}')">Invoke</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
 
-                        {# What the two flags stand at, which is what a click on either of them turns over #}
+                        {# What the two flags stand at #}
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.is_default }}</td>
 
@@ -197,6 +207,19 @@ serves the whole table - the row clicked fills them in before the popover opens.
     <input type="hidden" id="id_mllp-match-msh9_trigger_event">
     <input type="hidden" id="id_mllp-match-msh11_processing_id">
     <input type="hidden" id="id_mllp-match-msh12_version_id">
+</div>
+
+{# The fields and slots the wizard's panels edit a row's target through #}
+<div id="mllp-row-fields" hidden>
+    {{ row_form.service }}
+    {{ row_form.destinations }}
+    {{ row_form.respond_from }}
+    {{ row_form.delivery_mode }}
+
+    <span id="mllp-row-slot-destinations"></span>
+    <span id="mllp-row-slot-service"></span>
+    <span id="mllp-row-slot-delivery"></span>
+    <span id="mllp-row-slot-reply"></span>
 </div>
 
 {% include "zato/paginate/action-panel.html" %}
