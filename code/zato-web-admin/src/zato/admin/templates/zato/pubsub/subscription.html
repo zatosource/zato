@@ -509,7 +509,7 @@
                             {% elif item.delivery_type == 'push' and item.push_type == 'rest' %}
                                 Push <a href="/zato/http-soap/?cluster={{ cluster_id }}&amp;query={{ item.rest_push_endpoint_name }}&amp;connection=outgoing&amp;transport=plain_http">{{ item.rest_push_endpoint_name }}</a>
                             {% elif item.delivery_type == 'push' and item.push_type == 'service' %}
-                                Push <a href="/zato/service/?cluster={{ cluster_id }}&amp;query={{ item.push_service_name }}">{{ item.push_service_name }}</a>
+                                Push <a href="{% url "service-ide" "service" item.push_service_name %}?cluster={{ cluster_id }}">{{ item.push_service_name }}</a>
                             {% else %}
                                 Push
                             {% endif %}

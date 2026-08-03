@@ -8,22 +8,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from collections import namedtuple
 from http import HTTPStatus
 from json import dumps
 from traceback import format_exc
 
 # Django
 from django.http import HttpRequest, HttpResponse
-from django.urls import reverse
-from django.template.response import TemplateResponse
 
 # Zato
-from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.service import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, upload_to_server
 from zato.admin.middleware import HeadersEnrichedException
-from zato.common.ext.validate_ import is_boolean
 from zato.common.util.api import parse_extra_into_dict
 # Bunch
 from zato.common.ext.bunch import Bunch
@@ -32,7 +27,7 @@ from zato.common.ext.bunch import Bunch
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,11 +35,6 @@ if 0:
 logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-ExposedThrough = namedtuple('ExposedThrough', ['id', 'name', 'url']) # type: ignore
-DeploymentInfo = namedtuple('DeploymentInfo', ['server_name', 'details']) # type: ignore
-
 # ################################################################################################################################
 
 _to_ignore = {'demo.ping'}
@@ -60,34 +50,6 @@ _header_payload_formats = ('hl7-v2', 'fhir', 'json')
 
 # The header the server-side invoker proxy reads the format from
 _ide_data_format_header = 'X-Zato-IDE-Data-Format'
-
-# ################################################################################################################################
-
-def _get_channels(client:'any_', cluster:'any_', id:'str', channel_type:'str') -> 'anylist':
-    """ Returns a list of channels of a given type for the given service.
-    """
-    input_dict = {
-        'id': id,
-        'channel_type': channel_type
-    }
-    out = []
-
-    for item in client.invoke('zato.service.get-channel-list', input_dict):
-
-        if channel_type in ['plain_http']:
-            url = reverse('http-soap')
-            url += '?connection=channel&transport={}'.format(channel_type)
-            url += '&cluster={}'.format(cluster.id)
-        else:
-            url = reverse('channel-' + channel_type)
-            url += '?cluster={}'.format(cluster.id)
-
-        url += '&highlight={}'.format(item.id)
-
-        channel = ExposedThrough(item.id, item.name, url)
-        out.append(channel)
-
-    return out
 
 # ################################################################################################################################
 
@@ -140,77 +102,6 @@ class Edit(CreateEdit):
 
     def success_message(self, item:'any_') -> 'str':
         return 'Successfully {} service `{}`'.format(self.verb, item.name)
-
-# ################################################################################################################################
-
-@method_allowed('GET')
-def overview(req:'HttpRequest', service_name:'str') -> 'TemplateResponse':
-
-    cluster_id = req.GET.get('cluster')
-    service = None
-
-    create_form = CreateForm()
-    edit_form = EditForm(prefix='edit')
-
-    if cluster_id and req.method == 'GET':
-
-        input_dict = {
-            'name': service_name,
-            'cluster_id': req.zato.cluster_id # type: ignore
-        }
-
-        response = req.zato.client.invoke('zato.service.get-by-name', input_dict) # type: ignore
-        if response.has_data:
-            service = Bunch()
-
-            for name in('id', 'name', 'is_active', 'impl_name', 'is_internal',
-                  'usage', 'last_duration', 'usage_min', 'usage_max',
-                  'usage_mean', 'last_timestamp'):
-
-                value = getattr(response.data, name, None)
-
-                if name in('is_active', 'is_internal'):
-                    value = is_boolean(value)
-
-                if name == 'last_timestamp':
-
-                    if value:
-                        service.last_timestamp_utc = value # type: ignore
-                        service.last_timestamp = from_utc_to_user(value+'+00:00', req.zato.user_profile) # type: ignore
-
-                    continue
-
-                setattr(service, name, value)
-
-            for channel_type in('plain_http', 'amqp'):
-                channels = _get_channels(req.zato.client, req.zato.cluster, service.id, channel_type) # type: ignore
-                getattr(service, channel_type + '_channels').extend(channels)
-
-            deployment_service = 'zato.service.get-deployment-info-list'
-            deployment_request = {'id': service.id, 'needs_details':True}
-
-            for item in req.zato.client.invoke(deployment_service, deployment_request): # type: ignore
-                service.deployment_info.append(DeploymentInfo(item.server_name, item.details))
-
-            response = req.zato.client.invoke('zato.scheduler.job.get-list', {'cluster_id':cluster_id}) # type: ignore
-            if response.has_data:
-                for item in response.data:
-                    if item.service_name == service_name:
-                        url = reverse('scheduler')
-                        url += '?cluster={}'.format(cluster_id)
-                        url += '&highlight={}'.format(item.id)
-                        service.scheduler_jobs.append(ExposedThrough(item.id, item.name, url))
-
-    return_data = {
-        'zato_clusters':req.zato.clusters, # type: ignore
-        'service': service,
-        'cluster_id':cluster_id,
-        'search_form':req.zato.search_form, # type: ignore
-        'create_form':create_form,
-        'edit_form':edit_form,
-        }
-
-    return TemplateResponse(req, 'zato/service/overview.html', return_data)
 
 # ################################################################################################################################
 

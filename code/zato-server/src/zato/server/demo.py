@@ -13,6 +13,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # the in-process channel counters.
 
 # stdlib
+import os
 from contextlib import closing
 from logging import getLogger
 from time import sleep
@@ -29,6 +30,7 @@ from zato.common.json_internal import dumps
 from zato.common.odb.model import GenericConn
 from zato.common.odb.query.generic import GenericObjectWrapper
 from zato.common.util.api import hex_sequence_to_bytes
+from zato.common.util.open_ import open_w
 from zato.server.generic.api.channel_hl7_mllp import get_internal_port, is_channel_routed
 
 # ################################################################################################################################
@@ -52,8 +54,12 @@ _type_channel_mllp = 'channel-hl7-mllp'
 _type_outconn_mllp = 'outconn-hl7-mllp'
 _type_outconn_fhir = 'outconn-hl7-fhir'
 
-# The service behind the demo channels - it exists on every server
-_channel_service = 'helpers.echo'
+# The service behind the demo channels - nothing on a fresh server answers an HL7 message
+# with an acknowledgment of its own, so the import deploys one, its source below
+_channel_service = 'demo.hl7.ack'
+
+# What the demo service is deployed as
+_channel_service_file_name = 'demo_hl7_ack.py'
 
 # The addresses the demo outgoing connections point at - reserved names
 # that never resolve, the demo only needs the objects to exist
@@ -66,10 +72,70 @@ _burst_count = 20
 # The seed the burst messages are generated from
 _burst_seed = 20260102
 
-# The channel wrappers start asynchronously after their connections are created -
-# this is how long the listener is given to come up, in half-second steps
-_listener_wait_steps = 20
-_listener_wait_step_seconds = 0.5
+# Hot deploy and the channel wrappers both run on their own, so the import waits for what
+# it needs rather than assuming it is there - this is how long it waits, in half-second steps
+_wait_steps = 20
+_wait_step_seconds = 0.5
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The demo service's own source, deployed as it is - a sender that gets its own message back
+# has not been acknowledged, so the demo answers with what the protocol calls for
+_channel_service_source = '''\
+# -*- coding: utf-8 -*-
+
+# Zato
+from zato.common.hl7.audit import ACKStatus
+from zato.common.hl7.mllp.ack import build_ack
+from zato.server.service import Service
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _get_message_text(request:'any_') -> 'str':
+    """ Returns the ER7 text of what a channel handed over - a REST channel delivers bytes,
+    an MLLP channel that parses on input delivers a parsed message, and one that does not
+    delivers the text itself.
+    """
+    if isinstance(request, bytes):
+        return request.decode('utf-8')
+
+    if isinstance(request, str):
+        return request
+
+    out = request.to_er7()
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DemoHL7Ack(Service):
+    """ Answers every message with an HL7 acknowledgment - the sender and receiver of the
+    message swapped, a control id of this side's own and the sender's echoed back in MSA-2.
+    """
+    name = '{service_name}'
+
+    def handle(self):
+
+        message_text = _get_message_text(self.request.raw_request)
+
+        # An acknowledgment is built from the MSH line alone, and a sender may end its
+        # lines with a carriage return, a newline or both
+        msh_line = message_text.splitlines()[0]
+
+        self.response.payload = build_ack(msh_line, ACKStatus.Application_Accept)
+
+# ################################################################################################################################
+# ################################################################################################################################
+'''.format(service_name=_channel_service)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -119,26 +185,59 @@ _connection_defs = (
 # ################################################################################################################################
 # ################################################################################################################################
 
+def ensure_demo_service(server:'ParallelServer') -> 'bool':
+    """ Deploys the service the demo channels answer with, unless it is already there, and waits
+    for it to come up. Returns whether the channels can be pointed at it.
+    """
+
+    # Already deployed, so there is nothing to write and nothing to wait for
+    if server.service_store.is_deployed(_channel_service):
+        return True
+
+    file_path = os.path.join(server.hot_deploy_config.pickup_dir, _channel_service_file_name)
+
+    with open_w(file_path) as f:
+        _ = f.write(_channel_service_source)
+
+    # Hot deploy picks the file up on its own, so the service is not there the moment
+    # its source is - the channels and the burst that follow both need it to be
+    steps_left = _wait_steps
+
+    while steps_left:
+
+        if server.service_store.is_deployed(_channel_service):
+            logger.info('Deployed the demo service `%s` from %s', _channel_service, file_path)
+            return True
+
+        sleep(_wait_step_seconds)
+        steps_left -= 1
+
+    logger.warning('The demo service `%s` did not deploy from %s', _channel_service, file_path)
+    return False
+
+# ################################################################################################################################
+
 def ensure_demo_connections(server:'ParallelServer') -> 'strlist':
-    """ Creates the demo channels and outgoing connections unless they exist -
-    running the import twice changes nothing here. Returns the names created.
+    """ Creates the demo channels and outgoing connections, replacing any left by an earlier
+    import so that each run lays down the current definition. Returns the names created.
     """
 
     # What already exists is read straight from the database
     demo_names = [connection_def['name'] for connection_def in _connection_defs]
 
     with closing(server.odb.session()) as session:
-        rows = session.query(GenericConn.name).filter(GenericConn.name.in_(demo_names)).all()
+        rows = session.query(GenericConn.id, GenericConn.name).filter(GenericConn.name.in_(demo_names)).all()
 
-    existing = {row[0] for row in rows}
+    # A connection from an earlier import would keep whatever it was created with, a channel
+    # its service among it, so what is already there goes before anything new is created
+    for connection_id, connection_name in rows:
+        _ = server.invoke('zato.generic.connection.delete', {'id': connection_id, 'cluster_id': default_cluster_id})
+        logger.info('Deleted the demo connection `%s` left by an earlier import', connection_name)
 
     # Our response to produce
     out:'strlist' = []
 
     for connection_def in _connection_defs:
-
-        if connection_def['name'] in existing:
-            continue
 
         request = {
             'cluster_id': default_cluster_id,
@@ -197,7 +296,7 @@ def _wait_for_main_channel() -> 'int':
     route in it, returning the port to send to - zero when neither came up in time. A message
     that arrives before the route is registered matches no channel and is turned away.
     """
-    steps_left = _listener_wait_steps
+    steps_left = _wait_steps
 
     while steps_left:
 
@@ -207,7 +306,7 @@ def _wait_for_main_channel() -> 'int':
             if is_channel_routed(Channel_Main):
                 return port
 
-        sleep(_listener_wait_step_seconds)
+        sleep(_wait_step_seconds)
         steps_left -= 1
 
     return 0
@@ -258,6 +357,9 @@ def import_demo_data(server:'ParallelServer', *, config:'SeedConfig | None'=None
     if config is None:
         config = SeedConfig()
 
+    # The channels name this service, so it goes in before they do
+    service_deployed = ensure_demo_service(server)
+
     created_names = ensure_demo_connections(server)
     rule_names = store_demo_rules(server)
 
@@ -273,6 +375,7 @@ def import_demo_data(server:'ParallelServer', *, config:'SeedConfig | None'=None
     # Our response to produce
     out = {
         'created_connections': created_names,
+        'service_deployed': service_deployed,
         'rule_names': rule_names,
         'message_count': result.message_count,
         'event_count': result.event_count,

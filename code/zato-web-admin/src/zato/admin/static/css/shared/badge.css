@@ -14,6 +14,7 @@
     --zato-badge-letter-spacing: 0.5px;
 
     --zato-badge-value-font-weight: 600;
+    --zato-badge-inline-gap: 6px;
 
     --zato-badge-blue-background: #e0f0ff;
     --zato-badge-blue-color: #012845;
@@ -43,6 +44,11 @@
     text-transform: uppercase;
     line-height: 1.15;
     white-space: nowrap;
+}
+
+/* A badge that follows text rather than sitting alone in a cell of its own */
+.zato-badge-inline {
+    margin-left: var(--zato-badge-inline-gap);
 }
 
 /* A badge holding a value rather than a word - it keeps the case it was given, an address

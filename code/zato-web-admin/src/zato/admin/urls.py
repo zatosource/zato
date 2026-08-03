@@ -133,8 +133,6 @@ urlpatterns += [
         login_required(service.Edit()), name=service.Edit.url_name),
     url(r'^zato/service/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(service.Delete()), name=service.Delete.url_name),
-    url(r'^zato/service/overview/(?P<service_name>.*)/$',
-        login_required(service.overview), name='service-overview'),
     url(r'^zato/service/invoke/(?P<name>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(service.invoke), name='service-invoke'),
     url(r'^zato/service/config-tables/$',
