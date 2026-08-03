@@ -218,6 +218,11 @@ haproxy:
 	@sed \
 		-e 's|/opt/zato/env/qs-1/blocked-paths.txt|$(HOME)/env/qs-1/blocked-paths.txt|g' \
 		$(HAPROXY_CFG) > $(HAPROXY_DEV_DIR)/haproxy.cfg
+	Zato_Port_Server=$(Zato_Port_Server) \
+	Zato_Port_Dashboard=$(Zato_Port_Dashboard) \
+	Zato_Port_OpenAPI_Console=$(Zato_Port_OpenAPI_Console) \
+	Zato_Port_Load_Balancer=$(Zato_Port_Load_Balancer) \
+	Zato_Port_MLLP=$(Zato_Port_MLLP) \
 	Zato_Load_Balancer_Stats_Password=dev \
 	Zato_Load_Balancer_Metrics_Password=dev \
 	haproxy -d -f $(HAPROXY_DEV_DIR)/haproxy.cfg
@@ -1410,6 +1415,15 @@ health-clippy: ## Run clippy inside the health repo.
 
 HAPROXY_CFG     := $(CURDIR)/code/zato-common/src/zato/common/pubsub/server/haproxy.cfg
 HAPROXY_DEV_DIR := /tmp/zato-haproxy-dev
+
+# The configuration file the container ships with reads every port from the environment,
+# so a dev run supplies the same values the image's own defaults use
+Zato_Port_Server ?= 17010
+Zato_Port_Dashboard ?= 8183
+Zato_Port_OpenAPI_Console ?= 8185
+Zato_Port_Load_Balancer ?= 11223
+Zato_Port_MLLP ?= 11553
+
 MLLP_TESTS            := $(CURDIR)/code/tests/python/zato-common/mllp
 HL7_DEV_DIR           := /tmp/zato-hl7-dev
 HL7_DEV_FRONTEND_PORT := 21223
@@ -1417,6 +1431,7 @@ HL7_DEV_HTTP_LB_PORT  := 21225
 HL7_DEV_REST_PORT     := 27010
 HL7_DEV_MLLP_PORT     := 21312
 HL7_DEV_DASH_PORT     := 28183
+HL7_DEV_CONSOLE_PORT  := 28185
 HL7_DEV_STATS_PORT    := 28404
 
 hl7-haproxy: ## Start HAProxy in full debug mode on dev ports.
@@ -1425,14 +1440,16 @@ hl7-haproxy: ## Start HAProxy in full debug mode on dev ports.
 	@touch $(HL7_DEV_DIR)/blocked-paths.txt
 	@sed \
 		-e 's|/opt/zato/env/qs-1/blocked-paths.txt|$(HL7_DEV_DIR)/blocked-paths.txt|g' \
-		-e 's|0.0.0.0:11223|127.0.0.1:$(HL7_DEV_FRONTEND_PORT)|g' \
+		-e 's|0.0.0.0:|127.0.0.1:|g' \
 		-e 's|127.0.0.1:11225|127.0.0.1:$(HL7_DEV_HTTP_LB_PORT)|g' \
-		-e 's|127.0.0.1:17010|127.0.0.1:$(HL7_DEV_REST_PORT)|g' \
-		-e 's|127.0.0.1:31312|127.0.0.1:$(HL7_DEV_MLLP_PORT)|g' \
-		-e 's|0.0.0.0:8183|127.0.0.1:$(HL7_DEV_DASH_PORT)|g' \
 		-e 's|127.0.0.1:8182|127.0.0.1:$(HL7_DEV_DASH_PORT)|g' \
 		-e 's|\*:8404|127.0.0.1:$(HL7_DEV_STATS_PORT)|g' \
 		$(HAPROXY_CFG) > $(HL7_DEV_DIR)/haproxy.cfg
+	Zato_Port_Server=$(HL7_DEV_REST_PORT) \
+	Zato_Port_Dashboard=$(HL7_DEV_DASH_PORT) \
+	Zato_Port_OpenAPI_Console=$(HL7_DEV_CONSOLE_PORT) \
+	Zato_Port_Load_Balancer=$(HL7_DEV_FRONTEND_PORT) \
+	Zato_Port_MLLP=$(HL7_DEV_MLLP_PORT) \
 	Zato_Load_Balancer_Stats_Password=dev \
 	Zato_Load_Balancer_Metrics_Password=dev \
 	haproxy -d -f $(HL7_DEV_DIR)/haproxy.cfg
