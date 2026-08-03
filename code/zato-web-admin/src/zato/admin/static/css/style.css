@@ -1416,7 +1416,7 @@ input[type="checkbox"]:not(td.impexp input):not(.tri-state):not(.multi-select-ta
 /* The small print of a table cell - what a row says in passing rather than
    what it is about, like the MSH matchers an HL7 MLLP channel takes. */
 .zato-table-note {
-    font-size: 10.5px;
+    font-size: 0.75rem;
 }
 
 /* The countdown to the next refresh - a soft hint that additionally keeps
