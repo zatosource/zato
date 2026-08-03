@@ -16,6 +16,7 @@ $(document).ready(function() {
     $('#data-table').tablesorter();
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.HL7MLLPChannel;
     $.fn.zato.data_table.parse();
+    $.fn.zato.channel.hl7.mllp.init_endpoint_badges();
 })
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -31,8 +32,47 @@ $.fn.zato.channel.hl7.mllp.delete_ = function(id) {
 
 $.fn.zato.channel.hl7.mllp.config = {
     cluster_id: '1',
-    import_demo_url: '/zato/channel/hl7/mllp/import-demo-config'
+    import_demo_url: '/zato/channel/hl7/mllp/import-demo-config',
+
+    // The ports feeds connect on, written in by the page from what the environment has
+    mllp_port: '',
+    mllps_port: '',
+
+    // What each endpoint is called and which badge carries it
+    mllp_label: 'MLLP',
+    mllps_label: 'MLLPS',
+    mllp_badge_id: 'mllp-endpoint-plain',
+    mllps_badge_id: 'mllp-endpoint-tls'
 };
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.channel.hl7.mllp.init_endpoint_badge = function(badge_id, label, host, port) {
+
+    var address = host + ':' + port;
+    var badge = $('#' + badge_id);
+
+    badge.text(label + ': ' + address);
+
+    // Pressed, the badge hands the address over and says so above itself for a moment
+    badge.on('click', function() {
+        $.fn.zato.ui_helpers.copy_to_clipboard(this, address);
+    });
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.channel.hl7.mllp.init_endpoint_badges = function() {
+
+    var config = $.fn.zato.channel.hl7.mllp.config;
+
+    // Whichever of this machine's names got the browser here is the one a feed on the same
+    // network reaches it by, so the page never has to be told what to call itself
+    var host = window.location.hostname;
+
+    $.fn.zato.channel.hl7.mllp.init_endpoint_badge(config.mllp_badge_id, config.mllp_label, host, config.mllp_port);
+    $.fn.zato.channel.hl7.mllp.init_endpoint_badge(config.mllps_badge_id, config.mllps_label, host, config.mllps_port);
+}
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

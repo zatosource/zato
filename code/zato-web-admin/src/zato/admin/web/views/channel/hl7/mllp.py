@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from http import HTTPStatus
 from logging import getLogger
 from socket import AF_INET, SOCK_STREAM, socket as socket_
@@ -103,9 +104,13 @@ class Index(_Index):
     def handle(self):
 
         # Creating and editing happen on their own pages, so the list renders no dialog and
-        # needs neither the forms nor the security definitions a dialog would be built from
+        # needs neither the forms nor the security definitions a dialog would be built from.
+        # The two ports go to the page so it can tell a sending system where to connect -
+        # the address itself is the browser's to say, it being the one that got here.
         return {
             'show_search_form': True,
+            'mllp_port': os.environ['Zato_Port_MLLP'],
+            'mllps_port': os.environ['Zato_Port_MLLP_SSL'],
         }
 
 # ################################################################################################################################

@@ -8,6 +8,7 @@
     <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
     <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
     <link rel="stylesheet" type="text/css" href="/static/css/zato_highlight_pane.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/badge.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -25,6 +26,11 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_highlight_pane.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/invoker.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.channel.hl7.mllp.config.mllp_port = '{{ mllp_port }}';
+    $.fn.zato.channel.hl7.mllp.config.mllps_port = '{{ mllps_port }}';
+    </script>
 
     <script nonce="{{ CSP_NONCE }}">
     $.fn.zato.data_table.get_columns = function() {
@@ -67,7 +73,10 @@
         <div class='page_prompt' style="clear:left">
             <a href="{% url "channel-hl7-mllp-wizard-create" %}?cluster={{ cluster_id }}">Create a new channel</a> |
             <a href="javascript:$.fn.zato.channel.hl7.mllp.import_demo_config()" class="common">Import demo config</a> |
-            <a href="{% url "channel-hl7-dashboard" %}?cluster={{ cluster_id }}" class="common">Go to dashboard</a>
+            <a href="{% url "channel-hl7-dashboard" %}?cluster={{ cluster_id }}" class="common">Go to dashboard</a> |
+
+            <button type="button" class="zato-badge zato-badge-blue zato-badge-value" id="mllp-endpoint-plain"></button> |
+            <button type="button" class="zato-badge zato-badge-green zato-badge-value" id="mllp-endpoint-tls"></button>
         </div>
 
 
