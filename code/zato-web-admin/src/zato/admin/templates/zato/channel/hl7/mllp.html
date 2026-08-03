@@ -10,6 +10,12 @@
     <link rel="stylesheet" type="text/css" href="/static/css/zato_highlight_pane.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/badge.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/tippy-buttons.css">
+
+    {% comment %} The Match column edits the matchers in the wizard's own popover {% endcomment %}
+    <link rel="stylesheet" type="text/css" href="/static/css/settings.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -26,6 +32,15 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_ui_helpers.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_highlight_pane.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/invoker.js"></script>
+
+    {% comment %} What the Match column's popover is built from - the wizard kit's popover
+    engine, the chrome it wears and the matchers both pages edit {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/forms.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-descriptions.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp-matchers.js"></script>
+
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/hl7/mllp.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
@@ -40,6 +55,7 @@
             '_selection',
             'name',
             '_is_active',
+            '_match',
             '_is_default',
             '_service',
             '_destinations',
@@ -90,6 +106,7 @@
 
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
+                        <th><a href="#">Match</a></th>
                         <th><a href="#">Default</a></th>
 
                         <th><a href="#">Service</a></th>
@@ -122,6 +139,11 @@
                             {% endif %}
                         </td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+
+                        {# Which messages the channel takes, the line opening the very editor the wizard uses #}
+                        <td><a href="javascript:void(0)" class="zato-table-note" data-id="{{ item.id }}" data-match="{{ item.match_json }}"
+                            onclick="$.fn.zato.channel.hl7.mllp.match.open(this)">{{ item.match_label }}</a></td>
+
                         <td>{{ item.is_default|yesno:'Yes,No' }}</td>
 
                         {# A channel that only delivers to its destinations has no service to link to #}
@@ -148,12 +170,28 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='12'>No results</td>
+                        <td colspan='13'>No results</td>
                     </tr>
                 {% endif %}
 
                 </tbody>
             </table>
+
+{% comment %}
+The matchers of whichever row is being edited. The popover reads and writes fields
+rather than rows, the same as it does on the wizard's own form, so one set of them
+serves the whole table - the row clicked fills them in before the popover opens.
+{% endcomment %}
+<div id="mllp-match-fields" hidden>
+    <input type="hidden" id="id_mllp-match-msh3_sending_app">
+    <input type="hidden" id="id_mllp-match-msh4_sending_facility">
+    <input type="hidden" id="id_mllp-match-msh5_receiving_app">
+    <input type="hidden" id="id_mllp-match-msh6_receiving_facility">
+    <input type="hidden" id="id_mllp-match-msh9_message_type">
+    <input type="hidden" id="id_mllp-match-msh9_trigger_event">
+    <input type="hidden" id="id_mllp-match-msh11_processing_id">
+    <input type="hidden" id="id_mllp-match-msh12_version_id">
+</div>
 
 {% include "zato/paginate/action-panel.html" %}
 

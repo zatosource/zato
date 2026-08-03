@@ -97,6 +97,155 @@ $.fn.zato.channel.hl7.mllp.init_copy_address_link = function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// The Match column - each row's matchers are edited in the very popover the wizard
+// edits them in, hosted here on a handful of hidden fields instead of on a wizard form.
+$.fn.zato.channel.hl7.mllp.match = {
+
+    // The kit installs the popover engine here
+    forms: {},
+
+    config: {
+
+        // Every element the popover makes is named after this
+        idPrefix: 'mllp-match',
+
+        // Where a saved row goes, the channel's id following it
+        save_url: '/zato/channel/hl7/mllp/match/',
+
+        // Which micro-form of the ones the kit was given is the one this page opens
+        form_name: 'routing',
+
+        // What a saved row is told beside itself, on which side of it, and for how long -
+        // the same word a job executed from the scheduler gets
+        saved_message: 'OK, matchers saved',
+        saved_placement: 'left',
+        saved_theme: 'dark',
+        saved_visible_ms: 1200,
+        saved_fade_ms: 300,
+
+        // A failure is not said in passing, so it goes where the page says everything else
+        save_error_message: 'Message matchers could not be saved',
+
+        // The row being edited, held while its popover is open
+        link: null
+    }
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// The hidden fields the popover reads and writes, named the way it expects
+$.fn.zato.channel.hl7.mllp.match.field = function(name) {
+    var out = $('#id_' + $.fn.zato.channel.hl7.mllp.match.config.idPrefix + '-' + name);
+    return out;
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// A matcher is explained in the same words wherever it is shown, the popover inputs
+// carrying ids of their own for the help to find them under
+$.fn.zato.channel.hl7.mllp.match.helpDescriptions = function() {
+    var match = $.fn.zato.channel.hl7.mllp.match;
+    var out = match.forms.helpDescriptions($.fn.zato.channel.hl7.mllp.field_descriptions);
+    return out;
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Opens the matchers of one row, the popover hanging off the very line that was clicked
+$.fn.zato.channel.hl7.mllp.match.open = function(link) {
+
+    var match = $.fn.zato.channel.hl7.mllp.match;
+    var matchers = $.fn.zato.channel.hl7.mllp.matchers;
+    var values = JSON.parse(link.dataset.match);
+
+    match.config.link = link;
+
+    for(var fieldIdx = 0; fieldIdx < matchers.fields.length; fieldIdx++) {
+        var name = matchers.fields[fieldIdx].field;
+        match.field(name).val(values[name]);
+    }
+
+    match.forms.open(match.config.form_name, link);
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Says beside the row that its matchers went through, for as long as that takes to read
+$.fn.zato.channel.hl7.mllp.match.flash_saved = function(link) {
+
+    var config = $.fn.zato.channel.hl7.mllp.match.config;
+
+    var instance = tippy(link, {
+        content: config.saved_message,
+        theme: config.saved_theme,
+        trigger: 'manual',
+        placement: config.saved_placement,
+        arrow: true,
+        inertia: true
+    });
+
+    instance.show();
+
+    // The row keeps the line it was given, so the tooltip leaves nothing of itself behind
+    setTimeout(function() {
+        instance.hide();
+        setTimeout(function() { instance.destroy(); }, config.saved_fade_ms);
+    }, config.saved_visible_ms);
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Stores what the popover answered - the whole of a channel is not the page's to send,
+// so only the matchers travel and the endpoint puts them into the channel it names
+$.fn.zato.channel.hl7.mllp.match.save = function() {
+
+    var match = $.fn.zato.channel.hl7.mllp.match;
+    var matchers = $.fn.zato.channel.hl7.mllp.matchers;
+    var link = match.config.link;
+
+    var data = {};
+    var values = {};
+
+    for(var fieldIdx = 0; fieldIdx < matchers.fields.length; fieldIdx++) {
+        var name = matchers.fields[fieldIdx].field;
+        var value = match.field(name).val();
+
+        data[name] = value;
+        values[name] = value;
+    }
+
+    var callback = function(response, status) {
+
+        if(status !== 'success') {
+            $.fn.zato.user_message(false, match.config.save_error_message);
+            return;
+        }
+
+        // The row now matches on what was just sent, so it says so and opens on it next time
+        var saved = JSON.parse(response.responseText);
+
+        link.textContent = saved.match_label;
+        link.dataset.match = JSON.stringify(values);
+
+        match.flash_saved(link);
+    };
+
+    $.fn.zato.post(match.config.save_url + link.dataset.id + '/', callback, data);
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// The popover itself, the matchers and their form coming from the module both this page
+// and the wizard build them from - all this page adds is where a saved row goes
+$.fn.zato.wizard_kit.forms.setup($.fn.zato.channel.hl7.mllp.match, {
+    descriptors: {'routing': $.fn.zato.channel.hl7.mllp.matchers.descriptor},
+    showCancel: true,
+    doneLabel: 'Save',
+    onDone: $.fn.zato.channel.hl7.mllp.match.save
+});
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.channel.hl7.mllp.import_demo_config = function() {
     var config = $.fn.zato.channel.hl7.mllp.config;
     var import_url = config.import_demo_url + '?cluster=' + config.cluster_id;

@@ -19,9 +19,6 @@ $.fn.zato.wizard_kit.review.setup(wizard);
 
 review.config = {
 
-    // The routing summary when no matcher is filled in
-    anyMessageLabel: 'All messages',
-
     // What the review says about a decision not made yet
     notSetLabel: 'Not set',
     noServiceLabel: 'No service',
@@ -43,18 +40,6 @@ review.config = {
     noDedupLabel: 'no dedup',
     loggingLabel: ' logging options on',
     offLabel: 'Off',
-
-    // The matcher fields and their labels, in MSH order
-    matcherFields: [
-        {field: 'msh3_sending_app',        label: 'MSH-3 sending application'},
-        {field: 'msh4_sending_facility',   label: 'MSH-4 sending facility'},
-        {field: 'msh5_receiving_app',      label: 'MSH-5 receiving application'},
-        {field: 'msh6_receiving_facility', label: 'MSH-6 receiving facility'},
-        {field: 'msh9_message_type',       label: 'MSH-9.1 message type'},
-        {field: 'msh9_trigger_event',      label: 'MSH-9.2 trigger event'},
-        {field: 'msh11_processing_id',     label: 'MSH-11 processing ID'},
-        {field: 'msh12_version_id',        label: 'MSH-12 version'}
-    ],
 
     // The tolerance toggles, in the order the card shows them
     toleranceFields: [
@@ -226,26 +211,11 @@ review._restSummary = function() {
 
 review._routingSummary = function() {
 
-    var config = review.config;
+    // The same line the channel list shows in its Match column, read off the form
+    var out = $.fn.zato.channel.hl7.mllp.matchers.summary(function(fieldName) {
+        return wizard.field(fieldName).val();
+    });
 
-    var parts = [];
-
-    for(var matcherIdx = 0; matcherIdx < config.matcherFields.length; matcherIdx++) {
-        var matcher = config.matcherFields[matcherIdx];
-        var value = wizard.field(matcher.field).val().trim();
-
-        if(value) {
-            var shortLabel = matcher.label.split(' ')[0];
-            parts.push(shortLabel + ' = ' + value);
-        }
-    }
-
-    if(!parts.length) {
-        var out = config.anyMessageLabel;
-        return out;
-    }
-
-    var out = parts.join(', ');
     return out;
 };
 
@@ -501,8 +471,10 @@ review.render = function() {
         routingRows.push(['Default channel', 'Receives everything no other channel claimed']);
     }
 
-    for(var matcherIdx = 0; matcherIdx < config.matcherFields.length; matcherIdx++) {
-        var matcher = config.matcherFields[matcherIdx];
+    var matchers = $.fn.zato.channel.hl7.mllp.matchers;
+
+    for(var matcherIdx = 0; matcherIdx < matchers.fields.length; matcherIdx++) {
+        var matcher = matchers.fields[matcherIdx];
         var matcherValue = wizard.field(matcher.field).val().trim();
         if(matcherValue) {
             routingRows.push([matcher.label, matcherValue]);
@@ -510,7 +482,7 @@ review.render = function() {
     }
 
     if(!routingRows.length) {
-        routingRows.push([config.anyMessageLabel, '']);
+        routingRows.push([matchers.anyLabel, '']);
     }
 
     // Destinations and service, in the order the four lines of step 2 ask

@@ -46,28 +46,8 @@ $.fn.zato.wizard_kit.forms.setup(wizard, {
             ]]
         },
 
-        'routing': {
-            title: 'Message matchers',
-            width: '430px',
-            pages: [[
-                [
-                    {field: 'msh3_sending_app',        label: 'Sending application (MSH-3)',  kind: 'text'},
-                    {field: 'msh4_sending_facility',   label: 'Sending facility (MSH-4)',     kind: 'text'}
-                ],
-                [
-                    {field: 'msh5_receiving_app',      label: 'Receiving application (MSH-5)', kind: 'text'},
-                    {field: 'msh6_receiving_facility', label: 'Receiving facility (MSH-6)',   kind: 'text'}
-                ],
-                [
-                    {field: 'msh9_message_type',   label: 'Message type (MSH-9.1)',  kind: 'text', placeholder: 'e.g. ORU'},
-                    {field: 'msh9_trigger_event',  label: 'Trigger event (MSH-9.2)', kind: 'text', placeholder: 'e.g. R01'}
-                ],
-                [
-                    {field: 'msh11_processing_id', label: 'Processing ID (MSH-11)',  kind: 'text', placeholder: 'e.g. P'},
-                    {field: 'msh12_version_id',    label: 'Version (MSH-12)',        kind: 'text', placeholder: 'e.g. 2.5'}
-                ]
-            ]]
-        },
+        // The channel list opens the very same form from its Match column
+        'routing': $.fn.zato.channel.hl7.mllp.matchers.descriptor,
 
         'dedup': {
             title: 'Deduplication',

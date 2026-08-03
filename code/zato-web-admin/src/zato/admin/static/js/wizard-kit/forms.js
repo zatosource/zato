@@ -38,8 +38,26 @@
 //      });
 //
 // setup installs on wizard.forms: config, descriptors, registerKind,
-// showTippy, close, buildTitle, buildHelpBadge, initHelp, open, plus the
-// internal builders the instance's own popovers may reuse.
+// showTippy, close, buildTitle, buildHelpBadge, initHelp, helpDescriptions,
+// open, plus the internal builders the instance's own popovers may reuse.
+//
+// ---------------------------------------------------------------
+// Hosts that are not wizards
+// ---------------------------------------------------------------
+//
+// setup asks its host for config.idPrefix, field(name), helpDescriptions()
+// and, unless the host says otherwise, a review to refresh - so any page
+// with a few hidden inputs can host one of these popovers. Such a page
+// hands over onDone, what accepting the last page comes to, and turns on
+// showCancel, its popover being the whole of the save rather than one
+// answer on a page saved later on:
+//
+//      $.fn.zato.wizard_kit.forms.setup(host, {
+//          descriptors: {'routing': sharedDescriptor},
+//          showCancel: true,
+//          doneLabel: 'Save',
+//          onDone: host.save
+//      });
 
 (function($) {
 
@@ -65,6 +83,12 @@ kit.forms.defaults = {
     backLabel: 'Back',
     nextLabel: 'Next',
     doneLabel: 'OK',
+    cancelLabel: 'Cancel',
+
+    // Whether the last page offers a way out next to the button that accepts it -
+    // a wizard's popover is one answer among many on a page that is saved later on,
+    // so it has nothing to back out of, while a popover that saves on its own does
+    showCancel: false,
 
     // The per-field help badge label - the badge is rebuilt with every
     // page render, so one id can serve every micro-form
@@ -88,6 +112,13 @@ kit.forms.setup = function(wizard, config) {
 
     forms.descriptors = config.descriptors ? config.descriptors : {};
 
+    // What accepting the last page comes to, once the answers are back in the form -
+    // a wizard shows them on its cards, a page that hosts one popover of its own
+    // saves them where they belong instead
+    forms.onDone = config.onDone ? config.onDone : function() {
+        wizard.review.refreshSummaries();
+    };
+
     // The currently open popover, if any
     forms._instance = null;
 
@@ -107,6 +138,23 @@ kit.forms.setup = function(wizard, config) {
     // The id a micro-form input derives from the field it mirrors
     forms.inputId = function(fieldName) {
         var out = idPrefix + '-tippy-' + fieldName;
+        return out;
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // The help texts a page keeps under its Django field ids, said again under the
+    // ids the popover inputs take - one text describes a field wherever it is shown.
+    forms.helpDescriptions = function(shared) {
+
+        var out = $.extend({}, shared);
+
+        for(var key in shared) {
+            if(key.indexOf('id_') === 0) {
+                out[forms.inputId(key.substring(3))] = shared[key];
+            }
+        }
+
         return out;
     };
 
@@ -570,6 +618,20 @@ kit.forms.setup = function(wizard, config) {
 
             var hasMorePages = pageIndex < descriptor.pages.length - 1;
 
+            // .. a popover that saves by itself lets the reader leave it alone,
+            // nothing being written back until the button next to this one is pressed ..
+            if(formsConfig.showCancel && !hasMorePages) {
+                var cancelButton = document.createElement('button');
+                cancelButton.type = 'button';
+                cancelButton.className = 'secondary-button';
+                cancelButton.textContent = formsConfig.cancelLabel;
+
+                cancelButton.addEventListener('click', function() {
+                    forms.close();
+                });
+                buttons.appendChild(cancelButton);
+            }
+
             var forwardButton = document.createElement('button');
             forwardButton.type = 'button';
             forwardButton.className = 'action-button';
@@ -583,10 +645,10 @@ kit.forms.setup = function(wizard, config) {
                     renderPage();
                 }
 
-                // .. and OK writes everything back and closes the popover.
+                // .. and the last button writes everything back and closes the popover.
                 else {
                     forms.close();
-                    wizard.review.refreshSummaries();
+                    forms.onDone();
                 }
             });
             buttons.appendChild(forwardButton);
