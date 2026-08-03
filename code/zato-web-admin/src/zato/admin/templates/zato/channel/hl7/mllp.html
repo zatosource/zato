@@ -55,8 +55,8 @@
             '_selection',
             'name',
             '_is_active',
-            '_match',
             '_is_default',
+            '_match',
             '_service',
             '_destinations',
             '_audit_log',
@@ -106,8 +106,8 @@
 
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
-                        <th><a href="#">Match</a></th>
                         <th><a href="#">Default</a></th>
+                        <th><a href="#">Match</a></th>
 
                         <th><a href="#">Service</a></th>
                         <th><a href="#">Destinations</a></th>
@@ -139,12 +139,11 @@
                             {% endif %}
                         </td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.is_default|yesno:'Yes,No' }}</td>
 
                         {# Which messages the channel takes, the line opening the very editor the wizard uses #}
                         <td><a href="javascript:void(0)" class="zato-table-note" data-id="{{ item.id }}" data-match="{{ item.match_json }}"
                             onclick="$.fn.zato.channel.hl7.mllp.match.open(this)">{{ item.match_label }}</a></td>
-
-                        <td>{{ item.is_default|yesno:'Yes,No' }}</td>
 
                         {# A channel that only delivers to its destinations has no service to link to #}
                         {% if item.service %}
