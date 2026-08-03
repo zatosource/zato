@@ -4,6 +4,8 @@ A config-driven framework for multi-step wizard pages, following the dashboard k
 
 A wizard page is one dashboard card holding a step strip, one body per step, a review on the last step and a footer with Back, Next and Cancel. The rendered Django form is the single source of every field's value - whatever the wizard shows on its steps reads from and writes back into the form, so the payload posted on Finish is exactly what the matching full-page editor would post.
 
+A page opened on an object that already exists says so with `is_edit: true` in its `init` options, and its footer is Cancel and Save instead of Back and Next. An edit is not a walk from one end to the other - each step stands on its own, is reached from the step strip and is saved from where it is. Save posts the same whole form Finish does, every step being in the DOM at once, so where the reader happened to be standing makes no difference to what is written. The review step is not offered either, its tab taken out of the strip - looking over what is about to be made is a create's business, an edit having the object in front of it already.
+
 Three instances exist today:
 
 - the HL7 MLLP channel wizard - `static/js/channel/hl7/mllp-wizard/`
@@ -77,7 +79,7 @@ All ids derive from `idPrefix` and all are required:
 - `#<idPrefix>-steps` - the step strip, tabs carry `.wizard-step` and a `data-step` attribute
 - `#<idPrefix>-step-body-N` - one body per step, N counted from 0
 - `#<idPrefix>-name-badge` - the header badge mirroring the name
-- `#<idPrefix>-back`, `-next`, `-cancel`, `-status` - the footer. Back is rendered `disabled`, since a page opens on its first step and there is nothing behind it - the step walking takes it from there
+- `#<idPrefix>-back`, `-next`, `-cancel`, `-save`, `-status` - the footer. Back is rendered `disabled`, since a page opens on its first step and there is nothing behind it - the step walking takes it from there. Save is rendered `hidden`, a create ending in the Next button rather than in one of its own
 - `#<idPrefix>-how-it-works` - the page-wide help badge
 - `#<idPrefix>-review` - where the review step renders
 

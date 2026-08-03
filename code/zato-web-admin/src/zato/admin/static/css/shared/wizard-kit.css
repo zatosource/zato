@@ -281,6 +281,12 @@
     gap: 8px;
 }
 
+/* A step the page does not offer, e.g. the review an edit has no use for -
+   the tab's own display would otherwise keep it on screen */
+.wizard-steps > .dashboard-tab[hidden] {
+    display: none;
+}
+
 /* The step numbers are just part of the tab name, only in monospace */
 .wizard-step-num {
     font-family: "Ubuntu Mono", "DejaVu Sans Mono", "Menlo", "Consolas", monospace;

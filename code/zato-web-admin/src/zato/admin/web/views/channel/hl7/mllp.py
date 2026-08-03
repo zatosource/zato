@@ -609,7 +609,13 @@ def wizard_edit(req:'any_', id:'str') -> 'TemplateResponse':
     rest_channel_id = 0
 
     if 'rest_channel_id' in item_dict:
-        rest_channel_id = item_dict['rest_channel_id']
+        stored_rest_channel_id = item_dict['rest_channel_id']
+
+        # A channel that never had a bridge may still carry the key with nothing under it,
+        # and what the page is given goes into the form as text, so a null would reach
+        # the save as the word it is written with rather than as no channel at all
+        if stored_rest_channel_id:
+            rest_channel_id = stored_rest_channel_id
 
     if rest_channel_id:
         _populate_rest_bridge(req, item_dict, rest_channel_id)
