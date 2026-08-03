@@ -8,9 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import ExitStack
-from os.path import join
-from shutil import rmtree
-from tempfile import mkdtemp
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
@@ -136,27 +133,19 @@ def _reset_shared_state() -> 'None':
     _shared_state.router._routes = []
     _shared_state.listener_channel_count = 0
     _shared_state.internal_port = 0
-    _shared_state.haproxy_config_path = ''
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class _WiringTestCase(TestCase):
     """ Stands everything the wrapper reaches outside its own process off to one side - the
-    listener, the greenlet it would run on and the load balancer's configuration file - so that
-    what the wrapper hands each of them can be read back.
+    listener and the greenlet it would run on - so that what the wrapper hands each of them
+    can be read back.
     """
 
     def setUp(self) -> 'None':
 
         _reset_shared_state()
-
-        # The wrapper only writes to a configuration file that is really there, so there has to be one
-        self._config_dir = mkdtemp(prefix='mllp-wiring-')
-        config_path = join(self._config_dir, 'haproxy.cfg')
-
-        with open(config_path, 'w') as config_file:
-            _ = config_file.write('')
 
         self._patches = ExitStack()
 
@@ -166,12 +155,9 @@ class _WiringTestCase(TestCase):
         self.mock_server_class = _start('HL7MLLPServer')
         self.mock_spawn = _start('spawn_greenlet')
         self.mock_resolve_port = _start('resolve_internal_port', return_value=_test_internal_port)
-        self.mock_find_haproxy = _start('find_haproxy_config', return_value=config_path)
-        self.mock_ensure_backend = _start('ensure_mllp_backend_server')
 
     def tearDown(self) -> 'None':
         self._patches.close()
-        rmtree(self._config_dir, ignore_errors=True)
         _reset_shared_state()
 
 # ################################################################################################################################
@@ -395,18 +381,15 @@ class TestListenerWiring(_WiringTestCase):
 
 # ################################################################################################################################
 
-    def test_backend_line_written_once(self) -> 'None':
-        """ The load balancer is told where to reach this server when the listener starts, and
-        not again for every channel that follows.
+    def test_the_listener_binds_the_port_the_backend_names(self) -> 'None':
+        """ Nothing tells the load balancer where the listener is - its configuration already
+        names the port, so the listener has to be the one to match it.
         """
 
-        first = self.make_wrapper(name='first')
-        first._init_impl()
+        wrapper = self.make_wrapper(name='first')
+        wrapper._init_impl()
 
-        second = self.make_wrapper(name='second')
-        second._init_impl()
-
-        self.mock_ensure_backend.assert_called_once()
+        self.assertEqual(_shared_state.internal_port, _test_internal_port)
 
 # ################################################################################################################################
 

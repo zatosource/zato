@@ -25,7 +25,7 @@ import pytest
 # Zato
 from mllp_live_util import end_sequence, sample_wellness_oru, start_sequence
 from rest_echo_server import HTTPEchoHandler
-from zato.common.hl7.mllp.haproxy import ensure_mllp_backend_server
+from zato.common.hl7.mllp.haproxy import Env_Port_Name
 from zato.common.hl7.mllp.proxy_protocol import read_proxy_header
 
 # ################################################################################################################################
@@ -191,6 +191,9 @@ def _build_test_haproxy_cfg(
         config_text,
     )
 
+    # .. and the MLLP backend, which the shipped file points at a fixed loopback port ..
+    config_text = config_text.replace(f'127.0.0.1:${{{Env_Port_Name}}}', f'127.0.0.1:{mllp_backend_port}')
+
     # .. replace the blocked-paths file reference with /dev/null ..
     config_text = config_text.replace('/opt/zato/env/qs-1/blocked-paths.txt', '/dev/null')
 
@@ -204,9 +207,6 @@ def _build_test_haproxy_cfg(
 
     with open(config_path, 'w') as config_file:
         _ = config_file.write(config_text)
-
-    # .. the backend server line is written by the server at startup, exactly as production does it ..
-    _ = ensure_mllp_backend_server(config_path, 'server1', mllp_backend_port)
 
     return config_path
 

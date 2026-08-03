@@ -17,7 +17,7 @@ from typing import NamedTuple
 
 # Zato
 from zato.common.crypto.api import CryptoManager
-from zato.common.hl7.mllp.haproxy import ensure_mllp_backend_server
+from zato.common.hl7.mllp.haproxy import Env_Port_Name
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -53,10 +53,6 @@ _Fixed_Stats_Bind    = 'bind *:8404'
 
 # The path the shipped configuration reads its blocked paths from, which exists in a container only
 _Blocked_Paths_Path = '/opt/zato/env/qs-1/blocked-paths.txt'
-
-# What the server line inside the backend is named after, which is also what the server itself
-# is called, so the two agree on which line belongs to it.
-_Server_Name = 'server1'
 
 # How long HAProxy is given to bind its ports before the run is called off
 _Startup_Timeout = 20
@@ -186,9 +182,10 @@ class HAProxyHandle:
     """ One HAProxy instance running for the duration of a test run.
     """
 
-    def __init__(self, ports:'HAProxyPorts', config_path:'str') -> 'None':
+    def __init__(self, ports:'HAProxyPorts', config_path:'str', mllp_internal_port:'int') -> 'None':
         self.ports = ports
         self.config_path = config_path
+        self.mllp_internal_port = mllp_internal_port
         self.process:'subprocess.Popen[bytes] | None' = None
 
 # ################################################################################################################################
@@ -213,6 +210,7 @@ class HAProxyHandle:
         out = os.environ.copy()
 
         out['Zato_Port_MLLP'] = str(self.ports.mllp_plain)
+        out[Env_Port_Name] = str(self.mllp_internal_port)
         out['Zato_Port_Server'] = str(find_free_port())
         out['Zato_Port_Dashboard'] = str(find_free_port())
         out['Zato_Port_OpenAPI_Console'] = str(find_free_port())
@@ -304,11 +302,7 @@ def start_haproxy(directory:'str', mllp_internal_port:'int', certificates:'TestC
 
     _render_config(config_path, blocked_paths_path, ports, certificates)
 
-    # The server writes its own backend line in production, and this is that same step, run here
-    # because nothing has started the server yet at this point
-    _ = ensure_mllp_backend_server(config_path, _Server_Name, mllp_internal_port)
-
-    out = HAProxyHandle(ports, config_path)
+    out = HAProxyHandle(ports, config_path, mllp_internal_port)
     out.start()
 
     return out
