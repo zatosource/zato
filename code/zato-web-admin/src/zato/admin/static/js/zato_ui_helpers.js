@@ -9,6 +9,12 @@
         copiedToClipboard: 'Copied to clipboard'
     };
 
+    var _config = {
+
+        // Which side of the element a flash appears on when the caller names none
+        flashPlacement: 'top'
+    };
+
 // ////////////////////////////////////////////////////////////////////////
 
     $.fn.zato.ui_helpers.esc_html = function(text) {
@@ -35,11 +41,16 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-    $.fn.zato.ui_helpers.flash_tooltip = function(element, message) {
+    $.fn.zato.ui_helpers.flash_tooltip = function(element, message, placement) {
+
+        if (placement === undefined) {
+            placement = _config.flashPlacement;
+        }
+
         var tip = tippy(element, {
             content: message,
             trigger: 'manual',
-            placement: 'top',
+            placement: placement,
             duration: [100, 100],
             onShown: function(instance) {
                 setTimeout(function() { _dismissTooltip(instance); }, 600);
@@ -50,9 +61,9 @@
 
 // ////////////////////////////////////////////////////////////////////////
 
-    $.fn.zato.ui_helpers.copy_to_clipboard = function(element, text) {
+    $.fn.zato.ui_helpers.copy_to_clipboard = function(element, text, placement) {
         navigator.clipboard.writeText(text).then(function() {
-            $.fn.zato.ui_helpers.flash_tooltip(element, _labels.copiedToClipboard);
+            $.fn.zato.ui_helpers.flash_tooltip(element, _labels.copiedToClipboard, placement);
         });
     };
 
