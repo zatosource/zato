@@ -1,0 +1,14 @@
+/*
+ * Buttons inside a tippy popup, stacked one under another so each is read on a
+ * line of its own instead of the row of them running out across the page.
+ */
+
+.zato-tippy-buttons {
+
+    /* The air between one button and the next */
+    --zato-tippy-buttons-gap: 6px;
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--zato-tippy-buttons-gap);
+}

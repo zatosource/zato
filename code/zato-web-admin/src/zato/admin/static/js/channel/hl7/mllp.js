@@ -16,7 +16,7 @@ $(document).ready(function() {
     $('#data-table').tablesorter();
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.HL7MLLPChannel;
     $.fn.zato.data_table.parse();
-    $.fn.zato.channel.hl7.mllp.init_endpoint_badges();
+    $.fn.zato.channel.hl7.mllp.init_copy_address_link();
 })
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -38,31 +38,35 @@ $.fn.zato.channel.hl7.mllp.config = {
     mllp_port: '',
     mllps_port: '',
 
-    // What each endpoint is called and which badge carries it
+    // What each endpoint is called, which button in the popup carries it and the address
+    // it hands over, the address filled in once the page knows what name it was reached by
     mllp_label: 'MLLP',
     mllps_label: 'MLLPS',
-    mllp_badge_id: 'mllp-endpoint-plain',
-    mllps_badge_id: 'mllp-endpoint-tls'
+    mllp_button_id: 'mllp-copy-address-plain',
+    mllps_button_id: 'mllp-copy-address-tls',
+    mllp_address: '',
+    mllps_address: '',
+
+    // What the popup hangs off, and which side of a button in it the copy flash goes on,
+    // the button having the popup's own arrow directly above it
+    copy_address_link_id: 'mllp-copy-address-link',
+    copied_flash_placement: 'right'
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.hl7.mllp.init_endpoint_badge = function(badge_id, label, host, port) {
+$.fn.zato.channel.hl7.mllp.copy_endpoint_address = function(endpoint) {
 
-    var address = host + ':' + port;
-    var badge = $('#' + badge_id);
+    var config = $.fn.zato.channel.hl7.mllp.config;
+    var button = document.getElementById(config[endpoint + '_button_id']);
 
-    badge.text(label + ' ' + address);
-
-    // Pressed, the badge hands the address over and says so above itself for a moment
-    badge.on('click', function() {
-        $.fn.zato.ui_helpers.copy_to_clipboard(this, address);
-    });
+    // Pressed, the button hands the address over and says so beside itself for a moment
+    $.fn.zato.ui_helpers.copy_to_clipboard(button, config[endpoint + '_address'], config.copied_flash_placement);
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.hl7.mllp.init_endpoint_badges = function() {
+$.fn.zato.channel.hl7.mllp.init_copy_address_link = function() {
 
     var config = $.fn.zato.channel.hl7.mllp.config;
 
@@ -70,8 +74,25 @@ $.fn.zato.channel.hl7.mllp.init_endpoint_badges = function() {
     // network reaches it by, so the page never has to be told what to call itself
     var host = window.location.hostname;
 
-    $.fn.zato.channel.hl7.mllp.init_endpoint_badge(config.mllp_badge_id, config.mllp_label, host, config.mllp_port);
-    $.fn.zato.channel.hl7.mllp.init_endpoint_badge(config.mllps_badge_id, config.mllps_label, host, config.mllps_port);
+    config.mllp_address = host + ':' + config.mllp_port;
+    config.mllps_address = host + ':' + config.mllps_port;
+
+    var content = `
+        <div class="zato-tippy-buttons">
+            <input type="button" id="${config.mllp_button_id}" value="${config.mllp_label} ${config.mllp_address}" onclick="$.fn.zato.channel.hl7.mllp.copy_endpoint_address('mllp');"/>
+            <input type="button" id="${config.mllps_button_id}" value="${config.mllps_label} ${config.mllps_address}" onclick="$.fn.zato.channel.hl7.mllp.copy_endpoint_address('mllps');"/>
+        </div>
+    `;
+
+    tippy('#' + config.copy_address_link_id, {
+        content: content,
+        allowHTML: true,
+        theme: 'light',
+        trigger: 'click',
+        placement: 'bottom',
+        arrow: true,
+        interactive: true,
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

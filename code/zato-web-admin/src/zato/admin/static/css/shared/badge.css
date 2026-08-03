@@ -13,21 +13,21 @@
     --zato-badge-padding: 2px 10px;
     --zato-badge-letter-spacing: 0.5px;
 
-    --zato-badge-value-font-weight: 600;
     --zato-badge-inline-gap: 6px;
+    --zato-badge-inline-font-weight: 400;
 
     --zato-badge-blue-background: #e0f0ff;
     --zato-badge-blue-color: #012845;
-    --zato-badge-blue-value-background: #eef7ff;
-    --zato-badge-blue-value-color: #3a6684;
+    --zato-badge-blue-inline-background: #f6fafd;
+    --zato-badge-blue-inline-color: #3f6480;
 
     --zato-badge-amber-background: #ffe8cc;
     --zato-badge-amber-color: #101010;
+    --zato-badge-amber-inline-background: #fdf9f3;
+    --zato-badge-amber-inline-color: #7a5f36;
 
     --zato-badge-green-background: #daf0e0;
     --zato-badge-green-color: #08331c;
-    --zato-badge-green-value-background: #ebf7ef;
-    --zato-badge-green-value-color: #3d6b50;
 
     --zato-badge-red-background: #ffdede;
     --zato-badge-red-color: #5a1111;
@@ -46,26 +46,12 @@
     white-space: nowrap;
 }
 
-/* A badge that follows text rather than sitting alone in a cell of its own */
+/* A badge that follows text rather than sitting alone in a cell of its own - it keeps
+   its pill so it is still read as a badge, and loses the bold so the name beside it
+   stays the thing read first */
 .zato-badge-inline {
     margin-left: var(--zato-badge-inline-gap);
-}
-
-/* A badge holding a value rather than a word - it keeps the case it was given, an address
-   being read letter by letter, and it presses as a button, so the site's button chrome
-   is taken back off it */
-.zato-badge-value,
-.zato-badge-value:hover,
-.zato-badge-value:active,
-.zato-badge-value:focus {
-    text-transform: none;
-    font-weight: var(--zato-badge-value-font-weight);
-    border: none;
-    outline: none;
-    background-image: none;
-    text-shadow: none;
-    box-shadow: none;
-    cursor: pointer;
+    font-weight: var(--zato-badge-inline-font-weight);
 }
 
 .zato-badge-blue {
@@ -88,12 +74,12 @@
     background: var(--zato-badge-red-background);
 }
 
-.zato-badge-value.zato-badge-blue {
-    color: var(--zato-badge-blue-value-color);
-    background: var(--zato-badge-blue-value-background);
+.zato-badge-inline.zato-badge-blue {
+    color: var(--zato-badge-blue-inline-color);
+    background: var(--zato-badge-blue-inline-background);
 }
 
-.zato-badge-value.zato-badge-green {
-    color: var(--zato-badge-green-value-color);
-    background: var(--zato-badge-green-value-background);
+.zato-badge-inline.zato-badge-amber {
+    color: var(--zato-badge-amber-inline-color);
+    background: var(--zato-badge-amber-inline-background);
 }
