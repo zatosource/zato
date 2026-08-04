@@ -60,6 +60,7 @@ panels.config = {
         filterLabel: 'Filter',
         clear: 'Clear',
         services: 'Services',
+        removeService: 'Remove',
         replyFrom: 'The reply comes from',
         nothingToReply: 'Pick a service or a destination first',
         active: 'Active'
@@ -534,6 +535,15 @@ panels._fillServiceList = function(list, nameList, filterText) {
         list.appendChild(row);
 
         if(name === current) {
+
+            // Clicking the service the channel runs is what leaves it without one, which
+            // the name says right after itself rather than through a control of its own
+            var remove = document.createElement('span');
+            remove.className = 'wizard-pick-remove';
+            remove.textContent = panels.config.labels.removeService;
+
+            row.querySelector('.wizard-pick-name').appendChild(remove);
+
             picked = row;
         }
     }

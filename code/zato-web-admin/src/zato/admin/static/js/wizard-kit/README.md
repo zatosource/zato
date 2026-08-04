@@ -73,10 +73,12 @@ The page then calls `wizard.init({list_url: ...})` when the DOM is ready.
 | `nameUnique` | Optional, a live uniqueness check for the name - `{source, field, filterName, filterValue}` |
 | `onInit` | Optional, instance wiring run during init |
 | `beforeSave` | Optional, runs before validation on Finish, e.g. to serialize rows into hidden fields |
-| `finishLabel` | Optional, what the button on the last step says - named after the action the wizard ends in, `Create` or `Edit` |
-| `savedMessage`, `saveErrorMessage`, `redirectDelayMs`, `nextLabel` | Optional, the defaults in `kit.core.defaults` cover them |
+| `missingTargets` | Optional, where each required field is read on the review and answered on its step, keyed by field name - see the section on the answers a save waits for |
+| `missingExtra` | Optional, the questions still open that are not one empty field, as a list of the same entries |
+| `finishLabel` | Optional, what the button on the last step says - named after the action the wizard ends in, `Save` for all three of them |
+| `savedMessage`, `saveErrorMessage`, `redirectDelayMs`, `nextLabel`, `scrollBehavior`, `scrollBlock`, `missingClass`, `missingRowSelector` | Optional, the defaults in `kit.core.defaults` cover them |
 
-`core.setup` installs on the namespace: `config`, `state`, `field`, `fieldSelector`, `init`, `goToStep`, `save`, `updateNameBadge`, `initNameBadge`, `onNameCheckResult`. The `wizard.field(name)` accessor resolves `#id_<fieldPrefix><name>` and is the one way into the rendered Django form. `wizard.fieldSelector(name)` returns the same id as a selector string, which is what the shared helpers that mark a field required or check it for uniqueness take - everything inside the kit goes through one of the two, so a prefixed instance is prefixed everywhere.
+`core.setup` installs on the namespace: `config`, `state`, `field`, `fieldSelector`, `init`, `goToStep`, `reveal`, `missingList`, `checkMissing`, `save`, `updateNameBadge`, `initNameBadge`, `onNameCheckResult`. `wizard.reveal(element)` scrolls one element into view the gentle way, which is how a refused save shows what it is waiting for. The `wizard.field(name)` accessor resolves `#id_<fieldPrefix><name>` and is the one way into the rendered Django form. `wizard.fieldSelector(name)` returns the same id as a selector string, which is what the shared helpers that mark a field required or check it for uniqueness take - everything inside the kit goes through one of the two, so a prefixed instance is prefixed everywhere.
 
 ## Element contract
 
@@ -210,6 +212,32 @@ The pointer on the link itself shows a tooltip naming where the link goes, the g
 Card summaries go through `review.setSummary(elementId, text)`, which replays the fade-in when the text changed.
 
 Every question a step asks has a row of its own, whether it has been answered or not - a row left out is a question the reader cannot check. A row states what is set, never what not setting it would mean, so an unanswered one reads as `Not set` or as the plain absence it is, e.g. `No service`.
+
+## The answers a save waits for
+
+A wizard is saved once every question it must answer has been. Which those are is one map in the core config, keyed by field name, saying where each field is read on the review and where it is answered:
+
+```javascript
+missingTargets: {
+    name:      {group: 'Basics', label: 'Name'},
+    start_seq: {group: 'Transport', anchorSelector: '#mllp-wizard-row-transport'}
+},
+
+missingExtra: function() {
+    return [{label: 'Service', group: 'Destinations and service',
+        anchorSelector: '#mllp-wizard-line-service'}];
+}
+```
+
+- `group` is the label of the review group the field is read in, one of those `review.render` passes to `renderGroups`. Both are usually read off one map on the instance's own config, so the two files name a section once.
+- `label` is optional - it defaults to the label of the micro-form input the field is edited in, the descriptors being the one place a popover field is named. A field no popover holds spells its own out.
+- `anchorSelector` is optional - it is the row a refused save marks and scrolls to, e.g. the line that opens the popover holding the field. By default it is the field's own row, whatever matches `kit.core.defaults.missingRowSelector` around it.
+
+Which step an answer is given on is never declared - the kit reads it off the step body the anchor sits in.
+
+`missingExtra` is for a question that is not one empty field, e.g. an MLLP channel needing either a service or a destination, neither of them required on its own.
+
+`wizard.missingList()` is every such question still open. The review renderer reads it on each render and writes `Missing` in red into the section each entry belongs to - over the row already asking the question, or as a row of its own for a question no row mentions, so an instance writes its rows as if everything were answered. `wizard.checkMissing()` is what a save runs before it posts: with the review on screen it re-renders it and scrolls to the first open question, anywhere else it goes to the step the answer is given on and marks the row asking for it. Nothing is said in a message area or a popup - the page shows what it is waiting for where the answer is given.
 
 ## Choice cards
 

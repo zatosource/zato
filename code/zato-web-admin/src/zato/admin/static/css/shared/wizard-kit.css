@@ -986,6 +986,22 @@ a.wizard-select-delete:hover::before {
 }
 
 /* ------------------------------------------------------------ */
+/* Wizard - the answers a refused save is waiting for            */
+/* ------------------------------------------------------------ */
+
+/* One of them in the review, where a create reads the whole list of them */
+.wizard-review-missing {
+    color: var(--wizard-error);
+    font-weight: 700;
+}
+
+/* One of them on its own step, which is where an edit is sent instead */
+.wizard-missing,
+.wizard-missing label {
+    color: var(--wizard-error);
+}
+
+/* ------------------------------------------------------------ */
 /* Wizard - the live check                                       */
 /* ------------------------------------------------------------ */
 

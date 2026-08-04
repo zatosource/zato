@@ -253,6 +253,17 @@
     white-space: nowrap;
 }
 
+/* What the picked row says of itself - a click on it takes the pick away */
+.wizard-pick-remove {
+    margin-left: 8px;
+    font-size: 11px;
+    color: var(--wizard-text-faint);
+}
+
+.wizard-pick-row:hover .wizard-pick-remove {
+    color: var(--wizard-text-muted);
+}
+
 .wizard-pick-dot {
     position: relative;
     flex: 0 0 auto;

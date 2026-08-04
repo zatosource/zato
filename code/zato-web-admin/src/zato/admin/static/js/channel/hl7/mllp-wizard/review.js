@@ -506,7 +506,10 @@ review.render = function() {
     }
 
     // Every question of step 2 is answered here, the ones not yet decided
-    // included - a row left out is a question the reader cannot check
+    // included - a row left out is a question the reader cannot check. Neither
+    // of the two answered is what the channel cannot be saved over, and that is
+    // what the kit writes over these rows, one of them alone being a choice
+    // like any other.
     var serviceRows = [];
 
     if(!destinationRows.length) {
@@ -519,15 +522,17 @@ review.render = function() {
     serviceRows.push(['Delivery', wizard.destinations.deliveryLabel()]);
     serviceRows.push(['Reply from', wizard.destinations.replyLabel()]);
 
+    var groups = wizard.config_own.groups;
+
     review.renderGroups([
-        {label: 'Basics',       step: 0, rows: basicsRows},
-        {label: 'Transport',    step: 0, rows: transportRows, edit: review._editTransport},
-        {label: 'Routing',      step: 0, rows: routingRows, edit: review._editRouting},
-        {label: 'Destinations and service', step: 1, listRows: destinationRows, rows: serviceRows,
+        {label: groups.basics,    step: 0, rows: basicsRows},
+        {label: groups.transport, step: 0, rows: transportRows, edit: review._editTransport},
+        {label: groups.routing,   step: 0, rows: routingRows, edit: review._editRouting},
+        {label: groups.targets,   step: 1, listRows: destinationRows, rows: serviceRows,
             edit: review._editDestinations},
-        {label: 'Tolerance',    step: 1, rows: review._toleranceReviewRows(), edit: review._editTolerance},
-        {label: 'Deduplication', step: 1, rows: [['Window', review._dedupSummary()]], edit: review._editDedup},
-        {label: 'Logging',      step: 1, rows: [['Behavior', review._loggingSummary()]], edit: review._editLogging}
+        {label: groups.tolerance, step: 1, rows: review._toleranceReviewRows(), edit: review._editTolerance},
+        {label: groups.dedup,     step: 1, rows: [['Window', review._dedupSummary()]], edit: review._editDedup},
+        {label: groups.logging,   step: 1, rows: [['Behavior', review._loggingSummary()]], edit: review._editLogging}
     ]);
 };
 

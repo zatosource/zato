@@ -27,6 +27,10 @@
 // A row is a [key, value] pair - the value is usually text but may also be
 // a ready DOM Node, e.g. a badge. The instance must define render() and
 // refreshSummaries() itself - the kit only provides the building blocks.
+//
+// A group's rows are written as if every question were answered - the ones
+// still open are marked by the renderer itself, out of the missing targets
+// the instance declared in its core config.
 
 (function($) {
 
@@ -41,6 +45,10 @@ kit.review.config = {
 
     // The word every group's link into its step is written with
     editLabel: 'Edit',
+
+    // What an answer the wizard cannot be saved without reads as, and what it wears
+    missingLabel: 'Missing',
+    missingValueClass: 'wizard-review-missing',
 
     // How the tooltip on a link is shown
     editTooltipTheme: 'dark',
@@ -114,6 +122,54 @@ kit.review.setup = function(wizard) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+    // How the review writes an answer it is waiting for
+    review._missingValue = function() {
+
+        var reviewConfig = kit.review.config;
+        var out = document.createElement('span');
+
+        out.className = reviewConfig.missingValueClass;
+        out.textContent = reviewConfig.missingLabel;
+
+        return out;
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // The rows of one group with the questions it leaves open said in place -
+    // a row already asking one of them says Missing instead of the value it
+    // has none of, a question no row mentions is added at the end of the group.
+    review._withMissing = function(group, missingList) {
+
+        var out = group.rows.slice();
+
+        for(var entryIdx = 0; entryIdx < missingList.length; entryIdx++) {
+
+            var entry = missingList[entryIdx];
+
+            if(entry.group !== group.label) {
+                continue;
+            }
+
+            var isRowFound = false;
+
+            for(var rowIdx = 0; rowIdx < out.length; rowIdx++) {
+                if(out[rowIdx][0] === entry.label) {
+                    out[rowIdx] = [entry.label, review._missingValue()];
+                    isRowFound = true;
+                }
+            }
+
+            if(!isRowFound) {
+                out.push([entry.label, review._missingValue()]);
+            }
+        }
+
+        return out;
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
     // The rows of one repeating kind a group opens with - past the configured
     // count they go into a box that scrolls.
     review._buildRowList = function(listRows) {
@@ -167,6 +223,9 @@ kit.review.setup = function(wizard) {
 
         var container = $('#' + idPrefix + '-review');
 
+        // Whatever the wizard is still waiting for is read in the section it belongs to
+        var missingList = wizard.missingList();
+
         // The step re-renders on entry, so the old links take their tooltips out
         container.find('.wizard-review-edit').each(function() {
             this._tippy.destroy();
@@ -202,8 +261,10 @@ kit.review.setup = function(wizard) {
                 groupElement.appendChild(review._buildRowList(group.listRows));
             }
 
-            for(var rowIdx = 0; rowIdx < group.rows.length; rowIdx++) {
-                groupElement.appendChild(review._buildRow(group.rows[rowIdx]));
+            var rows = review._withMissing(group, missingList);
+
+            for(var rowIdx = 0; rowIdx < rows.length; rowIdx++) {
+                groupElement.appendChild(review._buildRow(rows[rowIdx]));
             }
 
             container.append(groupElement);
