@@ -15,7 +15,6 @@ $.fn.zato.audit_log.config = {
     pageSize: 25,
     detailsURL: '/zato/audit-log/details/',
     resubmitURL: '/zato/audit-log/resubmit/',
-    emptyValue: '---',
 
     // The name every source without a presenter of its own is drawn by
     defaultSource: 'default',

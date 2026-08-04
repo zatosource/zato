@@ -15,21 +15,24 @@
 
         labels: {
             'in': 'IN',
-            'out': 'OUT',
-            'none': '\u2013'
+            'out': 'OUT'
         },
 
         css_classes: {
             'in': 'dashboard-direction-in',
-            'out': 'dashboard-direction-out',
-            'none': 'dashboard-direction-none'
+            'out': 'dashboard-direction-out'
         }
     };
 
     /* One direction tag. The title is what the tag stands for in full, e.g. the event type
-       the direction was read out of. */
+       the direction was read out of. A record that went neither way - one expiring where it
+       stood, say - is given no tag, because a tag saying nothing is worse than none. */
     kit.direction.tag = function(direction, title) {
         var config = kit.direction.config;
+
+        if (direction === 'none') {
+            return '';
+        }
 
         var html = '<span class="dashboard-direction ' + config.css_classes[direction] + '"';
         html += ' title="' + kit._esc_html(title) + '">';
