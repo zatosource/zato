@@ -5,8 +5,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
-The four views the audit log page is served by - the page itself, the poll of one page of rows,
-the full payload of one event and the resubmit of one event.
+The five views the audit log page is served by - the page itself, the poll of one page of rows,
+one event's whole flow, the full payload of one event and the resubmit of one event.
 """
 
 # stdlib
@@ -22,14 +22,14 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.views import invoke_action_handler, method_allowed
-from zato.admin.web.views.audit_log.columns import _data_preview_len, _default_page, _get_outcomes, _poll_url, \
-    _row_columns, _source_columns, _source_title, _status_outstanding
-from zato.admin.web.views.audit_log.query import _attach_attr_columns, _attach_body_kinds, _attach_body_previews, \
-    _attach_lineage, _build_where, _mark_resubmitted, _normalize_row
+from zato.admin.web.views.audit_log.columns import _data_preview_len, _default_page, _flow_columns, _flow_url, \
+    _get_outcomes, _poll_url, _preview_len, _row_columns, _source_columns, _source_title, _status_outstanding
+from zato.admin.web.views.audit_log.query import _build_where, _hydrate_rows, _normalize_row
 from zato.admin.web.views.audit_log.sources import _get_resubmit_labels, _source_outstanding, _source_parse, \
-    _source_resubmit, _source_row_enrich
+    _source_resubmit
 from zato.common.audit_log.api import event_table, get_audit_engine
 from zato.common.audit_log.body import resolve_body
+from zato.common.audit_log.flow import get_flow_ids, Relation_Seed
 from zato.common.defaults import default_cluster_id
 from zato.x12.render import render_document
 
@@ -37,8 +37,9 @@ from zato.x12.render import render_document
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist
+    from zato.common.typing_ import any_, anydict, anylist
     any_ = any_
+    anydict = anydict
     anylist = anylist
 
 # ################################################################################################################################
@@ -92,6 +93,7 @@ def object_index(req:'any_') -> 'TemplateResponse':
         'audit_log_title': _source_title[source],
         'section_title': object_name,
         'poll_url': _poll_url,
+        'flow_url': _flow_url,
         'columns_json': columns_json,
         'outcomes_json': outcomes_json,
         'status': status,
@@ -183,36 +185,17 @@ def poll(req:'any_') -> 'HttpResponse':
             # A column the database has no value for is an empty one to the frontend ..
             _normalize_row(row)
 
-            # .. sources with extra columns extract them out of the full payload next ..
-            if enrich := _source_row_enrich.get(source):
-                enrich(row)
-
             # .. and only a preview of the payload goes into the table.
             data = row['data']
             row['data'] = data[:_data_preview_len]
 
             rows.append(row)
 
-        # Sources with attr columns get them merged in, one query for the page ..
-        _attach_attr_columns(connection, source, rows)
-
-        # .. sources whose payloads live in the body table get their previews the same way ..
-        _attach_body_previews(connection, source, rows)
-
-        # .. every row says what it came out of and what came out of it ..
-        _attach_lineage(connection, rows)
-
-        # .. and which of its message bodies are there to be read.
-        _attach_body_kinds(connection, rows)
-
-        # Rows already resubmitted get their marker, on sources with resubmit actions ..
-        if source in _source_resubmit:
-            _mark_resubmitted(connection, source, rows)
-
-        # .. and on a source with no resubmit at all, no row of it can carry one.
-        else:
-            for row in rows:
-                row['is_resubmitted'] = False
+        # Everything else the frontend reads off a row - this source's own extra columns, its
+        # attrs, a preview of a payload kept elsewhere, the lineage, the message bodies there
+        # are to read and the resubmitted marker - is merged in here, a query per set of rows
+        # rather than one per row.
+        _hydrate_rows(connection, rows)
 
     response_json = json.dumps({'rows': rows, 'total': total, 'page': page})
     response_bytes = response_json.encode('utf-8')
@@ -224,10 +207,88 @@ def poll(req:'any_') -> 'HttpResponse':
 # ################################################################################################################################
 
 @method_allowed('POST')
+def flow(req:'any_') -> 'HttpResponse':
+    """ Returns one event's whole flow as JSON - every event related to it, read forward in time,
+    each one saying why it is in the flow. A flow crosses sources, because one correlation id
+    spans a channel and everything it fanned its message out to.
+    """
+    body = json.loads(req.body)
+    seed_id = body['id']
+
+    rows:'anylist' = []
+
+    # A line of the flow reads what a list row reads and two things more
+    select_columns:'anylist' = []
+
+    for column_name in _flow_columns:
+        column = event_table.c[column_name]
+        select_columns.append(column)
+
+    # A flow is read the way it happened, oldest first, and two events of one moment are told apart
+    # by where they stand among the others of their correlation id - a request and the response to
+    # it are written down within the same millisecond often enough for that to matter.
+    order_by = [
+        event_table.c.event_time_iso.asc(),
+        event_table.c.cid_sequence.asc(),
+        event_table.c.id.asc(),
+    ]
+
+    engine = get_audit_engine()
+
+    with engine.connect() as connection:
+
+        # Which events are in the flow and why each of them is comes first ..
+        flow_ids = get_flow_ids(connection, seed_id)
+        relation_by_id = flow_ids.relation_by_id
+
+        # .. then they are read in the order they are to be shown in ..
+        flow_query = select(*select_columns)
+        flow_query = flow_query.where(event_table.c.id.in_(list(relation_by_id)))
+        flow_query = flow_query.order_by(*order_by)
+
+        flow_result = connection.execute(flow_query)
+
+        for db_row in flow_result:
+            row_values = zip(_flow_columns, db_row)
+
+            # A line of a flow carries two keys no column of the event table has
+            row:'anydict' = dict(row_values)
+
+            _normalize_row(row)
+
+            # Only a preview of the payload travels with a line - the whole of it is fetched
+            # by the line that is opened, and only then.
+            data = row['data']
+            row['data'] = data[:_data_preview_len]
+
+            # Why this event is in the flow, and whether it is the one the flow was read from
+            relation = relation_by_id[row['id']]
+
+            row['relation'] = relation
+            row['is_seed'] = relation == Relation_Seed
+
+            rows.append(row)
+
+        # .. and brought up to the shape a list row arrives in, per source, because a flow
+        # is not all one source.
+        _hydrate_rows(connection, rows)
+
+    response_json = json.dumps({'rows': rows, 'seed_id': seed_id, 'is_truncated': flow_ids.is_truncated})
+    response_bytes = response_json.encode('utf-8')
+
+    out = HttpResponse(response_bytes, content_type='application/json')
+
+    return out
+
+# ################################################################################################################################
+
+@method_allowed('POST')
 def details(req:'any_') -> 'HttpResponse':
-    """ Returns the complete payload of one audit event, without any truncation,
-    along with the human-readable rendering of the document the payload carries,
-    if it carries one at all.
+    """ Returns the payload of one audit event, along with the human-readable rendering of the
+    document it carries, if it carries one at all. A caller that only shows the top of a message -
+    a line of a flow opened for a look at it - asks for a preview instead, and gets the first few
+    thousand characters with no parsed view, because a fragment of a message parses into nothing.
+    Either way the full length is reported, so the reader is told how much of it is on the screen.
     """
     body = json.loads(req.body)
     event_id = body['id']
@@ -236,6 +297,9 @@ def details(req:'any_') -> 'HttpResponse':
     # or what the other side said when it failed. With none named, the newest one answers,
     # which is what the message overlay asks for.
     kind = body['kind']
+
+    # Whether the whole message is wanted or only the top of it
+    is_preview = body['preview']
 
     data = ''
     source = ''
@@ -265,14 +329,23 @@ def details(req:'any_') -> 'HttpResponse':
         if resolved is not None:
             data = resolved
 
-    # The parsed view comes from the source's own renderer, with the EDI renderer
-    # as the shared default - an empty result means no parsed tab at all.
-    if renderer := _source_parse.get(source):
-        parsed = renderer(data)
-    else:
-        parsed = render_document(data)
+    # However much of the message is being shown, how long it is in full is what says so
+    total_len = len(data)
 
-    response_json = json.dumps({'data': data, 'parsed': parsed})
+    # A preview is the top of the message and nothing else ..
+    if is_preview:
+        data = data[:_preview_len]
+        parsed = ''
+
+    # .. and the whole message additionally gets its parsed view, from the source's own renderer
+    # with the EDI renderer as the shared default - an empty result means no parsed tab at all.
+    else:
+        if renderer := _source_parse.get(source):
+            parsed = renderer(data)
+        else:
+            parsed = render_document(data)
+
+    response_json = json.dumps({'data': data, 'parsed': parsed, 'total_len': total_len})
     response_bytes = response_json.encode('utf-8')
 
     out = HttpResponse(response_bytes, content_type='application/json')

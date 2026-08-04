@@ -1,0 +1,131 @@
+/* ------------------------------------------------------------ */
+/* Dashboard kit - the fact rows                                 */
+/* ------------------------------------------------------------ */
+
+/* What is known about one thing, a fact to a line - the name of it in the first column, what it
+   says in the second, and the lines all as wide as the widest name so the values stand in a
+   column of their own to be read down */
+
+:root {
+    --dashboard-fact-tint: rgba(218, 165, 32, 0.10);
+    --dashboard-fact-tint-strong: rgba(218, 165, 32, 0.22);
+    --dashboard-fact-tint-dark: rgba(255, 255, 255, 0.06);
+    --dashboard-fact-tint-dark-strong: rgba(255, 255, 255, 0.12);
+    --dashboard-fact-line-dark: rgba(255, 255, 255, 0.08);
+    --dashboard-fact-label-dark: #9a9aae;
+}
+
+.dashboard-fact-rows {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+}
+
+.dashboard-fact-row {
+    display: contents;
+}
+
+.dashboard-fact-row-label,
+.dashboard-fact-row-value {
+    padding: 5px 10px 5px 0;
+}
+
+.dashboard-fact-row-label {
+    padding-left: 10px;
+    padding-right: 16px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    white-space: nowrap;
+}
+
+.dashboard-fact-row-value {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding-left: 10px;
+    font-family: var(--dashboard-mono);
+    font-size: 12px;
+}
+
+.dashboard-fact-row-text {
+    min-width: 0;
+    word-break: break-all;
+}
+
+/* Taking a value away is offered by the line being read and by no other, and it stands just
+   past the value rather than away at the edge of the panel */
+
+.dashboard-fact-row-copy {
+    flex: none;
+    margin-left: 0;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+}
+
+.dashboard-fact-row:hover .dashboard-fact-row-copy {
+    opacity: 1;
+}
+
+/* ------------------------------------------------------------ */
+/* On a light panel                                              */
+/* ------------------------------------------------------------ */
+
+.dashboard-fact-rows-light {
+    border-top: 1px solid var(--dashboard-line);
+}
+
+.dashboard-fact-rows-light .dashboard-fact-row-label,
+.dashboard-fact-rows-light .dashboard-fact-row-value {
+    border-bottom: 1px solid var(--dashboard-line);
+}
+
+.dashboard-fact-rows-light .dashboard-fact-row-label {
+    color: var(--dashboard-muted);
+    background: var(--dashboard-fact-tint);
+}
+
+.dashboard-fact-rows-light .dashboard-fact-row-value {
+    color: var(--dashboard-line-strong);
+}
+
+/* A line being read lifts as a whole, the name deepening in the tint it already wears and the
+   value taking on the lightest of it */
+
+.dashboard-fact-rows-light .dashboard-fact-row:hover .dashboard-fact-row-label {
+    background: var(--dashboard-fact-tint-strong);
+}
+
+.dashboard-fact-rows-light .dashboard-fact-row:hover .dashboard-fact-row-value {
+    background: var(--dashboard-fact-tint);
+}
+
+/* ------------------------------------------------------------ */
+/* On a dark panel                                               */
+/* ------------------------------------------------------------ */
+
+.dashboard-fact-rows-dark {
+    border-top: 1px solid var(--dashboard-fact-line-dark);
+}
+
+.dashboard-fact-rows-dark .dashboard-fact-row-label,
+.dashboard-fact-rows-dark .dashboard-fact-row-value {
+    border-bottom: 1px solid var(--dashboard-fact-line-dark);
+}
+
+.dashboard-fact-rows-dark .dashboard-fact-row-label {
+    color: var(--dashboard-fact-label-dark);
+    background: var(--dashboard-fact-tint-dark);
+}
+
+.dashboard-fact-rows-dark .dashboard-fact-row-value {
+    color: var(--dashboard-panel-text);
+}
+
+.dashboard-fact-rows-dark .dashboard-fact-row:hover .dashboard-fact-row-label {
+    background: var(--dashboard-fact-tint-dark-strong);
+}
+
+.dashboard-fact-rows-dark .dashboard-fact-row:hover .dashboard-fact-row-value {
+    background: var(--dashboard-fact-tint-dark);
+}

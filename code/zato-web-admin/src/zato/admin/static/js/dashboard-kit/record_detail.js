@@ -20,13 +20,21 @@
 
         var escaped_msg = entry.message.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         var highlighted_msg = kit.syntax_highlight(entry.message);
-        var html = '<div class="detail-log-line" style="' + border_style + '">';
-        html += '<div class="detail-log-stripe" style="background:' + lc.stripe + '"></div>';
-        html += '<div class="detail-log-ts" style="color:' + panel.ts_color + '">' + kit.format_local_time(entry.timestamp_iso) + '</div>';
-        html += '<div class="detail-log-level-col"><span class="detail-log-level" style="color:' + lc.badge_fg + ';background:' + lc.badge_bg + '">' + entry.level + '</span></div>';
-        html += '<div class="detail-log-msg" data-raw="' + escaped_msg + '" style="color:' + panel.msg_color + '">' + highlighted_msg + '</div>';
-        html += '<div class="detail-log-actions"><span class="dashboard-panel-action-badge detail-action-copy-row" style="color:#aaa;background:rgba(255,255,255,0.08)">Copy</span></div>';
-        html += '</div>';
+        var badge_html = '<span class="detail-log-level" style="color:' + lc.badge_fg + ';background:' + lc.badge_bg + '">' + entry.level + '</span>';
+        var actions_html = '<span class="dashboard-panel-action-badge detail-action-copy-row" style="color:#aaa;background:rgba(255,255,255,0.08)">Copy</span>';
+
+        var html = kit.log_line.render({
+            style: border_style,
+            stripe: lc.stripe,
+            lead_html: kit.format_local_time(entry.timestamp_iso),
+            lead_style: 'color:' + panel.ts_color,
+            badge_html: badge_html,
+            message_html: highlighted_msg,
+            message_style: 'color:' + panel.msg_color,
+            message_attrs: {'data-raw': escaped_msg},
+            actions_html: actions_html
+        });
+
         return html;
     };
 

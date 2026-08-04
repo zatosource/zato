@@ -238,6 +238,11 @@ _event_columns = [
     Index('idx_event_cid', 'cid', 'id'),
     Index('idx_event_msg_id', 'msg_id', 'id'),
 
+    # A resubmission names the event it was born from by that event's cid, so reading a message's
+    # flow asks which events point back at the cids it already holds - the only correlation
+    # question of the four with no index of its own behind it.
+    Index('idx_event_correl_id', 'correl_id', 'id'),
+
     # The reconciliation queries ask for the open events of one source before a moment in time -
     # every message whose receipt has not arrived - and the msg_id index above covers only the
     # lookup of the closing event, leaving the outer half of that question a full scan.

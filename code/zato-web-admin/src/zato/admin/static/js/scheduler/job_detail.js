@@ -12,6 +12,8 @@ $.fn.zato.scheduler.job_detail.config = {
     show_header_extra: false,
     // Delays below this threshold are hidden (shown as "-") to reduce noise.
     min_visible_delay_ms: 200,
+    // How many cells a row of the run history has, which is what a panel opened under one spans.
+    history_column_count: 6,
     stat_error_color: '#e0226e',
     detail_tags: [
         { key: 'error',  label: 'Error',  color: '#c0392b', bg: 'rgba(192, 57, 43, 0.1)',
@@ -820,35 +822,45 @@ $.fn.zato.scheduler.job_detail._render_mirror_row = function(record) {
     var tag_html = kit.record_detail.render_tags(record, detail.config.detail_tags, 'dark');
 
     var accent = cfg.mirror_accent;
-    var html = '<div class="detail-log-line detail-log-mirror" style="border-bottom:1px solid ' + cfg.row_border + '">';
-    html += '<div class="detail-log-stripe" style="background:' + accent + '"></div>';
     var mirror_run_href = kit.urls.run_detail(detail._object_id, record.current_run);
-    html += '<div class="detail-log-ts"><a href="' + mirror_run_href + '" class="detail-run-link" style="text-decoration:none"><span class="detail-log-level" style="color:' + accent + ';background:rgba(255,255,255,0.08)">Run #' + run_number + '</span></a></div>';
-    html += '<div class="detail-log-level-col">' + outcome_html + '</div>';
+    var lead_html = '<a href="' + mirror_run_href + '" class="detail-run-link" style="text-decoration:none"><span class="detail-log-level" style="color:' + accent + ';background:rgba(255,255,255,0.08)">Run #' + run_number + '</span></a>';
+
     var action_style = 'color:#aaa;background:rgba(255,255,255,0.08)';
-    html += '<div class="detail-log-msg" style="color:' + cfg.owner_color + '">' + tag_html + '</div>';
-    html += '<div class="detail-log-actions">';
+    var actions_html = '';
+
     if (record.outcome.indexOf('skipped') !== 0) {
-        html += '<span class="dashboard-panel-action-badge detail-action-toggle-all" style="' + action_style + '">Toggle all</span>';
-        html += '<span class="dashboard-panel-action-badge detail-action-copy-all" style="' + action_style + '">Copy</span>';
+        actions_html += '<span class="dashboard-panel-action-badge detail-action-toggle-all" style="' + action_style + '">Toggle all</span>';
+        actions_html += '<span class="dashboard-panel-action-badge detail-action-copy-all" style="' + action_style + '">Copy</span>';
     }
-    html += '<span class="dashboard-panel-action-badge detail-action-close" style="' + action_style + '">Close</span>';
-    html += '</div>';
-    html += '</div>';
+
+    actions_html += '<span class="dashboard-panel-action-badge detail-action-close" style="' + action_style + '">Close</span>';
+
+    var html = kit.log_line.render({
+        classes: 'detail-log-mirror',
+        style: 'border-bottom:1px solid ' + cfg.row_border,
+        stripe: accent,
+        lead_html: lead_html,
+        badge_html: outcome_html,
+        message_html: tag_html,
+        message_style: 'color:' + cfg.owner_color,
+        actions_html: actions_html
+    });
+
     return html;
 };
 
 $.fn.zato.scheduler.job_detail._render_panel_row = function(run) {
+    var kit = $.fn.zato.dashboard_kit;
     var detail = $.fn.zato.scheduler.job_detail;
-    var cfg = detail.config.detail_panel;
 
-    var html = '<tr class="detail-panel-row" data-run="' + run + '">';
-    html += '<td colspan="6">';
-    html += '<div class="detail-panel-grid">';
-    html += '<div class="detail-panel-inner">';
-    html += '<div class="detail-panel-log" data-since-idx="0">';
-    html += '</div>';
-    html += '</div></div></td></tr>';
+    var html = kit.log_line.panel({
+        tag: 'tr',
+        colspan: detail.config.history_column_count,
+        attrs: {'data-run': run},
+        is_framed: true,
+        body_attrs: {'data-since-idx': '0'}
+    });
+
     return html;
 };
 
