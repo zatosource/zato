@@ -443,10 +443,8 @@ $.fn.zato.channel.hl7.mllp.row_edit.render_destinations = function(id) {
     cell.textContent = '';
 
     if(!stored) {
-        var empty_link = row_edit.build_destination_link(id, 0, config.empty_cell_label);
-        cell.appendChild(empty_link);
-
-        return empty_link;
+        cell.appendChild(row_edit.build_destination_link(id, 0, config.empty_cell_label));
+        return;
     }
 
     var entries = JSON.parse(stored);
@@ -461,23 +459,14 @@ $.fn.zato.channel.hl7.mllp.row_edit.render_destinations = function(id) {
         }
     }
 
-    var first_link = null;
-
     for(var partIdx = 0; partIdx < parts.length; partIdx++) {
 
         if(partIdx) {
             cell.appendChild(document.createTextNode(config.destination_separator));
         }
 
-        var link = row_edit.build_destination_link(id, partIdx, parts[partIdx]);
-        cell.appendChild(link);
-
-        if(!first_link) {
-            first_link = link;
-        }
+        cell.appendChild(row_edit.build_destination_link(id, partIdx, parts[partIdx]));
     }
-
-    return first_link;
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -583,10 +572,12 @@ $.fn.zato.channel.hl7.mllp.row_edit.on_changed = function() {
     var link = config.link;
 
     var on_saved = function(saved) {
-        config.baseline = data;
 
-        var out = row_edit.update_row(link, row, data, saved);
-        return out;
+        config.baseline = data;
+        row_edit.update_row(link, row, data, saved);
+
+        // Whichever link the cells were left with is what the confirmation hangs off
+        return config.link;
     };
 
     mllp.inline.save(link, link.dataset.id, data, on_saved, $.fn.zato.inline_edit.config.saved_label);
@@ -594,7 +585,7 @@ $.fn.zato.channel.hl7.mllp.row_edit.on_changed = function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// What the two cells and the row now stand at, and where a saved row is to be told so
+// What the two cells and the row now stand at
 $.fn.zato.channel.hl7.mllp.row_edit.update_row = function(link, row, data, saved) {
 
     var mllp = $.fn.zato.channel.hl7.mllp;
@@ -608,14 +599,16 @@ $.fn.zato.channel.hl7.mllp.row_edit.update_row = function(link, row, data, saved
     var service_link = document.getElementById(mllp.config.service_link_id_prefix + id);
     service_link.textContent = saved.service ? saved.service : mllp.config.empty_cell_label;
 
-    var first_link = mllp.row_edit.render_destinations(id);
+    // The save had its say on this very link, taking the cell's popup with it
+    mllp.init_service_menu(service_link);
 
-    // The destinations are written anew, so a link clicked in that cell is gone by now
-    if(document.body.contains(link)) {
-        return link;
+    mllp.row_edit.render_destinations(id);
+
+    // A cell written anew leaves nothing of the link a panel still open saves through
+    if(!document.body.contains(link)) {
+        var first_id = mllp.config.destination_link_id_prefix + id + '-0';
+        mllp.row_edit.config.link = document.getElementById(first_id);
     }
-
-    return first_link;
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -661,12 +654,19 @@ $.fn.zato.channel.hl7.mllp.build_service_menu = function(instance, name) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.hl7.mllp.init_service_menus = function() {
+// The popup of one service cell. A save anchors its spinner on the very same link, and
+// action_runner destroys whatever tippy it finds there, so a saved cell is given a new one.
+$.fn.zato.channel.hl7.mllp.init_service_menu = function(link) {
 
     var mllp = $.fn.zato.channel.hl7.mllp;
     var config = mllp.config;
 
-    tippy('#data-table a.mllp-service-cell', {
+    // One popup to a link, whatever the cell was left with standing down
+    if(link._tippy) {
+        link._tippy.destroy();
+    }
+
+    tippy(link, {
         content: '',
         allowHTML: true,
         theme: config.service_menu_theme,
@@ -690,6 +690,18 @@ $.fn.zato.channel.hl7.mllp.init_service_menus = function() {
             instance.setContent(mllp.build_service_menu(instance, name));
         }
     });
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.channel.hl7.mllp.init_service_menus = function() {
+
+    var mllp = $.fn.zato.channel.hl7.mllp;
+    var links = document.querySelectorAll('#data-table a.mllp-service-cell');
+
+    for(var idx = 0; idx < links.length; idx++) {
+        mllp.init_service_menu(links[idx]);
+    }
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -787,14 +787,9 @@ def inline_edit(req:'any_', id:'str') -> 'JsonResponse':
 
             item_dict[name] = value
 
-    # There is nowhere for the messages of a channel with neither of the two to go
+    # A row may be left with neither a service nor a destination, one of the two being
+    # cleared before the other is picked in the panel that comes next
     service = item_dict['service']
-    destination_count = count_entries(item_dict['destinations'])
-
-    if not service:
-        if not destination_count:
-            name = item_dict['name']
-            raise Exception(f'HL7 MLLP channel `{name}` needs a service or at least one destination')
 
     _save_channel(req, item_dict)
 
