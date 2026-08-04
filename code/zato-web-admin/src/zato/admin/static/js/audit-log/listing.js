@@ -41,8 +41,13 @@ listing.config = {
     rangeStorageKey: 'zato_audit_log_range',
 
     // How wide the list starts out, which is wider than the kit's own default because
-    // a row of it carries the chips of whatever source it is listing
-    defaultListWidth: 620,
+    // a row of it carries a chip of whatever source it is listing
+    defaultListWidth: 700,
+
+    // How many of an event's chips a row of the list carries. A presenter names the most
+    // telling one of them first, and the rest of what an event says about itself is read
+    // in the pane rather than shouted across the list.
+    rowChipLimit: 1,
 
     emptyListing: 'No events found',
     emptyPane: 'No event selected',
@@ -154,8 +159,8 @@ listing.hidden = {};
 listing.minutes = 0;
 
 // Which cells the events now on the page have anything to say in, so a list of events
-// that never went anywhere or never came out either way is not given a column of blanks
-listing.columns = {direction: false, outcome: false, action: false};
+// that report no outcome of their own is not given a column of blanks
+listing.columns = {outcome: false, action: false};
 
 // The events already on the page before the last refresh, so only what is new puffs.
 // Nothing has been drawn yet while this is null, and a first drawing puffs nothing.
@@ -302,14 +307,10 @@ listing.actionHTML = function(rowModel) {
 
 // Which cells the events now on the page have anything to say in
 listing.updateColumns = function() {
-    var columns = {direction: false, outcome: false, action: false};
+    var columns = {outcome: false, action: false};
 
     for (var rowIndex = 0; rowIndex < listing.visible.length; rowIndex++) {
         var rowModel = listing.visible[rowIndex];
-
-        if (rowModel.direction !== 'none') {
-            columns.direction = true;
-        }
 
         if (rowModel.outcome !== '') {
             columns.outcome = true;
@@ -330,12 +331,9 @@ listing.updateColumns = function() {
 listing.columnCount = function() {
     var columns = listing.columns;
 
-    // The time an event happened and what it was are the two the list always holds.
-    var out = 2;
-
-    if (columns.direction) {
-        out += 1;
-    }
+    // Where a row stands, when it happened, which way it went and what it was are
+    // the four the list always holds.
+    var out = 4;
 
     if (columns.outcome) {
         out += 1;
@@ -350,29 +348,56 @@ listing.columnCount = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// One event as one line - when it happened, which way it went, what it is and what it
-// says about itself, how it turned out and what can be done with it. What the payload
-// holds is the pane's business, so nothing here is ever cut in half.
-listing.rowHTML = function(rowModel) {
+// Where one row stands in the whole result, not just on the page it is being read on,
+// so the tenth row of the second page is the thirty-fifth event
+listing.rowNumber = function(itemIndex) {
+    var pageSize = $.fn.zato.audit_log.config.pageSize;
+    var page = $.fn.zato.audit_log.pagination.current_page();
+
+    var out = (page - 1) * pageSize + itemIndex + 1;
+
+    return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The chips a row carries, which is the first few of the ones the presenter named
+listing.rowChips = function(rowModel) {
+    var out = rowModel.chips.slice(0, listing.config.rowChipLimit);
+    return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// One event as one line - where it stands in the list, when it happened, which way it
+// went, what it is and the one thing it is best known by, how it turned out and what can
+// be done with it. Everything else an event says is read in the pane.
+listing.rowHTML = function(rowModel, itemIndex) {
     var columns = listing.columns;
 
     var html = '<tr class="audit-log-row" data-item-id="' + rowModel.id +
         '" data-ts="' + listing.escapeHTML(rowModel.timeIso) + '">';
+
+    html += '<td class="audit-log-cell-number">' + listing.rowNumber(itemIndex) + '</td>';
 
     // The time of day is what tells two events of the same minute apart, and the whole
     // timestamp is one hover away.
     html += '<td class="audit-log-cell-time" title="' + listing.escapeHTML(rowModel.timeLocal) + '">' +
         listing.escapeHTML(rowModel.timeLocal.slice(11)) + '</td>';
 
-    if (columns.direction) {
-        html += '<td class="audit-log-cell-direction">' +
-            kit.direction.tag(rowModel.direction, rowModel.eventType) + '</td>';
-    }
+    html += '<td class="audit-log-cell-direction">' +
+        kit.direction.tag(rowModel.direction, rowModel.eventType) + '</td>';
 
     html += '<td class="audit-log-cell-main">';
     html += '<span class="audit-log-row-id">' + listing.escapeHTML(rowModel.controlId) + '</span>';
-    html += '<span class="audit-log-row-event">' + listing.escapeHTML(rowModel.eventType) + '</span>';
-    html += kit.chips.render(rowModel.chips);
+
+    // Saying an event was received next to a tag already reading IN is saying it twice.
+    // An event that went neither way has no tag to say what it was, so it says so itself.
+    if (rowModel.direction === 'none') {
+        html += '<span class="audit-log-row-event">' + listing.escapeHTML(rowModel.eventType) + '</span>';
+    }
+
+    html += kit.chips.render(listing.rowChips(rowModel));
     html += '</td>';
 
     if (columns.outcome) {

@@ -13,26 +13,25 @@
 
     kit.direction.config = {
 
+        /* A record that went neither way is one the platform itself wrote down - an alert
+           it raised, a message it expired - so it is marked as its own rather than left blank. */
         labels: {
             'in': 'IN',
-            'out': 'OUT'
+            'out': 'OUT',
+            'none': 'SYS'
         },
 
         css_classes: {
             'in': 'dashboard-direction-in',
-            'out': 'dashboard-direction-out'
+            'out': 'dashboard-direction-out',
+            'none': 'dashboard-direction-none'
         }
     };
 
     /* One direction tag. The title is what the tag stands for in full, e.g. the event type
-       the direction was read out of. A record that went neither way - one expiring where it
-       stood, say - is given no tag, because a tag saying nothing is worse than none. */
+       the direction was read out of. */
     kit.direction.tag = function(direction, title) {
         var config = kit.direction.config;
-
-        if (direction === 'none') {
-            return '';
-        }
 
         var html = '<span class="dashboard-direction ' + config.css_classes[direction] + '"';
         html += ' title="' + kit._esc_html(title) + '">';

@@ -16,10 +16,17 @@
 
 .dashboard-direction-in {
     color: #0f6ea8;
-    background: rgba(15, 110, 168, 0.12);
+    background: rgba(15, 110, 168, 0.1);
 }
 
 .dashboard-direction-out {
     color: #1b813e;
-    background: rgba(27, 129, 62, 0.12);
+    background: rgba(27, 129, 62, 0.1);
+}
+
+/* What the platform itself wrote down, which went nowhere and came from nowhere */
+
+.dashboard-direction-none {
+    color: #7d8794;
+    background: rgba(110, 110, 115, 0.1);
 }

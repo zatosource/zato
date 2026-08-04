@@ -87,6 +87,18 @@
     vertical-align: middle;
 }
 
+/* Where a row stands in the whole result, so that one event can be pointed at by number */
+
+.audit-log-cell-number {
+    width: 44px;
+    padding-right: 10px;
+    font-family: var(--dashboard-mono);
+    font-size: 11px;
+    text-align: right;
+    color: #a3adba;
+    white-space: nowrap;
+}
+
 .audit-log-cell-time {
     width: 68px;
     font-family: var(--dashboard-mono);
@@ -96,7 +108,7 @@
 }
 
 .audit-log-cell-direction {
-    width: 44px;
+    width: 46px;
 }
 
 .audit-log-cell-outcome {
@@ -141,15 +153,19 @@
     color: var(--dashboard-muted);
 }
 
-/* A list dragged narrow keeps what tells one event from another and drops the rest -
-   what kind of event it was is the pane's to say, and so is resubmitting it */
+/* A tag in the list is read a hundred at a time, so it is kept smaller and quieter than
+   the same tag in the pane, where one event is being read on its own */
 
-@container dashboard-list (max-width: 560px) {
-
-    .audit-log-row-event {
-        display: none;
-    }
+.audit-log-list-table .dashboard-chip,
+.audit-log-list-table .dashboard-outcome-badge {
+    padding: 1px 6px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
 }
+
+/* A list dragged narrow keeps what tells one event from another and drops the rest -
+   resubmitting one of them is the pane's business by then */
 
 @container dashboard-list (max-width: 420px) {
 
