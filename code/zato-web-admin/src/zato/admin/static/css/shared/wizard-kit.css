@@ -995,11 +995,19 @@ a.wizard-select-delete:hover::before {
     font-weight: 700;
 }
 
-/* One of them on its own step, which is where an edit is sent instead */
-.wizard-missing,
-.wizard-missing label {
+/* One of them on its own step, which is where an edit is sent instead - the
+   mark goes on the very cell asking the question, never on the row around it,
+   so a question standing next to another one leaves that one alone.
+   The class is named twice on purpose - the rows above color their labels
+   through a class and an element, which one class alone does not outrank. */
+.wizard-missing.wizard-missing {
     color: var(--wizard-error);
 }
+
+/* The field itself is not styled here at all. The shared validator marks it, the
+   same one every form on the dashboard is submitted through, so a field a wizard
+   is waiting for reads exactly like a field a REST channel is waiting for - the
+   frame, the honey and the message of style.css, nothing of the wizard's own. */
 
 /* Each of them pulses where it is asked, in the shared honey .pulsate of
    style.css - the word Missing in the review, the label of a row on a step */
@@ -1067,8 +1075,8 @@ a.wizard-select-delete:hover::before {
 /* Wizard - footer                                               */
 /* ------------------------------------------------------------ */
 
-/* Three zones - the help badge on the left, Back and Next dead center,
-   the status and Cancel on the right. The side columns share one width,
+/* Three zones - the help badge on the left, Back and Next dead center, the
+   link closing the form on the right. The side columns share one width,
    which is what keeps the middle pair truly centered. */
 .wizard-footer {
     display: grid;
@@ -1114,20 +1122,6 @@ a.wizard-cancel {
 .wizard-footer button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-}
-
-.wizard-status {
-    font-size: 12px;
-    color: var(--wizard-text-muted);
-    transition: opacity 300ms ease;
-}
-
-.wizard-status-saved {
-    color: var(--wizard-done);
-}
-
-.wizard-status-error {
-    color: var(--wizard-error);
 }
 
 /* ------------------------------------------------------------ */

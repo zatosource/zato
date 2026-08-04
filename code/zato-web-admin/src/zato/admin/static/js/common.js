@@ -1702,13 +1702,43 @@ $.fn.zato.get_chosen_elems_by_elem = function(elem) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.add_elem_placeholder = function(elem, msg) {
-    $(elem).attr("placeholder", msg);
+
+    elem = $(elem);
+
+    // The field's own placeholder is put aside, so that saying what the field is
+    // waiting for does not cost it the hint it was rendered with. It is put aside
+    // once only - a field asked for twice running must not end up remembering the
+    // message as its own.
+    if(elem.data($.fn.zato.own_placeholder_data_key) === undefined) {
+
+        let own_placeholder = elem.attr("placeholder");
+
+        if(own_placeholder === undefined) {
+            own_placeholder = "";
+        }
+
+        elem.data($.fn.zato.own_placeholder_data_key, own_placeholder);
+    }
+
+    elem.attr("placeholder", msg);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.remove_elem_placeholder = function(elem) {
-    $(elem).attr("placeholder", "");
+
+    elem = $(elem);
+
+    // A field that had a hint of its own reads it again, one that had none goes back
+    // to saying nothing, and the next time it is asked for it is read afresh
+    let own_placeholder = elem.data($.fn.zato.own_placeholder_data_key);
+
+    if(own_placeholder === undefined) {
+        own_placeholder = "";
+    }
+
+    elem.attr("placeholder", own_placeholder);
+    elem.removeData($.fn.zato.own_placeholder_data_key);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -1951,6 +1981,9 @@ $.fn.zato.set_select_values_on_source_change = function(source_id, target_id, ta
 $.fn.zato.validate_required_attr     = "data-zato-validator-required";
 $.fn.zato.validate_required_msg_attr = "data-zato-validator-required-msg";
 $.fn.zato.validate_required_msg      = "This is a required field";
+
+// Where a field's own placeholder waits while it says what it is waiting for instead
+$.fn.zato.own_placeholder_data_key   = "zato-own-placeholder";
 
 $.fn.zato.validate_equals_attr       = "data-zato-validator-equals";
 $.fn.zato.validate_equals_msg_attr   = "data-zato-validator-equals-msg";

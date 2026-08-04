@@ -153,8 +153,12 @@ class TestChannelHL7MLLPWizard:
         assert _Test_Service in review_text, f'Expected "{_Test_Service}" in the review, got: "{review_text}"'
         assert outconn_name in review_text, f'Expected "{outconn_name}" in the review, got: "{review_text}"'
 
-        # Finish - back on the list with the new channel
+        # Finish - the save says so beside the button it was asked for through, and closing
+        # the form is what goes back to the list the new channel is on
         page.click('#mllp-wizard-next')
+        _ = page.wait_for_selector('.tippy-box:has-text("OK, saved")', timeout=10000)
+
+        page.click('#mllp-wizard-cancel')
         page.wait_for_url('**/zato/channel/hl7/mllp/**', timeout=10000)
         _ = page.wait_for_selector('#data-table', state='visible')
 
@@ -188,18 +192,20 @@ class TestChannelHL7MLLPWizard:
         badge_text = page.inner_text('#mllp-wizard-name-badge')
         assert channel_name in badge_text, f'Expected "{channel_name}" in the name badge, got: "{badge_text}"'
 
-        # .. and the destination counted on the chip of step 2 ..
-        page.click('#mllp-wizard-next')
+        # .. and the destination counted on the chip of step 2, reached from the step strip,
+        # an edit having no walk of its own ..
+        page.click('#mllp-wizard-steps .wizard-step[data-step="1"]')
         time.sleep(0.2)
 
         chip_text = page.inner_text('#mllp-wizard-slot-destinations-chip')
         assert '1 destination' in chip_text, f'Expected "1 destination" on the chip, got: "{chip_text}"'
 
-        # .. and saving from the review, with nothing changed, lands back on the list.
-        page.click('#mllp-wizard-next')
-        time.sleep(0.2)
+        # .. and saving with nothing changed says so where it was asked for, the form
+        # staying open until it is closed.
+        page.click('#mllp-wizard-save')
+        _ = page.wait_for_selector('.tippy-box:has-text("OK, saved")', timeout=10000)
 
-        page.click('#mllp-wizard-next')
+        page.click('#mllp-wizard-cancel')
         _ = page.wait_for_selector('#data-table', state='visible', timeout=10000)
 
         row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{channel_name}"))')

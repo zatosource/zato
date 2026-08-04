@@ -7,8 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The three destination fields the MLLP wizard and editor post have to reach the server exactly
-# as they were sent and come back the same way, and a channel handing its messages to neither a
-# service nor a destination has to be refused rather than stored with nowhere to deliver.
+# as they were sent and come back the same way, and a new channel handing its messages to neither
+# a service nor a destination has to be refused rather than stored with nowhere to deliver.
 
 # stdlib
 from http import HTTPStatus
@@ -139,8 +139,8 @@ def test_a_service_less_channel_is_saved() -> 'None':
 # ################################################################################################################################
 
 def test_a_channel_with_neither_target_is_refused() -> 'None':
-    """ A channel naming neither a service nor a destination has nowhere to deliver, so it is
-    not saved at all - the same rule the enmasse importer enforces.
+    """ A new channel naming neither a service nor a destination has nowhere to deliver, so it
+    is not saved at all - the same rule the enmasse importer enforces.
     """
     post_data = new_channel_post_data(service='')
 
@@ -151,6 +151,25 @@ def test_a_channel_with_neither_target_is_refused() -> 'None':
     assert b'needs a service or at least one destination' in response.content
 
     assert request.zato.client.invocations == []
+
+# ################################################################################################################################
+
+def test_an_edited_channel_may_have_neither_target() -> 'None':
+    """ A stored channel that had its service and its destinations taken away is one someone
+    meant to leave that way, and each step of an edit is saved on its own, so the question is
+    not put to a save made elsewhere.
+    """
+    post_data = new_channel_post_data(prefix='edit-', service='')
+    post_data['id'] = '123'
+
+    request = new_request(post_data)
+    request.zato.client.set_response(_edit_service, _saved_channel)
+
+    response = Edit()(request)
+    sent = _get_sent(response, request, _edit_service)
+
+    assert sent['service'] == ''
+    assert sent['destinations'] == ''
 
 # ################################################################################################################################
 

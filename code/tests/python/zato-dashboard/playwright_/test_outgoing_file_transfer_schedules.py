@@ -40,6 +40,13 @@ _Refused_Run_Every = '0'
 # What the server says about that interval, which is what must reach the screen
 _Refused_Reason = 'Run-every'
 
+# What every form on the dashboard says in a field it is waiting for an answer to
+_Required_Message = 'This is a required field'
+
+# The hint the name field is rendered with, which that message stands in for and
+# which has to come back once the field is answered
+_Name_Placeholder = 'e.g. invoices.hourly'
+
 # The refusal the test provokes is logged by the Dashboard as it is reported back to the page
 _Refused_Log_Patterns = (
     'Run-every must be a positive integer',
@@ -183,11 +190,35 @@ def _wizard_next(page:'Page') -> 'None':
 
 # ################################################################################################################################
 
-def _wizard_finish(page:'Page') -> 'None':
-    """ Clicks Finish on the review step and waits for the redirect back to the schedules list.
+def _go_to_step(page:'Page', step_index:'int') -> 'None':
+    """ Jumps to one step through its tab in the step strip, which is how a step is
+    reached without asking for a save on the way.
     """
-    page.click('#file-transfer-wizard-next')
-    page.wait_for_url('**/zato/outgoing/file-transfer/schedules/**', timeout=10000)
+    page.click(f'#file-transfer-wizard-steps .wizard-step[data-step="{step_index}"]')
+    _ = page.wait_for_selector(f'#file-transfer-wizard-step-body-{step_index}', state='visible')
+
+# ################################################################################################################################
+
+def _wizard_save(page:'Page') -> 'None':
+    """ Saves from the button the current action ends in - Save on an edit, the last Next
+    on a create - and waits for the tooltip saying the save went through.
+    """
+    if page.is_visible('#file-transfer-wizard-save'):
+        page.click('#file-transfer-wizard-save')
+    else:
+        page.click('#file-transfer-wizard-next')
+
+    _ = page.wait_for_selector('.tippy-box:has-text("OK, saved")', timeout=10000)
+
+# ################################################################################################################################
+
+def _wizard_finish(page:'Page') -> 'None':
+    """ Saves and then closes the form - a save leaves open the page it was made on, so
+    going back to the schedules list is asked for separately.
+    """
+    _wizard_save(page)
+
+    page.click('#file-transfer-wizard-cancel')
     _ = page.wait_for_selector('#data-table', state='visible')
 
 # ################################################################################################################################
@@ -216,7 +247,7 @@ def _submit_a_schedule_the_server_refuses(page:'Page', kind:'ConnKind') -> 'None
     _wizard_next(page)
 
     page.click('#file-transfer-wizard-next')
-    _ = page.wait_for_selector('#file-transfer-wizard-status.wizard-status-error', timeout=10000)
+    _ = page.wait_for_selector('.tippy-box:has-text("Save failed")', timeout=10000)
 
 # ################################################################################################################################
 
@@ -342,8 +373,7 @@ class TestOutgoingFileTransferSchedules:
 
             page.fill('#id_directory', kind.edited_directory)
 
-            _wizard_next(page)
-            _wizard_next(page)
+            # An edit is saved from the step it is on, there being no walk to the end of
             _wizard_finish(page)
 
             row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{schedule_name}"))')
@@ -371,6 +401,68 @@ class TestOutgoingFileTransferSchedules:
 
 # ################################################################################################################################
 
+    def test_a_field_left_empty_is_marked_the_way_every_form_marks_one(
+        self,
+        logged_in_page:'Page',
+        zato_dashboard:'anydict',
+        kind:'ConnKind',
+        ) -> 'None':
+        """ A save refused over an empty field marks it the way every form on the dashboard
+        marks one it is waiting for, and gives it back the hint it was rendered with once
+        it is answered. Nothing is posted here - the service is left empty throughout, so
+        both saves are refused before anything reaches the server.
+        """
+        page = logged_in_page
+        base_url = zato_dashboard['dashboard_url']
+
+        _navigate_to_list(page, base_url, kind)
+
+        conn_name = _Test_Name_Prefix + kind.label + '.empty'
+        _create_connection(page, kind, conn_name)
+        conn_id = _get_item_id(page, conn_name)
+
+        try:
+
+            _open_schedules(page, conn_name)
+            _open_create_wizard(page)
+
+            # The name comes up with the hint the form gives it ..
+            placeholder = page.get_attribute('#id_name', 'placeholder')
+            assert placeholder == _Name_Placeholder, f'Expected the name hint, got: "{placeholder}"'
+
+            # .. and a save asked for with it still empty is refused, the field saying so
+            # from the step it is answered on, wherever the wizard happens to stand
+            _wizard_next(page)
+            _wizard_next(page)
+            page.click('#file-transfer-wizard-next')
+
+            _ = page.wait_for_selector('#id_name.zato-validator-attention', state='attached', timeout=5000)
+
+            placeholder = page.get_attribute('#id_name', 'placeholder')
+            assert placeholder == _Required_Message, \
+                f'Expected the required message on the name, got: "{placeholder}"'
+
+            # Answered, the field is left alone by the next save, which the service still
+            # being empty means is refused all the same
+            _go_to_step(page, 0)
+            page.fill('#id_name', 'invoices.hourly')
+
+            _go_to_step(page, 2)
+            page.click('#file-transfer-wizard-next')
+
+            _ = page.wait_for_selector('#id_name.zato-validator-attention', state='detached', timeout=5000)
+
+            placeholder = page.get_attribute('#id_name', 'placeholder')
+            assert placeholder == _Name_Placeholder, \
+                f'Expected the name hint back once the field was answered, got: "{placeholder}"'
+
+        finally:
+
+            _navigate_to_list(page, base_url, kind)
+            _delete_connection(page, kind, conn_id)
+
+# ################################################################################################################################
+
     @pytest.mark.expect_log_errors(*_Refused_Log_Patterns)
     def test_a_schedule_the_server_refuses_keeps_the_wizard_open(
         self,
@@ -393,12 +485,15 @@ class TestOutgoingFileTransferSchedules:
             _open_schedules(page, conn_name)
             _submit_a_schedule_the_server_refuses(page, kind)
 
-            # The wizard stays open with the reason on the screen rather than sending the user
+            # The wizard stays open with the reason one click away rather than sending the user
             # to a page of its own, so nothing already filled in is lost.
             assert page.is_visible('#file-transfer-wizard'), \
                 'The wizard must stay open when the server refuses the schedule'
 
-            message = page.inner_text('#user-message-div')
+            page.click('.tippy-box a:has-text("Show details")')
+            _ = page.wait_for_selector('.invoker-modal-response-pre', state='visible', timeout=5000)
+
+            message = page.inner_text('.invoker-modal-response-pre')
             assert _Refused_Reason in message, f'Expected the reason on the screen, got: "{message}"'
 
             # Nothing was created

@@ -14,7 +14,7 @@ from hl7_client.mllp_receiver import MLLPReceiver
 from mllp_channel import wait_for_item, Host
 from mllp_outconn import close_popover, delete_outgoing_connection, finish_wizard, go_to_step, \
     navigate_to_outgoing, open_create_wizard, open_edit_wizard, open_popover, set_in_popover, Popover_Input_Prefix, \
-    Wizard_Id
+    Saved_Tippy_Selector, Wizard_Id
 from zato.common.crypto.api import CryptoManager
 
 # ################################################################################################################################
@@ -46,6 +46,29 @@ _Wire_Message = (
     'PV1|1|I'
 )
 
+# What every form on the dashboard says in a field it is waiting for an answer to
+_Required_Message = 'This is a required field'
+
+# The two marks a refused save leaves on the first step - the field itself, marked by the
+# shared validator, and the label of the row asking for it, marked by the wizard
+_Name_Attention_Selector = '#id_edit-name.zato-validator-attention'
+_Name_Label_Missing_Selector = f'#{Wizard_Id}-step-body-0 .wizard-name-field label.wizard-missing'
+
+# The same mark on the row opening the popover a required answer is given in
+_Timing_Label_Missing_Selector = f'#{Wizard_Id}-row-timing label.wizard-missing'
+
+# How long a refused save is given to mark what it is waiting for - the marking is the
+# page's own work, with nothing to wait for on the wire
+_Mark_Timeout = 2000
+
+# How long a save is given to reach the server and say how it went - one POST answered
+# by the same host the page came from, so anything beyond this is a fault, not a wait
+_Save_Timeout = 2000
+
+# How long a refused save is given to say nothing before the absence of the tooltip is
+# read as an answer - a save that did go through would have shown it by then
+_Refusal_Settle_Seconds = 0.5
+
 # How long the live check is given to reach the receiver and come back
 _Probe_Timeout = 20000
 
@@ -70,6 +93,18 @@ def _text_has(control_id:'str') -> 'any_':
         return out
 
     return _predicate
+
+# ################################################################################################################################
+
+def _assert_not_saved(page:'Page') -> 'None':
+    """ Confirms a refused save said nothing about having gone through - the tooltip a
+    save shows beside the button it was asked for through is given its time and does
+    not turn up.
+    """
+    time.sleep(_Refusal_Settle_Seconds)
+
+    saved = page.query_selector(Saved_Tippy_Selector)
+    assert saved is None, 'A refused save should not have said that it went through'
 
 # ################################################################################################################################
 
@@ -148,7 +183,9 @@ class TestOutgoingHL7MLLPWizard:
     """ Walks the MLLP outgoing connection wizard end to end - creating a connection through
     its three steps against a real hl7apy receiver, checking the endpoint live before anything
     is saved, sending through the connection once it exists and reopening it for an edit, which
-    is the wizard reaching its fields under the edit- prefix.
+    is the wizard reaching its fields under the edit- prefix. Along the way the walk is taken
+    with the Enter key and a save is refused over an answer taken back out, which marks the
+    field the way every form on the dashboard marks one it is waiting for.
     """
 
     def test_mllp_outconn_wizard_full_cycle(self, logged_in_page:'Page', zato_dashboard:'anydict') -> 'None':
@@ -190,6 +227,13 @@ class TestOutgoingHL7MLLPWizard:
         # The header badge mirrors the name as it is typed
         badge_text = page.inner_text(f'#{Wizard_Id}-name-badge')
         assert conn_name in badge_text, f'Expected "{conn_name}" in the name badge, got: "{badge_text}"'
+
+        # A step filled in from the keyboard is left from the keyboard - Enter does what
+        # Next does, and the walk goes on from the step it lands on
+        page.press('#id_address', 'Enter')
+        _ = page.wait_for_selector(f'#{Wizard_Id}-step-body-1', state='visible', timeout=_Mark_Timeout)
+
+        go_to_step(page, 0)
 
         # The live check reaches the receiver with nothing stored yet, which is the whole
         # point of it - a wrong address is found out here rather than after a save
@@ -253,6 +297,39 @@ class TestOutgoingHL7MLLPWizard:
         stored_timeout = _read_in_popover(page, 'timing', 'recv_timeout')
         assert stored_timeout == _Changed_Recv_Timeout, \
             f'Expected the stored timeout on edit, got: "{stored_timeout}"'
+
+        # A save asked for with the name taken out is refused, the field marked the way every
+        # form on the dashboard marks one it is waiting for and the row's label saying so too
+        page.fill('#id_edit-name', '')
+        page.click(f'#{Wizard_Id}-save')
+
+        _ = page.wait_for_selector(_Name_Attention_Selector, state='attached', timeout=_Mark_Timeout)
+        _ = page.wait_for_selector(_Name_Label_Missing_Selector, state='attached', timeout=_Mark_Timeout)
+
+        placeholder = page.get_attribute('#id_edit-name', 'placeholder')
+        assert placeholder == _Required_Message, \
+            f'Expected the required message on the name, got: "{placeholder}"'
+
+        _assert_not_saved(page)
+
+        # An answer given in a popover is asked for on the row that opens it, the input
+        # holding it never being on screen - and the answered name is left alone
+        page.fill('#id_edit-name', conn_name)
+        set_in_popover(page, 'timing', 'recv_timeout', '')
+
+        page.click(f'#{Wizard_Id}-save')
+
+        _ = page.wait_for_selector(_Timing_Label_Missing_Selector, state='attached', timeout=_Mark_Timeout)
+        _ = page.wait_for_selector(_Name_Attention_Selector, state='detached', timeout=_Mark_Timeout)
+
+        _assert_not_saved(page)
+
+        # With both answered the step is saved from the keyboard, an edit being saved
+        # from wherever it stands
+        set_in_popover(page, 'timing', 'recv_timeout', _Changed_Recv_Timeout)
+        page.press('#id_edit-name', 'Enter')
+
+        _ = page.wait_for_selector(Saved_Tippy_Selector, timeout=_Save_Timeout)
 
         go_to_step(page, 1)
 

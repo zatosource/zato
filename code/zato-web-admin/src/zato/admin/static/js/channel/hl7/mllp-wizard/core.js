@@ -130,9 +130,15 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         default_character_encoding: {group: wizard.config_own.groups.transport, anchorSelector: '#mllp-wizard-row-transport'}
     },
 
-    // A channel hands its messages to a service, to its destinations or to both,
-    // so with neither of them answered both questions are still open
+    // A new channel hands its messages to a service, to its destinations or to both,
+    // so with neither of them answered both questions are still open. A stored one
+    // is not asked again - a channel that had its service and its destinations taken
+    // away is a channel someone meant to leave that way.
     missingExtra: function() {
+
+        if(wizard.state.isEdit) {
+            return [];
+        }
 
         if(wizard._has_target()) {
             return [];
