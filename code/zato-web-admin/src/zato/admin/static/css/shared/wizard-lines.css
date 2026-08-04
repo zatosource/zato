@@ -162,7 +162,11 @@
    flex chain running from here down to the lists */
 .wizard-panel {
     position: absolute;
-    z-index: 20;
+
+    /* A panel dragged up the page reaches the sticky navigation, which sits at 9999,
+       and it is the panel being read at the time, so it goes over the top of it */
+    z-index: 10000;
+
     display: flex;
     flex-direction: column;
 }

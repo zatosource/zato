@@ -19,7 +19,6 @@
 
     {% comment %} The Service and Destinations columns edit in the wizard's own panels {% endcomment %}
     <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-lines.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/shared/hint-tippy.css">
     <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
     <link rel="stylesheet" type="text/css" href="/static/css/channel/hl7/mllp-wizard-controls.css">
 {% endblock %}
@@ -164,13 +163,12 @@
                         <td><a href="javascript:void(0)" class="zato-table-note" data-id="{{ item.id }}" data-match="{{ item.match_json }}"
                             onclick="$.fn.zato.channel.hl7.mllp.match.open(this)">{{ item.match_label }}</a></td>
 
-                        {# The service each message is handed to, picked in the wizard's own panel #}
-                        <td><a href="javascript:void(0)" class="mllp-service-cell" id="mllp-service-{{ item.id }}" data-id="{{ item.id }}"
-                            onclick="$.fn.zato.channel.hl7.mllp.row_edit.open_service(this)">{% if item.service %}{{ item.service }}{% else %}Click to add{% endif %}</a></td>
+                        {# The service each message is handed to, what can be done with it opening on a click #}
+                        <td><a href="javascript:void(0)" class="mllp-service-cell" id="mllp-service-{{ item.id }}"
+                            data-id="{{ item.id }}">{% if item.service %}{{ item.service }}{% else %}Click to add{% endif %}</a></td>
 
-                        {# How many outgoing connections each message is delivered to on top of the service #}
-                        <td><a href="javascript:void(0)" class="mllp-destinations-cell" id="mllp-destinations-{{ item.id }}" data-id="{{ item.id }}"
-                            onclick="$.fn.zato.channel.hl7.mllp.row_edit.open_destinations(this)">{% if item.destination_count %}{{ item.destination_count }}{% else %}Click to add{% endif %}</a></td>
+                        {# The outgoing connections each message is delivered to, written in by the page #}
+                        <td id="mllp-destinations-cell-{{ item.id }}"></td>
 
                         <td><a href="/zato/audit-log/?source=hl7&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a></td>
                         <td><a href="{% url "channel-hl7-mllp-wizard-edit" item.id %}?cluster={{ cluster_id }}">Edit</a></td>

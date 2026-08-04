@@ -171,10 +171,14 @@ kit.lines._buildCaret = function() {
 // may return a function to run when the panel closes, which is where a panel
 // that edits the DOM directly writes its answers back into the state.
 //
-// spec: {title, width, minWidth, build(body, panel)}
+// spec: {title, width, minWidth, build(body, panel), geometryKey}
 kit.lines.openPanel = function(chip, spec) {
 
     var linesConfig = kit.lines.config;
+
+    // Where the panel was left is remembered under its chip, unless the caller opens the
+    // same panel off more than one chip - a list does, one per row, and it is one panel
+    var geometryKey = spec.geometryKey ? spec.geometryKey : chip.id;
 
     var panel = document.createElement('div');
     panel.className = 'zato-popup wizard-panel';
@@ -207,14 +211,14 @@ kit.lines.openPanel = function(chip, spec) {
 
     // A panel the user has already moved or resized opens the way it was
     // left, the rest hang under their chip
-    var isRestored = $.fn.zato.popup.restore_geometry(chip.id, panel);
+    var isRestored = $.fn.zato.popup.restore_geometry(geometryKey, panel);
 
     if(!isRestored) {
         kit.lines._place(panel, chip);
     }
 
-    kit.lines._makeDraggable(panel, header, chip.id);
-    kit.lines._makeResizable(panel, spec, chip.id);
+    kit.lines._makeDraggable(panel, header, geometryKey);
+    kit.lines._makeResizable(panel, spec, geometryKey);
 
     linesConfig.openPanel = {element: panel, chipId: chip.id, onClose: onClose};
 
