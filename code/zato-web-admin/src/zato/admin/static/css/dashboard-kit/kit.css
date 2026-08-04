@@ -22,7 +22,6 @@
     --dashboard-row-selected: #e0f0ff;
 
     --dashboard-mono: 'Menlo', 'Consolas', 'Monaco', monospace;
-    --dashboard-timeline-height: 44px;
 }
 
 .dashboard-page {

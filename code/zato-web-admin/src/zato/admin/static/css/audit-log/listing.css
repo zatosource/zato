@@ -5,7 +5,6 @@
 @import url("../dashboard-kit/chips.css");
 @import url("../dashboard-kit/direction.css");
 @import url("../dashboard-kit/payload_panel.css");
-@import url("../dashboard-kit/timeline.css");
 @import url("../dashboard-kit/list_detail.css");
 @import url("../dashboard-kit/tabs.css");
 
@@ -83,17 +82,15 @@
 }
 
 .audit-log-list-table td {
-    padding: 5px 6px;
+    padding: 4px 6px;
     border-bottom: 1px solid var(--dashboard-line);
-    vertical-align: top;
-    overflow: hidden;
+    vertical-align: middle;
 }
 
 .audit-log-cell-time {
     width: 68px;
     font-family: var(--dashboard-mono);
     font-size: 12px;
-    line-height: 18px;
     color: var(--dashboard-muted);
     white-space: nowrap;
 }
@@ -107,8 +104,9 @@
 }
 
 .audit-log-cell-action {
-    width: 104px;
+    width: 96px;
     text-align: right;
+    white-space: nowrap;
 }
 
 .audit-log-empty-row td,
@@ -117,80 +115,45 @@
     color: var(--dashboard-muted);
 }
 
-/* What one event says about itself, stacked so that a narrow list wraps rather than
-   clipping - the identity of the message on the upper line, what it carried on the lower */
+/* What one event is and what it says about itself, on one line for as long as the line
+   holds it and wrapping onto the next when it does not - a row grows rather than cutting
+   anything in half, and the payload it carried is the pane's business */
 
-.audit-log-row-line {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-    line-height: 18px;
-}
+.audit-log-cell-main {
+    line-height: 20px;
 
-.audit-log-row-line-lower {
-    margin-top: 2px;
+    /* A value too long for the room it is given breaks onto the next line rather than
+       running out into the cell beside it */
+    overflow-wrap: anywhere;
 }
 
 .audit-log-row-id {
-    flex: none;
-    max-width: 40%;
+    margin-right: 8px;
     font-family: var(--dashboard-mono);
     font-size: 12px;
     font-weight: 700;
     color: var(--dashboard-line-strong);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .audit-log-row-event {
-    flex: none;
+    margin-right: 8px;
     font-size: 11px;
     color: var(--dashboard-muted);
-    white-space: nowrap;
 }
 
-.audit-log-row-chips {
-    flex: 1 1 auto;
-    min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+/* A list dragged narrow keeps what tells one event from another and drops the rest -
+   what kind of event it was is the pane's to say, and so is resubmitting it */
 
-.audit-log-row-preview {
-    flex: 1 1 auto;
-    min-width: 0;
-    font-family: var(--dashboard-mono);
-    font-size: 12px;
-    color: #3f4854;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.audit-log-row-size {
-    flex: none;
-    white-space: nowrap;
-}
-
-/* A list dragged narrow drops what it can spare, in the order it can spare it */
-
-@container dashboard-list (max-width: 700px) {
+@container dashboard-list (max-width: 560px) {
 
     .audit-log-row-event {
         display: none;
     }
-
-    .audit-log-cell-action {
-        width: 74px;
-    }
 }
 
-@container dashboard-list (max-width: 560px) {
+@container dashboard-list (max-width: 420px) {
 
-    .audit-log-row-preview {
+    .audit-log-cell-action {
         display: none;
     }
 
@@ -198,57 +161,6 @@
         width: 60px;
         font-size: 11px;
     }
-}
-
-@container dashboard-list (max-width: 440px) {
-
-    /* What is left of a row this narrow is when it happened, which way it went and how it
-       turned out - resubmitting it is the pane's business by now */
-
-    .audit-log-cell-action,
-    .audit-log-size-text {
-        display: none;
-    }
-
-    .audit-log-row-line-lower {
-        justify-content: flex-end;
-    }
-}
-
-/* The payload of one row against the largest one on the page */
-
-.audit-log-size-bar {
-    display: inline-block;
-    width: 34px;
-    height: 6px;
-    margin-right: 6px;
-    border-radius: 1px;
-    background: rgba(42, 127, 191, 0.14);
-    vertical-align: middle;
-}
-
-.audit-log-size-bar-fill {
-    display: block;
-    height: 100%;
-    border-radius: 1px;
-    background: rgba(42, 127, 191, 0.55);
-}
-
-.audit-log-size-text {
-    font-family: var(--dashboard-mono);
-    font-size: 12px;
-}
-
-/* ------------------------------------------------------------ */
-/* Parts both the list and the pane are drawn out of             */
-/* ------------------------------------------------------------ */
-
-.audit-log-outcome-none {
-    color: var(--dashboard-muted);
-}
-
-.audit-log-muted {
-    color: var(--dashboard-muted);
 }
 
 .audit-log-lineage {

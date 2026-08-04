@@ -2,9 +2,9 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The audit log listing - a main list of events beside a pane holding the selected one whole,
-// with a timeline and its legend above them. Everything about it that is not about audit events
-// lives in the dashboard kit, and everything a particular source shows lives in its presenter.
+// The audit log listing - a main list of events beside a pane holding the selected one whole.
+// Everything about it that is not about audit events lives in the dashboard kit, and everything
+// a particular source shows lives in its presenter.
 
 $.fn.zato.audit_log.listing = {};
 
@@ -22,7 +22,6 @@ listing.config = {
     host: '#audit-log-listing',
     itemsHost: '#audit-log-table-body',
     itemSelector: '.audit-log-row',
-    timelineHost: '#audit-log-timeline',
     legendHost: '#audit-log-legend',
     payloadHost: '#audit-log-pane-payload',
     rangePillId: 'audit-log-range',
@@ -42,15 +41,9 @@ listing.config = {
     rangeStorageKey: 'zato_audit_log_range',
 
     // How wide the list starts out, which is wider than the kit's own default because
-    // a row of it says a lot at once
-    defaultListWidth: 760,
+    // a row of it carries the chips of whatever source it is listing
+    defaultListWidth: 620,
 
-    // How many cells one row of the list has, which is what a row standing in for
-    // the whole list spans. A row says more than five things, but the rest of them
-    // are stacked inside the one cell in the middle so a narrow list still reads.
-    columnCount: 5,
-
-    emptyValue: '---',
     emptyListing: 'No events found',
     emptyPane: 'No event selected',
     loadingLabel: 'Loading...',
@@ -73,11 +66,8 @@ listing.config = {
         'error': 'Error'
     },
 
-    // The outcomes an audit event reports, in the order they stack in the timeline
+    // The outcomes an audit event reports, in the order the legend offers them
     outcomeKeys: ['ok', 'error', 'expired'],
-
-    // The outcome an event that reports none of its own is counted as
-    neutralOutcomeKey: 'ok',
 
     // The tint the newest rows carry and how far down the list it reaches
     recencyRGB: '218, 165, 32',
@@ -85,9 +75,6 @@ listing.config = {
 
     // How often the listing asks for what has arrived since, until it is told otherwise
     refreshDefaultSeconds: 0,
-
-    // The smallest a size bar is drawn as, so a one-byte payload is still visible
-    minSizeBarPercent: 2,
 
     // The columns the list draws places of its own for, so the neutral presenter knows
     // which of a source's columns are left to become chips
@@ -166,8 +153,9 @@ listing.visible = [];
 listing.hidden = {};
 listing.minutes = 0;
 
-// The largest payload on the page, which every size bar is drawn against
-listing.maxSize = 1;
+// Which cells the events now on the page have anything to say in, so a list of events
+// that never went anywhere or never came out either way is not given a column of blanks
+listing.columns = {direction: false, outcome: false, action: false};
 
 // The events already on the page before the last refresh, so only what is new puffs.
 // Nothing has been drawn yet while this is null, and a first drawing puffs nothing.
@@ -200,12 +188,11 @@ listing.directionOf = function(eventType) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// Not every event type reports an outcome - a message arriving is neither a success nor
+// a failure until something is done with it, and an event with nothing to say here says nothing.
 listing.outcomeBadgeHTML = function(rowModel) {
-
-    // Not every event type reports an outcome - a message arriving is neither
-    // a success nor a failure until something is done with it.
     if (rowModel.outcome === '') {
-        return '<span class="audit-log-outcome-none">' + listing.config.emptyValue + '</span>';
+        return '';
     }
 
     var out = kit.outcome.badge(rowModel.outcome, kit.palette.outcome_palette);
@@ -215,31 +202,8 @@ listing.outcomeBadgeHTML = function(rowModel) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-listing.sizeText = function(size) {
-    if (size === null) {
-        return listing.config.emptyValue;
-    }
-
-    var out = kit.format_number_full(size);
-    return out;
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
-listing.durationText = function(durationMs) {
-    if (durationMs === null) {
-        return listing.config.emptyValue;
-    }
-
-    var out = kit.format_duration_ms(durationMs);
-    return out;
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
 // One row of the poll as everything drawing it reads it
 listing.buildRow = function(row) {
-    var config = listing.config;
     var presenter = $.fn.zato.audit_log.presenter();
 
     var out = {
@@ -257,7 +221,6 @@ listing.buildRow = function(row) {
         timeLocal: kit.format_local_time(row.event_time_iso),
         size: row.size,
         durationMs: row.duration_ms,
-        preview: row.data,
         parents: row.parents,
         children: row.children,
         bodyKinds: row.body_kinds,
@@ -275,17 +238,14 @@ listing.buildRow = function(row) {
         out.controlId = out.msgId;
     }
 
-    // An event reporting an outcome the timeline knows still counts as one that went through,
-    // and so does one reporting none at all.
-    if (config.outcomeKeys.indexOf(out.outcome) === -1) {
-        out.chartKey = config.neutralOutcomeKey;
-    }
-    else {
-        out.chartKey = out.outcome;
-    }
-
     out.chips = presenter.chips(row);
     out.headline = presenter.headline(row);
+
+    // An event a source has no name of its own for is still called something, so the pane
+    // heading it always reads as the message the list was pointed at.
+    if (out.headline === '') {
+        out.headline = out.controlId;
+    }
 
     return out;
 };
@@ -340,34 +300,62 @@ listing.actionHTML = function(rowModel) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The payload of one row against the largest one on the page
-listing.sizeBarHTML = function(rowModel) {
-    var config = listing.config;
+// Which cells the events now on the page have anything to say in
+listing.updateColumns = function() {
+    var columns = {direction: false, outcome: false, action: false};
 
-    if (rowModel.size === null) {
-        return '<span class="audit-log-size-text audit-log-muted">' + config.emptyValue + '</span>';
+    for (var rowIndex = 0; rowIndex < listing.visible.length; rowIndex++) {
+        var rowModel = listing.visible[rowIndex];
+
+        if (rowModel.direction !== 'none') {
+            columns.direction = true;
+        }
+
+        if (rowModel.outcome !== '') {
+            columns.outcome = true;
+        }
+
+        if (rowModel.actionLabel !== undefined || rowModel.isResubmitted) {
+            columns.action = true;
+        }
     }
 
-    var percent = (rowModel.size / listing.maxSize) * 100;
-
-    if (percent < config.minSizeBarPercent) {
-        percent = config.minSizeBarPercent;
-    }
-
-    var html = '<span class="audit-log-size-bar">';
-    html += '<span class="audit-log-size-bar-fill" style="width:' + percent.toFixed(1) + '%"></span>';
-    html += '</span>';
-    html += '<span class="audit-log-size-text">' + listing.sizeText(rowModel.size) + '</span>';
-
-    return html;
+    listing.columns = columns;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// One event as a row of five cells - when and which way it went, what it is, how it
-// turned out and what can be done with it - with what it says about itself stacked
-// inside the middle cell, so a list dragged narrow drops the details rather than the shape.
+// How many cells a row of the list currently has, which is what a row standing in
+// for the whole list spans
+listing.columnCount = function() {
+    var columns = listing.columns;
+
+    // The time an event happened and what it was are the two the list always holds.
+    var out = 2;
+
+    if (columns.direction) {
+        out += 1;
+    }
+
+    if (columns.outcome) {
+        out += 1;
+    }
+
+    if (columns.action) {
+        out += 1;
+    }
+
+    return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// One event as one line - when it happened, which way it went, what it is and what it
+// says about itself, how it turned out and what can be done with it. What the payload
+// holds is the pane's business, so nothing here is ever cut in half.
 listing.rowHTML = function(rowModel) {
+    var columns = listing.columns;
+
     var html = '<tr class="audit-log-row" data-item-id="' + rowModel.id +
         '" data-ts="' + listing.escapeHTML(rowModel.timeIso) + '">';
 
@@ -376,26 +364,24 @@ listing.rowHTML = function(rowModel) {
     html += '<td class="audit-log-cell-time" title="' + listing.escapeHTML(rowModel.timeLocal) + '">' +
         listing.escapeHTML(rowModel.timeLocal.slice(11)) + '</td>';
 
-    html += '<td class="audit-log-cell-direction">' +
-        kit.direction.tag(rowModel.direction, rowModel.eventType) + '</td>';
+    if (columns.direction) {
+        html += '<td class="audit-log-cell-direction">' +
+            kit.direction.tag(rowModel.direction, rowModel.eventType) + '</td>';
+    }
 
     html += '<td class="audit-log-cell-main">';
-
-    html += '<div class="audit-log-row-line">';
     html += '<span class="audit-log-row-id">' + listing.escapeHTML(rowModel.controlId) + '</span>';
     html += '<span class="audit-log-row-event">' + listing.escapeHTML(rowModel.eventType) + '</span>';
-    html += '<span class="audit-log-row-chips">' + kit.chips.render(rowModel.chips) + '</span>';
-    html += '</div>';
-
-    html += '<div class="audit-log-row-line audit-log-row-line-lower">';
-    html += '<span class="audit-log-row-preview">' + listing.escapeHTML(rowModel.preview) + '</span>';
-    html += '<span class="audit-log-row-size">' + listing.sizeBarHTML(rowModel) + '</span>';
-    html += '</div>';
-
+    html += kit.chips.render(rowModel.chips);
     html += '</td>';
 
-    html += '<td class="audit-log-cell-outcome">' + listing.outcomeBadgeHTML(rowModel) + '</td>';
-    html += '<td class="audit-log-cell-action">' + listing.actionHTML(rowModel) + '</td>';
+    if (columns.outcome) {
+        html += '<td class="audit-log-cell-outcome">' + listing.outcomeBadgeHTML(rowModel) + '</td>';
+    }
+
+    if (columns.action) {
+        html += '<td class="audit-log-cell-action">' + listing.actionHTML(rowModel) + '</td>';
+    }
 
     html += '</tr>';
 
@@ -407,7 +393,7 @@ listing.rowHTML = function(rowModel) {
 listing.emptyRowHTML = function() {
     var config = listing.config;
 
-    var out = '<tr class="audit-log-empty-row"><td colspan="' + config.columnCount + '">' +
+    var out = '<tr class="audit-log-empty-row"><td colspan="' + listing.columnCount() + '">' +
         config.emptyListing + '</td></tr>';
 
     return out;
@@ -418,7 +404,7 @@ listing.emptyRowHTML = function() {
 listing.loadingRowHTML = function() {
     var config = listing.config;
 
-    var out = '<tr class="detail-loading-row"><td colspan="' + config.columnCount + '">' +
+    var out = '<tr class="detail-loading-row"><td colspan="' + listing.columnCount() + '">' +
         '<img src="/static/gfx/spinner.svg" class="detail-spinner"> ' + config.loadingLabel + '</td></tr>';
 
     return out;
@@ -426,9 +412,9 @@ listing.loadingRowHTML = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The cells of the pane's grid - what this source says about its events, then what
-// every source says about all of them. An attribute with no value reads as empty rather
-// than being left out, so the grid does not move as the selection walks the list.
+// The cells of the pane's grid - what this source says about its events, then what every
+// source says about all of them. An attribute this event has no value for is left out
+// altogether, because a label above a dash says less than nothing.
 listing.paneAttrs = function(rowModel) {
     var config = listing.config;
     var columns = $.fn.zato.audit_log.config.columns;
@@ -443,7 +429,10 @@ listing.paneAttrs = function(rowModel) {
         }
 
         seen[column.key] = true;
-        out.push({label: column.label, value: rowModel.raw[column.key]});
+
+        if (rowModel.raw[column.key] !== '') {
+            out.push({label: column.label, value: rowModel.raw[column.key]});
+        }
     }
 
     for (var fieldIndex = 0; fieldIndex < config.paneFields.length; fieldIndex++) {
@@ -455,11 +444,20 @@ listing.paneAttrs = function(rowModel) {
             continue;
         }
 
-        out.push({label: field.label, value: rowModel[field.key]});
+        if (rowModel[field.key] !== '') {
+            out.push({label: field.label, value: rowModel[field.key]});
+        }
     }
 
-    out.push({label: config.durationLabel, value: listing.durationText(rowModel.durationMs)});
-    out.push({label: config.sizeLabel, value: listing.sizeText(rowModel.size)});
+    // An event that took no measurable time is one nothing was timed for, e.g. a message
+    // being written down rather than being answered.
+    if (rowModel.durationMs > 0) {
+        out.push({label: config.durationLabel, value: kit.format_duration_ms(rowModel.durationMs)});
+    }
+
+    if (rowModel.size > 0) {
+        out.push({label: config.sizeLabel, value: kit.format_number_full(rowModel.size)});
+    }
 
     return out;
 };
@@ -483,15 +481,10 @@ listing.paneGridHTML = function(rowModel) {
 
     for (var attrIndex = 0; attrIndex < attrs.length; attrIndex++) {
         var attr = attrs[attrIndex];
-        var value = attr.value;
-
-        if (value === '') {
-            value = config.emptyValue;
-        }
 
         html += '<div>';
         html += '<div class="audit-log-pane-cell-label">' + listing.escapeHTML(attr.label) + '</div>';
-        html += '<div class="audit-log-pane-cell-value">' + listing.escapeHTML(value) + '</div>';
+        html += '<div class="audit-log-pane-cell-value">' + listing.escapeHTML(attr.value) + '</div>';
         html += '</div>';
     }
 
@@ -647,7 +640,20 @@ listing.showPayload = function() {
 
     kit.payload_panel.lazy($host, tabs, function(tab, onDone) {
         listing.fetchDetails(rowModel.id, tab.kind, function(details) {
-            onDone(tab.parsed ? details.parsed : details.data);
+
+            if (!tab.parsed) {
+                onDone(details.data);
+                return;
+            }
+
+            // A payload this source's own reader could make nothing of - a JSON alert in
+            // an HL7 log, say - is shown as it stands rather than as a blank pane.
+            if (details.parsed === '') {
+                onDone(details.data);
+            }
+            else {
+                onDone(details.parsed);
+            }
         });
     });
 };
@@ -697,7 +703,9 @@ listing.filterRows = function() {
     for (var rowIndex = 0; rowIndex < listing.rowModels.length; rowIndex++) {
         var rowModel = listing.rowModels[rowIndex];
 
-        if (listing.hidden[rowModel.chartKey]) {
+        // The legend switches outcomes off, and an event reporting no outcome of its own
+        // is not any of them, so nothing the legend says takes it off the page.
+        if (listing.hidden[rowModel.outcome]) {
             continue;
         }
 
@@ -713,23 +721,6 @@ listing.filterRows = function() {
     }
 
     return out;
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
-// The largest payload of whatever is on the page, which every size bar is drawn against
-listing.updateMaxSize = function() {
-    var maxSize = 1;
-
-    for (var rowIndex = 0; rowIndex < listing.visible.length; rowIndex++) {
-        var size = listing.visible[rowIndex].size;
-
-        if (size !== null && size > maxSize) {
-            maxSize = size;
-        }
-    }
-
-    listing.maxSize = maxSize;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -768,28 +759,14 @@ listing.markNewRows = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-listing.drawTimeline = function() {
-    kit.timeline.render($(listing.config.timelineHost), listing.visible, {
-        keys: listing.config.outcomeKeys,
-        key_of: function(rowModel) { return rowModel.chartKey; },
-        ts_of: function(rowModel) { return new Date(rowModel.timeIso).getTime(); },
-        colors: kit.palette.outcome.bar_colors,
-
-        // The rows the legend switched off are not on the page at all by now
-        hidden: {},
-        empty_html: '<div class="dashboard-inline-empty">' + listing.config.emptyListing + '</div>'
-    });
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
 listing.draw = function() {
     listing.visible = listing.filterRows();
 
-    listing.updateMaxSize();
+    // Which cells a row holds is settled before a single one of them is drawn.
+    listing.updateColumns();
+
     listing.panes.set_items(listing.visible);
     listing.markNewRows();
-    listing.drawTimeline();
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -801,7 +778,7 @@ listing.renderPage = function(_$body, rows) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The timeline, the legend that filters it, the range pill and the live pill
+// The live pill, the range pill and the legend that narrows the list down to one outcome
 listing.chromeHTML = function() {
     var config = listing.config;
     var rangePillId = config.rangePillId;
@@ -830,8 +807,6 @@ listing.chromeHTML = function() {
 
     html += '<div class="dashboard-chart-legend" id="' + config.legendHost.slice(1) + '"></div>';
     html += '</div>';
-
-    html += '<div class="dashboard-timeline" id="' + config.timelineHost.slice(1) + '"></div>';
 
     return html;
 };
