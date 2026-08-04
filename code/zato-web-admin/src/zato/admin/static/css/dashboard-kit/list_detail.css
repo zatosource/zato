@@ -11,7 +11,13 @@
     align-items: stretch;
 }
 
+/* The list is dragged to whatever width suits, so what an item shows is answered
+   against the list rather than against the window */
+
 .dashboard-list-detail-list {
+    container-type: inline-size;
+    container-name: dashboard-list;
+
     height: var(--dashboard-list-detail-height);
     overflow: auto;
     border: 1px solid var(--dashboard-line);
