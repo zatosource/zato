@@ -12,28 +12,3 @@
     flex-direction: column;
     gap: var(--zato-tippy-buttons-gap);
 }
-
-/* The same, for a popup saying what can be done in the words the page says it in */
-.zato-tippy-links {
-
-    /* The air between one line and the next */
-    --zato-tippy-links-gap: 4px;
-
-    display: flex;
-    flex-direction: column;
-    gap: var(--zato-tippy-links-gap);
-    white-space: nowrap;
-}
-
-/* The site-wide tippy link colors are meant for dark tooltips, and a light popup is
-   white, so the links in one wear the very face the links above a table wear */
-.tippy-box[data-theme~='light'] .tippy-content a:not(.menu-link) {
-    color: rgb(17, 17, 17);
-    --zato-link-dash: rgba(0, 0, 0, 0.35);
-    font-size: 12px;
-}
-
-.tippy-box[data-theme~='light'] .tippy-content a:not(.menu-link):hover {
-    color: var(--zato-link-hover) !important;
-    --zato-link-dash: rgba(0, 0, 0, 0.35);
-}
