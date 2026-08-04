@@ -7,14 +7,16 @@
 @import url("../dashboard-kit/payload_panel.css");
 @import url("../dashboard-kit/timeline.css");
 @import url("../dashboard-kit/list_detail.css");
+@import url("../dashboard-kit/tabs.css");
 
 /* ------------------------------------------------------------ */
 /* The page around the listing                                   */
 /* ------------------------------------------------------------ */
 
-/* There are no tabs on this page - everything on it is an event */
+/* The page itself has nothing to tab between - everything on it is an event.
+   The tabs inside the detail pane are another matter. */
 
-.detail-page-audit-log .dashboard-tabs {
+.detail-page-audit-log > .dashboard-tabs {
     display: none;
 }
 
@@ -66,69 +68,46 @@
     background: var(--dashboard-row-hover);
 }
 
-/* The tint of a row that has just arrived is set on the element itself, so what marks
-   the selection is laid over whatever colour the row is already wearing */
+/* The tint of a row that has just arrived is set on the row itself, so what marks the
+   selection is laid over whatever colour the row is already wearing, and it is laid on
+   the cells because a collapsed table draws no shadow of a row */
 
-.audit-log-row.dashboard-list-detail-item-selected {
+.audit-log-row.dashboard-list-detail-item-selected > td {
+    box-shadow: inset 0 0 0 999px rgba(224, 240, 255, 0.55);
+}
+
+.audit-log-row.dashboard-list-detail-item-selected > td:first-child {
     box-shadow:
         inset 3px 0 0 var(--dashboard-accent),
         inset 0 0 0 999px rgba(224, 240, 255, 0.55);
 }
 
 .audit-log-list-table td {
-    padding: 4px 6px;
+    padding: 5px 6px;
     border-bottom: 1px solid var(--dashboard-line);
-    vertical-align: middle;
+    vertical-align: top;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 .audit-log-cell-time {
-    width: 70px;
+    width: 68px;
     font-family: var(--dashboard-mono);
     font-size: 12px;
+    line-height: 18px;
     color: var(--dashboard-muted);
+    white-space: nowrap;
 }
 
 .audit-log-cell-direction {
     width: 44px;
 }
 
-.audit-log-cell-id {
-    width: 130px;
-    font-family: var(--dashboard-mono);
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--dashboard-line-strong);
-}
-
-.audit-log-cell-event {
-    width: 120px;
-    font-size: 12px;
-}
-
 .audit-log-cell-outcome {
-    width: 74px;
-}
-
-.audit-log-cell-chips {
-    width: 30%;
-}
-
-.audit-log-cell-size {
-    width: 100px;
-    text-align: right;
-}
-
-.audit-log-cell-preview {
-    font-family: var(--dashboard-mono);
-    font-size: 12px;
-    color: #3f4854;
+    width: 76px;
 }
 
 .audit-log-cell-action {
-    width: 110px;
+    width: 104px;
     text-align: right;
 }
 
@@ -136,6 +115,104 @@
 .detail-loading-row td {
     padding: 10px 12px;
     color: var(--dashboard-muted);
+}
+
+/* What one event says about itself, stacked so that a narrow list wraps rather than
+   clipping - the identity of the message on the upper line, what it carried on the lower */
+
+.audit-log-row-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    line-height: 18px;
+}
+
+.audit-log-row-line-lower {
+    margin-top: 2px;
+}
+
+.audit-log-row-id {
+    flex: none;
+    max-width: 40%;
+    font-family: var(--dashboard-mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--dashboard-line-strong);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.audit-log-row-event {
+    flex: none;
+    font-size: 11px;
+    color: var(--dashboard-muted);
+    white-space: nowrap;
+}
+
+.audit-log-row-chips {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.audit-log-row-preview {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-family: var(--dashboard-mono);
+    font-size: 12px;
+    color: #3f4854;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.audit-log-row-size {
+    flex: none;
+    white-space: nowrap;
+}
+
+/* A list dragged narrow drops what it can spare, in the order it can spare it */
+
+@container dashboard-list (max-width: 700px) {
+
+    .audit-log-row-event {
+        display: none;
+    }
+
+    .audit-log-cell-action {
+        width: 74px;
+    }
+}
+
+@container dashboard-list (max-width: 560px) {
+
+    .audit-log-row-preview {
+        display: none;
+    }
+
+    .audit-log-cell-time {
+        width: 60px;
+        font-size: 11px;
+    }
+}
+
+@container dashboard-list (max-width: 440px) {
+
+    /* What is left of a row this narrow is when it happened, which way it went and how it
+       turned out - resubmitting it is the pane's business by now */
+
+    .audit-log-cell-action,
+    .audit-log-size-text {
+        display: none;
+    }
+
+    .audit-log-row-line-lower {
+        justify-content: flex-end;
+    }
 }
 
 /* The payload of one row against the largest one on the page */
@@ -237,8 +314,22 @@
     background: var(--dashboard-row-selected);
 }
 
+/* The pane's tabs are the dashboard's own, only smaller - the pane is a column of a
+   listing, not a page of its own */
+
+.audit-log-pane-tabs {
+    --tab-padding: 4px 14px;
+    --tab-font-size: 10.5px;
+
+    margin-bottom: 10px;
+}
+
 .audit-log-pane-chips {
     margin-bottom: 10px;
+}
+
+.audit-log-pane-chips:empty {
+    display: none;
 }
 
 .audit-log-pane-grid {

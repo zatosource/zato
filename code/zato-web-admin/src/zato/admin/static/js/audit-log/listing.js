@@ -27,6 +27,15 @@ listing.config = {
     payloadHost: '#audit-log-pane-payload',
     rangePillId: 'audit-log-range',
 
+    // The pane's two halves - the message itself and everything said about it
+    tabSelector: '.audit-log-pane-tab',
+    tabPanelPrefix: 'audit-log-pane-panel-',
+    tabStorageKey: 'zato_audit_log_pane_tab',
+    dataTab: 'data',
+    detailsTab: 'details',
+    dataTabLabel: 'Data',
+    detailsTabLabel: 'Details',
+
     // What the proportions of one source's listing are remembered under
     storagePrefix: 'zato_audit_log_layout_',
     refreshStorageKey: 'zato_audit_log_refresh',
@@ -37,8 +46,9 @@ listing.config = {
     defaultListWidth: 760,
 
     // How many cells one row of the list has, which is what a row standing in for
-    // the whole list spans
-    columnCount: 9,
+    // the whole list spans. A row says more than five things, but the rest of them
+    // are stacked inside the one cell in the middle so a narrow list still reads.
+    columnCount: 5,
 
     emptyValue: '---',
     emptyListing: 'No events found',
@@ -163,8 +173,11 @@ listing.maxSize = 1;
 // Nothing has been drawn yet while this is null, and a first drawing puffs nothing.
 listing.seenIds = null;
 
-// The two panes, once they are built
+// The two panes, once they are built, the tab group of the detail pane, once it holds
+// an event, and the event it is holding
 listing.panes = null;
+listing.tabs = null;
+listing.selected = null;
 
 // /////////////////////////////////////////////////////////////////////////////
 
@@ -351,9 +364,10 @@ listing.sizeBarHTML = function(rowModel) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// One event as a row of five cells - when and which way it went, what it is, how it
+// turned out and what can be done with it - with what it says about itself stacked
+// inside the middle cell, so a list dragged narrow drops the details rather than the shape.
 listing.rowHTML = function(rowModel) {
-    var config = listing.config;
-
     var html = '<tr class="audit-log-row" data-item-id="' + rowModel.id +
         '" data-ts="' + listing.escapeHTML(rowModel.timeIso) + '">';
 
@@ -365,12 +379,22 @@ listing.rowHTML = function(rowModel) {
     html += '<td class="audit-log-cell-direction">' +
         kit.direction.tag(rowModel.direction, rowModel.eventType) + '</td>';
 
-    html += '<td class="audit-log-cell-id">' + listing.escapeHTML(rowModel.controlId) + '</td>';
-    html += '<td class="audit-log-cell-event">' + listing.escapeHTML(rowModel.eventType) + '</td>';
+    html += '<td class="audit-log-cell-main">';
+
+    html += '<div class="audit-log-row-line">';
+    html += '<span class="audit-log-row-id">' + listing.escapeHTML(rowModel.controlId) + '</span>';
+    html += '<span class="audit-log-row-event">' + listing.escapeHTML(rowModel.eventType) + '</span>';
+    html += '<span class="audit-log-row-chips">' + kit.chips.render(rowModel.chips) + '</span>';
+    html += '</div>';
+
+    html += '<div class="audit-log-row-line audit-log-row-line-lower">';
+    html += '<span class="audit-log-row-preview">' + listing.escapeHTML(rowModel.preview) + '</span>';
+    html += '<span class="audit-log-row-size">' + listing.sizeBarHTML(rowModel) + '</span>';
+    html += '</div>';
+
+    html += '</td>';
+
     html += '<td class="audit-log-cell-outcome">' + listing.outcomeBadgeHTML(rowModel) + '</td>';
-    html += '<td class="audit-log-cell-chips">' + kit.chips.render(rowModel.chips) + '</td>';
-    html += '<td class="audit-log-cell-size">' + listing.sizeBarHTML(rowModel) + '</td>';
-    html += '<td class="audit-log-cell-preview">' + listing.escapeHTML(rowModel.preview) + '</td>';
     html += '<td class="audit-log-cell-action">' + listing.actionHTML(rowModel) + '</td>';
 
     html += '</tr>';
@@ -553,7 +577,19 @@ listing.fetchDetails = function(eventId, kind, onDone) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// One tab of the pane, drawn the way every tab on the dashboard is drawn
+listing.paneTabHTML = function(name, label) {
+    var out = '<button type="button" class="dashboard-tab audit-log-pane-tab" role="tab" data-tab="' +
+        name + '">' + label + '</button>';
+
+    return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 listing.paneHTML = function(rowModel) {
+    var config = listing.config;
+
     var html = '<div class="audit-log-pane-head">';
 
     html += kit.direction.tag(rowModel.direction, rowModel.eventType);
@@ -563,9 +599,24 @@ listing.paneHTML = function(rowModel) {
     html += '<span class="audit-log-pane-actions">';
     html += listing.actionHTML(rowModel);
     html += '<input type="button" class="audit-log-copy-cid" data-cid="' + listing.escapeHTML(rowModel.cid) +
-        '" value="' + listing.config.copyCIDLabel + '">';
+        '" value="' + config.copyCIDLabel + '">';
     html += '</span>';
     html += '</div>';
+
+    // The message itself is one half of what there is to know about an event and everything
+    // said about it is the other, so the pane is one or the other rather than both at once.
+    html += '<div class="dashboard-tabs audit-log-pane-tabs" role="tablist">';
+    html += listing.paneTabHTML(config.dataTab, config.dataTabLabel);
+    html += listing.paneTabHTML(config.detailsTab, config.detailsTabLabel);
+    html += '</div>';
+
+    html += '<div class="dashboard-tab-panel" role="tabpanel" id="' +
+        config.tabPanelPrefix + config.dataTab + '">';
+    html += '<div id="' + config.payloadHost.slice(1) + '"></div>';
+    html += '</div>';
+
+    html += '<div class="dashboard-tab-panel" role="tabpanel" id="' +
+        config.tabPanelPrefix + config.detailsTab + '">';
 
     html += '<div class="audit-log-pane-chips">';
     html += kit.chips.render(rowModel.chips);
@@ -573,23 +624,63 @@ listing.paneHTML = function(rowModel) {
     html += '</div>';
 
     html += listing.paneGridHTML(rowModel);
-    html += '<div id="' + listing.config.payloadHost.slice(1) + '"></div>';
+    html += '</div>';
 
     return html;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Each tab of the selected event asks for its own body the first time it is opened
-listing.onSelect = function(rowModel) {
+// Each tab of the payload asks for its own body the first time it is opened, and the
+// payload itself is only asked for once the tab holding it is the one being looked at.
+listing.showPayload = function() {
+    var $host = $(listing.config.payloadHost);
+
+    // The panel of the event already being read is the panel it was given.
+    if ($host.children().length) {
+        return;
+    }
+
+    var rowModel = listing.selected;
     var presenter = $.fn.zato.audit_log.presenter();
     var tabs = presenter.detailTabs(rowModel);
 
-    kit.payload_panel.lazy($(listing.config.payloadHost), tabs, function(tab, onDone) {
+    kit.payload_panel.lazy($host, tabs, function(tab, onDone) {
         listing.fetchDetails(rowModel.id, tab.kind, function(details) {
             onDone(tab.parsed ? details.parsed : details.data);
         });
     });
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+listing.onSelect = function(rowModel) {
+    var config = listing.config;
+
+    listing.selected = rowModel;
+
+    // The tab group is bound to the pane the first time the pane holds one, and every
+    // pane after that is put into whichever tab is already open.
+    if (listing.tabs === null) {
+        listing.tabs = kit.tabs.init({
+            tab_selector: config.tabSelector,
+            panel_prefix: config.tabPanelPrefix,
+            storage_key: config.tabStorageKey,
+            default_tab: config.dataTab,
+            on_change: function(tab) {
+                if (tab === config.dataTab) {
+                    listing.showPayload();
+                }
+            }
+        });
+    }
+    else {
+        listing.tabs.set_tab(listing.tabs.get_tab(), true);
+    }
+
+    if (listing.tabs.get_tab() === config.dataTab) {
+        listing.showPayload();
+    }
 };
 
 // /////////////////////////////////////////////////////////////////////////////
