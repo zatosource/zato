@@ -81,10 +81,12 @@
 //      #<idPrefix>-name-badge   - the header badge mirroring the name
 //      #<idPrefix>-back, -next, -cancel, -save, -status - the footer, with
 //                       Back rendered disabled, the first step having nothing
-//                       behind it, and Save rendered hidden, a create being
-//                       a walk that ends in one. An edit hides Back and Next
-//                       and shows Save instead, so every step is saved from
-//                       where it is, and it drops the review step's tab.
+//                       behind it, Save rendered hidden, a create being a walk
+//                       that ends in one, and Cancel a link, leaving being no
+//                       action of the page's own. An edit hides Back and Next
+//                       and moves Save into the middle they leave, so every
+//                       step is saved from where it is, and it drops the
+//                       review step's tab.
 //      #<idPrefix>-how-it-works - the page-wide help badge
 //      #<idPrefix>-review       - where the review step renders
 //
@@ -95,8 +97,8 @@
 //      wizard.review.refreshSummaries()- recomputes the card summaries
 //
 // setup(wizard, config) installs on the namespace: config, state, field,
-// fieldSelector, init, goToStep, save, reveal, missingList, checkMissing,
-// updateNameBadge, initNameBadge, onNameCheckResult.
+// fieldSelector, init, goToStep, save, reveal, pulsate, missingList,
+// checkMissing, updateNameBadge, initNameBadge, onNameCheckResult.
 // The page then calls wizard.init({list_url: ...}) when the DOM is ready.
 //
 // The init options:
@@ -138,6 +140,9 @@ kit.core.defaults = {
 
     // What a step's row holding an answer still waited for is marked with
     missingClass: 'wizard-missing',
+
+    // .. and what each of them pulses with, the shared honey pulse of style.css
+    pulsateClass: 'pulsate',
 
     // Which row that is, for a field whose target names no anchor of its own
     missingRowSelector: '.wizard-name-row, .wizard-field-row, .wizard-line, .wizard-toggle-row'
@@ -262,11 +267,13 @@ kit.core.setup = function(wizard, config) {
 
         // An edit is not a walk from one end to the other - each step stands on its own,
         // is reached from the step strip and is saved from where it is, so the walk's
-        // buttons come off the footer and Save joins Cancel.
+        // buttons come off the footer and Save takes the middle they leave, which is
+        // where the one action an edit has belongs.
         if(wizard.state.isEdit) {
             $('#' + idPrefix + '-back').prop('hidden', true);
             $('#' + idPrefix + '-next').prop('hidden', true);
             $('#' + idPrefix + '-save').prop('hidden', false);
+            $('#' + idPrefix + ' .wizard-footer-center').append($('#' + idPrefix + '-save'));
 
             // .. and the review is where a create looks over what it is about to make,
             // which an edit has in front of it already, so its step is not offered.
@@ -409,12 +416,27 @@ kit.core.setup = function(wizard, config) {
 // ////////////////////////////////////////////////////////////////////////
 
     // Brings one element into view without a jump, which is how a refused save
-    // shows what it is waiting for
+    // shows the first of the answers it is waiting for
     wizard.reveal = function(element) {
 
         var wizardConfig = wizard.config;
 
         element.scrollIntoView({behavior: wizardConfig.scrollBehavior, block: wizardConfig.scrollBlock});
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // Pulses everything asking to be looked at, the ones off screen included -
+    // whoever scrolls down finds them already saying so.
+    wizard.pulsate = function(elements) {
+
+        var pulsateClass = wizard.config.pulsateClass;
+
+        // Reflowing between the class removal and the re-add restarts the
+        // animation, so a second refused save says it again
+        elements.removeClass(pulsateClass);
+        void document.body.offsetWidth;
+        elements.addClass(pulsateClass);
     };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -455,11 +477,19 @@ kit.core.setup = function(wizard, config) {
             anchor = wizard.field(fieldName).closest(wizardConfig.missingRowSelector);
         }
 
+        // A row asks its question in its label, so that is the cell that pulses -
+        // a row with no label of its own pulses whole
+        var cell = anchor.find('label').first();
+        if(!cell.length) {
+            cell = anchor;
+        }
+
         var out = {
             label: label,
             group: target.group,
             step: wizard._missingStep(anchor),
-            anchor: anchor
+            anchor: anchor,
+            cell: cell
         };
 
         return out;
@@ -509,15 +539,19 @@ kit.core.setup = function(wizard, config) {
 // ////////////////////////////////////////////////////////////////////////
 
     // Whether every question the wizard must answer has been, and if not, where
-    // the first answer still waited for is asked. With the review on screen it is
-    // read there, every open question at once - anywhere else the page goes to the
-    // step the answer is given on and marks the row asking for it.
+    // the first answer still waited for is asked. All of them pulse, wherever they
+    // are - with the review on screen they are read there, every open question at
+    // once, anywhere else the page goes to the step the first one is given on and
+    // marks the rows asking for them.
     wizard.checkMissing = function() {
 
         var wizardConfig = wizard.config;
         var missingList = wizard.missingList();
 
+        // Whatever the last refused save marked and pulsed is answered by now
+        // or is about to be asked for again
         $('.' + wizardConfig.missingClass).removeClass(wizardConfig.missingClass);
+        $('.' + wizardConfig.pulsateClass).removeClass(wizardConfig.pulsateClass);
 
         if(!missingList.length) {
             return true;
@@ -527,17 +561,29 @@ kit.core.setup = function(wizard, config) {
 
             wizard.review.render();
 
-            var missingValue = $('#' + idPrefix + '-review .' + kit.review.config.missingValueClass).first();
-            wizard.reveal(missingValue.closest('.wizard-review-row')[0]);
+            var missingValueList = $('#' + idPrefix + '-review .' + kit.review.config.missingValueClass);
+
+            wizard.pulsate(missingValueList);
+            wizard.reveal(missingValueList[0]);
 
             return false;
+        }
+
+        // Every open question is marked and pulsed where it is asked, on whichever
+        // step that is, and the page goes to the first of them
+        var cellList = $();
+
+        for(var entryIdx = 0; entryIdx < missingList.length; entryIdx++) {
+            var entry = missingList[entryIdx];
+            entry.anchor.addClass(wizardConfig.missingClass);
+            cellList = cellList.add(entry.cell);
         }
 
         var first = missingList[0];
 
         wizard.goToStep(first.step);
-        first.anchor.addClass(wizardConfig.missingClass);
-        wizard.reveal(first.anchor[0]);
+        wizard.pulsate(cellList);
+        wizard.reveal(first.cell[0]);
 
         return false;
     };

@@ -76,9 +76,9 @@ The page then calls `wizard.init({list_url: ...})` when the DOM is ready.
 | `missingTargets` | Optional, where each required field is read on the review and answered on its step, keyed by field name - see the section on the answers a save waits for |
 | `missingExtra` | Optional, the questions still open that are not one empty field, as a list of the same entries |
 | `finishLabel` | Optional, what the button on the last step says - named after the action the wizard ends in, `Save` for all three of them |
-| `savedMessage`, `saveErrorMessage`, `redirectDelayMs`, `nextLabel`, `scrollBehavior`, `scrollBlock`, `missingClass`, `missingRowSelector` | Optional, the defaults in `kit.core.defaults` cover them |
+| `savedMessage`, `saveErrorMessage`, `redirectDelayMs`, `nextLabel`, `scrollBehavior`, `scrollBlock`, `missingClass`, `missingRowSelector`, `pulsateClass` | Optional, the defaults in `kit.core.defaults` cover them |
 
-`core.setup` installs on the namespace: `config`, `state`, `field`, `fieldSelector`, `init`, `goToStep`, `reveal`, `missingList`, `checkMissing`, `save`, `updateNameBadge`, `initNameBadge`, `onNameCheckResult`. `wizard.reveal(element)` scrolls one element into view the gentle way, which is how a refused save shows what it is waiting for. The `wizard.field(name)` accessor resolves `#id_<fieldPrefix><name>` and is the one way into the rendered Django form. `wizard.fieldSelector(name)` returns the same id as a selector string, which is what the shared helpers that mark a field required or check it for uniqueness take - everything inside the kit goes through one of the two, so a prefixed instance is prefixed everywhere.
+`core.setup` installs on the namespace: `config`, `state`, `field`, `fieldSelector`, `init`, `goToStep`, `reveal`, `pulsate`, `missingList`, `checkMissing`, `save`, `updateNameBadge`, `initNameBadge`, `onNameCheckResult`. `wizard.reveal(element)` scrolls one element into view the gentle way, `wizard.pulsate(elements)` pulses a set of them with the shared honey `.pulsate` of `style.css`, the one the updates page wears on a version it has just found - together they are how a refused save shows what it is waiting for. The `wizard.field(name)` accessor resolves `#id_<fieldPrefix><name>` and is the one way into the rendered Django form. `wizard.fieldSelector(name)` returns the same id as a selector string, which is what the shared helpers that mark a field required or check it for uniqueness take - everything inside the kit goes through one of the two, so a prefixed instance is prefixed everywhere.
 
 ## Element contract
 
@@ -88,7 +88,7 @@ All ids derive from `idPrefix` and all are required:
 - `#<idPrefix>-steps` - the step strip, tabs carry `.wizard-step` and a `data-step` attribute
 - `#<idPrefix>-step-body-N` - one body per step, N counted from 0
 - `#<idPrefix>-name-badge` - the header badge mirroring the name
-- `#<idPrefix>-back`, `-next`, `-cancel`, `-save`, `-status` - the footer. Back is rendered `disabled`, since a page opens on its first step and there is nothing behind it - the step walking takes it from there. Save is rendered `hidden`, a create ending in the Next button rather than in one of its own
+- `#<idPrefix>-back`, `-next`, `-cancel`, `-save`, `-status` - the footer. Back is rendered `disabled`, since a page opens on its first step and there is nothing behind it - the step walking takes it from there. Save is rendered `hidden`, a create ending in the Next button rather than in one of its own. Cancel is an `a.wizard-cancel` rather than a button, leaving being no action of the page's own, so it wears the same link face as everything else on a wizard. An edit hides Back and Next and moves Save into the middle they leave
 - `#<idPrefix>-how-it-works` - the page-wide help badge
 - `#<idPrefix>-review` - where the review step renders
 
@@ -237,7 +237,7 @@ Which step an answer is given on is never declared - the kit reads it off the st
 
 `missingExtra` is for a question that is not one empty field, e.g. an MLLP channel needing either a service or a destination, neither of them required on its own.
 
-`wizard.missingList()` is every such question still open. The review renderer reads it on each render and writes `Missing` in red into the section each entry belongs to - over the row already asking the question, or as a row of its own for a question no row mentions, so an instance writes its rows as if everything were answered. `wizard.checkMissing()` is what a save runs before it posts: with the review on screen it re-renders it and scrolls to the first open question, anywhere else it goes to the step the answer is given on and marks the row asking for it. Nothing is said in a message area or a popup - the page shows what it is waiting for where the answer is given.
+`wizard.missingList()` is every such question still open. The review renderer reads it on each render and writes `Missing` in red into the section each entry belongs to - over the row already asking the question, or as a row of its own for a question no row mentions, so an instance writes its rows as if everything were answered. `wizard.checkMissing()` is what a save runs before it posts: every open question pulses where it is asked, the ones off screen included, and the page scrolls to the first of them - with the review on screen that is the word `Missing` in it, anywhere else the label of the row on the step the answer is given on, the row itself wearing `.wizard-missing`. Nothing is said in a message area or a popup - the page shows what it is waiting for where the answer is given.
 
 ## Choice cards
 
