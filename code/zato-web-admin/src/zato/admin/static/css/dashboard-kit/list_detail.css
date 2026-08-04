@@ -1,0 +1,57 @@
+/* Dashboard kit - the list beside a detail pane.
+   How wide the list is and how tall the pair is are held in custom properties the
+   drag handles write to, and what is declared here is only what they start out as. */
+
+.dashboard-list-detail {
+    --dashboard-list-detail-list-width: 420px;
+    --dashboard-list-detail-height: 560px;
+
+    display: grid;
+    grid-template-columns: var(--dashboard-list-detail-list-width) 7px 1fr;
+    align-items: stretch;
+}
+
+.dashboard-list-detail-list {
+    height: var(--dashboard-list-detail-height);
+    overflow: auto;
+    border: 1px solid var(--dashboard-line);
+    background: #fff;
+}
+
+.dashboard-list-detail-pane {
+    height: var(--dashboard-list-detail-height);
+    overflow: auto;
+    padding: 10px 12px;
+    border: 1px solid var(--dashboard-line);
+    background: #fff;
+}
+
+.dashboard-list-detail-handle-x {
+    cursor: col-resize;
+    background:
+        linear-gradient(to right, transparent 3px, var(--dashboard-line) 3px, var(--dashboard-line) 4px, transparent 4px);
+}
+
+.dashboard-list-detail-handle-x:hover {
+    background:
+        linear-gradient(to right, transparent 2px, var(--dashboard-accent) 2px, var(--dashboard-accent) 5px, transparent 5px);
+}
+
+.dashboard-list-detail-handle-y {
+    height: 7px;
+    cursor: row-resize;
+    background:
+        linear-gradient(to bottom, transparent 3px, var(--dashboard-line) 3px, var(--dashboard-line) 4px, transparent 4px);
+}
+
+.dashboard-list-detail-handle-y:hover {
+    background:
+        linear-gradient(to bottom, transparent 2px, var(--dashboard-accent) 2px, var(--dashboard-accent) 5px, transparent 5px);
+}
+
+/* A drag must not select the text it passes over */
+
+body.dashboard-list-detail-dragging {
+    user-select: none;
+    cursor: col-resize;
+}

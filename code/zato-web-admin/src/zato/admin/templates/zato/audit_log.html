@@ -4,52 +4,9 @@
 
 {% block detail_css %}
 <link rel="stylesheet" type="text/css" href="/static/css/zato_highlight_pane.css">
+<link rel="stylesheet" type="text/css" href="/static/css/audit-log/listing.css">
 <style nonce="{{ CSP_NONCE }}">
 img.help-icon[id=""] { display: none; }
-
-/* There are no tabs on this page - everything on it is an event */
-.detail-page-audit-log .dashboard-tabs {
-    display: none;
-}
-
-.audit-log-search-form {
-    display: flex;
-    gap: 0.5rem;
-    margin: 0.5rem 0 1rem 0;
-}
-
-.audit-log-search-input {
-    width: 24rem;
-}
-
-.audit-log-data-preview {
-    font-family: monospace;
-    word-break: break-all;
-}
-
-.audit-log-filter-pill {
-    align-self: center;
-    cursor: pointer;
-    background: #eef1f5;
-    color: #4a5568;
-}
-
-.audit-log-filter-pill-active {
-    background: #012845;
-    color: #fff;
-}
-
-.audit-log-resubmitted-marker {
-    display: inline-block;
-    padding: 1px 6px;
-    border-radius: 3px;
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    background: #e0f0ff;
-    color: #012845;
-}
 </style>
 {% endblock %}
 
@@ -64,7 +21,17 @@ img.help-icon[id=""] { display: none; }
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/ace.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_highlight_pane.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/outcome.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/time_range.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/chips.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/direction.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/payload_panel.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/timeline.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/list_detail.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit_log.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/listing.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/default.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/hl7.js"></script>
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
     $.fn.zato.audit_log.init({
@@ -76,7 +43,8 @@ $(document).ready(function() {
         time_to: '{{ time_to }}',
         query: '{{ query }}',
         columns: {{ columns_json|safe }},
-        resubmitLabels: {{ resubmit_labels_json|safe }}
+        resubmitLabels: {{ resubmit_labels_json|safe }},
+        exchange: {{ exchange_json|safe }}
     });
 });
 </script>
@@ -100,27 +68,10 @@ $(document).ready(function() {
         {% endif %}
     </form>
 
+    <div id="audit-log-chrome"></div>
+
     <div class="detail-pagination-controls" id="audit-log-pagination-top"></div>
-    <table class="detail-table" id="audit-log-table">
-        <thead>
-            <tr>
-                {% for column in columns %}
-                {% if column.type == 'size' %}
-                <th style="text-align:right">{{ column.label }}</th>
-                {% else %}
-                <th>{{ column.label }}</th>
-                {% endif %}
-                {% endfor %}
-            </tr>
-        </thead>
-        <tbody id="audit-log-table-body">
-            <tr class="detail-loading-row">
-                <td colspan="{{ columns|length }}">
-                    <img src="/static/gfx/spinner.svg" class="detail-spinner"> Loading...
-                </td>
-            </tr>
-        </tbody>
-    </table>
+    <div class="audit-log-listing" id="audit-log-listing"></div>
     <div class="detail-pagination-controls" id="audit-log-pagination-bottom"></div>
 </div>
 {% endblock %}

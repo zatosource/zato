@@ -4,6 +4,9 @@
 
 $.fn.zato.audit_log = {};
 
+// The per-source presenters saying what a row of that source shows
+$.fn.zato.audit_log.sources = {};
+
 // /////////////////////////////////////////////////////////////////////////////
 
 (function($) {
@@ -13,6 +16,9 @@ $.fn.zato.audit_log.config = {
     detailsURL: '/zato/audit-log/details/',
     resubmitURL: '/zato/audit-log/resubmit/',
     emptyValue: '---',
+
+    // The name every source without a presenter of its own is drawn by
+    defaultSource: 'default',
 
     // The overlay tab labels - the raw payload and its parsed EDI document view
     rawTabLabel: 'Raw',
@@ -31,7 +37,12 @@ $.fn.zato.audit_log.config = {
 
     // The per-source column list and resubmit labels, assigned in init
     columns: [],
-    resubmitLabels: {}
+    resubmitLabels: {},
+
+    // Which source this page lists and how this source's exchanges open and close,
+    // both assigned in init
+    source: '',
+    exchange: {}
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -46,141 +57,17 @@ $.fn.zato.audit_log.escapeHTML = function(value) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.audit_log.renderCell = function(value) {
-    var config = $.fn.zato.audit_log.config;
-    var escapeHTML = $.fn.zato.audit_log.escapeHTML;
+$.fn.zato.audit_log.presenter = function() {
+    var audit_log = $.fn.zato.audit_log;
+    var presenter = audit_log.sources[audit_log.config.source];
 
-    // Empty values are shown as a placeholder so the table stays readable ..
-    if (value === '') {
-        return '<td>' + config.emptyValue + '</td>';
+    // Only the sources with details of their own to show have a presenter,
+    // every other one is drawn by the neutral default.
+    if (presenter === undefined) {
+        presenter = audit_log.sources[audit_log.config.defaultSource];
     }
 
-    // .. everything else is escaped and shown as-is.
-    return '<td>' + escapeHTML(value) + '</td>';
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
-// Each cell type has its own renderer so any source can compose its columns freely
-$.fn.zato.audit_log.cellRenderers = {
-
-    // The event time is shown in the browser's timezone and locale format
-    'time': function(row, column) {
-        var renderCell = $.fn.zato.audit_log.renderCell;
-        var eventTime = new Date(row[column.key]);
-        return renderCell(eventTime.toLocaleString());
-    },
-
-    // Each CID opens the complete message of its event
-    'cid': function(row, column) {
-        var config = $.fn.zato.audit_log.config;
-        var escapeHTML = $.fn.zato.audit_log.escapeHTML;
-
-        var cid = row[column.key];
-
-        if (cid === '') {
-            return '<td>' + config.emptyValue + '</td>';
-        }
-
-        var html = '<td>';
-        html += '<a href="#" class="audit-log-cid-link" data-id="' + row.id + '" data-cid="' + escapeHTML(cid) + '">';
-        html += escapeHTML(cid);
-        html += '</a>';
-        html += '</td>';
-
-        return html;
-    },
-
-    // Plain text cells are escaped and shown as-is
-    'text': function(row, column) {
-        var renderCell = $.fn.zato.audit_log.renderCell;
-        return renderCell(row[column.key]);
-    },
-
-    // The size is right-aligned like all numeric columns
-    'size': function(row, column) {
-        return '<td style="text-align:right">' + row[column.key] + '</td>';
-    },
-
-    // The payload preview concludes the row
-    'data': function(row, column) {
-        var config = $.fn.zato.audit_log.config;
-        var escapeHTML = $.fn.zato.audit_log.escapeHTML;
-
-        var data = row[column.key];
-
-        if (data === '') {
-            return '<td>' + config.emptyValue + '</td>';
-        }
-
-        return '<td class="audit-log-data-preview">' + escapeHTML(data) + '</td>';
-    },
-
-    // The resubmit action of the row - resend for outbound events, reprocess for inbound ones -
-    // plus a marker on rows that were already resubmitted. Event types without a registered
-    // action, e.g. the arrival of an MDN, have nothing to resubmit.
-    'action': function(row, column) {
-        var config = $.fn.zato.audit_log.config;
-
-        var label = config.resubmitLabels[row.event_type];
-
-        if (!label) {
-            return '<td>' + config.emptyValue + '</td>';
-        }
-
-        var html = '<td>';
-        html += '<a href="javascript:void(0)" class="audit-log-resubmit-link" data-id="' + row.id + '">' + label + '</a>';
-
-        if (row.is_resubmitted) {
-            html += ' <span class="audit-log-resubmitted-marker">' + config.resubmittedMarkerLabel + '</span>';
-        }
-
-        html += '</td>';
-
-        return html;
-    }
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.audit_log.renderRow = function(row) {
-    var config = $.fn.zato.audit_log.config;
-    var cellRenderers = $.fn.zato.audit_log.cellRenderers;
-
-    var html = '<tr>';
-
-    // Each cell is rendered by the renderer matching its column's type ..
-    for (var columnIdx = 0; columnIdx < config.columns.length; columnIdx++) {
-        var column = config.columns[columnIdx];
-        html += cellRenderers[column.type](row, column);
-    }
-
-    // .. and the row is complete.
-    html += '</tr>';
-
-    return html;
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.audit_log.renderPage = function($body, rows) {
-    var config = $.fn.zato.audit_log.config;
-    var renderRow = $.fn.zato.audit_log.renderRow;
-
-    // The table shows a placeholder row when there are no events ..
-    if (rows.length === 0) {
-        $body.html('<tr><td colspan="' + config.columns.length + '">No events found</td></tr>');
-        return;
-    }
-
-    // .. otherwise all rows are rebuilt in one go.
-    var html = '';
-
-    for (var rowIdx = 0; rowIdx < rows.length; rowIdx++) {
-        html += renderRow(rows[rowIdx]);
-    }
-
-    $body.html(html);
+    return presenter;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -210,7 +97,9 @@ $.fn.zato.audit_log.openMessageOverlay = function(eventId, cid) {
     $.ajax({
         url: config.detailsURL,
         type: 'POST',
-        data: JSON.stringify({id: eventId}),
+
+        // The overlay reads whichever body the event has, whatever kind it turns out to be
+        data: JSON.stringify({id: eventId, kind: ''}),
         contentType: 'application/json',
         headers: {'X-CSRFToken': $.cookie('csrftoken')},
         success: function(data) {
@@ -324,6 +213,15 @@ $.fn.zato.audit_log.parseResubmitResponse = function(jqXHR, textStatus) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// Puts one term into the search box and asks for the page it narrows down to,
+// which is what a chip clicked in the listing does
+$.fn.zato.audit_log.search = function(query) {
+    $('#audit-log-search-input').val(query);
+    $('#audit-log-search-form').submit();
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.audit_log.resubmit = function(linkElement) {
     var config = $.fn.zato.audit_log.config;
 
@@ -347,8 +245,14 @@ $.fn.zato.audit_log.init = function(initConfig) {
     // The columns to render and the resubmit labels come from the server, per source ..
     config.columns = initConfig.columns;
     config.resubmitLabels = initConfig.resubmitLabels;
+    config.source = initConfig.source;
+    config.exchange = initConfig.exchange;
 
-    // .. wire up the paginated table ..
+    // .. the listing puts its chrome and its two panes in place before the first page arrives ..
+    var listing = $.fn.zato.audit_log.listing;
+    listing.init(initConfig);
+
+    // .. wire up the paginated listing ..
     var pagination = kit.pagination.init({
         poll_url: initConfig.poll_url,
         page_size: config.pageSize,
@@ -360,10 +264,10 @@ $.fn.zato.audit_log.init = function(initConfig) {
             time_from: initConfig.time_from,
             time_to: initConfig.time_to
         },
-        table_body: '#audit-log-table-body',
+        table_body: listing.config.itemsHost,
         container_top: '#audit-log-pagination-top',
         container_bottom: '#audit-log-pagination-bottom',
-        render_page: $.fn.zato.audit_log.renderPage
+        render_page: listing.renderPage
     });
 
     // .. the resubmit outcome handler refreshes the table through this reference ..

@@ -1,0 +1,12 @@
+/* Dashboard kit - the stacked timeline. */
+
+.dashboard-timeline {
+    min-height: var(--dashboard-timeline-height);
+    margin-bottom: 0.6rem;
+}
+
+.dashboard-timeline-svg {
+    display: block;
+    width: 100%;
+    height: var(--dashboard-timeline-height);
+}

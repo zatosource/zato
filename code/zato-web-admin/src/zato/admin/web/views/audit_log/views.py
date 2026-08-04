@@ -24,8 +24,8 @@ from django.template.response import TemplateResponse
 from zato.admin.web.views import invoke_action_handler, method_allowed
 from zato.admin.web.views.audit_log.columns import _data_preview_len, _default_page, _poll_url, _row_columns, \
     _source_columns, _source_title, _status_outstanding
-from zato.admin.web.views.audit_log.query import _attach_attr_columns, _attach_body_previews, _build_where, \
-    _mark_resubmitted
+from zato.admin.web.views.audit_log.query import _attach_attr_columns, _attach_body_kinds, _attach_body_previews, \
+    _attach_lineage, _build_where, _mark_resubmitted, _normalize_row
 from zato.admin.web.views.audit_log.sources import _get_resubmit_labels, _source_outstanding, _source_parse, \
     _source_resubmit, _source_row_enrich
 from zato.common.audit_log.api import event_table, get_audit_engine
@@ -67,13 +67,20 @@ def object_index(req:'any_') -> 'TemplateResponse':
     time_to = req.GET.get('time_to', '')
     query = req.GET.get('query', '')
 
-    # The frontend renders the table headers and cells based on this source's columns
-    columns = _source_columns[source]
-    columns_json = json.dumps(columns)
+    # The listing draws each row's cells and chips out of this source's columns
+    columns_json = json.dumps(_source_columns[source])
 
     # The per-event-type resubmit labels of this source, empty for sources without resubmit
     resubmit_labels = _get_resubmit_labels(source)
     resubmit_labels_json = json.dumps(resubmit_labels)
+
+    # The exchanges of this source - the event that opens one and the event that closes it -
+    # which is what pairing the two halves of an exchange onto one line needs.
+    exchange = {'open_event': '', 'close_event': ''}
+
+    if outstanding := _source_outstanding.get(source):
+        exchange['open_event'] = outstanding.open_event
+        exchange['close_event'] = outstanding.close_event
 
     return_data = {
         'cluster_id': default_cluster_id,
@@ -82,7 +89,6 @@ def object_index(req:'any_') -> 'TemplateResponse':
         'audit_log_title': _source_title[source],
         'section_title': object_name,
         'poll_url': _poll_url,
-        'columns': columns,
         'columns_json': columns_json,
         'status': status,
         'time_from': time_from,
@@ -90,6 +96,7 @@ def object_index(req:'any_') -> 'TemplateResponse':
         'query': query,
         'has_outstanding_filter': source in _source_outstanding,
         'resubmit_labels_json': resubmit_labels_json,
+        'exchange_json': json.dumps(exchange),
         'zato_clusters': True,
         'zato_template_name': 'zato/audit_log.html',
     }
@@ -166,7 +173,10 @@ def poll(req:'any_') -> 'HttpResponse':
             row_values = zip(_row_columns, db_row)
             row = dict(row_values)
 
-            # Sources with extra columns extract them out of the full payload first ..
+            # A column the database has no value for is an empty one to the frontend ..
+            _normalize_row(row)
+
+            # .. sources with extra columns extract them out of the full payload next ..
             if enrich := _source_row_enrich.get(source):
                 enrich(row)
 
@@ -179,12 +189,23 @@ def poll(req:'any_') -> 'HttpResponse':
         # Sources with attr columns get them merged in, one query for the page ..
         _attach_attr_columns(connection, source, rows)
 
-        # .. and sources whose payloads live in the body table get their previews the same way.
+        # .. sources whose payloads live in the body table get their previews the same way ..
         _attach_body_previews(connection, source, rows)
 
-        # Rows already resubmitted get their marker, on sources with resubmit actions.
+        # .. every row says what it came out of and what came out of it ..
+        _attach_lineage(connection, rows)
+
+        # .. and which of its message bodies are there to be read.
+        _attach_body_kinds(connection, rows)
+
+        # Rows already resubmitted get their marker, on sources with resubmit actions ..
         if source in _source_resubmit:
             _mark_resubmitted(connection, source, rows)
+
+        # .. and on a source with no resubmit at all, no row of it can carry one.
+        else:
+            for row in rows:
+                row['is_resubmitted'] = False
 
     response_json = json.dumps({'rows': rows, 'total': total, 'page': page})
     response_bytes = response_json.encode('utf-8')
@@ -204,6 +225,11 @@ def details(req:'any_') -> 'HttpResponse':
     body = json.loads(req.body)
     event_id = body['id']
 
+    # Which of the event's message bodies is wanted - what was sent, what came back
+    # or what the other side said when it failed. With none named, the newest one answers,
+    # which is what the message overlay asks for.
+    kind = body['kind']
+
     data = ''
     source = ''
 
@@ -220,11 +246,15 @@ def details(req:'any_') -> 'HttpResponse':
             source = row[0]
             data = row[1]
 
-    # A payload stored outside the data column resolves through the body registry -
+    # A named body is one the data column never holds, so it always comes out of the body store ..
+    if kind:
+        data = ''
+
+    # .. and a payload stored outside the data column resolves through the body registry -
     # sources with their own body stores answer for themselves, everything else
     # reads the shared body table.
     if not data:
-        resolved = resolve_body(engine, source, event_id)
+        resolved = resolve_body(engine, source, event_id, kind)
         if resolved is not None:
             data = resolved
 

@@ -1,0 +1,39 @@
+/* Dashboard kit - chips.
+   The tones a chip can be given, and the value it carries next to its label.
+   The shape of a chip itself comes from .detail-tag. */
+
+.dashboard-chip-value {
+    margin-left: 5px;
+    font-weight: 700;
+    font-family: var(--dashboard-mono);
+}
+
+.dashboard-tag-neutral {
+    color: #012845;
+    background: #e8eef4;
+}
+
+.dashboard-tag-accent {
+    color: #0f6ea8;
+    background: #e0f0ff;
+}
+
+.dashboard-tag-good {
+    color: #1b813e;
+    background: rgba(27, 129, 62, 0.12);
+}
+
+.dashboard-tag-bad {
+    color: #e0226e;
+    background: rgba(224, 34, 110, 0.12);
+}
+
+.dashboard-tag-warn {
+    color: #b35e00;
+    background: rgba(179, 94, 0, 0.12);
+}
+
+.dashboard-tag-muted {
+    color: #6b7280;
+    background: rgba(110, 110, 115, 0.12);
+}

@@ -1,0 +1,80 @@
+/* Dashboard kit - the payload panel.
+   The dark frame a message is read in, its tab bar and its Copy button. */
+
+.dashboard-payload-loading {
+    padding: 10px 12px;
+    color: var(--dashboard-muted);
+    font-size: 13px;
+}
+
+.dashboard-payload {
+    background: var(--dashboard-panel-background);
+    border: 1px solid var(--dashboard-panel-border);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.dashboard-payload-bar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--dashboard-panel-border);
+}
+
+.dashboard-payload-tab {
+    padding: 2px 10px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: rgba(230, 230, 239, 0.6);
+    cursor: pointer;
+    user-select: none;
+}
+
+.dashboard-payload-tab:hover {
+    color: var(--dashboard-panel-text);
+}
+
+.dashboard-payload-tab-active {
+    color: var(--dashboard-panel-background);
+    background: var(--dashboard-panel-text);
+}
+
+.dashboard-payload-actions {
+    margin-left: auto;
+}
+
+.dashboard-payload-copy {
+    padding: 1px 10px;
+    border: 1px solid var(--dashboard-panel-border);
+    border-radius: 3px;
+    font-size: 11px;
+    color: var(--dashboard-panel-text);
+    background: transparent;
+    cursor: pointer;
+}
+
+.dashboard-payload-copy:hover {
+    background: rgba(230, 230, 239, 0.12);
+}
+
+.dashboard-payload-text {
+    max-height: var(--dashboard-payload-height);
+    margin: 0;
+    padding: 8px 12px;
+    overflow: auto;
+    font-family: var(--dashboard-mono);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--dashboard-panel-text);
+    background: var(--dashboard-panel-background);
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.dashboard-payload-text .dashboard-payload-loading {
+    padding: 0;
+}

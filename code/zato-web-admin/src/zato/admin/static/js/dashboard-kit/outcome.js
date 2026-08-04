@@ -14,6 +14,7 @@
         'ok': 'dashboard-outcome-ok',
         'error': 'dashboard-outcome-error',
         'timeout': 'dashboard-outcome-timeout',
+        'expired': 'dashboard-outcome-timeout',
         'running': 'dashboard-outcome-running',
         'skipped_already_in_flight': 'dashboard-outcome-skipped'
     };
