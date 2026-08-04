@@ -338,6 +338,24 @@ class _CreateEdit(CreateEdit):
 
 # ################################################################################################################################
 
+    def _get_rest_security_id(self) -> 'str':
+        """ Returns what the backing REST channel authenticates its callers with, ZATO_NONE for
+        a bridge taking a request whatever it was made with.
+        """
+        posted_value = self.req.POST[f'{self.form_prefix}rest_security_id']
+
+        # A bridge turned on without its popover ever being opened leaves the select on the
+        # placeholder it was rendered with, which says the same as picking no security does
+        if posted_value in ('', ZATO_NONE):
+            return ZATO_NONE
+
+        # What is posted otherwise is the definition's type alongside its id, and the id is
+        # the only part of it a REST channel is given.
+        out = get_security_id_from_select(self.req.POST, self.form_prefix, field_name='rest_security_id')
+        return out
+
+# ################################################################################################################################
+
     def success_message(self, item:'any_') -> 'str':
         out = 'Successfully {} HL7 MLLP channel `{}`'.format(self.verb, item.name)
         return out
@@ -398,8 +416,7 @@ class _CreateEdit(CreateEdit):
         """
 
         # .. extract security ID from the select widget ..
-        security_id = get_security_id_from_select(
-            self.req.POST, self.form_prefix, field_name='rest_security_id')
+        security_id = self._get_rest_security_id()
 
         # .. with two or more security definitions picked in the wizard,
         # all of them arrive in this list and one group of the channel's own
