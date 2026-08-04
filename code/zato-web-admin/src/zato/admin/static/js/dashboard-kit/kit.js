@@ -12,7 +12,17 @@
     kit.needsTestData = false;
 
     kit.labels = {
-        ready: 'Now'
+        ready: 'Now',
+        loading: 'Loading'
+    };
+
+    kit.spinner_url = '/static/gfx/spinner.svg';
+
+    /* The one way the dashboard says it is waiting - the spinner turning, then the word,
+       so that no screen spells it out for itself and drifts from the rest. */
+    kit.spinner_label_html = function() {
+        var out = '<img src="' + kit.spinner_url + '" class="detail-spinner"> ' + kit.labels.loading;
+        return out;
     };
 
     /* Compact number: 1234 -> "1.2K", 28937423 -> "29M". Single decimal
@@ -634,17 +644,58 @@
     kit.recency.STEPS = 10;
     kit.recency.MAX_ALPHA = 0.30;
 
+    /* Whether the tint is to appear or to fade in. A list redrawn from scratch wants it to
+       appear: its rows are new elements every time, so fading each of them in from nothing
+       would blink the whole list at every draw. */
+    kit.recency._wants_animation = function(config) {
+        if (config.animate === undefined) {
+            return true;
+        }
+
+        return config.animate;
+    };
+
+    /* One row wearing the tint of its place in the order - the newest wears the most of it
+       and the last of the steps wears almost none. */
+    kit.recency._tint = function($row, index, rgb, animate) {
+        var alpha = kit.recency.MAX_ALPHA * (1 - index / kit.recency.STEPS);
+
+        // The newest row is never faded in even when the others are - it is the one that
+        // just arrived, and it is meant to be there already.
+        if (animate && index > 0) {
+            $row.css('transition', 'background 0.4s ease');
+        }
+        else {
+            $row.css('transition', 'none');
+        }
+
+        $row.css('background', 'rgba(' + rgb + ', ' + alpha.toFixed(4) + ')');
+    };
+
+    /* A row that has fallen out of the newest few gives its tint back. */
+    kit.recency._untint = function($row, animate) {
+        if (animate) {
+            $row.css('transition', 'background 1.5s ease');
+        }
+        else {
+            $row.css('transition', 'none');
+        }
+
+        $row.css('background', '');
+    };
+
     /* Apply a fading tint to recently-arrived rows.
        config:
          container:  jQuery selector for the parent holding <tr data-ts="...">
          recent_ts:  array of timestamp strings, newest first, length <= STEPS
-         rgb:        base color as an "R, G, B" string (e.g. '218, 165, 32') */
+         rgb:        base color as an "R, G, B" string (e.g. '218, 165, 32')
+         animate:    whether the tint fades in and out, true when not said otherwise */
     kit.recency.apply = function(config) {
         var $container = $(config.container);
         var ts_list = config.recent_ts || [];
         var rgb = config.rgb || '218, 165, 32';
         var steps = kit.recency.STEPS;
-        var max_a = kit.recency.MAX_ALPHA;
+        var animate = kit.recency._wants_animation(config);
 
         var ts_set = {};
         for (var j = 0; j < ts_list.length && j < steps; j++) {
@@ -654,29 +705,47 @@
         $container.find('tr[data-ts]').each(function() {
             var $row = $(this);
             if (!ts_set[$row.attr('data-ts')]) {
-                $row.css('transition', 'background 1.5s ease');
-                $row.css('background', '');
+                kit.recency._untint($row, animate);
             }
         });
 
         for (var i = 0; i < ts_list.length && i < steps; i++) {
-            var alpha = max_a * (1 - i / steps);
-            var $row = $container.find('tr[data-ts="' + ts_list[i] + '"]');
-            if (i === 0) {
-                $row.css('transition', 'none');
-            } else {
-                $row.css('transition', 'background 0.4s ease');
-            }
-            $row.css('background', 'rgba(' + rgb + ', ' + alpha.toFixed(4) + ')');
+            kit.recency._tint($container.find('tr[data-ts="' + ts_list[i] + '"]'), i, rgb, animate);
         }
+    };
+
+    /* The same tint laid on by place in the drawn order rather than by timestamp, for a list
+       already drawn newest first. Two events of the same second then wear a tint each rather
+       than sharing one, and nothing has to carry its timestamp in the markup.
+       config:
+         container:     jQuery selector for the parent holding the items
+         item_selector: what one item looks like inside it
+         rgb:           base color as an "R, G, B" string
+         animate:       whether the tint fades in and out, true when not said otherwise */
+    kit.recency.apply_by_position = function(config) {
+        var $items = $(config.container).find(config.item_selector);
+        var animate = kit.recency._wants_animation(config);
+
+        $items.each(function(index) {
+            var $row = $(this);
+
+            if (index < kit.recency.STEPS) {
+                kit.recency._tint($row, index, config.rgb, animate);
+            }
+            else {
+                kit.recency._untint($row, animate);
+            }
+        });
     };
 
     // ////////////////////////////////////////////////////////////////////////
     // Clipboard copy with tippy tooltip
     // ////////////////////////////////////////////////////////////////////////
 
-    kit.copy_to_clipboard = function(element, text) {
-        $.fn.zato.ui_helpers.copy_to_clipboard(element, text);
+    /* The placement is which side of the element the "Copied to clipboard" flash appears
+       on - a caller naming none is answered above the element, as everywhere else. */
+    kit.copy_to_clipboard = function(element, text, placement) {
+        $.fn.zato.ui_helpers.copy_to_clipboard(element, text, placement);
     };
 
     kit.flash_tooltip = function(element, message) {
@@ -858,14 +927,119 @@
         return parts.join('');
     };
 
+    /* A message written as delimited segments - HL7 v2 and X12 are both read this way,
+       one segment to a line with its name in front of its fields. The name is what the eye
+       looks for going down a message, so that is what is coloured, and the separators are
+       given the quietest colour the theme has because they are read past rather than read. */
+    kit._segment_line_pattern = /^[A-Z][A-Z0-9]{2}[|*]/;
+    // The subcomponent separator is an ampersand, which by the time this runs is already
+    // written as the entity that stands for one, so that is what is looked for here
+    kit._segment_separators_pattern = /(\||\^|~|\*|&amp;)/g;
+
+    // A message of this kind ends its segments with a carriage return of its own rather
+    // than with a newline, so a line of it is whichever of the three a sender chose
+    kit._segment_end_pattern = /\r\n|\r|\n/;
+
+    kit._highlight_segments = function(text) {
+        var lines = text.split(kit._segment_end_pattern);
+        var out = [];
+
+        for (var line_index = 0; line_index < lines.length; line_index++) {
+            var line = lines[line_index];
+
+            // A line that is no segment of its own, a continuation or a blank one, is left be
+            if (!kit._segment_line_pattern.test(line)) {
+                out.push(kit._esc_html(line));
+                continue;
+            }
+
+            var name = line.substring(0, 3);
+            var fields = kit._esc_html(line.substring(3));
+
+            fields = fields.replace(kit._segment_separators_pattern, '<span class="c">$1</span>');
+            out.push('<span class="nt">' + name + '</span>' + fields);
+        }
+
+        return out.join('\n');
+    };
+
+    /* A document read as a tree of fields - the parsed view our own renderers write out,
+       a segment on a line of its own and its fields indented under it, each field naming
+       its reference and its label before the value. A reader picks a line out of such a
+       tree by its reference and reads the value at the end of it, so those two carry the
+       colours a key and a string wear in JSON and the label between them stays quiet.
+
+       A field is referred to by its segment and its position in it, a component of that
+       field by the position it holds inside the field - MSH-9 and MSH-9.1 */
+    kit._field_tree_probe = /^\s+[A-Z][A-Z0-9]{2}-\d+(?:\.\d+)*\s+[^:]*: /m;
+    kit._field_tree_segment_pattern = /^([A-Z][A-Z0-9]{2})$/;
+    kit._field_tree_field_pattern = /^(\s*)([A-Z][A-Z0-9]{2}-\d+(?:\.\d+)*)(\s+)([^:]*)(:)(.*)$/;
+
+    // A value that is a plain number reads as one rather than as text
+    kit._field_tree_number_pattern = /^\s*-?\d+(?:\.\d+)?\s*$/;
+
+    kit._highlight_field_tree = function(text) {
+        var lines = text.split('\n');
+        var out = [];
+
+        for (var line_index = 0; line_index < lines.length; line_index++) {
+            var line = lines[line_index];
+
+            if (kit._field_tree_segment_pattern.test(line)) {
+                out.push('<span class="nt">' + line + '</span>');
+                continue;
+            }
+
+            var parts = kit._field_tree_field_pattern.exec(line);
+
+            // The header line naming the message, a blank one, anything that is no field
+            if (parts === null) {
+                out.push(kit._esc_html(line));
+                continue;
+            }
+
+            var value_class = 's';
+
+            if (kit._field_tree_number_pattern.test(parts[6])) {
+                value_class = 'm';
+            }
+
+            out.push(parts[1] +
+                '<span class="na">' + parts[2] + '</span>' +
+                parts[3] +
+                '<span class="c">' + kit._esc_html(parts[4]) + parts[5] + '</span>' +
+                '<span class="' + value_class + '">' + kit._esc_html(parts[6]) + '</span>');
+        }
+
+        return out.join('\n');
+    };
+
+    // Past this much text the colouring costs more than it gives back, so the text is
+    // shown as it stands rather than made to wait for a pass over every character of it
+    kit.highlight_max_chars = 200000;
+
     kit.syntax_highlight = function(text) {
         var trimmed = text.trim();
         var html = null;
+
+        if (text.length > kit.highlight_max_chars) {
+            return '<span class="syntax-monokai">' + kit._esc_html(text) + '</span>';
+        }
 
         // .. try pure JSON
         if ((trimmed.charAt(0) === '{' && trimmed.charAt(trimmed.length - 1) === '}') ||
             (trimmed.charAt(0) === '[' && trimmed.charAt(trimmed.length - 1) === ']')) {
             html = kit._highlight_json(text);
+        }
+
+        // .. try a message written as delimited segments
+        if (!html && kit._segment_line_pattern.test(trimmed)) {
+            html = kit._highlight_segments(text);
+        }
+
+        // .. try a document already read into a tree of fields
+        if (!html && kit._field_tree_probe.test(text)) {
+            html = kit._highlight_field_tree(text);
         }
 
         // .. try Python traceback

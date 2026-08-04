@@ -12,6 +12,15 @@
 /* The page around the listing                                   */
 /* ------------------------------------------------------------ */
 
+/* The amber the newest rows of the list are washed with, which the pane borrows to set
+   the names of things apart from what they say - the same warmth rather than a colour
+   that would read as an outcome */
+
+.detail-page-audit-log {
+    --audit-log-label-tint: rgba(218, 165, 32, 0.10);
+    --audit-log-label-tint-strong: rgba(218, 165, 32, 0.22);
+}
+
 /* The page itself has nothing to tab between - everything on it is an event.
    The tabs inside the detail pane are another matter. */
 
@@ -72,13 +81,19 @@
    the cells because a collapsed table draws no shadow of a row */
 
 .audit-log-row.dashboard-list-detail-item-selected > td {
-    box-shadow: inset 0 0 0 999px rgba(224, 240, 255, 0.55);
+    box-shadow: inset 0 0 0 999px var(--dashboard-row-selected);
 }
 
 .audit-log-row.dashboard-list-detail-item-selected > td:first-child {
     box-shadow:
-        inset 3px 0 0 var(--dashboard-accent),
-        inset 0 0 0 999px rgba(224, 240, 255, 0.55);
+        inset 4px 0 0 var(--dashboard-accent),
+        inset 0 0 0 999px var(--dashboard-row-selected);
+}
+
+.audit-log-row.dashboard-list-detail-item-selected .audit-log-cell-number,
+.audit-log-row.dashboard-list-detail-item-selected .audit-log-row-id {
+    color: var(--dashboard-accent);
+    font-weight: 700;
 }
 
 .audit-log-list-table td {
@@ -87,15 +102,17 @@
     vertical-align: middle;
 }
 
-/* Where a row stands in the whole result, so that one event can be pointed at by number */
+/* The event's own number, which is how one event is pointed at - it is the first thing
+   read on a row and the first thing read in the pane, so it is not kept quiet */
 
 .audit-log-cell-number {
-    width: 44px;
-    padding-right: 10px;
+    width: 60px;
+    padding-right: 8px;
     font-family: var(--dashboard-mono);
-    font-size: 11px;
+    font-size: 12px;
+    font-weight: 700;
     text-align: right;
-    color: #a3adba;
+    color: var(--dashboard-line-strong);
     white-space: nowrap;
 }
 
@@ -179,15 +196,12 @@
     }
 }
 
+/* The event this one came out of, or one that came out of it, read as the value of the
+   line it stands on rather than as a tag of its own */
+
 .audit-log-lineage {
-    display: inline-block;
-    margin-right: 6px;
-    padding: 1px 6px;
-    border-radius: 3px;
-    font-size: 11px;
-    font-weight: 600;
-    color: #7b5ea7;
-    background: rgba(123, 94, 167, 0.12);
+    font-family: var(--dashboard-mono);
+    font-size: 12px;
     cursor: pointer;
 }
 
@@ -214,11 +228,29 @@
     margin-bottom: 8px;
 }
 
+/* Which event the pane is holding, said the way the list says it */
+
+.audit-log-pane-event {
+    flex: none;
+    font-family: var(--dashboard-mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--dashboard-accent);
+    white-space: nowrap;
+}
+
+/* A headline longer than the room the head has is the one thing here that gives way,
+   so what the event is called and what can be done with it stay where they are */
+
 .audit-log-pane-title {
+    min-width: 0;
+    overflow: hidden;
     font-family: var(--dashboard-mono);
     font-size: 14px;
     font-weight: 700;
     color: var(--dashboard-line-strong);
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .audit-log-pane-actions {
@@ -228,18 +260,13 @@
     margin-left: auto;
 }
 
-.audit-log-copy-cid {
-    padding: 1px 10px;
-    border: 1px solid var(--dashboard-line);
-    border-radius: 3px;
-    font-size: 11px;
-    color: var(--dashboard-line-strong);
-    background: #fff;
-    cursor: pointer;
-}
+/* Everything the head offers is offered the same way, whether it copies something
+   or sends a message out again */
 
-.audit-log-copy-cid:hover {
-    background: var(--dashboard-row-selected);
+.audit-log-copy-cid,
+.audit-log-resubmit-link {
+    flex: none;
+    font-size: 11px;
 }
 
 /* The pane's tabs are the dashboard's own, only smaller - the pane is a column of a
@@ -252,32 +279,75 @@
     margin-bottom: 10px;
 }
 
-.audit-log-pane-chips {
-    margin-bottom: 10px;
-}
+/* What is known about the event, one thing to a line - the name of it in the first column,
+   what it says in the second, and the lines all as wide as the widest name so the values
+   stand in a column of their own to be read down */
 
-.audit-log-pane-chips:empty {
-    display: none;
-}
-
-.audit-log-pane-grid {
+.audit-log-pane-rows {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 8px;
+    grid-template-columns: max-content 1fr;
     margin-bottom: 10px;
+    border-top: 1px solid var(--dashboard-line);
 }
 
-.audit-log-pane-cell-label {
+.audit-log-pane-row {
+    display: contents;
+}
+
+.audit-log-pane-row-label,
+.audit-log-pane-row-value {
+    padding: 5px 10px 5px 0;
+    border-bottom: 1px solid var(--dashboard-line);
+}
+
+.audit-log-pane-row-label {
+    padding-left: 10px;
+    padding-right: 16px;
     font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.6px;
     color: var(--dashboard-muted);
+    background: var(--audit-log-label-tint);
+    white-space: nowrap;
 }
 
-.audit-log-pane-cell-value {
+.audit-log-pane-row-value {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding-left: 10px;
     font-family: var(--dashboard-mono);
     font-size: 12px;
     color: var(--dashboard-line-strong);
+}
+
+.audit-log-pane-row-text {
+    min-width: 0;
     word-break: break-all;
+}
+
+/* A line being read lifts as a whole, the name deepening in the tint it already wears
+   and the value taking on the lightest of it */
+
+.audit-log-pane-row:hover .audit-log-pane-row-label {
+    background: var(--audit-log-label-tint-strong);
+}
+
+.audit-log-pane-row:hover .audit-log-pane-row-value {
+    background: var(--audit-log-label-tint);
+}
+
+/* Taking a value away is offered by the line being read and by no other, and it stands
+   just past the value rather than away at the edge of the pane */
+
+.audit-log-pane-row-copy {
+    flex: none;
+    margin-left: 0;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+}
+
+.audit-log-pane-row:hover .audit-log-pane-row-copy {
+    opacity: 1;
 }

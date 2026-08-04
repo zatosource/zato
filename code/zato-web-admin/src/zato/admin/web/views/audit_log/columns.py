@@ -6,8 +6,19 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 What each source's audit log page looks like - its title, the columns of its table, the attrs that
-render as columns of their own, and the ceilings the page itself is bounded by.
+render as columns of their own, the outcomes its events report, and the ceilings the page itself
+is bounded by.
 """
+
+# Zato
+from zato.common.audit_log.common import AuditOutcome
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import strtuple
+    strtuple = strtuple
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -219,6 +230,31 @@ _source_attr_columns = {
 
 # The sources whose payloads live in the event_body table rather than the data column
 _source_body_preview = {'hl7'}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# What outcomes a source's events report, which is what the listing offers as filters. Everything
+# that carries a message reports whether it went through or failed ..
+_default_outcomes = (AuditOutcome.OK, AuditOutcome.Error)
+
+# .. and a pushed pub/sub message may also run out of time before it can be delivered, which is
+# an outcome of its own and one no other source can report.
+_source_outcomes = {
+    'pubsub': (AuditOutcome.OK, AuditOutcome.Error, AuditOutcome.Expired),
+}
+
+# ################################################################################################################################
+
+def _get_outcomes(source:'str') -> 'strtuple':
+    """ Returns the outcomes this source's events report, so that a page offers filters for
+    the outcomes it can actually show and for no others.
+    """
+    if source in _source_outcomes:
+        out = _source_outcomes[source]
+        return out
+
+    return _default_outcomes
 
 # ################################################################################################################################
 # ################################################################################################################################

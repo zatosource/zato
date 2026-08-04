@@ -36,9 +36,9 @@ _all_ack_codes = _accepted_codes | _rejected_no_retry_codes | _rejected_retry_co
 # characters would leave the acknowledgment unreadable, so the standard ones stand in for them.
 Default_Encoding_Characters = '^~\\&'
 
-# How many hex characters the acknowledgment's own control id is made of. MSH-10 holds twenty
-# characters in the oldest version still in the field, and sixteen sits inside that.
-_Control_Id_Bits = 64
+# How many bits a control id of our own is made of. MSH-10 holds twenty characters in the oldest
+# version still in the field, and the sixteen hex characters these bits come to sit inside that.
+Control_Id_Bits = 64
 
 # How MSH-7 is written - the standard's own format, with the offset that says which clock it is on.
 _Timestamp_Format = '%Y%m%d%H%M%S%z'
@@ -71,6 +71,17 @@ _Default_Conditions = {
     'AR': Condition_Unsupported_Message,
     'CR': Condition_Unsupported_Message,
 }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def new_control_id() -> 'str':
+    """ A control id of our own, for a message we are the sender of - an acknowledgment
+    we answer with or a check we send out. It is what the other side echoes in MSA-2,
+    which is what tells its reply apart from every other one.
+    """
+    out = CryptoManager.generate_hex_string(Control_Id_Bits)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -132,7 +143,7 @@ def build_ack(
 
     # .. and a control id of our own, which is ours to be referred to by rather than
     # .. the sender's handed back to it ..
-    ack_control_id = CryptoManager.generate_hex_string(_Control_Id_Bits)
+    ack_control_id = new_control_id()
 
     # .. extract the original processing ID (MSH-11) and version (MSH-12) ..
     processing_id = _get_field(fields, 10)

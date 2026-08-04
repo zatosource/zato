@@ -229,6 +229,12 @@ _event_columns = [
     Column('duration_ms', Integer),
     Column('data', Text),
     Index('idx_event_source_object', 'source', 'object_name', 'id'),
+
+    # One object's events are read newest first by the time they happened rather than by the
+    # order they were written in, and a page of them is one window of that order - without
+    # this the whole of an object's history would be sorted to answer for a single page.
+    Index('idx_event_source_object_time', 'source', 'object_name', 'event_time_iso'),
+
     Index('idx_event_cid', 'cid', 'id'),
     Index('idx_event_msg_id', 'msg_id', 'id'),
 

@@ -40,6 +40,11 @@ listing.config = {
     refreshStorageKey: 'zato_audit_log_refresh',
     rangeStorageKey: 'zato_audit_log_range',
 
+    // What the event being read and the tab it is being read in are called in the address
+    // bar, so a link to the page is a link to that event in that tab
+    eventURLKey: 'event',
+    tabURLKey: 'tab',
+
     // How wide the list starts out, which is wider than the kit's own default because
     // a row of it carries a chip of whatever source it is listing
     defaultListWidth: 700,
@@ -51,11 +56,18 @@ listing.config = {
 
     emptyListing: 'No events found',
     emptyPane: 'No event selected',
-    loadingLabel: 'Loading...',
 
     rawTabLabel: 'Raw',
     parsedTabLabel: 'Parsed',
     copyCIDLabel: 'Copy CID',
+    copyLabel: 'Copy',
+
+    // Which side of the badge the pane says a value has been copied on - beside it, so the
+    // line being read is not covered by the word saying it was taken
+    copyFlashPlacement: 'right',
+
+    // What the pane calls the event it is holding, before anything else it says about it
+    eventLabel: 'Event',
 
     cidLabel: 'CID',
     durationLabel: 'Duration',
@@ -71,12 +83,8 @@ listing.config = {
         'error': 'Error'
     },
 
-    // The outcomes an audit event reports, in the order the legend offers them
-    outcomeKeys: ['ok', 'error', 'expired'],
-
-    // The tint the newest rows carry and how far down the list it reaches
+    // The tint the newest rows carry, how far down the list it reaches being the kit's own
     recencyRGB: '218, 165, 32',
-    recencySteps: 10,
 
     // How often the listing asks for what has arrived since, until it is told otherwise
     refreshDefaultSeconds: 0,
@@ -162,9 +170,12 @@ listing.minutes = 0;
 // that report no outcome of their own is not given a column of blanks
 listing.columns = {outcome: false, action: false};
 
-// The events already on the page before the last refresh, so only what is new puffs.
-// Nothing has been drawn yet while this is null, and a first drawing puffs nothing.
-listing.seenIds = null;
+// The events already on the page before the last refresh, so only what is new puffs
+listing.seenIds = {};
+
+// Whether the page now being drawn arrived by itself rather than because the reader
+// asked for it, which is the only time anything puffs
+listing.isLive = false;
 
 // The two panes, once they are built, the tab group of the detail pane, once it holds
 // an event, and the event it is holding
@@ -348,19 +359,6 @@ listing.columnCount = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Where one row stands in the whole result, not just on the page it is being read on,
-// so the tenth row of the second page is the thirty-fifth event
-listing.rowNumber = function(itemIndex) {
-    var pageSize = $.fn.zato.audit_log.config.pageSize;
-    var page = $.fn.zato.audit_log.pagination.current_page();
-
-    var out = (page - 1) * pageSize + itemIndex + 1;
-
-    return out;
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
 // The chips a row carries, which is the first few of the ones the presenter named
 listing.rowChips = function(rowModel) {
     var out = rowModel.chips.slice(0, listing.config.rowChipLimit);
@@ -369,16 +367,17 @@ listing.rowChips = function(rowModel) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// One event as one line - where it stands in the list, when it happened, which way it
-// went, what it is and the one thing it is best known by, how it turned out and what can
-// be done with it. Everything else an event says is read in the pane.
-listing.rowHTML = function(rowModel, itemIndex) {
+// One event as one line - which event it is, when it happened, which way it went, what it
+// is and the one thing it is best known by, how it turned out and what can be done with it.
+// Everything else an event says is read in the pane.
+listing.rowHTML = function(rowModel) {
     var columns = listing.columns;
 
-    var html = '<tr class="audit-log-row" data-item-id="' + rowModel.id +
-        '" data-ts="' + listing.escapeHTML(rowModel.timeIso) + '">';
+    var html = '<tr class="audit-log-row" data-item-id="' + rowModel.id + '">';
 
-    html += '<td class="audit-log-cell-number">' + listing.rowNumber(itemIndex) + '</td>';
+    // The event's own number, the one the address bar carries, so a row points at the same
+    // event tomorrow as it does now - where it happens to stand in the list does not.
+    html += '<td class="audit-log-cell-number">#' + rowModel.id + '</td>';
 
     // The time of day is what tells two events of the same minute apart, and the whole
     // timestamp is one hover away.
@@ -427,10 +426,8 @@ listing.emptyRowHTML = function() {
 // /////////////////////////////////////////////////////////////////////////////
 
 listing.loadingRowHTML = function() {
-    var config = listing.config;
-
     var out = '<tr class="detail-loading-row"><td colspan="' + listing.columnCount() + '">' +
-        '<img src="/static/gfx/spinner.svg" class="detail-spinner"> ' + config.loadingLabel + '</td></tr>';
+        kit.spinner_label_html() + '</td></tr>';
 
     return out;
 };
@@ -489,33 +486,21 @@ listing.paneAttrs = function(rowModel) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-listing.paneGridHTML = function(rowModel) {
-    var config = listing.config;
-    var attrs = listing.paneAttrs(rowModel);
+// One thing said about the event - what it is called on the left, what it says on the right,
+// and a way of taking it with you that only shows itself once the line is being read
+listing.paneRowHTML = function(label, valueHTML, copyValue) {
+    var out = '<div class="audit-log-pane-row">';
 
-    var html = '<div class="audit-log-pane-grid">';
+    out += '<div class="audit-log-pane-row-label">' + listing.escapeHTML(label) + '</div>';
+    out += '<div class="audit-log-pane-row-value">';
+    out += '<span class="audit-log-pane-row-text">' + valueHTML + '</span>';
+    out += '<span class="dashboard-panel-action-badge dashboard-panel-action-badge-light ' +
+        'audit-log-pane-row-copy" data-copy-value="' + listing.escapeHTML(copyValue) + '">' +
+        listing.config.copyLabel + '</span>';
+    out += '</div>';
+    out += '</div>';
 
-    // The CID leads the grid because it is what the whole message is opened by.
-    html += '<div>';
-    html += '<div class="audit-log-pane-cell-label">' + config.cidLabel + '</div>';
-    html += '<div class="audit-log-pane-cell-value">';
-    html += '<a href="#" class="audit-log-cid-link" data-id="' + rowModel.id + '" data-cid="' +
-        listing.escapeHTML(rowModel.cid) + '">' + listing.escapeHTML(rowModel.cid) + '</a>';
-    html += '</div>';
-    html += '</div>';
-
-    for (var attrIndex = 0; attrIndex < attrs.length; attrIndex++) {
-        var attr = attrs[attrIndex];
-
-        html += '<div>';
-        html += '<div class="audit-log-pane-cell-label">' + listing.escapeHTML(attr.label) + '</div>';
-        html += '<div class="audit-log-pane-cell-value">' + listing.escapeHTML(attr.value) + '</div>';
-        html += '</div>';
-    }
-
-    html += '</div>';
-
-    return html;
+    return out;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -539,8 +524,10 @@ listing.lineageHTML = function(rowModel) {
 // /////////////////////////////////////////////////////////////////////////////
 
 listing.lineageLinkHTML = function(label, eventId) {
-    var out = '<span class="audit-log-lineage" data-lineage-id="' + eventId + '">' +
-        label + ' ' + eventId + '</span>';
+    var value = '<a href="javascript:void(0)" class="audit-log-lineage" data-lineage-id="' +
+        eventId + '">' + listing.config.eventLabel + ' ' + eventId + '</a>';
+
+    var out = listing.paneRowHTML(label, value, eventId);
 
     return out;
 };
@@ -605,10 +592,13 @@ listing.paneTabHTML = function(name, label) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-listing.paneHTML = function(rowModel) {
+// What the pane says about the event it is holding, above its two tabs
+listing.paneHeadHTML = function(rowModel) {
     var config = listing.config;
 
-    var html = '<div class="audit-log-pane-head">';
+    // Which event is being read comes first, because it is what the address bar carries
+    // and what a row is picked out of the list by
+    var html = '<span class="audit-log-pane-event">' + config.eventLabel + ' ' + rowModel.id + '</span>';
 
     html += kit.direction.tag(rowModel.direction, rowModel.eventType);
     html += '<span class="audit-log-pane-title">' + listing.escapeHTML(rowModel.headline) + '</span>';
@@ -616,10 +606,47 @@ listing.paneHTML = function(rowModel) {
 
     html += '<span class="audit-log-pane-actions">';
     html += listing.actionHTML(rowModel);
-    html += '<input type="button" class="audit-log-copy-cid" data-cid="' + listing.escapeHTML(rowModel.cid) +
-        '" value="' + config.copyCIDLabel + '">';
+    html += '<a href="javascript:void(0)" class="audit-log-copy-cid" data-cid="' +
+        listing.escapeHTML(rowModel.cid) + '">' + config.copyCIDLabel + '</a>';
     html += '</span>';
+
+    return html;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// Everything said about the event, which is what the Details tab holds - one thing to a
+// line, read from the top down, rather than several of them side by side to be picked out
+listing.paneDetailsHTML = function(rowModel) {
+    var config = listing.config;
+    var attrs = listing.paneAttrs(rowModel);
+
+    var html = '<div class="audit-log-pane-rows">';
+
+    // The CID leads, because it is what the whole message is opened by
+    var cidValue = '<a href="#" class="audit-log-cid-link" data-id="' + rowModel.id + '" data-cid="' +
+        listing.escapeHTML(rowModel.cid) + '">' + listing.escapeHTML(rowModel.cid) + '</a>';
+
+    html += listing.paneRowHTML(config.cidLabel, cidValue, rowModel.cid);
+
+    for (var attrIndex = 0; attrIndex < attrs.length; attrIndex++) {
+        var attr = attrs[attrIndex];
+
+        html += listing.paneRowHTML(attr.label, listing.escapeHTML(attr.value), attr.value);
+    }
+
+    html += listing.lineageHTML(rowModel);
     html += '</div>';
+
+    return html;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+listing.paneHTML = function(rowModel) {
+    var config = listing.config;
+
+    var html = '<div class="audit-log-pane-head">' + listing.paneHeadHTML(rowModel) + '</div>';
 
     // The message itself is one half of what there is to know about an event and everything
     // said about it is the other, so the pane is one or the other rather than both at once.
@@ -635,16 +662,19 @@ listing.paneHTML = function(rowModel) {
 
     html += '<div class="dashboard-tab-panel" role="tabpanel" id="' +
         config.tabPanelPrefix + config.detailsTab + '">';
-
-    html += '<div class="audit-log-pane-chips">';
-    html += kit.chips.render(rowModel.chips);
-    html += listing.lineageHTML(rowModel);
-    html += '</div>';
-
-    html += listing.paneGridHTML(rowModel);
+    html += '<div class="audit-log-pane-details">' + listing.paneDetailsHTML(rowModel) + '</div>';
     html += '</div>';
 
     return html;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The pane brought from one event to the next where it stands - the frame, the tabs and
+// whichever of them is open all stay as they are, and only what they hold is replaced.
+listing.paneUpdate = function(rowModel, $pane) {
+    $pane.find('.audit-log-pane-head').html(listing.paneHeadHTML(rowModel));
+    $pane.find('.audit-log-pane-details').html(listing.paneDetailsHTML(rowModel));
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -653,17 +683,20 @@ listing.paneHTML = function(rowModel) {
 // payload itself is only asked for once the tab holding it is the one being looked at.
 listing.showPayload = function() {
     var $host = $(listing.config.payloadHost);
+    var rowModel = listing.selected;
 
-    // The panel of the event already being read is the panel it was given.
-    if ($host.children().length) {
+    // The panel already holding this event is the panel it was given - a refresh that leaves
+    // the same event selected leaves the message being read on the screen as it is.
+    if ($host.data('payload_event_id') === rowModel.id) {
         return;
     }
 
-    var rowModel = listing.selected;
+    $host.data('payload_event_id', rowModel.id);
+
     var presenter = $.fn.zato.audit_log.presenter();
     var tabs = presenter.detailTabs(rowModel);
 
-    kit.payload_panel.lazy($host, tabs, function(tab, onDone) {
+    kit.payload_panel.swap($host, tabs, function(tab, onDone) {
         listing.fetchDetails(rowModel.id, tab.kind, function(details) {
 
             if (!tab.parsed) {
@@ -699,15 +732,28 @@ listing.onSelect = function(rowModel) {
             storage_key: config.tabStorageKey,
             default_tab: config.dataTab,
             on_change: function(tab) {
+                kit.url_state.replace({tab: tab});
+
                 if (tab === config.dataTab) {
                     listing.showPayload();
                 }
             }
         });
+
+        // A link naming a tab opens in that tab, whatever this screen was last left in.
+        var urlTab = listing.urlTab();
+
+        if (urlTab !== '') {
+            listing.tabs.set_tab(urlTab, true);
+        }
     }
     else {
         listing.tabs.set_tab(listing.tabs.get_tab(), true);
     }
+
+    // A link to this page is a link to the event being read on it, in the tab it is
+    // being read in.
+    kit.url_state.replace({event: rowModel.id, tab: listing.tabs.get_tab()});
 
     if (listing.tabs.get_tab() === config.dataTab) {
         listing.showPayload();
@@ -716,14 +762,27 @@ listing.onSelect = function(rowModel) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The rows of the current page left after the range and the legend have had their say
+// The tab a link to this page asked for, and nothing when it asked for none
+listing.urlTab = function() {
+    var config = listing.config;
+    var wanted = kit.url_state.get(config.tabURLKey);
+
+    // Only the two the pane actually has are honoured, so a hand-typed address cannot
+    // leave the pane with no tab open at all.
+    if (wanted === config.dataTab || wanted === config.detailsTab) {
+        return wanted;
+    }
+
+    return '';
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The rows of the current page left after the legend has had its say. The range is not
+// asked about here - a window the reader picks is a window the whole result is read
+// through, so it is the poll that answers it and the pagination that counts it.
 listing.filterRows = function() {
     var out = [];
-    var cutoff = 0;
-
-    if (listing.minutes > 0) {
-        cutoff = Date.now() - listing.minutes * 60000;
-    }
 
     for (var rowIndex = 0; rowIndex < listing.rowModels.length; rowIndex++) {
         var rowModel = listing.rowModels[rowIndex];
@@ -734,14 +793,6 @@ listing.filterRows = function() {
             continue;
         }
 
-        if (cutoff > 0) {
-            var rowTime = new Date(rowModel.timeIso).getTime();
-
-            if (rowTime < cutoff) {
-                continue;
-            }
-        }
-
         out.push(rowModel);
     }
 
@@ -750,35 +801,32 @@ listing.filterRows = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The newest rows carry a fading tint, and a row that arrived on a live refresh puffs once
+// The newest rows carry a fading tint, and a row that arrived on a live refresh puffs once.
+// A page the reader asked for - a search, a page turned, a filter - puffs nothing, because
+// everything on it is new and a whole list blinking says nothing about any of it.
 listing.markNewRows = function() {
     var $itemsHost = listing.panes.items_host();
     var seenIds = {};
-
-    var timestamps = [];
-    var limit = listing.config.recencySteps;
 
     for (var rowIndex = 0; rowIndex < listing.visible.length; rowIndex++) {
         var rowModel = listing.visible[rowIndex];
         seenIds[rowModel.id] = true;
 
-        if (rowIndex < limit) {
-            timestamps.push(rowModel.timeIso);
-        }
-
-        // Nothing puffs on a first drawing - the whole page is new then, and a page
-        // of puffing rows says nothing about which of them just arrived.
-        if (listing.seenIds !== null && !listing.seenIds[rowModel.id]) {
+        if (listing.isLive && !listing.seenIds[rowModel.id]) {
             $itemsHost.find('[data-item-id="' + rowModel.id + '"]').addClass('kit-puff');
         }
     }
 
     listing.seenIds = seenIds;
 
-    kit.recency.apply({
+    // The list is drawn newest first, so the tint goes by where a row stands. It is laid on
+    // without animating unless the page came in by itself - the rows are drawn afresh every
+    // time, and fading each of them in would blink the whole list at every draw.
+    kit.recency.apply_by_position({
         container: listing.config.itemsHost,
-        recent_ts: timestamps,
-        rgb: listing.config.recencyRGB
+        item_selector: listing.config.itemSelector,
+        rgb: listing.config.recencyRGB,
+        animate: listing.isLive
     });
 };
 
@@ -799,6 +847,10 @@ listing.draw = function() {
 listing.renderPage = function(_$body, rows) {
     listing.rowModels = listing.buildRows(rows);
     listing.draw();
+
+    // Whatever brought the next page, it will have to say for itself that it came by
+    // the clock rather than by the reader.
+    listing.isLive = false;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -830,7 +882,11 @@ listing.chromeHTML = function() {
     html += '</div>';
     html += '</span>';
 
-    html += '<div class="dashboard-chart-legend" id="' + config.legendHost.slice(1) + '"></div>';
+    // A source whose events report no outcome at all is offered no legend either.
+    if ($.fn.zato.audit_log.config.outcomes.length) {
+        html += '<div class="dashboard-chart-legend" id="' + config.legendHost.slice(1) + '"></div>';
+    }
+
     html += '</div>';
 
     return html;
@@ -861,6 +917,33 @@ listing.setRange = function(minutes) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// The moment the range now picked reaches back to, as the poll reads it, and nothing at all
+// when the range is the whole log. Event times are stored as UTC with the offset spelled out,
+// and the comparison is made on the text of them, so the cutoff is written the same way.
+listing.rangeTimeFrom = function() {
+    if (listing.minutes === 0) {
+        return '';
+    }
+
+    var cutoff = new Date(Date.now() - listing.minutes * 60000);
+    var out = cutoff.toISOString().replace('Z', '+00:00');
+
+    return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// A window the reader has just picked, asked of the whole log rather than of the page that
+// happens to be open, so the count and the pages agree with what is on the screen
+listing.applyRange = function() {
+    var pagination = $.fn.zato.audit_log.pagination;
+
+    pagination.set_filters({time_from: listing.rangeTimeFrom()});
+    pagination.fetch_page(1);
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 listing.refresh = function() {
     var pagination = $.fn.zato.audit_log.pagination;
     pagination.fetch_page(pagination.current_page());
@@ -868,7 +951,24 @@ listing.refresh = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-listing.initChrome = function() {
+// The same page asked for again by the clock rather than by the reader, which is the one
+// case where what has arrived since is worth pointing out
+listing.refreshLive = function() {
+    listing.isLive = true;
+
+    // A window reaching back from now rolls with it, so the cutoff is worked out again at
+    // every tick rather than staying where it stood when the range was picked. A page
+    // opened on a window of its own reports no range and keeps the window it was given.
+    if (listing.minutes > 0) {
+        $.fn.zato.audit_log.pagination.set_filters({time_from: listing.rangeTimeFrom()});
+    }
+
+    listing.refresh();
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+listing.initChrome = function(initConfig) {
     var config = listing.config;
     var palette = kit.palette.outcome;
 
@@ -880,26 +980,42 @@ listing.initChrome = function() {
         storage_key: config.refreshStorageKey,
         url_param: 'refresh',
         default_seconds: config.refreshDefaultSeconds,
-        on_tick: listing.refresh
+        on_tick: listing.refreshLive
     });
 
-    var range = kit.time_range.init({
+    var rangeConfig = {
         pill: '#' + config.rangePillId + '-pill',
         menu: '#' + config.rangePillId + '-menu',
         storage_key: config.rangeStorageKey,
         on_change: function(minutes) {
             listing.setRange(minutes);
-            listing.draw();
+            listing.applyRange();
         }
-    });
+    };
+
+    // A page opened on a window of its own - one clicked on an analytics chart - is read
+    // through that window, so the range this screen was last left on does not overwrite it.
+    if (initConfig.time_from !== '' || initConfig.time_to !== '') {
+        rangeConfig.initial_minutes = 0;
+    }
+
+    var range = kit.time_range.init(rangeConfig);
 
     // The range this screen was left on last time is the one it opens on, and the pill
     // says so before the first page has even arrived.
     listing.setRange(range.get_minutes());
 
+    // The legend offers this source's own outcomes - a delivery running out of time is
+    // something only a pub/sub message does, and an HL7 log is not asked about it.
+    var outcomes = $.fn.zato.audit_log.config.outcomes;
+
+    if (!outcomes.length) {
+        return;
+    }
+
     kit.build_legend({
         container: config.legendHost,
-        series_keys: config.outcomeKeys,
+        series_keys: outcomes,
         palette: palette.bar_colors,
         labels: palette.labels,
         text_colors: palette.colors,
@@ -935,6 +1051,7 @@ listing.initPanes = function(source) {
         render_item: listing.rowHTML,
         render_empty: listing.emptyRowHTML,
         render_detail: listing.paneHTML,
+        update_detail: listing.paneUpdate,
         empty_detail: '<div class="dashboard-inline-empty">' + config.emptyPane + '</div>',
         on_select: listing.onSelect
     });
@@ -945,8 +1062,16 @@ listing.initPanes = function(source) {
 // /////////////////////////////////////////////////////////////////////////////
 
 listing.init = function(initConfig) {
-    listing.initChrome();
+    listing.initChrome(initConfig);
     listing.initPanes(initConfig.source);
+
+    // A link naming an event opens on it - the selection is made before the first page has
+    // arrived, and the page that arrives keeps whatever is already selected on it.
+    var urlEvent = kit.url_state.get(listing.config.eventURLKey);
+
+    if (urlEvent !== null && urlEvent !== '') {
+        listing.panes.select(urlEvent);
+    }
 
     // A chip says what its row has in common with others, so clicking one asks for them
     $(document).on('click', '.dashboard-chip', function() {
@@ -965,6 +1090,12 @@ listing.init = function(initConfig) {
 
     $(document).on('click', '.audit-log-copy-cid', function() {
         kit.copy_to_clipboard(this, $(this).attr('data-cid'));
+    });
+
+    // Anything the pane says about an event can be taken away as it stands, so a value
+    // read here is pasted elsewhere rather than typed out again
+    $(document).on('click', '.audit-log-pane-row-copy', function() {
+        kit.copy_to_clipboard(this, $(this).attr('data-copy-value'), listing.config.copyFlashPlacement);
     });
 };
 

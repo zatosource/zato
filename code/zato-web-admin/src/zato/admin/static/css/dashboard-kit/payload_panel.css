@@ -7,6 +7,18 @@
     font-size: 13px;
 }
 
+/* Inside the frame the waiting is said in the frame's own colours - the spinner is turned
+   light instead of the dark navy it wears on the white pages, where against this background
+   it would be one dark shape on another */
+
+.dashboard-payload .dashboard-payload-loading {
+    color: var(--dashboard-panel-text);
+}
+
+.dashboard-payload .detail-spinner {
+    filter: brightness(0) invert(0.85);
+}
+
 .dashboard-payload {
     background: var(--dashboard-panel-background);
     border: 1px solid var(--dashboard-panel-border);
@@ -47,22 +59,11 @@
     margin-left: auto;
 }
 
-.dashboard-payload-copy {
-    padding: 1px 10px;
-    border: 1px solid var(--dashboard-panel-border);
-    border-radius: 3px;
-    font-size: 11px;
-    color: var(--dashboard-panel-text);
-    background: transparent;
-    cursor: pointer;
-}
-
-.dashboard-payload-copy:hover {
-    background: rgba(230, 230, 239, 0.12);
-}
+/* The window a message is read through is one size whatever it is holding, so a message
+   replaced by another one swaps words rather than resizing everything under it */
 
 .dashboard-payload-text {
-    max-height: var(--dashboard-payload-height);
+    height: var(--dashboard-payload-height);
     margin: 0;
     padding: 8px 12px;
     overflow: auto;

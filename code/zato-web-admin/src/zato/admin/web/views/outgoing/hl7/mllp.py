@@ -18,7 +18,7 @@ from zato.admin.web.forms import populate_form_initial
 from zato.admin.web.forms.outgoing.hl7.mllp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, invoke_action_handler, method_allowed
 from zato.common.api import GENERIC, generic_attrs
-from zato.common.crypto.api import CryptoManager
+from zato.common.hl7.mllp.ack import new_control_id
 from zato.common.hl7.mllp.client import HL7MLLPClient
 from zato.common.hl7.mllp.tls import build_client_ssl_context
 from zato.common.model.hl7 import HL7MLLPOutconnConfigObject
@@ -49,10 +49,6 @@ _Probe_Message = (
     'PID|1||12345^^^FAC^MR||SMITH^JOHN^A||19800115|M\r'
     'PV1|1|I'
 )
-
-# .. how many bits the control id of one check is made of - it is echoed back in MSA-2,
-# .. which is what tells a reply meant for this check apart from any other ..
-_Probe_Control_Id_Bits = 32
 
 # .. the connection's receive timeout is configured in milliseconds and the client takes seconds ..
 _Ms_Per_Second = 1000
@@ -240,7 +236,7 @@ def wizard_test_action(req:'any_') -> 'JsonResponse':
     try:
         client = _build_probe_client(req)
 
-        control_id = CryptoManager.generate_hex_string(_Probe_Control_Id_Bits)
+        control_id = new_control_id()
         message = _Probe_Message.format(control_id=control_id)
 
         # The control id goes along, so the acknowledgment is checked for having echoed it
