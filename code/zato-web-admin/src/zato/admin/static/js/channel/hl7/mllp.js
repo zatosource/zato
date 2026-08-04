@@ -613,35 +613,39 @@ $.fn.zato.channel.hl7.mllp.row_edit.update_row = function(link, row, data, saved
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// One line of the popup a service cell opens, worn the way the links above the table are
-$.fn.zato.channel.hl7.mllp.build_menu_link = function(text) {
+// One button of the popup a service cell opens, worn the way the buttons handing over
+// an address are - what a popup offers is pressed rather than followed
+$.fn.zato.channel.hl7.mllp.build_menu_button = function(label) {
 
-    var out = document.createElement('a');
+    var out = document.createElement('input');
 
-    out.className = 'common';
-    out.textContent = text;
+    out.type = 'button';
+    out.value = label;
 
     return out;
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// The two things a service can be done with, one to a line
+// The two things a service can be done with, one to a button
 $.fn.zato.channel.hl7.mllp.build_service_menu = function(instance, name) {
 
     var mllp = $.fn.zato.channel.hl7.mllp;
     var config = mllp.config;
 
     var out = document.createElement('div');
-    out.className = 'zato-tippy-links';
+    out.className = 'zato-tippy-buttons';
 
-    // The IDE is reached the way every other link on the page is, so the browser's own
-    // Back button comes back to this list rather than to wherever the list was opened from
-    var open_ide = mllp.build_menu_link(config.open_ide_label);
-    open_ide.href = config.service_ide_url.replace('{name}', encodeURIComponent(name));
+    // The IDE is reached with a plain page load, so the browser's own Back button comes
+    // back to this list rather than to wherever the list was opened from
+    var ide_url = config.service_ide_url.replace('{name}', encodeURIComponent(name));
+    var open_ide = mllp.build_menu_button(config.open_ide_label);
 
-    var change_service = mllp.build_menu_link(config.change_service_label);
-    change_service.href = 'javascript:void(0)';
+    open_ide.addEventListener('click', function() {
+        window.location.href = ide_url;
+    });
+
+    var change_service = mllp.build_menu_button(config.change_service_label);
 
     change_service.addEventListener('click', function() {
         instance.hide();
