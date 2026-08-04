@@ -410,6 +410,8 @@ urlpatterns += [
         login_required(audit_log.object_index), name='audit-log'),
     url(r'^zato/audit-log/poll/$',
         login_required(audit_log.poll), name='audit-log-poll'),
+    url(r'^zato/audit-log/flow/$',
+        login_required(audit_log.flow), name='audit-log-flow'),
     url(r'^zato/audit-log/details/$',
         login_required(audit_log.details), name='audit-log-details'),
     url(r'^zato/audit-log/resubmit/$',

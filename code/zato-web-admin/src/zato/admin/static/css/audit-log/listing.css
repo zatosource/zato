@@ -7,19 +7,12 @@
 @import url("../dashboard-kit/payload_panel.css");
 @import url("../dashboard-kit/list_detail.css");
 @import url("../dashboard-kit/tabs.css");
+@import url("../dashboard-kit/log_line.css");
+@import url("../dashboard-kit/fact_rows.css");
 
 /* ------------------------------------------------------------ */
 /* The page around the listing                                   */
 /* ------------------------------------------------------------ */
-
-/* The amber the newest rows of the list are washed with, which the pane borrows to set
-   the names of things apart from what they say - the same warmth rather than a colour
-   that would read as an outcome */
-
-.detail-page-audit-log {
-    --audit-log-label-tint: rgba(218, 165, 32, 0.10);
-    --audit-log-label-tint-strong: rgba(218, 165, 32, 0.22);
-}
 
 /* The page itself has nothing to tab between - everything on it is an event.
    The tabs inside the detail pane are another matter. */
@@ -279,75 +272,184 @@
     margin-bottom: 10px;
 }
 
-/* What is known about the event, one thing to a line - the name of it in the first column,
-   what it says in the second, and the lines all as wide as the widest name so the values
-   stand in a column of their own to be read down */
+/* What is known about the event is the kit's own set of fact rows, and the pane only says
+   how far it stands from the message below it */
 
-.audit-log-pane-rows {
-    display: grid;
-    grid-template-columns: max-content 1fr;
+.audit-log-pane-details .dashboard-fact-rows {
     margin-bottom: 10px;
-    border-top: 1px solid var(--dashboard-line);
 }
 
-.audit-log-pane-row {
-    display: contents;
+/* ------------------------------------------------------------ */
+/* The message flow                                              */
+/* ------------------------------------------------------------ */
+
+/* The flow is as wide as the pane it is read in, so how much of a line is shown is answered
+   against the flow rather than against the window */
+
+.audit-log-flow {
+    container-type: inline-size;
+    container-name: audit-log-flow;
 }
 
-.audit-log-pane-row-label,
-.audit-log-pane-row-value {
-    padding: 5px 10px 5px 0;
-    border-bottom: 1px solid var(--dashboard-line);
+/* Nothing in the flow's actions is pushed away from what it acts on - the actions of a line
+   sit at its right edge and the padding a run log needs there is not needed here */
+
+.audit-log-flow .detail-log-actions {
+    padding-left: 12px;
 }
 
-.audit-log-pane-row-label {
-    padding-left: 10px;
-    padding-right: 16px;
+/* Each line is ruled off from the next, and the whole of it reads in the panel's own colour
+   with only what tells one line from another taking a colour of its own */
+
+.audit-log-flow .detail-log-line {
+    border-bottom: 1px solid var(--dashboard-panel-border);
+    color: var(--dashboard-panel-text);
+}
+
+.audit-log-flow .detail-log-ts {
+    color: var(--dashboard-fact-label-dark);
+}
+
+/* The line the flow was read from is where the reader stands, so it is the one line that
+   says so without being hovered over */
+
+.audit-log-flow-line-seed {
+    background: rgba(246, 166, 5, 0.10);
+}
+
+.audit-log-flow-line-seed .audit-log-flow-headline {
+    color: #f6c66a;
+}
+
+/* How long after the line above it the event happened, said beside the time it happened at
+   and kept quieter than it */
+
+.audit-log-flow-elapsed {
+    margin-left: 6px;
+    font-size: 0.92em;
+    opacity: 0.6;
+}
+
+.audit-log-flow-source,
+.audit-log-flow-event,
+.audit-log-flow-relation {
+    margin-right: 8px;
     font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.6px;
+    letter-spacing: 0.4px;
+}
+
+.audit-log-flow-source {
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.10);
+}
+
+.audit-log-flow-event {
+    opacity: 0.62;
+}
+
+.audit-log-flow-headline {
+    margin-right: 8px;
+    font-weight: 700;
+}
+
+.audit-log-flow-relation {
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: #f6c66a;
+    background: rgba(246, 166, 5, 0.14);
+}
+
+/* What a flow of one event has to say about itself, and what a flow that was cut short does */
+
+.audit-log-flow-footer {
+    padding: 6px 2px;
+    font-size: 11px;
     color: var(--dashboard-muted);
-    background: var(--audit-log-label-tint);
+}
+
+/* ------------------------------------------------------------ */
+/* The panel one line of the flow opens into                     */
+/* ------------------------------------------------------------ */
+
+.audit-log-flow-panel {
+    cursor: default;
+}
+
+.audit-log-flow-body {
+    margin-top: 8px;
+}
+
+.audit-log-flow-body-bar {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-bottom: 4px;
+}
+
+.audit-log-flow-body-kind-active {
+    color: var(--dashboard-panel-text);
+    background: rgba(255, 255, 255, 0.20);
+}
+
+/* How much of the message is on the screen, out of how much of it there is */
+
+.audit-log-flow-body-caption {
+    margin-left: 10px;
+    font-size: 10.5px;
+    color: var(--dashboard-fact-label-dark);
     white-space: nowrap;
 }
 
-.audit-log-pane-row-value {
+.audit-log-flow-body-actions {
     display: flex;
-    align-items: baseline;
-    gap: 8px;
-    padding-left: 10px;
-    font-family: var(--dashboard-mono);
-    font-size: 12px;
-    color: var(--dashboard-line-strong);
+    align-items: center;
+    margin-left: auto;
+    white-space: nowrap;
 }
 
-.audit-log-pane-row-text {
-    min-width: 0;
+.audit-log-flow-body-text {
+    max-height: 320px;
+    margin: 0;
+    padding: 6px 8px;
+    overflow: auto;
+    border: 1px solid var(--dashboard-fact-line-dark);
+    border-radius: 3px;
+    font-family: var(--dashboard-mono);
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--dashboard-panel-text);
+    background: rgba(0, 0, 0, 0.22);
+    white-space: pre-wrap;
     word-break: break-all;
 }
 
-/* A line being read lifts as a whole, the name deepening in the tint it already wears
-   and the value taking on the lightest of it */
+/* A pane dragged narrow keeps what tells one line of the flow from another and drops the
+   rest, in the order the rest is least missed in */
 
-.audit-log-pane-row:hover .audit-log-pane-row-label {
-    background: var(--audit-log-label-tint-strong);
+@container audit-log-flow (max-width: 620px) {
+
+    .audit-log-flow-elapsed {
+        display: none;
+    }
 }
 
-.audit-log-pane-row:hover .audit-log-pane-row-value {
-    background: var(--audit-log-label-tint);
+@container audit-log-flow (max-width: 520px) {
+
+    .audit-log-flow-source {
+        display: none;
+    }
 }
 
-/* Taking a value away is offered by the line being read and by no other, and it stands
-   just past the value rather than away at the edge of the pane */
+@container audit-log-flow (max-width: 440px) {
 
-.audit-log-pane-row-copy {
-    flex: none;
-    margin-left: 0;
-    opacity: 0;
-    transition: opacity 0.12s ease;
-}
+    .audit-log-flow-open {
+        display: none;
+    }
 
-.audit-log-pane-row:hover .audit-log-pane-row-copy {
-    opacity: 1;
+    .audit-log-flow-body-caption {
+        display: none;
+    }
 }

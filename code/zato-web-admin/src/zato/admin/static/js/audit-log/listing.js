@@ -24,16 +24,20 @@ listing.config = {
     itemSelector: '.audit-log-row',
     legendHost: '#audit-log-legend',
     payloadHost: '#audit-log-pane-payload',
+    flowHost: '#audit-log-pane-flow',
     rangePillId: 'audit-log-range',
 
-    // The pane's two halves - the message itself and everything said about it
+    // The pane's three halves - the message itself, everything said about it and the whole
+    // flow the message belongs to
     tabSelector: '.audit-log-pane-tab',
     tabPanelPrefix: 'audit-log-pane-panel-',
     tabStorageKey: 'zato_audit_log_pane_tab',
     dataTab: 'data',
     detailsTab: 'details',
+    flowTab: 'flow',
     dataTabLabel: 'Data',
     detailsTabLabel: 'Details',
+    flowTabLabel: 'Message flow',
 
     // What the proportions of one source's listing are remembered under
     storagePrefix: 'zato_audit_log_layout_',
@@ -60,11 +64,9 @@ listing.config = {
     rawTabLabel: 'Raw',
     parsedTabLabel: 'Parsed',
     copyCIDLabel: 'Copy CID',
-    copyLabel: 'Copy',
 
-    // Which side of the badge the pane says a value has been copied on - beside it, so the
-    // line being read is not covered by the word saying it was taken
-    copyFlashPlacement: 'right',
+    // The pane is a light panel, so what is known about the event is set out on one
+    paneFactVariant: 'light',
 
     // What the pane calls the event it is holding, before anything else it says about it
     eventLabel: 'Event',
@@ -486,48 +488,37 @@ listing.paneAttrs = function(rowModel) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// One thing said about the event - what it is called on the left, what it says on the right,
-// and a way of taking it with you that only shows itself once the line is being read
-listing.paneRowHTML = function(label, valueHTML, copyValue) {
-    var out = '<div class="audit-log-pane-row">';
-
-    out += '<div class="audit-log-pane-row-label">' + listing.escapeHTML(label) + '</div>';
-    out += '<div class="audit-log-pane-row-value">';
-    out += '<span class="audit-log-pane-row-text">' + valueHTML + '</span>';
-    out += '<span class="dashboard-panel-action-badge dashboard-panel-action-badge-light ' +
-        'audit-log-pane-row-copy" data-copy-value="' + listing.escapeHTML(copyValue) + '">' +
-        listing.config.copyLabel + '</span>';
-    out += '</div>';
-    out += '</div>';
-
+// One thing said about the event, in the shape the kit's fact rows read
+listing.paneFact = function(label, valueHTML, copyValue) {
+    var out = {label: label, value_html: valueHTML, copy_value: copyValue};
     return out;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
 // What this event came out of and what came out of it, each one selecting its own event
-listing.lineageHTML = function(rowModel) {
+listing.lineageFacts = function(rowModel) {
     var config = listing.config;
-    var html = '';
+    var out = [];
 
     for (var parentIndex = 0; parentIndex < rowModel.parents.length; parentIndex++) {
-        html += listing.lineageLinkHTML(config.lineageParentLabel, rowModel.parents[parentIndex].id);
+        out.push(listing.lineageFact(config.lineageParentLabel, rowModel.parents[parentIndex].id));
     }
 
     for (var childIndex = 0; childIndex < rowModel.children.length; childIndex++) {
-        html += listing.lineageLinkHTML(config.lineageChildLabel, rowModel.children[childIndex].id);
+        out.push(listing.lineageFact(config.lineageChildLabel, rowModel.children[childIndex].id));
     }
 
-    return html;
+    return out;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-listing.lineageLinkHTML = function(label, eventId) {
+listing.lineageFact = function(label, eventId) {
     var value = '<a href="javascript:void(0)" class="audit-log-lineage" data-lineage-id="' +
         eventId + '">' + listing.config.eventLabel + ' ' + eventId + '</a>';
 
-    var out = listing.paneRowHTML(label, value, eventId);
+    var out = listing.paneFact(label, value, eventId);
 
     return out;
 };
@@ -562,13 +553,15 @@ listing.parsedTab = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-listing.fetchDetails = function(eventId, kind, onDone) {
+// One event's payload, whole or only the top of it - a pane showing a message asks for all
+// of it, and a line of a flow opened for a look asks for as much of it as it will show
+listing.fetchDetails = function(eventId, kind, isPreview, onDone) {
     var config = $.fn.zato.audit_log.config;
 
     $.ajax({
         url: config.detailsURL,
         type: 'POST',
-        data: JSON.stringify({id: eventId, kind: kind}),
+        data: JSON.stringify({id: eventId, kind: kind, preview: isPreview}),
         contentType: 'application/json',
         headers: {'X-CSRFToken': $.cookie('csrftoken')},
         success: function(data) {
@@ -620,23 +613,23 @@ listing.paneHeadHTML = function(rowModel) {
 listing.paneDetailsHTML = function(rowModel) {
     var config = listing.config;
     var attrs = listing.paneAttrs(rowModel);
-
-    var html = '<div class="audit-log-pane-rows">';
+    var facts = [];
 
     // The CID leads, because it is what the whole message is opened by
     var cidValue = '<a href="#" class="audit-log-cid-link" data-id="' + rowModel.id + '" data-cid="' +
         listing.escapeHTML(rowModel.cid) + '">' + listing.escapeHTML(rowModel.cid) + '</a>';
 
-    html += listing.paneRowHTML(config.cidLabel, cidValue, rowModel.cid);
+    facts.push(listing.paneFact(config.cidLabel, cidValue, rowModel.cid));
 
     for (var attrIndex = 0; attrIndex < attrs.length; attrIndex++) {
         var attr = attrs[attrIndex];
 
-        html += listing.paneRowHTML(attr.label, listing.escapeHTML(attr.value), attr.value);
+        facts.push(listing.paneFact(attr.label, listing.escapeHTML(attr.value), attr.value));
     }
 
-    html += listing.lineageHTML(rowModel);
-    html += '</div>';
+    facts = facts.concat(listing.lineageFacts(rowModel));
+
+    var html = kit.fact_rows.render(facts, config.paneFactVariant);
 
     return html;
 };
@@ -648,11 +641,12 @@ listing.paneHTML = function(rowModel) {
 
     var html = '<div class="audit-log-pane-head">' + listing.paneHeadHTML(rowModel) + '</div>';
 
-    // The message itself is one half of what there is to know about an event and everything
-    // said about it is the other, so the pane is one or the other rather than both at once.
+    // The message itself, everything said about it and the flow it belongs to are three ways
+    // of reading one event, so the pane is one of them at a time rather than all three at once.
     html += '<div class="dashboard-tabs audit-log-pane-tabs" role="tablist">';
     html += listing.paneTabHTML(config.dataTab, config.dataTabLabel);
     html += listing.paneTabHTML(config.detailsTab, config.detailsTabLabel);
+    html += listing.paneTabHTML(config.flowTab, config.flowTabLabel);
     html += '</div>';
 
     html += '<div class="dashboard-tab-panel" role="tabpanel" id="' +
@@ -665,6 +659,11 @@ listing.paneHTML = function(rowModel) {
     html += '<div class="audit-log-pane-details">' + listing.paneDetailsHTML(rowModel) + '</div>';
     html += '</div>';
 
+    html += '<div class="dashboard-tab-panel" role="tabpanel" id="' +
+        config.tabPanelPrefix + config.flowTab + '">';
+    html += '<div id="' + config.flowHost.slice(1) + '"></div>';
+    html += '</div>';
+
     return html;
 };
 
@@ -672,6 +671,8 @@ listing.paneHTML = function(rowModel) {
 
 // The pane brought from one event to the next where it stands - the frame, the tabs and
 // whichever of them is open all stay as they are, and only what they hold is replaced.
+// The message and the flow are left alone here, each of them deciding for itself whether
+// the event it is holding is still the one being read.
 listing.paneUpdate = function(rowModel, $pane) {
     $pane.find('.audit-log-pane-head').html(listing.paneHeadHTML(rowModel));
     $pane.find('.audit-log-pane-details').html(listing.paneDetailsHTML(rowModel));
@@ -697,7 +698,7 @@ listing.showPayload = function() {
     var tabs = presenter.detailTabs(rowModel);
 
     kit.payload_panel.swap($host, tabs, function(tab, onDone) {
-        listing.fetchDetails(rowModel.id, tab.kind, function(details) {
+        listing.fetchDetails(rowModel.id, tab.kind, false, function(details) {
 
             if (!tab.parsed) {
                 onDone(details.data);
@@ -718,6 +719,21 @@ listing.showPayload = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// Whichever of the three ways of reading an event is open asks for what it shows, and the
+// two that are not open ask for nothing until their turn comes
+listing.showTab = function(tab) {
+    var config = listing.config;
+
+    if (tab === config.dataTab) {
+        listing.showPayload();
+    }
+    else if (tab === config.flowTab) {
+        $.fn.zato.audit_log.flow.show(listing.selected);
+    }
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 listing.onSelect = function(rowModel) {
     var config = listing.config;
 
@@ -733,10 +749,7 @@ listing.onSelect = function(rowModel) {
             default_tab: config.dataTab,
             on_change: function(tab) {
                 kit.url_state.replace({tab: tab});
-
-                if (tab === config.dataTab) {
-                    listing.showPayload();
-                }
+                listing.showTab(tab);
             }
         });
 
@@ -755,9 +768,7 @@ listing.onSelect = function(rowModel) {
     // being read in.
     kit.url_state.replace({event: rowModel.id, tab: listing.tabs.get_tab()});
 
-    if (listing.tabs.get_tab() === config.dataTab) {
-        listing.showPayload();
-    }
+    listing.showTab(listing.tabs.get_tab());
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -767,9 +778,17 @@ listing.urlTab = function() {
     var config = listing.config;
     var wanted = kit.url_state.get(config.tabURLKey);
 
-    // Only the two the pane actually has are honoured, so a hand-typed address cannot
+    // Only the three the pane actually has are honoured, so a hand-typed address cannot
     // leave the pane with no tab open at all.
-    if (wanted === config.dataTab || wanted === config.detailsTab) {
+    if (wanted === config.dataTab) {
+        return wanted;
+    }
+
+    if (wanted === config.detailsTab) {
+        return wanted;
+    }
+
+    if (wanted === config.flowTab) {
         return wanted;
     }
 
@@ -964,6 +983,14 @@ listing.refreshLive = function() {
     }
 
     listing.refresh();
+
+    // A flow being read grows with the clock too - a message answered a moment ago has one
+    // more line to it than it had a moment before.
+    if (listing.tabs !== null) {
+        if (listing.tabs.get_tab() === listing.config.flowTab) {
+            $.fn.zato.audit_log.flow.refreshLive();
+        }
+    }
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -1090,12 +1117,6 @@ listing.init = function(initConfig) {
 
     $(document).on('click', '.audit-log-copy-cid', function() {
         kit.copy_to_clipboard(this, $(this).attr('data-cid'));
-    });
-
-    // Anything the pane says about an event can be taken away as it stands, so a value
-    // read here is pasted elsewhere rather than typed out again
-    $(document).on('click', '.audit-log-pane-row-copy', function() {
-        kit.copy_to_clipboard(this, $(this).attr('data-copy-value'), listing.config.copyFlashPlacement);
     });
 };
 

@@ -28,14 +28,20 @@ img.help-icon[id=""] { display: none; }
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/payload_panel.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/list_detail.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/log_line.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/fact_rows.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit_log.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/listing.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/flow.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/flow-panel.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/default.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/hl7.js"></script>
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
     $.fn.zato.audit_log.init({
         poll_url: '{{ poll_url }}',
+        flow_url: '{{ flow_url }}',
+        cluster_id: '{{ cluster_id }}',
         source: '{{ source }}',
         object_name: '{{ object_name }}',
         status: '{{ status }}',

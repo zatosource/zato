@@ -15,7 +15,7 @@ from sqlalchemy import and_, func, or_, select
 # Zato
 from zato.admin.web.views.audit_log.columns import _data_preview_len, _row_numeric_columns, _search_columns, \
     _source_attr_columns, _source_body_preview, _status_outstanding
-from zato.admin.web.views.audit_log.sources import _source_outstanding
+from zato.admin.web.views.audit_log.sources import _source_outstanding, _source_resubmit, _source_row_enrich
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table
 from zato.common.audit_log.query import outstanding_conditions
 
@@ -130,6 +130,60 @@ def _normalize_row(row:'anydict') -> 'None':
 
         if value is None:
             row[key] = ''
+
+# ################################################################################################################################
+
+def _group_by_source(rows:'anylist') -> 'anydict':
+    """ Sorts a set of rows into one list per source. A page of a listing is all one source while
+    a message's flow crosses them - a channel fanning a message out to its destinations is one
+    correlation id spanning several - and what a source declares about its own events is asked
+    of that source's rows alone.
+    """
+    out:'anydict' = {}
+
+    for row in rows:
+        source = row['source']
+
+        if source not in out:
+            out[source] = []
+
+        out[source].append(row)
+
+    return out
+
+# ################################################################################################################################
+
+def _hydrate_rows(connection:'any_', rows:'anylist') -> 'None':
+    """ Brings a set of rows read straight out of the event table up to the shape the frontend reads,
+    whatever sources they came from - the same shape a page of a listing arrives in, so one row
+    renderer serves both.
+    """
+    rows_by_source = _group_by_source(rows)
+
+    for source, source_rows in rows_by_source.items():
+
+        # A column extracted out of the payload is extracted by the source that put it there ..
+        if enrich := _source_row_enrich.get(source):
+            for row in source_rows:
+                enrich(row)
+
+        # .. an attr column is read out of the attr table, one query per source ..
+        _attach_attr_columns(connection, source, source_rows)
+
+        # .. a payload kept outside the event row is previewed the same way ..
+        _attach_body_previews(connection, source, source_rows)
+
+        # .. and a row can only carry the resubmitted marker on a source that has resubmits at all.
+        if source in _source_resubmit:
+            _mark_resubmitted(connection, source, source_rows)
+        else:
+            for row in source_rows:
+                row['is_resubmitted'] = False
+
+    # Lineage and message bodies are keyed on the event id alone, so they answer for every
+    # row at once no matter which source wrote it.
+    _attach_lineage(connection, rows)
+    _attach_body_kinds(connection, rows)
 
 # ################################################################################################################################
 

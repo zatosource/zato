@@ -16,6 +16,9 @@ $.fn.zato.audit_log.config = {
     detailsURL: '/zato/audit-log/details/',
     resubmitURL: '/zato/audit-log/resubmit/',
 
+    // Where one event's whole flow is read from, assigned in init
+    flowURL: '',
+
     // The name every source without a presenter of its own is drawn by
     defaultSource: 'default',
 
@@ -38,9 +41,11 @@ $.fn.zato.audit_log.config = {
     columns: [],
     resubmitLabels: {},
 
-    // Which source this page lists and how this source's exchanges open and close,
-    // both assigned in init
+    // Which source this page lists, which object of it, which cluster it belongs to, and how
+    // this source's exchanges open and close, all assigned in init
     source: '',
+    objectName: '',
+    clusterId: '',
     exchange: {}
 };
 
@@ -56,9 +61,11 @@ $.fn.zato.audit_log.escapeHTML = function(value) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.audit_log.presenter = function() {
+// Which presenter draws a row of a given source. A page reads its own source's rows, and a
+// flow crosses sources, so an event is always drawn by the source that wrote it down.
+$.fn.zato.audit_log.presenterFor = function(source) {
     var audit_log = $.fn.zato.audit_log;
-    var presenter = audit_log.sources[audit_log.config.source];
+    var presenter = audit_log.sources[source];
 
     // Only the sources with details of their own to show have a presenter,
     // every other one is drawn by the neutral default.
@@ -67,6 +74,14 @@ $.fn.zato.audit_log.presenter = function() {
     }
 
     return presenter;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.audit_log.presenter = function() {
+    var audit_log = $.fn.zato.audit_log;
+
+    return audit_log.presenterFor(audit_log.config.source);
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -97,8 +112,9 @@ $.fn.zato.audit_log.openMessageOverlay = function(eventId, cid) {
         url: config.detailsURL,
         type: 'POST',
 
-        // The overlay reads whichever body the event has, whatever kind it turns out to be
-        data: JSON.stringify({id: eventId, kind: ''}),
+        // The overlay reads whichever body the event has, whatever kind it turns out to be,
+        // and it reads the whole of it because that is what it is opened for
+        data: JSON.stringify({id: eventId, kind: '', preview: false}),
         contentType: 'application/json',
         headers: {'X-CSRFToken': $.cookie('csrftoken')},
         success: function(data) {
@@ -248,10 +264,16 @@ $.fn.zato.audit_log.init = function(initConfig) {
     config.resubmitLabels = initConfig.resubmitLabels;
     config.source = initConfig.source;
     config.exchange = initConfig.exchange;
+    config.flowURL = initConfig.flow_url;
+    config.objectName = initConfig.object_name;
+    config.clusterId = initConfig.cluster_id;
 
     // .. the listing puts its chrome and its two panes in place before the first page arrives ..
     var listing = $.fn.zato.audit_log.listing;
     listing.init(initConfig);
+
+    // .. the flow is bound to the pane it will be read in ..
+    $.fn.zato.audit_log.flow.init();
 
     // .. the first page is read through whichever window the page was opened on, which is
     // the one the address named or, failing that, the range this screen was last left on ..

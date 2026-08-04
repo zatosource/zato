@@ -24,6 +24,7 @@ if 0:
 # ################################################################################################################################
 
 _poll_url = '/zato/audit-log/poll/'
+_flow_url = '/zato/audit-log/flow/'
 
 _default_page = 1
 _default_page_size = 25
@@ -31,13 +32,23 @@ _default_page_size = 25
 # How many characters of the payload are shown in the table
 _data_preview_len = 200
 
+# How many characters of a message a caller that only shows the top of one is given - enough
+# for the head of any message and short of what a browser would have to be handed a whole
+# multi-megabyte body for
+_preview_len = 4000
+
 # The columns returned to the frontend, in the order they appear in the select below
 _row_columns = ('id', 'cid', 'source', 'event_type', 'object_name', 'event_time_iso', 'msg_id', 'correl_id',
     'endpoint', 'ext_client_id', 'outcome', 'status', 'classification', 'size', 'duration_ms', 'data')
 
+# A line of one event's flow reads two things a row of a list has no place for - where the event
+# stands among the others of its own cid, which is what orders two events of the same moment,
+# and which server wrote it down, which is what a flow spanning several of them shows.
+_flow_columns = _row_columns + ('cid_sequence', 'server_name')
+
 # The row columns holding numbers - every other one is text, and a database NULL in a text column
 # reaches the frontend as an empty string so no cell renderer needs to know about NULLs at all.
-_row_numeric_columns = ('id', 'size', 'duration_ms')
+_row_numeric_columns = ('id', 'size', 'duration_ms', 'cid_sequence')
 
 # The free-text search covers these columns
 _search_columns = ('data', 'msg_id', 'correl_id', 'endpoint', 'ext_client_id')
