@@ -32,9 +32,6 @@ $.fn.zato.destinations.config = {
     respondFromServiceLabel: 'The service',
     defaultType: 'rest',
 
-    // What a channel handing its messages to neither a service nor a destination is told
-    noTargetMessage: 'Pick a service, a destination, or both - a channel needs at least one of them',
-
     typeList: [
         {id: 'rest',     label: 'REST'},
         {id: 'hl7-mllp', label: 'MLLP'},

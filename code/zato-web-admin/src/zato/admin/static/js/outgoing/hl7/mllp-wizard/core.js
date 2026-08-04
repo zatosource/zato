@@ -26,9 +26,18 @@ wizard.config_own = {
     // reads its input under
     editFieldPrefix: 'edit-',
 
-    // What the last step's button says, named after the action it performs
-    createLabel: 'Create',
-    editLabel: 'Save',
+    // What the button ending either of the two actions says
+    saveLabel: 'Save',
+
+    // The sections the review is read in, each group of answers under its own -
+    // the missing targets below name them too, which is why they are here rather
+    // than in the review module, loaded after this one
+    groups: {
+        destination: 'Destination',
+        framing: 'Framing and timing',
+        delivery: 'Delivery',
+        logging: 'Logging and audit'
+    },
 
     // The connection type the name has to be unique within - generic
     // connection names are unique per type rather than across all of them
@@ -78,9 +87,9 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
     stepCount: 3,
 
     // What the create page is - the edit page says so in its init options
-    // and the two keys below follow it before the kit's own init runs
+    // and the prefix below follows it before the kit's own init runs
     fieldPrefix: '',
-    finishLabel: wizard.config_own.createLabel,
+    finishLabel: wizard.config_own.saveLabel,
 
     // The rows the "How does it work?" badge walks through - the card header
     // with the wizard-wide overview, then anything on a step body holding a
@@ -101,6 +110,20 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         'read_buffer_size',
         'pool_size'
     ],
+
+    // Where each of them is read on the review and answered on its step - the
+    // name and the address stand on rows of their own, the rest are edited in
+    // the popovers the three lines below open
+    missingTargets: {
+        name:             {group: wizard.config_own.groups.destination, label: 'Name'},
+        address:          {group: wizard.config_own.groups.destination, label: 'Address'},
+        start_seq:        {group: wizard.config_own.groups.framing, anchorSelector: '#mllp-outconn-wizard-row-framing'},
+        end_seq:          {group: wizard.config_own.groups.framing, anchorSelector: '#mllp-outconn-wizard-row-framing'},
+        max_msg_size:     {group: wizard.config_own.groups.framing, anchorSelector: '#mllp-outconn-wizard-row-framing'},
+        read_buffer_size: {group: wizard.config_own.groups.framing, anchorSelector: '#mllp-outconn-wizard-row-framing'},
+        recv_timeout:     {group: wizard.config_own.groups.framing, anchorSelector: '#mllp-outconn-wizard-row-timing'},
+        pool_size:        {group: wizard.config_own.groups.delivery, anchorSelector: '#mllp-outconn-wizard-row-pool'}
+    },
 
     // The name check is scoped to MLLP outgoing connections because generic
     // connection names are unique per connection type
@@ -196,7 +219,6 @@ wizard.init = function(options) {
 
     if(options.is_edit) {
         wizard.config.fieldPrefix = ownConfig.editFieldPrefix;
-        wizard.config.finishLabel = ownConfig.editLabel;
     }
 
     wizard._kitInit(options);

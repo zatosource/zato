@@ -23,6 +23,15 @@ wizard.labels = {
     claimNo: 'No - this platform is the only consumer'
 };
 
+// The sections the review is read in, each group of answers under its own -
+// the missing targets below name them too
+wizard.groups = {
+
+    pickup: 'Pickup',
+    processing: 'Processing',
+    schedule: 'Schedule'
+};
+
 // ////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.wizard_kit.core.setup(wizard, {
@@ -33,8 +42,8 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
     // How many steps the wizard has
     stepCount: 3,
 
-    // The last step ends in the action itself, so the button says what it does
-    finishLabel: 'Create',
+    // What the button ending the action says
+    finishLabel: 'Save',
 
     // The rows the "How does it work?" badge walks through - the card
     // header with the wizard-wide overview, then anything on a step
@@ -55,6 +64,22 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         'run_every',
         'start_date'
     ],
+
+    // Where each of them is read on the review and answered on its step - every
+    // one of them is a field on a step body, so each is asked for on its own row,
+    // and no popover names them, which is why every label is spelled out here
+    missingTargets: {
+        name:              {group: wizard.groups.pickup, label: 'Name'},
+        directory:         {group: wizard.groups.pickup, label: 'Directory'},
+        pattern:           {group: wizard.groups.pickup, label: 'File pattern'},
+        stability_delay:   {group: wizard.groups.pickup, label: 'Check gap'},
+        marker_suffix:     {group: wizard.groups.pickup, label: 'Marker suffix'},
+        scheduler_service: {group: wizard.groups.processing, label: 'Service',
+                            anchorSelector: '#file-transfer-wizard-service-row'},
+        move_directory:    {group: wizard.groups.processing, label: 'Move to directory'},
+        run_every:         {group: wizard.groups.schedule, label: 'Run every'},
+        start_date:        {group: wizard.groups.schedule, label: 'Start time'}
+    },
 
 // ////////////////////////////////////////////////////////////////////////
 
@@ -248,8 +273,10 @@ wizard.review.render = function() {
     var isActive = wizard.field('is_active').is(':checked');
     var runEvery = wizard.field('run_every').val() + ' ' + wizard.field('run_unit').val();
 
+    var groups = wizard.groups;
+
     review.renderGroups([
-        {label: 'Pickup', step: 0, rows: [
+        {label: groups.pickup, step: 0, rows: [
             ['Name', wizard.field('name').val()],
             ['Connection', $('#file-transfer-wizard-context-badge').text()],
             ['Directory', review.codeValue(wizard.field('directory').val())],
@@ -257,13 +284,13 @@ wizard.review.render = function() {
             ['A file is ready', readyText],
             ['Claim before processing', claimText]
         ]},
-        {label: 'Processing', step: 1, rows: [
+        {label: groups.processing, step: 1, rows: [
             ['Service', wizard.field('scheduler_service').val()],
             ['Invoked with', labels.invokedWith],
             ['After success', successText],
             ['After failure', labels.afterFailure]
         ]},
-        {label: 'Schedule', step: 1, rows: [
+        {label: groups.schedule, step: 1, rows: [
             ['Run every', runEvery],
             ['Start time', wizard.field('start_date').val()],
             ['Active', isActive ? 'Yes' : 'No']

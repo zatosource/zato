@@ -27,9 +27,21 @@ wizard.config_own = {
     // reads its input under
     editFieldPrefix: 'edit-',
 
-    // What the last step's button says, named after the action it performs
-    createLabel: 'Create',
-    editLabel: 'Save',
+    // What the button ending either of the two actions says
+    saveLabel: 'Save',
+
+    // The sections the review is read in, each group of answers under its own -
+    // the missing targets below name them too, which is why they are here rather
+    // than in the review module, loaded after this one
+    groups: {
+        basics: 'Basics',
+        transport: 'Transport',
+        routing: 'Routing',
+        targets: 'Destinations and service',
+        tolerance: 'Tolerance',
+        dedup: 'Deduplication',
+        logging: 'Logging'
+    },
 
     // The connection type the name has to be unique within - generic
     // connection names are unique per type rather than across all of them
@@ -82,7 +94,7 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
     // What the create page is - the edit page says so in its init options
     // and the two keys below follow it before the kit's own init runs
     fieldPrefix: '',
-    finishLabel: wizard.config_own.createLabel,
+    finishLabel: wizard.config_own.saveLabel,
 
     // The rows the "How does it work?" badge walks through - the card
     // header with the wizard-wide overview, then anything on a step
@@ -102,6 +114,39 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         'end_seq',
         'default_character_encoding'
     ],
+
+    // Where each of them is read on the review and answered on its step - the
+    // name stands on a row of its own, everything else is edited in the protocol
+    // options popover, so the line opening it is what a refused save points at
+    missingTargets: {
+        name:                       {group: wizard.config_own.groups.basics, label: 'Name'},
+        max_msg_size:               {group: wizard.config_own.groups.transport, anchorSelector: '#mllp-wizard-row-transport'},
+        max_msg_size_unit:          {group: wizard.config_own.groups.transport, anchorSelector: '#mllp-wizard-row-transport'},
+        recv_timeout:               {group: wizard.config_own.groups.transport, anchorSelector: '#mllp-wizard-row-transport'},
+        idle_timeout:               {group: wizard.config_own.groups.transport, anchorSelector: '#mllp-wizard-row-transport',
+                                     label: 'Idle timeout'},
+        start_seq:                  {group: wizard.config_own.groups.transport, anchorSelector: '#mllp-wizard-row-transport'},
+        end_seq:                    {group: wizard.config_own.groups.transport, anchorSelector: '#mllp-wizard-row-transport'},
+        default_character_encoding: {group: wizard.config_own.groups.transport, anchorSelector: '#mllp-wizard-row-transport'}
+    },
+
+    // A channel hands its messages to a service, to its destinations or to both,
+    // so with neither of them answered both questions are still open
+    missingExtra: function() {
+
+        if(wizard._has_target()) {
+            return [];
+        }
+
+        var group = wizard.config_own.groups.targets;
+
+        var out = [
+            {label: 'Destinations', group: group, anchorSelector: '#mllp-wizard-line-destinations'},
+            {label: 'Service',      group: group, anchorSelector: '#mllp-wizard-line-service'}
+        ];
+
+        return out;
+    },
 
     // The name check is scoped to MLLP channels because generic
     // connection names are unique per connection type
@@ -152,17 +197,8 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
         // The destination rows travel in hidden JSON fields the backend reads ..
         wizard.destinations.serialize();
 
-        // .. so do the security definitions picked for the REST bridge ..
+        // .. and so do the security definitions picked for the REST bridge.
         wizard._writeSecurityIdInputs(form);
-
-        // .. and a channel handing its messages to neither a service nor a destination
-        // is not created at all, the step saying which of the two is missing.
-        if(!wizard._has_target()) {
-            $.fn.zato.user_message(false, $.fn.zato.destinations.config.noTargetMessage);
-            return false;
-        }
-
-        return true;
     }
 });
 
@@ -183,7 +219,6 @@ wizard.init = function(options) {
 
     if(options.is_edit) {
         wizard.config.fieldPrefix = ownConfig.editFieldPrefix;
-        wizard.config.finishLabel = ownConfig.editLabel;
 
         // The steps read the state rather than the form for everything that is
         // not one field of its own, so what the channel already holds goes in

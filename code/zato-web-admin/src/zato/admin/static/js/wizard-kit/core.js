@@ -47,10 +47,30 @@
 //      beforeSave     - optional, runs before validation on Finish, e.g. to
 //                       serialize rows into hidden fields - returning false
 //                       stops the save, the instance having said why itself
+//      missingTargets - optional, where each required field is read on the
+//                       review and answered on its step, keyed by field name -
+//                       {group, label, anchorSelector}, see below
+//      missingExtra   - optional, the questions still open that are not one
+//                       empty field, each of them the same entry with its
+//                       label and anchorSelector spelled out
 //      finishLabel    - optional, what the button on the last step says,
-//                       named after the action - Create or Edit
+//                       named after the action it performs
 //      savedMessage, saveErrorMessage, redirectDelayMs,
 //      nextLabel      - optional, the defaults below cover them
+//
+// A missingTargets entry says where an unanswered question is read and where
+// it is answered:
+//
+//      group          - the label of the review group the field is read in,
+//                       one of those review.render passes to renderGroups
+//      label          - optional, what the field is called - by default the
+//                       label of the micro-form input it is edited in
+//      anchorSelector - optional, the row a refused save marks and scrolls
+//                       to, e.g. the line opening the popover holding the
+//                       field - by default the field's own row
+//
+// Which step an answer is given on is not declared - the kit reads it off
+// the step body the anchor sits in.
 //
 // The element contract - ids derived from idPrefix, all required:
 //
@@ -75,8 +95,8 @@
 //      wizard.review.refreshSummaries()- recomputes the card summaries
 //
 // setup(wizard, config) installs on the namespace: config, state, field,
-// fieldSelector, init, goToStep, save, updateNameBadge, initNameBadge,
-// onNameCheckResult.
+// fieldSelector, init, goToStep, save, reveal, missingList, checkMissing,
+// updateNameBadge, initNameBadge, onNameCheckResult.
 // The page then calls wizard.init({list_url: ...}) when the DOM is ready.
 //
 // The init options:
@@ -105,12 +125,22 @@ kit.core.defaults = {
     redirectDelayMs: 750,
 
     // The footer button labels. The last step is where the wizard does what
-    // it was opened for, so an instance names that - Create or Edit.
+    // it was opened for, so an instance names that.
     finishLabel: 'Finish',
     nextLabel: 'Next',
 
     // The field the header badge mirrors
-    nameField: 'name'
+    nameField: 'name',
+
+    // How an element a refused save waits for is brought into view
+    scrollBehavior: 'smooth',
+    scrollBlock: 'center',
+
+    // What a step's row holding an answer still waited for is marked with
+    missingClass: 'wizard-missing',
+
+    // Which row that is, for a field whose target names no anchor of its own
+    missingRowSelector: '.wizard-name-row, .wizard-field-row, .wizard-line, .wizard-toggle-row'
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -378,6 +408,142 @@ kit.core.setup = function(wizard, config) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+    // Brings one element into view without a jump, which is how a refused save
+    // shows what it is waiting for
+    wizard.reveal = function(element) {
+
+        var wizardConfig = wizard.config;
+
+        element.scrollIntoView({behavior: wizardConfig.scrollBehavior, block: wizardConfig.scrollBlock});
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // Which step an answer is given on - the body holding the row it is given
+    // in. A field edited in a popover is answered where the popover opens, so
+    // the row that opens it is what is asked about, not the hidden input.
+    wizard._missingStep = function(anchor) {
+
+        var out = 0;
+
+        for(var bodyIdx = 0; bodyIdx < wizard.config.stepCount; bodyIdx++) {
+            var body = $('#' + idPrefix + '-step-body-' + bodyIdx);
+            if(body.find(anchor).length) {
+                out = bodyIdx;
+            }
+        }
+
+        return out;
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // One question the wizard cannot be saved without an answer to - what it
+    // is called, the review section it is read in, and where it is answered.
+    wizard._missingEntry = function(fieldName, target) {
+
+        var wizardConfig = wizard.config;
+
+        var label = target.label;
+        if(!label) {
+            label = wizard.forms.fieldLabel(fieldName);
+        }
+
+        // A field the target says nothing about is asked for on its own row
+        var anchor = $(target.anchorSelector);
+        if(!anchor.length) {
+            anchor = wizard.field(fieldName).closest(wizardConfig.missingRowSelector);
+        }
+
+        var out = {
+            label: label,
+            group: target.group,
+            step: wizard._missingStep(anchor),
+            anchor: anchor
+        };
+
+        return out;
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // Every such question still open - the required fields left empty, then
+    // whatever the instance asks beyond them. The review says so in place and
+    // a refused save goes to the first of them, both reading this.
+    wizard.missingList = function() {
+
+        var wizardConfig = wizard.config;
+        var targets = wizardConfig.missingTargets;
+        var out = [];
+
+        if(targets) {
+            for(var fieldIdx = 0; fieldIdx < wizardConfig.requiredFields.length; fieldIdx++) {
+
+                var fieldName = wizardConfig.requiredFields[fieldIdx];
+                var target = targets[fieldName];
+
+                if(!target) {
+                    continue;
+                }
+
+                if(wizard.field(fieldName).val().trim()) {
+                    continue;
+                }
+
+                out.push(wizard._missingEntry(fieldName, target));
+            }
+        }
+
+        if(wizardConfig.missingExtra) {
+            var extraList = wizardConfig.missingExtra();
+
+            for(var extraIdx = 0; extraIdx < extraList.length; extraIdx++) {
+                var extra = extraList[extraIdx];
+                out.push(wizard._missingEntry(extra.field, extra));
+            }
+        }
+
+        return out;
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // Whether every question the wizard must answer has been, and if not, where
+    // the first answer still waited for is asked. With the review on screen it is
+    // read there, every open question at once - anywhere else the page goes to the
+    // step the answer is given on and marks the row asking for it.
+    wizard.checkMissing = function() {
+
+        var wizardConfig = wizard.config;
+        var missingList = wizard.missingList();
+
+        $('.' + wizardConfig.missingClass).removeClass(wizardConfig.missingClass);
+
+        if(!missingList.length) {
+            return true;
+        }
+
+        if(wizard.state.currentStep === wizardConfig.stepCount - 1) {
+
+            wizard.review.render();
+
+            var missingValue = $('#' + idPrefix + '-review .' + kit.review.config.missingValueClass).first();
+            wizard.reveal(missingValue.closest('.wizard-review-row')[0]);
+
+            return false;
+        }
+
+        var first = missingList[0];
+
+        wizard.goToStep(first.step);
+        first.anchor.addClass(wizardConfig.missingClass);
+        wizard.reveal(first.anchor[0]);
+
+        return false;
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
     wizard.goToStep = function(stepIndex) {
 
         var wizardConfig = wizard.config;
@@ -446,6 +612,11 @@ kit.core.setup = function(wizard, config) {
             }
         }
 
+        // .. a wizard is saved only once every question it must answer has been ..
+        if(!wizard.checkMissing()) {
+            return;
+        }
+
         // .. client-side validation next ..
         if(!$.fn.zato.is_form_valid(form)) {
             return;
@@ -464,7 +635,6 @@ kit.core.setup = function(wizard, config) {
             if(status === 'success') {
                 var response = JSON.parse(data.responseText);
                 statusElement.text(wizardConfig.savedMessage).addClass('wizard-status-saved');
-                $('#user-message-div').hide();
 
                 // Back to the list page, with the new item highlighted
                 setTimeout(function() {
@@ -473,7 +643,10 @@ kit.core.setup = function(wizard, config) {
             }
             else {
                 statusElement.text(wizardConfig.saveErrorMessage).addClass('wizard-status-error');
-                $.fn.zato.user_message(false, data.responseText);
+
+                // The footer says that it failed, the whole of what came back being too much
+                // for a line of it - that goes where a failure is looked into
+                console.error(data.responseText);
             }
         };
 

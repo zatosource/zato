@@ -242,11 +242,12 @@ review._buildEdit = function(descriptorName, linkId) {
 review.render = function() {
 
     var ownConfig = review.config_own;
+    var groups = wizard.config_own.groups;
     var isActive = wizard.field('is_active').prop('checked');
 
     review.renderGroups([
         {
-            label: 'Destination',
+            label: groups.destination,
             step: 0,
             rows: [
                 ['Name', review._value('name')],
@@ -255,7 +256,7 @@ review.render = function() {
             ]
         },
         {
-            label: 'Framing and timing',
+            label: groups.framing,
             step: 0,
             edit: review._buildEdit('framing', 'mllp-outconn-wizard-edit-framing'),
             rows: [
@@ -265,7 +266,7 @@ review.render = function() {
             ]
         },
         {
-            label: 'Delivery',
+            label: groups.delivery,
             step: 1,
             edit: review._buildEdit('retries', 'mllp-outconn-wizard-edit-retries'),
             rows: [
@@ -275,7 +276,7 @@ review.render = function() {
             ]
         },
         {
-            label: 'Logging and audit',
+            label: groups.logging,
             step: 1,
             edit: function() {
                 review.openOptions();

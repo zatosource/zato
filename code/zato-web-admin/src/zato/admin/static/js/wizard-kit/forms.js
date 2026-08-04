@@ -143,6 +143,45 @@ kit.forms.setup = function(wizard, config) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+    // What one field is called where it is edited, the micro-forms being the one
+    // place every field of theirs is named. A field no popover holds is named by
+    // whoever asks for it instead.
+    forms.fieldLabel = function(fieldName) {
+
+        var out = '';
+
+        for(var descriptorName in forms.descriptors) {
+
+            var pages = forms.descriptors[descriptorName].pages;
+
+            for(var pageIdx = 0; pageIdx < pages.length; pageIdx++) {
+
+                var page = pages[pageIdx];
+
+                for(var entryIdx = 0; entryIdx < page.length; entryIdx++) {
+
+                    // An entry is either one field or a row of them shown side by side
+                    var entry = page[entryIdx];
+                    var specList = entry.length ? entry : [entry];
+
+                    for(var specIdx = 0; specIdx < specList.length; specIdx++) {
+
+                        var spec = specList[specIdx];
+
+                        // A field carrying a unit is edited under one label with it
+                        if(spec.field === fieldName || spec.unitField === fieldName) {
+                            out = spec.label;
+                        }
+                    }
+                }
+            }
+        }
+
+        return out;
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
     // The help texts a page keeps under its Django field ids, said again under the
     // ids the popover inputs take - one text describes a field wherever it is shown.
     forms.helpDescriptions = function(shared) {

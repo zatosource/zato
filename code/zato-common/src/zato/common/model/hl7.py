@@ -18,13 +18,16 @@ class HL7MLLPChannelConfigObject:
     name: str = ''
     is_active: bool = False
     is_internal: bool = False
-    service: strnone = None
     security_name: strnone = None
 
-    # The channel's destination list as it is stored, plus how many destinations that comes to -
-    # a channel that declares none keeps the empty string and the count of zero.
+    # What a message is handed to - a channel names a service, a list of destinations or both,
+    # and whichever of them it leaves out stays the empty string rather than nothing at all,
+    # the list writing each of these out as it stands.
+    service: str = ''
     destinations: str = ''
     destination_count: int = 0
+    respond_from: str = ''
+    delivery_mode: str = ''
 
     # The MSH fields the channel matches incoming messages on, a field left empty matching
     # anything, plus the one line the whole match comes to when it is written out.
