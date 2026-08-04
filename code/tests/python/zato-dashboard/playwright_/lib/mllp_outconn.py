@@ -32,6 +32,9 @@ Popover_Input_Prefix = f'{Wizard_Id}-tippy-'
 Popover_Selector = f'#{Wizard_Id}-popup'
 Popover_Ok_Selector = f'#{Wizard_Id}-popup .wizard-tippy-buttons .action-button'
 
+# What a save that went through says beside the button it was asked for through
+Saved_Tippy_Selector = '.tippy-box:has-text("OK, saved")'
+
 # How long the wizard is given to open, to save and to land back on the list
 _Wizard_Timeout = 10000
 
@@ -135,12 +138,21 @@ def go_to_step(page:'Page', step_index:'int') -> 'None':
 # ################################################################################################################################
 
 def finish_wizard(page:'Page', name:'str') -> 'None':
-    """ Presses the button of the last step and waits for the list page the wizard
-    lands back on, with the connection's own row on it.
+    """ Saves through the button the action ends in, waits for the tooltip saying the save
+    went through and then closes the form, a save leaving open the page it was made on. The
+    list page it goes back to carries the connection's own row.
     """
-    go_to_step(page, 2)
+    # An edit is saved from the step it stands on, a create from the end of its walk
+    if page.is_visible(f'#{Wizard_Id}-save'):
+        page.click(f'#{Wizard_Id}-save')
 
-    page.click(f'#{Wizard_Id}-next')
+    else:
+        go_to_step(page, 2)
+        page.click(f'#{Wizard_Id}-next')
+
+    _ = page.wait_for_selector(Saved_Tippy_Selector, timeout=_Wizard_Timeout)
+
+    page.click(f'#{Wizard_Id}-cancel')
     page.wait_for_url('**/zato/outgoing/hl7/mllp/**', timeout=_Wizard_Timeout)
 
     _ = page.wait_for_selector('#data-table', state='visible')

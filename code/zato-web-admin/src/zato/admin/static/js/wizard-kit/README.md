@@ -2,9 +2,11 @@
 
 A config-driven framework for multi-step wizard pages, following the dashboard kit conventions - IIFE modules hanging sub-namespaces off one root, all domain specifics injected through config. The root namespace is `$.fn.zato.wizard_kit`, declared in `static/js/common.js`.
 
-A wizard page is one dashboard card holding a step strip, one body per step, a review on the last step and a footer with Back, Next and Cancel. The rendered Django form is the single source of every field's value - whatever the wizard shows on its steps reads from and writes back into the form, so the payload posted on Finish is exactly what the matching full-page editor would post.
+A wizard page is one dashboard card holding a step strip, one body per step, a review on the last step and a footer with Back, Next and the link closing the form. The rendered Django form is the single source of every field's value - whatever the wizard shows on its steps reads from and writes back into the form, so the payload posted on Finish is exactly what the matching full-page editor would post.
 
-A page opened on an object that already exists says so with `is_edit: true` in its `init` options, and its footer is Cancel and Save instead of Back and Next. An edit is not a walk from one end to the other - each step stands on its own, is reached from the step strip and is saved from where it is. Save posts the same whole form Finish does, every step being in the DOM at once, so where the reader happened to be standing makes no difference to what is written. The review step is not offered either, its tab taken out of the strip - looking over what is about to be made is a create's business, an edit having the object in front of it already.
+Enter does what the button ending the step does, a page filled in from the keyboard being finished from the keyboard - it walks a create on to the next step and saves it from the last one, and it saves an edit from wherever it stands. A field that answers Enter itself keeps it, a chosen select picking the option under the cursor and a multi-line field taking it as text.
+
+A page opened on an object that already exists says so with `is_edit: true` in its `init` options, and its footer is Save and the closing link instead of Back and Next. An edit is not a walk from one end to the other - each step stands on its own, is reached from the step strip and is saved from where it is. Save posts the same whole form Finish does, every step being in the DOM at once, so where the reader happened to be standing makes no difference to what is written. The review step is not offered either, its tab taken out of the strip - looking over what is about to be made is a create's business, an edit having the object in front of it already.
 
 Three instances exist today:
 
@@ -56,7 +58,7 @@ The page then calls `wizard.init({list_url: ...})` when the DOM is ready.
 
 | Key | Meaning |
 |---|---|
-| `list_url` | Where Cancel and a finished save go back to |
+| `list_url` | Where the link closing the form goes back to |
 | `is_edit` | Whether the page was opened on an object that already exists |
 
 ## Core config contract
@@ -76,7 +78,7 @@ The page then calls `wizard.init({list_url: ...})` when the DOM is ready.
 | `missingTargets` | Optional, where each required field is read on the review and answered on its step, keyed by field name - see the section on the answers a save waits for |
 | `missingExtra` | Optional, the questions still open that are not one empty field, as a list of the same entries |
 | `finishLabel` | Optional, what the button on the last step says - named after the action the wizard ends in, `Save` for all three of them |
-| `savedMessage`, `saveErrorMessage`, `redirectDelayMs`, `nextLabel`, `scrollBehavior`, `scrollBlock`, `missingClass`, `missingRowSelector`, `pulsateClass` | Optional, the defaults in `kit.core.defaults` cover them |
+| `nextLabel`, `scrollBehavior`, `scrollBlock`, `missingClass`, `missingRowSelector`, `pulsateClass` | Optional, the defaults in `kit.core.defaults` cover them |
 
 `core.setup` installs on the namespace: `config`, `state`, `field`, `fieldSelector`, `init`, `goToStep`, `reveal`, `pulsate`, `missingList`, `checkMissing`, `save`, `updateNameBadge`, `initNameBadge`, `onNameCheckResult`. `wizard.reveal(element)` scrolls one element into view the gentle way, `wizard.pulsate(elements)` pulses a set of them with the shared honey `.pulsate` of `style.css`, the one the updates page wears on a version it has just found - together they are how a refused save shows what it is waiting for. The `wizard.field(name)` accessor resolves `#id_<fieldPrefix><name>` and is the one way into the rendered Django form. `wizard.fieldSelector(name)` returns the same id as a selector string, which is what the shared helpers that mark a field required or check it for uniqueness take - everything inside the kit goes through one of the two, so a prefixed instance is prefixed everywhere.
 
@@ -88,7 +90,7 @@ All ids derive from `idPrefix` and all are required:
 - `#<idPrefix>-steps` - the step strip, tabs carry `.wizard-step` and a `data-step` attribute
 - `#<idPrefix>-step-body-N` - one body per step, N counted from 0
 - `#<idPrefix>-name-badge` - the header badge mirroring the name
-- `#<idPrefix>-back`, `-next`, `-cancel`, `-save`, `-status` - the footer. Back is rendered `disabled`, since a page opens on its first step and there is nothing behind it - the step walking takes it from there. Save is rendered `hidden`, a create ending in the Next button rather than in one of its own. Cancel is an `a.wizard-cancel` rather than a button, leaving being no action of the page's own, so it wears the same link face as everything else on a wizard. An edit hides Back and Next and moves Save into the middle they leave
+- `#<idPrefix>-back`, `-next`, `-cancel`, `-save` - the footer. Back is rendered `disabled`, since a page opens on its first step and there is nothing behind it - the step walking takes it from there. Save is rendered `hidden`, a create ending in the Next button rather than in one of its own. Closing the form is an `a.wizard-cancel` rather than a button, leaving being no action of the page's own, so it wears the same link face as everything else on a wizard. An edit hides Back and Next and moves Save into the middle they leave
 - `#<idPrefix>-how-it-works` - the page-wide help badge
 - `#<idPrefix>-review` - where the review step renders
 
@@ -237,7 +239,15 @@ Which step an answer is given on is never declared - the kit reads it off the st
 
 `missingExtra` is for a question that is not one empty field, e.g. an MLLP channel needing either a service or a destination, neither of them required on its own.
 
-`wizard.missingList()` is every such question still open. The review renderer reads it on each render and writes `Missing` in red into the section each entry belongs to - over the row already asking the question, or as a row of its own for a question no row mentions, so an instance writes its rows as if everything were answered. `wizard.checkMissing()` is what a save runs before it posts: every open question pulses where it is asked, the ones off screen included, and the page scrolls to the first of them - with the review on screen that is the word `Missing` in it, anywhere else the label of the row on the step the answer is given on, the row itself wearing `.wizard-missing`. Nothing is said in a message area or a popup - the page shows what it is waiting for where the answer is given.
+`wizard.missingList()` is every such question still open. The review renderer reads it on each render and writes `Missing` in red into the section each entry belongs to - over the row already asking the question, or as a row of its own for a question no row mentions, so an instance writes its rows as if everything were answered. `wizard.checkMissing()` is what a save runs before it posts: every open question pulses where it is asked, the ones off screen included, and the page scrolls to the first of them - with the review on screen that is the word `Missing` in it, anywhere else the label of the row on the step the answer is given on.
+
+The fields themselves are not marked by the kit at all. A save runs `$.fn.zato.is_form_valid` first, the very call a REST channel is submitted through, and that is what puts `.zato-validator-attention` on every required field left empty - the red frame, the honey, one blink, `This is a required field` where its own placeholder would be, and the chosen box marked in place of the select hiding behind it. It takes its mark off each field the moment that field is answered, and the field's own placeholder comes back with it. None of that is restyled here, so a field a wizard is waiting for reads exactly like a field a REST channel is waiting for.
+
+What the kit adds around that is the row asking the question: the label naming it wears `.wizard-missing` and turns the same red, wherever the row is, so a step walked back to says on its own what it is waiting for. The mark stays on the cell asking the question, so a label beside it, an Active switch say, is left alone.
+
+A save that goes through says so the way every inline edit on a listing does - a tooltip reading `OK, saved` to the left of the button it was asked for through, gone a moment later, the page it was made on staying open. One that does not shows `Save failed` there instead, with a `Show details` link opening the exception the endpoint sent back. Both come from `$.fn.zato.action_runner`, the labels and the timings from `$.fn.zato.inline_edit.config`, so a wizard and a listing answer in the same words.
+
+Which questions a save waits on follows what the page is. A create is one walk ending in one save, so it waits on all of them and the review is where they are read. An edit is a page per step, each saved from where it is, so a save there waits only on the questions its own step asks - saving the first step of a channel is not the moment to answer for the second, and the save made on that step is where those answers are due. The shared validator is pointed the same way, at the whole form on a create and at the body of the step on screen on an edit, so it does not refuse a save over a field another step holds. Nothing is said in a message area or a popup - the page shows what it is waiting for where the answer is given.
 
 ## Choice cards
 
@@ -257,7 +267,7 @@ Clicks inside the unfolded body do not re-select, so typing into the card's own 
 
 ## CSS
 
-The shared stylesheet is `static/css/shared/wizard-kit.css` - the card, the step strip, the badges, the name row, sections, toggle rows, select rows, the service picker, option cards, choice cards, the review, the popover micro-forms (tippy theme `wizard`), the live check, the footer and the status area. The decision lines have one of their own, `static/css/shared/wizard-lines.css` - the lines, the chips, the options strip and the panels, including how a badge picker sits inside a panel. An instance stylesheet adds only what is truly its own, e.g. the MLLP tolerance grid.
+The shared stylesheet is `static/css/shared/wizard-kit.css` - the card, the step strip, the badges, the name row, sections, toggle rows, select rows, the service picker, option cards, choice cards, the review, the popover micro-forms (tippy theme `wizard`), the live check and the footer. The decision lines have one of their own, `static/css/shared/wizard-lines.css` - the lines, the chips, the options strip and the panels, including how a badge picker sits inside a panel. An instance stylesheet adds only what is truly its own, e.g. the MLLP tolerance grid.
 
 Parameterization runs through the `--wizard-*` tokens, declared with defaults on `:root` because the popover micro-forms are appended to `document.body`, outside any page container. An instance recolors itself by overriding the tokens in its own stylesheet, also on `:root`, since one page carries one wizard.
 

@@ -55,8 +55,13 @@
 //                       label and anchorSelector spelled out
 //      finishLabel    - optional, what the button on the last step says,
 //                       named after the action it performs
-//      savedMessage, saveErrorMessage, redirectDelayMs,
-//      nextLabel      - optional, the defaults below cover them
+//      nextLabel      - optional, the defaults below cover it
+//
+// A required field left empty is marked by the shared validator a save runs
+// first, $.fn.zato.is_form_valid, the very one every form on the dashboard is
+// submitted through - the frame, the honey and the message are the same there
+// as anywhere else. What the kit adds around it is the row asking the question,
+// the review reading them all and the step a refused save goes to.
 //
 // A missingTargets entry says where an unanswered question is read and where
 // it is answered:
@@ -79,14 +84,17 @@
 //                                 and a data-step attribute
 //      #<idPrefix>-step-body-N  - one body per step, N counted from 0
 //      #<idPrefix>-name-badge   - the header badge mirroring the name
-//      #<idPrefix>-back, -next, -cancel, -save, -status - the footer, with
-//                       Back rendered disabled, the first step having nothing
+//      #<idPrefix>-back, -next, -cancel, -save - the footer, with Back
+//                       rendered disabled, the first step having nothing
 //                       behind it, Save rendered hidden, a create being a walk
 //                       that ends in one, and Cancel a link, leaving being no
 //                       action of the page's own. An edit hides Back and Next
 //                       and moves Save into the middle they leave, so every
 //                       step is saved from where it is, and it drops the
-//                       review step's tab.
+//                       review step's tab. How a save went is said in a
+//                       tooltip beside the button it was asked for through,
+//                       and Enter anywhere in the form does what that
+//                       button does.
 //      #<idPrefix>-how-it-works - the page-wide help badge
 //      #<idPrefix>-review       - where the review step renders
 //
@@ -103,7 +111,8 @@
 //
 // The init options:
 //
-//      list_url       - where Cancel and a finished save go back to
+//      list_url       - where the link closing the form goes back to, a save
+//                       leaving the page it was made on open
 //      is_edit        - whether the page was opened on an object that
 //                       already exists
 
@@ -118,13 +127,6 @@ kit.core = {};
 
 // The defaults every wizard shares - the instance config overrides them
 kit.core.defaults = {
-
-    // Messages shown next to the Finish button after a save attempt
-    savedMessage: 'OK, saved',
-    saveErrorMessage: 'Could not save',
-
-    // How long the success message stays on screen before the redirect
-    redirectDelayMs: 750,
 
     // The footer button labels. The last step is where the wizard does what
     // it was opened for, so an instance names that.
@@ -263,6 +265,41 @@ kit.core.setup = function(wizard, config) {
 
         $('#' + idPrefix + '-save').on('click', function() {
             wizard.save();
+        });
+
+        // .. Enter does what the button ending the step does, so a page filled in from the
+        // keyboard is finished from the keyboard - it saves an edit, each step of one being
+        // saved from where it stands, and it walks a create on to the step after this one,
+        // the last of them being where a create saves ..
+        $(wizardConfig.formSelector).on('keydown', function(event) {
+
+            if(event.key !== 'Enter') {
+                return;
+            }
+
+            // A button answers Enter on its own and a multi-line field takes it as text ..
+            var tagName = event.target.tagName;
+
+            if(tagName === 'BUTTON' || tagName === 'TEXTAREA') {
+                return;
+            }
+
+            // .. and a chosen select answers it with the option under the cursor, which is
+            // an answer to that field rather than to the step it sits on ..
+            if($(event.target).closest('.chosen-container').length) {
+                return;
+            }
+
+            // .. and nothing here is submitted by the browser, every button on the page
+            // being a plain one, so the key is answered in full right here.
+            event.preventDefault();
+
+            if(wizard.state.isEdit) {
+                wizard.save();
+            }
+            else {
+                $('#' + idPrefix + '-next').click();
+            }
         });
 
         // An edit is not a walk from one end to the other - each step stands on its own,
@@ -538,24 +575,84 @@ kit.core.setup = function(wizard, config) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    // Whether every question the wizard must answer has been, and if not, where
-    // the first answer still waited for is asked. All of them pulse, wherever they
-    // are - with the review on screen they are read there, every open question at
-    // once, anywhere else the page goes to the step the first one is given on and
-    // marks the rows asking for them.
+    // The open questions a save has to wait on. A create is one walk ending in one
+    // save, so it waits on all of them - an edit is a page per step, each saved from
+    // where it is, so it waits only on the step it is on and leaves the questions the
+    // other steps ask to the saves made there.
+    wizard._missingToWaitOn = function() {
+
+        var missingList = wizard.missingList();
+
+        if(!wizard.state.isEdit) {
+            return missingList;
+        }
+
+        var out = [];
+
+        for(var entryIdx = 0; entryIdx < missingList.length; entryIdx++) {
+            if(missingList[entryIdx].step === wizard.state.currentStep) {
+                out.push(missingList[entryIdx]);
+            }
+        }
+
+        return out;
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // Takes the marks of the last refused save off the rows - whatever they asked for
+    // is answered by now or is about to be asked for again. The fields themselves are
+    // not touched here, the shared validator taking its own mark off each one the
+    // moment it is answered.
+    wizard._clearMissing = function() {
+
+        var wizardConfig = wizard.config;
+
+        $('.' + wizardConfig.missingClass).removeClass(wizardConfig.missingClass);
+        $('.' + wizardConfig.pulsateClass).removeClass(wizardConfig.pulsateClass);
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // Marks every question still open where it is asked - the label naming the row goes
+    // red, the same red the field under it wears. Gives back the cells to pulse.
+    wizard._markMissing = function(missingList) {
+
+        var wizardConfig = wizard.config;
+        var out = $();
+
+        for(var entryIdx = 0; entryIdx < missingList.length; entryIdx++) {
+
+            var entry = missingList[entryIdx];
+
+            entry.cell.addClass(wizardConfig.missingClass);
+            out = out.add(entry.cell);
+        }
+
+        return out;
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // Whether every question the save has to wait on has been answered, and if not,
+    // where the first one still open is asked. All of them pulse, wherever they are -
+    // with the review on screen they are read there, every open question at once,
+    // anywhere else the page goes to the step the first one is given on and marks the
+    // rows asking for them.
     wizard.checkMissing = function() {
 
         var wizardConfig = wizard.config;
-        var missingList = wizard.missingList();
+        var missingList = wizard._missingToWaitOn();
 
-        // Whatever the last refused save marked and pulsed is answered by now
-        // or is about to be asked for again
-        $('.' + wizardConfig.missingClass).removeClass(wizardConfig.missingClass);
-        $('.' + wizardConfig.pulsateClass).removeClass(wizardConfig.pulsateClass);
+        wizard._clearMissing();
 
         if(!missingList.length) {
             return true;
         }
+
+        // Wherever the questions are read, the rows asking them are marked, so a step
+        // walked back to says on its own what it is still waiting for
+        var cellList = wizard._markMissing(missingList);
 
         if(wizard.state.currentStep === wizardConfig.stepCount - 1) {
 
@@ -569,16 +666,8 @@ kit.core.setup = function(wizard, config) {
             return false;
         }
 
-        // Every open question is marked and pulsed where it is asked, on whichever
-        // step that is, and the page goes to the first of them
-        var cellList = $();
-
-        for(var entryIdx = 0; entryIdx < missingList.length; entryIdx++) {
-            var entry = missingList[entryIdx];
-            entry.anchor.addClass(wizardConfig.missingClass);
-            cellList = cellList.add(entry.cell);
-        }
-
+        // Every open question pulses where it is asked, on whichever step that is,
+        // and the page goes to the first of them
         var first = missingList[0];
 
         wizard.goToStep(first.step);
@@ -645,6 +734,33 @@ kit.core.setup = function(wizard, config) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+    // What the shared validator is pointed at, it asking every required field it finds
+    // inside. A create is one walk ending in one save, so the whole form answers for it -
+    // an edit is a page per step, each saved from where it is, so only the step on screen
+    // is asked and a field another step holds is left to the save made there.
+    wizard._requiredScope = function() {
+
+        if(wizard.state.isEdit) {
+            return $('#' + idPrefix + '-step-body-' + wizard.state.currentStep);
+        }
+
+        return $(wizard.config.formSelector);
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // The button a save was asked for through - the one ending the walk on a create,
+    // the Save an edit shows in its place. It is what the answer is shown beside.
+    wizard._actionButton = function() {
+
+        var buttonId = wizard.state.isEdit ? '-save' : '-next';
+        var out = document.getElementById(idPrefix + buttonId);
+
+        return out;
+    };
+
+// ////////////////////////////////////////////////////////////////////////
+
     wizard.save = function() {
 
         var wizardConfig = wizard.config;
@@ -658,13 +774,15 @@ kit.core.setup = function(wizard, config) {
             }
         }
 
-        // .. a wizard is saved only once every question it must answer has been ..
-        if(!wizard.checkMissing()) {
-            return;
-        }
+        // .. the fields say for themselves what they are still waiting for, in the frame,
+        // the honey and the message every form on the dashboard says it in ..
+        var isFormValid = $.fn.zato.is_form_valid(wizard._requiredScope());
 
-        // .. client-side validation next ..
-        if(!$.fn.zato.is_form_valid(form)) {
+        // .. the wizard says the rest of it - the row asking each question, the review
+        // reading them all and the step to go to - and both have to be satisfied ..
+        var isAnswered = wizard.checkMissing();
+
+        if(!isFormValid || !isAnswered) {
             return;
         }
 
@@ -673,31 +791,39 @@ kit.core.setup = function(wizard, config) {
             return;
         }
 
-        var statusElement = $('#' + idPrefix + '-status');
-        statusElement.text('').removeClass('wizard-status-saved wizard-status-error');
+        // .. what was typed is taken without the spaces around it, a name being the same
+        // name however it was pasted in ..
+        form.find('input[type="text"], textarea').each(function() {
+            $(this).val($(this).val().trim());
+        });
 
-        var callback = function(data, status) {
+        // .. and the save itself says how it went beside the button that asked for it,
+        // in the very words and the very tooltip an inline edit answers with, a failure
+        // keeping the whole of what came back one click away.
+        var inlineConfig = $.fn.zato.inline_edit.config;
 
-            if(status === 'success') {
-                var response = JSON.parse(data.responseText);
-                statusElement.text(wizardConfig.savedMessage).addClass('wizard-status-saved');
+        $.fn.zato.action_runner.run({
+            link_elem: wizard._actionButton(),
+            url: form.attr('action'),
+            data: form.serialize(),
+            placement: inlineConfig.confirmation_placement,
+            spinner_label: inlineConfig.saving_label,
+            details_modal_title: inlineConfig.details_modal_title,
+            show_delay_ms: inlineConfig.saving_lead_in_ms,
 
-                // Back to the list page, with the new item highlighted
-                setTimeout(function() {
-                    window.location.href = wizard.state.listUrl + '&highlight=' + response.id;
-                }, wizardConfig.redirectDelayMs);
+            // The endpoint answers with JSON when it saved and with the exception when it did not
+            parse: function(jqXHR) {
+
+                var isHttpOk = (jqXHR.status >= 200 && jqXHR.status < 300);
+
+                return {
+                    is_success: isHttpOk,
+                    label: isHttpOk ? inlineConfig.saved_label : inlineConfig.error_label,
+                    details_title: inlineConfig.error_label,
+                    details_body: jqXHR.responseText
+                };
             }
-            else {
-                statusElement.text(wizardConfig.saveErrorMessage).addClass('wizard-status-error');
-
-                // The footer says that it failed, the whole of what came back being too much
-                // for a line of it - that goes where a failure is looked into
-                console.error(data.responseText);
-            }
-        };
-
-        // .. and the actual POST to the create endpoint.
-        $.fn.zato.data_table._on_submit(form, callback);
+        });
     };
 
 // ////////////////////////////////////////////////////////////////////////

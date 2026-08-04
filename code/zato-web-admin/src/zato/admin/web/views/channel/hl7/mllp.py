@@ -196,7 +196,9 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     # A channel hands each message to a service, to its destinations, or to both, so the service
-    # is not required here - what a channel may not do is name neither of the two.
+    # is not required here - what a new channel may not do is name neither of the two.
+    is_target_required = True
+
     input_required = 'name', 'is_internal'
     input_optional = (
         'service',
@@ -267,9 +269,11 @@ class _CreateEdit(CreateEdit):
 # ################################################################################################################################
 
     def _check_target(self) -> 'None':
-        """ Refuses a channel that hands each message it accepts to neither a service nor a
+        """ Refuses a new channel that hands each message it accepts to neither a service nor a
         destination, there being nowhere for its messages to go - the same rule the enmasse
-        importer enforces, applied to what the page posts.
+        importer enforces, applied to what the page posts. A stored channel is not asked again,
+        one that had its service and its destinations taken away being one someone meant to
+        leave that way.
         """
         prefix = self.form_prefix
         post_data = self.req.POST
@@ -277,17 +281,19 @@ class _CreateEdit(CreateEdit):
         service = post_data[f'{prefix}service']
         destinations = post_data[f'{prefix}destinations']
 
-        if not service:
+        if service:
+            return
 
+        if self.is_target_required:
             if not count_entries(destinations):
                 name = post_data[f'{prefix}name']
                 raise Exception(f'HL7 MLLP channel `{name}` needs a service or at least one destination')
 
-            # The backing REST channel hands each request to a service of its own, which is the
-            # channel's, so there is no bridge to build for a channel that names no service.
-            if post_data.get(f'{prefix}use_rest'):
-                name = post_data[f'{prefix}name']
-                raise Exception(f'HL7 MLLP channel `{name}` needs a service for its REST bridge')
+        # The backing REST channel hands each request to a service of its own, which is the
+        # channel's, so there is no bridge to build for a channel that names no service.
+        if post_data.get(f'{prefix}use_rest'):
+            name = post_data[f'{prefix}name']
+            raise Exception(f'HL7 MLLP channel `{name}` needs a service for its REST bridge')
 
 # ################################################################################################################################
 
@@ -564,6 +570,10 @@ class Edit(_CreateEdit):
     url_name = 'channel-hl7-mllp-edit'
     form_prefix = 'edit-'
     service_name = 'zato.generic.connection.edit'
+
+    # Where a stored channel's messages go is answered on the step that asks it, and each step
+    # of an edit is saved on its own, so a save made on another one leaves that answer alone
+    is_target_required = False
 
 # ################################################################################################################################
 # ################################################################################################################################

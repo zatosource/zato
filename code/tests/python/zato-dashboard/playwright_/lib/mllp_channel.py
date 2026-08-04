@@ -190,8 +190,12 @@ def create_channel(
     page.click('#mllp-wizard-next')
     time.sleep(0.2)
 
-    # .. step 3 - finish, which posts the form and returns to the list ..
+    # .. step 3 - finish, which posts the form and says so where it was asked for, the page
+    # it was saved from staying open, so the list is gone back to on its own ..
     page.click('#mllp-wizard-next')
+    _ = page.wait_for_selector('.tippy-box:has-text("OK, saved")', timeout=10000)
+
+    page.click('#mllp-wizard-cancel')
     _ = page.wait_for_url('**/zato/channel/hl7/mllp/**', timeout=10000)
     _ = page.wait_for_selector('#data-table', state='visible')
 
@@ -202,10 +206,10 @@ def create_channel(
 # ################################################################################################################################
 
 def save_channel(page:'Page', base_url:'str', name:'str') -> 'None':
-    """ Opens an existing channel in the same wizard, from its row's Edit link, and walks it
-    to the end with nothing changed. What the channel already stores is what the wizard opens
-    with, so the save posts back exactly what was there - anything the wizard failed to read
-    back is what the channel loses.
+    """ Opens an existing channel in the same wizard, from its row's Edit link, and saves it
+    with nothing changed. What the channel already stores is what the wizard opens with, so
+    the save posts back exactly what was there - anything the wizard failed to read back is
+    what the channel loses.
     """
     navigate_to_channels(page, base_url)
 
@@ -214,16 +218,13 @@ def save_channel(page:'Page', base_url:'str', name:'str') -> 'None':
     page.click(f'{row_selector} a:text-is("Edit")')
     _ = page.wait_for_selector('#mllp-wizard', state='visible')
 
-    # Step 1 to step 2, step 2 to the review, and the review's own button saves
-    page.click('#mllp-wizard-next')
-    time.sleep(0.2)
-
-    page.click('#mllp-wizard-next')
-    time.sleep(0.2)
+    # An edit is saved from the step it is on, every step being in the form at once
+    page.click('#mllp-wizard-save')
+    _ = page.wait_for_selector('.tippy-box:has-text("OK, saved")', timeout=10000)
 
     # The wizard page has no data table of its own, so waiting for one is waiting for
-    # the list page the save lands on
-    page.click('#mllp-wizard-next')
+    # the list page closing the form goes back to
+    page.click('#mllp-wizard-cancel')
     _ = page.wait_for_selector('#data-table', state='visible', timeout=10000)
 
     row = page.query_selector(row_selector)

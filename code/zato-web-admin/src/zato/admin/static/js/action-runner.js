@@ -12,7 +12,8 @@
  *       url: '<POST target>',
  *       data: '<optional POST body>',
  *       parse: function(jqXHR, textStatus) { return {is_success, label, details_title, details_body}; },
- *       details_modal_title: 'Response'
+ *       details_modal_title: 'Response',
+ *       placement: 'left'
  *   });
  *
  *   $.fn.zato.action_runner.close_all();
@@ -234,6 +235,7 @@ $.fn.zato.action_runner = {
         var details_modal_title = opts.details_modal_title || 'Response';
         var spinner_label = opts.spinner_label || 'Pinging ..';
         var show_delay_ms = opts.show_delay_ms || 0;
+        var placement = opts.placement || 'top';
 
         console.log('[action_runner] run: url=' + url + ' data_length=' + data.length + ' has_on_success=' + !!on_success);
         console.log('[action_runner] run: link_elem=' + (link_elem ? link_elem.tagName + '.' + link_elem.className : 'null'));
@@ -270,7 +272,7 @@ $.fn.zato.action_runner = {
         var instance = tippy(link_elem, {
             content: _spinner_html,
             allowHTML: true,
-            placement: 'top',
+            placement: placement,
             trigger: 'manual',
             arrow: true,
             animation: 'fade',
