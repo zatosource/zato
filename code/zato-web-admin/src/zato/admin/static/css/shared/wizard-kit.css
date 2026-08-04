@@ -1001,6 +1001,9 @@ a.wizard-select-delete:hover::before {
     color: var(--wizard-error);
 }
 
+/* Each of them pulses where it is asked, in the shared honey .pulsate of
+   style.css - the word Missing in the review, the label of a row on a step */
+
 /* ------------------------------------------------------------ */
 /* Wizard - the live check                                       */
 /* ------------------------------------------------------------ */
@@ -1100,6 +1103,12 @@ a.wizard-select-delete:hover::before {
 .wizard-footer .secondary-button {
     box-shadow: none !important;
     text-shadow: none !important;
+}
+
+/* Leaving is not an action the page pushes, so it is a link like every other
+   one on a wizard, reading at the size the buttons beside it do */
+a.wizard-cancel {
+    font-size: var(--wizard-button-font-size);
 }
 
 .wizard-footer button:disabled {

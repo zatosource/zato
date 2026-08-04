@@ -941,6 +941,23 @@ input[data-zato-validator-required="required"]::placeholder {
     }
 }
 
+/* The honey pulse that asks the reader to look here - the version the updates
+   page has just found, the answer a refused save is waiting for. It lives here
+   rather than next to either of them so that both wear the very same pulse.
+   It fits the words it is put on, never the box around them, which is what
+   the inline-block is for - a transform passes an inline element by. */
+@keyframes pulsate {
+    0%, 100% { transform: scale(1); background-color: transparent; }
+    50% { transform: scale(1.1); background-color: #fffacd; }
+}
+
+.pulsate {
+    animation: pulsate 0.5s ease-in-out 3;
+    display: inline-block;
+    border-radius: 3px;
+    transition: background-color 0.2s;
+}
+
 .options-expanded {
     background-color:#e3e3e0;
 }
