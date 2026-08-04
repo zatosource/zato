@@ -815,7 +815,6 @@ def inline_edit(req:'any_', id:'str') -> 'JsonResponse':
         'match_label': get_match_label(get_match_values(lambda name: item_dict[name])),
         'default_cleared_id': default_cleared_id,
         'service': service,
-        'destination_count': destination_count,
     })
 
     return out
