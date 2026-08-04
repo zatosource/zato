@@ -13,10 +13,10 @@ what a page of rows is enriched with before it reaches the browser.
 from sqlalchemy import and_, func, or_, select
 
 # Zato
-from zato.admin.web.views.audit_log.columns import _data_preview_len, _search_columns, _source_attr_columns, \
-    _source_body_preview, _status_outstanding
+from zato.admin.web.views.audit_log.columns import _data_preview_len, _row_numeric_columns, _search_columns, \
+    _source_attr_columns, _source_body_preview, _status_outstanding
 from zato.admin.web.views.audit_log.sources import _source_outstanding
-from zato.common.audit_log.api import event_attr_table, event_body_table, event_table
+from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table
 from zato.common.audit_log.query import outstanding_conditions
 
 # ################################################################################################################################
@@ -114,6 +114,94 @@ def _build_where(
             out.extend(conditions)
 
     return out
+
+# ################################################################################################################################
+
+def _normalize_row(row:'anydict') -> 'None':
+    """ Turns the NULLs of one row's text columns into empty strings, so that every cell
+    the frontend reads is a value of the type its column says it is.
+    """
+    for key, value in row.items():
+
+        # Numbers are left alone - a missing duration is not a duration of zero,
+        # and the frontend says so rather than showing one.
+        if key in _row_numeric_columns:
+            continue
+
+        if value is None:
+            row[key] = ''
+
+# ################################################################################################################################
+
+def _attach_lineage(connection:'any_', rows:'anylist') -> 'None':
+    """ Merges the lineage of the page rows in - what each event came out of and what came out of it.
+    One event may have several parents because aggregation makes one message out of many, and several
+    children because a message may be resubmitted more than once.
+    """
+    row_by_event_id:'anydict' = {}
+
+    for row in rows:
+        row['parents'] = []
+        row['children'] = []
+
+        row_by_event_id[row['id']] = row
+
+    if not row_by_event_id:
+        return
+
+    is_child_here = event_link_table.c.child_event_id.in_(row_by_event_id)
+    is_parent_here = event_link_table.c.parent_event_id.in_(row_by_event_id)
+
+    statement = select(
+        event_link_table.c.child_event_id,
+        event_link_table.c.parent_event_id,
+        event_link_table.c.link_type,
+    )
+    statement = statement.where(or_(is_child_here, is_parent_here))
+
+    result = connection.execute(statement)
+
+    for child_event_id, parent_event_id, link_type in result:
+
+        # A link is seen from both ends when both of its events are on the page,
+        # and from one end only when the other event is on a page of its own.
+        if child_row := row_by_event_id.get(child_event_id):
+            child_row['parents'].append({'id': parent_event_id, 'link_type': link_type})
+
+        if parent_row := row_by_event_id.get(parent_event_id):
+            parent_row['children'].append({'id': child_event_id, 'link_type': link_type})
+
+# ################################################################################################################################
+
+def _attach_body_kinds(connection:'any_', rows:'anylist') -> 'None':
+    """ Says which message bodies each row of the page has - what was sent, what came back and what
+    the other side said when it failed - so a row can offer them without asking for them first.
+    """
+    row_by_event_id:'anydict' = {}
+
+    for row in rows:
+        row['body_kinds'] = []
+
+        row_by_event_id[row['id']] = row
+
+    if not row_by_event_id:
+        return
+
+    is_wanted_event = event_body_table.c.event_id.in_(row_by_event_id)
+
+    statement = select(event_body_table.c.event_id, event_body_table.c.kind)
+    statement = statement.where(is_wanted_event)
+    statement = statement.order_by(event_body_table.c.id)
+
+    result = connection.execute(statement)
+
+    for event_id, kind in result:
+        row = row_by_event_id[event_id]
+
+        # One event stores one body of each kind, yet a retried delivery may have stored
+        # its own, so the kind is named once no matter how many rows carry it.
+        if kind not in row['body_kinds']:
+            row['body_kinds'].append(kind)
 
 # ################################################################################################################################
 

@@ -4,8 +4,6 @@
 @import url("../dashboard-kit/main_chart.css");
 
 .detail-page-scheduler {
-    --component-accent: var(--zato-seablue);
-    --component-accent-light: #e0f0ff;
     --detail-search-icon-color: #8a8a8a;
 }
 
@@ -103,36 +101,6 @@
 .detail-config-extra .hl-comment { color: #6e7781; font-style: italic; }
 
 
-@keyframes kit-puff {
-    0%   { transform: scale(1); background: rgba(218, 165, 32, 0.5); color: #7a5c00; }
-    50%  { transform: scale(1.12); background: rgba(218, 165, 32, 0.3); color: #7a5c00; }
-    100% { transform: scale(1); }
-}
-
-.kit-puff {
-    animation: kit-puff 0.7s ease-out;
-}
-
-@keyframes kit-fade-in {
-    from { opacity: 0; transform: translateY(-2px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-
-.kit-fade-in {
-    animation: kit-fade-in 0.35s ease-out;
-}
-
-.detail-tag {
-    display: inline-block;
-    font-size: 11px;
-    padding: 1px 6px;
-    border-radius: 3px;
-    margin-right: 4px;
-    font-weight: 600;
-    cursor: pointer;
-    user-select: none;
-}
-
 tbody tr[data-run]:not(.detail-panel-row) {
     cursor: pointer;
 }
@@ -161,11 +129,11 @@ tbody tr[data-run]:not(.detail-panel-row) {
 }
 
 .detail-panel-log {
-    font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+    font-family: var(--dashboard-mono);
     padding: 2px 0;
     border-radius: 0 0 4px 4px;
-    background: #232336;
-    border: 1px solid #3a3a52;
+    background: var(--dashboard-panel-background);
+    border: 1px solid var(--dashboard-panel-border);
     font-size: 12px;
     max-width: 100%;
     overflow: hidden;

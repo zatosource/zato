@@ -1,0 +1,264 @@
+@import url("../dashboard-kit/kit.css");
+@import url("../dashboard-kit/outcome.css");
+@import url("../dashboard-kit/time_range.css");
+@import url("../dashboard-kit/main_chart.css");
+@import url("../dashboard-kit/chips.css");
+@import url("../dashboard-kit/direction.css");
+@import url("../dashboard-kit/payload_panel.css");
+@import url("../dashboard-kit/timeline.css");
+@import url("../dashboard-kit/list_detail.css");
+
+/* ------------------------------------------------------------ */
+/* The page around the listing                                   */
+/* ------------------------------------------------------------ */
+
+/* There are no tabs on this page - everything on it is an event */
+
+.detail-page-audit-log .dashboard-tabs {
+    display: none;
+}
+
+.audit-log-search-form {
+    display: flex;
+    gap: 0.5rem;
+    margin: 0.5rem 0 1rem 0;
+}
+
+.audit-log-search-input {
+    width: 24rem;
+}
+
+.audit-log-filter-pill {
+    align-self: center;
+    cursor: pointer;
+    background: #eef1f5;
+    color: #4a5568;
+}
+
+.audit-log-filter-pill-active {
+    background: var(--dashboard-line-strong);
+    color: #fff;
+}
+
+/* ------------------------------------------------------------ */
+/* The chrome above the listing                                  */
+/* ------------------------------------------------------------ */
+
+.audit-log-chrome-controls {
+    margin-bottom: 0.6rem;
+}
+
+/* ------------------------------------------------------------ */
+/* The main list                                                 */
+/* ------------------------------------------------------------ */
+
+.audit-log-list-table {
+    width: 100%;
+    margin: 0;
+    table-layout: fixed;
+}
+
+.audit-log-row {
+    cursor: pointer;
+}
+
+.audit-log-row:hover {
+    background: var(--dashboard-row-hover);
+}
+
+/* The tint of a row that has just arrived is set on the element itself, so what marks
+   the selection is laid over whatever colour the row is already wearing */
+
+.audit-log-row.dashboard-list-detail-item-selected {
+    box-shadow:
+        inset 3px 0 0 var(--dashboard-accent),
+        inset 0 0 0 999px rgba(224, 240, 255, 0.55);
+}
+
+.audit-log-list-table td {
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--dashboard-line);
+    vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.audit-log-cell-time {
+    width: 70px;
+    font-family: var(--dashboard-mono);
+    font-size: 12px;
+    color: var(--dashboard-muted);
+}
+
+.audit-log-cell-direction {
+    width: 44px;
+}
+
+.audit-log-cell-id {
+    width: 130px;
+    font-family: var(--dashboard-mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--dashboard-line-strong);
+}
+
+.audit-log-cell-event {
+    width: 120px;
+    font-size: 12px;
+}
+
+.audit-log-cell-outcome {
+    width: 74px;
+}
+
+.audit-log-cell-chips {
+    width: 30%;
+}
+
+.audit-log-cell-size {
+    width: 100px;
+    text-align: right;
+}
+
+.audit-log-cell-preview {
+    font-family: var(--dashboard-mono);
+    font-size: 12px;
+    color: #3f4854;
+}
+
+.audit-log-cell-action {
+    width: 110px;
+    text-align: right;
+}
+
+.audit-log-empty-row td,
+.detail-loading-row td {
+    padding: 10px 12px;
+    color: var(--dashboard-muted);
+}
+
+/* The payload of one row against the largest one on the page */
+
+.audit-log-size-bar {
+    display: inline-block;
+    width: 34px;
+    height: 6px;
+    margin-right: 6px;
+    border-radius: 1px;
+    background: rgba(42, 127, 191, 0.14);
+    vertical-align: middle;
+}
+
+.audit-log-size-bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: 1px;
+    background: rgba(42, 127, 191, 0.55);
+}
+
+.audit-log-size-text {
+    font-family: var(--dashboard-mono);
+    font-size: 12px;
+}
+
+/* ------------------------------------------------------------ */
+/* Parts both the list and the pane are drawn out of             */
+/* ------------------------------------------------------------ */
+
+.audit-log-outcome-none {
+    color: var(--dashboard-muted);
+}
+
+.audit-log-muted {
+    color: var(--dashboard-muted);
+}
+
+.audit-log-lineage {
+    display: inline-block;
+    margin-right: 6px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #7b5ea7;
+    background: rgba(123, 94, 167, 0.12);
+    cursor: pointer;
+}
+
+.audit-log-resubmitted-marker {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: #e0f0ff;
+    color: var(--dashboard-line-strong);
+}
+
+/* ------------------------------------------------------------ */
+/* The detail pane                                               */
+/* ------------------------------------------------------------ */
+
+.audit-log-pane-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.audit-log-pane-title {
+    font-family: var(--dashboard-mono);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--dashboard-line-strong);
+}
+
+.audit-log-pane-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.audit-log-copy-cid {
+    padding: 1px 10px;
+    border: 1px solid var(--dashboard-line);
+    border-radius: 3px;
+    font-size: 11px;
+    color: var(--dashboard-line-strong);
+    background: #fff;
+    cursor: pointer;
+}
+
+.audit-log-copy-cid:hover {
+    background: var(--dashboard-row-selected);
+}
+
+.audit-log-pane-chips {
+    margin-bottom: 10px;
+}
+
+.audit-log-pane-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.audit-log-pane-cell-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--dashboard-muted);
+}
+
+.audit-log-pane-cell-value {
+    font-family: var(--dashboard-mono);
+    font-size: 12px;
+    color: var(--dashboard-line-strong);
+    word-break: break-all;
+}

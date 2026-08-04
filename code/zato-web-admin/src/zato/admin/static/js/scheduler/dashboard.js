@@ -52,63 +52,15 @@ $.fn.zato.scheduler.dashboard.theme = {
 // Outcome color map - tinted badge palette (uses theme accent for OK)
 // ////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.scheduler.dashboard.outcome_colors = {
-    'ok': '#2a7fbf',
-    'running': '#888',
-    'error': '#e0226e',
-    'timeout': '#b35e00',
-    'skipped_already_in_flight': '#7b5ea7'
-};
+$.fn.zato.scheduler.dashboard.outcome_colors = $.fn.zato.dashboard_kit.palette.outcome.colors;
+$.fn.zato.scheduler.dashboard.outcome_backgrounds = $.fn.zato.dashboard_kit.palette.outcome.backgrounds;
+$.fn.zato.scheduler.dashboard.outcome_bar_colors = $.fn.zato.dashboard_kit.palette.outcome.bar_colors;
+$.fn.zato.scheduler.dashboard.outcome_bar_tints = $.fn.zato.dashboard_kit.palette.outcome.bar_tints;
+$.fn.zato.scheduler.dashboard.outcome_labels = $.fn.zato.dashboard_kit.palette.outcome.labels;
+$.fn.zato.scheduler.dashboard.outcome_short_labels = $.fn.zato.dashboard_kit.palette.outcome.short_labels;
+$.fn.zato.scheduler.dashboard.outcome_tooltips = $.fn.zato.dashboard_kit.palette.outcome.tooltips;
 
-$.fn.zato.scheduler.dashboard.outcome_backgrounds = {
-    'ok': 'rgba(42, 127, 191, 0.12)',
-    'running': 'rgba(136, 136, 136, 0.12)',
-    'error': 'rgba(224, 34, 110, 0.12)',
-    'timeout': 'rgba(179, 94, 0, 0.12)',
-    'skipped_already_in_flight': 'rgba(123, 94, 167, 0.12)'
-};
-
-$.fn.zato.scheduler.dashboard.outcome_bar_colors = {
-    'ok': '#3a9ad9',
-    'running': '#aaa',
-    'error': '#c0392b',
-    'timeout': '#b45309',
-    'skipped_already_in_flight': '#6b4d94'
-};
-
-$.fn.zato.scheduler.dashboard.outcome_bar_tints = {
-    'ok': '#d1e8f8',
-    'running': '#e0e0e0',
-    'error': '#f5d5d2',
-    'timeout': '#fde8cd',
-    'skipped_already_in_flight': '#ddd0ef'
-};
-
-$.fn.zato.scheduler.dashboard.outcome_labels = {
-    'ok': 'OK',
-    'running': 'Running',
-    'error': 'Error',
-    'timeout': 'Timeout',
-    'skipped_already_in_flight': 'Skipped (already in flight)'
-};
-
-$.fn.zato.scheduler.dashboard.outcome_short_labels = {
-    'skipped_already_in_flight': 'Skipped'
-};
-
-$.fn.zato.scheduler.dashboard.outcome_tooltips = {
-    'skipped_already_in_flight': 'Skipped because run #{ctx} was already in flight'
-};
-
-
-$.fn.zato.scheduler.dashboard.outcome_palette = {
-    colors: $.fn.zato.scheduler.dashboard.outcome_colors,
-    backgrounds: $.fn.zato.scheduler.dashboard.outcome_backgrounds,
-    bar_colors: $.fn.zato.scheduler.dashboard.outcome_bar_colors,
-    labels: $.fn.zato.scheduler.dashboard.outcome_labels,
-    short_labels: $.fn.zato.scheduler.dashboard.outcome_short_labels,
-    tooltips: $.fn.zato.scheduler.dashboard.outcome_tooltips
-};
+$.fn.zato.scheduler.dashboard.outcome_palette = $.fn.zato.dashboard_kit.palette.outcome_palette;
 
 // ////////////////////////////////////////////////////////////////////////////
 // Kit aliases - keep short references for code that used the old local names

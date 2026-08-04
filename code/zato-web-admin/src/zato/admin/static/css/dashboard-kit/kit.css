@@ -5,8 +5,49 @@
    hero strip, section wrappers, responsive breakpoints, skeleton
    shimmer. Nothing in here is specific to scheduler or pub/sub. */
 
+/* The tokens every kit component reads - the dark frame a payload is shown in,
+   the lines and the muted text around it, and the type a value is set in. */
+
+:root {
+    --dashboard-panel-background: #232336;
+    --dashboard-panel-border: #3a3a52;
+    --dashboard-panel-text: #e6e6ef;
+    --dashboard-payload-height: 320px;
+
+    --dashboard-line: #e4e8ee;
+    --dashboard-line-strong: #012845;
+    --dashboard-muted: #6b7280;
+    --dashboard-accent: var(--zato-seablue);
+    --dashboard-row-hover: #f3f8fc;
+    --dashboard-row-selected: #e0f0ff;
+
+    --dashboard-mono: 'Menlo', 'Consolas', 'Monaco', monospace;
+    --dashboard-timeline-height: 44px;
+}
+
 .dashboard-page {
     min-height: calc(100vh - 60px);
+}
+
+/* What a row that has just arrived does, and what a panel that has just opened does */
+
+@keyframes kit-puff {
+    0%   { transform: scale(1); background: rgba(218, 165, 32, 0.5); color: #7a5c00; }
+    50%  { transform: scale(1.12); background: rgba(218, 165, 32, 0.3); color: #7a5c00; }
+    100% { transform: scale(1); }
+}
+
+.kit-puff {
+    animation: kit-puff 0.7s ease-out;
+}
+
+@keyframes kit-fade-in {
+    from { opacity: 0; transform: translateY(-2px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.kit-fade-in {
+    animation: kit-fade-in 0.35s ease-out;
 }
 
 /* Hide the top nav border-bottom on pages that host a dashboard */
