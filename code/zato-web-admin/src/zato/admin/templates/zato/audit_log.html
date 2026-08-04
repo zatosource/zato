@@ -43,6 +43,7 @@ $(document).ready(function() {
         time_to: '{{ time_to }}',
         query: '{{ query }}',
         columns: {{ columns_json|safe }},
+        outcomes: {{ outcomes_json|safe }},
         resubmitLabels: {{ resubmit_labels_json|safe }},
         exchange: {{ exchange_json|safe }}
     });

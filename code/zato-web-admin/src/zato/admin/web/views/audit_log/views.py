@@ -22,8 +22,8 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.views import invoke_action_handler, method_allowed
-from zato.admin.web.views.audit_log.columns import _data_preview_len, _default_page, _poll_url, _row_columns, \
-    _source_columns, _source_title, _status_outstanding
+from zato.admin.web.views.audit_log.columns import _data_preview_len, _default_page, _get_outcomes, _poll_url, \
+    _row_columns, _source_columns, _source_title, _status_outstanding
 from zato.admin.web.views.audit_log.query import _attach_attr_columns, _attach_body_kinds, _attach_body_previews, \
     _attach_lineage, _build_where, _mark_resubmitted, _normalize_row
 from zato.admin.web.views.audit_log.sources import _get_resubmit_labels, _source_outstanding, _source_parse, \
@@ -70,6 +70,9 @@ def object_index(req:'any_') -> 'TemplateResponse':
     # The listing draws each row's cells and chips out of this source's columns
     columns_json = json.dumps(_source_columns[source])
 
+    # .. and offers filters for the outcomes this source's events actually report
+    outcomes_json = json.dumps(list(_get_outcomes(source)))
+
     # The per-event-type resubmit labels of this source, empty for sources without resubmit
     resubmit_labels = _get_resubmit_labels(source)
     resubmit_labels_json = json.dumps(resubmit_labels)
@@ -90,6 +93,7 @@ def object_index(req:'any_') -> 'TemplateResponse':
         'section_title': object_name,
         'poll_url': _poll_url,
         'columns_json': columns_json,
+        'outcomes_json': outcomes_json,
         'status': status,
         'time_from': time_from,
         'time_to': time_to,
@@ -138,11 +142,14 @@ def poll(req:'any_') -> 'HttpResponse':
         select_columns.append(column)
 
     # Outstanding items are shown oldest first - the longest-waiting exchange is the most
-    # urgent one - while the regular view shows the newest events first.
+    # urgent one - while the regular view shows the newest events first. It is the time an
+    # event happened that orders them, not the order they were written in, so that a page
+    # and the window it is read through agree on what newest means. Two events of the same
+    # moment are told apart by their ids.
     if status == _status_outstanding:
-        order_by = event_table.c.id.asc()
+        order_by = [event_table.c.event_time_iso.asc(), event_table.c.id.asc()]
     else:
-        order_by = event_table.c.id.desc()
+        order_by = [event_table.c.event_time_iso.desc(), event_table.c.id.desc()]
 
     # Build both queries upfront ..
     event_count = func.count()
@@ -155,7 +162,7 @@ def poll(req:'any_') -> 'HttpResponse':
 
     page_query = select(*select_columns)
     page_query = page_query.where(*where_conditions)
-    page_query = page_query.order_by(order_by)
+    page_query = page_query.order_by(*order_by)
     page_query = page_query.limit(page_size)
     page_query = page_query.offset(offset)
 

@@ -11,7 +11,7 @@ import json
 import os
 
 # Zato
-from zato.common.crypto.api import CryptoManager
+from zato.common.hl7.mllp.ack import new_control_id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,18 +37,9 @@ Ack_Accepted = 'AA'
 # The acknowledgment code the listener answers a sender the channel turned away with
 Ack_Rejected = 'AR'
 
-# How many bits the control id of one message is made of, which is what makes each message its own
-_Control_Id_Bits = 64
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def new_control_id() -> 'str':
-    """ Returns a control id no other message of this run carries, which is how a test tells the
-    message it sent from every other one that reached the same service.
-    """
-    out = CryptoManager.generate_hex_string(_Control_Id_Bits)
-    return out
+# A control id no other message of this run carries, which is how a test tells the message it sent
+# from every other one that reached the same service. It is the one the server itself sends with.
+new_control_id = new_control_id
 
 # ################################################################################################################################
 

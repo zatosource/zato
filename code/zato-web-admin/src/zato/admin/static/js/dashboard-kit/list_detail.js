@@ -99,6 +99,8 @@
          render_item:   one item as HTML, given the item and its position
          render_empty:  what stands in for the items when there are none
          render_detail: the selected item as HTML
+         update_detail: brings a pane already holding one item to another, given the item
+                        and the pane. Without it, every selection rebuilds the pane.
          empty_detail:  what the pane holds when nothing is selected
          on_select:     called with the selected item once the pane holds it
          resize_hint:   the title the drag handles carry */
@@ -108,6 +110,10 @@
         var $host = $(config.host);
         var items = [];
         var selected_id = null;
+
+        // Whether the pane is already holding an item, which is what tells a pane that can
+        // be brought to the next one apart from a pane that has to be built first
+        var pane_is_built = false;
 
         if (config.resize_hint === undefined) {
             config.resize_hint = 'Drag to resize, double click to reset';
@@ -250,11 +256,21 @@
 
             if (item_index === -1) {
                 $pane.html(config.empty_detail);
+                pane_is_built = false;
                 return;
             }
 
             var item = items[item_index];
-            $pane.html(config.render_detail(item));
+
+            // A pane already holding an item is brought to the next one where it stands,
+            // so walking the list does not blank and rebuild the pane at every step.
+            if (pane_is_built && config.update_detail !== undefined) {
+                config.update_detail(item, $pane);
+            }
+            else {
+                $pane.html(config.render_detail(item));
+                pane_is_built = true;
+            }
 
             config.on_select(item, $pane);
         }

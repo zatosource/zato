@@ -241,8 +241,10 @@ $.fn.zato.audit_log.init = function(initConfig) {
     var kit = $.fn.zato.dashboard_kit;
     var config = $.fn.zato.audit_log.config;
 
-    // The columns to render and the resubmit labels come from the server, per source ..
+    // The columns to render, the outcomes to offer as filters and the resubmit labels come
+    // from the server, per source ..
     config.columns = initConfig.columns;
+    config.outcomes = initConfig.outcomes;
     config.resubmitLabels = initConfig.resubmitLabels;
     config.source = initConfig.source;
     config.exchange = initConfig.exchange;
@@ -250,6 +252,14 @@ $.fn.zato.audit_log.init = function(initConfig) {
     // .. the listing puts its chrome and its two panes in place before the first page arrives ..
     var listing = $.fn.zato.audit_log.listing;
     listing.init(initConfig);
+
+    // .. the first page is read through whichever window the page was opened on, which is
+    // the one the address named or, failing that, the range this screen was last left on ..
+    var timeFrom = initConfig.time_from;
+
+    if (timeFrom === '') {
+        timeFrom = listing.rangeTimeFrom();
+    }
 
     // .. wire up the paginated listing ..
     var pagination = kit.pagination.init({
@@ -260,7 +270,7 @@ $.fn.zato.audit_log.init = function(initConfig) {
             object_name: initConfig.object_name,
             query: initConfig.query,
             status: initConfig.status,
-            time_from: initConfig.time_from,
+            time_from: timeFrom,
             time_to: initConfig.time_to
         },
         table_body: listing.config.itemsHost,

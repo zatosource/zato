@@ -318,6 +318,31 @@ a.dashboard-hero-pill-link:not(.menu-link):not(.chosen-single):hover {
     user-select: none;
 }
 
+/* What one of these looks like on a dark panel, which is where most of them are */
+
+.dashboard-panel-action-badge-dark {
+    color: #aaa;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.dashboard-panel-action-badge-dark:hover {
+    color: var(--dashboard-panel-text);
+    background: rgba(255, 255, 255, 0.16);
+}
+
+/* And what one looks like on a light panel, where it stands beside what it acts on
+   and has to stay quieter than it */
+
+.dashboard-panel-action-badge-light {
+    color: var(--dashboard-muted);
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.dashboard-panel-action-badge-light:hover {
+    color: var(--dashboard-line-strong);
+    background: rgba(0, 0, 0, 0.10);
+}
+
 .badge-running-spinner {
     display: inline-block;
     width: 10px;

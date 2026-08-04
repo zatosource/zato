@@ -15,7 +15,7 @@
         return params.getAll(key);
     };
 
-    kit.url_state.set = function(updates) {
+    kit.url_state._url_with = function(updates) {
         var params = new URLSearchParams(window.location.search);
         for (var key in updates) {
             if (!updates.hasOwnProperty(key)) continue;
@@ -27,8 +27,18 @@
             }
         }
         var qs = params.toString();
-        var new_url = window.location.pathname + (qs ? '?' + qs : '');
-        history.pushState(null, '', new_url);
+        return window.location.pathname + (qs ? '?' + qs : '');
+    };
+
+    kit.url_state.set = function(updates) {
+        history.pushState(null, '', kit.url_state._url_with(updates));
+    };
+
+    /* The same as set, only the address bar is corrected where it stands rather than
+       a step being added to the history - what is being looked at within a page is not
+       somewhere the back button should have to walk out of one click at a time. */
+    kit.url_state.replace = function(updates) {
+        history.replaceState(null, '', kit.url_state._url_with(updates));
     };
 
     kit.url_state.set_list = function(key, values) {
