@@ -13,11 +13,16 @@
 
     kit.list_detail.config = {
 
-        // How far the list may be dragged either way, and how much of the pane is kept
-        // no matter how wide the list is pulled
-        min_list_width: 240,
+        // How wide the list may be pulled, and how much of the pane is kept no matter how wide
+        // it is pulled. The list has no width it stops narrowing at - it gives its columns up
+        // one at a time and then shuts altogether, the handle staying where it is to pull it
+        // back open.
         max_list_width: 1400,
         min_pane_width: 320,
+
+        // Narrower than this a list has room for nothing worth reading, so it is shut rather
+        // than left standing as a strip of empty panel
+        snap_shut_width: 110,
 
         // How far the pair may be dragged up and down
         min_height: 240,
@@ -28,6 +33,7 @@
         default_height: 560,
 
         selected_class: 'dashboard-list-detail-item-selected',
+        closed_class: 'dashboard-list-detail-closed',
 
         list_width_property: '--dashboard-list-detail-list-width',
         height_property: '--dashboard-list-detail-height'
@@ -50,8 +56,10 @@
             width = max_width;
         }
 
-        if (width < config.min_list_width) {
-            width = config.min_list_width;
+        // A list too narrow to read anything in is shut all the way rather than left ajar,
+        // which is also what keeps a drag past the left edge from going negative
+        if (width < config.snap_shut_width) {
+            width = 0;
         }
 
         return width;
@@ -155,6 +163,10 @@
         function apply_size() {
             $container[0].style.setProperty(kit_config.list_width_property, list_width + 'px');
             $container[0].style.setProperty(kit_config.height_property, height + 'px');
+
+            // A list shut all the way is taken off the grid frame and all, rather than left as
+            // a hairline of border between the handle and the pane
+            $container.toggleClass(kit_config.closed_class, list_width === 0);
         }
 
         function store_size() {
@@ -169,8 +181,19 @@
                 return;
             }
 
-            list_width = kit.list_detail._clamp_list_width(stored.list_width, $container.width());
             height = kit.list_detail._clamp_height(stored.height);
+
+            var stored_width = kit.list_detail._clamp_list_width(stored.list_width, $container.width());
+
+            // A list is shut with the handle for as long as the page is being read and no
+            // longer. A page that came up with nothing on the left of it reads as a page that
+            // failed to load rather than as one somebody left that way, so a list that would
+            // come back shut comes back the width it started out at instead.
+            if (stored_width === 0) {
+                return;
+            }
+
+            list_width = stored_width;
         }
 
         function reset_size() {

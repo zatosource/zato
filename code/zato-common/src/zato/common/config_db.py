@@ -7,12 +7,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Config DB - what the SQL screen saves are the Zato_Audit_Log_DB_* and Zato_Analytics_DB_*
-# environment variables, applied to the running process and persisted into an env.ini file
-# so they survive restarts. Both the server-side services and the dashboard process use
-# these helpers so the two processes stay in step.
+# environment variables, along with Zato_Audit_Log_Enabled, applied to the running process
+# and persisted into an env.ini file so they survive restarts. Both the server-side services
+# and the dashboard process use these helpers so the two processes stay in step.
 
 # stdlib
 import os
+
+# Zato
+from zato.common.util.api import as_bool
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,6 +38,19 @@ sql_env_prefix_by_database = {
     'analytics': 'Zato_Analytics_DB_',
     'pubsub':    'Zato_PubSub_DB_',
 }
+
+# Turns the whole audit log off - a feature switch rather than a connection field,
+# which is why it stands outside the Zato_Audit_Log_DB_ family
+Env_Audit_Log_Enabled = 'Zato_Audit_Log_Enabled'
+
+# The variable turning a database off altogether, for the databases that can be turned off -
+# the audit log can, the analytics and pub/sub stores cannot
+sql_enabled_env_by_database = {
+    'audit-log': Env_Audit_Log_Enabled,
+}
+
+# What a database that has no such variable reports - it is always in use
+Default_Enabled = True
 
 # Maps the SQL form fields to the suffixes of the corresponding environment variables
 sql_field_suffixes = {
@@ -74,6 +90,39 @@ def build_env_variables(env_prefix:'str', suffixes:'strstrdict', values:'stranyd
             value = str(value)
 
         out[env_name] = value
+
+    return out
+
+# ################################################################################################################################
+
+def build_enabled_env_variables(database:'str', values:'stranydict') -> 'stranydict':
+    """ Turns the Enabled form field of a database into its environment variable.
+    Databases that cannot be turned off have no such variable and produce nothing.
+    """
+
+    # Our response to produce
+    out:'stranydict' = {}
+
+    if env_name := sql_enabled_env_by_database.get(database):
+        out[env_name] = str(values['enabled'])
+
+    return out
+
+# ################################################################################################################################
+
+def get_enabled_from_env(database:'str') -> 'bool':
+    """ Whether a database is currently turned on, per its environment variable.
+    Databases that cannot be turned off are always on.
+    """
+
+    # Our response to produce
+    out = Default_Enabled
+
+    # A database that cannot be turned off has no such variable, and an unset variable
+    # leaves the built-in default in place
+    if env_name := sql_enabled_env_by_database.get(database):
+        if value := os.environ.get(env_name, ''):
+            out = as_bool(value)
 
     return out
 

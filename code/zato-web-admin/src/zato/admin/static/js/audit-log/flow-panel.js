@@ -28,7 +28,6 @@ panel.config = {
     previewLineCount: 24,
 
     fullMessageLabel: 'Full message',
-    openInDataLabel: 'Open in Data tab',
 
     // What the panel says about the event, each one left out when the event has nothing to
     // put there and when the line above it already said it
@@ -114,32 +113,32 @@ panel.bodyKinds = function(rowModel) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-panel.bodyBarHTML = function(rowModel) {
+panel.bodyBarHTML = function(kinds) {
     var config = panel.config;
-    var kinds = panel.bodyKinds(rowModel);
 
     var html = '<div class="audit-log-flow-body-bar">';
 
-    for (var kindIndex = 0; kindIndex < kinds.length; kindIndex++) {
-        var kind = kinds[kindIndex];
-        var activeClass = kindIndex === 0 ? ' audit-log-flow-body-kind-active' : '';
+    // An event that stored one body has nothing to choose between, so it is shown rather
+    // than offered
+    if (kinds.length > 1) {
+        for (var kindIndex = 0; kindIndex < kinds.length; kindIndex++) {
+            var kind = kinds[kindIndex];
+            var activeClass = kindIndex === 0 ? ' dashboard-panel-action-badge-active' : '';
 
-        html += '<span class="dashboard-panel-action-badge dashboard-panel-action-badge-dark ' +
-            'audit-log-flow-body-kind' + activeClass + '" data-kind="' + kind.kind + '">' +
-            kind.label + '</span>';
+            html += '<span class="dashboard-panel-action-badge dashboard-panel-action-badge-dark ' +
+                'audit-log-flow-body-kind' + activeClass + '" data-kind="' + kind.kind + '">' +
+                kind.label + '</span>';
+        }
     }
 
     html += '<span class="audit-log-flow-body-caption"></span>';
 
-    // The whole message is read in the overlay, and the whole of it beside its parsed view is
-    // read in the pane's own Data tab
+    // Only the top of the message is on the screen here, so the whole of it is one click away
     html += '<span class="audit-log-flow-body-actions">';
     html += '<span class="dashboard-panel-action-badge dashboard-panel-action-badge-dark ' +
         'audit-log-flow-copy-body">' + flow.config.copyLabel + '</span>';
     html += '<span class="dashboard-panel-action-badge dashboard-panel-action-badge-dark ' +
         'audit-log-flow-full-message">' + config.fullMessageLabel + '</span>';
-    html += '<span class="dashboard-panel-action-badge dashboard-panel-action-badge-dark ' +
-        'audit-log-flow-open-data">' + config.openInDataLabel + '</span>';
     html += '</span>';
 
     html += '</div>';
@@ -151,11 +150,14 @@ panel.bodyBarHTML = function(rowModel) {
 
 panel.contentHTML = function(rowModel) {
     var facts = panel.facts(rowModel);
+    var kinds = panel.bodyKinds(rowModel);
 
     var html = kit.fact_rows.render(facts, flow.config.darkVariant);
 
-    html += '<div class="audit-log-flow-body">';
-    html += panel.bodyBarHTML(rowModel);
+    // Which body is on the screen is the body's own business, since with a single one there
+    // is no badge to read it off
+    html += '<div class="audit-log-flow-body" data-kind="' + kinds[0].kind + '">';
+    html += panel.bodyBarHTML(kinds);
     html += '<pre class="audit-log-flow-body-text"></pre>';
     html += '</div>';
 
@@ -328,8 +330,8 @@ panel.expand = function(eventId) {
     $panel.addClass('expanded');
     $line.attr('aria-expanded', 'true');
 
-    var $kind = $panel.find('.audit-log-flow-body-kind-active');
-    panel.loadBody($panel, $kind.attr('data-kind'));
+    var $body = $panel.find('.audit-log-flow-body');
+    panel.loadBody($panel, $body.attr('data-kind'));
 
     panel.writeOpenSteps();
 };
@@ -424,11 +426,14 @@ panel.init = function() {
     $(document).on('click', '.audit-log-flow-body-kind', function() {
         var $kind = $(this);
         var $panel = $kind.closest(panelSelector);
+        var kind = $kind.attr('data-kind');
 
-        $panel.find('.audit-log-flow-body-kind').removeClass('audit-log-flow-body-kind-active');
-        $kind.addClass('audit-log-flow-body-kind-active');
+        $panel.find('.audit-log-flow-body-kind').removeClass('dashboard-panel-action-badge-active');
+        $kind.addClass('dashboard-panel-action-badge-active');
 
-        panel.loadBody($panel, $kind.attr('data-kind'));
+        $panel.find('.audit-log-flow-body').attr('data-kind', kind);
+
+        panel.loadBody($panel, kind);
     });
 
     $(document).on('click', '.audit-log-flow-copy-body', function() {
@@ -443,24 +448,6 @@ panel.init = function() {
         var rowModel = flow.rowById($panel.attr('data-step'));
 
         $.fn.zato.audit_log.openMessageOverlay(rowModel.id, rowModel.cid);
-    });
-
-    $(document).on('click', '.audit-log-flow-open-data', function() {
-        var $panel = $(this).closest(panelSelector);
-        var eventId = $panel.attr('data-step');
-
-        // An event of this very page is selected in the list and read in its Data tab, and one
-        // that belongs to another object is opened on its own page instead
-        if (listing.modelById(eventId) === null) {
-            var rowModel = flow.rowById(eventId);
-            window.location.href = flow.eventURL(rowModel);
-            return;
-        }
-
-        // The tab is switched before the event is, so that bringing the pane to the event asks
-        // for the message rather than for a flow that is about to be left behind
-        listing.tabs.set_tab(listing.config.dataTab, true);
-        listing.panes.select(eventId);
     });
 };
 

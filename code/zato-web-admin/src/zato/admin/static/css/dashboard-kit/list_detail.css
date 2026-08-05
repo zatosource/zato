@@ -5,23 +5,42 @@
 .dashboard-list-detail {
     --dashboard-list-detail-list-width: 420px;
     --dashboard-list-detail-height: 560px;
+    --dashboard-list-detail-handle-width: 7px;
 
     display: grid;
-    grid-template-columns: var(--dashboard-list-detail-list-width) 7px 1fr;
+    grid-template-columns:
+        var(--dashboard-list-detail-list-width) var(--dashboard-list-detail-handle-width) 1fr;
     align-items: stretch;
 }
 
 /* The list is dragged to whatever width suits, so what an item shows is answered
    against the list rather than against the window */
 
+/* A grid item is at least as wide as the narrowest its contents will go unless it is told
+   otherwise, so without this the list would stop shrinking where its rows stop shrinking and
+   the pane would be drawn over what is left of it. The list is the width of its own track and
+   whatever no longer fits across it is cut off rather than scrolled to, a list being read down
+   and not across. */
+
 .dashboard-list-detail-list {
     container-type: inline-size;
     container-name: dashboard-list;
 
     height: var(--dashboard-list-detail-height);
-    overflow: auto;
+    min-width: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
     border: 1px solid var(--dashboard-line);
     background: #fff;
+}
+
+/* A list shut all the way keeps its place on the grid and only stops being drawn - taking it
+   off the grid altogether would move the handle and the pane up a column each, and the pane
+   would end up in the few pixels meant for the handle. Its track is already nothing wide, so
+   dropping the frame leaves nothing of it to see. */
+
+.dashboard-list-detail-closed .dashboard-list-detail-list {
+    border-width: 0;
 }
 
 .dashboard-list-detail-pane {
@@ -41,6 +60,16 @@
 .dashboard-list-detail-handle-x:hover {
     background:
         linear-gradient(to right, transparent 2px, var(--dashboard-accent) 2px, var(--dashboard-accent) 5px, transparent 5px);
+}
+
+/* With the list shut the handle is all that is left of it, so it takes the accent to say it is
+   still there to take hold of - the same hairline it always is, only not the same colour as
+   every other rule on the page. Dragging it right brings the list back, and double clicking
+   it, as ever, puts both panes back the size they started out at. */
+
+.dashboard-list-detail-closed .dashboard-list-detail-handle-x {
+    background:
+        linear-gradient(to right, transparent 3px, var(--dashboard-accent) 3px, var(--dashboard-accent) 4px, transparent 4px);
 }
 
 .dashboard-list-detail-handle-y {

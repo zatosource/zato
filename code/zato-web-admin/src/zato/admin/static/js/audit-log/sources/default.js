@@ -45,18 +45,6 @@ $.fn.zato.audit_log.sources['default'] = {
         }
 
         return row.msg_id;
-    },
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    // The message as it went over the wire comes first, and the reading of it,
-    // for a payload that carries a document readable as such, comes after.
-    detailTabs: function(rowModel) {
-        var out = listing.bodyTabs(rowModel);
-
-        out.push(listing.parsedTab());
-
-        return out;
     }
 };
 

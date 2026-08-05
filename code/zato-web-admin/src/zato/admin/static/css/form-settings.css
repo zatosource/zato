@@ -19,9 +19,3 @@
 .form-settings-container .form-value-checkbox {
     text-align: right;
 }
-
-.form-settings-container .form-value-checkbox input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    accent-color: var(--primary-dark);
-}

@@ -190,6 +190,23 @@
         return year + '-' + month + '-' + day + ' ' + hours + ':' + minutes + ':' + seconds;
     };
 
+    /* The same timestamp with every fractional digit it was written down with. A Date carries
+       milliseconds and no more, so the fraction is lifted out of the string itself - a zone
+       offset is whole minutes, which leaves the fraction the same locally as it was in UTC. */
+    kit.format_local_time_precise = function(iso_string) {
+        if (!iso_string) return '';
+
+        var out = kit.format_local_time(iso_string);
+        var fraction = iso_string.match(/\.(\d+)/);
+
+        // A timestamp that fell on a whole second was written down without a fraction at all
+        if (fraction === null) {
+            return out;
+        }
+
+        return out + '.' + fraction[1];
+    };
+
     /* Bucket `timeline` into `bucket_count` consecutive equal-width time
        slots ending at `now`, counting only records for which
        `predicate(record)` returns true. `ts_accessor(record)` must
