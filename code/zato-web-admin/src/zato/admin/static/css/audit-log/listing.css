@@ -42,6 +42,9 @@
     --audit-log-search-clear-room: 58px;
     --audit-log-search-clear-inset: 5px;
     --audit-log-search-clear-drop: 0px;
+
+    /* How far the word inside the badge sits above the badge's own middle */
+    --audit-log-search-clear-text-lift: 1px;
     --audit-log-search-clear-layer: 2;
 
     /* The room left between the end of a row and the list's own edge, so that a framed row stops
@@ -105,6 +108,10 @@
     transform: translateY(calc(-50% + var(--audit-log-search-clear-drop)));
     margin-left: 0;
     font-weight: 400;
+
+    /* The badge keeps the height it has - the room above the word is moved below it */
+    padding-top: 0;
+    padding-bottom: calc(2 * var(--audit-log-search-clear-text-lift));
 }
 
 /* It reads the same pointed at as not - the cursor is what says it can be clicked */
