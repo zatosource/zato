@@ -23,10 +23,25 @@
        column of them is legible at a glance, and still held back from what a row is named by */
     --audit-log-time-text: #43506a;
 
-    /* The frame a failed row is picked out by, in the red an error is named in everywhere else on
-       the screen. It is dashed so that it reads as a mark left on the row rather than as a border
-       the table drew, and it is written as one value because all four sides are the one frame. */
-    --audit-log-error-frame: 2px dashed #e0226e;
+    /* The red an error is named in everywhere else on the screen, kept as its channels so that the
+       frame a failed row is picked out by and the wash behind it are the one colour at two
+       strengths. The frame is dashed so it reads as a mark left on the row rather than as a border
+       the table drew, and it is written as one value because all four sides are the one frame. The
+       wash is faint enough to leave the row's own colours - the tint of a new arrival underneath
+       it, the blue of the selection over it - reading through. */
+    --audit-log-error-rgb: 224, 34, 110;
+    --audit-log-error-frame-width: 2px;
+    --audit-log-error-frame: var(--audit-log-error-frame-width) dashed rgb(var(--audit-log-error-rgb));
+    --audit-log-error-tint: rgba(var(--audit-log-error-rgb), 0.05);
+
+    /* The room left between the end of a row and the list's own edge, so that a framed row stops
+       short of the scrollbar the list carries rather than running into it */
+    --audit-log-list-end-gap: 6px;
+
+    /* The dot a failed row is marked with, and how far its rail stands off the list. Both come out
+       of the inset the page already keeps at its edge, so nothing in the list gives up any room. */
+    --audit-log-error-dot-size: 8px;
+    --audit-log-error-rail-gap: 10px;
 
     --dashboard-flow-accent: #f6c66a;
     --dashboard-flow-accent-tint: rgba(246, 166, 5, 0.10);
@@ -72,8 +87,12 @@
 /* The main list                                                 */
 /* ------------------------------------------------------------ */
 
+/* The list takes all the room it is given bar the last few pixels of it, which are left for the
+   scrollbar to stand in - a row's own frame is no thing to meet a scrollbar with. It begins where
+   the list begins, so nothing on this screen holds a row away from the edge it is read from. */
+
 .audit-log-list-table {
-    width: 100%;
+    width: calc(100% - var(--audit-log-list-end-gap));
     margin: 0;
 }
 
@@ -98,28 +117,6 @@
     font-weight: 700;
 }
 
-/* A failed event is framed rather than filled, so what marks the selection and what marks a row
-   as newly arrived both still read through it.
-
-   The frame is drawn on the cells and this table collapses its borders, which is what keeps a run
-   of failures from doubling up: where two framed rows meet, the line below one and the line above
-   the next are the same line, drawn once. The two ends are the number cell, which is never given
-   up, and the empty cell the row's leftover room goes to, so the frame closes at the row's edges
-   however many columns a narrow list has dropped in between. */
-
-.audit-log-row-error > td {
-    border-top: var(--audit-log-error-frame);
-    border-bottom: var(--audit-log-error-frame);
-}
-
-.audit-log-row-error > td:first-child {
-    border-left: var(--audit-log-error-frame);
-}
-
-.audit-log-row-error > td:last-child {
-    border-right: var(--audit-log-error-frame);
-}
-
 /* No column of this table says how wide it is. Every one of them is as wide as what it holds and
    no wider, nothing wraps, and the room the row has over goes to the empty cell at its end, so
    the columns are laid out by the data rather than by a number written down here. A list dragged
@@ -131,6 +128,71 @@
     border-bottom: 1px solid var(--dashboard-line);
     vertical-align: middle;
     white-space: nowrap;
+}
+
+/* A failed event wears a frame and a wash of the error red, which is what a row is picked out by
+   from across the list.
+
+   The frame is the row's own border and not its cells'. A row is a row at every width, whereas its
+   cells come and go as the list is dragged narrower and the empty one at its end is there to give
+   up all of its width - hang a side of the frame on that and the side goes with the width. Being
+   the row's, the frame also outranks the line each cell carries below it, this table collapsing its
+   borders and the wider border winning when two meet. That same collapsing is what keeps a run of
+   failures from doubling up: where two framed rows meet, the line below one and the line above the
+   next are one line, drawn once.
+
+   The wash stays on the cells, which is where it covers the tint of a new arrival without hiding
+   it, and is itself covered by the blue of the selection. */
+
+.audit-log-row-error {
+    border: var(--audit-log-error-frame);
+}
+
+.audit-log-row-error > td {
+    background: var(--audit-log-error-tint);
+}
+
+/* The dots that say which rows failed stand outside the table altogether, in a rail of their own
+   beside the list, and are read down the edge of the page where nothing else is - which is what
+   lets a failure be found without reading a single row.
+
+   A rail is what it takes. The list scrolls, so it shows nothing painted outside its own edge, and
+   a mark on a row could never reach past it; the rail is next to the list rather than inside it, in
+   the room the page already leaves at its edge, and each mark is held level with its row by the
+   listing. Nothing of this is in the table, so no row moves and no column changes.
+
+   The rail is no taller than the list, and cuts off what runs past its ends, so a mark whose row
+   has been scrolled out of sight goes with it. */
+
+.detail-page-audit-log .dashboard-list-detail {
+    position: relative;
+}
+
+.audit-log-error-rail {
+    position: absolute;
+    left: calc(-1 * (var(--audit-log-error-rail-gap) + var(--audit-log-error-dot-size)));
+    width: var(--audit-log-error-dot-size);
+    overflow: hidden;
+
+    /* The rail is read, never reached for - the row beside it is what answers a click */
+    pointer-events: none;
+}
+
+.audit-log-error-rail-dot {
+    position: absolute;
+    left: 0;
+    width: var(--audit-log-error-dot-size);
+    height: var(--audit-log-error-dot-size);
+    transform: translateY(-50%);
+    border-radius: 50%;
+    background: rgb(var(--audit-log-error-rgb));
+}
+
+/* A list dragged shut has no rows to mark, and marks beside a list nobody can read stand
+   against nothing */
+
+.dashboard-list-detail-closed .audit-log-error-rail {
+    display: none;
 }
 
 /* The event's own number, which is how one event is pointed at - it is the first thing

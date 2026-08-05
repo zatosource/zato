@@ -71,8 +71,12 @@ listing.config = {
     // What stands between the day a row belongs to and the time of day
     dayTimeSeparator: ' \u00b7 ',
 
-    // The one outcome a row is marked for on sight, being the one a reader came to the list for
+    // The one outcome a row is marked for on sight, being the one a reader came to the list for,
+    // the class it is marked with, and the rail beside the list its mark stands in
     errorOutcome: 'error',
+    errorRowClass: 'audit-log-row-error',
+    railClass: 'audit-log-error-rail',
+    railMarkClass: 'audit-log-error-rail-dot',
 
     rawTabLabel: 'Raw',
     parsedTabLabel: 'Parsed',
@@ -399,7 +403,7 @@ listing.rowHTML = function(rowModel) {
     // What failed is found by looking rather than by reading down the rows, so it is marked
     // on the row itself and not left to a column that a narrow list would have dropped
     if (rowModel.outcome === listing.config.errorOutcome) {
-        rowClass += ' audit-log-row-error';
+        rowClass += ' ' + listing.config.errorRowClass;
     }
 
     var html = '<tr class="' + rowClass + '" data-item-id="' + rowModel.id + '">';
@@ -893,6 +897,86 @@ listing.fitColumns = function() {
     }
 };
 
+// A list scrolls, and a scrolling box shows nothing painted outside it, so a mark that is to stand
+// outside the rows cannot be part of one. The marks for the failed rows are drawn in a rail of their
+// own beside the list, in the room the page already leaves at its edge, and each is held level with
+// the row it belongs to. Nothing is added to the table, so no row moves and no column changes.
+listing.rail = {};
+
+listing.rail.parts = function() {
+    var config = listing.config;
+    var $list = listing.panes.items_host().closest('table').parent();
+
+    // The rail stands next to the list rather than inside it, so it is a child of the pair
+    var $pair = $list.parent();
+    var $rail = $pair.children('.' + config.railClass);
+
+    if ($rail.length === 0) {
+        $rail = $('<div class="' + config.railClass + '"></div>');
+        $pair.append($rail);
+    }
+
+    return {list: $list[0], pair: $pair[0], $rail: $rail};
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+listing.rail.sync = function() {
+    var config = listing.config;
+    var parts = listing.rail.parts();
+    var listRect = parts.list.getBoundingClientRect();
+    var pairRect = parts.pair.getBoundingClientRect();
+
+    // The rail stands level with the list and no taller than it, which is what cuts a mark off as
+    // the row it belongs to is scrolled out of sight rather than leaving it above the list
+    parts.$rail.css({
+        top: (listRect.top - pairRect.top) + 'px',
+        height: listRect.height + 'px'
+    });
+
+    var rows = listing.panes.items_host().find('.' + config.errorRowClass);
+    var marks = parts.$rail.children();
+
+    // One mark per failed row. They are drawn again only when their number changes - a scroll
+    // moves the ones already there rather than making them afresh.
+    if (marks.length !== rows.length) {
+        var html = '';
+
+        for (var rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+            html += '<div class="' + config.railMarkClass + '"></div>';
+        }
+
+        parts.$rail.html(html);
+        marks = parts.$rail.children();
+    }
+
+    for (var markIndex = 0; markIndex < rows.length; markIndex++) {
+        var rowRect = rows[markIndex].getBoundingClientRect();
+
+        // Where the middle of the row falls inside the list, the mark being centred on that point
+        marks[markIndex].style.top = (rowRect.top + rowRect.height / 2 - listRect.top) + 'px';
+    }
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// A scroll asks for the marks to be moved far oftener than they can be drawn, so what it asks for
+// is one move on the next frame and nothing more until that frame has been drawn.
+listing.rail.pending = false;
+
+listing.rail.schedule = function() {
+    if (listing.rail.pending) {
+        return;
+    }
+
+    listing.rail.pending = true;
+
+    window.requestAnimationFrame(function() {
+        listing.rail.pending = false;
+        listing.rail.sync();
+    });
+};
+
 // /////////////////////////////////////////////////////////////////////////////
 
 listing.draw = function() {
@@ -907,6 +991,9 @@ listing.draw = function() {
     // What the rows just drawn are holding is what settles how much room the row needs, so which
     // columns fit is worked out after they are on the page rather than before
     listing.fitColumns();
+
+    // Where the failed rows now stand is where their marks stand beside them
+    listing.rail.sync();
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -1134,12 +1221,17 @@ listing.initPanes = function(source) {
     listing.panes.items_host().html(listing.loadingRowHTML());
 
     // The list is dragged wider and narrower by hand, so what fits is worked out again whenever
-    // it changes size rather than only when a page of events arrives
+    // it changes size rather than only when a page of events arrives, and the rail beside it is
+    // brought back level at the same time
     var listElement = listing.panes.items_host().closest('table').parent()[0];
 
     new ResizeObserver(function() {
         listing.fitColumns();
+        listing.rail.sync();
     }).observe(listElement);
+
+    // The rows scroll under the rail, so their marks follow them down it
+    listElement.addEventListener('scroll', listing.rail.schedule);
 };
 
 // /////////////////////////////////////////////////////////////////////////////
