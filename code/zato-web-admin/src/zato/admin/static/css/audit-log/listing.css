@@ -14,6 +14,15 @@
    saying how an event got into it, and the one value of an event that leads somewhere */
 
 :root {
+
+    /* The room the frame around the page used to give what stands inside it, kept now that the
+       frame itself is gone, so nothing on the page moved out to the edge along with it */
+    --audit-log-page-inset: 20px;
+
+    /* The digits of a time of day - darker than the grey the dashboard mutes text to, so a
+       column of them is legible at a glance, and still held back from what a row is named by */
+    --audit-log-time-text: #43506a;
+
     --dashboard-flow-accent: #f6c66a;
     --dashboard-flow-accent-tint: rgba(246, 166, 5, 0.10);
     --dashboard-flow-accent-tint-strong: rgba(246, 166, 5, 0.18);
@@ -23,6 +32,11 @@
 /* ------------------------------------------------------------ */
 /* The page around the listing                                   */
 /* ------------------------------------------------------------ */
+
+.detail-page-audit-log {
+    padding-left: var(--audit-log-page-inset);
+    padding-right: var(--audit-log-page-inset);
+}
 
 /* The page itself has nothing to tab between - everything on it is an event.
    The tabs inside the detail pane are another matter. */
@@ -41,18 +55,6 @@
     width: 24rem;
 }
 
-.audit-log-filter-pill {
-    align-self: center;
-    cursor: pointer;
-    background: #eef1f5;
-    color: #4a5568;
-}
-
-.audit-log-filter-pill-active {
-    background: var(--dashboard-line-strong);
-    color: #fff;
-}
-
 /* ------------------------------------------------------------ */
 /* The chrome above the listing                                  */
 /* ------------------------------------------------------------ */
@@ -68,7 +70,6 @@
 .audit-log-list-table {
     width: 100%;
     margin: 0;
-    table-layout: fixed;
 }
 
 .audit-log-row {
@@ -93,99 +94,86 @@
         inset 0 0 0 999px var(--dashboard-row-selected);
 }
 
-.audit-log-row.dashboard-list-detail-item-selected .audit-log-cell-number,
-.audit-log-row.dashboard-list-detail-item-selected .audit-log-row-id {
+.audit-log-row.dashboard-list-detail-item-selected .audit-log-cell-number {
     color: var(--dashboard-accent);
     font-weight: 700;
 }
 
-/* Every column is the width it says it is - a list dragged narrow drops the columns it no
-   longer has room for rather than squeezing all of them into what is left, so a row reads the
-   same at any width right up to the moment a column of it goes */
-
-.audit-log-list-table {
-    table-layout: fixed;
-}
-
-/* A column being the width it says it is means what it holds no longer widens it, so anything
-   longer than the column ends in an ellipsis instead of painting over its neighbour */
+/* No column of this table says how wide it is. Every one of them is as wide as what it holds and
+   no wider, nothing wraps, and the room the row has over goes to the empty cell at its end, so
+   the columns are laid out by the data rather than by a number written down here. A list dragged
+   narrow drops the columns it no longer has room for one at a time, which is the only thing that
+   ever changes where a column stands. */
 
 .audit-log-list-table td {
     padding: 4px 6px;
     border-bottom: 1px solid var(--dashboard-line);
     vertical-align: middle;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* The event's own number, which is how one event is pointed at - it is the first thing
    read on a row and the first thing read in the pane, so it is not kept quiet */
 
 .audit-log-cell-number {
-    width: 76px;
     padding-right: 8px;
     font-family: var(--dashboard-mono);
     font-size: 12px;
     font-weight: 700;
     text-align: right;
     color: var(--dashboard-line-strong);
-    white-space: nowrap;
 }
 
 /* Two events of one exchange land within the same second of each other, so the second is not
-   what tells them apart - the cell is as wide as the whole fraction the event was written down
-   with, and the date it fell on is one hover away */
+   what tells them apart - the cell holds the whole fraction the event was written down with,
+   which is the same count of digits on every row */
 
 .audit-log-cell-time {
-    width: 122px;
     font-family: var(--dashboard-mono);
     font-size: 12px;
-    color: var(--dashboard-muted);
-    white-space: nowrap;
+    color: var(--audit-log-time-text);
 }
 
-.audit-log-cell-direction {
-    width: 46px;
-}
+/* The day stands over the time rather than beside it, so naming it costs the column height
+   rather than costing every row the width of the longest day name. It is read before the time
+   and not instead of it, so it carries less size than the digits and more colour. */
 
-.audit-log-cell-outcome {
-    width: 76px;
+.audit-log-cell-day {
+    display: block;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    color: var(--dashboard-line-strong);
 }
 
 .audit-log-cell-action {
-    width: 96px;
     text-align: right;
-    white-space: nowrap;
+}
+
+/* The one cell that asks for everything, which is what a table hands its leftover room to. It
+   holds nothing, so that room reads as the end of the row, and every column before it is left
+   at the width of what it holds. */
+
+.audit-log-cell-filler {
+    width: 100%;
+    padding: 0;
 }
 
 /* A row saying there is nothing to list, or that there soon will be, spans the whole table and
-   is a sentence rather than a column, so it is not held to any column's width */
+   is a sentence rather than a column */
 
 .audit-log-empty-row td,
 .detail-loading-row td {
     padding: 10px 12px;
     color: var(--dashboard-muted);
-    overflow: visible;
-    text-overflow: clip;
 }
 
-/* What one event is and what it says about itself, always on the one line - a row of a list
-   read a hundred at a time is one row tall whatever it is holding, so what does not fit ends
-   in an ellipsis rather than folding the row open */
+/* What an event says about itself, always on the one line - a row of a list read a hundred at a
+   time is one row tall whatever it is holding. It is as wide as the tags it holds, the room the
+   row has over being the filler's business. */
 
 .audit-log-cell-main {
     line-height: 20px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.audit-log-row-id {
-    margin-right: 8px;
-    font-family: var(--dashboard-mono);
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--dashboard-line-strong);
 }
 
 .audit-log-row-event {
@@ -205,22 +193,17 @@
     letter-spacing: 0.2px;
 }
 
-/* A list dragged narrow gives its columns up one at a time, in the order they are least
-   missed in, and nothing that stays gets any narrower for it. What an event is called goes
-   before when it happened, when it happened goes before which way it went, and the event's own
-   number is the last thing standing, because it is what a row is pointed at by.
+/* A list dragged narrow gives its columns up one at a time, in the order they are least missed
+   in, and nothing that stays gets any narrower for it. What an event has in common with others
+   goes before when it happened, when it happened goes before which way it went, and the event's
+   own number is the last thing standing, because it is what a row is pointed at by.
 
-   Each width below is what the columns still on the row add up to, so a column goes at the
-   moment the row would otherwise start eating into the ones beside it.
-
-   What an event is called empties out rather than going, so the one column with no width of
-   its own stays on the row and whatever the row has over is left standing at its right edge.
-   Every column that is still being read keeps the width it declares and stays where it is,
-   which is what would be lost if the slack were shared out among them instead. */
+   Each width below is about the pane, not about a column - it is the point past which the row
+   would have to start giving something up. */
 
 /* Resubmitting an event is the pane's business once the list is this narrow */
 
-@container dashboard-list (max-width: 670px) {
+@container dashboard-list (max-width: 640px) {
 
     .audit-log-cell-action {
         display: none;
@@ -230,7 +213,7 @@
 /* How it turned out is said by the stripe of the pane as well, so the badge saying it again
    is what goes next */
 
-@container dashboard-list (max-width: 560px) {
+@container dashboard-list (max-width: 545px) {
 
     .audit-log-cell-outcome {
         display: none;
@@ -246,15 +229,11 @@
     .audit-log-row-event {
         display: none;
     }
-}
 
-/* A name cut down to an ellipsis is not a name, so what the event is called goes once the
-   room left for it is less than a few characters of it */
+    /* A cell holding nothing asks for no room either */
 
-@container dashboard-list (max-width: 360px) {
-
-    .audit-log-row-id {
-        display: none;
+    .audit-log-cell-main {
+        padding: 0;
     }
 }
 
@@ -485,14 +464,6 @@
     border-radius: 3px;
     color: var(--dashboard-flow-accent);
     background: var(--dashboard-flow-accent-tint-tag);
-}
-
-/* What a flow of one event has to say about itself, and what a flow that was cut short does */
-
-.audit-log-flow-footer {
-    padding: 6px 2px;
-    font-size: 11px;
-    color: var(--dashboard-muted);
 }
 
 /* ------------------------------------------------------------ */

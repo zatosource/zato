@@ -35,8 +35,7 @@ would be a box inside a box {% endcomment %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/log_line.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/fact_rows.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit_log.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/listing.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/flow.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/listing.js"></script><script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/flow.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/flow-panel.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/default.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/hl7.js"></script>
@@ -73,10 +72,6 @@ $(document).ready(function() {
     <form class="audit-log-search-form" id="audit-log-search-form">
         <input type="text" class="audit-log-search-input" id="audit-log-search-input" placeholder="Search .." value="{{ query }}">
         <button type="submit" class="action-button">Search</button>
-        {% if has_outstanding_filter %}
-        <a href="#" id="audit-log-outstanding-pill"
-            class="detail-component-pill audit-log-filter-pill{% if status == 'outstanding' %} audit-log-filter-pill-active{% endif %}">Outstanding</a>
-        {% endif %}
     </form>
 
     <div id="audit-log-chrome"></div>

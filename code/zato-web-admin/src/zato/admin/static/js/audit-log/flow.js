@@ -38,10 +38,6 @@ flow.config = {
     copyLabel: 'Copy',
     openLabel: 'Open',
 
-    // The whole of a flow that has nothing else in it, and the top of one that was cut short
-    emptyFlow: 'Nothing else shares this event\'s correlation id',
-    truncatedFlow: 'First 200 events of this flow',
-
     // What one relation of an event to the flow is called. The operation itself is left unnamed,
     // because a line of the same operation is what a flow is mostly made of.
     relationLabels: {
@@ -55,10 +51,9 @@ flow.config = {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The event whose flow is drawn, the events of it and whether it was cut short
+// The event whose flow is drawn and the events of it
 flow.seedId = null;
 flow.rows = [];
-flow.isTruncated = false;
 
 // Each request the flow makes is numbered, so a flow arriving after the pane has been brought
 // to another event is dropped rather than drawn over it
@@ -171,11 +166,8 @@ flow.stripeOf = function(rowModel) {
 // When the event happened, with the whole timestamp one hover away, and how long after the
 // line above it that was
 flow.leadHTML = function(rowModel, previous) {
-    var timeLocal = rowModel.timeLocal;
-    var timeOfDay = timeLocal.slice(11);
-
-    var html = '<span class="audit-log-flow-time" title="' + flow.escapeHTML(timeLocal) + '">' +
-        flow.escapeHTML(timeOfDay) + '</span>';
+    var html = '<span class="audit-log-flow-time" title="' + flow.escapeHTML(rowModel.timeLocal) + '">' +
+        flow.escapeHTML(rowModel.timeLocal.slice(11)) + '</span>';
 
     if (previous !== null) {
         html += flow.elapsedHTML(previous, rowModel);
@@ -322,24 +314,6 @@ flow.stepHTML = function(rowModel, previous) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-flow.footerHTML = function() {
-    var config = flow.config;
-    var rowCount = flow.rows.length;
-
-    if (flow.isTruncated) {
-        return '<div class="audit-log-flow-footer">' + config.truncatedFlow + '</div>';
-    }
-
-    // A flow of one is the event on its own, with nothing before it and nothing after
-    if (rowCount === 1) {
-        return '<div class="audit-log-flow-footer">' + config.emptyFlow + '</div>';
-    }
-
-    return '';
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
 flow.render = function() {
     var html = '<div class="detail-panel-log audit-log-flow">';
     var previous = null;
@@ -352,7 +326,6 @@ flow.render = function() {
     }
 
     html += '</div>';
-    html += flow.footerHTML();
 
     flow.host().html(html);
 };
@@ -393,7 +366,6 @@ flow.show = function(rowModel) {
         clearTimeout(spinnerTimer);
 
         flow.rows = flow.buildRows(data.rows);
-        flow.isTruncated = data.is_truncated;
 
         flow.render();
         flow.panel.restoreStep();
@@ -417,7 +389,6 @@ flow.refreshLive = function() {
         }
 
         flow.merge(flow.buildRows(data.rows));
-        flow.isTruncated = data.is_truncated;
     });
 };
 
