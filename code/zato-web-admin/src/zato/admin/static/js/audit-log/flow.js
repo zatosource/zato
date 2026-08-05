@@ -32,6 +32,9 @@ flow.config = {
     // How long the flow and its panels wait for what they asked for before saying they are waiting
     spinnerDelayMs: 150,
 
+    // The variant the direction tags and the fact rows wear, the flow being a dark frame
+    darkVariant: 'dark',
+
     copyLabel: 'Copy',
     openLabel: 'Open',
 
@@ -84,7 +87,6 @@ flow.buildRow = function(row) {
     out.isSeed = row.is_seed;
     out.source = row.source;
     out.objectName = row.object_name;
-    out.serverName = row.server_name;
 
     // A flow crosses sources, so a line of another one is named by that source rather than by
     // the one the page happens to be listing
@@ -294,7 +296,7 @@ flow.lineHTML = function(rowModel, previous) {
         },
         stripe: flow.stripeOf(rowModel),
         lead_html: flow.leadHTML(rowModel, previous),
-        badge_html: kit.direction.tag(rowModel.direction, rowModel.eventType),
+        badge_html: kit.direction.tag(rowModel.direction, rowModel.eventType, flow.config.darkVariant),
         message_html: flow.messageHTML(rowModel),
         actions_html: flow.actionsHTML(rowModel)
     });

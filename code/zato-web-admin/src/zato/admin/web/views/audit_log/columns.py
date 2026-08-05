@@ -41,10 +41,9 @@ _preview_len = 4000
 _row_columns = ('id', 'cid', 'source', 'event_type', 'object_name', 'event_time_iso', 'msg_id', 'correl_id',
     'endpoint', 'ext_client_id', 'outcome', 'status', 'classification', 'size', 'duration_ms', 'data')
 
-# A line of one event's flow reads two things a row of a list has no place for - where the event
-# stands among the others of its own cid, which is what orders two events of the same moment,
-# and which server wrote it down, which is what a flow spanning several of them shows.
-_flow_columns = _row_columns + ('cid_sequence', 'server_name')
+# A line of one event's flow reads one thing a row of a list has no place for - where the event
+# stands among the others of its own cid, which is what orders two events of the same moment.
+_flow_columns = _row_columns + ('cid_sequence',)
 
 # The row columns holding numbers - every other one is text, and a database NULL in a text column
 # reaches the frontend as an empty string so no cell renderer needs to know about NULLs at all.
