@@ -225,11 +225,18 @@ $.fn.zato.audit_log.parseResubmitResponse = function(jqXHR, textStatus) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Puts one term into the search box and asks for the page it narrows down to,
-// which is what a chip clicked in the listing does
+// Puts one term into the search box and asks for the page it narrows down to, which is what
+// the Search beside a value in the detail pane does
 $.fn.zato.audit_log.search = function(query) {
     $('#audit-log-search-input').val(query);
     $('#audit-log-search-form').submit();
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// Clear stands in the box only while there is a term in it to be cleared
+$.fn.zato.audit_log.showSearchClear = function() {
+    $('#audit-log-search-clear').toggle($('#audit-log-search-input').val() !== '');
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -307,8 +314,23 @@ $.fn.zato.audit_log.init = function(initConfig) {
 
         var query = $('#audit-log-search-input').val();
 
+        $.fn.zato.audit_log.showSearchClear();
+
         pagination.set_filters({query: query});
         pagination.fetch_page(1);
+    });
+
+    // .. Clear follows the first character typed and the last one deleted, starting from
+    // whatever term the page came up with, a term the pane set included ..
+    $.fn.zato.audit_log.showSearchClear();
+
+    $('#audit-log-search-input').on('input', $.fn.zato.audit_log.showSearchClear);
+
+    // .. and clearing the box asks for the whole log back ..
+    $('#audit-log-search-clear').on('click', function() {
+        $('#audit-log-search-input').val('');
+        $.fn.zato.audit_log.showSearchClear();
+        $('#audit-log-search-form').submit();
     });
 
     // .. each resubmit link sends its row's payload out again ..

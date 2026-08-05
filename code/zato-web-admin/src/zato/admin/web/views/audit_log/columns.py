@@ -49,8 +49,10 @@ _flow_columns = _row_columns + ('cid_sequence',)
 # reaches the frontend as an empty string so no cell renderer needs to know about NULLs at all.
 _row_numeric_columns = ('id', 'size', 'duration_ms', 'cid_sequence')
 
-# The free-text search covers these columns
-_search_columns = ('data', 'msg_id', 'correl_id', 'endpoint', 'ext_client_id')
+# The free-text search covers these columns - every one the detail pane offers a Search beside,
+# so no value shown as searchable comes back with nothing
+_search_columns = ('data', 'event_type', 'msg_id', 'correl_id', 'endpoint', 'ext_client_id',
+    'status', 'classification')
 
 # The status query parameter value narrowing the page down to open exchanges
 _status_outstanding = 'outstanding'

@@ -49,8 +49,9 @@ panel.config = {
 // /////////////////////////////////////////////////////////////////////////////
 
 // One fact of the event, left out when the event has nothing to put there and when the line
-// the panel hangs under has already said it
-panel.pushFact = function(facts, rowModel, label, value) {
+// the panel hangs under has already said it. `searchValue` is what its Search asks the list
+// for, empty when no Search is to be offered.
+panel.pushFact = function(facts, rowModel, label, value, searchValue) {
     if (value === '') {
         return;
     }
@@ -59,7 +60,8 @@ panel.pushFact = function(facts, rowModel, label, value) {
         return;
     }
 
-    facts.push({label: label, value_html: flow.escapeHTML(value), copy_value: value});
+    facts.push({label: label, value_html: flow.escapeHTML(value), copy_value: value,
+        search_value: searchValue});
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -68,22 +70,26 @@ panel.facts = function(rowModel) {
     var config = panel.config;
     var facts = [];
 
-    panel.pushFact(facts, rowModel, config.cidLabel, rowModel.cid);
-    panel.pushFact(facts, rowModel, config.controlIdLabel, rowModel.msgId);
-    panel.pushFact(facts, rowModel, config.correlIdLabel, rowModel.correlId);
-    panel.pushFact(facts, rowModel, config.endpointLabel, rowModel.endpoint);
-    panel.pushFact(facts, rowModel, config.statusLabel, rowModel.status);
-    panel.pushFact(facts, rowModel, config.classificationLabel, rowModel.classification);
+    // What the event is named by is what other events are found by, so each of these is offered
+    // for the list to be asked for
+    panel.pushFact(facts, rowModel, config.cidLabel, rowModel.cid, rowModel.cid);
+    panel.pushFact(facts, rowModel, config.controlIdLabel, rowModel.msgId, rowModel.msgId);
+    panel.pushFact(facts, rowModel, config.correlIdLabel, rowModel.correlId, rowModel.correlId);
+    panel.pushFact(facts, rowModel, config.endpointLabel, rowModel.endpoint, rowModel.endpoint);
+    panel.pushFact(facts, rowModel, config.statusLabel, rowModel.status, rowModel.status);
+    panel.pushFact(facts, rowModel, config.classificationLabel, rowModel.classification,
+        rowModel.classification);
 
-    // An event that took no measurable time is one nothing was timed for
+    // An event that took no measurable time is one nothing was timed for. What it was measured
+    // with is no way of finding another event, so neither of these two offers a Search.
     if (rowModel.durationMs > 0) {
         var durationText = kit.format_duration_ms(rowModel.durationMs);
-        panel.pushFact(facts, rowModel, config.durationLabel, durationText);
+        panel.pushFact(facts, rowModel, config.durationLabel, durationText, '');
     }
 
     if (rowModel.size > 0) {
         var sizeText = kit.format_number_full(rowModel.size);
-        panel.pushFact(facts, rowModel, config.sizeLabel, sizeText);
+        panel.pushFact(facts, rowModel, config.sizeLabel, sizeText, '');
     }
 
     return facts;
