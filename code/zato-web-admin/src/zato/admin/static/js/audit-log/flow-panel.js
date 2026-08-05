@@ -19,12 +19,10 @@ var panel = flow.panel;
 
 panel.config = {
 
-    // What the line standing open is called in the address bar, so a link to the page is a link
-    // to that line of that event's flow
+    // What the lines standing open are called in the address bar, so a link to the page is a
+    // link to the flow as the reader left it, and what separates them there
     stepURLKey: 'step',
-
-    // The variant of the fact rows the panel sets out, it being inside a dark frame
-    factVariant: 'dark',
+    stepSeparator: ',',
 
     // How much of a message the panel shows before it stops
     previewLineCount: 24,
@@ -35,26 +33,19 @@ panel.config = {
     // What the panel says about the event, each one left out when the event has nothing to
     // put there and when the line above it already said it
     cidLabel: 'CID',
-    msgIdLabel: 'Message id',
+    controlIdLabel: 'Control id',
     correlIdLabel: 'Correlation id',
     endpointLabel: 'Endpoint',
     statusLabel: 'Status',
     classificationLabel: 'Classification',
-    serverLabel: 'Server',
     durationLabel: 'Duration',
     sizeLabel: 'Size',
 
-    // How much of the message the panel is showing, out of how much there is
+    // What a message too long to show whole says about how much of it is on the screen
     charactersLabel: 'characters',
-    wholeBodyLabel: 'Whole message',
     firstOfLabel: 'First',
     ofLabel: 'of'
 };
-
-// /////////////////////////////////////////////////////////////////////////////
-
-// Which line of the flow stands open, and nothing when none of them does
-panel.openStep = null;
 
 // /////////////////////////////////////////////////////////////////////////////
 
@@ -79,12 +70,11 @@ panel.facts = function(rowModel) {
     var facts = [];
 
     panel.pushFact(facts, rowModel, config.cidLabel, rowModel.cid);
-    panel.pushFact(facts, rowModel, config.msgIdLabel, rowModel.msgId);
+    panel.pushFact(facts, rowModel, config.controlIdLabel, rowModel.msgId);
     panel.pushFact(facts, rowModel, config.correlIdLabel, rowModel.correlId);
     panel.pushFact(facts, rowModel, config.endpointLabel, rowModel.endpoint);
     panel.pushFact(facts, rowModel, config.statusLabel, rowModel.status);
     panel.pushFact(facts, rowModel, config.classificationLabel, rowModel.classification);
-    panel.pushFact(facts, rowModel, config.serverLabel, rowModel.serverName);
 
     // An event that took no measurable time is one nothing was timed for
     if (rowModel.durationMs > 0) {
@@ -162,7 +152,7 @@ panel.bodyBarHTML = function(rowModel) {
 panel.contentHTML = function(rowModel) {
     var facts = panel.facts(rowModel);
 
-    var html = kit.fact_rows.render(facts, panel.config.factVariant);
+    var html = kit.fact_rows.render(facts, flow.config.darkVariant);
 
     html += '<div class="audit-log-flow-body">';
     html += panel.bodyBarHTML(rowModel);
@@ -174,16 +164,17 @@ panel.contentHTML = function(rowModel) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// How much of the message is on the screen, out of how much of it there is
+// How much of the message is on the screen, said only by a message that did not fit on it -
+// a message shown whole is its own caption
 panel.captionText = function(shownLength, totalLength) {
     var config = panel.config;
-    var totalText = kit.format_number_full(totalLength) + ' ' + config.charactersLabel;
 
     if (shownLength >= totalLength) {
-        return config.wholeBodyLabel + ', ' + totalText;
+        return '';
     }
 
     var shownText = kit.format_number_full(shownLength);
+    var totalText = kit.format_number_full(totalLength) + ' ' + config.charactersLabel;
 
     var out = config.firstOfLabel + ' ' + shownText + ' ' + config.ofLabel + ' ' + totalText;
 
@@ -280,25 +271,34 @@ panel.of = function(eventId) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-panel.closeAll = function() {
-    var $host = flow.host();
+// The lines standing open, in the order they were opened, written where a link to the page
+// will carry them
+panel.writeOpenSteps = function() {
+    var openSteps = [];
 
-    $host.find(flow.config.panelSelector).removeClass('expanded');
-    $host.find(flow.config.lineSelector).attr('aria-expanded', 'false');
+    flow.host().find(flow.config.panelSelector + '.expanded').each(function() {
+        openSteps.push($(this).attr('data-step'));
+    });
+
+    kit.url_state.replace({step: openSteps.join(panel.config.stepSeparator)});
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// Everything the reader has opened, closed in one go
 panel.collapse = function() {
-    panel.closeAll();
+    var $host = flow.host();
 
-    panel.openStep = null;
+    $host.find(flow.config.panelSelector).removeClass('expanded');
+    $host.find(flow.config.lineSelector).attr('aria-expanded', 'false');
+
     kit.url_state.replace({step: ''});
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// One line at a time stands open, so the flow stays a flow rather than a stack of panels
+// A line opens on top of whatever else is open, so two events of a flow are read side by side
+// rather than one after the other, and opens closed when it is already open
 panel.expand = function(eventId) {
     var $host = flow.host();
     var $line = $host.find(flow.config.lineSelector + '[data-step="' + eventId + '"]');
@@ -309,13 +309,13 @@ panel.expand = function(eventId) {
 
     var $panel = panel.of(eventId);
 
-    // The line already open is the line being closed
     if ($panel.hasClass('expanded')) {
-        panel.collapse();
+        $panel.removeClass('expanded');
+        $line.attr('aria-expanded', 'false');
+
+        panel.writeOpenSteps();
         return;
     }
-
-    panel.closeAll();
 
     // A panel is filled the first time it is opened and keeps what it was given after that
     if (!$panel.data('flow_panel_built')) {
@@ -331,13 +331,12 @@ panel.expand = function(eventId) {
     var $kind = $panel.find('.audit-log-flow-body-kind-active');
     panel.loadBody($panel, $kind.attr('data-kind'));
 
-    panel.openStep = eventId;
-    kit.url_state.replace({step: eventId});
+    panel.writeOpenSteps();
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// A link naming a line opens on that line, and a flow that no longer holds it opens closed
+// A link naming lines opens on those of them the flow still holds
 panel.restoreStep = function() {
     var wanted = kit.url_state.get(panel.config.stepURLKey);
 
@@ -349,11 +348,15 @@ panel.restoreStep = function() {
         return;
     }
 
-    if (flow.rowById(wanted) === null) {
-        return;
-    }
+    var eventIds = wanted.split(panel.config.stepSeparator);
 
-    panel.expand(wanted);
+    for (var stepIndex = 0; stepIndex < eventIds.length; stepIndex++) {
+        var eventId = eventIds[stepIndex];
+
+        if (flow.rowById(eventId) !== null) {
+            panel.expand(eventId);
+        }
+    }
 };
 
 // /////////////////////////////////////////////////////////////////////////////

@@ -30,3 +30,25 @@
     color: #7d8794;
     background: rgba(110, 110, 115, 0.1);
 }
+
+/* ------------------------------------------------------------ */
+/* Inside a dark frame                                           */
+/* ------------------------------------------------------------ */
+
+/* The same three tags lifted to where they can be read against a dark panel, since a tint
+   meant to sit on white all but disappears on one */
+
+.dashboard-direction-dark.dashboard-direction-in {
+    color: #6fb6e8;
+    background: rgba(111, 182, 232, 0.18);
+}
+
+.dashboard-direction-dark.dashboard-direction-out {
+    color: #74cf92;
+    background: rgba(116, 207, 146, 0.18);
+}
+
+.dashboard-direction-dark.dashboard-direction-none {
+    color: #a8aebc;
+    background: rgba(255, 255, 255, 0.12);
+}
