@@ -2,9 +2,9 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// What one line of a flow opens into - the facts the line itself had no room for, and the top
-// of the message the event carried, fetched the first time it is asked for. The whole message
-// and its parsed view are read where they already are rather than drawn a second time here.
+// What one line of a flow opens into - the facts the line itself had no room for, and the
+// message the event carried, read parsed or raw and cut to the panel's window until the
+// whole of it is asked for, each body fetched the first time it is asked for.
 
 $.fn.zato.audit_log.flow.panel = {};
 
@@ -20,14 +20,20 @@ var panel = flow.panel;
 panel.config = {
 
     // What the lines standing open are called in the address bar, so a link to the page is a
-    // link to the flow as the reader left it, and what separates them there
+    // link to the flow as the reader left it, and what separates them there. Within one entry,
+    // the choices made on that panel follow the event id - the view when it is not parsed, the
+    // kind when it is not the first one, and the word for the whole body being on the screen -
+    // so the link carries not only what is open but how each open thing is being read.
     stepURLKey: 'step',
     stepSeparator: ',',
+    stepStateSeparator: '.',
+    wholeFlag: 'all',
 
     // How much of a message the panel shows before it stops
     previewLineCount: 24,
 
-    fullMessageLabel: 'Full message',
+    // The way to the rest of a message the panel cut short
+    showAllLabel: 'Show all',
 
     // What the panel says about the event, each one left out when the event has nothing to
     // put there and when the line above it already said it
@@ -121,8 +127,18 @@ panel.bodyKinds = function(rowModel) {
 
 panel.bodyBarHTML = function(kinds) {
     var config = panel.config;
+    var listingConfig = listing.config;
 
     var html = '<div class="audit-log-flow-body-bar">';
+
+    // How the body is read - as its source's reader parsed it, which is what it opens on
+    // everywhere, or as it went down the wire - the same two views the Data tab offers
+    html += '<span class="dashboard-panel-action-badge dashboard-panel-action-badge-dark ' +
+        'audit-log-flow-body-view dashboard-panel-action-badge-active" data-view="' +
+        listingConfig.parsedView + '">' + listingConfig.parsedTabLabel + '</span>';
+    html += '<span class="dashboard-panel-action-badge dashboard-panel-action-badge-dark ' +
+        'audit-log-flow-body-view" data-view="' + listingConfig.rawView + '">' +
+        listingConfig.rawTabLabel + '</span>';
 
     // An event that stored one body has nothing to choose between, so it is shown rather
     // than offered
@@ -139,12 +155,11 @@ panel.bodyBarHTML = function(kinds) {
 
     html += '<span class="audit-log-flow-body-caption"></span>';
 
-    // Only the top of the message is on the screen here, so the whole of it is one click away
     html += '<span class="audit-log-flow-body-actions">';
     html += '<span class="dashboard-panel-action-badge dashboard-panel-action-badge-dark ' +
-        'audit-log-flow-copy-body">' + flow.config.copyLabel + '</span>';
+        'audit-log-flow-show-all">' + config.showAllLabel + '</span>';
     html += '<span class="dashboard-panel-action-badge dashboard-panel-action-badge-dark ' +
-        'audit-log-flow-full-message">' + config.fullMessageLabel + '</span>';
+        'audit-log-flow-copy-body">' + flow.config.copyLabel + '</span>';
     html += '</span>';
 
     html += '</div>';
@@ -160,9 +175,11 @@ panel.contentHTML = function(rowModel) {
 
     var html = kit.fact_rows.render(facts, flow.config.darkVariant);
 
-    // Which body is on the screen is the body's own business, since with a single one there
-    // is no badge to read it off
-    html += '<div class="audit-log-flow-body" data-kind="' + kinds[0].kind + '">';
+    // Which body is on the screen and how it is being read are the body's own business,
+    // since with a single body there is no kind badge to read the first one off - and which
+    // kind it woke up on stays written down, being what the address bar leaves unsaid
+    html += '<div class="audit-log-flow-body" data-kind="' + kinds[0].kind +
+        '" data-default-kind="' + kinds[0].kind + '" data-view="' + listing.config.parsedView + '">';
     html += panel.bodyBarHTML(kinds);
     html += '<pre class="audit-log-flow-body-text"></pre>';
     html += '</div>';
@@ -207,12 +224,28 @@ panel.cutToLines = function(text) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// One body of one event, asked for the first time the kind holding it is chosen and kept
-// from then on, because the payload of an event does not change
-panel.loadBody = function($panel, kind) {
+// One loaded body put on the screen - its text, its caption, and the way to the whole of it,
+// offered only while less than the whole of it is what is shown
+panel.showLoaded = function($panel, entry) {
+    $panel.find('.audit-log-flow-body-text').html(entry.html);
+    $panel.find('.audit-log-flow-body-caption').text(entry.caption);
+    $panel.find('.audit-log-flow-show-all').toggle(entry.caption !== '');
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// One body of one event, read the way the panel's body element says it is to be read - which
+// kind, which view, and whether the whole of it. A body read one way once is read from what
+// it left behind rather than from the server again, because the payload of an event does
+// not change.
+panel.loadBody = function($panel) {
+    var listingConfig = listing.config;
     var eventId = $panel.attr('data-step');
-    var $text = $panel.find('.audit-log-flow-body-text');
-    var $caption = $panel.find('.audit-log-flow-body-caption');
+    var $body = $panel.find('.audit-log-flow-body');
+
+    var kind = $body.attr('data-kind');
+    var view = $body.attr('data-view');
+    var isWhole = $body.attr('data-whole') === '1';
 
     var loaded = $panel.data('flow_body_loaded');
 
@@ -221,10 +254,10 @@ panel.loadBody = function($panel, kind) {
         $panel.data('flow_body_loaded', loaded);
     }
 
-    // A kind read once is read from what it left behind rather than from the server again
-    if (loaded[kind] !== undefined) {
-        $text.html(loaded[kind].html);
-        $caption.text(loaded[kind].caption);
+    var loadedKey = view + '|' + kind + '|' + isWhole;
+
+    if (loaded[loadedKey] !== undefined) {
+        panel.showLoaded($panel, loaded[loadedKey]);
         return;
     }
 
@@ -237,6 +270,10 @@ panel.loadBody = function($panel, kind) {
     token = token + 1;
     $panel.data('flow_body_token', token);
 
+    // Whether this body is cut short is not known until it arrives, so nothing offers the
+    // whole of it in the meantime
+    $panel.find('.audit-log-flow-show-all').hide();
+
     // Whatever the panel is holding stays there while the next body is on its way, and the
     // wait is only announced once it is long enough to be worth announcing
     var spinnerTimer = setTimeout(function() {
@@ -244,28 +281,48 @@ panel.loadBody = function($panel, kind) {
             return;
         }
 
-        $text.html(kit.spinner_label_html());
+        $panel.find('.audit-log-flow-body-text').html(kit.spinner_label_html());
     }, flow.config.spinnerDelayMs);
 
-    // Only the top of the message is asked for, since only the top of it is shown
-    listing.fetchDetails(eventId, kind, true, function(details) {
+    // Only the raw view shown short asks for only the top of the message - the parsed one
+    // is built by the server out of the whole message, and Show all asks for all of it
+    var isPreview = view === listingConfig.rawView && !isWhole;
 
-        // A body of a kind the panel has since been switched away from is not shown at all
+    listing.fetchDetails(eventId, kind, isPreview, function(details) {
+
+        // A body the panel has since been switched away from is not shown at all
         if ($panel.data('flow_body_token') !== token) {
             return;
         }
 
         clearTimeout(spinnerTimer);
 
-        var shown = panel.cutToLines(details.data);
+        var text = details.data;
+        var totalLength = details.total_len;
 
-        loaded[kind] = {
+        // A payload this source's own reader could make nothing of is shown as it stands
+        // rather than as a blank panel - the same fallback the Data tab makes
+        if (view === listingConfig.parsedView) {
+            if (details.parsed !== '') {
+                text = details.parsed;
+            }
+
+            totalLength = text.length;
+        }
+
+        var shown = text;
+
+        // The body is cut to the panel's window unless the whole of it was asked for
+        if (!isWhole) {
+            shown = panel.cutToLines(text);
+        }
+
+        loaded[loadedKey] = {
             html: kit.syntax_highlight(shown),
-            caption: panel.captionText(shown.length, details.total_len)
+            caption: panel.captionText(shown.length, totalLength)
         };
 
-        $text.html(loaded[kind].html);
-        $caption.text(loaded[kind].caption);
+        panel.showLoaded($panel, loaded[loadedKey]);
     });
 };
 
@@ -279,14 +336,40 @@ panel.of = function(eventId) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The lines standing open, in the order they were opened, written where a link to the page
-// will carry them. With any of them open the rest of the flow steps back, the same way the
-// scheduler's run log does it, so what is open is what is read.
+// One open panel's entry in the address bar - the event id, followed only by the choices
+// made on it that a fresh panel would not make by itself, so an untouched one is its id alone
+panel.stepEntry = function($panel) {
+    var config = panel.config;
+    var $body = $panel.find('.audit-log-flow-body');
+
+    var entry = $panel.attr('data-step');
+
+    if ($body.attr('data-view') !== listing.config.parsedView) {
+        entry += config.stepStateSeparator + $body.attr('data-view');
+    }
+
+    if ($body.attr('data-kind') !== $body.attr('data-default-kind')) {
+        entry += config.stepStateSeparator + $body.attr('data-kind');
+    }
+
+    if ($body.attr('data-whole') === '1') {
+        entry += config.stepStateSeparator + config.wholeFlag;
+    }
+
+    return entry;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The lines standing open, in the order they were opened and each read the way its reader
+// left it, written where a link to the page will carry them. With any of them open the rest
+// of the flow steps back, the same way the scheduler's run log does it, so what is open is
+// what is read.
 panel.writeOpenSteps = function() {
     var openSteps = [];
 
     flow.host().find(flow.config.panelSelector + '.expanded').each(function() {
-        openSteps.push($(this).attr('data-step'));
+        openSteps.push(panel.stepEntry($(this)));
     });
 
     flow.host().find('.audit-log-flow').toggleClass('detail-dimmed', openSteps.length > 0);
@@ -311,9 +394,38 @@ panel.collapse = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// The choices a link made on one panel, put on it before its body is asked for - the badge
+// of each choice lit the same as if it had been clicked
+panel.applyState = function($panel, state) {
+    var $body = $panel.find('.audit-log-flow-body');
+
+    if (state.view !== '') {
+        $body.attr('data-view', state.view);
+
+        $panel.find('.audit-log-flow-body-view').removeClass('dashboard-panel-action-badge-active');
+        $panel.find('.audit-log-flow-body-view[data-view="' + state.view + '"]')
+            .addClass('dashboard-panel-action-badge-active');
+    }
+
+    if (state.kind !== '') {
+        $body.attr('data-kind', state.kind);
+
+        $panel.find('.audit-log-flow-body-kind').removeClass('dashboard-panel-action-badge-active');
+        $panel.find('.audit-log-flow-body-kind[data-kind="' + state.kind + '"]')
+            .addClass('dashboard-panel-action-badge-active');
+    }
+
+    if (state.whole) {
+        $body.attr('data-whole', '1');
+    }
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 // A line opens on top of whatever else is open, so two events of a flow are read side by side
-// rather than one after the other, and opens closed when it is already open
-panel.expand = function(eventId) {
+// rather than one after the other, and opens closed when it is already open. A `state` comes
+// only from a link being followed, carrying the choices the link's sender had made.
+panel.expand = function(eventId, state) {
     var $host = flow.host();
     var $line = $host.find(flow.config.lineSelector + '[data-step="' + eventId + '"]');
 
@@ -339,20 +451,25 @@ panel.expand = function(eventId) {
         $panel.data('flow_panel_built', true);
     }
 
+    if (state !== undefined) {
+        panel.applyState($panel, state);
+    }
+
     $panel.addClass('expanded');
     $line.attr('aria-expanded', 'true');
 
-    var $body = $panel.find('.audit-log-flow-body');
-    panel.loadBody($panel, $body.attr('data-kind'));
+    panel.loadBody($panel);
 
     panel.writeOpenSteps();
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// A link naming lines opens on those of them the flow still holds
+// A link naming lines opens on those of them the flow still holds, each one read the way
+// the link says it was being read - the view, the kind and the whole body all put back
 panel.restoreStep = function() {
-    var wanted = kit.url_state.get(panel.config.stepURLKey);
+    var config = panel.config;
+    var wanted = kit.url_state.get(config.stepURLKey);
 
     if (wanted === null) {
         return;
@@ -362,14 +479,35 @@ panel.restoreStep = function() {
         return;
     }
 
-    var eventIds = wanted.split(panel.config.stepSeparator);
+    var entries = wanted.split(config.stepSeparator);
 
-    for (var stepIndex = 0; stepIndex < eventIds.length; stepIndex++) {
-        var eventId = eventIds[stepIndex];
+    for (var stepIndex = 0; stepIndex < entries.length; stepIndex++) {
+        var segments = entries[stepIndex].split(config.stepStateSeparator);
+        var eventId = segments[0];
 
-        if (flow.rowById(eventId) !== null) {
-            panel.expand(eventId);
+        if (flow.rowById(eventId) === null) {
+            continue;
         }
+
+        var state = {view: '', kind: '', whole: false};
+
+        // Whatever follows the id names one choice each - a segment that is neither a view
+        // nor the whole-body word can only be a kind
+        for (var segmentIndex = 1; segmentIndex < segments.length; segmentIndex++) {
+            var segment = segments[segmentIndex];
+
+            if (segment === listing.config.rawView || segment === listing.config.parsedView) {
+                state.view = segment;
+            }
+            else if (segment === config.wholeFlag) {
+                state.whole = true;
+            }
+            else {
+                state.kind = segment;
+            }
+        }
+
+        panel.expand(eventId, state);
     }
 };
 
@@ -438,14 +576,40 @@ panel.init = function() {
     $(document).on('click', '.audit-log-flow-body-kind', function() {
         var $kind = $(this);
         var $panel = $kind.closest(panelSelector);
-        var kind = $kind.attr('data-kind');
 
         $panel.find('.audit-log-flow-body-kind').removeClass('dashboard-panel-action-badge-active');
         $kind.addClass('dashboard-panel-action-badge-active');
 
-        $panel.find('.audit-log-flow-body').attr('data-kind', kind);
+        $panel.find('.audit-log-flow-body').attr('data-kind', $kind.attr('data-kind'));
 
-        panel.loadBody($panel, kind);
+        panel.loadBody($panel);
+        panel.writeOpenSteps();
+    });
+
+    // A body is read raw or parsed the same way the Data tab reads it, and the view chosen
+    // stays chosen as the panel's kinds are walked through
+    $(document).on('click', '.audit-log-flow-body-view', function() {
+        var $view = $(this);
+        var $panel = $view.closest(panelSelector);
+
+        $panel.find('.audit-log-flow-body-view').removeClass('dashboard-panel-action-badge-active');
+        $view.addClass('dashboard-panel-action-badge-active');
+
+        $panel.find('.audit-log-flow-body').attr('data-view', $view.attr('data-view'));
+
+        panel.loadBody($panel);
+        panel.writeOpenSteps();
+    });
+
+    // The rest of a message the panel cut short - from here on this panel shows its bodies
+    // whole, whichever kind and view of them is asked for
+    $(document).on('click', '.audit-log-flow-show-all', function() {
+        var $panel = $(this).closest(panelSelector);
+
+        $panel.find('.audit-log-flow-body').attr('data-whole', '1');
+
+        panel.loadBody($panel);
+        panel.writeOpenSteps();
     });
 
     $(document).on('click', '.audit-log-flow-copy-body', function() {
@@ -453,13 +617,6 @@ panel.init = function() {
         var text = $panel.find('.audit-log-flow-body-text').text();
 
         kit.copy_to_clipboard(this, text);
-    });
-
-    $(document).on('click', '.audit-log-flow-full-message', function() {
-        var $panel = $(this).closest(panelSelector);
-        var rowModel = flow.rowById($panel.attr('data-step'));
-
-        $.fn.zato.audit_log.openMessageOverlay(rowModel.id, rowModel.cid);
     });
 };
 

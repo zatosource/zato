@@ -207,9 +207,10 @@ def poll(req:'any_') -> 'HttpResponse':
 
 @method_allowed('POST')
 def flow(req:'any_') -> 'HttpResponse':
-    """ Returns one event's whole flow as JSON - every event related to it, read forward in time,
-    each one saying why it is in the flow. A flow crosses sources, because one correlation id
-    spans a channel and everything it fanned its message out to.
+    """ Returns one event's whole flow as JSON - every event related to it, the newest first
+    the way the event list reads, each one saying why it is in the flow. A flow crosses
+    sources, because one correlation id spans a channel and everything it fanned its
+    message out to.
     """
     body = json.loads(req.body)
     seed_id = body['id']
@@ -223,13 +224,13 @@ def flow(req:'any_') -> 'HttpResponse':
         column = event_table.c[column_name]
         select_columns.append(column)
 
-    # A flow is read the way it happened, oldest first, and two events of one moment are told apart
-    # by where they stand among the others of their correlation id - a request and the response to
-    # it are written down within the same millisecond often enough for that to matter.
+    # A flow reads the way the list does, newest first, and two events of one moment are told
+    # apart by where they stand among the others of their correlation id - a request and the
+    # response to it are written down within the same millisecond often enough for that to matter.
     order_by = [
-        event_table.c.event_time_iso.asc(),
-        event_table.c.cid_sequence.asc(),
-        event_table.c.id.asc(),
+        event_table.c.event_time_iso.desc(),
+        event_table.c.cid_sequence.desc(),
+        event_table.c.id.desc(),
     ]
 
     engine = get_audit_engine()

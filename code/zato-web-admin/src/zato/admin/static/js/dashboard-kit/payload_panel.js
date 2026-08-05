@@ -81,27 +81,34 @@
     };
 
     /* A panel whose tabs fetch their own text. `fetch(tab, done)` calls `done(text)`
-       when the text of that one tab has arrived, and is called once per tab at most. */
-    kit.payload_panel.lazy = function($host, tabs, fetch) {
+       when the text of that one tab has arrived, and is called once per tab at most.
+       `open_index` names the tab the panel opens on, the first one when left unsaid. */
+    kit.payload_panel.lazy = function($host, tabs, fetch, open_index) {
         $host.html(kit.payload_panel._html(tabs));
 
         var $panel = $host.find('.dashboard-payload');
         $panel.data('payload_tabs', tabs);
         $panel.data('payload_fetch', fetch);
 
-        // The tab that is already open is the one worth having right away.
-        kit.payload_panel._fill($panel, 0);
+        if (open_index === undefined) {
+            open_index = 0;
+        }
+
+        // The tab that is open is the one worth having right away.
+        kit.payload_panel._activate($panel, open_index);
+        kit.payload_panel._fill($panel, open_index);
     };
 
     /* The panel brought to another message. A frame whose tabs are these very tabs is kept
        where it stands and only its text is asked for again, so reading down a list swaps
-       words rather than tearing the frame down and putting it back up. */
-    kit.payload_panel.swap = function($host, tabs, fetch) {
+       words rather than tearing the frame down and putting it back up. A caller that says
+       which tab is to be open is obeyed, one that says nothing leaves the open tab alone. */
+    kit.payload_panel.swap = function($host, tabs, fetch, open_index) {
         var $panel = $host.find('.dashboard-payload');
 
         // A message read in other tabs than these needs a frame of its own.
         if (!kit.payload_panel._same_tabs($panel, tabs)) {
-            kit.payload_panel.lazy($host, tabs, fetch);
+            kit.payload_panel.lazy($host, tabs, fetch, open_index);
             return;
         }
 
@@ -112,9 +119,25 @@
         // the one worth having right away.
         $panel.find('.dashboard-payload-text').data('payload_loaded', false);
 
-        var open_index = $panel.find('.dashboard-payload-tab.dashboard-panel-action-badge-active')
-            .attr('data-tab-index');
+        if (open_index === undefined) {
+            open_index = $panel.find('.dashboard-payload-tab.dashboard-panel-action-badge-active')
+                .attr('data-tab-index');
+        }
+        else {
+            kit.payload_panel._activate($panel, open_index);
+        }
+
         kit.payload_panel._fill($panel, open_index);
+    };
+
+    /* Puts one tab in front - its badge lit and its pane the one on the screen. */
+    kit.payload_panel._activate = function($panel, tab_index) {
+        $panel.find('.dashboard-payload-tab').removeClass('dashboard-panel-action-badge-active');
+        $panel.find('.dashboard-payload-tab[data-tab-index="' + tab_index + '"]')
+            .addClass('dashboard-panel-action-badge-active');
+
+        $panel.find('.dashboard-payload-text').attr('hidden', 'hidden');
+        $panel.find('.dashboard-payload-text[data-tab-index="' + tab_index + '"]').removeAttr('hidden');
     };
 
     /* Whether a panel already carries this very set of tabs, which is what tells a frame
@@ -197,12 +220,7 @@
         var $panel = $tab.closest('.dashboard-payload');
         var tab_index = $tab.attr('data-tab-index');
 
-        $panel.find('.dashboard-payload-tab').removeClass('dashboard-panel-action-badge-active');
-        $tab.addClass('dashboard-panel-action-badge-active');
-
-        $panel.find('.dashboard-payload-text').attr('hidden', 'hidden');
-        $panel.find('.dashboard-payload-text[data-tab-index="' + tab_index + '"]').removeAttr('hidden');
-
+        kit.payload_panel._activate($panel, tab_index);
         kit.payload_panel._fill($panel, tab_index);
     });
 

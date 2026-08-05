@@ -83,6 +83,13 @@ listing.config = {
 
     rawTabLabel: 'Raw',
     parsedTabLabel: 'Parsed',
+
+    // The two ways a body is read wherever one is read, parsed being the one every reader
+    // starts on, and the name the way chosen goes into the address bar under
+    rawView: 'raw',
+    parsedView: 'parsed',
+    viewURLKey: 'view',
+
     copyCIDLabel: 'Copy CID',
 
     // What is known about the event is set out on the same dark frame the message and the flow
@@ -599,9 +606,11 @@ listing.lineageFact = function(label, eventId) {
 listing.detailTabs = function() {
     var config = listing.config;
 
+    // Parsed reads first, being what a message is opened to be read as - the wire form is
+    // there for whoever asks for it
     var out = [
-        {label: config.rawTabLabel, kind: '', parsed: false},
-        {label: config.parsedTabLabel, kind: '', parsed: true}
+        {label: config.parsedTabLabel, kind: '', parsed: true},
+        {label: config.rawTabLabel, kind: '', parsed: false}
     ];
 
     return out;
@@ -752,6 +761,14 @@ listing.showPayload = function() {
 
     var tabs = listing.detailTabs();
 
+    // The tab standing open is the one the address bar names, so a copied link opens on the
+    // very reading its sender had in front of them
+    var openIndex = 0;
+
+    if (kit.url_state.get(listing.config.viewURLKey) === listing.config.rawView) {
+        openIndex = 1;
+    }
+
     kit.payload_panel.swap($host, tabs, function(tab, onDone) {
         listing.fetchDetails(rowModel.id, tab.kind, false, function(details) {
 
@@ -769,7 +786,7 @@ listing.showPayload = function() {
                 onDone(details.parsed);
             }
         });
-    });
+    }, openIndex);
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -1295,6 +1312,24 @@ listing.init = function(initConfig) {
         event.stopPropagation();
 
         $.fn.zato.audit_log.search($(this).attr('data-search-value'));
+    });
+
+    // The way the message is being read goes into the address bar, parsed being taken as
+    // read there the same way it is on the screen
+    $(document).on('click', listing.config.payloadHost + ' .dashboard-payload-tab', function() {
+        var config = listing.config;
+        var tab = listing.detailTabs()[Number($(this).attr('data-tab-index'))];
+
+        var view = '';
+
+        if (!tab.parsed) {
+            view = config.rawView;
+        }
+
+        var updates = {};
+        updates[config.viewURLKey] = view;
+
+        kit.url_state.replace(updates);
     });
 
     // A lineage marker of an event on this page selects it, and one of an event on

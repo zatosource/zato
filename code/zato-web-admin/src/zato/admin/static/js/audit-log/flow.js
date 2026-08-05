@@ -2,9 +2,10 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// One event's whole flow - every event related to it on a line of its own, read forward in
-// time. The shape of a line and of the shell under it comes from the dashboard kit, what goes
-// into them is the audit log's business, and what a line opens into is in flow-panel.js.
+// One event's whole flow - every event related to it on a line of its own, the newest first
+// the way the list reads. The shape of a line and of the shell under it comes from the
+// dashboard kit, what goes into them is the audit log's business, and what a line opens
+// into is in flow-panel.js.
 
 $.fn.zato.audit_log.flow = {};
 
@@ -39,13 +40,13 @@ flow.config = {
     openLabel: 'Open',
 
     // What one relation of an event to the flow is called. The operation itself is left unnamed,
-    // because a line of the same operation is what a flow is mostly made of.
+    // because a line of the same operation is what a flow is mostly made of - and so is sharing
+    // a message id, which is why a line found by it wears no tag either.
     relationLabels: {
         'parent': 'Came out of',
         'child': 'Led to',
         'resubmit-of': 'Repeat of',
-        'resubmitted-as': 'Repeated as',
-        'same-msg-id': 'Same message id'
+        'resubmitted-as': 'Repeated as'
     }
 };
 
@@ -89,8 +90,10 @@ flow.buildRow = function(row) {
 
     out.headline = presenter.headline(row);
 
-    if (out.headline === '') {
-        out.headline = out.controlId;
+    // A headline that is only the message id says what the flow already says - most lines of
+    // a flow share it, and the panel's facts carry it - so what happened stands in its place
+    if (out.headline === '' || out.headline === row.msg_id) {
+        out.headline = out.eventType;
     }
 
     return out;
@@ -163,15 +166,13 @@ flow.stripeOf = function(rowModel) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// When the event happened, with the whole timestamp one hover away, and how long after the
-// line above it that was
-flow.leadHTML = function(rowModel, previous) {
+// When the event happened - which day, said the way the list says it, then the time of day
+// whole, with the full stamp one hover away
+flow.leadHTML = function(rowModel) {
     var html = '<span class="audit-log-flow-time" title="' + flow.escapeHTML(rowModel.timeLocal) + '">' +
+        '<span class="audit-log-cell-day">' + flow.escapeHTML(kit.time_ago_label(rowModel.timeIso)) +
+        '</span>' + flow.escapeHTML(listing.config.dayTimeSeparator) +
         flow.escapeHTML(rowModel.timeLocal.slice(11)) + '</span>';
-
-    if (previous !== null) {
-        html += flow.elapsedHTML(previous, rowModel);
-    }
 
     return html;
 };
@@ -195,19 +196,30 @@ flow.elapsedHTML = function(previous, rowModel) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// What the event is - which source wrote it down when that is not the source of the page,
-// what happened, what the message is known by, and why the event is in the flow
-flow.messageHTML = function(rowModel) {
+// What the event is - how long after the line below it it happened, the line below being
+// the one before it in time, which source wrote it down when that is not the source of the
+// page, what happened, what the message is known by, and why the event is in the flow
+flow.messageHTML = function(rowModel, previous) {
     var config = flow.config;
     var pageSource = $.fn.zato.audit_log.config.source;
     var html = '';
+
+    // The elapsed time reads after the direction rather than before it, so the tag saying
+    // which way the event went stands right against the time it went that way at
+    if (previous !== null) {
+        html += flow.elapsedHTML(previous, rowModel);
+    }
 
     // A flow crosses sources, so a line of another one says which it came from
     if (rowModel.source !== pageSource) {
         html += '<span class="audit-log-flow-source">' + flow.escapeHTML(rowModel.source) + '</span>';
     }
 
-    html += '<span class="audit-log-flow-event">' + flow.escapeHTML(rowModel.eventType) + '</span>';
+    // An event whose headline is what happened does not say it a second time beside itself
+    if (rowModel.eventType !== rowModel.headline) {
+        html += '<span class="audit-log-flow-event">' + flow.escapeHTML(rowModel.eventType) + '</span>';
+    }
+
     html += '<span class="audit-log-flow-headline">' + flow.escapeHTML(rowModel.headline) + '</span>';
 
     // The operation itself is left unnamed, and so is the line the flow was read from
@@ -287,9 +299,9 @@ flow.lineHTML = function(rowModel, previous) {
             'aria-expanded': 'false'
         },
         stripe: flow.stripeOf(rowModel),
-        lead_html: flow.leadHTML(rowModel, previous),
+        lead_html: flow.leadHTML(rowModel),
         badge_html: kit.direction.tag(rowModel.direction, rowModel.eventType, flow.config.darkVariant),
-        message_html: flow.messageHTML(rowModel),
+        message_html: flow.messageHTML(rowModel, previous),
         actions_html: flow.actionsHTML(rowModel)
     });
 
@@ -316,13 +328,18 @@ flow.stepHTML = function(rowModel, previous) {
 
 flow.render = function() {
     var html = '<div class="detail-panel-log audit-log-flow">';
-    var previous = null;
 
     for (var rowIndex = 0; rowIndex < flow.rows.length; rowIndex++) {
         var rowModel = flow.rows[rowIndex];
 
+        // With the newest first, the event before this one in time is the row after it
+        var previous = null;
+
+        if (rowIndex + 1 < flow.rows.length) {
+            previous = flow.rows[rowIndex + 1];
+        }
+
         html += flow.stepHTML(rowModel, previous);
-        previous = rowModel;
     }
 
     html += '</div>';
@@ -402,18 +419,22 @@ flow.merge = function(rows) {
         return;
     }
 
-    var previous = null;
-
-    if (flow.rows.length) {
-        previous = flow.rows[flow.rows.length - 1];
-    }
-
-    for (var rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+    // What arrives reads newest first like everything else, and each new line goes on top of
+    // the flow - so the arrivals are walked from the oldest of them up, each landing above
+    // the one before it and the newest of them ending up topmost
+    for (var rowIndex = rows.length - 1; rowIndex >= 0; rowIndex--) {
         var rowModel = rows[rowIndex];
 
         // A line already on the screen is left as it stands, open panel and loaded body and all
         if (flow.rowById(rowModel.id) !== null) {
             continue;
+        }
+
+        // The newest line already drawn is the one before this one in time
+        var previous = null;
+
+        if (flow.rows.length) {
+            previous = flow.rows[0];
         }
 
         var $step = $(flow.stepHTML(rowModel, previous));
@@ -422,10 +443,8 @@ flow.merge = function(rows) {
         $line.addClass('kit-fade-in');
         $line.one('animationend', function() { $(this).removeClass('kit-fade-in'); });
 
-        $flow.append($step);
-        flow.rows.push(rowModel);
-
-        previous = rowModel;
+        $flow.prepend($step);
+        flow.rows.unshift(rowModel);
     }
 };
 
