@@ -23,6 +23,11 @@
        column of them is legible at a glance, and still held back from what a row is named by */
     --audit-log-time-text: #43506a;
 
+    /* The frame a failed row is picked out by, in the red an error is named in everywhere else on
+       the screen. It is dashed so that it reads as a mark left on the row rather than as a border
+       the table drew, and it is written as one value because all four sides are the one frame. */
+    --audit-log-error-frame: 2px dashed #e0226e;
+
     --dashboard-flow-accent: #f6c66a;
     --dashboard-flow-accent-tint: rgba(246, 166, 5, 0.10);
     --dashboard-flow-accent-tint-strong: rgba(246, 166, 5, 0.18);
@@ -93,6 +98,28 @@
     font-weight: 700;
 }
 
+/* A failed event is framed rather than filled, so what marks the selection and what marks a row
+   as newly arrived both still read through it.
+
+   The frame is drawn on the cells and this table collapses its borders, which is what keeps a run
+   of failures from doubling up: where two framed rows meet, the line below one and the line above
+   the next are the same line, drawn once. The two ends are the number cell, which is never given
+   up, and the empty cell the row's leftover room goes to, so the frame closes at the row's edges
+   however many columns a narrow list has dropped in between. */
+
+.audit-log-row-error > td {
+    border-top: var(--audit-log-error-frame);
+    border-bottom: var(--audit-log-error-frame);
+}
+
+.audit-log-row-error > td:first-child {
+    border-left: var(--audit-log-error-frame);
+}
+
+.audit-log-row-error > td:last-child {
+    border-right: var(--audit-log-error-frame);
+}
+
 /* No column of this table says how wide it is. Every one of them is as wide as what it holds and
    no wider, nothing wraps, and the room the row has over goes to the empty cell at its end, so
    the columns are laid out by the data rather than by a number written down here. A list dragged
@@ -128,11 +155,10 @@
     color: var(--audit-log-time-text);
 }
 
-/* The day is read before the time and not instead of it, so it is the one part of the cell
-   carrying any weight */
+/* The day is read before the time and not instead of it - it is set apart by its colour alone,
+   a column of names in bold being a column shouting the one thing every row has in common */
 
 .audit-log-cell-day {
-    font-weight: 700;
     color: var(--dashboard-line-strong);
 }
 

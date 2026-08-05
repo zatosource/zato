@@ -105,6 +105,11 @@ Screen_Browser = 'audit-log-browser'
 # working day with a quiet night, the weights drive the traffic curve
 Hourly_Weights = (2, 1, 1, 1, 1, 2, 4, 7, 10, 12, 14, 13, 11, 12, 14, 13, 11, 9, 7, 5, 4, 3, 3, 2)
 
+# The fraction of a second a moment is drawn from. A message arrives when it arrives, not on
+# a whole second, and a demo whose events all land on one is a demo that reads as made up -
+# it is also the fraction that tells two events of the same exchange apart.
+Microseconds_Per_Second = 1_000_000
+
 # The hour the clinic feed falls silent at on the seed's last day
 Clinic_Silent_Hour = 6
 
@@ -402,9 +407,20 @@ def purge_demo_data(engine:'Engine') -> 'None':
 
 # ################################################################################################################################
 
+def _draw_fraction(rng:'Random') -> 'timedelta':
+    """ Draws the fraction of a second a moment falls on. Nothing is written down on a whole
+    second - a message arrives when it arrives, and a check that comes round on the half hour
+    still takes a moment to reach the point of writing its finding down.
+    """
+    out = timedelta(microseconds=rng.randrange(Microseconds_Per_Second))
+    return out
+
+# ################################################################################################################################
+
 def _draw_time(rng:'Random', now:'datetime', days:'int') -> 'datetime':
     """ Draws one timestamp within the seeded span - a uniform day, an hour
-    from the working-day curve, and a uniform minute and second.
+    from the working-day curve, a uniform minute and second, and the fraction
+    of a second the clock would have caught the message at.
     """
     day_offset = rng.randrange(days)
     hour = rng.choices(range(24), weights=Hourly_Weights)[0]
@@ -412,7 +428,7 @@ def _draw_time(rng:'Random', now:'datetime', days:'int') -> 'datetime':
     second = rng.randrange(60)
 
     day_start = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=day_offset)
-    out = day_start + timedelta(hours=hour, minutes=minute, seconds=second)
+    out = day_start + timedelta(hours=hour, minutes=minute, seconds=second) + _draw_fraction(rng)
 
     return out
 
@@ -466,7 +482,7 @@ def _build_plan(config:'SeedConfig', now:'datetime') -> 'anylist':
         # and fails most of the time ..
         if id(item) in burst_ids:
             planned.channel_name = Channel_Lab
-            planned.when = burst_start + timedelta(seconds=rng.randrange(burst_seconds))
+            planned.when = burst_start + timedelta(seconds=rng.randrange(burst_seconds)) + _draw_fraction(rng)
             planned.is_error = rng.random() < Burst_Error_Ratio
 
         # .. everything else follows the working-day curve.
@@ -613,7 +629,7 @@ def _write_in_flight_sends(
         attrs = get_audit_attrs(message)
 
         # Each send went out within the last minutes and nothing has come back yet
-        when = now - timedelta(minutes=rng.randrange(2, 30))
+        when = now - timedelta(minutes=rng.randrange(2, 30)) + _draw_fraction(rng)
         cid = f'{Cid_Prefix}if-{index + 1:08d}'
 
         audit_log.set_event_time(when)
@@ -627,6 +643,7 @@ def _write_batch(
     audit_log:'_BulkAuditLog',
     config:'SeedConfig',
     now:'datetime',
+    rng:'Random',
     ) -> 'None':
     """ Writes one FHS/BHS batch with its parent row and per-message children -
     the lineage view's demo case. The parent and all its children share
@@ -642,7 +659,7 @@ def _write_batch(
     batch_text = 'BHS|^~\\&|DEMO_BATCH|GENERAL_HOSPITAL|ZATO|ZATO|20260101000000\r' + body + '\rBTS|3'
 
     batch_cid = f'{Cid_Prefix}batch-00000001'
-    batch_when = now.replace(hour=11, minute=0, second=0, microsecond=0) - timedelta(days=2)
+    batch_when = now.replace(hour=11, minute=0, second=0, microsecond=0) - timedelta(days=2) + _draw_fraction(rng)
 
     audit_log.set_event_time(batch_when)
     _ = audit_batch_received(audit_log, Channel_Main, batch_text, cid=batch_cid, endpoint='mllp://demo')
@@ -665,7 +682,7 @@ def _write_resubmit_chain(
         return
 
     # The repair happened this morning, two hours ago
-    repair_when = now - timedelta(hours=2)
+    repair_when = now - timedelta(hours=2) + _draw_fraction(rng)
     repair_cid = f'{Cid_Prefix}rp-00000001'
 
     message = parse_hl7(repair_source.text, validate=False)
@@ -791,7 +808,7 @@ def _build_alert_row(
 
 # ################################################################################################################################
 
-def _write_alerts(audit_log:'_BulkAuditLog', now:'datetime') -> 'dictlist':
+def _write_alerts(audit_log:'_BulkAuditLog', now:'datetime', rng:'Random') -> 'dictlist':
     """ Writes the alert history's audit events and composes the alert rows -
     one alert in each lifecycle state, so the alerts screen shows all three
     colors. Returns the alert rows for the bulk insert.
@@ -815,26 +832,30 @@ def _write_alerts(audit_log:'_BulkAuditLog', now:'datetime') -> 'dictlist':
         f'Feed on {Channel_Clinic} has been silent since {Clinic_Silent_Hour:02d}:00 UTC',
         severity=AlertSeverity.Warning)
 
-    silent_first = today_start + timedelta(hours=Clinic_Silent_Hour, minutes=30)
-    silent_when = silent_first
-    silent_count = 0
+    silent_when = today_start + timedelta(hours=Clinic_Silent_Hour, minutes=30)
+
+    # The moments the repeated findings were written down at, which is what the alert reports -
+    # a check comes round on the half hour but writes its finding a moment after
+    silent_stamps:'anylist' = []
 
     while silent_when < now:
-        silent_count += 1
+        stamped = silent_when + _draw_fraction(rng)
+        silent_stamps.append(stamped)
+        silent_count = len(silent_stamps)
 
-        audit_log.set_event_time(silent_when)
+        audit_log.set_event_time(stamped)
         record_alert_event(
             audit_log, silent_rule, silent_finding, silent_count, f'{Cid_Prefix}al-silent-{silent_count:04d}')
 
+        # The next round is counted off the half hour itself, so the fractions do not accumulate
         silent_when = silent_when + timedelta(minutes=30)
 
     # A run whose moment is before the silence window has no repetitions to fold
-    if silent_count:
-        silent_last = silent_first + timedelta(minutes=30 * (silent_count - 1))
+    if silent_stamps:
         out.append(_build_alert_row(
             silent_rule, silent_finding,
-            count=silent_count, state=AlertState.Unobserved,
-            first_raised=silent_first, last_raised=silent_last))
+            count=len(silent_stamps), state=AlertState.Unobserved,
+            first_raised=silent_stamps[0], last_raised=silent_stamps[-1]))
 
     # The observed alert - yesterday's error burst, acknowledged that evening
     error_rule = rules[Rule_Error_Rate]
@@ -845,23 +866,24 @@ def _write_alerts(audit_log:'_BulkAuditLog', now:'datetime') -> 'dictlist':
 
     burst_day = today_start - timedelta(days=1)
     error_offsets = (10, 40, 80)
-    error_count = 0
+
+    # The moments the findings were written down at, which the alert reports as its own
+    error_stamps:'anylist' = []
 
     for minutes_offset in error_offsets:
-        error_when = burst_day + timedelta(hours=Burst_Start_Hour, minutes=minutes_offset)
-        error_count += 1
+        stamped = burst_day + timedelta(hours=Burst_Start_Hour, minutes=minutes_offset) + _draw_fraction(rng)
+        error_stamps.append(stamped)
 
-        audit_log.set_event_time(error_when)
+        audit_log.set_event_time(stamped)
         record_alert_event(
-            audit_log, error_rule, error_finding, error_count, f'{Cid_Prefix}al-error-{minutes_offset:04d}')
+            audit_log, error_rule, error_finding, len(error_stamps), f'{Cid_Prefix}al-error-{minutes_offset:04d}')
 
-    observed_when = burst_day + timedelta(hours=Burst_End_Hour, minutes=5)
+    observed_when = burst_day + timedelta(hours=Burst_End_Hour, minutes=5) + _draw_fraction(rng)
 
     out.append(_build_alert_row(
         error_rule, error_finding,
-        count=error_count, state=AlertState.Observed,
-        first_raised=burst_day + timedelta(hours=Burst_Start_Hour, minutes=error_offsets[0]),
-        last_raised=burst_day + timedelta(hours=Burst_Start_Hour, minutes=error_offsets[-1]),
+        count=len(error_stamps), state=AlertState.Observed,
+        first_raised=error_stamps[0], last_raised=error_stamps[-1],
         observed_by=Actor_Admin, observed_iso=observed_when.isoformat()))
 
     # The resolved alert - a delivery stall from three days ago, repaired the same day
@@ -871,7 +893,7 @@ def _write_alerts(audit_log:'_BulkAuditLog', now:'datetime') -> 'dictlist':
         f'Messages sent through {Outconn_Forward} received no acknowledgment within 5 minutes',
         severity=AlertSeverity.Warning)
 
-    missing_when = today_start - timedelta(days=3) + timedelta(hours=9)
+    missing_when = today_start - timedelta(days=3) + timedelta(hours=9) + _draw_fraction(rng)
 
     audit_log.set_event_time(missing_when)
     record_alert_event(audit_log, missing_rule, missing_finding, 1, f'{Cid_Prefix}al-missing-0001')
@@ -888,7 +910,7 @@ def _write_alerts(audit_log:'_BulkAuditLog', now:'datetime') -> 'dictlist':
 
 # ################################################################################################################################
 
-def _write_config_history(audit_log:'_BulkAuditLog', now:'datetime') -> 'int':
+def _write_config_history(audit_log:'_BulkAuditLog', now:'datetime', rng:'Random') -> 'int':
     """ Writes the config-change history - the demo objects created a week ago
     and one edit later on. The view-access record follows separately, once
     the real id of the viewed event is known. Returns the event count.
@@ -910,7 +932,7 @@ def _write_config_history(audit_log:'_BulkAuditLog', now:'datetime') -> 'int':
             'is_audit_log_active': True,
         }
 
-        audit_log.set_event_time(created_when + timedelta(minutes=index))
+        audit_log.set_event_time(created_when + timedelta(minutes=index) + _draw_fraction(rng))
         _ = record_config_change(
             audit_log,
             action=AuditEvent.Config_Created,
@@ -923,7 +945,7 @@ def _write_config_history(audit_log:'_BulkAuditLog', now:'datetime') -> 'int':
         count += 1
 
     # The lab channel's pool grew two days ago
-    edited_when = today_start - timedelta(days=2) + timedelta(hours=15)
+    edited_when = today_start - timedelta(days=2) + timedelta(hours=15) + _draw_fraction(rng)
 
     audit_log.set_event_time(edited_when)
     _ = record_config_change(
@@ -942,14 +964,14 @@ def _write_config_history(audit_log:'_BulkAuditLog', now:'datetime') -> 'int':
 
 # ################################################################################################################################
 
-def _write_view_event(audit_log:'_BulkAuditLog', now:'datetime', viewed_event_id:'int') -> 'None':
+def _write_view_event(audit_log:'_BulkAuditLog', now:'datetime', viewed_event_id:'int', rng:'Random') -> 'None':
     """ Writes the view-access record - somebody opened the failed message's body
     yesterday evening. This runs after the main commit because the record embeds
     the viewed event's real database id.
     """
 
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    viewed_when = today_start - timedelta(days=1) + timedelta(hours=16, minutes=10)
+    viewed_when = today_start - timedelta(days=1) + timedelta(hours=16, minutes=10) + _draw_fraction(rng)
 
     audit_log.set_event_time(viewed_when)
     _ = record_view_event(
@@ -1062,17 +1084,17 @@ def seed_demo_data(
     _write_in_flight_sends(audit_log, config, now, rng)
 
     # The batch with its lineage
-    _write_batch(audit_log, config, now)
+    _write_batch(audit_log, config, now, rng)
 
     # The repair story - the failed message reprocessed successfully
     _write_resubmit_chain(audit_log, repair_source, now, rng)
 
     # The three alert lifecycles - their audit events plus the composed alert rows
-    alert_rows = _write_alerts(audit_log, now)
+    alert_rows = _write_alerts(audit_log, now, rng)
     out.alert_count = len(alert_rows)
 
     # The config-change history, without the view record yet
-    out.config_event_count = _write_config_history(audit_log, now)
+    out.config_event_count = _write_config_history(audit_log, now, rng)
 
     # The FHIR request/response pairs
     out.fhir_pair_count = _write_fhir_traffic(audit_log, config, now, rng)
@@ -1096,7 +1118,7 @@ def seed_demo_data(
     # which exists only after the main commit - it follows in a small write of its own
     if repair_source is not None:
 
-        _write_view_event(audit_log, now, id_map[repair_source.relative_received_id])
+        _write_view_event(audit_log, now, id_map[repair_source.relative_received_id], rng)
 
         with engine.begin() as connection:
             _ = audit_log.write_collected(connection)
