@@ -24,8 +24,9 @@ from sqlalchemy import text as sa_text
 # Zato
 from zato.common.analytics.api import analytics_db_file_name, metadata as analytics_metadata
 from zato.common.audit_log.common import Audit_DB_File_Name, metadata as audit_metadata
-from zato.common.config_db import apply_env_variables, build_env_variables, get_default_env_file_path, \
-    persist_env_variables, sql_env_prefix_by_database, sql_field_suffixes
+from zato.common.config_db import apply_env_variables, build_enabled_env_variables, build_env_variables, \
+    get_default_env_file_path, get_enabled_from_env, persist_env_variables, sql_env_prefix_by_database, \
+    sql_field_suffixes
 from zato.common.db_env import build_connect_args_from_values, build_engine_url_from_values, get_env_values, EnvDBConfig
 from zato.common.pubsub.sql.schema import metadata as pubsub_metadata, pubsub_db_file_name
 from zato.common.redis_env import get_redis_conn_from_values, get_redis_values_from_section
@@ -103,9 +104,12 @@ class SQLGet(AdminService):
         # .. the connection values come out of the environment with defaults filled in ..
         values = get_env_values(config)
 
-        # .. and so do the display name and description.
+        # .. and so do the display name and description ..
         values['display_name'] = os.environ.get(config.env_prefix + 'Display_Name', '')
         values['description']  = os.environ.get(config.env_prefix + 'Description', '')
+
+        # .. and whether the database is in use at all, which only the audit log can turn off.
+        values['enabled'] = get_enabled_from_env(database)
 
         self.response.payload = {
             'success': True,
@@ -161,6 +165,8 @@ class SQLSave(AdminService):
     live in this process and persisted into an env file so they survive restarts.
     The audit log resolves its engine per write and the analytics rollup and queries
     resolve theirs per call, so new operations use the new database immediately.
+    The audit log's Enabled switch is read per write too, so turning it off stops
+    the writing from the very next event on.
     """
     name = _sql_service_prefix + 'save'
 
@@ -174,6 +180,9 @@ class SQLSave(AdminService):
 
         # .. turn the form values into their environment variables ..
         env_variables = build_env_variables(env_prefix, sql_field_suffixes, values)
+
+        # .. the Enabled switch has a variable of its own, outside the connection family ..
+        env_variables.update(build_enabled_env_variables(database, values))
 
         # .. apply them to the running server ..
         set_count = apply_env_variables(env_variables)

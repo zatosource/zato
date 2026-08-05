@@ -65,8 +65,9 @@ listing.config = {
     parsedTabLabel: 'Parsed',
     copyCIDLabel: 'Copy CID',
 
-    // The pane is a light panel, so what is known about the event is set out on one
-    paneFactVariant: 'light',
+    // What is known about the event is set out on the same dark frame the message and the flow
+    // are read on, so moving between the pane's tabs is not moving between two kinds of page
+    paneFactVariant: 'dark',
 
     // What the pane calls the event it is holding, before anything else it says about it
     eventLabel: 'Event',
@@ -236,7 +237,7 @@ listing.buildRow = function(row) {
         status: row.status,
         classification: row.classification,
         timeIso: row.event_time_iso,
-        timeLocal: kit.format_local_time(row.event_time_iso),
+        timeLocal: kit.format_local_time_precise(row.event_time_iso),
         size: row.size,
         durationMs: row.duration_ms,
         parents: row.parents,
@@ -525,29 +526,18 @@ listing.lineageFact = function(label, eventId) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The tabs of one event's payload - one per body kind the event actually has,
-// and one for the wire format of a source that keeps its payload in the event itself
-listing.bodyTabs = function(rowModel) {
+// The two ways of reading one event's payload - as it went over the wire, which is where the
+// reading of it starts whatever source wrote it down, and as that source's own reader makes
+// sense of it. Every event of every source is read through these same two tabs, so moving down
+// the list swaps the text inside the frame rather than taking the frame down and putting it up.
+listing.detailTabs = function() {
     var config = listing.config;
-    var out = [];
 
-    for (var kindIndex = 0; kindIndex < rowModel.bodyKinds.length; kindIndex++) {
-        var kind = rowModel.bodyKinds[kindIndex];
+    var out = [
+        {label: config.rawTabLabel, kind: '', parsed: false},
+        {label: config.parsedTabLabel, kind: '', parsed: true}
+    ];
 
-        out.push({label: config.bodyKindLabels[kind], kind: kind, parsed: false});
-    }
-
-    if (out.length === 0) {
-        out.push({label: config.rawTabLabel, kind: '', parsed: false});
-    }
-
-    return out;
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
-listing.parsedTab = function() {
-    var out = {label: listing.config.parsedTabLabel, kind: '', parsed: true};
     return out;
 };
 
@@ -694,8 +684,7 @@ listing.showPayload = function() {
 
     $host.data('payload_event_id', rowModel.id);
 
-    var presenter = $.fn.zato.audit_log.presenter();
-    var tabs = presenter.detailTabs(rowModel);
+    var tabs = listing.detailTabs();
 
     kit.payload_panel.swap($host, tabs, function(tab, onDone) {
         listing.fetchDetails(rowModel.id, tab.kind, false, function(details) {

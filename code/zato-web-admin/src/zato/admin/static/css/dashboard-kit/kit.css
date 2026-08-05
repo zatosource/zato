@@ -14,6 +14,15 @@
     --dashboard-panel-text: #e6e6ef;
     --dashboard-payload-height: 320px;
 
+    /* What a thing that can be clicked on the dark frame is set in - at rest it has to be read
+       across the panel without being shouted, being pointed at brings it forward, and the one
+       of a row of them standing open stays forward whether it is pointed at or not */
+
+    --dashboard-badge-dark-text: #c8c8d6;
+    --dashboard-badge-dark-fill: rgba(255, 255, 255, 0.12);
+    --dashboard-badge-dark-fill-hover: rgba(255, 255, 255, 0.22);
+    --dashboard-badge-dark-fill-active: rgba(255, 255, 255, 0.30);
+
     --dashboard-line: #e4e8ee;
     --dashboard-line-strong: #012845;
     --dashboard-muted: #6b7280;
@@ -318,29 +327,53 @@ a.dashboard-hero-pill-link:not(.menu-link):not(.chosen-single):hover {
     user-select: none;
 }
 
-/* What one of these looks like on a dark panel, which is where most of them are */
+/* A badge that leads somewhere is a real link, so it can be opened in a tab of its own, and it
+   is written with the tag rather than the class so it outweighs whatever a page says about its
+   links - a badge reads the same whether it acts where it stands or leads away */
 
-.dashboard-panel-action-badge-dark {
-    color: #aaa;
-    background: rgba(255, 255, 255, 0.08);
+a.dashboard-panel-action-badge,
+a.dashboard-panel-action-badge:hover,
+a.dashboard-panel-action-badge:visited {
+    padding: 1px 6px;
+    text-decoration: none;
 }
 
-.dashboard-panel-action-badge-dark:hover {
+/* What one of these looks like on a dark panel, which is where most of them are */
+
+.dashboard-panel-action-badge-dark,
+a.dashboard-panel-action-badge-dark:visited {
+    color: var(--dashboard-badge-dark-text);
+    background: var(--dashboard-badge-dark-fill);
+}
+
+.dashboard-panel-action-badge-dark:hover,
+a.dashboard-panel-action-badge-dark:hover {
     color: var(--dashboard-panel-text);
-    background: rgba(255, 255, 255, 0.16);
+    background: var(--dashboard-badge-dark-fill-hover);
 }
 
 /* And what one looks like on a light panel, where it stands beside what it acts on
    and has to stay quieter than it */
 
-.dashboard-panel-action-badge-light {
+.dashboard-panel-action-badge-light,
+a.dashboard-panel-action-badge-light:visited {
     color: var(--dashboard-muted);
     background: rgba(0, 0, 0, 0.05);
 }
 
-.dashboard-panel-action-badge-light:hover {
+.dashboard-panel-action-badge-light:hover,
+a.dashboard-panel-action-badge-light:hover {
     color: var(--dashboard-line-strong);
     background: rgba(0, 0, 0, 0.10);
+}
+
+/* A badge that is not acted on but chosen - one of a row of them, the one standing open.
+   It stays lit whether it is being pointed at or not, which is what tells it from the rest. */
+
+.dashboard-panel-action-badge-active,
+.dashboard-panel-action-badge-active:hover {
+    color: var(--dashboard-panel-text);
+    background: var(--dashboard-badge-dark-fill-active);
 }
 
 .badge-running-spinner {

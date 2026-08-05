@@ -7,8 +7,6 @@
 
 (function($) {
 
-var listing = $.fn.zato.audit_log.listing;
-
 var hl7 = {
 
     config: {
@@ -83,16 +81,6 @@ $.fn.zato.audit_log.sources['hl7'] = {
         }
 
         return row.msg_type + ' ' + row.msg_id;
-    },
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    // An HL7 message is read as segments and fields, so that view comes first
-    // and the wire format stays one click away.
-    detailTabs: function(rowModel) {
-        var out = [listing.parsedTab()];
-
-        return out.concat(listing.bodyTabs(rowModel));
     }
 };
 

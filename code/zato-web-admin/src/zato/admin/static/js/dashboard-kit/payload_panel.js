@@ -32,10 +32,13 @@
         var html = '<div class="dashboard-payload">';
         html += '<div class="dashboard-payload-bar">';
 
+        // A tab is a badge like every other thing that can be clicked on a dark panel, and the
+        // one standing open is the one wearing the badge's own open state
         for (var tab_index = 0; tab_index < tabs.length; tab_index++) {
-            var tab_class = tab_index === 0 ? ' dashboard-payload-tab-active' : '';
+            var tab_class = tab_index === 0 ? ' dashboard-panel-action-badge-active' : '';
 
-            html += '<span class="dashboard-payload-tab' + tab_class + '" data-tab-index="' + tab_index + '">';
+            html += '<span class="dashboard-panel-action-badge dashboard-panel-action-badge-dark ' +
+                'dashboard-payload-tab' + tab_class + '" data-tab-index="' + tab_index + '">';
             html += kit._esc_html(tabs[tab_index].label);
             html += '</span>';
         }
@@ -109,7 +112,8 @@
         // the one worth having right away.
         $panel.find('.dashboard-payload-text').data('payload_loaded', false);
 
-        var open_index = $panel.find('.dashboard-payload-tab-active').attr('data-tab-index');
+        var open_index = $panel.find('.dashboard-payload-tab.dashboard-panel-action-badge-active')
+            .attr('data-tab-index');
         kit.payload_panel._fill($panel, open_index);
     };
 
@@ -193,8 +197,8 @@
         var $panel = $tab.closest('.dashboard-payload');
         var tab_index = $tab.attr('data-tab-index');
 
-        $panel.find('.dashboard-payload-tab').removeClass('dashboard-payload-tab-active');
-        $tab.addClass('dashboard-payload-tab-active');
+        $panel.find('.dashboard-payload-tab').removeClass('dashboard-panel-action-badge-active');
+        $tab.addClass('dashboard-panel-action-badge-active');
 
         $panel.find('.dashboard-payload-text').attr('hidden', 'hidden');
         $panel.find('.dashboard-payload-text[data-tab-index="' + tab_index + '"]').removeAttr('hidden');

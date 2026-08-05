@@ -18,7 +18,7 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.views import method_allowed
-from zato.admin.web.views.settings.config import config_db_redis_page_config, config_db_sql_page_config
+from zato.admin.web.views.settings.config import config_db_redis_page_config
 from zato.common.config_db import apply_env_variables, get_default_env_file_path, persist_env_variables
 from zato.common.json_internal import dumps, loads
 
@@ -124,7 +124,6 @@ def sql_index(req:'any_') -> 'TemplateResponse':
         logger.error('config_db sql_index: %s', format_exc())
 
     return TemplateResponse(req, 'zato/config-db/sql/index.html', {
-        'page_config': config_db_sql_page_config,
         'sql_values': sql_values,
     })
 

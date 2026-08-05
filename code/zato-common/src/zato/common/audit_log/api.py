@@ -21,9 +21,10 @@ from zato.common.audit_log.common import Attr_Value_Max_Len, Audit_DB_File_Name,
     get_source_env_suffix, metadata
 from zato.common.audit_log.retention import Env_Archive_Dir, Env_Content_Retention_Days, \
     Env_Content_Retention_Days_Prefix, get_content_retention_days, register_prunability, run_retention
+from zato.common.config_db import Default_Enabled, Env_Audit_Log_Enabled
 from zato.common.db_env import Default_SSL, Default_SSL_Verify, Default_Type, EnvDBConfig, get_env_engine, \
     Type_MySQL, Type_Oracle, Type_PostgreSQL, Type_SQLite
-from zato.common.util.api import utcnow
+from zato.common.util.api import as_bool, utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,14 +53,18 @@ if 0:
 __all__ = [
     'Audit_DB_File_Name', 'derive_classification', 'event_attr_table', 'event_body_table', 'event_link_table',
     'event_table', 'get_audit_db_path', 'get_audit_engine', 'get_content_retention_days', 'get_retention_days',
-    'get_source_env_suffix', 'metadata', 'register_prunability', 'AuditBody', 'AuditClassification', 'AuditEvent',
-    'AuditLink', 'AuditLog', 'AuditOutcome', 'AuditSource', 'ModuleCtx', 'Retention_Days',
+    'get_source_env_suffix', 'is_audit_log_enabled', 'metadata', 'register_prunability', 'AuditBody',
+    'AuditClassification', 'AuditEvent', 'AuditLink', 'AuditLog', 'AuditOutcome', 'AuditSource', 'ModuleCtx',
+    'Retention_Days',
 ]
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ModuleCtx:
+
+    # The environment variable turning the whole audit log off
+    Env_Enabled = Env_Audit_Log_Enabled
 
     # Environment variables selecting and configuring the audit log database
     Env_Type     = 'Zato_Audit_Log_DB_Type'
@@ -93,6 +98,9 @@ class ModuleCtx:
     Type_MySQL      = Type_MySQL
     Type_PostgreSQL = Type_PostgreSQL
     Type_Oracle     = Type_Oracle
+
+    # The audit log records events unless it is turned off explicitly
+    Default_Enabled = Default_Enabled
 
     # What is used when Zato_Audit_Log_DB_Type is not set
     Default_Type = Default_Type
@@ -160,6 +168,22 @@ def get_audit_engine() -> 'Engine':
     return out
 
 # ################################################################################################################################
+
+def is_audit_log_enabled() -> 'bool':
+    """ Whether the audit log records anything at all, as set through the Config DB SQL screen.
+    Read on each write rather than cached, so turning the switch off takes effect at once,
+    with no restart and with no need to rebuild any writer.
+    """
+
+    # An unset variable means the audit log is on
+    if value := os.environ.get(ModuleCtx.Env_Enabled, ''):
+        out = as_bool(value)
+    else:
+        out = ModuleCtx.Default_Enabled
+
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class AuditLog:
@@ -168,6 +192,8 @@ class AuditLog:
     as configured through the Zato_Audit_Log_DB_* environment variables.
     Events are written synchronously by default - high-volume producers turn on batching
     through the flush parameters or the Zato_Audit_Log_Flush_* environment variables.
+    The whole log can be turned off through Zato_Audit_Log_Enabled, in which case every
+    insert becomes a silent no-op.
     """
 
     def __init__(
@@ -245,8 +271,14 @@ class AuditLog:
         parent_link_type:'str' = AuditLink.Resubmit_Of,
         ) -> 'intnone':
         """ Writes one audit event, at the moment it happens, in the same process.
-        Returns the event's id when the write is synchronous, None when it was buffered.
+        Returns the event's id when the write is synchronous, None when it was buffered,
+        and None without writing anything when the audit log is turned off.
         """
+
+        # A turned-off audit log records nothing at all - the event is dropped in silence,
+        # with no message of its own, so no caller has to know whether the log is in use
+        if not is_audit_log_enabled():
+            return None
 
         # The event time is always assigned here so all rows share one clock ..
         now = utcnow()
@@ -317,7 +349,9 @@ class AuditLog:
 # ################################################################################################################################
 
     def flush(self) -> 'None':
-        """ Writes out everything currently buffered.
+        """ Writes out everything currently buffered. Events accepted while the audit log
+        was still on are written out even after it has been turned off - they were recorded
+        already, only their trip to the database was pending.
         """
         self._buffer.flush()
 
@@ -325,8 +359,12 @@ class AuditLog:
 
     def add_links(self, child_event_id:'int', parents:'intlist', link_type:'str') -> 'None':
         """ Links an already written event to its parent events - how a resubmission points back
-        to the original message it was born from.
+        to the original message it was born from. A turned-off audit log has no event to link to,
+        so the call is skipped in silence, the same way the insert that preceded it was.
         """
+        if not is_audit_log_enabled():
+            return
+
         rows:'anylist' = []
 
         for parent_event_id in parents:

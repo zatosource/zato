@@ -1,0 +1,71 @@
+/*
+ * Config DB - the SQL databases screen.
+ *
+ * The page is one wizard-kit card with a tab per database, so everything the
+ * kit already paints is left alone - this file only says what is this page's
+ * own: how wide the label column is, which fields the kit does not cover and
+ * where the one verdict line sits.
+ */
+
+:root {
+
+    /* The questions here are longer than a wizard's - "Database name" and
+       "Certificate file" both have to fit before the column of fields starts */
+    --config-db-sql-label-width: 9.5em;
+}
+
+/* ------------------------------------------------------------ */
+/* Config DB SQL - the panel of one database                     */
+/* ------------------------------------------------------------ */
+
+/* Every label on a panel shares one width, whatever kind of row it names,
+   so the fields of all three sections line up in a single column */
+.config-db-sql-panel .wizard-name-field label,
+.config-db-sql-panel .wizard-field-row > label,
+.config-db-sql-panel .wizard-toggle-label {
+    width: var(--config-db-sql-label-width);
+}
+
+/* The name row is the panel's first line, the sections follow it - each of
+   them stands as far from what is above as it does from what is below */
+.config-db-sql-panel .wizard-section {
+    margin-top: 22px;
+}
+
+/* The kit dresses text inputs, and a password field is one in everything
+   but the characters it shows */
+.config-db-sql-panel .wizard-field-row input[type="password"] {
+    flex: 1;
+    box-sizing: border-box;
+    height: 24px;
+    padding: 0 10px;
+    border: 1px solid var(--wizard-border-strong);
+    border-radius: 3px;
+    font-size: 13px;
+}
+
+/* A port is four digits, so the field stops short of the full column */
+.config-db-sql-panel input.config-db-sql-port {
+    flex: 0 0 6em;
+}
+
+/* ------------------------------------------------------------ */
+/* Config DB SQL - the verdict of a test or a save               */
+/* ------------------------------------------------------------ */
+
+/* A full-width line of its own under the footer's three zones, so an error
+   as long as a stack trace wraps instead of pushing the buttons apart */
+.config-db-sql-card .wizard-footer {
+    row-gap: 8px;
+}
+
+.config-db-sql-verdict {
+    grid-column: 1 / -1;
+    text-align: center;
+}
+
+/* The kit's verdict rides beside a button, this one stands on its own */
+.config-db-sql-verdict .wizard-probe-result {
+    margin-left: 0;
+    overflow-wrap: anywhere;
+}

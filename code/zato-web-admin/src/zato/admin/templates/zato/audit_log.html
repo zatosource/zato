@@ -15,6 +15,10 @@ img.help-icon[id=""] { display: none; }
 {% endblock %}
 {% block help_icon_id %}{% endblock %}
 
+{% comment %} The listing draws its own frames - a heavy one around the whole page as well
+would be a box inside a box {% endcomment %}
+{% block progress_panel_class %}progress-panel-borderless progress-panel-no-margin{% endblock %}
+
 {% block detail_page_class %}detail-page-audit-log{% endblock %}
 
 {% block detail_js %}

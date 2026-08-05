@@ -34,25 +34,13 @@
     border-bottom: 1px solid var(--dashboard-panel-border);
 }
 
+/* A tab wears the badge every clickable thing on a dark panel wears, so all a tab adds here
+   is the room a word of it needs */
+
 .dashboard-payload-tab {
-    padding: 2px 10px;
-    border-radius: 3px;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    color: rgba(230, 230, 239, 0.6);
-    cursor: pointer;
-    user-select: none;
-}
-
-.dashboard-payload-tab:hover {
-    color: var(--dashboard-panel-text);
-}
-
-.dashboard-payload-tab-active {
-    color: var(--dashboard-panel-background);
-    background: var(--dashboard-panel-text);
+    margin-left: 0;
+    padding-left: 10px;
+    padding-right: 10px;
 }
 
 .dashboard-payload-actions {

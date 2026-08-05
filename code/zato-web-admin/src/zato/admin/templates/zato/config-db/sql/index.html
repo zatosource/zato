@@ -1,102 +1,79 @@
-{% extends "zato/settings/form-page.html" %}
+{% extends "zato/dashboard_base.html" %}
 
-{% block form_rows %}
-<div class="info-row">
-    <div class="info-label">Database</div>
-    <div class="info-value form-value">
-        <select id="id_database">
-            <option value="audit-log">Audit log</option>
-            <option value="analytics">Analytics</option>
-            <option value="pubsub">Pub/sub</option>
-        </select>
-    </div>
-</div>
-<div class="info-row">
-    <div class="info-label">Name</div>
-    <div class="info-value form-value">
-        <input type="text" id="id_display_name" placeholder="A short name for this connection">
-    </div>
-</div>
-<div class="info-row">
-    <div class="info-label">Description</div>
-    <div class="info-value form-value">
-        <input type="text" id="id_description" placeholder="What this connection is used for">
-    </div>
-</div>
-<div class="info-row">
-    <div class="info-label">Type</div>
-    <div class="info-value form-value">
-        <select id="id_type">
-            <option value="sqlite">SQLite</option>
-            <option value="mysql">MySQL</option>
-            <option value="postgresql">PostgreSQL</option>
-            <option value="oracle">Oracle DB</option>
-        </select>
-    </div>
-</div>
-<div class="info-row">
-    <div class="info-label">Host</div>
-    <div class="info-value form-value">
-        <input type="text" id="id_host" placeholder="e.g. localhost">
-    </div>
-</div>
-<div class="info-row">
-    <div class="info-label">Port</div>
-    <div class="info-value form-value">
-        <input type="text" id="id_port" class="form-value-short" placeholder="e.g. 5432">
-    </div>
-</div>
-<div class="info-row">
-    <div class="info-label">Database name</div>
-    <div class="info-value form-value">
-        <input type="text" id="id_name" placeholder="Database name or SQLite file path">
-    </div>
-</div>
-<div class="info-row">
-    <div class="info-label">Username</div>
-    <div class="info-value form-value">
-        <input type="text" id="id_username">
-    </div>
-</div>
-<div class="info-row">
-    <div class="info-label">Password</div>
-    <div class="info-value form-value">
-        <input type="password" id="id_password">
-    </div>
-</div>
-<div class="info-row">
-    <div class="info-label">Use SSL/TLS</div>
-    <div class="info-value form-value form-value-checkbox">
-        <input type="checkbox" id="id_ssl">
-    </div>
-</div>
-<div class="info-row">
-    <div class="info-label">SSL CA file</div>
-    <div class="info-value form-value">
-        <input type="text" id="id_ssl_ca_file" placeholder="Path to the CA certificate file">
-    </div>
-</div>
-<div class="info-row">
-    <div class="info-label">SSL certificate file</div>
-    <div class="info-value form-value">
-        <input type="text" id="id_ssl_cert_file" placeholder="Path to the client certificate file">
-    </div>
-</div>
-<div class="info-row">
-    <div class="info-label">SSL key file</div>
-    <div class="info-value form-value">
-        <input type="text" id="id_ssl_key_file" placeholder="Path to the client key file">
-    </div>
-</div>
-<div class="info-row">
-    <div class="info-label">Verify SSL certificate</div>
-    <div class="info-value form-value form-value-checkbox">
-        <input type="checkbox" id="id_ssl_verify" checked>
-    </div>
-</div>
+{% comment %}
+The SQL databases the server configures through environment variables - one tab
+per database, each tab a form of its own. The page is one dashboard card wearing
+the wizard kit's look, the same one an HL7 MLLP channel is created through, but
+there is nothing to walk through here, so the tabs are plain tabs and there are
+no steps. The view provides:
+
+* sql_values - the current values of every database, keyed by its identifier
+{% endcomment %}
+
+{% block html_title %}Config DB - SQL databases{% endblock %}
+
+{% block dashboard_extra_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/settings.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
+<link rel="stylesheet" type="text/css" href="/static/css/config-db/sql.css">
 {% endblock %}
 
-{% block form_page_js %}
-{{ sql_values|json_script:"sql-values" }}
-<script type="text/javascript" src="/static/js/config-db/sql.js" nonce="{{ CSP_NONCE }}"></script>
+{% block dashboard_domain_js %}
+{{ sql_values|json_script:"config-db-sql-values" }}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/config-db/sql.js"></script>
+{% endblock %}
+
+{% block dashboard_tiles %}{% endblock %}
+{% block dashboard_header_pill %}{% endblock %}
+{% block dashboard_chart_header_content %}{% endblock %}
+{% block dashboard_time_range_options %}{% endblock %}
+{% block dashboard_refresh_options %}{% endblock %}
+
+{% block dashboard_grid %}
+
+        <div class="dashboard-card wizard-card config-db-sql-card" id="config-db-sql">
+
+            <div class="dashboard-card-header">
+                <h3>SQL databases</h3>
+            </div>
+
+            {% comment %} The tab strip wears the wizard's recolored dashboard tabs -
+                 here each tab is a database rather than a step {% endcomment %}
+            <div class="dashboard-tabs wizard-steps" id="config-db-sql-tabs" role="tablist" aria-label="Databases">
+                <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="audit-log" role="tab" aria-selected="true">Audit log</button>
+                <button type="button" class="dashboard-tab" data-tab="analytics" role="tab" aria-selected="false">Analytics</button>
+                <button type="button" class="dashboard-tab" data-tab="pubsub" role="tab" aria-selected="false">Pub/sub</button>
+            </div>
+
+            <div class="dashboard-tab-panel config-db-sql-panel" id="config-db-sql-tab-panel-audit-log" role="tabpanel">
+                {% include "zato/config-db/sql/_fields.html" with database="audit-log" has_enabled=True %}
+            </div>
+
+            <div class="dashboard-tab-panel config-db-sql-panel" id="config-db-sql-tab-panel-analytics" role="tabpanel" hidden>
+                {% include "zato/config-db/sql/_fields.html" with database="analytics" has_enabled=False %}
+            </div>
+
+            <div class="dashboard-tab-panel config-db-sql-panel" id="config-db-sql-tab-panel-pubsub" role="tabpanel" hidden>
+                {% include "zato/config-db/sql/_fields.html" with database="pubsub" has_enabled=False %}
+            </div>
+
+            {% comment %} Help on the left, the two actions in the middle and their one
+                 verdict on a line of its own, where a long error has room to wrap {% endcomment %}
+            <div class="wizard-footer">
+                <span class="how-it-works-badge" id="config-db-sql-how-it-works">How does it work?</span>
+                <div class="wizard-footer-center">
+                    <button type="button" class="wizard-probe-button" id="config-db-sql-test">Test the connection</button>
+                    <button type="button" class="action-button" id="config-db-sql-save">Save</button>
+                </div>
+                <div class="wizard-footer-right"></div>
+                <div class="config-db-sql-verdict">
+                    <span class="wizard-probe-result" id="config-db-sql-result"></span>
+                </div>
+            </div>
+
+        </div>
+
 {% endblock %}

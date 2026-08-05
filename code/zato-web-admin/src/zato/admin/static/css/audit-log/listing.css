@@ -10,6 +10,16 @@
 @import url("../dashboard-kit/log_line.css");
 @import url("../dashboard-kit/fact_rows.css");
 
+/* What stands out on the dark frame the pane reads on - the line a flow was read from, the tag
+   saying how an event got into it, and the one value of an event that leads somewhere */
+
+:root {
+    --dashboard-flow-accent: #f6c66a;
+    --dashboard-flow-accent-tint: rgba(246, 166, 5, 0.10);
+    --dashboard-flow-accent-tint-strong: rgba(246, 166, 5, 0.18);
+    --dashboard-flow-accent-tint-tag: rgba(246, 166, 5, 0.14);
+}
+
 /* ------------------------------------------------------------ */
 /* The page around the listing                                   */
 /* ------------------------------------------------------------ */
@@ -89,17 +99,30 @@
     font-weight: 700;
 }
 
+/* Every column is the width it says it is - a list dragged narrow drops the columns it no
+   longer has room for rather than squeezing all of them into what is left, so a row reads the
+   same at any width right up to the moment a column of it goes */
+
+.audit-log-list-table {
+    table-layout: fixed;
+}
+
+/* A column being the width it says it is means what it holds no longer widens it, so anything
+   longer than the column ends in an ellipsis instead of painting over its neighbour */
+
 .audit-log-list-table td {
     padding: 4px 6px;
     border-bottom: 1px solid var(--dashboard-line);
     vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* The event's own number, which is how one event is pointed at - it is the first thing
    read on a row and the first thing read in the pane, so it is not kept quiet */
 
 .audit-log-cell-number {
-    width: 60px;
+    width: 76px;
     padding-right: 8px;
     font-family: var(--dashboard-mono);
     font-size: 12px;
@@ -109,8 +132,12 @@
     white-space: nowrap;
 }
 
+/* Two events of one exchange land within the same second of each other, so the second is not
+   what tells them apart - the cell is as wide as the whole fraction the event was written down
+   with, and the date it fell on is one hover away */
+
 .audit-log-cell-time {
-    width: 68px;
+    width: 122px;
     font-family: var(--dashboard-mono);
     font-size: 12px;
     color: var(--dashboard-muted);
@@ -131,22 +158,26 @@
     white-space: nowrap;
 }
 
+/* A row saying there is nothing to list, or that there soon will be, spans the whole table and
+   is a sentence rather than a column, so it is not held to any column's width */
+
 .audit-log-empty-row td,
 .detail-loading-row td {
     padding: 10px 12px;
     color: var(--dashboard-muted);
+    overflow: visible;
+    text-overflow: clip;
 }
 
-/* What one event is and what it says about itself, on one line for as long as the line
-   holds it and wrapping onto the next when it does not - a row grows rather than cutting
-   anything in half, and the payload it carried is the pane's business */
+/* What one event is and what it says about itself, always on the one line - a row of a list
+   read a hundred at a time is one row tall whatever it is holding, so what does not fit ends
+   in an ellipsis rather than folding the row open */
 
 .audit-log-cell-main {
     line-height: 20px;
-
-    /* A value too long for the room it is given breaks onto the next line rather than
-       running out into the cell beside it */
-    overflow-wrap: anywhere;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .audit-log-row-id {
@@ -174,18 +205,73 @@
     letter-spacing: 0.2px;
 }
 
-/* A list dragged narrow keeps what tells one event from another and drops the rest -
-   resubmitting one of them is the pane's business by then */
+/* A list dragged narrow gives its columns up one at a time, in the order they are least
+   missed in, and nothing that stays gets any narrower for it. What an event is called goes
+   before when it happened, when it happened goes before which way it went, and the event's own
+   number is the last thing standing, because it is what a row is pointed at by.
 
-@container dashboard-list (max-width: 420px) {
+   Each width below is what the columns still on the row add up to, so a column goes at the
+   moment the row would otherwise start eating into the ones beside it.
+
+   What an event is called empties out rather than going, so the one column with no width of
+   its own stays on the row and whatever the row has over is left standing at its right edge.
+   Every column that is still being read keeps the width it declares and stays where it is,
+   which is what would be lost if the slack were shared out among them instead. */
+
+/* Resubmitting an event is the pane's business once the list is this narrow */
+
+@container dashboard-list (max-width: 670px) {
 
     .audit-log-cell-action {
         display: none;
     }
+}
+
+/* How it turned out is said by the stripe of the pane as well, so the badge saying it again
+   is what goes next */
+
+@container dashboard-list (max-width: 560px) {
+
+    .audit-log-cell-outcome {
+        display: none;
+    }
+}
+
+/* A tag is what an event has in common with others rather than what it is, and a tag folded
+   onto a line of its own says less than no tag at all */
+
+@container dashboard-list (max-width: 470px) {
+
+    .audit-log-cell-main .dashboard-chip,
+    .audit-log-row-event {
+        display: none;
+    }
+}
+
+/* A name cut down to an ellipsis is not a name, so what the event is called goes once the
+   room left for it is less than a few characters of it */
+
+@container dashboard-list (max-width: 360px) {
+
+    .audit-log-row-id {
+        display: none;
+    }
+}
+
+@container dashboard-list (max-width: 300px) {
 
     .audit-log-cell-time {
-        width: 60px;
-        font-size: 11px;
+        display: none;
+    }
+}
+
+/* Which way the event went is the last thing to go - past this the list has nothing left to
+   give up and shuts altogether, which the kit sees to */
+
+@container dashboard-list (max-width: 170px) {
+
+    .audit-log-cell-direction {
+        display: none;
     }
 }
 
@@ -272,11 +358,37 @@
     margin-bottom: 10px;
 }
 
-/* What is known about the event is the kit's own set of fact rows, and the pane only says
-   how far it stands from the message below it */
+/* What is known about the event is set out on the same dark frame the message itself and the
+   flow are read on, so the three tabs of the pane are three ways of reading one thing rather
+   than three places */
+
+.audit-log-pane-details {
+    padding: 1px 0;
+    border: 1px solid var(--dashboard-panel-border);
+    border-radius: 4px;
+    background: var(--dashboard-panel-background);
+    overflow: hidden;
+}
+
+/* The topmost rule of the fact rows would sit a pixel inside the frame's own */
 
 .audit-log-pane-details .dashboard-fact-rows {
-    margin-bottom: 10px;
+    border-top: none;
+}
+
+/* The CID opens the whole message and a lineage marker selects the event it names, so those
+   two values lead somewhere and the rest do not - which is what sets them apart here */
+
+.audit-log-pane-details a,
+.audit-log-pane-details a:visited {
+    padding: 0;
+    color: var(--dashboard-flow-accent);
+    text-decoration: none;
+}
+
+.audit-log-pane-details a:hover {
+    background: none;
+    text-decoration: underline;
 }
 
 /* ------------------------------------------------------------ */
@@ -310,15 +422,28 @@
     color: var(--dashboard-fact-label-dark);
 }
 
+/* A line being read lifts by its own background rather than by a filter laid over everything
+   standing on it, which would brighten what can be done with the line along with the line and
+   leave neither of them where the reader left it */
+
+.audit-log-flow .detail-log-line:hover {
+    filter: none;
+    background-color: var(--dashboard-fact-tint-dark);
+}
+
 /* The line the flow was read from is where the reader stands, so it is the one line that
    says so without being hovered over */
 
 .audit-log-flow-line-seed {
-    background: rgba(246, 166, 5, 0.10);
+    background-color: var(--dashboard-flow-accent-tint);
+}
+
+.audit-log-flow .audit-log-flow-line-seed:hover {
+    background-color: var(--dashboard-flow-accent-tint-strong);
 }
 
 .audit-log-flow-line-seed .audit-log-flow-headline {
-    color: #f6c66a;
+    color: var(--dashboard-flow-accent);
 }
 
 /* How long after the line above it the event happened, said beside the time it happened at
@@ -358,8 +483,8 @@
 .audit-log-flow-relation {
     padding: 1px 5px;
     border-radius: 3px;
-    color: #f6c66a;
-    background: rgba(246, 166, 5, 0.14);
+    color: var(--dashboard-flow-accent);
+    background: var(--dashboard-flow-accent-tint-tag);
 }
 
 /* What a flow of one event has to say about itself, and what a flow that was cut short does */
@@ -387,11 +512,6 @@
     align-items: center;
     gap: 2px;
     margin-bottom: 4px;
-}
-
-.audit-log-flow-body-kind-active {
-    color: var(--dashboard-panel-text);
-    background: rgba(255, 255, 255, 0.20);
 }
 
 /* How much of the message is on the screen, out of how much of it there is */
