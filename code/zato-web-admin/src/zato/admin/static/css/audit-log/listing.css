@@ -78,7 +78,13 @@
     --audit-log-flow-open-side-gap: 8px;
 
     --audit-log-flow-open-surface: #32324f;
-    --audit-log-flow-backdrop-filter: brightness(0.4) saturate(0.5);
+
+    /* What sets the closed lines back is their colour being drained, not their light - text
+       pushed toward black stops being readable, while text merely gone grey still reads and
+       yet could never be mistaken for the one thing on the frame still in colour, the card.
+       The touch of darkening only settles the greys into the darkened room behind them. */
+    --audit-log-flow-backdrop-filter: grayscale(1) brightness(0.75);
+
 
     /* With a block open, the frame itself falls to near-black under the closed lines, so
        the card is lit against a room gone dark rather than against the everyday panel */
@@ -89,6 +95,11 @@
        and the shadow it casts into the dark, upward off the line and downward off the
        panel so the two throw one glow rather than two */
     --audit-log-flow-open-text: #e9e9f4;
+
+    /* The names down the card's fact rows - the grey they wear on the everyday panel sinks
+       into the navy, so on the card they read nearly as bright as the text they name, the
+       size and the capitals being what keeps them apart from it */
+    --audit-log-flow-open-label: #d9d9ec;
     --audit-log-flow-open-rim: rgba(255, 255, 255, 0.22);
     --audit-log-flow-open-shadow-up: 0 -14px 30px rgba(0, 0, 0, 0.55);
     --audit-log-flow-open-shadow-down: 0 18px 36px rgba(0, 0, 0, 0.6);
@@ -554,6 +565,13 @@
     color: var(--dashboard-fact-label-dark);
 }
 
+/* The day is named the way the list names it, but the colour the list gives it belongs on
+   white - here it reads in the timestamp's own */
+
+.audit-log-flow .audit-log-cell-day {
+    color: inherit;
+}
+
 /* A line being read lifts by its own background rather than by a filter laid over everything
    standing on it, which would brighten what can be done with the line along with the line and
    leave neither of them where the reader left it */
@@ -576,7 +594,10 @@
     filter: var(--audit-log-flow-backdrop-filter);
 }
 
-.audit-log-flow.detail-dimmed > .detail-log-line:hover,
+.audit-log-flow.detail-dimmed > .detail-log-line:hover {
+    filter: none;
+}
+
 .audit-log-flow.detail-dimmed > .detail-log-line[aria-expanded="true"] {
     filter: none;
 }
@@ -603,6 +624,14 @@
     transition: margin 0.2s, background-color 0.2s, box-shadow 0.2s;
 }
 
+/* The names of the card's facts and the open line's own time, read against the navy
+   rather than the everyday panel */
+
+.audit-log-flow .audit-log-flow-panel.expanded .dashboard-fact-row-label,
+.audit-log-flow .detail-log-line[aria-expanded="true"] .detail-log-ts {
+    color: var(--audit-log-flow-open-label);
+}
+
 /* The line the flow was read from is where the reader stands, so it is the one line that
    says so without being hovered over */
 
@@ -626,11 +655,11 @@
     color: var(--dashboard-flow-accent);
 }
 
-/* How long after the line above it the event happened, said beside the time it happened at
-   and kept quieter than it */
+/* How long after the line below it - the one before it in time - the event happened, said
+   beside the time it happened at and kept quieter than it */
 
 .audit-log-flow-elapsed {
-    margin-left: 6px;
+    margin-right: 12px;
     font-size: 0.92em;
     opacity: 0.6;
 }
@@ -638,7 +667,7 @@
 .audit-log-flow-source,
 .audit-log-flow-event,
 .audit-log-flow-relation {
-    margin-right: 8px;
+    margin-right: 12px;
     font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
@@ -656,7 +685,7 @@
 }
 
 .audit-log-flow-headline {
-    margin-right: 8px;
+    margin-right: 12px;
     font-weight: 700;
 }
 
@@ -698,6 +727,7 @@
 .audit-log-flow-body-actions {
     display: flex;
     align-items: center;
+    gap: 4px;
     margin-left: auto;
     white-space: nowrap;
 }
