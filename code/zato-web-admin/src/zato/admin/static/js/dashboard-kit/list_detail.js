@@ -80,7 +80,9 @@
     };
 
     /* The shape itself - the list, the handle that sets how wide it is, the pane,
-       and under both of them the handle that sets how tall the pair is. */
+       and under both of them the handle that sets how tall the pair is. A pair that takes
+       the room the page has left gets no such handle: what it is tall enough for is the
+       window, and dragging it past that is what a scrollbar comes of. */
     kit.list_detail._shape_html = function(config) {
         var html = '<div class="dashboard-list-detail">';
 
@@ -92,7 +94,9 @@
         html += '<div class="dashboard-list-detail-pane"></div>';
         html += '</div>';
 
-        html += '<div class="dashboard-list-detail-handle-y" title="' + config.resize_hint + '"></div>';
+        if (!config.fit_height) {
+            html += '<div class="dashboard-list-detail-handle-y" title="' + config.resize_hint + '"></div>';
+        }
 
         return html;
     };
@@ -112,7 +116,9 @@
          empty_detail:  what the pane holds when there are items and none of them is selected
          no_items_detail: what it holds instead when there is nothing to select at all
          on_select:     called with the selected item once the pane holds it
-         resize_hint:   the title the drag handles carry */
+         resize_hint:   the title the drag handles carry
+         fit_height:    whether the pair takes the room the page has left below it, in place
+                        of a height of its own that is dragged and remembered */
     kit.list_detail.create = function(config) {
         var kit_config = kit.list_detail.config;
 
@@ -126,6 +132,10 @@
 
         if (config.resize_hint === undefined) {
             config.resize_hint = 'Drag to resize, double click to reset';
+        }
+
+        if (config.fit_height === undefined) {
+            config.fit_height = false;
         }
 
         $host.html(kit.list_detail._shape_html(config));
@@ -205,8 +215,72 @@
             kit.storage_set_json(config.storage_key, null);
         }
 
+        /* The pair sized to the page rather than to a number - whatever is drawn under it
+           keeps its room and the pair takes everything else down to the foot of the window.
+           It is all read off the layout in one pass, nothing being applied in between, so
+           measuring never disturbs what is measured - which is what lets this be called
+           every time anything on the page changes size. */
+        function fit_to_page() {
+
+            // A pair with a height of its own is left at whatever it was dragged to
+            if (!config.fit_height) {
+                return;
+            }
+
+            var pair_rect = $container[0].getBoundingClientRect();
+
+            // The height property names the panes' content height, while on the screen each
+            // pane also wears its padding and its frame - so the pair stands taller than the
+            // property says by that much. How much is read off the pair as it is now, the
+            // difference between what it measures and what the property last said.
+            var wear = pair_rect.height - height;
+
+            // Where the page's content really ends - the body's own edge plus the margin
+            // under it, read off the layout rather than added up from stylesheets. It is the
+            // body rather than the document that is asked, because the document never says
+            // it is shorter than the window, and a page with room to spare is a pair to grow.
+            var body_style = getComputedStyle(document.body);
+            var content_bottom = document.body.getBoundingClientRect().bottom + parseFloat(body_style.marginBottom);
+
+            var below = content_bottom - pair_rect.bottom;
+
+            // Whole pixels only - the measurements carry fractions, and a fraction of a pixel
+            // past the window is already a page that scrolls
+            var new_height = Math.floor(window.innerHeight - pair_rect.top - below - wear);
+
+            // A window too short for the pair's own minimum is one to scroll
+            if (new_height < kit_config.min_height) {
+                new_height = kit_config.min_height;
+            }
+
+            // A pair already the right size is left alone - which is also what stops the
+            // observer below from being answered with the very change it watches for
+            if (Math.abs(new_height - height) < 1) {
+                return;
+            }
+
+            height = new_height;
+            apply_size();
+        }
+
+        // A width dragged on this screen is kept whether the height is dragged or fitted
         load_size();
         apply_size();
+
+        if (config.fit_height) {
+            fit_to_page();
+
+            // What stands above the pair arrives in its own time - a row of page links with
+            // the first page of items, a legend with the chrome - and each arrival moves where
+            // the pair begins. So the fit is not run at moments picked in advance: the body is
+            // watched, and whenever anything on the page changes size the pair takes what room
+            // is left again.
+            new ResizeObserver(fit_to_page).observe(document.body);
+
+            // A window pulled taller leaves the body the size it was, so that one the body's
+            // observer never sees - the window says so itself
+            $(window).on('resize.list_detail', fit_to_page);
+        }
 
         // ////////////////////////////////////////////////////////////////////
         // Dragging the two panes to size

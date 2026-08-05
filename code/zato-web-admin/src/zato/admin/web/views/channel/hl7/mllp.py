@@ -772,6 +772,18 @@ def _read_channel(req:'any_', id:'str') -> 'stranydict':
 
 # ################################################################################################################################
 
+def _is_default(item:'stranydict') -> 'bool':
+    """ Whether a channel holds the default flag. A generic connection carries the flag only once
+    something has set it, so a channel that never has is not the default.
+    """
+    if 'is_default' not in item:
+        return False
+
+    out = asbool(item['is_default'])
+    return out
+
+# ################################################################################################################################
+
 def _clear_other_default(req:'any_', id:'str') -> 'int':
     """ Takes the default flag off whichever other channel held it, returning its id, zero if none did.
     """
@@ -786,7 +798,7 @@ def _clear_other_default(req:'any_', id:'str') -> 'int':
         if str(item['id']) == str(id):
             continue
 
-        if asbool(item['is_default']):
+        if _is_default(item):
             other = _read_channel(req, item['id'])
             other['is_default'] = False
             _save_channel(req, other)
@@ -822,7 +834,7 @@ def inline_edit(req:'any_', id:'str') -> 'JsonResponse':
 
     # A flag comes back from storage as the word it was written with as readily as the thing itself
     is_active = asbool(item_dict['is_active'])
-    is_default = asbool(item_dict['is_default'])
+    is_default = _is_default(item_dict)
 
     # Only one channel is the default, and the page is told which row lost it
     if is_default:

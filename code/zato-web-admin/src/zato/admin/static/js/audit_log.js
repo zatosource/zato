@@ -300,8 +300,11 @@ $.fn.zato.audit_log.init = function(initConfig) {
             time_to: initConfig.time_to
         },
         table_body: listing.config.itemsHost,
+
+        // The page links are read above the list only - the list is as tall as the page and
+        // scrolls inside itself, so a second row of them at the foot of it would be reached
+        // by scrolling the page it is meant to keep still
         container_top: '#audit-log-pagination-top',
-        container_bottom: '#audit-log-pagination-bottom',
         render_page: listing.renderPage
     });
 

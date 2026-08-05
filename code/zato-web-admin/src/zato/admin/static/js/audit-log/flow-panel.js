@@ -280,7 +280,8 @@ panel.of = function(eventId) {
 // /////////////////////////////////////////////////////////////////////////////
 
 // The lines standing open, in the order they were opened, written where a link to the page
-// will carry them
+// will carry them. With any of them open the rest of the flow steps back, the same way the
+// scheduler's run log does it, so what is open is what is read.
 panel.writeOpenSteps = function() {
     var openSteps = [];
 
@@ -288,17 +289,22 @@ panel.writeOpenSteps = function() {
         openSteps.push($(this).attr('data-step'));
     });
 
+    flow.host().find('.audit-log-flow').toggleClass('detail-dimmed', openSteps.length > 0);
+
     kit.url_state.replace({step: openSteps.join(panel.config.stepSeparator)});
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Everything the reader has opened, closed in one go
+// Everything the reader has opened, closed in one go - and with nothing open any longer,
+// every line reads at full strength again
 panel.collapse = function() {
     var $host = flow.host();
 
     $host.find(flow.config.panelSelector).removeClass('expanded');
     $host.find(flow.config.lineSelector).attr('aria-expanded', 'false');
+
+    $host.find('.audit-log-flow').removeClass('detail-dimmed');
 
     kit.url_state.replace({step: ''});
 };

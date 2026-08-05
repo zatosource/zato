@@ -1240,6 +1240,11 @@ listing.initPanes = function(source) {
         storage_key: config.storagePrefix + source,
         default_list_width: config.defaultListWidth,
 
+        // The log is the page - it takes the room the window has left below the search box and
+        // the pills, and the list and the pane are scrolled inside it rather than the page
+        // being scrolled to reach the foot of them
+        fit_height: true,
+
         list_html: listHTML,
         items_host: config.itemsHost,
         item_selector: config.itemSelector,
