@@ -58,11 +58,20 @@ listing.config = {
     // rather than shouted across the list.
     rowChipLimit: 2,
 
+    // The order a row gives its columns up in as the list is narrowed, from the one least missed
+    // to the one it holds on to longest. Each name is the class the list carries while that
+    // column is being left out, and the event's own number is not on the list at all - it is
+    // what a row is pointed at by, so it is never given up.
+    dropOrder: ['action', 'chips', 'time', 'direction'],
+    dropClassPrefix: 'audit-log-drop-',
+
     emptyListing: 'No events found',
     emptyPane: 'No event selected',
 
-    // What the day a row belongs to is called when that day is the one being read
+    // What the day a row belongs to is called when that day is the one being read, and what
+    // stands between the day and the time of day
     todayLabel: 'Today',
+    dayTimeSeparator: ' \u00b7 ',
 
     rawTabLabel: 'Raw',
     parsedTabLabel: 'Parsed',
@@ -324,14 +333,10 @@ listing.actionHTML = function(rowModel) {
 
 // Which cells the events now on the page have anything to say in
 listing.updateColumns = function() {
-    var columns = {outcome: false, action: false};
+    var columns = {action: false};
 
     for (var rowIndex = 0; rowIndex < listing.visible.length; rowIndex++) {
         var rowModel = listing.visible[rowIndex];
-
-        if (rowModel.outcome !== '') {
-            columns.outcome = true;
-        }
 
         if (rowModel.actionLabel !== undefined || rowModel.isResubmitted) {
             columns.action = true;
@@ -351,10 +356,6 @@ listing.columnCount = function() {
     // Where a row stands, when it happened, which way it went, what it was, and the cell at the
     // end that takes up whatever room the row has over, are the five the list always holds.
     var out = 5;
-
-    if (columns.outcome) {
-        out += 1;
-    }
 
     if (columns.action) {
         out += 1;
@@ -393,12 +394,11 @@ listing.dayMark = function(rowModel) {
 // /////////////////////////////////////////////////////////////////////////////
 
 // When an event happened - which day it was, then the time of day down to the last digit it was
-// written down with, two events of one exchange sharing everything above that digit. The day
-// stands over the time rather than beside it, so the column is as wide as a time of day and no
-// wider whatever day is being named.
+// written down with, two events of one exchange sharing everything above that digit
 listing.timeCellHTML = function(rowModel) {
     var out = '<span class="audit-log-cell-day">' +
         listing.escapeHTML(listing.dayMark(rowModel)) + '</span>' +
+        listing.escapeHTML(listing.config.dayTimeSeparator) +
         listing.escapeHTML(rowModel.timeLocal.slice(11));
 
     return out;
@@ -437,10 +437,6 @@ listing.rowHTML = function(rowModel) {
 
     html += kit.chips.render(listing.rowChips(rowModel));
     html += '</td>';
-
-    if (columns.outcome) {
-        html += '<td class="audit-log-cell-outcome">' + listing.outcomeBadgeHTML(rowModel) + '</td>';
-    }
 
     if (columns.action) {
         html += '<td class="audit-log-cell-action">' + listing.actionHTML(rowModel) + '</td>';
@@ -881,6 +877,34 @@ listing.markNewRows = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// A row keeps every column it has room for and gives up the next one at the moment it has not.
+// Which moment that is, is measured rather than guessed - the columns are as wide as the data
+// makes them, and a width written down here could only ever be a guess at what that comes to.
+listing.fitColumns = function() {
+    var config = listing.config;
+    var $host = $(config.host);
+    var listElement = listing.panes.items_host().closest('table').parent()[0];
+
+    // Everything is put back before the row is measured, so a pane being widened takes its
+    // columns back in the reverse of the order it gave them up
+    for (var index = 0; index < config.dropOrder.length; index++) {
+        $host.removeClass(config.dropClassPrefix + config.dropOrder[index]);
+    }
+
+    for (var dropIndex = 0; dropIndex < config.dropOrder.length; dropIndex++) {
+
+        // Reading the width is what settles the layout, so the row that is measured next is the
+        // row as it stands with the column just given up already gone
+        if (listElement.scrollWidth <= listElement.clientWidth) {
+            break;
+        }
+
+        $host.addClass(config.dropClassPrefix + config.dropOrder[dropIndex]);
+    }
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 listing.draw = function() {
     listing.visible = listing.filterRows();
 
@@ -889,6 +913,10 @@ listing.draw = function() {
 
     listing.panes.set_items(listing.visible);
     listing.markNewRows();
+
+    // What the rows just drawn are holding is what settles how much room the row needs, so which
+    // columns fit is worked out after they are on the page rather than before
+    listing.fitColumns();
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -1114,6 +1142,14 @@ listing.initPanes = function(source) {
     });
 
     listing.panes.items_host().html(listing.loadingRowHTML());
+
+    // The list is dragged wider and narrower by hand, so what fits is worked out again whenever
+    // it changes size rather than only when a page of events arrives
+    var listElement = listing.panes.items_host().closest('table').parent()[0];
+
+    new ResizeObserver(function() {
+        listing.fitColumns();
+    }).observe(listElement);
 };
 
 // /////////////////////////////////////////////////////////////////////////////

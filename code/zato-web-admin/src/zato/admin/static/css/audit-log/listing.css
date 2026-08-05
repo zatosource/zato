@@ -88,12 +88,6 @@
     box-shadow: inset 0 0 0 999px var(--dashboard-row-selected);
 }
 
-.audit-log-row.dashboard-list-detail-item-selected > td:first-child {
-    box-shadow:
-        inset 4px 0 0 var(--dashboard-accent),
-        inset 0 0 0 999px var(--dashboard-row-selected);
-}
-
 .audit-log-row.dashboard-list-detail-item-selected .audit-log-cell-number {
     color: var(--dashboard-accent);
     font-weight: 700;
@@ -134,15 +128,11 @@
     color: var(--audit-log-time-text);
 }
 
-/* The day stands over the time rather than beside it, so naming it costs the column height
-   rather than costing every row the width of the longest day name. It is read before the time
-   and not instead of it, so it carries less size than the digits and more colour. */
+/* The day is read before the time and not instead of it, so it is the one part of the cell
+   carrying any weight */
 
 .audit-log-cell-day {
-    display: block;
-    font-size: 10.5px;
     font-weight: 700;
-    letter-spacing: 0.6px;
     color: var(--dashboard-line-strong);
 }
 
@@ -176,10 +166,14 @@
     line-height: 20px;
 }
 
+/* What an event is, for the events that are not a message going one way or the other - it is
+   the only thing such a row is named by, so it is read at the same strength as any other name
+   on the list rather than as a note beside one */
+
 .audit-log-row-event {
     margin-right: 8px;
-    font-size: 11px;
-    color: var(--dashboard-muted);
+    font-size: 12px;
+    color: var(--dashboard-line-strong);
 }
 
 /* A tag in the list is read a hundred at a time, so it is kept smaller and quieter than
@@ -196,62 +190,40 @@
 /* A list dragged narrow gives its columns up one at a time, in the order they are least missed
    in, and nothing that stays gets any narrower for it. What an event has in common with others
    goes before when it happened, when it happened goes before which way it went, and the event's
-   own number is the last thing standing, because it is what a row is pointed at by.
+   own number is never given up, because it is what a row is pointed at by.
 
-   Each width below is about the pane, not about a column - it is the point past which the row
-   would have to start giving something up. */
+   No width appears below. Which columns the row has room for is measured on the page - the
+   columns are as wide as the data makes them, so a number written down here could only ever be
+   a guess at when the room runs out. The list carries one class per column it is leaving out. */
 
-/* Resubmitting an event is the pane's business once the list is this narrow */
+/* Resubmitting an event is the pane's business once the row is this tight */
 
-@container dashboard-list (max-width: 640px) {
-
-    .audit-log-cell-action {
-        display: none;
-    }
+.audit-log-drop-action .audit-log-cell-action {
+    display: none;
 }
 
-/* How it turned out is said by the stripe of the pane as well, so the badge saying it again
-   is what goes next */
+/* A tag is what an event has in common with others rather than what it is */
 
-@container dashboard-list (max-width: 545px) {
-
-    .audit-log-cell-outcome {
-        display: none;
-    }
+.audit-log-drop-chips .audit-log-cell-main .dashboard-chip,
+.audit-log-drop-chips .audit-log-row-event {
+    display: none;
 }
 
-/* A tag is what an event has in common with others rather than what it is, and a tag folded
-   onto a line of its own says less than no tag at all */
+/* A cell holding nothing asks for no room either */
 
-@container dashboard-list (max-width: 470px) {
-
-    .audit-log-cell-main .dashboard-chip,
-    .audit-log-row-event {
-        display: none;
-    }
-
-    /* A cell holding nothing asks for no room either */
-
-    .audit-log-cell-main {
-        padding: 0;
-    }
+.audit-log-drop-chips .audit-log-cell-main {
+    padding: 0;
 }
 
-@container dashboard-list (max-width: 300px) {
-
-    .audit-log-cell-time {
-        display: none;
-    }
+.audit-log-drop-time .audit-log-cell-time {
+    display: none;
 }
 
 /* Which way the event went is the last thing to go - past this the list has nothing left to
    give up and shuts altogether, which the kit sees to */
 
-@container dashboard-list (max-width: 170px) {
-
-    .audit-log-cell-direction {
-        display: none;
-    }
+.audit-log-drop-direction .audit-log-cell-direction {
+    display: none;
 }
 
 /* The event this one came out of, or one that came out of it, read as the value of the
