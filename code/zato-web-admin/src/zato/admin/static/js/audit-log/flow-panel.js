@@ -155,9 +155,11 @@ panel.bodyBarHTML = function(kinds) {
 
     html += '<span class="audit-log-flow-body-caption"></span>';
 
+    // The rest of a message cut short is offered right beside the words saying how much of
+    // it is shown, as quiet underlined words rather than another button
+    html += '<span class="audit-log-flow-show-all">' + config.showAllLabel + '</span>';
+
     html += '<span class="audit-log-flow-body-actions">';
-    html += '<span class="dashboard-panel-action-badge dashboard-panel-action-badge-dark ' +
-        'audit-log-flow-show-all">' + config.showAllLabel + '</span>';
     html += '<span class="dashboard-panel-action-badge dashboard-panel-action-badge-dark ' +
         'audit-log-flow-copy-body">' + flow.config.copyLabel + '</span>';
     html += '</span>';
@@ -225,11 +227,16 @@ panel.cutToLines = function(text) {
 // /////////////////////////////////////////////////////////////////////////////
 
 // One loaded body put on the screen - its text, its caption, and the way to the whole of it,
-// offered only while less than the whole of it is what is shown
+// reading as itself again and offered only while less than the whole of it is what is shown
 panel.showLoaded = function($panel, entry) {
     $panel.find('.audit-log-flow-body-text').html(entry.html);
     $panel.find('.audit-log-flow-body-caption').text(entry.caption);
-    $panel.find('.audit-log-flow-show-all').toggle(entry.caption !== '');
+
+    var $showAll = $panel.find('.audit-log-flow-show-all');
+
+    $showAll.removeClass('audit-log-flow-show-all-loading');
+    $showAll.text(panel.config.showAllLabel);
+    $showAll.toggleClass('audit-log-flow-show-all-absent', entry.caption === '');
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -271,13 +278,21 @@ panel.loadBody = function($panel) {
     $panel.data('flow_body_token', token);
 
     // Whether this body is cut short is not known until it arrives, so nothing offers the
-    // whole of it in the meantime
-    $panel.find('.audit-log-flow-show-all').hide();
+    // whole of it in the meantime - unless it is the offer itself being answered, which
+    // stands where it is, already turned into the wait it announces
+    $panel.find('.audit-log-flow-show-all:not(.audit-log-flow-show-all-loading)')
+        .addClass('audit-log-flow-show-all-absent');
 
     // Whatever the panel is holding stays there while the next body is on its way, and the
     // wait is only announced once it is long enough to be worth announcing
     var spinnerTimer = setTimeout(function() {
         if ($panel.data('flow_body_token') !== token) {
+            return;
+        }
+
+        // A wait already announced beside the caption is not announced over the body too -
+        // what the body holds stays put, which is the point of announcing it there
+        if ($panel.find('.audit-log-flow-show-all').hasClass('audit-log-flow-show-all-loading')) {
             return;
         }
 
@@ -601,15 +616,28 @@ panel.init = function() {
         panel.writeOpenSteps();
     });
 
-    // The rest of a message the panel cut short - from here on this panel shows its bodies
-    // whole, whichever kind and view of them is asked for
+    // The rest of a message the panel cut short - the words themselves turn into the wait
+    // being announced, staying where they stand so nothing on the panel moves, and only
+    // after that is the whole body asked for. From here on this panel shows its bodies
+    // whole, whichever kind and view of them is asked for.
     $(document).on('click', '.audit-log-flow-show-all', function() {
-        var $panel = $(this).closest(panelSelector);
+        var $link = $(this);
+        var $panel = $link.closest(panelSelector);
+
+        // A second click while the first is being answered has nothing more to ask for
+        if ($link.hasClass('audit-log-flow-show-all-loading')) {
+            return;
+        }
+
+        $link.addClass('audit-log-flow-show-all-loading');
+        $link.html(kit.spinner_label_html());
 
         $panel.find('.audit-log-flow-body').attr('data-whole', '1');
-
-        panel.loadBody($panel);
         panel.writeOpenSteps();
+
+        setTimeout(function() {
+            panel.loadBody($panel);
+        }, flow.config.spinnerDelayMs);
     });
 
     $(document).on('click', '.audit-log-flow-copy-body', function() {
