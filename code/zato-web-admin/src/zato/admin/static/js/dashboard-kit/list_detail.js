@@ -194,17 +194,10 @@
 
             height = kit.list_detail._clamp_height(stored.height);
 
-            var stored_width = kit.list_detail._clamp_list_width(stored.list_width, $container.width());
-
-            // A list is shut with the handle for as long as the page is being read and no
-            // longer. A page that came up with nothing on the left of it reads as a page that
-            // failed to load rather than as one somebody left that way, so a list that would
-            // come back shut comes back the width it started out at instead.
-            if (stored_width === 0) {
-                return;
-            }
-
-            list_width = stored_width;
+            // A list shut with the handle stays shut across a refresh like any other width
+            // stays what it was dragged to - the handle is where it always is to pull it
+            // back open
+            list_width = kit.list_detail._clamp_list_width(stored.list_width, $container.width());
         }
 
         function reset_size() {

@@ -327,27 +327,57 @@ a.dashboard-hero-pill-link:not(.menu-link):not(.chosen-single):hover {
     user-select: none;
 }
 
-/* A badge that leads somewhere is a real link, so it can be opened in a tab of its own, and it
-   is written with the tag rather than the class so it outweighs whatever a page says about its
-   links - a badge reads the same whether it acts where it stands or leads away */
+/* A badge that leads somewhere is a real link, so it can be opened in a tab of its own. The
+   page dresses its links with a face of their own - near-black ink and a dotted underline
+   drawn as a background image - and reaches them at a:not(...), which counts like a class,
+   so one class on a tag is not enough to stand above it. A badge that is a link names both
+   of its classes on the tag and outweighs the page's face in every state - a badge reads
+   the same whether it acts where it stands or leads away. */
 
-a.dashboard-panel-action-badge,
-a.dashboard-panel-action-badge:hover,
-a.dashboard-panel-action-badge:visited {
+a.dashboard-panel-action-badge.dashboard-panel-action-badge-dark,
+a.dashboard-panel-action-badge.dashboard-panel-action-badge-dark:visited {
     padding: 1px 6px;
     text-decoration: none;
-}
 
-/* What one of these looks like on a dark panel, which is where most of them are */
+    /* The page's element reset hands every anchor a face of its own, so wearing the
+       letters of whatever panel the badge stands on has to be said in as many words */
+    font-family: inherit;
 
-.dashboard-panel-action-badge-dark,
-a.dashboard-panel-action-badge-dark:visited {
     color: var(--dashboard-badge-dark-text);
     background: var(--dashboard-badge-dark-fill);
 }
 
-.dashboard-panel-action-badge-dark:hover,
-a.dashboard-panel-action-badge-dark:hover {
+a.dashboard-panel-action-badge.dashboard-panel-action-badge-dark:hover {
+    padding: 1px 6px;
+    text-decoration: none;
+    color: var(--dashboard-panel-text);
+    background: var(--dashboard-badge-dark-fill-hover);
+}
+
+a.dashboard-panel-action-badge.dashboard-panel-action-badge-light,
+a.dashboard-panel-action-badge.dashboard-panel-action-badge-light:visited {
+    padding: 1px 6px;
+    text-decoration: none;
+    font-family: inherit;
+    color: var(--dashboard-muted);
+    background: rgba(0, 0, 0, 0.05);
+}
+
+a.dashboard-panel-action-badge.dashboard-panel-action-badge-light:hover {
+    padding: 1px 6px;
+    text-decoration: none;
+    color: var(--dashboard-line-strong);
+    background: rgba(0, 0, 0, 0.10);
+}
+
+/* What one of these looks like on a dark panel, which is where most of them are */
+
+.dashboard-panel-action-badge-dark {
+    color: var(--dashboard-badge-dark-text);
+    background: var(--dashboard-badge-dark-fill);
+}
+
+.dashboard-panel-action-badge-dark:hover {
     color: var(--dashboard-panel-text);
     background: var(--dashboard-badge-dark-fill-hover);
 }
@@ -355,14 +385,12 @@ a.dashboard-panel-action-badge-dark:hover {
 /* And what one looks like on a light panel, where it stands beside what it acts on
    and has to stay quieter than it */
 
-.dashboard-panel-action-badge-light,
-a.dashboard-panel-action-badge-light:visited {
+.dashboard-panel-action-badge-light {
     color: var(--dashboard-muted);
     background: rgba(0, 0, 0, 0.05);
 }
 
-.dashboard-panel-action-badge-light:hover,
-a.dashboard-panel-action-badge-light:hover {
+.dashboard-panel-action-badge-light:hover {
     color: var(--dashboard-line-strong);
     background: rgba(0, 0, 0, 0.10);
 }
