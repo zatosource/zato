@@ -68,6 +68,9 @@ listing.config = {
     emptyListing: 'No events found',
     emptyPane: 'No event selected',
 
+    // What the pane says when there is nothing to select at all
+    emptyPaneNoEvents: 'No events found',
+
     // What stands between the day a row belongs to and the time of day
     dayTimeSeparator: ' \u00b7 ',
 
@@ -132,14 +135,20 @@ listing.config = {
         'size': true
     },
 
-    // What the pane says about every event whatever source it came from, each one left out
-    // when the source already declares a column of its own for it
+    // The columns the pane shows but offers no Search by - the outcome has a filter of its own
+    nonSearchColumnKeys: {
+        'outcome': true
+    },
+
+    // What the pane says about every event whatever source it came from, each one left out when
+    // the source already declares a column of its own for it. `searchable` says whether Search is
+    // offered beside it - a moment in time is shared by nothing, so it is not.
     paneFields: [
-        {label: 'Time', key: 'timeLocal', columnKey: 'event_time_iso'},
-        {label: 'Correlation id', key: 'correlId', columnKey: 'correl_id'},
-        {label: 'Status', key: 'status', columnKey: 'status'},
-        {label: 'Classification', key: 'classification', columnKey: 'classification'},
-        {label: 'Endpoint', key: 'endpoint', columnKey: 'endpoint'}
+        {label: 'Time', key: 'timeLocal', columnKey: 'event_time_iso', searchable: false},
+        {label: 'Correlation id', key: 'correlId', columnKey: 'correl_id', searchable: true},
+        {label: 'Status', key: 'status', columnKey: 'status', searchable: true},
+        {label: 'Classification', key: 'classification', columnKey: 'classification', searchable: true},
+        {label: 'Endpoint', key: 'endpoint', columnKey: 'endpoint', searchable: true}
     ],
 
     // How far back the range pill reaches, in the order it offers the choice,
@@ -470,7 +479,9 @@ listing.loadingRowHTML = function() {
 
 // The cells of the pane's grid - what this source says about its events, then what every
 // source says about all of them. An attribute this event has no value for is left out
-// altogether, because a label above a dash says less than nothing.
+// altogether, because a label above a dash says less than nothing. Each one also carries what
+// the list is asked for by its Search, which is empty for what an event was measured with -
+// nothing is found by having taken the same number of milliseconds.
 listing.paneAttrs = function(rowModel) {
     var config = listing.config;
     var columns = $.fn.zato.audit_log.config.columns;
@@ -486,8 +497,16 @@ listing.paneAttrs = function(rowModel) {
 
         seen[column.key] = true;
 
-        if (rowModel.raw[column.key] !== '') {
-            out.push({label: column.label, value: rowModel.raw[column.key]});
+        var columnValue = rowModel.raw[column.key];
+
+        if (columnValue !== '') {
+            var columnSearch = columnValue;
+
+            if (config.nonSearchColumnKeys[column.key]) {
+                columnSearch = '';
+            }
+
+            out.push({label: column.label, value: columnValue, search: columnSearch});
         }
     }
 
@@ -500,19 +519,28 @@ listing.paneAttrs = function(rowModel) {
             continue;
         }
 
-        if (rowModel[field.key] !== '') {
-            out.push({label: field.label, value: rowModel[field.key]});
+        var fieldValue = rowModel[field.key];
+
+        if (fieldValue !== '') {
+            var fieldSearch = '';
+
+            if (field.searchable) {
+                fieldSearch = fieldValue;
+            }
+
+            out.push({label: field.label, value: fieldValue, search: fieldSearch});
         }
     }
 
     // An event that took no measurable time is one nothing was timed for, e.g. a message
     // being written down rather than being answered.
     if (rowModel.durationMs > 0) {
-        out.push({label: config.durationLabel, value: kit.format_duration_ms(rowModel.durationMs)});
+        out.push({label: config.durationLabel,
+            value: kit.format_duration_ms(rowModel.durationMs), search: ''});
     }
 
     if (rowModel.size > 0) {
-        out.push({label: config.sizeLabel, value: kit.format_number_full(rowModel.size)});
+        out.push({label: config.sizeLabel, value: kit.format_number_full(rowModel.size), search: ''});
     }
 
     return out;
@@ -521,8 +549,10 @@ listing.paneAttrs = function(rowModel) {
 // /////////////////////////////////////////////////////////////////////////////
 
 // One thing said about the event, in the shape the kit's fact rows read
-listing.paneFact = function(label, valueHTML, copyValue) {
-    var out = {label: label, value_html: valueHTML, copy_value: copyValue};
+// One fact of the pane - `searchValue` is what its Search asks the list for, empty when no
+// Search is to be offered
+listing.paneFact = function(label, valueHTML, copyValue, searchValue) {
+    var out = {label: label, value_html: valueHTML, copy_value: copyValue, search_value: searchValue};
     return out;
 };
 
@@ -546,11 +576,16 @@ listing.lineageFacts = function(rowModel) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// An event's own id is a number in the database and a piece of text everywhere on the screen,
+// which is where it turns into one
 listing.lineageFact = function(label, eventId) {
-    var value = '<a href="javascript:void(0)" class="audit-log-lineage" data-lineage-id="' +
-        eventId + '">' + listing.config.eventLabel + ' ' + eventId + '</a>';
+    var idText = String(eventId);
 
-    var out = listing.paneFact(label, value, eventId);
+    var value = '<a href="javascript:void(0)" class="audit-log-lineage" data-lineage-id="' +
+        idText + '">' + listing.config.eventLabel + ' ' + idText + '</a>';
+
+    // The event named here is opened by clicking it, rather than searched for
+    var out = listing.paneFact(label, value, idText, '');
 
     return out;
 };
@@ -640,12 +675,12 @@ listing.paneDetailsHTML = function(rowModel) {
     var cidValue = '<a href="#" class="audit-log-cid-link" data-id="' + rowModel.id + '" data-cid="' +
         listing.escapeHTML(rowModel.cid) + '">' + listing.escapeHTML(rowModel.cid) + '</a>';
 
-    facts.push(listing.paneFact(config.cidLabel, cidValue, rowModel.cid));
+    facts.push(listing.paneFact(config.cidLabel, cidValue, rowModel.cid, ''));
 
     for (var attrIndex = 0; attrIndex < attrs.length; attrIndex++) {
         var attr = attrs[attrIndex];
 
-        facts.push(listing.paneFact(attr.label, listing.escapeHTML(attr.value), attr.value));
+        facts.push(listing.paneFact(attr.label, listing.escapeHTML(attr.value), attr.value, attr.search));
     }
 
     facts = facts.concat(listing.lineageFacts(rowModel));
@@ -1215,6 +1250,7 @@ listing.initPanes = function(source) {
         render_detail: listing.paneHTML,
         update_detail: listing.paneUpdate,
         empty_detail: '<div class="dashboard-inline-empty">' + config.emptyPane + '</div>',
+        no_items_detail: '<div class="dashboard-inline-empty">' + config.emptyPaneNoEvents + '</div>',
         on_select: listing.onSelect
     });
 
@@ -1248,9 +1284,12 @@ listing.init = function(initConfig) {
         listing.panes.select(urlEvent);
     }
 
-    // A chip says what its row has in common with others, so clicking one asks for them
-    $(document).on('click', '.dashboard-chip', function() {
-        $.fn.zato.audit_log.search($(this).attr('data-chip-value'));
+    // The events sharing a value are asked for wherever that value is named - the Details tab
+    // and the panel a flow line opens
+    $(document).on('click', listing.config.host + ' .dashboard-fact-row-search', function(event) {
+        event.stopPropagation();
+
+        $.fn.zato.audit_log.search($(this).attr('data-search-value'));
     });
 
     // A lineage marker of an event on this page selects it, and one of an event on

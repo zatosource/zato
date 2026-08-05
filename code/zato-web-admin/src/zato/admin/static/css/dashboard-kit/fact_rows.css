@@ -53,17 +53,19 @@
     word-break: break-all;
 }
 
-/* Taking a value away is offered by the line being read and by no other, and it stands just
-   past the value rather than away at the edge of the panel */
+/* What can be done with a value is offered by the line being read and by no other, just past
+   the value rather than away at the edge of the panel */
 
-.dashboard-fact-row-copy {
+.dashboard-fact-row-copy,
+.dashboard-fact-row-search {
     flex: none;
     margin-left: 0;
     opacity: 0;
     transition: opacity 0.12s ease;
 }
 
-.dashboard-fact-row:hover .dashboard-fact-row-copy {
+.dashboard-fact-row:hover .dashboard-fact-row-copy,
+.dashboard-fact-row:hover .dashboard-fact-row-search {
     opacity: 1;
 }
 

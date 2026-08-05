@@ -70,7 +70,12 @@ $(document).ready(function() {
 <div class="dashboard-tab-panel" id="dashboard-tab-panel-events" role="tabpanel">
 
     <form class="audit-log-search-form" id="audit-log-search-form">
-        <input type="text" class="audit-log-search-input" id="audit-log-search-input" placeholder="Search .." value="{{ query }}">
+        <span class="audit-log-search-field">
+            <input type="text" class="audit-log-search-input" id="audit-log-search-input" placeholder="Search .." value="{{ query }}">
+            <span class="dashboard-panel-action-badge dashboard-panel-action-badge-light audit-log-search-clear"
+                id="audit-log-search-clear">Clear</span>
+        </span>
+
         <button type="submit" class="action-button">Search</button>
     </form>
 

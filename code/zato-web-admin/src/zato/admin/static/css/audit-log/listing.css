@@ -34,15 +34,22 @@
     --audit-log-error-frame: var(--audit-log-error-frame-width) dashed rgb(var(--audit-log-error-rgb));
     --audit-log-error-tint: rgba(var(--audit-log-error-rgb), 0.05);
 
+    /* The room the search box keeps for Clear, how far in from its edge it stands, how far it sits
+       below the middle, and which layer it is drawn in. The layer is what keeps it on the screen
+       while the box is being typed into: formalize.css gives a focused input z-index 1, which
+       counts here because the input is a flex item, and an input painted over the badge hides it
+       behind its own background. */
+    --audit-log-search-clear-room: 58px;
+    --audit-log-search-clear-inset: 5px;
+    --audit-log-search-clear-drop: 0px;
+    --audit-log-search-clear-layer: 2;
+
     /* The room left between the end of a row and the list's own edge, so that a framed row stops
        short of the scrollbar the list carries rather than running into it */
     --audit-log-list-end-gap: 6px;
 
-    /* Every row on the list is this tall and no row is ever any other height. A row that was as
-       tall as whatever it happened to hold would stand somewhere else the moment the list was
-       dragged narrow enough to drop a tag, and the row being read would walk off the top of the
-       screen under the reader - so the height is stated once here instead. It is the height the
-       tallest of them already came to, a tag and the room the line gives it. */
+    /* Every row is this tall whatever it holds, so a dropped tag does not shorten the rows and
+       walk the list up under the reader. It is the height the tallest of them already came to.  */
     --audit-log-row-height: 28px;
 
     /* The dot a failed row is marked with, and how far its rail stands off the list. Both come out
@@ -78,9 +85,36 @@
     margin: 0.5rem 0 1rem 0;
 }
 
+/* Clear stands inside the box, which keeps room for it so a long term is not typed underneath */
+
+.audit-log-search-field {
+    position: relative;
+    display: inline-flex;
+}
+
 .audit-log-search-input {
     width: 24rem;
+    padding-right: var(--audit-log-search-clear-room);
 }
+
+.audit-log-search-clear {
+    position: absolute;
+    top: 50%;
+    right: var(--audit-log-search-clear-inset);
+    z-index: var(--audit-log-search-clear-layer);
+    transform: translateY(calc(-50% + var(--audit-log-search-clear-drop)));
+    margin-left: 0;
+    font-weight: 400;
+}
+
+/* It reads the same pointed at as not - the cursor is what says it can be clicked */
+
+.audit-log-search-clear:hover {
+    color: var(--dashboard-muted);
+    background: rgba(0, 0, 0, 0.05);
+}
+
+
 
 /* ------------------------------------------------------------ */
 /* The chrome above the listing                                  */
@@ -130,9 +164,7 @@
    narrow drops the columns it no longer has room for one at a time, which is the only thing that
    ever changes where a column stands. */
 
-/* A cell asks for the row's height rather than for the height of what it holds, and a table reads
-   that as the least it may be - so a dropped tag, an empty cell or a row with nothing to tag at
-   all leaves every row standing exactly where it stood */
+/* A cell asks for the row's height, which a table reads as the least it may be */
 
 .audit-log-list-table td {
     height: var(--audit-log-row-height);
@@ -142,19 +174,11 @@
     white-space: nowrap;
 }
 
-/* A failed event wears a frame and a wash of the error red, which is what a row is picked out by
-   from across the list.
-
-   The frame is the row's own border and not its cells'. A row is a row at every width, whereas its
-   cells come and go as the list is dragged narrower and the empty one at its end is there to give
-   up all of its width - hang a side of the frame on that and the side goes with the width. Being
-   the row's, the frame also outranks the line each cell carries below it, this table collapsing its
-   borders and the wider border winning when two meet. That same collapsing is what keeps a run of
-   failures from doubling up: where two framed rows meet, the line below one and the line above the
-   next are one line, drawn once.
-
-   The wash stays on the cells, which is where it covers the tint of a new arrival without hiding
-   it, and is itself covered by the blue of the selection. */
+/* A failed event wears a frame and a wash of the error red. The frame is the row's own border, so
+   no cell being dropped or shrunk can take a side off it, and being wider it wins over the line
+   each cell carries below it. Collapsed borders also mean two framed rows meeting share one line
+   rather than doubling up. The wash stays on the cells, where it covers the tint of a new arrival
+   and is itself covered by the blue of the selection. */
 
 .audit-log-row-error {
     border: var(--audit-log-error-frame);
@@ -277,7 +301,10 @@
 }
 
 /* A tag in the list is read a hundred at a time, so it is kept smaller and quieter than
-   the same tag in the pane, where one event is being read on its own */
+   the same tag in the pane, where one event is being read on its own.
+
+   It takes the row's own cursor rather than one of its own, because it is part of what the row
+   says and not something to be clicked apart from it - the row opens the event, tag and all. */
 
 .audit-log-list-table .dashboard-chip,
 .audit-log-list-table .dashboard-outcome-badge {
@@ -285,6 +312,7 @@
     font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.2px;
+    cursor: inherit;
 }
 
 /* A list dragged narrow gives its columns up one at a time, in the order they are least missed

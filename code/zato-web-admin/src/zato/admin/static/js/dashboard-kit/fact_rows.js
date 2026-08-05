@@ -14,6 +14,11 @@
     kit.fact_rows.config = {
         copy_label: 'Copy',
 
+        // Offered beside a value other records can be looked up by, as a badge rather than by
+        // turning the value into a link
+        search_label: 'Search',
+        search_title: 'Look for the records carrying this value',
+
         // Which side of the badge the word saying a value has been taken appears on - beside it,
         // so the line being read is not covered by it
         copy_flash_placement: 'right',
@@ -32,7 +37,8 @@
     };
 
     /* One fact - what it is called, what it says as HTML the caller has already made safe,
-       and what taking it away puts on the clipboard. */
+       what taking it away puts on the clipboard, and what other records can be looked up by
+       from it, which is empty for a value nothing is to be found by. */
     kit.fact_rows.row = function(fact, variant) {
         var config = kit.fact_rows.config;
 
@@ -41,9 +47,18 @@
         out += '<div class="dashboard-fact-row-label">' + kit._esc_html(fact.label) + '</div>';
         out += '<div class="dashboard-fact-row-value">';
         out += '<span class="dashboard-fact-row-text">' + fact.value_html + '</span>';
+
         out += '<span class="dashboard-panel-action-badge ' + config.badge_classes[variant] +
             ' dashboard-fact-row-copy" data-copy-value="' + kit._esc_html(fact.copy_value) + '">' +
             config.copy_label + '</span>';
+
+        // Copy comes first, being offered for every fact, so the row reads the same all the way down
+        if (fact.search_value !== '') {
+            out += '<span class="dashboard-panel-action-badge ' + config.badge_classes[variant] +
+                ' dashboard-fact-row-search" data-search-value="' + kit._esc_html(fact.search_value) +
+                '" title="' + config.search_title + '">' + config.search_label + '</span>';
+        }
+
         out += '</div>';
         out += '</div>';
 

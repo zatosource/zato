@@ -109,7 +109,8 @@
          render_detail: the selected item as HTML
          update_detail: brings a pane already holding one item to another, given the item
                         and the pane. Without it, every selection rebuilds the pane.
-         empty_detail:  what the pane holds when nothing is selected
+         empty_detail:  what the pane holds when there are items and none of them is selected
+         no_items_detail: what it holds instead when there is nothing to select at all
          on_select:     called with the selected item once the pane holds it
          resize_hint:   the title the drag handles carry */
     kit.list_detail.create = function(config) {
@@ -278,7 +279,15 @@
             var item_index = index_of(selected_id);
 
             if (item_index === -1) {
-                $pane.html(config.empty_detail);
+
+                // A pane asking for a selection that cannot be made says the wrong thing
+                var empty_html = config.empty_detail;
+
+                if (items.length === 0) {
+                    empty_html = config.no_items_detail;
+                }
+
+                $pane.html(empty_html);
                 pane_is_built = false;
                 return;
             }
