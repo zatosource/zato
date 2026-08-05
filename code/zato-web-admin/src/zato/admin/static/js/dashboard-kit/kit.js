@@ -174,7 +174,33 @@
         named_days_back: 6,
         seconds_per_minute: 60,
         seconds_per_hour: 3600,
-        ms_per_day: 86400000
+        ms_per_day: 86400000,
+
+        /* Where the lines fall between counting a past day in days, in weeks and on the calendar.
+           Five days back is as far as single days are worth counting, and the far side of four
+           weeks is where a month on the calendar starts saying it better than any count of days. */
+        counted_days_back: 6,
+        calendar_days_back: 27,
+        days_per_week: 7,
+        weeks_per_month: 4,
+        months_per_year: 12,
+
+        /* Asking for the wording rather than the number is what turns one day back into
+           yesterday, one week back into last week and one month back into last month. */
+        relative_options: {numeric: 'auto'}
+    };
+
+    /* One formatter serves every row - it is built the first time a label is asked for and kept,
+       building one per row being the expensive part of wording a date this way. */
+    kit._relative_formatter = null;
+
+    kit._relative_format = function() {
+        if (kit._relative_formatter === null) {
+            kit._relative_formatter = new Intl.RelativeTimeFormat(
+                navigator.language, kit.past_time.relative_options);
+        }
+
+        return kit._relative_formatter;
     };
 
     /* Midnight of the day a moment falls on, in the browser's own zone. Days are counted from
@@ -201,6 +227,63 @@
         var midnights = kit._local_midnight(new Date()) - kit._local_midnight(target);
 
         return Math.round(midnights / config.ms_per_day);
+    };
+
+    /* How far back a past day is, as one amount of one unit - the largest unit that still has
+       something to say about it. Days give way to weeks and weeks to months rather than piling
+       up, so no day is ever spoken of in a count too large to picture.
+
+       Where the lines fall is where GitHub draws them for the dates it prints next to a commit,
+       which is the reading most of the trade has settled on. */
+    kit.days_back_amount = function(iso_string) {
+        var config = kit.past_time;
+        var days_back = kit.local_days_back(iso_string);
+
+        // Today and the five days behind it are each worth counting on their own
+        if (days_back < config.counted_days_back) {
+            return [days_back, 'day'];
+        }
+
+        // From six days back the count is in weeks, and a fourth week is a month - four weeks
+        // is as many as are ever named
+        if (days_back < config.calendar_days_back) {
+            var weeks_back = Math.round(days_back / config.days_per_week);
+
+            if (weeks_back >= config.weeks_per_month) {
+                return [1, 'month'];
+            }
+
+            return [weeks_back, 'week'];
+        }
+
+        // Beyond four weeks the calendar says how far back it was, a month being a month on it
+        // rather than a stretch of thirty days
+        var now = new Date();
+        var target = new Date(iso_string);
+        var years_back = now.getFullYear() - target.getFullYear();
+        var months_back = years_back * config.months_per_year + (now.getMonth() - target.getMonth());
+
+        if (months_back >= config.months_per_year) {
+            return [years_back, 'year'];
+        }
+
+        // Four weeks into a long month has still not left it, and a month it has not left is no
+        // way of saying how far back it was, so the days say it instead
+        if (months_back === 0) {
+            return [days_back, 'day'];
+        }
+
+        return [months_back, 'month'];
+    };
+
+    /* What a past day is called - today, yesterday, a count of days, weeks, months or years,
+       in the reader's own language. The label opens the line it is read at the head of, which
+       is why it is capitalised where a language leaves it in lower case. */
+    kit.time_ago_label = function(iso_string) {
+        var amount = kit.days_back_amount(iso_string);
+        var out = kit._relative_format().format(-amount[0], amount[1]);
+
+        return out.charAt(0).toUpperCase() + out.slice(1);
     };
 
     /* The day a past moment fell on, named as briefly as it can be without standing for two

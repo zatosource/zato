@@ -68,10 +68,11 @@ listing.config = {
     emptyListing: 'No events found',
     emptyPane: 'No event selected',
 
-    // What the day a row belongs to is called when that day is the one being read, and what
-    // stands between the day and the time of day
-    todayLabel: 'Today',
+    // What stands between the day a row belongs to and the time of day
     dayTimeSeparator: ' \u00b7 ',
+
+    // The one outcome a row is marked for on sight, being the one a reader came to the list for
+    errorOutcome: 'error',
 
     rawTabLabel: 'Raw',
     parsedTabLabel: 'Parsed',
@@ -374,30 +375,12 @@ listing.rowChips = function(rowModel) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Which day a row belongs to, in the fewest characters that can only mean one day - today by
-// name, the weekday within the week just gone since each of the seven names falls once there,
-// and the month and the day beyond it.
-listing.dayMark = function(rowModel) {
-    var daysBack = kit.local_days_back(rowModel.timeIso);
-
-    if (daysBack === 0) {
-        return listing.config.todayLabel;
-    }
-
-    if (daysBack <= kit.past_time.named_days_back) {
-        return kit.past_time.weekday_labels[new Date(rowModel.timeIso).getDay()];
-    }
-
-    return rowModel.timeLocal.slice(5, 10);
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
-// When an event happened - which day it was, then the time of day down to the last digit it was
-// written down with, two events of one exchange sharing everything above that digit
+// When an event happened - which day it was, read as how far back that day is, then the time of
+// day down to the last digit it was written down with, two events of one exchange sharing
+// everything above that digit
 listing.timeCellHTML = function(rowModel) {
     var out = '<span class="audit-log-cell-day">' +
-        listing.escapeHTML(listing.dayMark(rowModel)) + '</span>' +
+        listing.escapeHTML(kit.time_ago_label(rowModel.timeIso)) + '</span>' +
         listing.escapeHTML(listing.config.dayTimeSeparator) +
         listing.escapeHTML(rowModel.timeLocal.slice(11));
 
@@ -411,8 +394,15 @@ listing.timeCellHTML = function(rowModel) {
 // Everything else an event says is read in the pane.
 listing.rowHTML = function(rowModel) {
     var columns = listing.columns;
+    var rowClass = 'audit-log-row';
 
-    var html = '<tr class="audit-log-row" data-item-id="' + rowModel.id + '">';
+    // What failed is found by looking rather than by reading down the rows, so it is marked
+    // on the row itself and not left to a column that a narrow list would have dropped
+    if (rowModel.outcome === listing.config.errorOutcome) {
+        rowClass += ' audit-log-row-error';
+    }
+
+    var html = '<tr class="' + rowClass + '" data-item-id="' + rowModel.id + '">';
 
     // The event's own number, the one the address bar carries, so a row points at the same
     // event tomorrow as it does now - where it happens to stand in the list does not.

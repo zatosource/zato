@@ -130,6 +130,18 @@ class TestSeedContents:
 
 # ################################################################################################################################
 
+    def test_no_event_lands_on_a_whole_second(self) -> 'None':
+        """ Every event carries the fraction of a second it happened on - a data set
+        whose moments all sit on a whole second reads as made up.
+        """
+        _ = _run_seed()
+
+        for event in _get_events():
+            when = datetime.fromisoformat(event['event_time_iso'])
+            assert when.microsecond, event['event_time_iso']
+
+# ################################################################################################################################
+
     def test_the_lab_burst_is_visible(self) -> 'None':
         """ The previous day's burst window holds far more lab failures
         than the rest of the week combined.
