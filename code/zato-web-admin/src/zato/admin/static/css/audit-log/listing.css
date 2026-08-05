@@ -38,6 +38,13 @@
        short of the scrollbar the list carries rather than running into it */
     --audit-log-list-end-gap: 6px;
 
+    /* Every row on the list is this tall and no row is ever any other height. A row that was as
+       tall as whatever it happened to hold would stand somewhere else the moment the list was
+       dragged narrow enough to drop a tag, and the row being read would walk off the top of the
+       screen under the reader - so the height is stated once here instead. It is the height the
+       tallest of them already came to, a tag and the room the line gives it. */
+    --audit-log-row-height: 28px;
+
     /* The dot a failed row is marked with, and how far its rail stands off the list. Both come out
        of the inset the page already keeps at its edge, so nothing in the list gives up any room. */
     --audit-log-error-dot-size: 8px;
@@ -123,7 +130,12 @@
    narrow drops the columns it no longer has room for one at a time, which is the only thing that
    ever changes where a column stands. */
 
+/* A cell asks for the row's height rather than for the height of what it holds, and a table reads
+   that as the least it may be - so a dropped tag, an empty cell or a row with nothing to tag at
+   all leaves every row standing exactly where it stood */
+
 .audit-log-list-table td {
+    height: var(--audit-log-row-height);
     padding: 4px 6px;
     border-bottom: 1px solid var(--dashboard-line);
     vertical-align: middle;
