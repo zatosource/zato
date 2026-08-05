@@ -25,7 +25,10 @@ from zato.common.defaults import default_cluster_id
 from zato.common.demo.seed import get_demo_rule_defs, purge_demo_data, seed_demo_data, Channel_Clinic, Channel_Lab, \
     Channel_Main, Outconn_FHIR, Outconn_Forward, Route_Clinic, Route_Lab, Route_Main, SeedConfig
 from zato.common.hl7.feed import generate_feed_items, rewrite_msh_field, FeedConfig, MSH3_Index
+from zato.common.hl7.fhir.fields import Outconn_Config_Defaults as FHIR_Outconn_Defaults
 from zato.common.hl7.mllp.client import HL7MLLPClient
+from zato.common.hl7.mllp.fields import Channel_Defaults as MLLP_Channel_Defaults, \
+    Outconn_Defaults as MLLP_Outconn_Defaults
 from zato.common.json_internal import dumps
 from zato.common.odb.model import GenericConn
 from zato.common.odb.query.generic import GenericObjectWrapper
@@ -53,6 +56,14 @@ logger = getLogger(__name__)
 _type_channel_mllp = 'channel-hl7-mllp'
 _type_outconn_mllp = 'outconn-hl7-mllp'
 _type_outconn_fhir = 'outconn-hl7-fhir'
+
+# Every field each type carries, so a demo object holds what one made in the Dashboard holds
+# rather than only the few fields named below - a reader of any other field finds it there
+_type_defaults = {
+    _type_channel_mllp: MLLP_Channel_Defaults,
+    _type_outconn_mllp: MLLP_Outconn_Defaults,
+    _type_outconn_fhir: FHIR_Outconn_Defaults,
+}
 
 # The service behind the demo channels - nothing on a fresh server answers an HL7 message
 # with an acknowledgment of its own, so the import deploys one, its source below
@@ -239,13 +250,17 @@ def ensure_demo_connections(server:'ParallelServer') -> 'strlist':
 
     for connection_def in _connection_defs:
 
-        request = {
+        # The type's own defaults go in first so that what the demo asks for wins over them,
+        # the audit log being on among it
+        request = dict(_type_defaults[connection_def['type_']])
+
+        request.update({
             'cluster_id': default_cluster_id,
             'is_active': True,
             'is_internal': False,
             'pool_size': 1,
             'is_audit_log_active': True,
-        }
+        })
         request.update(connection_def)
 
         _ = server.invoke('zato.generic.connection.create', request)

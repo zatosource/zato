@@ -64,11 +64,51 @@
     --dashboard-flow-accent-tint: rgba(246, 166, 5, 0.10);
     --dashboard-flow-accent-tint-strong: rgba(246, 166, 5, 0.18);
     --dashboard-flow-accent-tint-tag: rgba(246, 166, 5, 0.14);
+
+    /* The block an open flow line and its panel form together - how far it stands off the
+       lines around it and the solid surface the two of them share, a clearly lighter shade
+       of the panel's own so the block reads as raised off it. What is not open is pushed
+       down toward black instead of being faded: on a dark frame, transparency only sinks
+       light text into the background, while darkening keeps it legible and unmistakably
+       set back. */
+    --audit-log-flow-open-gap: 20px;
+
+    /* The card also stands in from the frame's own sides, so the dark shows around all four
+       of its edges rather than only above and below it */
+    --audit-log-flow-open-side-gap: 8px;
+
+    --audit-log-flow-open-surface: #32324f;
+    --audit-log-flow-backdrop-filter: brightness(0.4) saturate(0.5);
+
+    /* With a block open, the frame itself falls to near-black under the closed lines, so
+       the card is lit against a room gone dark rather than against the everyday panel */
+    --audit-log-flow-backdrop-surface: #191926;
+
+    /* What the raised block adds on top of its surface - text a shade brighter than the
+       frame's own, a hairline of light along its top edge the way a lit card catches it,
+       and the shadow it casts into the dark, upward off the line and downward off the
+       panel so the two throw one glow rather than two */
+    --audit-log-flow-open-text: #e9e9f4;
+    --audit-log-flow-open-rim: rgba(255, 255, 255, 0.22);
+    --audit-log-flow-open-shadow-up: 0 -14px 30px rgba(0, 0, 0, 0.55);
+    --audit-log-flow-open-shadow-down: 0 18px 36px rgba(0, 0, 0, 0.6);
 }
 
 /* ------------------------------------------------------------ */
 /* The page around the listing                                   */
 /* ------------------------------------------------------------ */
+
+/* Every settings page stands in a container that insists on being a window tall, and its
+   padding comes on top of that, so the document is always some 60px taller than the window.
+   On this page the pair is what fills the window - it measures the room the page leaves it,
+   and a floor under the page would only be measured back off the pair while keeping the page
+   scrollable. So the floor goes, and the padding below is kept small - what the pair may not
+   have is only what is really drawn under it. */
+
+.settings-container:has(.detail-page-audit-log) {
+    min-height: 0;
+    padding-bottom: 12px;
+}
 
 .detail-page-audit-log {
     padding-left: var(--audit-log-page-inset);
@@ -487,6 +527,9 @@
 .audit-log-flow {
     container-type: inline-size;
     container-name: audit-log-flow;
+
+    /* The room going dark and lighting back up is part of the same movement as the card */
+    transition: background 0.2s;
 }
 
 /* Nothing in the flow's actions is pushed away from what it acts on - the actions of a line
@@ -497,11 +540,14 @@
 }
 
 /* Each line is ruled off from the next, and the whole of it reads in the panel's own colour
-   with only what tells one line from another taking a colour of its own */
+   with only what tells one line from another taking a colour of its own. Everything a line
+   goes through - falling dark, coming back, rising into a block and settling out of one -
+   is one movement rather than a jump. */
 
 .audit-log-flow .detail-log-line {
     border-bottom: 1px solid var(--dashboard-panel-border);
     color: var(--dashboard-panel-text);
+    transition: filter 0.2s, margin 0.2s, background-color 0.2s, box-shadow 0.2s;
 }
 
 .audit-log-flow .detail-log-ts {
@@ -517,11 +563,59 @@
     background-color: var(--dashboard-fact-tint-dark);
 }
 
+/* The scheduler's stepping back, remade for the dark frame the flow reads on. Fading is what
+   a white table does - here the closed lines are darkened toward the background instead,
+   whole, text and stripe and tags together, and come back whole under the pointer. */
+
+.audit-log-flow.detail-dimmed {
+    background: var(--audit-log-flow-backdrop-surface);
+}
+
+.audit-log-flow.detail-dimmed > .detail-log-line {
+    opacity: 1;
+    filter: var(--audit-log-flow-backdrop-filter);
+}
+
+.audit-log-flow.detail-dimmed > .detail-log-line:hover,
+.audit-log-flow.detail-dimmed > .detail-log-line[aria-expanded="true"] {
+    filter: none;
+}
+
+/* An open line and its panel are one thing being read, and the two of them stand off the
+   list as one raised block - air above and below it, one solid lighter surface under both,
+   no rule left between them, and the panel closing the block with the rule the line gave
+   up. Against the darkened lines around it, the block is the one lit thing on the frame. */
+
+.audit-log-flow .detail-log-line[aria-expanded="true"] {
+    margin: var(--audit-log-flow-open-gap) var(--audit-log-flow-open-side-gap) 0;
+    border-top: 1px solid var(--audit-log-flow-open-rim);
+    border-bottom-color: transparent;
+    background-color: var(--audit-log-flow-open-surface);
+    color: var(--audit-log-flow-open-text);
+    box-shadow: var(--audit-log-flow-open-shadow-up);
+}
+
+.audit-log-flow .audit-log-flow-panel.expanded {
+    margin: 0 var(--audit-log-flow-open-side-gap) var(--audit-log-flow-open-gap);
+    border-bottom: 1px solid var(--dashboard-panel-border);
+    background-color: var(--audit-log-flow-open-surface);
+    box-shadow: var(--audit-log-flow-open-shadow-down);
+    transition: margin 0.2s, background-color 0.2s, box-shadow 0.2s;
+}
+
 /* The line the flow was read from is where the reader stands, so it is the one line that
    says so without being hovered over */
 
 .audit-log-flow-line-seed {
     background-color: var(--dashboard-flow-accent-tint);
+}
+
+/* Open, the seed is raised like any other open line and keeps its amber on top of that */
+
+.audit-log-flow .audit-log-flow-line-seed[aria-expanded="true"] {
+    background:
+        linear-gradient(var(--dashboard-flow-accent-tint), var(--dashboard-flow-accent-tint)),
+        var(--audit-log-flow-open-surface);
 }
 
 .audit-log-flow .audit-log-flow-line-seed:hover {

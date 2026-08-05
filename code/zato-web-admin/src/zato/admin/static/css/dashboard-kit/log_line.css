@@ -148,3 +148,25 @@ tbody.detail-dimmed > tr.detail-panel-row:not(.expanded) {
 tbody.detail-dimmed > tr.detail-panel-row.expanded {
     opacity: 1;
 }
+
+/* The same stepping back for a log whose lines are not table rows - with something open,
+   every line falls quiet except under the pointer, and only the open panels keep their
+   full strength. The child selector keeps the lines inside an open panel out of it. */
+
+div.detail-dimmed > .detail-log-line {
+    opacity: 0.35;
+    transition: opacity 0.2s;
+}
+
+div.detail-dimmed > .detail-log-line:hover {
+    opacity: 1;
+}
+
+div.detail-dimmed > .detail-panel-row:not(.expanded) {
+    opacity: 0.35;
+    transition: opacity 0.2s;
+}
+
+div.detail-dimmed > .detail-panel-row.expanded {
+    opacity: 1;
+}
