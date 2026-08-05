@@ -54,12 +54,15 @@ listing.config = {
     defaultListWidth: 700,
 
     // How many of an event's chips a row of the list carries. A presenter names the most
-    // telling one of them first, and the rest of what an event says about itself is read
-    // in the pane rather than shouted across the list.
-    rowChipLimit: 1,
+    // telling ones first, and the rest of what an event says about itself is read in the pane
+    // rather than shouted across the list.
+    rowChipLimit: 2,
 
     emptyListing: 'No events found',
     emptyPane: 'No event selected',
+
+    // What the day a row belongs to is called when that day is the one being read
+    todayLabel: 'Today',
 
     rawTabLabel: 'Raw',
     parsedTabLabel: 'Parsed',
@@ -345,9 +348,9 @@ listing.updateColumns = function() {
 listing.columnCount = function() {
     var columns = listing.columns;
 
-    // Where a row stands, when it happened, which way it went and what it was are
-    // the four the list always holds.
-    var out = 4;
+    // Where a row stands, when it happened, which way it went, what it was, and the cell at the
+    // end that takes up whatever room the row has over, are the five the list always holds.
+    var out = 5;
 
     if (columns.outcome) {
         out += 1;
@@ -370,6 +373,39 @@ listing.rowChips = function(rowModel) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// Which day a row belongs to, in the fewest characters that can only mean one day - today by
+// name, the weekday within the week just gone since each of the seven names falls once there,
+// and the month and the day beyond it.
+listing.dayMark = function(rowModel) {
+    var daysBack = kit.local_days_back(rowModel.timeIso);
+
+    if (daysBack === 0) {
+        return listing.config.todayLabel;
+    }
+
+    if (daysBack <= kit.past_time.named_days_back) {
+        return kit.past_time.weekday_labels[new Date(rowModel.timeIso).getDay()];
+    }
+
+    return rowModel.timeLocal.slice(5, 10);
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// When an event happened - which day it was, then the time of day down to the last digit it was
+// written down with, two events of one exchange sharing everything above that digit. The day
+// stands over the time rather than beside it, so the column is as wide as a time of day and no
+// wider whatever day is being named.
+listing.timeCellHTML = function(rowModel) {
+    var out = '<span class="audit-log-cell-day">' +
+        listing.escapeHTML(listing.dayMark(rowModel)) + '</span>' +
+        listing.escapeHTML(rowModel.timeLocal.slice(11));
+
+    return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 // One event as one line - which event it is, when it happened, which way it went, what it
 // is and the one thing it is best known by, how it turned out and what can be done with it.
 // Everything else an event says is read in the pane.
@@ -382,16 +418,16 @@ listing.rowHTML = function(rowModel) {
     // event tomorrow as it does now - where it happens to stand in the list does not.
     html += '<td class="audit-log-cell-number">#' + rowModel.id + '</td>';
 
-    // The time of day is what tells two events of the same minute apart, and the whole
-    // timestamp is one hover away.
+    // Which day it was and the time of day, with the whole stamp one hover away
     html += '<td class="audit-log-cell-time" title="' + listing.escapeHTML(rowModel.timeLocal) + '">' +
-        listing.escapeHTML(rowModel.timeLocal.slice(11)) + '</td>';
+        listing.timeCellHTML(rowModel) + '</td>';
 
     html += '<td class="audit-log-cell-direction">' +
         kit.direction.tag(rowModel.direction, rowModel.eventType) + '</td>';
 
+    // What the message is called by its protocol is read in the pane rather than on the row -
+    // a control id is a number to be copied, not a number to be scanned down a list.
     html += '<td class="audit-log-cell-main">';
-    html += '<span class="audit-log-row-id">' + listing.escapeHTML(rowModel.controlId) + '</span>';
 
     // Saying an event was received next to a tag already reading IN is saying it twice.
     // An event that went neither way has no tag to say what it was, so it says so itself.
@@ -409,6 +445,11 @@ listing.rowHTML = function(rowModel) {
     if (columns.action) {
         html += '<td class="audit-log-cell-action">' + listing.actionHTML(rowModel) + '</td>';
     }
+
+    // Every column of a fixed table gives its width, and the room the row has over has to go
+    // somewhere - it goes into this last empty cell, so no column that is being read is stretched
+    // to swallow it and every one of them stands where it says it does.
+    html += '<td class="audit-log-cell-filler"></td>';
 
     html += '</tr>';
 

@@ -100,7 +100,6 @@ def object_index(req:'any_') -> 'TemplateResponse':
         'time_from': time_from,
         'time_to': time_to,
         'query': query,
-        'has_outstanding_filter': source in _source_outstanding,
         'resubmit_labels_json': resubmit_labels_json,
         'exchange_json': json.dumps(exchange),
         'zato_clusters': True,
@@ -273,7 +272,7 @@ def flow(req:'any_') -> 'HttpResponse':
         # is not all one source.
         _hydrate_rows(connection, rows)
 
-    response_json = json.dumps({'rows': rows, 'seed_id': seed_id, 'is_truncated': flow_ids.is_truncated})
+    response_json = json.dumps({'rows': rows, 'seed_id': seed_id})
     response_bytes = response_json.encode('utf-8')
 
     out = HttpResponse(response_bytes, content_type='application/json')

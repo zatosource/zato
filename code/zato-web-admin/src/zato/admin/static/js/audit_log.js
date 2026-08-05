@@ -26,9 +26,6 @@ $.fn.zato.audit_log.config = {
     rawTabLabel: 'Raw',
     parsedTabLabel: 'Parsed',
 
-    // The status filter value narrowing the page down to open exchanges
-    outstandingStatus: 'outstanding',
-
     // What the resubmit outcome is reported with
     resubmitModalTitle: 'Resubmit result',
     resubmitErrorLabel: 'Resubmit failed',
@@ -312,31 +309,6 @@ $.fn.zato.audit_log.init = function(initConfig) {
 
         pagination.set_filters({query: query});
         pagination.fetch_page(1);
-    });
-
-    // .. the outstanding pill toggles between all events and the open exchanges,
-    // .. keeping the status query parameter of the page URL in sync ..
-    $('#audit-log-outstanding-pill').on('click', function(event) {
-        event.preventDefault();
-
-        var pill = $(this);
-        var wasActive = pill.hasClass('audit-log-filter-pill-active');
-
-        var newStatus = wasActive ? '' : config.outstandingStatus;
-        pill.toggleClass('audit-log-filter-pill-active', !wasActive);
-
-        pagination.set_filters({status: newStatus});
-        pagination.fetch_page(1);
-
-        var urlParams = new URLSearchParams(window.location.search);
-
-        if (newStatus) {
-            urlParams.set('status', newStatus);
-        } else {
-            urlParams.delete('status');
-        }
-
-        history.replaceState(null, '', '?' + urlParams.toString());
     });
 
     // .. each resubmit link sends its row's payload out again ..

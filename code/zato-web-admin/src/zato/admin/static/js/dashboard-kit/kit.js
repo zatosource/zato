@@ -165,29 +165,112 @@
         return 'In ' + seconds + 's';
     };
 
+    /* How a day is named once it is no longer today, and how far back a name goes. Six days is
+       the furthest a weekday name can reach - the seventh day back is the same weekday as
+       today, so a name there would stand for two different days. */
+    kit.past_time = {
+        yesterday_label: 'Yesterday',
+        weekday_labels: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+        named_days_back: 6,
+        seconds_per_minute: 60,
+        seconds_per_hour: 3600,
+        ms_per_day: 86400000
+    };
+
+    /* Midnight of the day a moment falls on, in the browser's own zone. Days are counted from
+       one midnight to the next rather than in stretches of 86400 seconds, so a day is a day on
+       the clock the reader is looking at and not a fixed quantity of time. */
+    kit._local_midnight = function(date) {
+        return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+    };
+
+    /* The time of day alone, which is what a named day is followed by */
+    kit._local_hours_minutes = function(date) {
+        var hours = ('0' + date.getHours()).slice(-2);
+        var minutes = ('0' + date.getMinutes()).slice(-2);
+
+        return hours + ':' + minutes;
+    };
+
+    /* How many days back a moment falls on the reader's own calendar, today being 0. A day
+       either side of a change of clocks is 23 or 25 hours long, so the two midnights are
+       divided and rounded rather than subtracted and floored. */
+    kit.local_days_back = function(iso_string) {
+        var config = kit.past_time;
+        var target = new Date(iso_string);
+        var midnights = kit._local_midnight(new Date()) - kit._local_midnight(target);
+
+        return Math.round(midnights / config.ms_per_day);
+    };
+
+    /* The day a past moment fell on, named as briefly as it can be without standing for two
+       different days, and empty for today - today needs no name. */
+    kit.past_day_label = function(iso_string) {
+        var config = kit.past_time;
+        var days_back = kit.local_days_back(iso_string);
+
+        if (days_back === 0) {
+            return '';
+        }
+
+        if (days_back === 1) {
+            return config.yesterday_label;
+        }
+
+        if (days_back <= config.named_days_back) {
+            return config.weekday_labels[new Date(iso_string).getDay()];
+        }
+
+        // Further back than a weekday name can reach without repeating itself
+        return kit.format_local_date(new Date(iso_string));
+    };
+
+    /* When something happened, read backwards from now. Within the day it is how long ago,
+       which needs no day named; beyond it the day is named outright - yesterday, then the
+       weekday, then the date - so that a row never leaves the reader to work out which day
+       it is talking about. */
     kit.relative_time_past = function(iso_string) {
         if (!iso_string) return '-';
-        var target = new Date(iso_string).getTime();
-        var now = Date.now();
-        var diff_seconds = Math.floor((now - target) / 1000);
+
+        var config = kit.past_time;
+        var target = new Date(iso_string);
+        var diff_seconds = Math.floor((Date.now() - target.getTime()) / 1000);
 
         if (diff_seconds < 0) diff_seconds = 0;
-        if (diff_seconds < 60) return diff_seconds + 's ago';
-        if (diff_seconds < 3600) return Math.floor(diff_seconds / 60) + 'm ago';
-        if (diff_seconds < 86400) return Math.floor(diff_seconds / 3600) + 'h ago';
-        return Math.floor(diff_seconds / 86400) + 'd ago';
+
+        if (diff_seconds < config.seconds_per_minute) {
+            return diff_seconds + 's ago';
+        }
+
+        if (diff_seconds < config.seconds_per_hour) {
+            return Math.floor(diff_seconds / config.seconds_per_minute) + 'm ago';
+        }
+
+        var day_label = kit.past_day_label(iso_string);
+
+        // Still today, so the hour it happened at is unambiguous on its own
+        if (day_label === '') {
+            return Math.floor(diff_seconds / config.seconds_per_hour) + 'h ago';
+        }
+
+        return day_label + ' ' + kit._local_hours_minutes(target);
+    };
+
+    /* The day a moment fell on, as digits */
+    kit.format_local_date = function(date) {
+        var year = date.getFullYear();
+        var month = ('0' + (date.getMonth() + 1)).slice(-2);
+        var day = ('0' + date.getDate()).slice(-2);
+
+        return year + '-' + month + '-' + day;
     };
 
     kit.format_local_time = function(iso_string) {
         if (!iso_string) return '';
         var date = new Date(iso_string);
-        var year = date.getFullYear();
-        var month = ('0' + (date.getMonth() + 1)).slice(-2);
-        var day = ('0' + date.getDate()).slice(-2);
-        var hours = ('0' + date.getHours()).slice(-2);
-        var minutes = ('0' + date.getMinutes()).slice(-2);
         var seconds = ('0' + date.getSeconds()).slice(-2);
-        return year + '-' + month + '-' + day + ' ' + hours + ':' + minutes + ':' + seconds;
+
+        return kit.format_local_date(date) + ' ' + kit._local_hours_minutes(date) + ':' + seconds;
     };
 
     /* The same timestamp with every fractional digit it was written down with. A Date carries
