@@ -518,8 +518,9 @@ div.prompt form {
 
 /* The standard link face - also available as .zato-link-face for a span
    inside a larger anchor, when only part of the anchor's text is meant
-   to carry the link look */
-a:not(.menu-link),
+   to carry the link look. A dashboard action badge that happens to be a
+   link keeps the badge's own face instead, so it is left out here. */
+a:not(.menu-link):not(.dashboard-panel-action-badge),
 .zato-link-face {
     color: rgb(17, 17, 17);
     font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -538,7 +539,7 @@ a:not(.menu-link),
     padding-bottom: 2px;
 }
 
-a:not(.menu-link):not(.chosen-single):not(.status-badge):hover,
+a:not(.menu-link):not(.chosen-single):not(.status-badge):not(.dashboard-panel-action-badge):hover,
 a:not(.menu-link):hover .zato-link-face {
     color: var(--zato-link-hover) !important;
     background-color: transparent;

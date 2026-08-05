@@ -594,6 +594,13 @@
     color: inherit;
 }
 
+/* A timestamp under the pointer turns amber on every line - a hovered line steps forward
+   out of the dimming anyway, and its time is what it is picked out of the flow by */
+
+.audit-log-flow .detail-log-line:hover .detail-log-ts {
+    color: var(--dashboard-flow-accent);
+}
+
 /* A line being read lifts by its own background rather than by a filter laid over everything
    standing on it, which would brighten what can be done with the line along with the line and
    leave neither of them where the reader left it */
