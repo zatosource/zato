@@ -1,42 +1,72 @@
 /* ------------------------------------------------------------ */
 /* Dropdown menu - anchored menu shared across pages             */
+/*                                                               */
+/* A floating surface with its edge drawn as shadow, entering    */
+/* with a small settle. Every gray is black at low alpha.        */
 /* ------------------------------------------------------------ */
+
+@keyframes zato-dropdown-enter {
+    from {
+        opacity: 0;
+        transform: translateY(-4px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
 
 .zato-dropdown-menu {
     position: absolute;
     z-index: 10000;
     background: #ffffff;
-    border: 1px solid #d0d0d0;
-    border-radius: 4px;
-    box-shadow: 0 4px 12px #00000026;
+    border-radius: 10px;
+    box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.06),
+        0 2px 6px rgba(0, 0, 0, 0.06),
+        0 12px 24px rgba(0, 0, 0, 0.09);
     min-width: 220px;
-    max-height: 260px;
+    max-height: 280px;
     overflow-y: auto;
-    padding: 4px 0;
+    padding: 5px 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    transform-origin: top;
+    animation: zato-dropdown-enter 0.14s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .zato-dropdown-menu {
+        animation: none;
+    }
 }
 
 .zato-dropdown-header {
-    padding: 4px 10px 2px;
+    padding: 6px 14px 3px;
     font-size: 10px;
     font-weight: 600;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.5px;
     text-transform: uppercase;
-    color: #999999;
+    color: rgba(26, 32, 44, 0.45);
     user-select: none;
 }
+
+/* Rows highlight as rounded inset pills, not full-bleed bars */
 
 .zato-dropdown-item {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 5px 10px;
+    margin: 0 5px;
+    padding: 5px 9px;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 12px;
-    transition: background 0.1s;
+    transition: background 0.1s ease;
 }
 
-.zato-dropdown-item:hover {
-    background: #f0f4f8;
+.zato-dropdown-item:hover,
+.zato-dropdown-item-active {
+    background: rgba(84, 105, 212, 0.07);
 }
 
 .zato-dropdown-item-value {
@@ -46,60 +76,67 @@
 }
 
 .zato-dropdown-item-label {
-    color: #666666;
+    color: rgba(26, 32, 44, 0.55);
     font-size: 11px;
     text-transform: capitalize;
 }
 
 .zato-dropdown-item-text {
-    color: #2c3e50;
+    flex: 1;
+    color: #1a202c;
     font-size: 12px;
 }
 
 .zato-dropdown-item-selected {
-    background: #f0f4f8;
+    background: rgba(84, 105, 212, 0.08);
 }
 
 .zato-dropdown-item-selected .zato-dropdown-item-text {
     font-weight: 600;
 }
 
-/* The checkbox of a multi-pick row - an empty square until its row is picked,
-   then the accent green the rate limiting rows carry */
+/* A picked row carries a light floating checkmark - drawn strokes, no box.
+   The space is held whether or not the mark is showing, so rows do not shift. */
+
+@keyframes zato-dropdown-check-in {
+    from {
+        opacity: 0;
+        transform: rotate(-45deg) scale(0.5);
+    }
+    to {
+        opacity: 1;
+        transform: rotate(-45deg) scale(1);
+    }
+}
 
 .zato-dropdown-item-check {
-    box-sizing: border-box;
     position: relative;
     flex: none;
-    width: 13px;
-    height: 13px;
-    border: 1px solid #d0d0d0;
-    border-radius: 3px;
-    background: #ffffff;
-    transition: background 0.1s, border-color 0.1s;
+    width: 12px;
+    height: 12px;
 }
-
-.zato-dropdown-item-selected .zato-dropdown-item-check {
-    border-color: #2e7d6a;
-    background: #2e7d6a;
-}
-
-/* The tick is drawn, not typed - two white strokes turned into a check */
 
 .zato-dropdown-item-selected .zato-dropdown-item-check::after {
     content: '';
     position: absolute;
-    left: 4px;
-    top: 1px;
-    width: 3px;
-    height: 7px;
-    border-right: 2px solid #ffffff;
-    border-bottom: 2px solid #ffffff;
-    transform: rotate(45deg);
+    left: 1px;
+    top: 2px;
+    width: 8px;
+    height: 4px;
+    border-left: 1.5px solid #5469d4;
+    border-bottom: 1.5px solid #5469d4;
+    transform: rotate(-45deg);
+    animation: zato-dropdown-check-in 0.12s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .zato-dropdown-item-selected .zato-dropdown-item-check::after {
+        animation: none;
+    }
 }
 
 .zato-dropdown-separator {
     height: 1px;
-    background: #e9ecef;
-    margin: 4px 0;
+    background: rgba(0, 0, 0, 0.06);
+    margin: 5px 10px;
 }

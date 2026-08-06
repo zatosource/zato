@@ -1,13 +1,14 @@
 /* ------------------------------------------------------------ */
 /* Dashboard kit - the select trigger                            */
 /*                                                               */
-/* The rate limiting forms' control language under a common      */
-/* name - the same white face, borders and inks as the inputs    */
-/* and the dropdown of shared/dropdown-menu.css. The menu the    */
-/* trigger opens is that same shared dropdown.                   */
+/* Edges are built out of layered shadow, not borders - black    */
+/* at low alpha, never a gray hex - and the type is the page's   */
+/* own system stack. The menu the trigger opens is the shared    */
+/* dropdown of shared/dropdown-menu.css.                         */
 /* ------------------------------------------------------------ */
 
-/* Layout the trigger always has, whatever face it wears */
+/* Layout the trigger always has, whatever face it wears. The font is claimed
+   explicitly because the forms it stands in reset themselves to bare sans-serif. */
 
 .dashboard-select-trigger {
     display: inline-flex;
@@ -16,59 +17,106 @@
     cursor: pointer;
     user-select: none;
     white-space: nowrap;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 12px;
 }
 
-/* The face itself - the rate limiting forms' input look */
+/* The face itself - a floating surface, its edge drawn as the innermost shadow */
 
 .dashboard-select-face {
-    padding: 4px 9px;
-    border: 1px solid #d0d0d0;
-    border-radius: 3px;
-    font-size: 12px;
+    padding: 5px 10px;
+    border-radius: 7px;
     background: #ffffff;
-    transition: border-color 0.15s;
+    box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.07),
+        0 1px 2px rgba(0, 0, 0, 0.05);
+    transition: box-shadow 0.15s ease;
 }
 
 .dashboard-select-face:hover {
-    border-color: #5794d0;
+    box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.12),
+        0 2px 5px rgba(0, 0, 0, 0.08);
 }
 
-/* What the select is called reads like the forms' own labels .. */
+/* While its menu is up, the edge becomes the accent ring */
+
+.dashboard-select-face.dashboard-select-trigger-open {
+    box-shadow:
+        0 0 0 1px #5469d4,
+        0 0 0 4px rgba(84, 105, 212, 0.12);
+}
+
+/* Hierarchy by weight, not by gray - the label in soft ink, the value in full ink */
 
 .dashboard-select-label {
-    font-weight: 600;
-    color: #2c3e50;
+    font-weight: 500;
+    color: rgba(26, 32, 44, 0.62);
 }
-
-/* .. and what is picked reads like the dropdown's own values */
 
 .dashboard-select-value {
-    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-    font-size: 11px;
-    font-weight: 500;
-    color: #1a56a8;
+    font-weight: 600;
+    color: #1a202c;
 }
+
+/* Several picks at once read as a small accent pill */
+
+.dashboard-select-value-count {
+    padding: 0 7px;
+    border-radius: 999px;
+    background: rgba(84, 105, 212, 0.1);
+    color: #5469d4;
+    font-size: 11px;
+    line-height: 16px;
+}
+
+/* The chevron is drawn on the baseline and turns over while the menu is up */
 
 .dashboard-select-chevron {
-    font-size: 9px;
-    color: #666666;
-}
-
-/* The filter box at the top of a long menu, the same input look as the face */
-
-.dashboard-select-filter {
     box-sizing: border-box;
-    width: calc(100% - 16px);
-    margin: 2px 8px 6px 8px;
-    padding: 3px 6px;
-    border: 1px solid #d0d0d0;
-    border-radius: 3px;
-    font-size: 11px;
-    outline: none;
-    transition: border-color 0.15s;
+    flex: none;
+    width: 7px;
+    height: 7px;
+    margin-top: -3px;
+    border-right: 1.5px solid rgba(26, 32, 44, 0.45);
+    border-bottom: 1.5px solid rgba(26, 32, 44, 0.45);
+    transform: rotate(45deg);
+    transition: transform 0.14s ease;
 }
 
-.dashboard-select-filter:focus {
-    border-color: #5794d0;
-    box-shadow: 0 0 0 2px #5794d01a;
+.dashboard-select-trigger-open .dashboard-select-chevron {
+    margin-top: 3px;
+    transform: rotate(225deg);
+}
+
+/* The filter box at the top of a long menu - text over a hairline, nothing else.
+   Named as an input so formalize.css, which dresses every text input on the page
+   in its own bevel, is outweighed where the markup is the kit's own. */
+
+input.dashboard-select-filter {
+    appearance: none;
+    -webkit-appearance: none;
+    display: block;
+    box-sizing: border-box;
+    width: calc(100% - 20px);
+    margin: 4px 10px;
+    padding: 5px 2px;
+    border: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+    border-radius: 0;
+    background: transparent;
+    font-family: inherit;
+    font-size: 12px;
+    color: #1a202c;
+    outline: none;
+    box-shadow: none;
+    transition: border-color 0.15s ease;
+}
+
+input.dashboard-select-filter:focus {
+    border: none;
+    border-bottom: 1px solid rgba(84, 105, 212, 0.55);
+    background: transparent;
+    outline: none;
+    box-shadow: none;
 }
