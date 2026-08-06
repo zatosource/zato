@@ -17,13 +17,18 @@ from zato.common.py23_.past.builtins import unicode
 
 # Zato
 from zato.common.api import query_parameters, ZATO_ODB_POOL_NAME
+from zato.common.audit_log.sql import all_levels as all_sql_audit_levels, Level_Off as SQL_Audit_Off
 from zato.common.exception import ZatoException
 from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import Cluster, SQLConnectionPool
 from zato.common.odb.query import out_sql_list
 from zato.common.util.api import get_sql_engine_display_name
+from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import AsIs, Integer
 from zato.server.service.internal import AdminService, ChangePasswordBase
+
+# The connection attributes that live in the opaque column rather than in columns of their own
+_opaque_attrs = ['audit_log']
 
 class _SQLService:
     """ A common class for various SQL-related services.
@@ -40,6 +45,11 @@ class _SQLService:
                 'extra should be a list of key=value parameters, possibly one-element long, instead of `{}`'.format(
                     extra))
 
+    def validate_audit_log(self, cid, audit_log):
+        if audit_log not in all_sql_audit_levels:
+            level_names = sorted(all_sql_audit_levels)
+            raise ZatoException(cid, 'audit_log must be one of `{}` instead of `{}`'.format(level_names, audit_log))
+
 class GetList(AdminService):
     """ Returns a list of outgoing SQL connections.
     """
@@ -47,10 +57,11 @@ class GetList(AdminService):
 
     input = 'cluster_id', *query_parameters
     output = 'id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username', \
-        Integer('pool_size'), '-extra', '-engine_display_name'
+        Integer('pool_size'), '-extra', '-engine_display_name', '-audit_log'
 
     def get_data(self, session):
-        return self._search(out_sql_list, session, self.request.input.cluster_id, False)
+        # The audit level lives in the opaque column, which is what elems_with_opaque surfaces
+        return elems_with_opaque(self._search(out_sql_list, session, self.request.input.cluster_id, False))
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -64,7 +75,7 @@ class Create(AdminService, _SQLService):
     """ Creates a new outgoing SQL connection.
     """
     input = 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username', \
-        Integer('pool_size'), '-extra'
+        Integer('pool_size'), '-extra', '-audit_log'
     output = 'id', 'name', 'display_name'
 
     def handle(self):
@@ -72,7 +83,11 @@ class Create(AdminService, _SQLService):
         input.password = uuid4().hex
         input.extra = input.extra.encode('utf-8') if input.extra else b''
 
+        # A connection that does not say otherwise is not audited
+        input.audit_log = input.audit_log or SQL_Audit_Off
+
         self.validate_extra(self.cid, input.extra.decode('utf-8'))
+        self.validate_audit_log(self.cid, input.audit_log)
 
         with closing(self.odb.session()) as session:
             existing_one = session.query(SQLConnectionPool.id).\
@@ -97,6 +112,9 @@ class Create(AdminService, _SQLService):
                 item.pool_size = input.pool_size
                 item.extra = input.extra
 
+                # The audit level lives in the opaque column rather than in a column of its own
+                set_instance_opaque_attrs(item, input, only=_opaque_attrs)
+
                 session.add(item)
                 session.commit()
 
@@ -119,14 +137,18 @@ class Edit(AdminService, _SQLService):
     """ Updates an outgoing SQL connection.
     """
     input = 'id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username', \
-        Integer('pool_size'), '-extra'
+        Integer('pool_size'), '-extra', '-audit_log'
     output = 'id', 'name', 'display_name'
 
     def handle(self):
         input = self.request.input
         input.extra = input.extra.encode('utf-8') if input.extra else b''
 
+        # A connection that does not say otherwise is not audited
+        input.audit_log = input.audit_log or SQL_Audit_Off
+
         self.validate_extra(self.cid, input.extra.decode('utf-8'))
+        self.validate_audit_log(self.cid, input.audit_log)
 
         with closing(self.odb.session()) as session:
             existing_one = session.query(SQLConnectionPool.id).\
@@ -151,6 +173,9 @@ class Edit(AdminService, _SQLService):
                 item.username = input.username
                 item.pool_size = input.pool_size
                 item.extra = input.extra.encode('utf8') if isinstance(input.extra, unicode) else input.extra
+
+                # The audit level lives in the opaque column rather than in a column of its own
+                set_instance_opaque_attrs(item, input, only=_opaque_attrs)
 
                 session.add(item)
                 session.commit()

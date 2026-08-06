@@ -20,6 +20,7 @@ from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.sql import CreateForm, EditForm
 from zato.admin.web.views import Delete as _Delete, method_allowed
 from zato.common.api import engine_display_name
+from zato.common.audit_log.sql import Level_Off
 from zato.common.json_internal import dumps
 # Bunch
 from zato.common.ext.bunch import Bunch
@@ -40,6 +41,7 @@ def _get_edit_create_message(params, prefix=''):
         'db_name': params[prefix + 'db_name'],
         'username': params[prefix + 'username'],
         'pool_size': params[prefix + 'pool_size'],
+        'audit_log': params[prefix + 'audit_log'],
         'extra': params.get(prefix + 'extra'),
     }
 
@@ -82,6 +84,13 @@ def index(req):
                 setattr(_item, name, value)
 
             _item.engine_display_name = engine_display_name[_item.engine]
+
+            # A connection created before the audit level existed carries none, which means off
+            audit_log = item.audit_log
+            if not audit_log:
+                audit_log = Level_Off
+
+            _item.audit_log = audit_log
 
             _item.extra = item.extra or ''
             items.append(_item)

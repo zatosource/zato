@@ -119,7 +119,7 @@ def _seed_table(details:'stranydict', engine_name:'str') -> 'None':
 # ################################################################################################################################
 
 @contextmanager
-def _new_connection(details:'stranydict', engine_name:'str', extra:'str') -> 'conngen':
+def _new_connection(details:'stranydict', engine_name:'str', audit_log:'str') -> 'conngen':
     """ Builds the connection under test through the pool store - the same wiring
     a server uses - and takes it apart when the block ends.
     """
@@ -134,8 +134,13 @@ def _new_connection(details:'stranydict', engine_name:'str', extra:'str') -> 'co
         'db_name': details['name'],
         'pool_size': 1,
         'fs_sql_config': {},
-        'extra': extra,
+        'extra': '',
     }
+
+    # A connection that says nothing about auditing carries no such key at all,
+    # the same way one created before the setting existed carries none.
+    if audit_log:
+        config['audit_log'] = audit_log
 
     store = PoolStore(server_name=Server_Name)
     store[Connection_Name] = config
@@ -184,10 +189,10 @@ def _get_endpoint(details:'stranydict') -> 'str':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _check_no_extra_leaves_no_trail(details:'stranydict', engine_name:'str', tmp_path:'any_') -> 'None':
+def _check_no_opt_in_leaves_no_trail(details:'stranydict', engine_name:'str', tmp_path:'any_') -> 'None':
     """ A connection that never opted in runs its statements and leaves nothing behind.
     """
-    with _audit_db_env(tmp_path, 'no-extra'):
+    with _audit_db_env(tmp_path, 'no-opt-in'):
         with _new_connection(details, engine_name, '') as conn:
 
             rows = conn.execute(_select_all)
@@ -201,7 +206,7 @@ def _check_level_off_leaves_no_trail(details:'stranydict', engine_name:'str', tm
     """ Saying off explicitly is the same as saying nothing.
     """
     with _audit_db_env(tmp_path, 'level-off'):
-        with _new_connection(details, engine_name, 'audit_log=off') as conn:
+        with _new_connection(details, engine_name, 'off') as conn:
 
             rows = conn.execute(_select_all)
 
@@ -214,7 +219,7 @@ def _check_level_statement(details:'stranydict', engine_name:'str', tmp_path:'an
     """ The statement level records the SQL text alone - no parameters, no rows.
     """
     with _audit_db_env(tmp_path, 'level-statement'):
-        with _new_connection(details, engine_name, 'audit_log=statement') as conn:
+        with _new_connection(details, engine_name, 'statement') as conn:
 
             rows = conn.execute(_select_by_code, _select_params)
             assert rows == [_seed_rows[1]]
@@ -246,7 +251,7 @@ def _check_level_statement_params(details:'stranydict', engine_name:'str', tmp_p
     """ The statement-params level adds the parameters and still keeps the rows out.
     """
     with _audit_db_env(tmp_path, 'level-statement-params'):
-        with _new_connection(details, engine_name, 'audit_log=statement-params') as conn:
+        with _new_connection(details, engine_name, 'statement-params') as conn:
 
             _ = conn.execute(_select_by_code, _select_params)
 
@@ -266,7 +271,7 @@ def _check_level_full(details:'stranydict', engine_name:'str', tmp_path:'any_') 
     and the rows that came back.
     """
     with _audit_db_env(tmp_path, 'level-full'):
-        with _new_connection(details, engine_name, 'audit_log=full') as conn:
+        with _new_connection(details, engine_name, 'full') as conn:
 
             rows = conn.execute(_select_by_code, _select_params)
             assert rows == [_seed_rows[1]]
@@ -288,7 +293,7 @@ def _check_a_failed_statement_is_recorded(details:'stranydict', engine_name:'str
     learns about it.
     """
     with _audit_db_env(tmp_path, 'error-outcome'):
-        with _new_connection(details, engine_name, 'audit_log=statement') as conn:
+        with _new_connection(details, engine_name, 'statement') as conn:
 
             try:
                 _ = conn.execute(_select_missing_table)
@@ -317,7 +322,7 @@ def _check_an_unknown_level_is_refused(details:'stranydict', engine_name:'str', 
     with _audit_db_env(tmp_path, 'unknown-level'):
 
         try:
-            with _new_connection(details, engine_name, 'audit_log=everything'):
+            with _new_connection(details, engine_name, 'everything'):
                 pass
         except Exception as e:
             assert 'Unknown SQL audit level' in str(e)
@@ -335,7 +340,7 @@ def run_sql_audit_scenario(details:'stranydict', engine_name:'str', tmp_path:'an
     _seed_table(details, engine_name)
 
     # No opt-in and an explicit off leave no trail
-    _check_no_extra_leaves_no_trail(details, engine_name, tmp_path)
+    _check_no_opt_in_leaves_no_trail(details, engine_name, tmp_path)
     _check_level_off_leaves_no_trail(details, engine_name, tmp_path)
 
     # Each level carries exactly what it promised and nothing more

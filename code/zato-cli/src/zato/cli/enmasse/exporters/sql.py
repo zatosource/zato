@@ -78,8 +78,13 @@ class SQLExporter:
             if timeout := row.get('timeout'):
                 item['timeout'] = timeout
 
-            # The SSL/TLS configuration is kept in the opaque attributes
+            # The SSL/TLS configuration and the audit level are kept in the opaque attributes
             opaque = parse_instance_opaque_attr(row)
+
+            # A connection that is not audited says nothing about it in its YAML
+            if audit_log := opaque.get('audit_log'):
+                if audit_log != 'off':
+                    item['audit_log'] = audit_log
 
             if opaque.get('ssl'):
                 item['ssl'] = opaque['ssl']
