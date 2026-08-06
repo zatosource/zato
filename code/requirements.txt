@@ -11,7 +11,7 @@ cffi==2.0.0
 chardet==5.2.0
 colorama==0.4.6
 configparser==7.1.0
-cryptography==46.0.7
+cryptography==50.0.0
 curl-cffi==0.15.0b3
 dacite==1.6.0
 dateparser==0.7.6
@@ -35,7 +35,7 @@ grpcio==1.82.1
 grpcio-tools==1.82.1
 gunicorn==23.0.0
 hiredis==3.3.1
-httplib2==0.19.0
+httplib2==0.32.0
 humanize==4.12.3
 idna==3.15
 impacket==0.13.1
