@@ -264,9 +264,12 @@ page.init = function() {
 
     // The two tabs - which one is open goes into the address bar, so a link
     // is a link to the very reading its sender had in front of them
+    // The tabs are the same badges every chosen thing on a dark panel wears,
+    // the open one lit the way an open payload tab is
     page.tabs = kit.tabs.init({
         tab_selector: config.tabSelector,
         panel_prefix: config.tabPanelPrefix,
+        active_cls: 'dashboard-panel-action-badge-active',
         storage_key: config.tabStorageKey,
         default_tab: config.flowTab,
         on_change: function(tab) {
