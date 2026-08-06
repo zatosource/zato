@@ -37,8 +37,8 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     /* The inks a direction and an outcome are written in, on the nodes and on
        the detail pane's tabs alike */
     --message-flow-in: #6fb6e8;
-    --message-flow-request: #74cf92;
-    --message-flow-reply: #b9b9d4;
+    --message-flow-out: #74cf92;
+    --message-flow-sys: #b9b9d4;
     --message-flow-view: #cfa9ea;
     --message-flow-good: #74cf92;
     --message-flow-bad: #ff8a94;
@@ -61,6 +61,148 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
 
 .message-flow-page * {
     box-sizing: border-box;
+}
+
+/* ------------------------------------------------------------ */
+/* The head - the search box, the two tabs and the status line   */
+/* ------------------------------------------------------------ */
+
+.message-flow-head {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 18px;
+    margin-bottom: var(--message-flow-page-pad);
+}
+
+.message-flow-search-form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* The box and its Clear share one frame, the same shape the listing's search wears */
+
+.message-flow-search-field {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+#message-flow-search-input {
+    width: 340px;
+    padding: 6px 56px 6px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 4px;
+    background: var(--message-flow-canvas-surface);
+    color: var(--message-flow-text);
+    font-family: 'Roboto Mono', monospace;
+    font-size: 12px;
+}
+
+#message-flow-search-input::placeholder {
+    color: var(--message-flow-muted);
+}
+
+#message-flow-search-input:focus {
+    outline: none;
+    border-color: var(--message-flow-selected);
+}
+
+.message-flow-search-clear {
+    position: absolute;
+    right: 6px;
+    display: none;
+}
+
+/* The two ways of reading one journey stand as equals - the open one is lit,
+   the other waits in the dim ink everything unlit on this page waits in */
+
+.message-flow-tabs {
+    display: flex;
+    gap: 4px;
+    border: none;
+}
+
+.message-flow-tab {
+    padding: 6px 14px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--message-flow-muted);
+    font-family: 'Roboto Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.message-flow-tab:hover {
+    color: var(--message-flow-text);
+}
+
+.message-flow-tab.dashboard-tab-active {
+    border-color: rgba(255, 255, 255, 0.16);
+    background: var(--message-flow-canvas-surface);
+    color: var(--message-flow-selected-text);
+}
+
+/* How many events the term led to and what it was found by */
+
+.message-flow-status {
+    margin-left: auto;
+    color: var(--message-flow-muted);
+    font-size: 11px;
+}
+
+/* ------------------------------------------------------------ */
+/* The two tab panels                                            */
+/* ------------------------------------------------------------ */
+
+.message-flow-panel {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.message-flow-panel[hidden] {
+    display: none;
+}
+
+/* The drawing panel keeps the canvas, the drag bar and the pane in a column */
+
+.message-flow-panel-tab-drawing {
+    display: flex;
+    flex-direction: column;
+}
+
+/* The thread reads inside its own framed room, scrolled within it */
+
+.message-flow-panel-tab-thread {
+    overflow: auto;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 6px;
+    background-color: var(--message-flow-canvas-surface);
+    padding: 14px;
+}
+
+/* What either tab says when there is nothing to read yet */
+
+.message-flow-canvas-hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--message-flow-muted);
+    font-size: 11px;
+}
+
+.message-flow-hint-term {
+    margin-left: 4px;
+    color: var(--message-flow-selected-text);
+}
+
+.message-flow-thread .dashboard-inline-empty {
+    color: var(--message-flow-muted);
+    font-size: 11px;
 }
 
 /* The canvas is a framed panel with a faint dot grid, so the drawing stands in
@@ -204,24 +346,24 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     fill: var(--message-flow-in);
 }
 
-/* The request an outgoing connection made */
+/* A message leaving, whatever it left as */
 
-.message-flow-chip-request {
+.message-flow-chip-out {
     fill: rgba(116, 207, 146, 0.18);
 }
 
-.message-flow-chip-text-request {
-    fill: var(--message-flow-request);
+.message-flow-chip-text-out {
+    fill: var(--message-flow-out);
 }
 
-/* The answer to a message wears one word whichever way it travelled */
+/* An event that went neither way - a message expiring, a ledger being written */
 
-.message-flow-chip-reply {
+.message-flow-chip-none {
     fill: rgba(157, 157, 184, 0.18);
 }
 
-.message-flow-chip-text-reply {
-    fill: var(--message-flow-reply);
+.message-flow-chip-text-none {
+    fill: var(--message-flow-sys);
 }
 
 /* A person reading a stored message after the fact */
@@ -401,31 +543,16 @@ svg.message-flow-focus .message-flow-branch:not(.message-flow-lit) {
     color: var(--message-flow-muted);
 }
 
-/* The attachments a message carried - each one a badge that downloads its
-   file, its size beside the name in the caption's dim ink */
+/* The files the exchange's events carried, through the kit's own attachment
+   strips - the row takes no room at all until a strip has anything to say */
 
 .message-flow-detail-attachments {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 6px 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex: 0 0 auto;
+    padding: 0 12px;
 }
 
-.message-flow-detail-attachments-label {
-    margin-right: 4px;
-    color: var(--message-flow-muted);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.4px;
-    text-transform: uppercase;
-}
-
-.message-flow-detail-attachment-size {
-    margin-left: 6px;
-    color: var(--message-flow-muted);
-    font-weight: 400;
+.message-flow-detail-attachments .dashboard-attachments {
+    margin: 6px 0;
 }
 
 /* The bodies are read through the kit's payload panel - the pane itself is the
@@ -477,12 +604,12 @@ svg.message-flow-focus .message-flow-branch:not(.message-flow-lit) {
     color: var(--message-flow-in);
 }
 
-.message-flow-detail-tab-direction-request {
-    color: var(--message-flow-request);
+.message-flow-detail-tab-direction-out {
+    color: var(--message-flow-out);
 }
 
-.message-flow-detail-tab-direction-reply {
-    color: var(--message-flow-reply);
+.message-flow-detail-tab-direction-none {
+    color: var(--message-flow-sys);
 }
 
 .message-flow-detail-tab-direction-view {

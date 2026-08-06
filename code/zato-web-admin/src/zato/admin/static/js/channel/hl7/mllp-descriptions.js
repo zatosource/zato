@@ -48,7 +48,7 @@ $.fn.zato.channel.hl7.mllp.field_descriptions = {
     // Tolerance - wire-level preprocessing
     'id_normalize_line_endings': 'Converts CRLF and LF to CR<br>as required by HL7 v2.',
     'id_force_standard_delimiters': 'Rewrites MSH-2 to standard delimiters<br>(^~\\&amp;).',
-    'id_repair_truncated_msh': 'Recovers messages with a corrupted<br>or malformed MSH segment.',
+    'id_restore_truncated_msh': 'Recovers messages with a corrupted<br>or malformed MSH segment.',
     'id_split_concatenated_messages': 'Splits a TCP payload containing multiple<br>MSH segments into separate messages.',
 
     // Tolerance - parser-level fixups

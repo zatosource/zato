@@ -575,7 +575,7 @@ class TestPreprocessingQuirks:
 # ################################################################################################################################
 
     def test_quirk_l_truncated_msh(self, mllp_server:'int') -> 'None':
-        """ A message starting with 'SH|' (missing the leading M) must be repaired and accepted.
+        """ A message starting with 'SH|' (missing the leading M) must be restored and accepted.
         """
 
         raw_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

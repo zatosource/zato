@@ -353,7 +353,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
             default_character_encoding=self.config.default_character_encoding,
             should_use_msh18_encoding=asbool(self.config.use_msh18_encoding),
             should_normalize_line_endings=asbool(self.config.normalize_line_endings),
-            should_repair_truncated_msh=asbool(self.config.repair_truncated_msh),
+            should_restore_truncated_msh=asbool(self.config.restore_truncated_msh),
             should_split_concatenated_messages=asbool(self.config.split_concatenated_messages),
             should_force_standard_delimiters=asbool(self.config.force_standard_delimiters),
 

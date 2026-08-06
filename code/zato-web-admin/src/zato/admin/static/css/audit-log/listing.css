@@ -494,10 +494,11 @@
     margin-left: auto;
 }
 
-/* Everything the head offers is offered the same way, whether it copies something
-   or sends a message out again */
+/* Everything the head offers is offered the same way, whether it copies something,
+   sends a message out again or opens the flow the message belongs to */
 
 .audit-log-copy-cid,
+.audit-log-open-flow,
 .audit-log-resubmit-link {
     flex: none;
     font-size: 11px;
@@ -513,9 +514,9 @@
     margin-bottom: 10px;
 }
 
-/* What is known about the event is set out on the same dark frame the message itself and the
-   flow are read on, so the three tabs of the pane are three ways of reading one thing rather
-   than three places */
+/* What is known about the event is set out on the same dark frame the message itself is
+   read on, so the two tabs of the pane are two ways of reading one thing rather than
+   two places */
 
 .audit-log-pane-details {
     padding: 1px 0;

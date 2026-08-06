@@ -61,7 +61,7 @@ class TestNegativeCodes:
 
     def test_application_error_is_unclassified(self) -> 'None':
 
-        # An error may need a resend or a repair - a person decides, so no classification.
+        # An error may need a resend or a reprocess - a person decides, so no classification.
         result = interpret_ack_code(ACKStatus.Application_Error)
 
         assert result.ack_status == 'AE'

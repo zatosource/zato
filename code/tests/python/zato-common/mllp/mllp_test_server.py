@@ -149,7 +149,7 @@ def _build_argument_parser() -> 'argparse.ArgumentParser':
 
     # Pre-processing toggles (each has a --no- variant via BooleanOptionalAction)
     _ = parser.add_argument('--normalize-line-endings', action=argparse.BooleanOptionalAction, default=True)
-    _ = parser.add_argument('--repair-truncated-msh', action=argparse.BooleanOptionalAction, default=True)
+    _ = parser.add_argument('--restore-truncated-msh', action=argparse.BooleanOptionalAction, default=True)
     _ = parser.add_argument('--split-concatenated-messages', action=argparse.BooleanOptionalAction, default=True)
     _ = parser.add_argument('--force-standard-delimiters', action=argparse.BooleanOptionalAction, default=True)
     _ = parser.add_argument('--use-msh18-encoding', action=argparse.BooleanOptionalAction, default=True)
@@ -202,7 +202,7 @@ def main() -> 'None':
         # Callbacks receive the raw ER7 text so the echo mode can log it verbatim
         should_parse_on_input=False,
         should_normalize_line_endings=args.normalize_line_endings,
-        should_repair_truncated_msh=args.repair_truncated_msh,
+        should_restore_truncated_msh=args.restore_truncated_msh,
         should_split_concatenated_messages=args.split_concatenated_messages,
         should_force_standard_delimiters=args.force_standard_delimiters,
         should_use_msh18_encoding=args.use_msh18_encoding,

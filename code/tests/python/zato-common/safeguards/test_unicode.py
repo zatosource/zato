@@ -80,7 +80,7 @@ class TestNormalizeUnicode:
 
     def test_iban_matches_again_after_normalization(self) -> 'None':
 
-        # A zero-width space inside an IBAN prevents the detector from firing - normalization repairs that.
+        # A zero-width space inside an IBAN prevents the detector from firing - normalization fixes that.
         result = _new_result()
         smuggled = 'Pay to DE89\u200b370400440532013000 today'
         value = {'payment': smuggled}

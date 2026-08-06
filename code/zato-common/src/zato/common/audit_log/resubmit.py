@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The source-agnostic core of every resubmit - loading a stored event back, the registry
-# of per-source handlers, the per-hop resend over outgoing events, and bulk repair.
+# of per-source handlers, the per-hop resend over outgoing events, and bulk resubmit.
 # Each source contributes its own resend and reprocess semantics on top of this module,
 # the way zato.common.as2.resubmit and zato.common.hl7.resubmit do.
 
@@ -268,8 +268,8 @@ def resend_hop(event:'StoredEvent', send:'callable_', audit_log:'AuditLog', cid:
 # ################################################################################################################################
 
 @dataclass(init=False)
-class RepairFilter:
-    """ Which stored events one bulk repair applies to.
+class ResubmitFilter:
+    """ Which stored events one bulk resubmit applies to.
     """
     source: str = ''
     event_type: str = ''
@@ -280,8 +280,8 @@ class RepairFilter:
 # ################################################################################################################################
 
 @dataclass(init=False)
-class BulkRepairResult:
-    """ What one bulk repair did, row by row.
+class BulkResubmitResult:
+    """ What one bulk resubmit did, row by row.
     """
     is_dry_run: bool = False
     total: int = 0
@@ -297,24 +297,24 @@ class BulkRepairResult:
 
 # ################################################################################################################################
 
-def find_event_ids(repair_filter:'RepairFilter') -> 'intlist':
-    """ Returns the ids of the events one bulk repair applies to, oldest first,
+def find_event_ids(resubmit_filter:'ResubmitFilter') -> 'intlist':
+    """ Returns the ids of the events one bulk resubmit applies to, oldest first,
     so resubmission preserves the original order.
     """
     statement = select(event_table.c.id)
 
-    statement = statement.where(event_table.c.source == repair_filter.source)
-    statement = statement.where(event_table.c.event_type == repair_filter.event_type)
+    statement = statement.where(event_table.c.source == resubmit_filter.source)
+    statement = statement.where(event_table.c.event_type == resubmit_filter.event_type)
 
     # The optional criteria narrow the match only when set
-    if repair_filter.object_name:
-        statement = statement.where(event_table.c.object_name == repair_filter.object_name)
+    if resubmit_filter.object_name:
+        statement = statement.where(event_table.c.object_name == resubmit_filter.object_name)
 
-    if repair_filter.classification:
-        statement = statement.where(event_table.c.classification == repair_filter.classification)
+    if resubmit_filter.classification:
+        statement = statement.where(event_table.c.classification == resubmit_filter.classification)
 
-    if repair_filter.outcome:
-        statement = statement.where(event_table.c.outcome == repair_filter.outcome)
+    if resubmit_filter.outcome:
+        statement = statement.where(event_table.c.outcome == resubmit_filter.outcome)
 
     statement = statement.order_by(event_table.c.id)
 
@@ -330,8 +330,8 @@ def find_event_ids(repair_filter:'RepairFilter') -> 'intlist':
 
 # ################################################################################################################################
 
-def bulk_repair(
-    repair_filter:'RepairFilter',
+def bulk_resubmit(
+    resubmit_filter:'ResubmitFilter',
     resubmit_one:'callable_',
     audit_log:'AuditLog',
     cid:'str',
@@ -339,24 +339,24 @@ def bulk_repair(
     transform:'callable_ | None' = None,
     dry_run:'bool' = False,
     actor:'str' = '',
-    ) -> 'BulkRepairResult':
+    ) -> 'BulkResubmitResult':
     """ Applies one filter server-side and resubmits every matched event sequentially,
     optionally transforming each payload first - one audited operation with per-row outcomes.
     A dry run reports what would be resubmitted, per row, without sending anything.
     Every real row is guarded by a dedup key, so overlapping bulk operations
-    cannot double-apply one message. The actor is who asked for the repair,
+    cannot double-apply one message. The actor is who asked for the resubmit,
     recorded on each ledger row and on the bulk event itself.
     """
 
     # Our response to produce - the rows are assigned here because init=False
     # means the field factory never runs
-    out = BulkRepairResult()
+    out = BulkResubmitResult()
     out.is_dry_run = dry_run
     out.rows = []
 
     engine = get_audit_engine()
 
-    event_ids = find_event_ids(repair_filter)
+    event_ids = find_event_ids(resubmit_filter)
     out.total = len(event_ids)
 
     # Sequential, in id order, so downstream systems see the original order preserved
@@ -368,7 +368,7 @@ def bulk_repair(
         event = load_event(event_id)
         payload = get_stored_payload(event)
 
-        # The optional repair happens before anything is sent or reported
+        # The optional transform happens before anything is sent or reported
         if transform:
             payload = transform(payload)
 
@@ -377,17 +377,17 @@ def bulk_repair(
             row['result'] = Row_Would_Resubmit
             continue
 
-        # The dedup key covers the exact payload, so repairing a message differently
+        # The dedup key covers the exact payload, so resubmitting an edited message
         # is a new operation while resubmitting it identically twice is caught
         dedup_key = build_dedup_key(Action_Resend, event_id, payload)
 
-        if not acquire_dedup_key(engine, dedup_key, cid, AuditEvent.Bulk_Repair, actor):
+        if not acquire_dedup_key(engine, dedup_key, cid, AuditEvent.Bulk_Resubmit, actor):
             row['result'] = Row_Duplicate
             out.duplicate_count += 1
             continue
 
         # One failing row never aborts the rest of the operation - and a failed row
-        # releases its key, so the same repair remains retryable later,
+        # releases its key, so the same resubmit remains retryable later,
         # while a successful one remains claimed permanently.
         try:
             resubmit_one(event, payload)
@@ -419,12 +419,12 @@ def bulk_repair(
         'data': rows_json,
     }
 
-    # Who asked for the repair is a searchable attribute of the bulk event
+    # Who asked for the resubmit is a searchable attribute of the bulk event
     if actor:
         bulk_options['attrs'] = {'actor': actor}
 
     out.bulk_event_id = audit_log.insert(
-        repair_filter.source, AuditEvent.Bulk_Repair, repair_filter.object_name, **bulk_options)
+        resubmit_filter.source, AuditEvent.Bulk_Resubmit, resubmit_filter.object_name, **bulk_options)
 
     return out
 

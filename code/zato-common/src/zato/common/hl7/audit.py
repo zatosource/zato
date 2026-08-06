@@ -179,7 +179,7 @@ class _ACKCodeDetails(NamedTuple):
 
 # What each acknowledgment code from table 0008 means - a reject can never succeed as-is,
 # so it is classified permanent, while an error stays unclassified because either
-# a resend or a repair may apply and a person needs to decide which.
+# a resend or a reprocess may apply and a person needs to decide which.
 _ack_code_details = {
     ACKStatus.Application_Accept: _ACKCodeDetails(AuditOutcome.OK, ''),
     ACKStatus.Commit_Accept:      _ACKCodeDetails(AuditOutcome.OK, ''),

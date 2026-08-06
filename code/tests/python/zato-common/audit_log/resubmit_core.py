@@ -16,9 +16,9 @@ from zato.common.audit_log.api import event_attr_table, event_link_table, event_
 from zato.common.audit_log.common import event_dedup_table
 from zato.common.audit_log.dedup import acquire_dedup_key, build_dedup_key, complete_dedup_key, get_in_doubt, \
     release_dedup_key
-from zato.common.audit_log.resubmit import bulk_repair, find_event_ids, get_resubmit_handler, get_stored_payload, \
+from zato.common.audit_log.resubmit import bulk_resubmit, find_event_ids, get_resubmit_handler, get_stored_payload, \
     load_event, register_resubmit_handler, require_event_type, resend_hop, Action_Reprocess, Action_Resend, \
-    RepairFilter, ResubmitException, Row_Error, Row_Resubmitted, Row_Would_Resubmit
+    ResubmitFilter, ResubmitException, Row_Error, Row_Resubmitted, Row_Would_Resubmit
 from zato.common.json_internal import dumps, loads
 
 # ################################################################################################################################
@@ -38,7 +38,7 @@ _server_name = 'test-audit-log-server'
 # The connection the per-hop resend checks deliver through
 _hop_connection_name = 'audit.test.core.hop'
 
-# The connection the bulk repair checks deliver through
+# The connection the bulk resubmit checks deliver through
 _bulk_connection_name = 'audit.test.core.bulk'
 
 # Who asks for the resubmits in this scenario
@@ -336,13 +336,13 @@ def _run_dedup_checks() -> 'None':
 
     assert acquire_dedup_key(engine, second_key, 'cid-core-dedup-5', Action_Resend) is True
 
-    # Completed so the bulk repair checks later in the scenario start with nothing in doubt
+    # Completed so the bulk resubmit checks later in the scenario start with nothing in doubt
     complete_dedup_key(engine, second_key, AuditOutcome.OK)
 
 # ################################################################################################################################
 
-def _run_bulk_repair_checks(audit_log:'AuditLog') -> 'None':
-    """ Confirms bulk repair end to end - server-side filtering in id order, the dry run,
+def _run_bulk_resubmit_checks(audit_log:'AuditLog') -> 'None':
+    """ Confirms bulk resubmit end to end - server-side filtering in id order, the dry run,
     per-row outcomes with one failure not aborting the rest, the payload transform,
     dedup preventing double-apply, a failed row staying retryable, and the one
     audit event recording the whole operation.
@@ -358,27 +358,27 @@ def _run_bulk_repair_checks(audit_log:'AuditLog') -> 'None':
             data=dumps({'payload': payload}))
         seeded_ids.append(event_id)
 
-    repair_filter = RepairFilter()
-    repair_filter.source = AuditSource.REST_Outgoing
-    repair_filter.event_type = AuditEvent.Request_Sent
-    repair_filter.object_name = _bulk_connection_name
-    repair_filter.outcome = AuditOutcome.Error
+    resubmit_filter = ResubmitFilter()
+    resubmit_filter.source = AuditSource.REST_Outgoing
+    resubmit_filter.event_type = AuditEvent.Request_Sent
+    resubmit_filter.object_name = _bulk_connection_name
+    resubmit_filter.outcome = AuditOutcome.Error
 
     # The filter matches the seeded events in id order ..
-    assert find_event_ids(repair_filter) == seeded_ids
+    assert find_event_ids(resubmit_filter) == seeded_ids
 
     resubmitted:'anylist' = []
 
     def resubmit_one(event:'anydict', payload:'str') -> 'None':
 
-        # The marker arrives uppercased because the repair transform ran first
+        # The marker arrives uppercased because the transform ran first
         if 'BAD' in payload:
             raise ValueError('This payload cannot be delivered')
 
         resubmitted.append(payload)
 
     # .. a dry run reports every row without sending anything ..
-    dry_result = bulk_repair(repair_filter, resubmit_one, audit_log, 'cid-core-bulk-dry',
+    dry_result = bulk_resubmit(resubmit_filter, resubmit_one, audit_log, 'cid-core-bulk-dry',
         transform=str.upper, dry_run=True)
 
     assert dry_result.is_dry_run is True
@@ -391,7 +391,7 @@ def _run_bulk_repair_checks(audit_log:'AuditLog') -> 'None':
         assert row['result'] == Row_Would_Resubmit
 
     # .. the real run transforms and delivers, and the one failing row does not abort the rest ..
-    first_result = bulk_repair(repair_filter, resubmit_one, audit_log, 'cid-core-bulk-first',
+    first_result = bulk_resubmit(resubmit_filter, resubmit_one, audit_log, 'cid-core-bulk-first',
         transform=str.upper, actor=_actor)
 
     assert first_result.total == 3
@@ -409,11 +409,11 @@ def _run_bulk_repair_checks(audit_log:'AuditLog') -> 'None':
     # .. the whole operation is one audit event with the per-row outcomes inside ..
     bulk_row = _get_event_row(first_result.bulk_event_id)
 
-    assert bulk_row['event_type'] == AuditEvent.Bulk_Repair
+    assert bulk_row['event_type'] == AuditEvent.Bulk_Resubmit
     assert bulk_row['outcome'] == AuditOutcome.Error
     assert loads(bulk_row['data']) == {'rows': first_result.rows}
 
-    # .. the bulk event and every ledger row it claimed say who asked for the repair ..
+    # .. the bulk event and every ledger row it claimed say who asked for the resubmit ..
     assert _get_attr_value(first_result.bulk_event_id, 'actor') == _actor
 
     first_bulk_key = build_dedup_key(Action_Resend, seeded_ids[0], 'BULK-ONE')
@@ -423,7 +423,7 @@ def _run_bulk_repair_checks(audit_log:'AuditLog') -> 'None':
     def fixed_resubmit_one(event:'anydict', payload:'str') -> 'None':
         resubmitted.append(payload)
 
-    second_result = bulk_repair(repair_filter, fixed_resubmit_one, audit_log, 'cid-core-bulk-second',
+    second_result = bulk_resubmit(resubmit_filter, fixed_resubmit_one, audit_log, 'cid-core-bulk-second',
         transform=str.upper)
 
     assert second_result.resubmitted_count == 1
@@ -435,7 +435,7 @@ def _run_bulk_repair_checks(audit_log:'AuditLog') -> 'None':
     assert bulk_row['outcome'] == AuditOutcome.OK
 
     # .. a third identical run applies nothing at all ..
-    third_result = bulk_repair(repair_filter, fixed_resubmit_one, audit_log, 'cid-core-bulk-third',
+    third_result = bulk_resubmit(resubmit_filter, fixed_resubmit_one, audit_log, 'cid-core-bulk-third',
         transform=str.upper)
 
     assert third_result.resubmitted_count == 0
@@ -451,7 +451,7 @@ def _run_bulk_repair_checks(audit_log:'AuditLog') -> 'None':
 def run_resubmit_core_scenario() -> 'None':
     """ The shared resubmit core scenario every backend must pass: loading stored events
     back with every rejection path, the per-source handler registry, the per-hop resend,
-    the dedup ledger and bulk repair with dry runs and double-apply prevention.
+    the dedup ledger and bulk resubmit with dry runs and double-apply prevention.
     """
     delete_all_events()
 
@@ -461,7 +461,7 @@ def run_resubmit_core_scenario() -> 'None':
     _run_registry_checks()
     _run_hop_resend_checks(audit_log)
     _run_dedup_checks()
-    _run_bulk_repair_checks(audit_log)
+    _run_bulk_resubmit_checks(audit_log)
 
 # ################################################################################################################################
 # ################################################################################################################################

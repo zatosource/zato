@@ -45,7 +45,7 @@ review.config = {
     toleranceFields: [
         'normalize_line_endings',
         'force_standard_delimiters',
-        'repair_truncated_msh',
+        'restore_truncated_msh',
         'split_concatenated_messages',
         'normalize_obx2_value_type',
         'replace_invalid_obx2_value_type',

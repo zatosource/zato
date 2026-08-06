@@ -23,8 +23,8 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.views import invoke_action_handler, method_allowed
-from zato.admin.web.views.audit_log.columns import _data_preview_len, _default_page, _flow_columns, _flow_url, \
-    _get_outcomes, _poll_url, _preview_len, _row_columns, _source_columns, _source_title, _status_outstanding
+from zato.admin.web.views.audit_log.columns import _data_preview_len, _default_page, _flow_columns, _get_outcomes, \
+    _poll_url, _preview_len, _row_columns, _source_columns, _source_title, _status_outstanding
 from zato.admin.web.views.audit_log.query import _build_where, _hydrate_rows, _normalize_row
 from zato.admin.web.views.audit_log.sources import _get_resubmit_labels, _source_outstanding, _source_parse, \
     _source_resubmit
@@ -32,7 +32,7 @@ from zato.common.audit_log.api import event_table, get_audit_engine, AuditLog
 from zato.common.audit_log.attachment import get_attachment, list_attachments
 from zato.common.audit_log.body import resolve_body
 from zato.common.audit_log.config_audit import record_view_event
-from zato.common.audit_log.flow import get_flow_ids, Relation_Seed
+from zato.common.audit_log.flow import get_flow_ids, resolve_seed, Relation_Seed
 from zato.common.defaults import default_cluster_id
 from zato.x12.render import render_document
 
@@ -123,7 +123,6 @@ def object_index(req:'any_') -> 'TemplateResponse':
         'audit_log_title': _source_title[source],
         'section_title': object_name,
         'poll_url': _poll_url,
-        'flow_url': _flow_url,
         'columns_json': columns_json,
         'outcomes_json': outcomes_json,
         'status': status,
@@ -235,16 +234,11 @@ def poll(req:'any_') -> 'HttpResponse':
 
 # ################################################################################################################################
 
-@method_allowed('POST')
-def flow(req:'any_') -> 'HttpResponse':
-    """ Returns one event's whole flow as JSON - every event related to it, the newest first
-    the way the event list reads, each one saying why it is in the flow. A flow crosses
-    sources, because one correlation id spans a channel and everything it fanned its
-    message out to.
+def _read_flow_rows(connection:'any_', seed_id:'int') -> 'anylist':
+    """ One event's whole flow as the frontend reads it - every event related to the seed,
+    the newest first the way the event list reads, each one saying why it is in the flow
+    and which event it was found through. Shared by the flow view and the journey one.
     """
-    body = json.loads(req.body)
-    seed_id = body['id']
-
     rows:'anylist' = []
 
     # A line of the flow reads what a list row reads and two things more
@@ -263,55 +257,105 @@ def flow(req:'any_') -> 'HttpResponse':
         event_table.c.id.desc(),
     ]
 
+    # Which events are in the flow and why each of them is comes first ..
+    flow_ids = get_flow_ids(connection, seed_id)
+    relation_by_id = flow_ids.relation_by_id
+    via_by_id = flow_ids.via_by_id
+
+    # .. then they are read in the order they are to be shown in ..
+    flow_query = select(*select_columns)
+    flow_query = flow_query.where(event_table.c.id.in_(list(relation_by_id)))
+    flow_query = flow_query.order_by(*order_by)
+
+    flow_result = connection.execute(flow_query)
+
+    for db_row in flow_result:
+        row_values = zip(_flow_columns, db_row)
+
+        # A line of a flow carries two keys no column of the event table has
+        row:'anydict' = dict(row_values)
+
+        _normalize_row(row)
+
+        # Only a preview of the payload travels with a line - the whole of it is fetched
+        # by the line that is opened, and only then.
+        data = row['data']
+        row['data'] = data[:_data_preview_len]
+
+        # Why this event is in the flow, and whether it is the one the flow was read from
+        relation = relation_by_id[row['id']]
+
+        row['relation'] = relation
+        row['is_seed'] = relation == Relation_Seed
+
+        # Which event this one was found through, zero when its relation is a shared one
+        # that names no event in particular
+        if row['id'] in via_by_id:
+            row['via_id'] = via_by_id[row['id']]
+        else:
+            row['via_id'] = 0
+
+        rows.append(row)
+
+    # .. and brought up to the shape a list row arrives in, per source, because a flow
+    # is not all one source.
+    _hydrate_rows(connection, rows)
+
+    return rows
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def flow(req:'any_') -> 'HttpResponse':
+    """ Returns one event's whole flow as JSON - every event related to it, the newest first
+    the way the event list reads, each one saying why it is in the flow. A flow crosses
+    sources, because one correlation id spans a channel and everything it fanned its
+    message out to.
+    """
+    body = json.loads(req.body)
+    seed_id = body['id']
+
+    engine = get_audit_engine()
+
+    with engine.connect() as connection:
+        rows = _read_flow_rows(connection, seed_id)
+
+    response_json = json.dumps({'rows': rows, 'seed_id': seed_id})
+    response_bytes = response_json.encode('utf-8')
+
+    out = HttpResponse(response_bytes, content_type='application/json')
+
+    return out
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def journey(req:'any_') -> 'HttpResponse':
+    """ Returns the whole journey of whatever one search term names - the term is resolved
+    to a seed event (an event id, a cid or a control id, the newest matching event winning)
+    and the seed's flow comes back the same shape the flow view sends, along with what the
+    term turned out to name. A term that names nothing comes back with no rows and an empty
+    resolved_by, which is how the message flow page knows to say so.
+    """
+    body = json.loads(req.body)
+    term = body['term'].strip()
+
+    rows:'anylist' = []
+
     engine = get_audit_engine()
 
     with engine.connect() as connection:
 
-        # Which events are in the flow and why each of them is comes first ..
-        flow_ids = get_flow_ids(connection, seed_id)
-        relation_by_id = flow_ids.relation_by_id
-        via_by_id = flow_ids.via_by_id
+        resolved = resolve_seed(connection, term)
 
-        # .. then they are read in the order they are to be shown in ..
-        flow_query = select(*select_columns)
-        flow_query = flow_query.where(event_table.c.id.in_(list(relation_by_id)))
-        flow_query = flow_query.order_by(*order_by)
+        if resolved.seed_id:
+            rows = _read_flow_rows(connection, resolved.seed_id)
 
-        flow_result = connection.execute(flow_query)
-
-        for db_row in flow_result:
-            row_values = zip(_flow_columns, db_row)
-
-            # A line of a flow carries two keys no column of the event table has
-            row:'anydict' = dict(row_values)
-
-            _normalize_row(row)
-
-            # Only a preview of the payload travels with a line - the whole of it is fetched
-            # by the line that is opened, and only then.
-            data = row['data']
-            row['data'] = data[:_data_preview_len]
-
-            # Why this event is in the flow, and whether it is the one the flow was read from
-            relation = relation_by_id[row['id']]
-
-            row['relation'] = relation
-            row['is_seed'] = relation == Relation_Seed
-
-            # Which event this one was found through, zero when its relation is a shared one
-            # that names no event in particular
-            if row['id'] in via_by_id:
-                row['via_id'] = via_by_id[row['id']]
-            else:
-                row['via_id'] = 0
-
-            rows.append(row)
-
-        # .. and brought up to the shape a list row arrives in, per source, because a flow
-        # is not all one source.
-        _hydrate_rows(connection, rows)
-
-    response_json = json.dumps({'rows': rows, 'seed_id': seed_id})
+    response_json = json.dumps({
+        'rows': rows,
+        'seed_id': resolved.seed_id,
+        'resolved_by': resolved.resolved_by,
+    })
     response_bytes = response_json.encode('utf-8')
 
     out = HttpResponse(response_bytes, content_type='application/json')

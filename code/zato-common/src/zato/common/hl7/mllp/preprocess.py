@@ -105,15 +105,15 @@ def normalize_line_endings(data:'str') -> 'str':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def repair_truncated_msh(data:'str') -> 'str':
-    """ Repairs messages whose MSH segment arrived damaged - one that lost its leading M, one
+def restore_truncated_msh(data:'str') -> 'str':
+    """ Restores messages whose MSH segment arrived damaged - one that lost its leading M, one
     that carries junk ahead of it, and one that was cut short of the fields the standard requires.
     """
 
     # Check for the 'SH|' prefix (missing M) ..
     if data.startswith('SH|'):
         data = 'M' + data
-        logger.warning('Repaired truncated MSH: prepended M to SH|')
+        logger.warning('Restored truncated MSH: prepended M to SH|')
 
     else:
 
@@ -304,7 +304,7 @@ def decode_with_msh18(raw_bytes:'bytes', default_encoding:'str' = 'utf-8') -> 's
 def preprocess_message(
     raw_bytes:'bytes',
     should_normalize_line_endings:'bool' = True,
-    should_repair_truncated_msh:'bool' = True,
+    should_restore_truncated_msh:'bool' = True,
     should_split_concatenated_messages:'bool' = True,
     should_force_standard_delimiters:'bool' = True,
     should_use_msh18_encoding:'bool' = True,
@@ -331,9 +331,9 @@ def preprocess_message(
         logger.info('Detected batch/file payload (starts with %s)', data[:3])
         return BatchPayload(data)
 
-    # .. repair truncated MSH ..
-    if should_repair_truncated_msh:
-        data = repair_truncated_msh(data)
+    # .. restore truncated MSH ..
+    if should_restore_truncated_msh:
+        data = restore_truncated_msh(data)
 
     # .. split concatenated messages ..
     if should_split_concatenated_messages:

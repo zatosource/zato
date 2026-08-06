@@ -24,20 +24,21 @@ listing.config = {
     itemSelector: '.audit-log-row',
     legendHost: '#audit-log-legend',
     payloadHost: '#audit-log-pane-payload',
-    flowHost: '#audit-log-pane-flow',
     rangePillId: 'audit-log-range',
 
-    // The pane's three halves - the message itself, everything said about it and the whole
-    // flow the message belongs to
+    // The pane's two halves - the message itself and everything said about it. The whole
+    // flow the message belongs to is a page of its own, which the pane head links to.
     tabSelector: '.audit-log-pane-tab',
     tabPanelPrefix: 'audit-log-pane-panel-',
     tabStorageKey: 'zato_audit_log_pane_tab',
     dataTab: 'data',
     detailsTab: 'details',
-    flowTab: 'flow',
     dataTabLabel: 'Data',
     detailsTabLabel: 'Details',
-    flowTabLabel: 'Message flow',
+
+    // Where the event's whole flow is read, and what the doorway to it says
+    flowPagePath: '/zato/message-flow/',
+    openFlowLabel: 'Open flow',
 
     // What the proportions of one source's listing are remembered under
     storagePrefix: 'zato_audit_log_layout_',
@@ -667,6 +668,8 @@ listing.paneHeadHTML = function(rowModel) {
 
     html += '<span class="audit-log-pane-actions">';
     html += listing.actionHTML(rowModel);
+    html += '<a class="audit-log-open-flow" href="' + config.flowPagePath + '?term=' + rowModel.id +
+        '">' + config.openFlowLabel + '</a>';
     html += '<a href="javascript:void(0)" class="audit-log-copy-cid" data-cid="' +
         listing.escapeHTML(rowModel.cid) + '">' + config.copyCIDLabel + '</a>';
     html += '</span>';
@@ -729,12 +732,11 @@ listing.paneHTML = function(rowModel) {
 
     var html = '<div class="audit-log-pane-head">' + listing.paneHeadHTML(rowModel) + '</div>';
 
-    // The message itself, everything said about it and the flow it belongs to are three ways
-    // of reading one event, so the pane is one of them at a time rather than all three at once.
+    // The message itself and everything said about it are two ways of reading one event,
+    // so the pane is one of them at a time rather than both at once.
     html += '<div class="dashboard-tabs audit-log-pane-tabs" role="tablist">';
     html += listing.paneTabHTML(config.dataTab, config.dataTabLabel);
     html += listing.paneTabHTML(config.detailsTab, config.detailsTabLabel);
-    html += listing.paneTabHTML(config.flowTab, config.flowTabLabel);
     html += '</div>';
 
     html += '<div class="dashboard-tab-panel" role="tabpanel" id="' +
@@ -745,11 +747,6 @@ listing.paneHTML = function(rowModel) {
     html += '<div class="dashboard-tab-panel" role="tabpanel" id="' +
         config.tabPanelPrefix + config.detailsTab + '">';
     html += '<div class="audit-log-pane-details">' + listing.paneDetailsHTML(rowModel) + '</div>';
-    html += '</div>';
-
-    html += '<div class="dashboard-tab-panel" role="tabpanel" id="' +
-        config.tabPanelPrefix + config.flowTab + '">';
-    html += '<div id="' + config.flowHost.slice(1) + '"></div>';
     html += '</div>';
 
     return html;
@@ -814,16 +811,13 @@ listing.showPayload = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Whichever of the three ways of reading an event is open asks for what it shows, and the
-// two that are not open ask for nothing until their turn comes
+// Whichever of the two ways of reading an event is open asks for what it shows, and the
+// one that is not open asks for nothing until its turn comes
 listing.showTab = function(tab) {
     var config = listing.config;
 
     if (tab === config.dataTab) {
         listing.showPayload();
-    }
-    else if (tab === config.flowTab) {
-        $.fn.zato.audit_log.flow.show(listing.selected);
     }
 };
 
@@ -876,17 +870,13 @@ listing.urlTab = function() {
     var config = listing.config;
     var wanted = kit.url_state.get(config.tabURLKey);
 
-    // Only the three the pane actually has are honoured, so a hand-typed address cannot
+    // Only the two the pane actually has are honoured, so a hand-typed address cannot
     // leave the pane with no tab open at all.
     if (wanted === config.dataTab) {
         return wanted;
     }
 
     if (wanted === config.detailsTab) {
-        return wanted;
-    }
-
-    if (wanted === config.flowTab) {
         return wanted;
     }
 
@@ -1196,14 +1186,6 @@ listing.refreshLive = function() {
     }
 
     listing.refresh();
-
-    // A flow being read grows with the clock too - a message answered a moment ago has one
-    // more line to it than it had a moment before.
-    if (listing.tabs !== null) {
-        if (listing.tabs.get_tab() === listing.config.flowTab) {
-            $.fn.zato.audit_log.flow.refreshLive();
-        }
-    }
 };
 
 // /////////////////////////////////////////////////////////////////////////////

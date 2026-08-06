@@ -9,10 +9,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # The demo-data seeder - one deterministic run fills the audit database with a week
 # of realistic HL7 traffic so every screen has something meaningful to show:
 # hourly traffic curves, an error burst, a feed gone silent, alerts in all three
-# lifecycle states, a batch with lineage, a resubmit chain, dedup ledger entries
-# and a config-change history. All content comes from the shipped fakers through
-# the sample feed - nothing is authored here. The seeder is a permanent asset,
-# the same run backs the dashboard's "Import demo data" action.
+# lifecycle states, a batch with lineage, resubmit chains with the people behind
+# them, content-viewed records, dedup ledger entries and a config-change history.
+# All content comes from the shipped fakers through the sample feed - nothing is
+# authored here. The seeder is a permanent asset, the same run backs
+# the dashboard's "Import demo data" action.
 #
 # Events are not written one at a time - the whole run is collected in memory
 # with its final timestamps and lands in the database in one bulk transaction,
@@ -131,10 +132,24 @@ Forward_Timeout_Ratio = 0.03
 
 # How many recent sends are still awaiting their acknowledgment -
 # the outstanding filter's demo cases
-In_Flight_Count = 3
+In_Flight_Count = 8
 
 # What share of ADT traffic the main channel takes, the clinic gets the rest
 Main_Channel_Share = 0.75
+
+# How many failed messages get a resubmit chain of their own -
+# the flow page's demo DAGs
+Resubmit_Count = 12
+
+# Every chain this many gets a first reprocess that fails and a second one
+# that goes through - a two-hop DAG
+Second_Hop_Every = 3
+
+# How many content-viewed records the access log carries
+View_Count = 40
+
+# The people whose names appear on resubmits and body views
+Actors = (Actor_Admin, Actor_Operator)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -151,10 +166,10 @@ class SeedConfig:
     days:'int' = 7
 
     # How many messages one day carries on average
-    messages_per_day:'int' = 240
+    messages_per_day:'int' = 1200
 
     # How many extra messages the error burst adds
-    burst_message_count:'int' = 60
+    burst_message_count:'int' = 180
 
     # How many FHIR request/response pairs the run writes
     fhir_pair_count:'int' = 30
@@ -173,6 +188,8 @@ class SeedResult:
     fhir_pair_count:'int' = 0
     config_event_count:'int' = 0
     dedup_count:'int' = 0
+    resubmit_count:'int' = 0
+    view_count:'int' = 0
     channel_names:'list' = field(default_factory=list)
     rule_names:'list' = field(default_factory=list)
 
@@ -195,15 +212,39 @@ class _PlannedMessage:
 # ################################################################################################################################
 
 @dataclass(init=False)
-class _RepairSource:
-    """ The failed lab message the repair story reprocesses - captured while
+class _ResubmitSource:
+    """ One failed message a resubmit chain reprocesses - captured while
     the week's traffic is written, so nothing needs to be read back later.
+    The chain fields are filled in when the chain itself is written, which
+    is what the dedup ledger rows are later derived from.
     """
 
     relative_received_id:'int' = 0
     cid:'str' = ''
     control_id:'str' = ''
     text:'str' = ''
+    channel_name:'str' = ''
+    when:'datetime' = None # type: ignore[assignment]
+
+    # Filled in by the chain writer - the chain's cid, its stamped moments
+    # and who asked for the resubmit
+    chain_cid:'str' = ''
+    chain_created_iso:'str' = ''
+    chain_completed_iso:'str' = ''
+    chain_actor:'str' = ''
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class _PlannedView:
+    """ One content-viewed record planned during the traffic pass - it embeds
+    the viewed event's real database id, so it is written after the main commit.
+    """
+
+    relative_event_id:'int' = 0
+    actor:'str' = ''
+    when:'datetime' = None # type: ignore[assignment]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -434,10 +475,20 @@ def _draw_time(rng:'Random', now:'datetime', days:'int') -> 'datetime':
 
 # ################################################################################################################################
 
-def _build_ack_text(ack_code:'str', control_id:'str') -> 'str':
-    """ Builds the minimal acknowledgment message a channel would send back.
+def _to_hl7_timestamp(when:'datetime') -> 'str':
+    """ Renders a moment as an HL7 TS with a four-digit fraction - a message body
+    whose MSH-7 sits on a whole second reads as made up.
     """
-    msh = 'MSH|^~\\&|ZATO|ZATO|DEMO|DEMO|20260101000000||ACK|{}|P|2.4'.format(control_id)
+    out = when.strftime('%Y%m%d%H%M%S.%f')[:19]
+    return out
+
+# ################################################################################################################################
+
+def _build_ack_text(ack_code:'str', control_id:'str', when:'datetime') -> 'str':
+    """ Builds the minimal acknowledgment message a channel would send back,
+    its MSH-7 carrying the acknowledgment's own moment.
+    """
+    msh = 'MSH|^~\\&|ZATO|ZATO|DEMO|DEMO|{}||ACK|{}|P|2.4'.format(_to_hl7_timestamp(when), control_id)
     msa = 'MSA|{}|{}'.format(ack_code, control_id)
 
     out = msh + '\r' + msa
@@ -530,12 +581,21 @@ def _write_messages(
     ) -> 'anytuple':
     """ Writes the planned messages through the same producers the live wire uses -
     a received event and its acknowledgment per message, plus the forwarded pair
-    on the outgoing connection where the plan says so. Returns the message count
-    and the first failed lab message, which the repair story reprocesses.
+    on the outgoing connection where the plan says so. Returns the message count,
+    the failed messages the resubmit chains reprocess and the receipts
+    the content-viewed records draw from.
     """
 
-    # The repair story's source - the first lab message whose acknowledgment failed
-    repair_source:'_RepairSource | None' = None
+    # The failed lab and main messages the resubmit chains reprocess
+    resubmit_sources:'anylist' = []
+
+    # The receipts somebody may have opened later - every failure and a sparse
+    # sample of accepted ones, as (relative id, moment) pairs
+    failed_candidates:'anylist' = []
+    ok_candidates:'anylist' = []
+
+    # Every this many accepted receipts, one goes into the view candidates
+    ok_sample_step = 100
 
     for index, planned in enumerate(plan):
 
@@ -550,13 +610,24 @@ def _write_messages(
             audit_log, planned.channel_name, planned.text,
             cid=cid, msg_id=planned.control_id, attrs=attrs, endpoint='mllp://demo')
 
-        # The first failed lab receipt is what the repair story reprocesses
-        if repair_source is None and planned.channel_name == Channel_Lab and planned.is_error:
-            repair_source = _RepairSource()
-            repair_source.relative_received_id = received_id
-            repair_source.cid = cid
-            repair_source.control_id = planned.control_id
-            repair_source.text = planned.text
+        # Failed lab and main receipts feed the resubmit chains, up to the fixed count
+        needs_chain = planned.channel_name in (Channel_Lab, Channel_Main) and planned.is_error
+
+        if needs_chain and len(resubmit_sources) < Resubmit_Count:
+            source = _ResubmitSource()
+            source.relative_received_id = received_id
+            source.cid = cid
+            source.control_id = planned.control_id
+            source.text = planned.text
+            source.channel_name = planned.channel_name
+            source.when = planned.when
+            resubmit_sources.append(source)
+
+        # Every failure may have been looked at, accepted ones only now and then
+        if planned.is_error:
+            failed_candidates.append((received_id, planned.when))
+        elif index % ok_sample_step == 0:
+            ok_candidates.append((received_id, planned.when))
 
         # The acknowledgment follows within the handling time
         if planned.is_error:
@@ -566,8 +637,8 @@ def _write_messages(
             ack_code = ACKStatus.Application_Accept
             duration_ms = rng.randrange(5, 120)
 
-        ack_text = _build_ack_text(ack_code, planned.control_id)
         ack_when = planned.when + timedelta(milliseconds=duration_ms)
+        ack_text = _build_ack_text(ack_code, planned.control_id, ack_when)
 
         audit_log.set_event_time(ack_when)
         _ = audit_ack_sent(
@@ -599,7 +670,7 @@ def _write_messages(
                 audit_log, Outconn_Forward, forward_ack_code,
                 cid=cid, msg_id=planned.control_id, duration_ms=forward_duration_ms)
 
-    return len(plan), repair_source
+    return len(plan), resubmit_sources, failed_candidates, ok_candidates
 
 # ################################################################################################################################
 
@@ -656,112 +727,195 @@ def _write_batch(
     items = generate_feed_items(3, feed_config)
     body = '\r'.join(item.text for item in items)
 
-    batch_text = 'BHS|^~\\&|DEMO_BATCH|GENERAL_HOSPITAL|ZATO|ZATO|20260101000000\r' + body + '\rBTS|3'
-
     batch_cid = f'{Cid_Prefix}batch-00000001'
     batch_when = now.replace(hour=11, minute=0, second=0, microsecond=0) - timedelta(days=2) + _draw_fraction(rng)
+
+    # The batch header carries the batch's own moment
+    batch_header = 'BHS|^~\\&|DEMO_BATCH|GENERAL_HOSPITAL|ZATO|ZATO|{}'.format(_to_hl7_timestamp(batch_when))
+    batch_text = batch_header + '\r' + body + '\rBTS|3'
 
     audit_log.set_event_time(batch_when)
     _ = audit_batch_received(audit_log, Channel_Main, batch_text, cid=batch_cid, endpoint='mllp://demo')
 
 # ################################################################################################################################
 
-def _write_resubmit_chain(
+def _write_one_hop(
     audit_log:'_BulkAuditLog',
-    repair_source:'_RepairSource | None',
-    now:'datetime',
-    rng:'Random',
-    ) -> 'None':
-    """ Writes the repair story - the failed message captured during the week's
-    traffic reprocessed successfully, the new events linked to the original
-    by the correlation id and a resubmit link.
+    source:'_ResubmitSource',
+    *,
+    cid:'str',
+    when:'datetime',
+    correl_id:'str',
+    parent_relative_id:'int',
+    actor:'str',
+    ack_code:'str',
+    duration_ms:'int',
+    ) -> 'anytuple':
+    """ Writes one hop of a resubmit chain, mirroring what the reprocess handler
+    writes - the new receipt linked to its parent, then the acknowledgment.
+    Returns the receipt's relative id and the acknowledgment's moment.
     """
 
-    # A run too small to have produced a lab failure has no repair story
-    if repair_source is None:
-        return
-
-    # The repair happened this morning, two hours ago
-    repair_when = now - timedelta(hours=2) + _draw_fraction(rng)
-    repair_cid = f'{Cid_Prefix}rp-00000001'
-
-    message = parse_hl7(repair_source.text, validate=False)
+    message = parse_hl7(source.text, validate=False)
     attrs = get_audit_attrs(message)
 
-    # The reprocessed receipt mirrors what the reprocess handler writes
-    audit_log.set_event_time(repair_when)
-    _ = audit_log.insert(
-        AuditSource.HL7, AuditEvent.Message_Received, Channel_Lab,
-        cid=repair_cid,
-        msg_id=repair_source.control_id,
-        correl_id=repair_source.cid,
-        size=len(repair_source.text),
+    # Who asked for the resubmit travels with the receipt
+    attrs['actor'] = actor
+
+    audit_log.set_event_time(when)
+    received_id = audit_log.insert(
+        AuditSource.HL7, AuditEvent.Message_Received, source.channel_name,
+        cid=cid,
+        msg_id=source.control_id,
+        correl_id=correl_id,
+        size=len(source.text),
         outcome=AuditOutcome.OK,
-        data=dumps({'payload': repair_source.text}),
+        data=dumps({'payload': source.text}),
         attrs=attrs,
-        parents=[repair_source.relative_received_id],
+        parents=[parent_relative_id],
     )
 
-    # This time the acknowledgment accepts
-    duration_ms = rng.randrange(5, 120)
-    ack_text = _build_ack_text(ACKStatus.Application_Accept, repair_source.control_id)
-    ack_when = repair_when + timedelta(milliseconds=duration_ms)
+    ack_when = when + timedelta(milliseconds=duration_ms)
+    ack_text = _build_ack_text(ack_code, source.control_id, ack_when)
 
     audit_log.set_event_time(ack_when)
     _ = audit_ack_sent(
-        audit_log, Channel_Lab, ACKStatus.Application_Accept, ack_text,
-        cid=repair_cid, msg_id=repair_source.control_id, duration_ms=duration_ms)
+        audit_log, source.channel_name, ack_code, ack_text,
+        cid=cid, msg_id=source.control_id, duration_ms=duration_ms)
+
+    return received_id, ack_when
+
+# ################################################################################################################################
+
+def _write_resubmit_chains(
+    audit_log:'_BulkAuditLog',
+    resubmit_sources:'anylist',
+    now:'datetime',
+    rng:'Random',
+    ) -> 'None':
+    """ Writes the resubmit chains - each failed message captured during the week's
+    traffic reprocessed by a person, the new events linked to the original by the
+    correlation id and a resubmit link. Every few chains the first reprocess fails
+    too and a second one goes through - a two-hop DAG. Each chain's stamped moments
+    are written back onto its source, which the dedup ledger rows are built from.
+    """
+
+    for index, source in enumerate(resubmit_sources):
+
+        chain_number = index + 1
+
+        # Who asked for this resubmit
+        actor = rng.choice(Actors)
+
+        # The reprocess follows the failure within hours, never reaching past now
+        chain_when = source.when + timedelta(minutes=rng.randrange(30, 720)) + _draw_fraction(rng)
+
+        if chain_when > now:
+            chain_when = now - timedelta(minutes=rng.randrange(1, 30)) + _draw_fraction(rng)
+
+        chain_cid = f'{Cid_Prefix}rp-{chain_number:08d}'
+
+        # Every few chains the first reprocess fails as well
+        has_second_hop = chain_number % Second_Hop_Every == 0
+
+        if has_second_hop:
+            first_ack_code = ACKStatus.Application_Error
+        else:
+            first_ack_code = ACKStatus.Application_Accept
+
+        first_hop_id, first_ack_when = _write_one_hop(
+            audit_log, source,
+            cid=chain_cid,
+            when=chain_when,
+            correl_id=source.cid,
+            parent_relative_id=source.relative_received_id,
+            actor=actor,
+            ack_code=first_ack_code,
+            duration_ms=rng.randrange(5, 120),
+        )
+
+        completed_when = first_ack_when
+
+        # The second hop hangs off the first and goes through
+        if has_second_hop:
+
+            second_when = first_ack_when + timedelta(minutes=rng.randrange(5, 60)) + _draw_fraction(rng)
+
+            if second_when > now:
+                second_when = now - timedelta(seconds=rng.randrange(30, 300)) + _draw_fraction(rng)
+
+            _, completed_when = _write_one_hop(
+                audit_log, source,
+                cid=f'{Cid_Prefix}rp2-{chain_number:08d}',
+                when=second_when,
+                correl_id=chain_cid,
+                parent_relative_id=first_hop_id,
+                actor=actor,
+                ack_code=ACKStatus.Application_Accept,
+                duration_ms=rng.randrange(5, 120),
+            )
+
+        # The chain's own moments and actor, which its dedup ledger row reports
+        source.chain_cid = chain_cid
+        source.chain_created_iso = chain_when.isoformat()
+        source.chain_completed_iso = completed_when.isoformat()
+        source.chain_actor = actor
 
 # ################################################################################################################################
 
 def _build_dedup_rows(
     now:'datetime',
-    repair_source:'_RepairSource | None',
+    resubmit_sources:'anylist',
     id_map:'intanydict',
+    rng:'Random',
     ) -> 'dictlist':
-    """ Composes the dedup ledger's demo rows - the reprocess claim behind
-    the repair story, one more completed resend and one still in doubt,
-    the ledger screen's demo cases.
+    """ Composes the dedup ledger's demo rows - one reprocess claim per resubmit
+    chain, one more completed resend and one still in doubt, the ledger screen's
+    demo cases.
     """
-
-    now_iso = now.isoformat()
 
     # Our response to produce
     out:'dictlist' = []
 
-    # The repair went through the dedup ledger too - one completed claim,
-    # keyed by the original event's real id, the same key the reprocess
-    # handler would build for it
-    if repair_source is not None:
+    # Every chain went through the dedup ledger too - one completed claim each,
+    # keyed by the original event's real id, the same key the reprocess handler
+    # would build for it, stamped with the chain's own moments
+    for source in resubmit_sources:
 
-        repair_when = now - timedelta(hours=2)
-        original_event_id = id_map[repair_source.relative_received_id]
+        original_event_id = id_map[source.relative_received_id]
 
         out.append({
-            'dedup_key': build_dedup_key('reprocess', original_event_id, repair_source.text),
-            'cid': f'{Cid_Prefix}rp-00000001',
+            'dedup_key': build_dedup_key('reprocess', original_event_id, source.text),
+            'cid': source.chain_cid,
             'action': 'reprocess',
-            'created_iso': repair_when.isoformat(),
+            'actor': source.chain_actor,
+            'created_iso': source.chain_created_iso,
             'outcome': AuditOutcome.OK,
-            'completed_iso': repair_when.isoformat(),
+            'completed_iso': source.chain_completed_iso,
         })
 
     # A completed resend claim from earlier today
+    resend_when = now - timedelta(minutes=rng.randrange(30, 240)) + _draw_fraction(rng)
+
     out.append({
         'dedup_key': build_dedup_key('resend', 2, 'demo-resend-payload'),
         'cid': f'{Cid_Prefix}dd-00000001',
         'action': 'resend',
-        'created_iso': now_iso,
+        'actor': rng.choice(Actors),
+        'created_iso': resend_when.isoformat(),
         'outcome': AuditOutcome.OK,
-        'completed_iso': now_iso,
+        'completed_iso': (resend_when + timedelta(milliseconds=rng.randrange(20, 250))).isoformat(),
     })
 
     # A claim that never completed - the in-doubt screen's demo case
+    in_doubt_when = now - timedelta(minutes=rng.randrange(5, 30)) + _draw_fraction(rng)
+
     out.append({
         'dedup_key': build_dedup_key('resend', 3, 'demo-in-doubt-payload'),
         'cid': f'{Cid_Prefix}dd-00000002',
         'action': 'resend',
-        'created_iso': now_iso,
+        'actor': rng.choice(Actors),
+        'created_iso': in_doubt_when.isoformat(),
         'outcome': '',
         'completed_iso': '',
     })
@@ -886,7 +1040,7 @@ def _write_alerts(audit_log:'_BulkAuditLog', now:'datetime', rng:'Random') -> 'd
         first_raised=error_stamps[0], last_raised=error_stamps[-1],
         observed_by=Actor_Admin, observed_iso=observed_when.isoformat()))
 
-    # The resolved alert - a delivery stall from three days ago, repaired the same day
+    # The resolved alert - a delivery stall from three days ago, resolved the same day
     missing_rule = rules[Rule_Missing_Ack]
     missing_finding = new_finding(
         FindingKind.Missing_Followup, AuditSource.HL7, Outconn_Forward,
@@ -964,23 +1118,84 @@ def _write_config_history(audit_log:'_BulkAuditLog', now:'datetime', rng:'Random
 
 # ################################################################################################################################
 
-def _write_view_event(audit_log:'_BulkAuditLog', now:'datetime', viewed_event_id:'int', rng:'Random') -> 'None':
-    """ Writes the view-access record - somebody opened the failed message's body
-    yesterday evening. This runs after the main commit because the record embeds
-    the viewed event's real database id.
+def _draw_view_time(rng:'Random', message_when:'datetime', now:'datetime') -> 'datetime':
+    """ Draws the moment somebody opened a message's body - within hours of the
+    message's own moment, never reaching past now.
+    """
+    out = message_when + timedelta(minutes=rng.randrange(10, 600)) + _draw_fraction(rng)
+
+    if out > now:
+        out = now - timedelta(minutes=rng.randrange(1, 15)) + _draw_fraction(rng)
+
+    return out
+
+# ################################################################################################################################
+
+def _plan_views(
+    resubmit_sources:'anylist',
+    failed_candidates:'anylist',
+    ok_candidates:'anylist',
+    now:'datetime',
+    rng:'Random',
+    ) -> 'anylist':
+    """ Plans the content-viewed records - every resubmitted message was looked at
+    before it was reprocessed, then other failures and a few accepted ones fill
+    the list up to the fixed count.
     """
 
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    viewed_when = today_start - timedelta(days=1) + timedelta(hours=16, minutes=10) + _draw_fraction(rng)
+    # Our response to produce
+    out:'anylist' = []
 
-    audit_log.set_event_time(viewed_when)
-    _ = record_view_event(
-        audit_log,
-        actor=Actor_Admin,
-        viewed_event_id=viewed_event_id,
-        screen=Screen_Browser,
-        cid=f'{Cid_Prefix}cfg-0007',
-    )
+    # A resubmitted message's body was on somebody's screen first
+    resubmitted_ids = set()
+
+    for source in resubmit_sources:
+
+        resubmitted_ids.add(source.relative_received_id)
+
+        view = _PlannedView()
+        view.relative_event_id = source.relative_received_id
+        view.actor = rng.choice(Actors)
+        view.when = _draw_view_time(rng, source.when, now)
+        out.append(view)
+
+    # Other failures and a few accepted ones fill the rest, failures first
+    remaining = [item for item in failed_candidates if item[0] not in resubmitted_ids]
+    remaining.extend(ok_candidates)
+
+    for relative_event_id, message_when in remaining:
+
+        if len(out) >= View_Count:
+            break
+
+        view = _PlannedView()
+        view.relative_event_id = relative_event_id
+        view.actor = rng.choice(Actors)
+        view.when = _draw_view_time(rng, message_when, now)
+        out.append(view)
+
+    return out
+
+# ################################################################################################################################
+
+def _write_view_events(audit_log:'_BulkAuditLog', planned_views:'anylist', id_map:'intanydict') -> 'int':
+    """ Writes the view-access records - who opened which message's body and when.
+    This runs after the main commit because each record embeds the viewed event's
+    real database id. Returns how many were written.
+    """
+
+    for index, view in enumerate(planned_views):
+
+        audit_log.set_event_time(view.when)
+        _ = record_view_event(
+            audit_log,
+            actor=view.actor,
+            viewed_event_id=id_map[view.relative_event_id],
+            screen=Screen_Browser,
+            cid=f'{Cid_Prefix}view-{index + 1:04d}',
+        )
+
+    return len(planned_views)
 
 # ################################################################################################################################
 
@@ -1076,9 +1291,10 @@ def seed_demo_data(
     out.channel_names = [Channel_Main, Channel_Lab, Channel_Clinic]
     out.rule_names = [rule_def['name'] for rule_def in get_demo_rule_defs()]
 
-    # The week of wire traffic, which also yields the repair story's source
+    # The week of wire traffic, which also yields the resubmit chains' sources
+    # and the receipts the content-viewed records draw from
     plan = _build_plan(config, now)
-    out.message_count, repair_source = _write_messages(audit_log, plan, rng)
+    out.message_count, resubmit_sources, failed_candidates, ok_candidates = _write_messages(audit_log, plan, rng)
 
     # The open exchanges the outstanding filter surfaces
     _write_in_flight_sends(audit_log, config, now, rng)
@@ -1086,8 +1302,9 @@ def seed_demo_data(
     # The batch with its lineage
     _write_batch(audit_log, config, now, rng)
 
-    # The repair story - the failed message reprocessed successfully
-    _write_resubmit_chain(audit_log, repair_source, now, rng)
+    # The resubmit chains - the failed messages reprocessed by a person
+    _write_resubmit_chains(audit_log, resubmit_sources, now, rng)
+    out.resubmit_count = len(resubmit_sources)
 
     # The three alert lifecycles - their audit events plus the composed alert rows
     alert_rows = _write_alerts(audit_log, now, rng)
@@ -1099,6 +1316,10 @@ def seed_demo_data(
     # The FHIR request/response pairs
     out.fhir_pair_count = _write_fhir_traffic(audit_log, config, now, rng)
 
+    # The content-viewed records are planned now and written after the main
+    # commit, once the real database ids of the viewed events exist
+    planned_views = _plan_views(resubmit_sources, failed_candidates, ok_candidates, now, rng)
+
     # Everything lands in the database at once - a rerun replaces the previous
     # data set inside the same transaction, so a failed import changes nothing
     with engine.begin() as connection:
@@ -1107,23 +1328,23 @@ def seed_demo_data(
 
         id_map = audit_log.write_collected(connection)
 
-        dedup_rows = _build_dedup_rows(now, repair_source, id_map)
+        dedup_rows = _build_dedup_rows(now, resubmit_sources, id_map, rng)
         _ = connection.execute(event_dedup_table.insert(), dedup_rows)
         out.dedup_count = len(dedup_rows)
 
         if alert_rows:
             _ = connection.execute(alert_table.insert(), alert_rows)
 
-    # The view-access record embeds the viewed event's real database id,
-    # which exists only after the main commit - it follows in a small write of its own
-    if repair_source is not None:
+    # Each view-access record embeds the viewed event's real database id,
+    # which exists only after the main commit - they follow in a write of their own
+    if planned_views:
 
-        _write_view_event(audit_log, now, id_map[repair_source.relative_received_id], rng)
+        out.view_count = _write_view_events(audit_log, planned_views, id_map)
 
         with engine.begin() as connection:
             _ = audit_log.write_collected(connection)
 
-        out.config_event_count += 1
+        out.config_event_count += out.view_count
 
     # The final count is what the database actually holds
     statement = select(func.count()).select_from(event_table).where(event_table.c.cid.like(Cid_Prefix + '%'))

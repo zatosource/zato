@@ -4,21 +4,77 @@
 
 {% block "extra_css" %}
 <link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/kit.css">
+<link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/tabs.css">
+<link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/chips.css">
+<link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/direction.css">
+<link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/log_line.css">
+<link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/fact_rows.css">
 <link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/payload_panel.css">
+<link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/tree.css">
+<link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/attachments.css">
+<link rel="stylesheet" type="text/css" href="/static/css/audit-log/listing.css">
 <link rel="stylesheet" type="text/css" href="/static/css/message-flow/page.css">
 {% endblock %}
 
 {% block "content" %}
 
 <div class="message-flow-page">
-    <div id="message-flow-canvas" class="message-flow-canvas"></div>
-    <div id="message-flow-resize" class="message-flow-resize"></div>
-    <div id="message-flow-detail" class="message-flow-detail"></div>
+
+    <div class="message-flow-head">
+        <form class="message-flow-search-form" id="message-flow-search-form">
+            <span class="message-flow-search-field">
+                <input type="text" id="message-flow-search-input" placeholder="Control id, CID or event id .."
+                    autocomplete="off">
+                <span class="dashboard-panel-action-badge dashboard-panel-action-badge-dark message-flow-search-clear"
+                    id="message-flow-search-clear">Clear</span>
+            </span>
+            <button type="submit" class="action-button">Search</button>
+        </form>
+
+        <div class="dashboard-tabs message-flow-tabs" role="tablist">
+            <button type="button" class="dashboard-tab message-flow-tab" role="tab" data-tab="drawing">Drawing</button>
+            <button type="button" class="dashboard-tab message-flow-tab" role="tab" data-tab="thread">Thread</button>
+        </div>
+
+        <span class="message-flow-status" id="message-flow-status"></span>
+    </div>
+
+    <div class="dashboard-tab-panel message-flow-panel message-flow-panel-tab-drawing" id="message-flow-panel-drawing"
+        role="tabpanel">
+        <div id="message-flow-canvas" class="message-flow-canvas"></div>
+        <div id="message-flow-resize" class="message-flow-resize"></div>
+        <div id="message-flow-detail" class="message-flow-detail"></div>
+    </div>
+
+    <div class="dashboard-tab-panel message-flow-panel message-flow-panel-tab-thread" id="message-flow-panel-thread"
+        role="tabpanel">
+        <div id="audit-log-pane-flow" class="message-flow-thread"></div>
+    </div>
+
 </div>
 
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_ui_helpers.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/kit.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/palette.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/detail-kit/url_state.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/outcome.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/chips.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/direction.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/payload_panel.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/demo.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/log_line.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/fact_rows.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/attachments.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/draw.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/draw_zoom.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit_log.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/listing.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/flow.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/flow-panel.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/default.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/hl7.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/drawing.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/detail.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/page.js"></script>
 
 {% endblock %}
