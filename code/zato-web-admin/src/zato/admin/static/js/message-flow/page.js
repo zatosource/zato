@@ -3,9 +3,9 @@
 
 // Message flow - the page. A search box holding the one thing a person has -
 // a control id, a CID or an event id - and under it two equal ways of reading
-// what it names: the journey drawn, and the same journey as the thread the
-// audit log reads. The address bar carries the term and the open tab, so a
-// link reproduces the screen.
+// what it names: the journey drawn on the Message flow tab, and the same
+// journey as the List tab's lines. The address bar carries the term
+// and the open tab, so a link reproduces the screen.
 
 $.fn.zato.message_flow.page = {};
 
@@ -26,15 +26,15 @@ page.config = {
     tabSelector: '.message-flow-tab',
     tabPanelPrefix: 'message-flow-panel-',
     tabStorageKey: 'zato_message_flow_tab',
-    drawingTab: 'drawing',
-    threadTab: 'thread',
+    flowTab: 'flow',
+    listTab: 'list',
 
     // What the term and the tab are called in the address bar
     termURLKey: 'term',
     tabURLKey: 'tab',
 
-    // Where the thread mounts - the same host the audit log's flow renders into
-    threadHost: '#audit-log-pane-flow',
+    // Where the list mounts - the same host the audit log's flow renders into
+    listHost: '#audit-log-pane-flow',
 
     // What the page says before a term is searched, while one is being answered,
     // and when a term names nothing
@@ -87,9 +87,9 @@ page.showCanvasHint = function(html) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The thread's own empty state, in the same words the canvas says
-page.showThreadHint = function(html) {
-    $(page.config.threadHost).html('<div class="dashboard-inline-empty">' + html + '</div>');
+// The list's own empty state, in the same words the canvas says
+page.showListHint = function(html) {
+    $(page.config.listHost).html('<div class="dashboard-inline-empty">' + html + '</div>');
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -108,12 +108,12 @@ page.showIdle = function() {
 
     page.state.controlId = '';
 
-    // The thread's own state is let go too, so the next search draws afresh
+    // The list's own state is let go too, so the next search draws afresh
     flow.seedId = null;
     flow.rows = [];
 
     page.showCanvasHint(kit._esc_html(config.idleHint));
-    page.showThreadHint(kit._esc_html(config.idleHint));
+    page.showListHint(kit._esc_html(config.idleHint));
     page.showStatus('');
 
     detail.hide();
@@ -136,7 +136,7 @@ page.showNotFound = function(term) {
         kit._esc_html(term) + '</span>';
 
     page.showCanvasHint(hint);
-    page.showThreadHint(hint);
+    page.showListHint(hint);
     page.showStatus('');
 
     detail.hide();
@@ -145,7 +145,7 @@ page.showNotFound = function(term) {
 // /////////////////////////////////////////////////////////////////////////////
 
 // One journey on both tabs - the models are built once and the drawing and the
-// thread read the same list, so what one shows is what the other says
+// list read the same rows, so what one shows is what the other says
 page.showJourney = function(data) {
     var config = page.config;
     var detail = $.fn.zato.message_flow.detail;
@@ -170,7 +170,7 @@ page.showJourney = function(data) {
     drawing.render(models, seedModel);
     detail.hide();
 
-    // .. and the thread reads it the way the audit log does, newest first,
+    // .. and the list reads it the way the audit log does, newest first,
     // with whatever steps the address bar names already open
     flow.seedId = data.seed_id;
     flow.rows = models;
@@ -210,7 +210,7 @@ page.search = function(term) {
         }
 
         page.showCanvasHint(kit.spinner_label_html());
-        page.showThreadHint(kit.spinner_label_html());
+        page.showListHint(kit.spinner_label_html());
     }, config.spinnerDelayMs);
 
     $.ajax({
@@ -258,7 +258,7 @@ page.init = function() {
     $.fn.zato.message_flow.drawing.init();
     $.fn.zato.message_flow.detail.init();
 
-    // The thread's lines and panels answer to the same handlers they answer to
+    // The list's lines and panels answer to the same handlers they answer to
     // everywhere, bound once for the page
     $.fn.zato.audit_log.flow.init();
 
@@ -268,7 +268,7 @@ page.init = function() {
         tab_selector: config.tabSelector,
         panel_prefix: config.tabPanelPrefix,
         storage_key: config.tabStorageKey,
-        default_tab: config.drawingTab,
+        default_tab: config.flowTab,
         on_change: function(tab) {
             kit.url_state.replace({tab: tab});
         }
@@ -277,7 +277,7 @@ page.init = function() {
     // A link naming a tab opens in that tab, whatever this screen was last left in
     var urlTab = kit.url_state.get(config.tabURLKey);
 
-    if (urlTab === config.drawingTab || urlTab === config.threadTab) {
+    if (urlTab === config.flowTab || urlTab === config.listTab) {
         page.tabs.set_tab(urlTab, true);
     }
 
@@ -299,7 +299,7 @@ page.init = function() {
         page.search('');
     });
 
-    // A Search badge in a thread panel asks this very page for the value it carries,
+    // A Search badge in a list panel asks this very page for the value it carries,
     // the box picking the term up so what is being read is never in doubt
     $(document).on('click', '.message-flow-page .dashboard-fact-row-search', function(event) {
         event.stopPropagation();

@@ -206,7 +206,7 @@ detail.show = function(nodeDetail) {
 // /////////////////////////////////////////////////////////////////////////////
 
 // The words under the body - how much of it there is, in the same dim ink the
-// thread's captions use, and nothing while the open body is still on its way
+// list's captions use, and nothing while the open body is still on its way
 detail.updateCaption = function() {
     var host = detail.host();
     var caption = host.querySelector('.message-flow-detail-caption');

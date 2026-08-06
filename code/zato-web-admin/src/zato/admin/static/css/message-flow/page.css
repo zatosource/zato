@@ -79,6 +79,7 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     display: flex;
     align-items: center;
     gap: 8px;
+    margin: 0;
 }
 
 /* The box and its Clear share one frame, the same shape the listing's search wears */
@@ -102,17 +103,50 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
 
 #message-flow-search-input::placeholder {
     color: var(--message-flow-muted);
+    font-size: 10.5px;
 }
+
+/* The base stylesheets glow a focused field grey - here the amber border says it */
 
 #message-flow-search-input:focus {
     outline: none;
     border-color: var(--message-flow-selected);
+    box-shadow: none;
 }
 
 .message-flow-search-clear {
     position: absolute;
     right: 6px;
     display: none;
+}
+
+/* The button in the dark room's own dress - the base stylesheets would put a
+   white gradient and a light text-shadow on any button, so both are stood down */
+
+.message-flow-search-button {
+    appearance: none;
+    padding: 6px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 4px;
+    background: linear-gradient(#3a3a5c, #2d2d48);
+    color: var(--message-flow-text);
+    font-family: 'Roboto Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    text-shadow: none;
+    cursor: pointer;
+}
+
+.message-flow-search-button:hover {
+    background: linear-gradient(#44446a, #353553);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.message-flow-search-button:focus,
+.message-flow-search-button:active {
+    outline: none;
+    background: linear-gradient(#3a3a5c, #2d2d48);
+    box-shadow: none;
 }
 
 /* The two ways of reading one journey stand as equals - the open one is lit,
@@ -125,6 +159,7 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
 }
 
 .message-flow-tab {
+    appearance: none;
     padding: 6px 14px;
     border: 1px solid transparent;
     border-radius: 4px;
@@ -133,11 +168,19 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     font-family: 'Roboto Mono', monospace;
     font-size: 12px;
     font-weight: 700;
+    text-shadow: none;
     cursor: pointer;
 }
 
 .message-flow-tab:hover {
+    background: transparent;
     color: var(--message-flow-text);
+}
+
+.message-flow-tab:focus,
+.message-flow-tab:active {
+    outline: none;
+    box-shadow: none;
 }
 
 .message-flow-tab.dashboard-tab-active {
@@ -167,21 +210,18 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     display: none;
 }
 
-/* The drawing panel keeps the canvas, the drag bar and the pane in a column */
+/* The Message flow panel keeps the canvas, the drag bar and the pane in a column */
 
-.message-flow-panel-tab-drawing {
+.message-flow-panel-tab-flow {
     display: flex;
     flex-direction: column;
 }
 
-/* The thread reads inside its own framed room, scrolled within it */
+/* The List panel is only its lines - no frame of its own, the page itself is
+   the room they read in, scrolled within the panel */
 
-.message-flow-panel-tab-thread {
+.message-flow-panel-tab-list {
     overflow: auto;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 6px;
-    background-color: var(--message-flow-canvas-surface);
-    padding: 14px;
 }
 
 /* What either tab says when there is nothing to read yet */
@@ -200,7 +240,7 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     color: var(--message-flow-selected-text);
 }
 
-.message-flow-thread .dashboard-inline-empty {
+.message-flow-list .dashboard-inline-empty {
     color: var(--message-flow-muted);
     font-size: 11px;
 }
