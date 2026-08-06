@@ -21,11 +21,18 @@
     font-size: 12px;
 }
 
+/* A select with nothing to offer stands aside until it has something again */
+
+.dashboard-select-trigger-disabled {
+    opacity: 0.45;
+    pointer-events: none;
+}
+
 /* The face itself - a floating surface, its edge drawn as the innermost shadow */
 
 .dashboard-select-face {
     padding: 5px 10px;
-    border-radius: 7px;
+    border-radius: 3px;
     background: #ffffff;
     box-shadow:
         0 0 0 1px rgba(0, 0, 0, 0.07),
@@ -47,30 +54,22 @@
         0 0 0 4px rgba(84, 105, 212, 0.12);
 }
 
-/* Hierarchy by weight, not by gray - the label in soft ink, the value in full ink */
+/* The label in soft ink and the value as a badge - the same quiet face the page's
+   other light badges wear, whether it names one pick or counts several */
 
 .dashboard-select-label {
-    font-weight: 500;
     color: rgba(26, 32, 44, 0.62);
 }
 
 .dashboard-select-value {
-    font-weight: 600;
-    color: #1a202c;
-}
-
-/* Several picks at once read as a small accent pill */
-
-.dashboard-select-value-count {
-    padding: 0 7px;
-    border-radius: 999px;
-    background: rgba(84, 105, 212, 0.1);
-    color: #5469d4;
+    padding: 1px 6px;
+    border-radius: 3px;
     font-size: 11px;
-    line-height: 16px;
+    color: rgba(26, 86, 168, 0.72);
+    background: rgba(26, 86, 168, 0.05);
 }
 
-/* The chevron is drawn on the baseline and turns over while the menu is up */
+/* The chevron is drawn on the baseline and stands turned over while the menu is up */
 
 .dashboard-select-chevron {
     box-sizing: border-box;
@@ -81,7 +80,6 @@
     border-right: 1.5px solid rgba(26, 32, 44, 0.45);
     border-bottom: 1.5px solid rgba(26, 32, 44, 0.45);
     transform: rotate(45deg);
-    transition: transform 0.14s ease;
 }
 
 .dashboard-select-trigger-open .dashboard-select-chevron {

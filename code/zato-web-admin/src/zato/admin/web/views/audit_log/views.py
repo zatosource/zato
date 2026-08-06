@@ -205,7 +205,7 @@ def poll(req:'any_') -> 'HttpResponse':
     body = json.loads(req.body)
 
     sources = body['sources']
-    object_name = body['object_name']
+    object_names = body['object_names']
     query = body['query']
     status = body['status']
     time_from = body['time_from']
@@ -217,7 +217,7 @@ def poll(req:'any_') -> 'HttpResponse':
     if page < _default_page:
         page = _default_page
 
-    where_conditions = _build_where(sources, object_name, query, status, time_from, time_to)
+    where_conditions = _build_where(sources, object_names, query, status, time_from, time_to)
 
     rows:'anylist' = []
 

@@ -44,7 +44,7 @@ def _escape_like(query:'str') -> 'str':
 
 def _build_where(
     sources:'anylist',
-    object_name:'str',
+    object_names:'anylist',
     query:'str',
     status:'str',
     time_from:'str' = '',
@@ -52,19 +52,19 @@ def _build_where(
     ) -> 'anylist':
     """ Builds the WHERE conditions for the poll query. A per-source page names its one
     source, the all-events page names whichever ones its reader picked - none at all
-    reads everything.
+    reads everything. The same goes for the objects - any number can be picked at once.
     """
 
     # Our response to produce
     out:'anylist' = []
 
-    # No sources is the whole log - every source, every object - and an empty
-    # object name reads the whole of whatever sources are given
+    # No sources is the whole log - every source, every object - and no
+    # object names reads the whole of whatever sources are given
     if sources:
         out.append(event_table.c.source.in_(sources))
 
-    if object_name:
-        out.append(event_table.c.object_name == object_name)
+    if object_names:
+        out.append(event_table.c.object_name.in_(object_names))
 
     # The page can be scoped down to a time window, e.g. one clicked on an analytics chart -
     # event times are ISO timestamps, so string prefixes compare correctly.
