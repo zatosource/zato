@@ -205,7 +205,7 @@ def message_detail(request:'any_') -> 'TemplateResponse':
     message_data['content_type'] = content_type
 
     # .. pre-render syntax-highlighted HTML so the page loads without a highlight delay ..
-    lexer = get_pygments_lexer(content_type)
+    lexer = get_pygments_lexer(content_type, raw_data)
     formatter = HtmlFormatter(nowrap=True)
     message_data['data_highlighted'] = pygments_highlight(raw_data, lexer, formatter)
 

@@ -6,10 +6,13 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+import re
+
 # pygments
 from pygments import highlight as pygments_highlight
 from pygments.formatters import HtmlFormatter
-from pygments.lexers import get_lexer_by_name, HtmlLexer, JsonLexer, TextLexer, XmlLexer
+from pygments.lexers import get_lexer_by_name, HtmlLexer, JsonLexer, SqlLexer, TextLexer, XmlLexer
 
 # Django
 from django.http import JsonResponse
@@ -33,6 +36,7 @@ _Lexer_Whitelist = frozenset({
     'json',
     'markdown',
     'pytb',
+    'sql',
 })
 
 # ################################################################################################################################
@@ -57,9 +61,18 @@ _mime_to_pygments_lexer = {
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_pygments_lexer(content_type:'str') -> 'any_':
+# Words a statement can open with - libmagic reads SQL as plain text, so the
+# statement is told apart by the word it begins with rather than by its MIME type.
+_sql_starter_pattern = re.compile(r'^(select|insert|update|delete|merge|with|create|alter|drop|truncate)\b', re.IGNORECASE)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_pygments_lexer(content_type:'str', text:'str'='') -> 'any_':
     if lexer_class := _mime_to_pygments_lexer.get(content_type):
         out = lexer_class()
+    elif _sql_starter_pattern.match(text.lstrip()):
+        out = SqlLexer()
     else:
         out = TextLexer()
 
@@ -81,7 +94,7 @@ def highlight_data_previews(rows:'anylist') -> 'None':
         text = row['data_preview']
         if text.strip():
             content_type = get_content_type(text)
-            lexer = get_pygments_lexer(content_type)
+            lexer = get_pygments_lexer(content_type, text)
             row['data_preview_highlighted'] = pygments_highlight(text, lexer, _nowrap_formatter)
         else:
             row['data_preview_highlighted'] = text
@@ -112,7 +125,7 @@ def highlight(request:'any_') -> 'JsonResponse':
     # .. otherwise, auto-detect.
     else:
         content_type = get_content_type(text)
-        lexer = get_pygments_lexer(content_type)
+        lexer = get_pygments_lexer(content_type, text)
 
     formatter = HtmlFormatter(nowrap=True)
     highlighted = pygments_highlight(text, lexer, formatter)

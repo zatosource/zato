@@ -3,10 +3,19 @@
 /* ------------------------------------------------------------ */
 
 /* The light grey strip the nav menu stands on suits the light pages - on this
-   dark page it turns into a dark seam between the menu bar and the room below */
+   dark page it turns into a dark seam, and the bar casts a quieter version of
+   the dispersed shadow the drawing's nodes do */
 
 body:has(.message-flow-page) .pure-css-nav {
     border-bottom-color: #101018;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+}
+
+/* The dropdowns the menu opens hang over the dark room too, so they cast their
+   own shadow, one step quieter than the bar's */
+
+body:has(.message-flow-page) .pure-css-nav > nav ul ul {
+    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.3));
 }
 
 .message-flow-page {
@@ -16,8 +25,7 @@ body:has(.message-flow-page) .pure-css-nav {
 
     /* The dark room and its inks - the same family the flow tab speaks */
     --message-flow-surface: #1c1c28;
-    --message-flow-canvas-surface: #262636;
-    --message-flow-canvas-surface-focus: #191926;
+    --message-flow-canvas-surface: #191926;
     --message-flow-text: #e9e9f4;
     --message-flow-label: #d9d9ec;
     --message-flow-muted: #9d9db8;
@@ -26,11 +34,25 @@ body:has(.message-flow-page) .pure-css-nav {
     --message-flow-selected: rgb(246, 166, 5);
     --message-flow-selected-text: #f6c66a;
 
+    /* The inks a direction and an outcome are written in, on the nodes and on
+       the detail pane's tabs alike */
+    --message-flow-in: #6fb6e8;
+    --message-flow-request: #74cf92;
+    --message-flow-reply: #b9b9d4;
+    --message-flow-view: #cfa9ea;
+    --message-flow-good: #74cf92;
+    --message-flow-bad: #ff8a94;
+
+    /* The pane under the drawing keeps one height whatever it is holding */
+    --message-flow-detail-height: 250px;
+
     /* The room above and below the canvas - the same measure on both sides */
     --message-flow-page-pad: 18px;
 
     box-sizing: border-box;
-    min-height: calc(100dvh - var(--message-flow-top-offset));
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - var(--message-flow-top-offset));
     padding: var(--message-flow-page-pad) 22px;
     background: var(--message-flow-surface);
     color: var(--message-flow-text);
@@ -42,18 +64,18 @@ body:has(.message-flow-page) .pure-css-nav {
 }
 
 /* The canvas is a framed panel with a faint dot grid, so the drawing stands in
-   a room of its own rather than floating on the raw page - and with a branch
-   held, the room falls toward black the way the flow's frame does */
+   a room of its own rather than floating on the raw page - it takes whatever
+   height the page has left after the detail pane, when one is open, has its say */
 
 .message-flow-canvas {
     overflow: auto;
-    height: calc(100dvh - var(--message-flow-top-offset) - 2 * var(--message-flow-page-pad));
+    flex: 1 1 auto;
+    min-height: 0;
     border: 1px solid rgba(255, 255, 255, 0.16);
     border-radius: 6px;
     background-color: var(--message-flow-canvas-surface);
     background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
     background-size: 22px 22px;
-    transition: background-color 0.25s;
 
     /* The canvas is walked by dragging it, so it keeps no scrollbars */
     scrollbar-width: none;
@@ -66,10 +88,6 @@ body:has(.message-flow-page) .pure-css-nav {
 
 .message-flow-canvas.message-flow-panning {
     cursor: grabbing;
-}
-
-.message-flow-canvas:has(.message-flow-focus) {
-    background-color: var(--message-flow-canvas-surface-focus);
 }
 
 .message-flow-canvas svg {
@@ -183,7 +201,7 @@ body:has(.message-flow-page) .pure-css-nav {
 }
 
 .message-flow-chip-text-in {
-    fill: #6fb6e8;
+    fill: var(--message-flow-in);
 }
 
 /* The request an outgoing connection made */
@@ -193,7 +211,7 @@ body:has(.message-flow-page) .pure-css-nav {
 }
 
 .message-flow-chip-text-request {
-    fill: #74cf92;
+    fill: var(--message-flow-request);
 }
 
 /* The answer to a message wears one word whichever way it travelled */
@@ -203,7 +221,17 @@ body:has(.message-flow-page) .pure-css-nav {
 }
 
 .message-flow-chip-text-reply {
-    fill: #b9b9d4;
+    fill: var(--message-flow-reply);
+}
+
+/* A person reading a stored message after the fact */
+
+.message-flow-chip-view {
+    fill: rgba(207, 169, 234, 0.18);
+}
+
+.message-flow-chip-text-view {
+    fill: var(--message-flow-view);
 }
 
 .message-flow-chip-good {
@@ -211,7 +239,7 @@ body:has(.message-flow-page) .pure-css-nav {
 }
 
 .message-flow-chip-text-good {
-    fill: #74cf92;
+    fill: var(--message-flow-good);
 }
 
 .message-flow-chip-bad {
@@ -219,7 +247,7 @@ body:has(.message-flow-page) .pure-css-nav {
 }
 
 .message-flow-chip-text-bad {
-    fill: #ff8a94;
+    fill: var(--message-flow-bad);
 }
 
 .message-flow-chip-muted {
@@ -252,4 +280,252 @@ body:has(.message-flow-page) .pure-css-nav {
 
 svg.message-flow-focus .message-flow-branch:not(.message-flow-lit) {
     filter: grayscale(1) brightness(0.75);
+}
+
+/* ------------------------------------------------------------ */
+/* The detail pane - a clicked node's bodies under the drawing   */
+/* ------------------------------------------------------------ */
+
+/* The pane is always on the page and always this one size - a node opened,
+   switched or let go swaps what is inside it and moves nothing around it */
+
+.message-flow-detail {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    height: var(--message-flow-detail-height);
+    border: 1px solid var(--dashboard-panel-border);
+    border-radius: 6px;
+    background-color: var(--dashboard-panel-background);
+    overflow: hidden;
+}
+
+/* The bar between the drawing and the pane - grabbing it and pulling shares
+   the room between the two. Its handle is a small lit card of the drawing's
+   own family - gradient face, rim of light, a shadow into the room - standing
+   on a hairline that fades out before the edges, and the pull turns it amber
+   the way selection reads everywhere on this page. */
+
+.message-flow-resize {
+    position: relative;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--message-flow-page-pad);
+    cursor: row-resize;
+}
+
+.message-flow-resize::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(255, 255, 255, 0.16) 15%,
+        rgba(255, 255, 255, 0.16) 85%,
+        transparent);
+}
+
+.message-flow-resize::after {
+    content: '';
+    position: relative;
+    width: 46px;
+    height: 5px;
+    border-radius: 3px;
+    border: 1px solid var(--message-flow-rim);
+    background: linear-gradient(#3a3a5c, #2d2d48);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+    transition: border-color 0.15s, background-color 0.15s;
+}
+
+/* A pointer passing across the bar paints nothing - the amber waits out a
+   short delay, and only a pointer that stays gets it. The pull itself is an
+   intentional gesture and answers at once. */
+
+.message-flow-resize:hover::after {
+    transition-delay: 0.15s;
+}
+
+.message-flow-resize:hover::after,
+.message-flow-resizing::after {
+    border-color: var(--message-flow-selected);
+    background: linear-gradient(rgba(246, 166, 5, 0.28), rgba(246, 166, 5, 0.12)),
+        linear-gradient(#3a3a5c, #2d2d48);
+}
+
+.message-flow-resizing::after {
+    transition-delay: 0s;
+}
+
+/* With nothing picked, the pane says what it is waiting for */
+
+.message-flow-detail-hint {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    color: var(--message-flow-muted);
+    font-size: 11px;
+}
+
+.message-flow-detail-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.message-flow-detail-title {
+    color: var(--message-flow-text);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.message-flow-detail-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 10px;
+}
+
+.message-flow-detail-control-id {
+    color: var(--message-flow-selected-text);
+    font-weight: 700;
+}
+
+.message-flow-detail-time {
+    color: var(--message-flow-muted);
+}
+
+/* The attachments a message carried - each one a badge that downloads its
+   file, its size beside the name in the caption's dim ink */
+
+.message-flow-detail-attachments {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 6px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.message-flow-detail-attachments-label {
+    margin-right: 4px;
+    color: var(--message-flow-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+
+.message-flow-detail-attachment-size {
+    margin-left: 6px;
+    color: var(--message-flow-muted);
+    font-weight: 400;
+}
+
+/* The bodies are read through the kit's payload panel - the pane itself is the
+   frame, so inside it the panel's own frame is stood down and its window takes
+   whatever room the pane has left */
+
+.message-flow-detail-panel {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.message-flow-detail-panel .dashboard-payload {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+}
+
+.message-flow-detail-panel .dashboard-payload-text {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+    background: transparent;
+    animation: message-flow-body-fade 0.15s ease-out;
+}
+
+@keyframes message-flow-body-fade {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* A tab wears the exchange's own words - the direction in its ink, the id in
+   amber, an outcome in the outcome's colour */
+
+.message-flow-detail-panel .dashboard-payload-tab {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.message-flow-detail-tab-direction-in {
+    color: var(--message-flow-in);
+}
+
+.message-flow-detail-tab-direction-request {
+    color: var(--message-flow-request);
+}
+
+.message-flow-detail-tab-direction-reply {
+    color: var(--message-flow-reply);
+}
+
+.message-flow-detail-tab-direction-view {
+    color: var(--message-flow-view);
+}
+
+.message-flow-detail-tab-id {
+    color: var(--message-flow-selected-text);
+}
+
+.message-flow-detail-tab-outcome-good {
+    color: var(--message-flow-good);
+}
+
+.message-flow-detail-tab-outcome-bad {
+    color: var(--message-flow-bad);
+}
+
+/* The tab standing open is raised off the bar and the others sink into it,
+   the same treatment the audit log's parsed and raw badges wear */
+
+.message-flow-detail-panel .dashboard-payload-tab.dashboard-panel-action-badge-active,
+.message-flow-detail-panel .dashboard-payload-tab.dashboard-panel-action-badge-active:hover {
+    color: var(--dashboard-chosen-badge-text);
+    background: var(--dashboard-chosen-badge-fill);
+    box-shadow: var(--dashboard-chosen-badge-shadow);
+}
+
+.message-flow-detail-panel .dashboard-payload-tab:not(.dashboard-panel-action-badge-active) {
+    background: var(--dashboard-unchosen-badge-fill);
+    box-shadow: var(--dashboard-unchosen-badge-shadow);
+}
+
+.message-flow-detail-panel .dashboard-payload-tab:not(.dashboard-panel-action-badge-active):hover {
+    background: var(--dashboard-unchosen-badge-fill-hover);
+}
+
+/* How much text the open tab holds, in the caption's dim ink */
+
+.message-flow-detail-caption {
+    flex: 0 0 auto;
+    padding: 5px 12px 7px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--message-flow-muted);
+    font-size: 10px;
 }

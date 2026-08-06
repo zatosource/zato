@@ -39,7 +39,16 @@
 
             html += '<span class="dashboard-panel-action-badge dashboard-panel-action-badge-dark ' +
                 'dashboard-payload-tab' + tab_class + '" data-tab-index="' + tab_index + '">';
-            html += kit._esc_html(tabs[tab_index].label);
+
+            // A tab whose label brings its own markup wears it as it is - one that is
+            // a plain word is escaped like any other text
+            if (tabs[tab_index].label_html === undefined) {
+                html += kit._esc_html(tabs[tab_index].label);
+            }
+            else {
+                html += tabs[tab_index].label_html;
+            }
+
             html += '</span>';
         }
 
@@ -55,12 +64,25 @@
             var hidden_attr = pane_index === 0 ? '' : ' hidden';
             var tab = tabs[pane_index];
 
+            // A tab holding rows rather than words is read as a table
+            if (tab.table !== undefined) {
+                html += '<div class="dashboard-payload-text dashboard-payload-table-holder" data-tab-index="' +
+                    pane_index + '"' + hidden_attr + '>';
+                html += kit.payload_panel._table_html(tab.table);
+                html += '</div>';
+                continue;
+            }
+
             html += '<pre class="dashboard-payload-text" data-tab-index="' + pane_index + '"' + hidden_attr + '>';
 
             // A tab whose text is already here shows it, and one whose text is still
-            // to be fetched shows nothing until its turn comes.
+            // to be fetched shows nothing until its turn comes. SQL stands escaped
+            // for now - its colours come from the server once the frame is up.
             if (tab.text === undefined) {
                 html += '';
+            }
+            else if (kit._sql_starter_pattern.test(tab.text.trim())) {
+                html += '<span class="syntax-monokai">' + kit._esc_html(tab.text) + '</span>';
             }
             else {
                 html += kit.syntax_highlight(tab.text);
@@ -74,10 +96,81 @@
         return html;
     };
 
+    /* Rows out of a database drawn as the table they are - a header of column
+       names and one line per row. */
+    kit.payload_panel._table_html = function(table) {
+        var html = '<table class="dashboard-payload-table"><thead><tr>';
+
+        for (var column_index = 0; column_index < table.columns.length; column_index++) {
+            html += '<th>' + kit._esc_html(table.columns[column_index]) + '</th>';
+        }
+
+        html += '</tr></thead><tbody>';
+
+        for (var row_index = 0; row_index < table.rows.length; row_index++) {
+            html += '<tr>';
+
+            var row = table.rows[row_index];
+
+            for (var cell_index = 0; cell_index < row.length; cell_index++) {
+                html += '<td>' + kit._esc_html(String(row[cell_index])) + '</td>';
+            }
+
+            html += '</tr>';
+        }
+
+        html += '</tbody></table>';
+
+        return html;
+    };
+
+    /* Puts one text into one pane - most kinds are coloured right here, SQL is sent
+       to the server's pygments, the escaped text standing in until the colours land. */
+    kit.payload_panel._show_text = function($pane, text) {
+        if (kit._sql_starter_pattern.test(text.trim())) {
+            $pane.html('<span class="syntax-monokai">' + kit._esc_html(text) + '</span>');
+
+            // The colours are for this very text - a pane brought to another
+            // message in the meantime keeps that message's words instead
+            var token = $pane.data('payload_token');
+
+            kit._highlight_remote(text, 'sql', function(html) {
+                if ($pane.data('payload_token') !== token) {
+                    return;
+                }
+
+                $pane.html('<span class="syntax-monokai">' + html + '</span>');
+            });
+
+            return;
+        }
+
+        $pane.html(kit.syntax_highlight(text));
+    };
+
+    /* Asks the server for the colours of every SQL pane of a freshly built frame -
+       the panes already stand with their text escaped, so nothing moves meanwhile. */
+    kit.payload_panel._color_sql = function($panel) {
+        var tabs = $panel.data('payload_tabs');
+
+        $panel.find('.dashboard-payload-text').each(function() {
+            var $pane = $(this);
+            var tab = tabs[parseInt($pane.attr('data-tab-index'), 10)];
+
+            if (tab.text !== undefined && kit._sql_starter_pattern.test(tab.text.trim())) {
+                kit.payload_panel._show_text($pane, tab.text);
+            }
+        });
+    };
+
     /* A panel whose every tab already has its text. */
     kit.payload_panel.render = function($host, tabs) {
         $host.html(kit.payload_panel._html(tabs));
-        $host.find('.dashboard-payload').data('payload_tabs', tabs);
+
+        var $panel = $host.find('.dashboard-payload');
+        $panel.data('payload_tabs', tabs);
+
+        kit.payload_panel._color_sql($panel);
     };
 
     /* A panel whose tabs fetch their own text. `fetch(tab, done)` calls `done(text)`
@@ -89,6 +182,8 @@
         var $panel = $host.find('.dashboard-payload');
         $panel.data('payload_tabs', tabs);
         $panel.data('payload_fetch', fetch);
+
+        kit.payload_panel._color_sql($panel);
 
         if (open_index === undefined) {
             open_index = 0;
@@ -211,7 +306,7 @@
             }
 
             clearTimeout(spinner_timer);
-            $pane.html(kit.syntax_highlight(text));
+            kit.payload_panel._show_text($pane, text);
         });
     };
 
@@ -226,7 +321,26 @@
 
     $(document).on('click', '.dashboard-payload-copy', function() {
         var $panel = $(this).closest('.dashboard-payload');
-        var text = $panel.find('.dashboard-payload-text:not([hidden])').text();
+        var $pane = $panel.find('.dashboard-payload-text:not([hidden])');
+
+        var tabs = $panel.data('payload_tabs');
+        var tab = tabs[parseInt($pane.attr('data-tab-index'), 10)];
+
+        var text;
+
+        // A table copies as its rows, tab-separated, header first - text copies as it stands
+        if (tab.table === undefined) {
+            text = $pane.text();
+        }
+        else {
+            var lines = [tab.table.columns.join('\t')];
+
+            for (var row_index = 0; row_index < tab.table.rows.length; row_index++) {
+                lines.push(tab.table.rows[row_index].join('\t'));
+            }
+
+            text = lines.join('\n');
+        }
 
         kit.copy_to_clipboard(this, text);
     });

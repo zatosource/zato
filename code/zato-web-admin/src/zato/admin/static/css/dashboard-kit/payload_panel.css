@@ -67,3 +67,28 @@
 .dashboard-payload-text .dashboard-payload-loading {
     padding: 0;
 }
+
+/* Rows out of a database are read as the table they are - column names in a dim
+   header over one line per row, hairline rules between them */
+
+.dashboard-payload-table {
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.dashboard-payload-table th,
+.dashboard-payload-table td {
+    padding: 4px 18px 4px 0;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.dashboard-payload-table th {
+    color: #9aa0b4;
+    font-weight: 600;
+    border-bottom: 1px solid var(--dashboard-panel-border);
+}
+
+.dashboard-payload-table td {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
