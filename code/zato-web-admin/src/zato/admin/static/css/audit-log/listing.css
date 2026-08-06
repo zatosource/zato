@@ -153,8 +153,20 @@
 
 .audit-log-search-form {
     display: flex;
+    align-items: center;
     gap: 0.5rem;
     margin: 0.5rem 0 1rem 0;
+}
+
+/* The filter selects of the all-events page stand a step apart from the search itself -
+   they narrow the list by what an event is, not by what it says */
+
+.audit-log-filter-select {
+    display: inline-flex;
+}
+
+.audit-log-filter-select:first-of-type {
+    margin-left: 8px;
 }
 
 /* Clear stands inside the box, which keeps room for it so a long term is not typed underneath */
@@ -494,11 +506,6 @@
     margin-left: auto;
 }
 
-/* Everything the head offers is offered the same way, whether it copies something,
-   sends a message out again or opens the flow the message belongs to */
-
-.audit-log-copy-cid,
-.audit-log-open-flow,
 .audit-log-resubmit-link {
     flex: none;
     font-size: 11px;
@@ -512,6 +519,16 @@
     --tab-font-size: 10.5px;
 
     margin-bottom: 10px;
+}
+
+/* The doorway to the event's flow stands beside the tabs, a link rather than a tab -
+   it leaves the page instead of turning it */
+
+.audit-log-pane-tabs .audit-log-open-flow {
+    align-self: center;
+    margin-left: 8px;
+    font-size: 11px;
+    white-space: nowrap;
 }
 
 /* What is known about the event is set out on the same dark frame the message itself is

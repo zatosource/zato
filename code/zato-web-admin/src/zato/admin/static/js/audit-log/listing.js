@@ -91,8 +91,6 @@ listing.config = {
     parsedView: 'parsed',
     viewURLKey: 'view',
 
-    copyCIDLabel: 'Copy CID',
-
     // What is known about the event is set out on the same dark frame the message and the flow
     // are read on, so moving between the pane's tabs is not moving between two kinds of page
     paneFactVariant: 'dark',
@@ -258,9 +256,11 @@ listing.outcomeBadgeHTML = function(rowModel) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// One row of the poll as everything drawing it reads it
+// One row of the poll as everything drawing it reads it. Each row is drawn by the source
+// that wrote it down - on a single-source page that is the page's own source, and on the
+// all-events page the sources mix on one list.
 listing.buildRow = function(row) {
-    var presenter = $.fn.zato.audit_log.presenter();
+    var presenter = $.fn.zato.audit_log.presenterFor(row.source);
 
     var out = {
         raw: row,
@@ -668,10 +668,6 @@ listing.paneHeadHTML = function(rowModel) {
 
     html += '<span class="audit-log-pane-actions">';
     html += listing.actionHTML(rowModel);
-    html += '<a class="audit-log-open-flow" href="' + config.flowPagePath + '?term=' + rowModel.id +
-        '">' + config.openFlowLabel + '</a>';
-    html += '<a href="javascript:void(0)" class="audit-log-copy-cid" data-cid="' +
-        listing.escapeHTML(rowModel.cid) + '">' + config.copyCIDLabel + '</a>';
     html += '</span>';
 
     return html;
@@ -733,10 +729,13 @@ listing.paneHTML = function(rowModel) {
     var html = '<div class="audit-log-pane-head">' + listing.paneHeadHTML(rowModel) + '</div>';
 
     // The message itself and everything said about it are two ways of reading one event,
-    // so the pane is one of them at a time rather than both at once.
+    // so the pane is one of them at a time rather than both at once. The flow the event
+    // belongs to is a page of its own, and its doorway stands beside the tabs.
     html += '<div class="dashboard-tabs audit-log-pane-tabs" role="tablist">';
     html += listing.paneTabHTML(config.dataTab, config.dataTabLabel);
     html += listing.paneTabHTML(config.detailsTab, config.detailsTabLabel);
+    html += '<a class="audit-log-open-flow" href="' + config.flowPagePath + '?term=' + rowModel.id +
+        '">' + config.openFlowLabel + '</a>';
     html += '</div>';
 
     html += '<div class="dashboard-tab-panel" role="tabpanel" id="' +
@@ -1350,9 +1349,6 @@ listing.init = function(initConfig) {
         }
     });
 
-    $(document).on('click', '.audit-log-copy-cid', function() {
-        kit.copy_to_clipboard(this, $(this).attr('data-cid'));
-    });
 };
 
 // /////////////////////////////////////////////////////////////////////////////

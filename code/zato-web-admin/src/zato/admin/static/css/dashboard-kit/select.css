@@ -1,0 +1,85 @@
+/* ------------------------------------------------------------ */
+/* Dashboard kit - the select trigger                            */
+/*                                                               */
+/* The look the rate limiting forms gave their selects, kept in  */
+/* one place under a common name. The menu the trigger opens is  */
+/* shared/dropdown-menu.css.                                     */
+/* ------------------------------------------------------------ */
+
+.dashboard-select {
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    padding: 4px 8px;
+    border: 1px solid #d0d0d0;
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 12px;
+    line-height: normal;
+    text-shadow: none;
+    background: #ffffff none;
+    background-image: none;
+    color: #2c3e50;
+    outline: none;
+    box-shadow: none;
+    cursor: pointer;
+    user-select: none;
+    transition: border-color 0.15s;
+}
+
+.dashboard-select:hover {
+    border-color: #a8b4c0;
+}
+
+.dashboard-select:focus,
+.dashboard-select:focus-visible {
+    border-color: #5794d0;
+    box-shadow: 0 0 0 2px #5794d01a;
+}
+
+/* What the select is called - quieter than the value it holds */
+
+.dashboard-select-label {
+    color: #666666;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.dashboard-select-value {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* The chevron is drawn rather than typed, so it reads the same in every font */
+
+.dashboard-select-chevron {
+    width: 7px;
+    height: 7px;
+    margin-top: -3px;
+    border-right: 1.5px solid #666666;
+    border-bottom: 1.5px solid #666666;
+    transform: rotate(45deg);
+    flex: none;
+}
+
+/* The filter box at the top of a long menu */
+
+.dashboard-select-filter {
+    box-sizing: border-box;
+    width: calc(100% - 16px);
+    margin: 2px 8px 6px 8px;
+    padding: 3px 6px;
+    border: 1px solid #d0d0d0;
+    border-radius: 3px;
+    font-size: 11px;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.dashboard-select-filter:focus {
+    border-color: #5794d0;
+    box-shadow: 0 0 0 2px #5794d01a;
+}
