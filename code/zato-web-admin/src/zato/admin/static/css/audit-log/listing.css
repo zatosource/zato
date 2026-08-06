@@ -73,8 +73,8 @@
        set back. */
     --audit-log-flow-open-gap: 20px;
 
-    /* The card also stands in from the frame's own sides, so the dark shows around all four
-       of its edges rather than only above and below it */
+    /* Every line stands in from the frame's own sides by the same measure, so the dark
+       shows along the edges and an open card is no wider or narrower than its line was */
     --audit-log-flow-open-side-gap: 8px;
 
     --audit-log-flow-open-surface: #32324f;
@@ -584,6 +584,7 @@
    is one movement rather than a jump. */
 
 .audit-log-flow .detail-log-line {
+    margin: 0 var(--audit-log-flow-open-side-gap);
     border-bottom: 1px solid var(--dashboard-panel-border);
     color: var(--dashboard-panel-text);
     transition: filter 0.2s, margin 0.2s, background-color 0.2s, box-shadow 0.2s;
@@ -640,7 +641,8 @@
 /* An open line and its panel are one thing being read, and the two of them stand off the
    list as one raised block - air above and below it, one solid lighter surface under both,
    no rule left between them, and the panel closing the block with the rule the line gave
-   up. Against the darkened lines around it, the block is the one lit thing on the frame. */
+   up. The block keeps the same sides every line stands at, so opening moves nothing
+   sideways. Against the darkened lines around it, it is the one lit thing on the frame. */
 
 .audit-log-flow .detail-log-line[aria-expanded="true"] {
     margin: var(--audit-log-flow-open-gap) var(--audit-log-flow-open-side-gap) 0;

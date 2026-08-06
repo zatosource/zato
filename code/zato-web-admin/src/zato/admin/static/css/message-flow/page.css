@@ -43,6 +43,14 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     --message-flow-good: #74cf92;
     --message-flow-bad: #ff8a94;
 
+    /* The face a raised card on this page wears - the same two colours the nodes'
+       own SVG gradient is built from - and that face under the amber wash selection
+       paints everywhere here. The drag handle reads off these two, so it invents
+       no colour of its own. */
+    --message-flow-card-face: linear-gradient(#3a3a5c, #2d2d48);
+    --message-flow-card-face-selected: linear-gradient(rgba(246, 166, 5, 0.28), rgba(246, 166, 5, 0.12)),
+        linear-gradient(#3a3a5c, #2d2d48);
+
     /* The pane under the drawing keeps one height whatever it is holding */
     --message-flow-detail-height: 250px;
 
@@ -120,73 +128,56 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     display: none;
 }
 
-/* The button in the dark room's own dress - the base stylesheets would put a
-   white gradient and a light text-shadow on any button, so both are stood down */
+/* Search and the two tabs are the same badges Clear and every dark-panel action
+   already wear - the only styling of their own is undoing what the base
+   stylesheets force on a button element: the white gradient, the light
+   text-shadow, the Helvetica and the grey focus glow */
 
-.message-flow-search-button {
+.message-flow-search-button,
+.message-flow-tab {
     appearance: none;
-    padding: 6px 14px;
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 4px;
-    background: linear-gradient(#3a3a5c, #2d2d48);
-    color: var(--message-flow-text);
-    font-family: 'Roboto Mono', monospace;
-    font-size: 11px;
-    font-weight: 700;
+    margin-left: 0;
+    padding: 4px 10px;
+    border: none;
+    font-family: inherit;
+    line-height: inherit;
     text-shadow: none;
-    cursor: pointer;
-}
-
-.message-flow-search-button:hover {
-    background: linear-gradient(#44446a, #353553);
-    border-color: rgba(255, 255, 255, 0.3);
 }
 
 .message-flow-search-button:focus,
-.message-flow-search-button:active {
-    outline: none;
-    background: linear-gradient(#3a3a5c, #2d2d48);
-    box-shadow: none;
-}
-
-/* The two ways of reading one journey stand as equals - the open one is lit,
-   the other waits in the dim ink everything unlit on this page waits in */
-
-.message-flow-tabs {
-    display: flex;
-    gap: 4px;
-    border: none;
-}
-
-.message-flow-tab {
-    appearance: none;
-    padding: 6px 14px;
-    border: 1px solid transparent;
-    border-radius: 4px;
-    background: transparent;
-    color: var(--message-flow-muted);
-    font-family: 'Roboto Mono', monospace;
-    font-size: 12px;
-    font-weight: 700;
-    text-shadow: none;
-    cursor: pointer;
-}
-
-.message-flow-tab:hover {
-    background: transparent;
-    color: var(--message-flow-text);
-}
-
+.message-flow-search-button:active,
 .message-flow-tab:focus,
 .message-flow-tab:active {
     outline: none;
     box-shadow: none;
+    background-image: none;
 }
 
-.message-flow-tab.dashboard-tab-active {
-    border-color: rgba(255, 255, 255, 0.16);
-    background: var(--message-flow-canvas-surface);
+/* The two ways of reading one journey stand as equals - two of the same badges,
+   pressed out and pressed in exactly the way the detail pane's tabs are: the
+   open one raised on the kit's sheen and shadow, the other sunk into the bar.
+   The open one's words read in the amber everything chosen on this page reads
+   in, which is what tells it from the room behind it. */
+
+.message-flow-tabs {
+    display: flex;
+    gap: 6px;
+}
+
+.message-flow-tab:not(.dashboard-panel-action-badge-active) {
+    background: var(--dashboard-unchosen-badge-fill);
+    box-shadow: var(--dashboard-unchosen-badge-shadow);
+}
+
+.message-flow-tab:not(.dashboard-panel-action-badge-active):hover {
+    background: var(--dashboard-unchosen-badge-fill-hover);
+}
+
+.message-flow-tab.dashboard-panel-action-badge-active,
+.message-flow-tab.dashboard-panel-action-badge-active:hover {
     color: var(--message-flow-selected-text);
+    background: var(--dashboard-chosen-badge-fill);
+    box-shadow: var(--dashboard-chosen-badge-shadow);
 }
 
 /* How many events the term led to and what it was found by */
@@ -519,7 +510,7 @@ svg.message-flow-focus .message-flow-branch:not(.message-flow-lit) {
     height: 5px;
     border-radius: 3px;
     border: 1px solid var(--message-flow-rim);
-    background: linear-gradient(#3a3a5c, #2d2d48);
+    background: var(--message-flow-card-face);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
     transition: border-color 0.15s, background-color 0.15s;
 }
@@ -535,8 +526,7 @@ svg.message-flow-focus .message-flow-branch:not(.message-flow-lit) {
 .message-flow-resize:hover::after,
 .message-flow-resizing::after {
     border-color: var(--message-flow-selected);
-    background: linear-gradient(rgba(246, 166, 5, 0.28), rgba(246, 166, 5, 0.12)),
-        linear-gradient(#3a3a5c, #2d2d48);
+    background: var(--message-flow-card-face-selected);
 }
 
 .message-flow-resizing::after {
