@@ -38,7 +38,8 @@ from zato.server.generic.api.outconn_sftp import outconn_sftp_bool_config_keys, 
     outconn_sftp_int_config_keys
 from zato.server.generic.api.outconn_mongodb import outconn_mongodb_bool_config_keys, outconn_mongodb_config_defaults, \
     outconn_mongodb_int_config_keys
-from zato.server.generic.api.outconn_smb import outconn_smb_config_defaults, outconn_smb_int_config_keys
+from zato.server.generic.api.outconn_smb import outconn_smb_bool_config_keys, outconn_smb_config_defaults, \
+    outconn_smb_int_config_keys
 from zato.server.generic.connection import GenericConnection
 from zato.server.connection.outgoing_delivery import publishable_generic_types
 
@@ -679,11 +680,17 @@ class Generic(ConfigManagerImpl):
             if config.get(key) is None:
                 config[key] = default
 
-        # .. and make sure numeric fields are integers.
+        # .. make sure numeric fields are integers ..
         for key in outconn_smb_int_config_keys:
             value = config[key]
             if isinstance(value, str):
                 config[key] = int(value)
+
+        # .. and make sure boolean fields are booleans.
+        for key in outconn_smb_bool_config_keys:
+            value = config[key]
+            if isinstance(value, str):
+                config[key] = as_bool(value)
 
 # ################################################################################################################################
 

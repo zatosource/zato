@@ -204,11 +204,12 @@ class HopResendResult:
 
 # ################################################################################################################################
 
-def resend_hop(event:'StoredEvent', send:'callable_', audit_log:'AuditLog', cid:'str') -> 'HopResendResult':
+def resend_hop(event:'StoredEvent', send:'callable_', audit_log:'AuditLog', cid:'str', actor:'str'='') -> 'HopResendResult':
     """ Sends the exact payload stored with one outgoing event through the same connection again -
     repeating a single delivery to one destination without re-running the service that produced it
     and without involving any other destination. The attempt is recorded as its own outgoing event
-    linked to the original by the correlation id, regardless of the outcome.
+    linked to the original by the correlation id, regardless of the outcome. The actor is who
+    asked for the resend, recorded with the new event so the trail says by whom.
     """
     require_event_type(event, AuditEvent.Request_Sent, 'resent per hop')
 
@@ -228,6 +229,10 @@ def resend_hop(event:'StoredEvent', send:'callable_', audit_log:'AuditLog', cid:
         'data': dumps(stored_details),
         'parents': [event.id],
     }
+
+    # Who asked for the resend is a searchable attribute of the new event
+    if actor:
+        values['attrs'] = {'actor': actor}
 
     # Deliver the payload through the connection the original went through ..
     try:
@@ -333,12 +338,14 @@ def bulk_repair(
     *,
     transform:'callable_ | None' = None,
     dry_run:'bool' = False,
+    actor:'str' = '',
     ) -> 'BulkRepairResult':
     """ Applies one filter server-side and resubmits every matched event sequentially,
     optionally transforming each payload first - one audited operation with per-row outcomes.
     A dry run reports what would be resubmitted, per row, without sending anything.
     Every real row is guarded by a dedup key, so overlapping bulk operations
-    cannot double-apply one message.
+    cannot double-apply one message. The actor is who asked for the repair,
+    recorded on each ledger row and on the bulk event itself.
     """
 
     # Our response to produce - the rows are assigned here because init=False
@@ -374,7 +381,7 @@ def bulk_repair(
         # is a new operation while resubmitting it identically twice is caught
         dedup_key = build_dedup_key(Action_Resend, event_id, payload)
 
-        if not acquire_dedup_key(engine, dedup_key, cid, AuditEvent.Bulk_Repair):
+        if not acquire_dedup_key(engine, dedup_key, cid, AuditEvent.Bulk_Repair, actor):
             row['result'] = Row_Duplicate
             out.duplicate_count += 1
             continue
@@ -411,6 +418,10 @@ def bulk_repair(
         'outcome': bulk_outcome,
         'data': rows_json,
     }
+
+    # Who asked for the repair is a searchable attribute of the bulk event
+    if actor:
+        bulk_options['attrs'] = {'actor': actor}
 
     out.bulk_event_id = audit_log.insert(
         repair_filter.source, AuditEvent.Bulk_Repair, repair_filter.object_name, **bulk_options)

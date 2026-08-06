@@ -177,6 +177,11 @@ panel.contentHTML = function(rowModel) {
 
     var html = kit.fact_rows.render(facts, flow.config.darkVariant);
 
+    // The files the event carried, filled in once their metadata has arrived and only
+    // when there are any at all
+    html += '<div class="' + listing.config.attachmentsHostClass + '" data-attachments-id="' +
+        rowModel.id + '"></div>';
+
     // Which body is on the screen and how it is being read are the body's own business,
     // since with a single body there is no kind badge to read the first one off - and which
     // kind it woke up on stays written down, being what the address bar leaves unsaid
@@ -458,12 +463,16 @@ panel.expand = function(eventId, state) {
         return;
     }
 
-    // A panel is filled the first time it is opened and keeps what it was given after that
+    // A panel is filled the first time it is opened and keeps what it was given after that,
+    // and the files its event carried are asked about at the same moment
     if (!$panel.data('flow_panel_built')) {
         var rowModel = flow.rowById(eventId);
 
         $panel.find('.detail-panel-body').html(panel.contentHTML(rowModel));
         $panel.data('flow_panel_built', true);
+
+        listing.loadAttachments(rowModel,
+            $panel.find('.' + listing.config.attachmentsHostClass));
     }
 
     if (state !== undefined) {

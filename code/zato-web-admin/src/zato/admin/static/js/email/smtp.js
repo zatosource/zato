@@ -41,6 +41,7 @@ $(document).ready(function() {
 $.fn.zato.email.smtp.field_descriptions = {
     'id_name': 'A unique name for this SMTP connection.<br>Used to identify it in services, logs and the dashboard.',
     'id_is_active': 'Whether this connection can send e-mail.<br>Services cannot send anything through<br>an inactive connection.',
+    'id_is_audit_log_active': 'Whether this connection\'s activity is recorded<br>in the audit log. On by default.',
     'id_needs_tls_verify': 'Whether the server\'s TLS certificate is verified.<br>Turn it off only for servers<br>with self-signed certificates.',
     'id_is_debug': 'When on, the full SMTP protocol conversation<br>is written out to server logs.<br>Useful when diagnosing delivery issues.',
     'id_provider': 'Pre-fills the connection details<br>for a well-known e-mail provider.<br>Pick Generic to fill everything in yourself.',
@@ -180,6 +181,7 @@ $.fn.zato.email.smtp.data_table.new_row = function(item, data, include_tr) {
     var is_active = item.is_active == true
     var is_debug = item.is_debug == true
     var needs_tls_verify = item.needs_tls_verify == true
+    var is_audit_log_active = item.is_audit_log_active == true
     var username = item.username ? item.username : "<span class='form_hint'>(None)</span>";
 
     row += "<td class='numbering'>&nbsp;</td>";
@@ -204,6 +206,7 @@ $.fn.zato.email.smtp.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.ca_certs_path);
     row += String.format("<td class='ignore'>{0}</td>", item.helo_hostname);
     row += String.format("<td class='ignore'>{0}</td>", item.from_address);
+    row += String.format("<td class='ignore'>{0}</td>", is_audit_log_active);
 
     if(include_tr) {
         row += '</tr>';

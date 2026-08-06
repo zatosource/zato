@@ -62,7 +62,7 @@ _rest_methods_with_body = ('POST', 'PUT', 'PATCH')
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _send_rest(connections:'DestinationConnections', entry:'DestinationEntry', payload:'any_') -> 'any_':
+def _send_rest(connections:'DestinationConnections', entry:'DestinationEntry', payload:'any_', cid:'str'='') -> 'any_':
     """ Delivers to an outgoing REST connection, with the method the destination names.
     """
     method = get_option(entry, DestinationOption.Method, Default_Method)
@@ -85,7 +85,7 @@ def _send_rest(connections:'DestinationConnections', entry:'DestinationEntry', p
 
 # ################################################################################################################################
 
-def _send_mllp(connections:'DestinationConnections', entry:'DestinationEntry', payload:'any_') -> 'any_':
+def _send_mllp(connections:'DestinationConnections', entry:'DestinationEntry', payload:'any_', cid:'str'='') -> 'any_':
     """ Delivers to an outgoing HL7 MLLP connection and returns the text of the acknowledgment it
     answered with - that text, and not the result object around it, is what a channel replying
     from this destination answers its own sender with.
@@ -99,7 +99,7 @@ def _send_mllp(connections:'DestinationConnections', entry:'DestinationEntry', p
 
 # ################################################################################################################################
 
-def _send_fhir(connections:'DestinationConnections', entry:'DestinationEntry', payload:'any_') -> 'any_':
+def _send_fhir(connections:'DestinationConnections', entry:'DestinationEntry', payload:'any_', cid:'str'='') -> 'any_':
     """ Delivers to an outgoing HL7 FHIR connection, with the method and the path the destination names.
     """
     method = get_option(entry, DestinationOption.Method, Default_Method)
@@ -119,7 +119,7 @@ def _send_fhir(connections:'DestinationConnections', entry:'DestinationEntry', p
 
 # ################################################################################################################################
 
-def _send_smtp(connections:'DestinationConnections', entry:'DestinationEntry', payload:'any_') -> 'any_':
+def _send_smtp(connections:'DestinationConnections', entry:'DestinationEntry', payload:'any_', cid:'str'='') -> 'any_':
     """ Delivers to an outgoing SMTP connection, as the body of a message to the recipient
     and under the subject line the destination names.
     """
@@ -139,7 +139,9 @@ def _send_smtp(connections:'DestinationConnections', entry:'DestinationEntry', p
 
     item = connections.email.smtp[entry.connection]
 
-    out = item.conn.send(message)
+    # The connection's own message-sent row and the hop row that the delivery engine writes
+    # describe one delivery, so they share the correlation id.
+    out = item.conn.send(message, cid=cid)
     return out
 
 # ################################################################################################################################
@@ -155,11 +157,11 @@ _adapters:'strcalldict' = {
 
 # ################################################################################################################################
 
-def send(connections:'DestinationConnections', entry:'DestinationEntry', payload:'any_') -> 'any_':
+def send(connections:'DestinationConnections', entry:'DestinationEntry', payload:'any_', cid:'str'='') -> 'any_':
     """ Delivers one payload to one destination, whatever the type of connection behind it.
     """
     if adapter := _adapters.get(entry.type):
-        out = adapter(connections, entry, payload)
+        out = adapter(connections, entry, payload, cid)
 
     # .. a type nothing delivers to should never have been stored in the first place.
     else:

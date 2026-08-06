@@ -125,13 +125,14 @@ class TestEnmasseSMBFromYAML(TestCase):
 
     def get_yaml_dict(self) -> 'stranydict':
 
-        # A connection with a plain ASCII name ..
+        # A connection with a plain ASCII name - it also keeps the bytes of the files it moves ..
         ascii_named = {
             'name': ModuleCtx.Conn_Name,
             'host': self.smb_server.host,
             'port': self.smb_server.port,
             'username': self.smb_server.username,
             'password': self.smb_server.password,
+            'should_store_content': True,
         }
 
         # .. and one whose name contains Dutch, Greek and Korean letters.
@@ -212,6 +213,19 @@ class TestEnmasseSMBFromYAML(TestCase):
             self.assertEqual(instance.port, self.smb_server.port)
             self.assertEqual(instance.username, self.smb_server.username)
             self.assertEqual(instance.secret, self.smb_server.password)
+
+        # The first connection turned content storage on, the second one left it off by default
+        ascii_instance = self.session.query(GenericConn).filter_by(
+            name=ModuleCtx.Conn_Name,
+            type_=GENERIC.CONNECTION.TYPE.OUTCONN_SMB
+        ).one()
+        self.assertIs(parse_instance_opaque_attr(ascii_instance)['should_store_content'], True)
+
+        unicode_instance = self.session.query(GenericConn).filter_by(
+            name=ModuleCtx.Unicode_Conn_Name,
+            type_=GENERIC.CONNECTION.TYPE.OUTCONN_SMB
+        ).one()
+        self.assertIs(parse_instance_opaque_attr(unicode_instance)['should_store_content'], False)
 
 # ################################################################################################################################
 

@@ -538,12 +538,17 @@ class ResendHop(AdminService):
     The attempt lands as its own audit event linked to the original by the correlation id.
     """
     name = 'zato.audit-log.resend-hop'
-    input = Int('event_id')
+    input = Int('event_id'), '-actor'
     output = 'response_data'
 
     def handle(self) -> 'None':
 
         event_id = self.request.input.event_id
+
+        # Who asked for the resend - the empty string means the caller did not say
+        actor = self.request.input.actor
+        if actor is None:
+            actor = ''
 
         # A failed resend comes back as a report too, never as a bare exception,
         # so the caller always sees the same shape with the details inside.
@@ -559,7 +564,7 @@ class ResendHop(AdminService):
             send = self._build_send(event)
 
             audit_log = AuditLog(self.server.name)
-            result = resend_hop(event, send, audit_log, self.cid)
+            result = resend_hop(event, send, audit_log, self.cid, actor)
 
             report['is_ok'] = True
             report['event_id'] = result.event_id
@@ -582,7 +587,7 @@ class ResendHop(AdminService):
         entry = get_hop_entry(event.source, event.object_name, event.details)
 
         def send(payload:'str') -> 'any_':
-            out = dispatch_send(self, entry, payload)
+            out = dispatch_send(self, entry, payload, self.cid)
             return out
 
         return send

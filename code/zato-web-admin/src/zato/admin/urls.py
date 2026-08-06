@@ -422,6 +422,10 @@ urlpatterns += [
         login_required(audit_log.details), name='audit-log-details'),
     url(r'^zato/audit-log/resubmit/$',
         login_required(audit_log.resubmit), name='audit-log-resubmit'),
+    url(r'^zato/audit-log/attachments/$',
+        login_required(audit_log.attachments), name='audit-log-attachments'),
+    url(r'^zato/audit-log/attachment/$',
+        login_required(audit_log.attachment_download), name='audit-log-attachment-download'),
 
     # Channel destinations
 

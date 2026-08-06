@@ -13,6 +13,7 @@ import pytest
 from sqlalchemy.exc import DBAPIError
 
 # Zato
+from attachments import run_attachment_scenario
 from common import assert_postgresql_connection_encrypted, audit_log_env, run_audit_log_scenario
 from config_audit import run_config_audit_scenario
 from resubmit_core import run_resubmit_core_scenario
@@ -40,6 +41,7 @@ def test_audit_log_postgresql_ssl(postgresql_ssl_server:'DatabaseServer') -> 'No
         run_retention_tiers_scenario()
         run_resubmit_core_scenario()
         run_config_audit_scenario()
+        run_attachment_scenario()
         assert_postgresql_connection_encrypted()
 
 # ################################################################################################################################

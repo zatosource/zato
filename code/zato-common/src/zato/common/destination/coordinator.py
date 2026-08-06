@@ -58,8 +58,9 @@ class DeliveryTransports:
     the transports perform each delivery.
     """
 
-    # send(entry, payload) - delivers one payload through one destination and returns
-    # whatever the connection answered with.
+    # send(entry, payload, cid) - delivers one payload through one destination and returns
+    # whatever the connection answered with. The cid ties the rows the connection itself
+    # writes to the hop rows the coordinator writes.
     send: 'callable_' = None
 
     # sleep(seconds) - waits between two attempts at the same destination.
@@ -261,7 +262,7 @@ def deliver_hop(context:'DeliveryContext', planned:'PlannedHop') -> 'HopResult':
 
         # The delivery itself, whatever it is that the destination's type does ..
         try:
-            response = transports.send(entry, planned.payload)
+            response = transports.send(entry, planned.payload, context.cid)
 
         # .. a delivery that raised has its error recorded and may be tried again ..
         except Exception as e:

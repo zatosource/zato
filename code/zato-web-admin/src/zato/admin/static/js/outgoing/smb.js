@@ -40,6 +40,7 @@ $.fn.zato.outgoing.smb.field_descriptions = {
     'id_port': 'TCP port the SMB server listens on.<br>The default of 445 is what Windows<br>and Samba servers use for SMB over TCP.',
     'id_username': 'Username to authenticate as, e.g. a domain<br>account in the DOMAIN\\user form<br>or a local account name.',
     'id_secret': 'Password for the username above.<br>It is stored encrypted in the ODB.',
+    'id_should_store_content': 'Whether the audit log additionally keeps the bytes<br>of the files this connection moves,<br>so they can be reread and downloaded later. Off by default.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -103,6 +104,7 @@ $.fn.zato.outgoing.smb.data_table.new_row = function(item, data, include_tr) {
     // 5
     row += String.format("<td class='ignore'>{0}</td>", item.port);
     row += String.format("<td class='ignore'>{0}</td>", item.username ? item.username : '');
+    row += String.format("<td class='ignore'>{0}</td>", item.should_store_content == true);
 
     if(include_tr) {
         row += '</tr>';

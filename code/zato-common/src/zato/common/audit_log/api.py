@@ -13,6 +13,7 @@ from logging import getLogger
 from time import monotonic
 
 # Zato
+from zato.common.audit_log.attachment import build_attachment_rows
 from zato.common.audit_log.buffer import Env_Flush_Max_Size, Env_Flush_Max_Wait_Ms, EventBuffer, get_flush_max_size, \
     get_flush_max_wait_ms, PendingEvent
 from zato.common.audit_log.common import Attr_Value_Max_Len, Audit_DB_File_Name, AuditBody, AuditClassification, \
@@ -33,10 +34,11 @@ if 0:
     from datetime import datetime
     from sqlalchemy.engine import Engine
     from zato.common.audit_log.buffer import pending_event_list
-    from zato.common.typing_ import anylist, intlist, intlistnone, intnone, stranydict, strdictnone
+    from zato.common.typing_ import anylist, anylistnone, intlist, intlistnone, intnone, stranydict, strdictnone
 
     # Dummy assignments to satisfy type checkers
     anylist = anylist
+    anylistnone = anylistnone
     datetime = datetime
     Engine = Engine
     intlist = intlist
@@ -267,6 +269,7 @@ class AuditLog:
         data:'str' = '',
         attrs:'strdictnone' = None,
         bodies:'strdictnone' = None,
+        attachments:'anylistnone' = None,
         parents:'intlistnone' = None,
         parent_link_type:'str' = AuditLink.Resubmit_Of,
         ) -> 'intnone':
@@ -301,6 +304,9 @@ class AuditLog:
         if bodies is None:
             bodies = {}
 
+        if attachments is None:
+            attachments = []
+
         if parents is None:
             parents = []
 
@@ -309,6 +315,7 @@ class AuditLog:
 
         pending.attrs = attrs
         pending.bodies = bodies
+        pending.attachments = attachments
         pending.parents = parents
         pending.parent_link_type = parent_link_type
 
@@ -484,6 +491,15 @@ class AuditLog:
                     body_insert = event_body_table.insert()
 
                     _ = connection.execute(body_insert, body_rows)
+
+                # .. attachments, one body row each, stamped the same way ..
+                if pending.attachments:
+
+                    attachment_rows = build_attachment_rows(
+                        event_id, pending.values['event_time_iso'], pending.attachments)
+                    attachment_insert = event_body_table.insert()
+
+                    _ = connection.execute(attachment_insert, attachment_rows)
 
                 # .. and lineage links to parent events.
                 if pending.parents:

@@ -10,6 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from datetime import datetime, timezone
 from logging import getLogger
 from stat import S_ISDIR, S_ISLNK
+from time import monotonic
+from traceback import format_exc
 
 # gevent
 from gevent.fileobject import FileObjectThread
@@ -18,6 +20,8 @@ from gevent.fileobject import FileObjectThread
 from humanize import naturalsize
 
 # Zato
+from zato.common.audit_log.api import AuditOutcome
+from zato.common.audit_log.file_transfer import record_file_transfer, Operation_Delete, Operation_Store
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -132,6 +136,24 @@ class SMBConnection:
 
     def ping(self) -> 'None':
         self.wrapper.ping()
+
+# ################################################################################################################################
+
+    def _record_transfer(
+        self,
+        operation:'str',
+        remote_path:'str',
+        *,
+        outcome:'str',
+        size:'int' = 0,
+        duration_ms:'int' = 0,
+        error:'str' = '',
+        content:'any_' = None,
+        ) -> 'None':
+        """ Records one file operation of this connection in the audit log.
+        """
+        _ = record_file_transfer(self.wrapper.audit_log, self.wrapper.config.name, operation, remote_path,
+            cid=self.cid, outcome=outcome, size=size, duration_ms=duration_ms, error=error, content=content)
 
 # ################################################################################################################################
 
@@ -254,17 +276,41 @@ class SMBConnection:
 
     def delete_file(self, remote_path:'str') -> 'None':
 
-        with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
-            client = cast_('SMBClient', client)
-            client.remove(remote_path)
+        start = monotonic()
+
+        # A failed deletion is recorded too, before the caller learns about it
+        try:
+            with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
+                client = cast_('SMBClient', client)
+                client.remove(remote_path)
+        except Exception:
+            duration_ms = int((monotonic() - start) * 1000)
+            self._record_transfer(Operation_Delete, remote_path,
+                outcome=AuditOutcome.Error, duration_ms=duration_ms, error=format_exc())
+            raise
+
+        duration_ms = int((monotonic() - start) * 1000)
+        self._record_transfer(Operation_Delete, remote_path, outcome=AuditOutcome.OK, duration_ms=duration_ms)
 
 # ################################################################################################################################
 
     def delete_directory(self, remote_path:'str') -> 'None':
 
-        with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
-            client = cast_('SMBClient', client)
-            client.rmdir(remote_path)
+        start = monotonic()
+
+        # A failed deletion is recorded too, before the caller learns about it
+        try:
+            with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
+                client = cast_('SMBClient', client)
+                client.rmdir(remote_path)
+        except Exception:
+            duration_ms = int((monotonic() - start) * 1000)
+            self._record_transfer(Operation_Delete, remote_path,
+                outcome=AuditOutcome.Error, duration_ms=duration_ms, error=format_exc())
+            raise
+
+        duration_ms = int((monotonic() - start) * 1000)
+        self._record_transfer(Operation_Delete, remote_path, outcome=AuditOutcome.OK, duration_ms=duration_ms)
 
 # ################################################################################################################################
 
@@ -302,9 +348,29 @@ class SMBConnection:
         if not isinstance(data, bytes):
             data = data.encode(encoding)
 
-        with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
-            client = cast_('SMBClient', client)
-            client.write(remote_path, data)
+        size = len(data)
+        start = monotonic()
+
+        # A failed store is recorded too, before the caller learns about it
+        try:
+            with self.wrapper.client(should_block=True, block_timeout=_pool_block_timeout) as client:
+                client = cast_('SMBClient', client)
+                client.write(remote_path, data)
+        except Exception:
+            duration_ms = int((monotonic() - start) * 1000)
+            self._record_transfer(Operation_Store, remote_path,
+                outcome=AuditOutcome.Error, size=size, duration_ms=duration_ms, error=format_exc())
+            raise
+
+        # The bytes themselves are kept only when the connection asked for that
+        if self.wrapper.should_store_content:
+            content = data
+        else:
+            content = None
+
+        duration_ms = int((monotonic() - start) * 1000)
+        self._record_transfer(Operation_Store, remote_path,
+            outcome=AuditOutcome.OK, size=size, duration_ms=duration_ms, content=content)
 
 # ################################################################################################################################
 

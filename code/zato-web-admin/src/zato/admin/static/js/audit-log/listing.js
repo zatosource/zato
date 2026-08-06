@@ -96,6 +96,9 @@ listing.config = {
     // are read on, so moving between the pane's tabs is not moving between two kinds of page
     paneFactVariant: 'dark',
 
+    // Where the files the event carried are offered, below everything said about it
+    attachmentsHostClass: 'audit-log-pane-attachments',
+
     // What the pane calls the event it is holding, before anything else it says about it
     eventLabel: 'Event',
 
@@ -696,7 +699,27 @@ listing.paneDetailsHTML = function(rowModel) {
 
     var html = kit.fact_rows.render(facts, config.paneFactVariant);
 
+    // The files the event carried, filled in once their metadata has arrived and only
+    // when there are any at all
+    html += '<div class="' + config.attachmentsHostClass + '" data-attachments-id="' +
+        rowModel.id + '"></div>';
+
     return html;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The files the event carried are asked about when the event is opened - an event
+// carrying none keeps the strip's place empty
+listing.loadAttachments = function(rowModel, $host) {
+    var config = $.fn.zato.audit_log.config;
+
+    kit.attachments.load($host, {
+        list_url: config.attachmentsURL,
+        download_url: config.attachmentDownloadURL,
+        id: rowModel.id,
+        variant: listing.config.paneFactVariant
+    });
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -806,10 +829,13 @@ listing.showTab = function(tab) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-listing.onSelect = function(rowModel) {
+listing.onSelect = function(rowModel, $pane) {
     var config = listing.config;
 
     listing.selected = rowModel;
+
+    // The files the event carried are asked about the moment the pane holds it
+    listing.loadAttachments(rowModel, $pane.find('.' + config.attachmentsHostClass));
 
     // The tab group is bound to the pane the first time the pane holds one, and every
     // pane after that is put into whichever tab is already open.

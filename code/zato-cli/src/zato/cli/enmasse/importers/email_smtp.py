@@ -132,6 +132,9 @@ class SMTPImporter:
         else:
             smtp_conn.password = uuid4().hex
 
+        # The audit log is on unless the YAML definition turns it off
+        smtp_def['is_audit_log_active'] = smtp_def.get('is_audit_log_active', True)
+
         # Set any opaque attributes from the configuration
         set_instance_opaque_attrs(smtp_conn, smtp_def)
 
@@ -168,6 +171,9 @@ class SMTPImporter:
 
                 # Set the attribute on the SMTP connection object
                 setattr(smtp_conn, key, value)
+
+        # The audit log is on unless the YAML definition turns it off
+        smtp_def['is_audit_log_active'] = smtp_def.get('is_audit_log_active', True)
 
         # Set any opaque attributes
         set_instance_opaque_attrs(smtp_conn, smtp_def)

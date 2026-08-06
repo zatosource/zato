@@ -54,6 +54,8 @@ class AuditSource:
     SOAP_Outgoing = 'soap-outgoing'
     Email_IMAP    = 'email-imap'
     Email_SMTP    = 'email-smtp'
+    File_Outgoing = 'file-outgoing'
+    SQL_Outgoing  = 'sql-outgoing'
     AS2           = 'as2'
     AS4           = 'as4'
     X12           = 'x12'
@@ -158,11 +160,13 @@ class AuditOutcome:
 
 class AuditBody:
     """ The kinds of message bodies an event may carry - what was sent, what came back,
-    and what the other side said when it failed.
+    what the other side said when it failed, and the files that travelled with the message.
     """
-    Request  = 'request'
-    Response = 'response'
-    Error    = 'error'
+    Request    = 'request'
+    Response   = 'response'
+    Error      = 'error'
+    Attachment = 'attachment'
+    SQL_Rows   = 'sql-rows'
 
 # ################################################################################################################################
 
@@ -311,6 +315,7 @@ _event_dedup_columns = [
     Column('dedup_key', _short_column),
     Column('cid', _short_column),
     Column('action', _short_column),
+    Column('actor', _short_column),
     Column('created_iso', _short_column),
     Column('outcome', _short_column),
     Column('completed_iso', _short_column),

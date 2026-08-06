@@ -47,8 +47,8 @@ class ConnectionDispatcher:
 
 # ################################################################################################################################
 
-    def send(self, entry:'DestinationEntry', payload:'any_') -> 'any_':
-        out = dispatch_send(self.connections, entry, payload)
+    def send(self, entry:'DestinationEntry', payload:'any_', cid:'str'='') -> 'any_':
+        out = dispatch_send(self.connections, entry, payload, cid)
         return out
 
 # ################################################################################################################################

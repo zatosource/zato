@@ -15,6 +15,7 @@ from traceback import format_exc
 
 # Zato
 from zato.common.api import SFTP
+from zato.common.audit_log.api import AuditLog
 from zato.common.sftp import SFTPOutput
 from zato.common.util.api import new_cid
 from zato.server.commands import CommandsFacade
@@ -374,6 +375,9 @@ class OutconnSFTPWrapper(Wrapper):
         config.parent = self
         config.auth_url = config.address
         super(OutconnSFTPWrapper, self).__init__(config, 'outgoing SFTP', server)
+
+        # Every file this connection moves is recorded through this object
+        self.audit_log = AuditLog(server.name)
 
 # ################################################################################################################################
 

@@ -16,6 +16,7 @@ from smbprotocol.exceptions import SMBOSError
 
 # Zato
 from zato.common.api import SMB
+from zato.common.audit_log.api import AuditLog
 from zato.common.typing_ import cast_
 from zato.server.connection.queue import Wrapper
 
@@ -42,13 +43,14 @@ outconn_smb_config_defaults:'dict[str, object]' = {
     'host': '',
     'port': SMB.DEFAULT.PORT,
     'username': '',
+    'should_store_content': False,
 }
 
 # Config keys that must be integers but may arrive as strings from opaque storage
 outconn_smb_int_config_keys = ('port',)
 
 # Config keys that must be booleans but may arrive as strings from opaque storage
-outconn_smb_bool_config_keys = ()
+outconn_smb_bool_config_keys = ('should_store_content',)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -248,6 +250,16 @@ class OutconnSMBWrapper(Wrapper):
         config.parent = self
         config.auth_url = '{}:{}'.format(config.host, config.port)
         super(OutconnSMBWrapper, self).__init__(config, 'outgoing SMB', server)
+
+        # Every file this connection moves is recorded through this object
+        self.audit_log = AuditLog(server.name)
+
+        # Whether the audited operations also keep the bytes of the files they moved -
+        # connections created before the flag existed have no such key stored at all.
+        if 'should_store_content' in config:
+            self.should_store_content = config['should_store_content']
+        else:
+            self.should_store_content = False
 
 # ################################################################################################################################
 

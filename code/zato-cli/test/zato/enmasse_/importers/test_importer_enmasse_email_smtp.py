@@ -24,6 +24,7 @@ from zato.cli.enmasse.importers.email_smtp import SMTPImporter
 from zato.common.odb.model import SMTP
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
+from zato.common.util.sql import parse_instance_opaque_attr
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -100,6 +101,28 @@ class TestEnmasseSMTPFromYAML(TestCase):
         self.assertEqual(smtp.username, 'enmasse@example.com')
         self.assertTrue(smtp.password)
 
+        # A connection without the flag in YAML has the audit log on
+        smtp_opaque = parse_instance_opaque_attr(smtp)
+        self.assertIs(smtp_opaque['is_audit_log_active'], True)
+
+# ################################################################################################################################
+
+    def test_smtp_audit_log_flag_off(self):
+        """ Test that a definition turning the audit log off keeps it off.
+        """
+        self._setup_test_environment()
+
+        # The template turns the audit log off for smtp.2
+        smtp_defs = self.yaml_config['email_smtp']
+        smtp_def = smtp_defs[1]
+
+        _ = self.smtp_importer.create_smtp_definition(smtp_def, self.session)
+        self.session.commit()
+
+        smtp = self.session.query(SMTP).filter_by(name='enmasse.email.smtp.2').one()
+        smtp_opaque = parse_instance_opaque_attr(smtp)
+        self.assertIs(smtp_opaque['is_audit_log_active'], False)
+
 # ################################################################################################################################
 
     def test_smtp_update(self):
@@ -155,19 +178,19 @@ class TestEnmasseSMTPFromYAML(TestCase):
         self.importer.smtp_defs = self.smtp_importer.smtp_defs
 
         # Verify SMTP definitions were created
-        self.assertEqual(len(smtp_created), 1)
+        self.assertEqual(len(smtp_created), 2)
         self.assertEqual(len(smtp_updated), 0)
 
         # Verify the SMTP definitions dictionary was populated
-        self.assertEqual(len(self.smtp_importer.smtp_defs), 1)
+        self.assertEqual(len(self.smtp_importer.smtp_defs), 2)
 
         # Verify that these definitions are accessible from the main importer
-        self.assertEqual(len(self.importer.smtp_defs), 1)
+        self.assertEqual(len(self.importer.smtp_defs), 2)
 
         # Try importing the same definitions again - should result in updates, not creations
         smtp_created2, smtp_updated2 = self.smtp_importer.sync_smtp_definitions(smtp_list, self.session)
         self.assertEqual(len(smtp_created2), 0)
-        self.assertEqual(len(smtp_updated2), 1)
+        self.assertEqual(len(smtp_updated2), 2)
 
 # ################################################################################################################################
 # ################################################################################################################################

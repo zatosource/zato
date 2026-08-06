@@ -107,6 +107,9 @@ class PendingEvent:
     # Message bodies, kind to content
     bodies: 'stranydict'
 
+    # Attachment envelopes, one body row each
+    attachments: 'anylist'
+
     # Lineage - the ids of parent events and how this event relates to them
     parents: 'anylist'
     parent_link_type: 'str' = ''

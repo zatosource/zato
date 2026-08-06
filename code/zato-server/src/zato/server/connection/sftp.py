@@ -9,14 +9,20 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from datetime import date, datetime
 from logging import getLogger
+from os.path import getsize
 from tempfile import NamedTemporaryFile
-from time import strptime
+from time import monotonic, strptime
+from traceback import format_exc
 
 # gevent
 from gevent.fileobject import FileObjectThread
 
 # humanize
 from humanize import naturalsize
+
+# Zato
+from zato.common.audit_log.api import AuditOutcome
+from zato.common.audit_log.file_transfer import record_file_transfer, Operation_Delete, Operation_Store
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -182,6 +188,23 @@ class SFTPConnection:
 
     def ping(self) -> 'None':
         self.wrapper.ping()
+
+# ################################################################################################################################
+
+    def _record_transfer(
+        self,
+        operation:'str',
+        remote_path:'str',
+        *,
+        outcome:'str',
+        size:'int' = 0,
+        duration_ms:'int' = 0,
+        error:'str' = '',
+        ) -> 'None':
+        """ Records one file operation of this connection in the audit log.
+        """
+        _ = record_file_transfer(self.wrapper.audit_log, self.wrapper.config.name, operation, remote_path,
+            cid=self.cid, outcome=outcome, size=size, duration_ms=duration_ms, error=error)
 
 # ################################################################################################################################
 
@@ -488,7 +511,20 @@ class SFTPConnection:
         else:
             command = 'rm'
 
-        out = self.execute('{} {}'.format(command, quote_path(remote_path)), log_level)
+        start = monotonic()
+
+        # A failed deletion is recorded too, before the caller learns about it
+        try:
+            out = self.execute('{} {}'.format(command, quote_path(remote_path)), log_level)
+        except Exception:
+            duration_ms = int((monotonic() - start) * 1000)
+            self._record_transfer(Operation_Delete, remote_path,
+                outcome=AuditOutcome.Error, duration_ms=duration_ms, error=format_exc())
+            raise
+
+        duration_ms = int((monotonic() - start) * 1000)
+        self._record_transfer(Operation_Delete, remote_path, outcome=AuditOutcome.OK, duration_ms=duration_ms)
+
         return out
 
 # ################################################################################################################################
@@ -669,7 +705,26 @@ class SFTPConnection:
         else:
             options = ''
 
-        out = self.execute('put{} {} {}'.format(options, quote_path(local_path), quote_path(remote_path)), log_level)
+        # How much is about to be moved - a directory uploaded recursively reports no size
+        try:
+            size = getsize(local_path)
+        except OSError:
+            size = 0
+
+        start = monotonic()
+
+        # A failed store is recorded too, before the caller learns about it
+        try:
+            out = self.execute('put{} {} {}'.format(options, quote_path(local_path), quote_path(remote_path)), log_level)
+        except Exception:
+            duration_ms = int((monotonic() - start) * 1000)
+            self._record_transfer(Operation_Store, remote_path,
+                outcome=AuditOutcome.Error, size=size, duration_ms=duration_ms, error=format_exc())
+            raise
+
+        duration_ms = int((monotonic() - start) * 1000)
+        self._record_transfer(Operation_Store, remote_path, outcome=AuditOutcome.OK, size=size, duration_ms=duration_ms)
+
         return out
 
 # ################################################################################################################################

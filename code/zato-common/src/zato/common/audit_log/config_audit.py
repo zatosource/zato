@@ -200,6 +200,8 @@ def record_view_event(
     viewed_event_id:'int',
     screen:'str',
     cid:'str' = '',
+    viewed_source:'str' = '',
+    viewed_object_name:'str' = '',
     ) -> 'intnone':
     """ Writes one view-access event - who opened which event's message body
     and from which screen. This is access logging, not access control -
@@ -214,9 +216,19 @@ def record_view_event(
         'screen': screen,
     }
 
+    # Which source and object the viewed event belongs to, when the caller knows them -
+    # an auditor reads "who viewed the messages of this channel" straight off these.
+    if viewed_source:
+        attrs['viewed_source'] = viewed_source
+
+    if viewed_object_name:
+        attrs['viewed_object_name'] = viewed_object_name
+
     data = dumps({
         'viewed_event_id': viewed_event_id,
         'screen': screen,
+        'viewed_source': viewed_source,
+        'viewed_object_name': viewed_object_name,
     })
 
     insert_options = {

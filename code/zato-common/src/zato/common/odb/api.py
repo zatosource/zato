@@ -14,7 +14,8 @@ from copy import deepcopy
 from io import StringIO
 from logging import DEBUG, getLogger
 from threading import RLock
-from time import time
+from time import monotonic, time
+from traceback import format_exc
 from urllib.parse import urlencode
 
 # Bunch
@@ -32,6 +33,9 @@ from sqlalchemy.sql.type_api import TypeEngine
 # Zato
 from zato.common.api import DEPLOYMENT_STATUS, HTTP_SOAP, MS_SQL, NotGiven, SEC_DEF_TYPE, SECRET_SHADOW, \
      SERVER_UP_STATUS, UNITTEST, ZATO_NONE, ZATO_ODB_POOL_NAME
+from zato.common.audit_log.api import AuditLog, AuditOutcome
+from zato.common.audit_log.sql import all_levels as all_sql_audit_levels, record_sql_execution, Extra_Audit_Log, \
+     Level_Off as SQL_Audit_Off
 from zato.common.exception import Inactive
 from zato.common.mssql_direct import MSSQLDirectAPI, SimpleSession
 from zato.common.odb import query
@@ -41,7 +45,8 @@ from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, Depl
 from zato.common.odb.ssl_config import get_ssl_connect_args
 from zato.common.odb.testing import UnittestEngine
 from zato.common.odb.query import generic as query_generic
-from zato.common.util.api import current_host, get_component_name, get_engine_url, new_cid, parse_extra_into_dict, spawn_greenlet
+from zato.common.util.api import current_host, get_component_name, get_engine_url, new_cid, new_cid_server, \
+     parse_extra_into_dict, spawn_greenlet
 from zato.common.util.sql import ElemsWithOpaqueMaker, elems_with_opaque
 from zato.common.util.time_ import utcnow
 from zato.common.util.url_dispatcher import get_match_target
@@ -127,13 +132,19 @@ class SessionWrapper:
     """
     _Session: 'SASession'
 
-    def __init__(self) -> 'None':
+    def __init__(self, *, audit_log:'AuditLog | None'=None) -> 'None':
         self.session_initialized = False
         self.pool = None      # type: SQLConnectionPool
         self.config = {}    # type: dict
         self.is_sqlite = False # type: bool
         self.is_oracle_db = False # type: bool
         self.logger = logging.getLogger(self.__class__.__name__)
+
+        # Statement auditing - off unless the pool store attached a writer
+        # and the connection's own extra field asked for a level.
+        self.audit_log = audit_log
+        self.sql_audit_level = SQL_Audit_Off
+        self.sql_audit_endpoint = ''
 
     def init_session(self, *args, **kwargs):
         _ = spawn_greenlet(self._init_session, *args, **kwargs)
@@ -143,6 +154,13 @@ class SessionWrapper:
         self.config = config
         self.fs_sql_config = config['fs_sql_config']
         self.pool = pool
+
+        # The audit level applies only where a writer was attached - the pool store attaches one
+        # to every outgoing connection that asked for auditing, while the ODB's own wrapper
+        # never audits itself.
+        if self.audit_log:
+            self.sql_audit_level = pool.sql_audit_level
+            self.sql_audit_endpoint = '{}:{}/{}'.format(config['host'], config['port'], config['db_name'])
 
         is_ms_sql_direct = config['engine'] == MS_SQL.ZATO_DIRECT
 
@@ -160,6 +178,32 @@ class SessionWrapper:
         self.is_oracle_db = self.pool.engine and self.pool.engine.name.startswith('oracle')
 
     def execute(self, query:'str', params:'strdictnone'=None) -> 'any_':
+
+        # The common case - a connection whose statements are not audited runs them as it always did
+        if self.sql_audit_level == SQL_Audit_Off:
+            out = self._execute(query, params)
+            return out
+
+        start = monotonic()
+
+        # A failed statement is recorded too, before the caller learns about it
+        try:
+            out = self._execute(query, params)
+        except Exception:
+            duration_ms = int((monotonic() - start) * 1000)
+            _ = record_sql_execution(self.audit_log, self.config['name'], self.sql_audit_level, query,
+                cid=new_cid_server(), endpoint=self.sql_audit_endpoint, outcome=AuditOutcome.Error,
+                params=params, duration_ms=duration_ms, error=format_exc())
+            raise
+
+        duration_ms = int((monotonic() - start) * 1000)
+        _ = record_sql_execution(self.audit_log, self.config['name'], self.sql_audit_level, query,
+            cid=new_cid_server(), endpoint=self.sql_audit_endpoint, outcome=AuditOutcome.OK,
+            params=params, rows=out, duration_ms=duration_ms)
+
+        return out
+
+    def _execute(self, query:'str', params:'strdictnone'=None) -> 'any_':
 
         with closing(self.session()) as session:
             result = session.execute(query, params)
@@ -257,6 +301,9 @@ class SQLConnectionPool:
         self.engine = None
         self.engine_name:'str' = config['engine'] # self.engine.name is 'mysql' while 'self.engine_name' is mysql+pymysql
 
+        # Statement auditing is off until the connection's extra field says otherwise in init
+        self.sql_audit_level = SQL_Audit_Off
+
         self._is_oracle_db = self.engine_name.startswith('oracle')
 
         if should_init: # type: ignore
@@ -295,6 +342,17 @@ class SQLConnectionPool:
                 self.logger.error('Failed to decode hex-encoded extra parameter: %s', e)
 
         extra_parsed = parse_extra_into_dict(extra) # type: ignore
+
+        # The audit level is ours, not the driver's - it is taken out before anything
+        # reaches create_engine. An unknown level is refused outright because an audit
+        # trail that silently is not there is worse than a connection that will not start.
+        sql_audit_level = extra_parsed.pop(Extra_Audit_Log, SQL_Audit_Off)
+
+        if sql_audit_level not in all_sql_audit_levels:
+            level_names = sorted(all_sql_audit_levels)
+            raise Exception(f'Unknown SQL audit level `{sql_audit_level}` in connection `{self.name}`, must be one of `{level_names}`')
+
+        self.sql_audit_level = sql_audit_level
 
         # Snowflake turns engine URL query parameters into connect arguments,
         # so everything from the connection's extra goes onto the URL, not into create_engine.
@@ -528,8 +586,9 @@ class PoolStore:
     """ A main class for accessing all of the SQL connection pools. Each server
     thread has its own store.
     """
-    def __init__(self, sql_conn_class=SQLConnectionPool):
+    def __init__(self, sql_conn_class=SQLConnectionPool, server_name=''):
         self.sql_conn_class = sql_conn_class
+        self.server_name = server_name
         self._lock = RLock()
         self.wrappers = {}
         self.logger = getLogger(self.__class__.__name__)
@@ -572,7 +631,13 @@ class PoolStore:
             config_no_sensitive['password'] = SECRET_SHADOW
             pool = self.sql_conn_class(name, config, config_no_sensitive)
 
-            wrapper = SessionWrapper()
+            # A connection that opted into statement auditing receives a writer of its own -
+            # every other one carries none and its statements run as they always did.
+            if pool.sql_audit_level != SQL_Audit_Off:
+                wrapper = SessionWrapper(audit_log=AuditLog(self.server_name))
+            else:
+                wrapper = SessionWrapper()
+
             wrapper.init_session(name, config, pool)
 
             self.wrappers[name] = wrapper
