@@ -14,17 +14,17 @@ body:has(.message-flow-page) .pure-css-nav {
     /* The room under the top menu bar and the cluster colour strip */
     --message-flow-top-offset: 81px;
 
-    /* The dark room and its inks */
+    /* The dark room and its inks - the same family the flow tab speaks */
     --message-flow-surface: #1c1c28;
-    --message-flow-node-surface: #32324f;
+    --message-flow-canvas-surface: #262636;
+    --message-flow-canvas-surface-focus: #191926;
     --message-flow-text: #e9e9f4;
+    --message-flow-label: #d9d9ec;
     --message-flow-muted: #9d9db8;
-    --message-flow-guide: rgba(255, 255, 255, 0.45);
-    --message-flow-ok: #3fb27f;
-    --message-flow-ok-rim: #2a7a57;
-    --message-flow-error: #d64550;
-    --message-flow-error-rim: #932f37;
-    --message-flow-seed: rgb(246, 166, 5);
+    --message-flow-guide: rgba(255, 255, 255, 0.35);
+    --message-flow-rim: rgba(255, 255, 255, 0.22);
+    --message-flow-selected: rgb(246, 166, 5);
+    --message-flow-selected-text: #f6c66a;
 
     box-sizing: border-box;
     min-height: calc(100dvh - var(--message-flow-top-offset));
@@ -38,100 +38,190 @@ body:has(.message-flow-page) .pure-css-nav {
     box-sizing: border-box;
 }
 
-/* The drawing is drawn at its natural size, a window too narrow for it is scrolled */
+/* The canvas is a framed panel with a faint dot grid, so the drawing stands in
+   a room of its own rather than floating on the raw page - and with a branch
+   held, the room falls toward black the way the flow's frame does */
 
 .message-flow-canvas {
     overflow: auto;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 6px;
+    background-color: var(--message-flow-canvas-surface);
+    background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+    background-size: 22px 22px;
+    transition: background-color 0.25s;
+}
+
+.message-flow-canvas:has(.message-flow-focus) {
+    background-color: var(--message-flow-canvas-surface-focus);
 }
 
 .message-flow-canvas svg {
     display: block;
-    font-family: Tahoma, Verdana, sans-serif;
+    font-family: 'Roboto Mono', monospace;
 }
 
 /* ------------------------------------------------------------ */
 /* The drawing vocabulary                                        */
 /* ------------------------------------------------------------ */
 
-/* A step box */
+/* A node - a lit card: gradient face, a hairline of light along the top edge,
+   a shadow cast into the room */
 
-.mf-box {
-    fill: var(--message-flow-node-surface);
+.message-flow-node {
+    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5));
 }
 
-.mf-box-seed {
-    stroke: var(--message-flow-seed);
+.message-flow-node-selectable {
+    cursor: pointer;
+}
+
+.message-flow-box {
+    fill: url(#message-flow-node-fill);
+}
+
+/* The node the reader picked - amber says selection and nothing else */
+
+.message-flow-node-selected .message-flow-box {
+    stroke: var(--message-flow-selected);
     stroke-width: 1.6;
 }
 
-/* The words inside a box */
+.message-flow-rim {
+    fill: none;
+    stroke: var(--message-flow-rim);
+    stroke-width: 1;
+}
 
-.mf-title {
+/* The title band across a node's top and the hairline under it */
+
+.message-flow-band,
+.message-flow-band-square {
+    fill: rgba(0, 0, 0, 0.2);
+}
+
+.message-flow-band-line {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.1);
+    stroke-width: 1;
+}
+
+.message-flow-band-type {
+    fill: var(--message-flow-label);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+/* The words inside a node */
+
+.message-flow-title {
     fill: var(--message-flow-text);
     font-size: 11px;
     font-weight: 700;
 }
 
-.mf-sub {
+.message-flow-sub {
     fill: var(--message-flow-muted);
     font-size: 10px;
 }
 
-.mf-note {
-    fill: var(--message-flow-seed);
-    font-size: 10px;
+.message-flow-control-id {
+    fill: var(--message-flow-selected-text);
+    font-size: 11px;
     font-weight: 700;
 }
 
-/* Connectors - solid, touching what they join */
+/* A timestamp under the pointer turns amber, the way the flow's do */
 
-.mf-connector {
+.message-flow-timestamp {
+    transition: fill 0.15s;
+}
+
+.message-flow-timestamp:hover {
+    fill: var(--message-flow-selected-text);
+}
+
+/* Chips - the same tones the listing and the flow wear, lifted for a dark frame */
+
+.message-flow-chip-back {
+    fill: var(--message-flow-canvas-surface);
+}
+
+.message-flow-chip-text {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+}
+
+.message-flow-chip-id {
+    fill: rgba(246, 166, 5, 0.16);
+}
+
+.message-flow-chip-text-id {
+    fill: var(--message-flow-selected-text);
+}
+
+.message-flow-chip-in {
+    fill: rgba(111, 182, 232, 0.18);
+}
+
+.message-flow-chip-text-in {
+    fill: #6fb6e8;
+}
+
+.message-flow-chip-out {
+    fill: rgba(116, 207, 146, 0.18);
+}
+
+.message-flow-chip-text-out {
+    fill: #74cf92;
+}
+
+.message-flow-chip-good {
+    fill: rgba(116, 207, 146, 0.18);
+}
+
+.message-flow-chip-text-good {
+    fill: #74cf92;
+}
+
+.message-flow-chip-bad {
+    fill: rgba(214, 69, 80, 0.22);
+}
+
+.message-flow-chip-text-bad {
+    fill: #ff8a94;
+}
+
+.message-flow-chip-muted {
+    fill: rgba(255, 255, 255, 0.1);
+}
+
+.message-flow-chip-text-muted {
+    fill: #a8aebc;
+}
+
+/* Connectors - soft translucent guides with rounded elbows */
+
+.message-flow-connector {
     fill: none;
     stroke: var(--message-flow-guide);
     stroke-width: 2;
 }
 
-.mf-connector-arrow {
+.message-flow-connector-arrow {
     fill: var(--message-flow-guide);
 }
 
-.mf-connector-label {
-    fill: var(--message-flow-muted);
-    font-size: 10px;
+/* A branch under the pointer or held by a click stays in colour, the rest of the
+   room is drained the way the flow sets its closed lines back */
+
+.message-flow-branch {
+    cursor: pointer;
+    transition: filter 0.25s;
 }
 
-.mf-connector-seed {
-    stroke: var(--message-flow-seed);
-}
-
-.mf-connector-arrow-seed {
-    fill: var(--message-flow-seed);
-}
-
-/* Status balls - the green and red of how a step ended */
-
-.mf-ball-ok {
-    fill: var(--message-flow-ok);
-    stroke: var(--message-flow-ok-rim);
-    stroke-width: 1;
-}
-
-.mf-ball-error {
-    fill: var(--message-flow-error);
-    stroke: var(--message-flow-error-rim);
-    stroke-width: 1;
-}
-
-/* The corner squares carrying the event ids */
-
-.mf-number-frame {
-    fill: #454569;
-    stroke: rgba(255, 255, 255, 0.35);
-    stroke-width: 1;
-}
-
-.mf-number-text {
-    fill: var(--message-flow-text);
-    font-size: 9px;
-    font-weight: 700;
+svg.message-flow-focus .message-flow-branch:not(.message-flow-lit) {
+    filter: grayscale(1) brightness(0.75);
 }
