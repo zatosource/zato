@@ -21,18 +21,42 @@ var svgNamespace = 'http://www.w3.org/2000/svg';
 
 demo.config = {
 
-    // One node card and its regions
-    boxWidth: 250,
-    boxHeight: 68,
-    bandHeight: 24,
+    // One node card and its regions - the title band and, under it, one line
+    // for each half of the exchange. A node is as wide as its own words need,
+    // so the ruling measures of each script are written down here.
+    boxHeight: 74,
+    bandHeight: 22,
+    lineTop: 6,
+    lineStride: 22,
 
-    // The writing inside a node's body
-    bodyPadLeft: 14,
+    // The writing inside a node
+    bodyPadLeft: 10,
 
-    // Chips - height, side padding and how wide one character runs
+    // How wide one character runs in each of the scripts a node is written in,
+    // and the least room kept between a line's words and its timestamp
+    titleCharWidth: 6.6,
+    typeCharWidth: 6.2,
+    subCharWidth: 6,
+    lineMinGap: 18,
+
+    // Chips - height, side padding and how wide one character runs, with the
+    // direction chips sharing one width so their column lines up
     chipHeight: 16,
     chipPadX: 6,
     chipCharWidth: 6,
+    directionChipWidth: 46,
+
+    // The word each kind of line wears - what arrived on a channel, the request
+    // an outgoing connection made, and the answer either of them got
+    directionLabels: {
+        'in': 'IN',
+        'request': 'REQ',
+        'reply': 'REPLY'
+    },
+
+    // Connectors - a labelled one is long enough for its chip, a bare one is short
+    connectorLong: 190,
+    connectorShort: 84,
 
     // Connectors - the corner radius of an elbow and the arrowhead
     elbowRadius: 6,
@@ -41,7 +65,15 @@ demo.config = {
 
     // How long a left branch stays lit - long enough to walk the pointer over
     // the gap to the next one without the room flickering back to light
-    dimHoldMs: 180
+    dimHoldMs: 180,
+
+    // Dragging the canvas - how far the pointer travels before a press becomes
+    // a drag, how much of the let-go speed survives each frame, the speed at
+    // which the glide is over, and the frame the pointer's speed is scaled to
+    panDragThreshold: 4,
+    panFriction: 0.92,
+    panMinSpeed: 0.4,
+    panVelocityFrameMs: 16
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -243,13 +275,120 @@ demo.addChip = function(host, x, y, label, kind, onCanvas) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// One node - the lit card: gradient face, top rim, title band with the event id,
-// the direction and the event type, the body with the channel and the timestamp
-// and the outcome chip on the right
-demo.addNode = function(host, x, y, node) {
+// A direction chip - every in and out shares one width, so the pairs line up
+demo.addDirectionChip = function(host, x, y, label, kind) {
     var config = demo.config;
 
-    var width = config.boxWidth;
+    var width = config.directionChipWidth;
+
+    demo.addRect(host, x, y, width, config.chipHeight, 'message-flow-chip-' + kind, 3);
+    demo.addText(host, x + width / 2, y + 12, label, 'message-flow-chip-text message-flow-chip-text-' + kind, 'middle');
+
+    return width;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// One half of an exchange written on its own line - the direction, the event's
+// own id, what the event was, and when it happened, on the right
+demo.addEventLine = function(group, x, lineY, width, event) {
+    var config = demo.config;
+
+    var cursor = x + config.bodyPadLeft;
+
+    cursor += demo.addDirectionChip(group, cursor, lineY, config.directionLabels[event.direction], event.direction);
+    cursor += 6;
+    cursor += demo.addChip(group, cursor, lineY, event.id, 'id', false);
+    cursor += 8;
+
+    // A plain event type is written as a tag, an outcome is worn as a chip
+    if (event.kind === 'type') {
+        demo.addText(group, cursor, lineY + 12, event.label.toUpperCase(), 'message-flow-band-type', 'start');
+    }
+    else {
+        demo.addChip(group, cursor, lineY, event.label, event.kind, false);
+    }
+
+    demo.addText(group, x + width - config.bodyPadLeft, lineY + 12, event.time,
+        'message-flow-sub message-flow-timestamp', 'end');
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The line for the reply that never came - the same word the answered
+// exchanges wear, and the plain word that there was nothing
+demo.addMissingLine = function(group, x, lineY) {
+    var config = demo.config;
+
+    var cursor = x + config.bodyPadLeft;
+
+    cursor += demo.addDirectionChip(group, cursor, lineY, demo.config.directionLabels['reply'], 'muted');
+    cursor += 8;
+
+    demo.addText(group, cursor, lineY + 12, 'none', 'message-flow-sub', 'start');
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// How wide one node has to be for its own words - the channel across the band
+// and the longer of its two lines, each line being its chips, its label and its
+// timestamp with breathing room between them
+demo.nodeWidth = function(node) {
+    var config = demo.config;
+
+    var width = config.bodyPadLeft + 2 + Math.round(node.channel.length * config.titleCharWidth) + config.bodyPadLeft;
+
+    for (var lineIndex = 0; lineIndex < node.events.length; lineIndex++) {
+        var event = node.events[lineIndex];
+
+        if (event === null) {
+            continue;
+        }
+
+        var labelWidth;
+
+        if (event.kind === 'type') {
+            labelWidth = Math.round(event.label.length * config.typeCharWidth);
+        }
+        else {
+            labelWidth = demo.chipWidth(event.label);
+        }
+
+        var timeWidth = Math.round(event.time.length * config.subCharWidth);
+
+        var lineWidth = config.bodyPadLeft + config.directionChipWidth + 6 + demo.chipWidth(event.id) + 8 +
+            labelWidth + config.lineMinGap + timeWidth + config.bodyPadLeft;
+
+        if (lineWidth > width) {
+            width = lineWidth;
+        }
+    }
+
+    return width;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// How long the connector into a node runs - a labelled one long enough for its
+// chip to sit on it with the line showing on both sides, a bare one short
+demo.connectorLength = function(node) {
+    var config = demo.config;
+
+    if (node.connectorLabel.length > 10) {
+        return config.connectorLong;
+    }
+
+    return config.connectorShort;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// One node - the lit card for a whole exchange: gradient face, top rim, the
+// channel across the title band, and one line per half of the pair under it,
+// so the in and the out are read together, each with its own id and time
+demo.addNode = function(host, x, y, width, node) {
+    var config = demo.config;
+
     var height = config.boxHeight;
     var bandHeight = config.bandHeight;
 
@@ -265,22 +404,21 @@ demo.addNode = function(host, x, y, node) {
     // The hairline of light along the top edge
     demo.addPolyline(group, [[x + 4, y + 1], [x + width - 4, y + 1]], 'message-flow-rim');
 
-    // The band's own line - the id chip, the direction, the event type
-    var cursor = x + 10;
+    // The band carries the channel the exchange happened on
+    demo.addText(group, x + config.bodyPadLeft + 2, y + 15, node.channel, 'message-flow-title', 'start');
 
-    cursor += demo.addChip(group, cursor, y + 4, node.id, 'id', false);
-    cursor += 6;
-    cursor += demo.addChip(group, cursor, y + 4, node.direction.toUpperCase(), node.direction, false);
-    cursor += 8;
+    // The two halves of the pair, each on its own line
+    for (var lineIndex = 0; lineIndex < node.events.length; lineIndex++) {
+        var event = node.events[lineIndex];
+        var lineY = y + bandHeight + config.lineTop + lineIndex * config.lineStride;
 
-    demo.addText(group, cursor, y + 16, node.eventType.toUpperCase(), 'message-flow-band-type', 'start');
-
-    // The body - the channel, the timestamp, the outcome chip
-    demo.addText(group, x + config.bodyPadLeft, y + bandHeight + 20, node.channel, 'message-flow-title', 'start');
-    demo.addText(group, x + config.bodyPadLeft, y + bandHeight + 36, node.time, 'message-flow-sub message-flow-timestamp', 'start');
-
-    var outcomeWidth = demo.chipWidth(node.outcome);
-    demo.addChip(group, x + width - 10 - outcomeWidth, y + bandHeight + 14, node.outcome, node.outcomeKind, false);
+        if (event === null) {
+            demo.addMissingLine(group, x, lineY);
+        }
+        else {
+            demo.addEventLine(group, x, lineY, width, event);
+        }
+    }
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -297,38 +435,63 @@ demo.render = function() {
     var rowGap = 30;
     var marginTop = 28;
 
-    // Each exchange wears the id of the arrival that started it
+    // Each node is a whole exchange - the pair of the event that came in and the
+    // one that went out answering it, each with its own id and its own time, and
+    // a half that never happened saying so
     var rows = [
         [
-            {id: '8272', direction: 'in', eventType: 'message-received', channel: 'demo.hl7.adt.main',
-                time: '2 days ago \u00b7 16:55:37.962', outcome: 'ACK AE', outcomeKind: 'bad',
-                connectorLabel: ''}
+            {channel: 'demo.hl7.adt.main', connectorLabel: '', events: [
+                {direction: 'in', id: '8272', kind: 'type', label: 'message-received', time: '2 days ago \u00b7 16:55:37.962'},
+                {direction: 'reply', id: '8273', kind: 'bad', label: 'ACK AE', time: '2 days ago \u00b7 16:55:38.171'}
+            ]}
         ],
         [
-            {id: '4594', direction: 'in', eventType: 'message-received', channel: 'demo.hl7.oru.lab',
-                time: 'Yesterday \u00b7 20:00:11.156', outcome: 'ACK AE', outcomeKind: 'bad',
-                connectorLabel: ''},
-            {id: '9198', direction: 'in', eventType: 'message-received', channel: 'demo.hl7.adt.main',
-                time: 'Today \u00b7 00:47:32.525', outcome: 'ACK AA', outcomeKind: 'good',
-                connectorLabel: 'Reprocessed \u00b7 +4h 47m 21s'},
-            {id: '9199', direction: 'out', eventType: 'sent', channel: 'demo.hl7.forward',
-                time: 'Today \u00b7 00:47:32.546', outcome: 'OK', outcomeKind: 'good',
-                connectorLabel: '+0.021s'}
+            {channel: 'demo.hl7.oru.lab', connectorLabel: '', events: [
+                {direction: 'in', id: '4594', kind: 'type', label: 'message-received', time: 'Yesterday \u00b7 20:00:11.156'},
+                {direction: 'reply', id: '4595', kind: 'bad', label: 'ACK AE', time: 'Yesterday \u00b7 20:00:11.157'}
+            ]},
+            {channel: 'demo.hl7.oru.lab', connectorLabel: 'Reprocessed \u00b7 +4h 47m 21s', events: [
+                {direction: 'in', id: '9198', kind: 'type', label: 'message-received', time: 'Today \u00b7 00:47:32.525'},
+                {direction: 'reply', id: '9200', kind: 'good', label: 'ACK AA', time: 'Today \u00b7 00:47:32.526'}
+            ]},
+            {channel: 'demo.hl7.forward', connectorLabel: '+0.021s', events: [
+                {direction: 'request', id: '9199', kind: 'type', label: 'sent', time: 'Today \u00b7 00:47:32.546'},
+                null
+            ]}
         ],
         [
-            {id: '9194', direction: 'in', eventType: 'message-received', channel: 'demo.hl7.adt.main',
-                time: 'Yesterday \u00b7 20:00:14.421', outcome: 'ACK AA', outcomeKind: 'good',
-                connectorLabel: ''}
+            {channel: 'demo.hl7.adt.main', connectorLabel: '', events: [
+                {direction: 'in', id: '9194', kind: 'type', label: 'message-received', time: 'Yesterday \u00b7 20:00:14.421'},
+                {direction: 'reply', id: '9195', kind: 'good', label: 'ACK AA', time: 'Yesterday \u00b7 20:00:14.421'}
+            ]}
         ]
     ];
 
-    // A labelled connector is long enough for its chip, a bare one stays short
-    var longConnector = 190;
-    var shortConnector = 84;
-
     var rowStride = config.boxHeight + rowGap;
     var height = marginTop + rows.length * rowStride - rowGap + 28;
-    var width = fanX + config.boxWidth + longConnector + config.boxWidth + shortConnector + config.boxWidth + 28;
+
+    // Every node is as wide as its own words, so the drawing's width is the
+    // longest row's - each row being its nodes and the connectors between them
+    var width = 0;
+
+    for (var measureIndex = 0; measureIndex < rows.length; measureIndex++) {
+        var measuredRow = rows[measureIndex];
+        var rowWidth = fanX;
+
+        for (var measureBoxIndex = 0; measureBoxIndex < measuredRow.length; measureBoxIndex++) {
+            if (measureBoxIndex > 0) {
+                rowWidth += demo.connectorLength(measuredRow[measureBoxIndex]);
+            }
+
+            rowWidth += demo.nodeWidth(measuredRow[measureBoxIndex]);
+        }
+
+        if (rowWidth > width) {
+            width = rowWidth;
+        }
+    }
+
+    width += 28;
 
     var svg = demo.newSVG('message-flow-canvas', width, height);
 
@@ -365,11 +528,7 @@ demo.render = function() {
             // From the second station on, the connector to it carries the words
             // of how the message got there, worn as a chip on the line
             if (boxIndex > 0) {
-                var connectorLength = shortConnector;
-
-                if (node.connectorLabel.length > 10) {
-                    connectorLength = longConnector;
-                }
+                var connectorLength = demo.connectorLength(node);
 
                 demo.addPolyline(branch, [[x, centerY], [x + connectorLength, centerY]], 'message-flow-connector');
                 demo.addArrow(branch, x + connectorLength, centerY, 'message-flow-connector-arrow');
@@ -382,13 +541,15 @@ demo.render = function() {
                 x += connectorLength;
             }
 
-            demo.addNode(branch, x, y, node);
-            x += config.boxWidth;
+            var nodeWidth = demo.nodeWidth(node);
+
+            demo.addNode(branch, x, y, nodeWidth, node);
+            x += nodeWidth;
         }
     }
 
     // The message itself, standing before all of its deliveries
-    var hub = demo.addGroup(svg, 'message-flow-node message-flow-node-selectable');
+    var hub = demo.addGroup(svg, 'message-flow-node message-flow-node-selectable message-flow-root');
     var hubTop = hubCenterY - hubHeight / 2;
 
     demo.addRect(hub, hubX, hubTop, hubWidth, hubHeight, 'message-flow-box', 4);
@@ -397,6 +558,147 @@ demo.render = function() {
     demo.addText(hub, hubX + hubWidth / 2, hubCenterY + 14, 'FEED-00000020', 'message-flow-control-id', 'middle');
 
     demo.wireDrawing(svg);
+    demo.wirePanning(document.getElementById('message-flow-canvas'));
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The canvas is walked by grabbing it - a press and a pull scroll it directly,
+// and letting go mid-motion sends it gliding on, friction bleeding the speed
+// off frame by frame until it settles
+demo.wirePanning = function(host) {
+    var config = demo.config;
+
+    var isPressed = false;
+    var hasDragged = false;
+
+    var startPointerX = 0;
+    var startPointerY = 0;
+    var startScrollLeft = 0;
+    var startScrollTop = 0;
+
+    var lastPointerX = 0;
+    var lastPointerY = 0;
+    var lastMoveTime = 0;
+
+    var velocityX = 0;
+    var velocityY = 0;
+    var glideFrame = null;
+
+    var stopGlide = function() {
+        if (glideFrame !== null) {
+            window.cancelAnimationFrame(glideFrame);
+            glideFrame = null;
+        }
+    };
+
+    var glideStep = function() {
+        host.scrollLeft -= velocityX;
+        host.scrollTop -= velocityY;
+
+        // Friction takes its share of the speed every frame
+        velocityX *= config.panFriction;
+        velocityY *= config.panFriction;
+
+        var speed = Math.sqrt(velocityX * velocityX + velocityY * velocityY);
+
+        // Slow enough is stopped - anything further would be invisible anyway
+        if (speed < config.panMinSpeed) {
+            glideFrame = null;
+            return;
+        }
+
+        glideFrame = window.requestAnimationFrame(glideStep);
+    };
+
+    host.addEventListener('mousedown', function(event) {
+
+        // Only the main button grabs the canvas
+        if (event.button !== 0) {
+            return;
+        }
+
+        // A new grab takes over from any glide still running
+        stopGlide();
+
+        isPressed = true;
+        hasDragged = false;
+
+        startPointerX = event.clientX;
+        startPointerY = event.clientY;
+        startScrollLeft = host.scrollLeft;
+        startScrollTop = host.scrollTop;
+
+        lastPointerX = event.clientX;
+        lastPointerY = event.clientY;
+        lastMoveTime = window.performance.now();
+
+        velocityX = 0;
+        velocityY = 0;
+
+        // The press must not start selecting the drawing's text
+        event.preventDefault();
+    });
+
+    window.addEventListener('mousemove', function(event) {
+        if (!isPressed) {
+            return;
+        }
+
+        var deltaX = event.clientX - startPointerX;
+        var deltaY = event.clientY - startPointerY;
+
+        // A press only becomes a drag once the pointer has really travelled,
+        // so plain clicks on nodes stay clicks
+        if (!hasDragged) {
+            if (Math.abs(deltaX) < config.panDragThreshold && Math.abs(deltaY) < config.panDragThreshold) {
+                return;
+            }
+
+            hasDragged = true;
+            host.classList.add('message-flow-panning');
+        }
+
+        host.scrollLeft = startScrollLeft - deltaX;
+        host.scrollTop = startScrollTop - deltaY;
+
+        // The pointer's speed right now, scaled to one frame - what the glide
+        // will start from if the grab ends here
+        var now = window.performance.now();
+        var elapsed = now - lastMoveTime;
+
+        if (elapsed > 0) {
+            velocityX = (event.clientX - lastPointerX) / elapsed * config.panVelocityFrameMs;
+            velocityY = (event.clientY - lastPointerY) / elapsed * config.panVelocityFrameMs;
+        }
+
+        lastPointerX = event.clientX;
+        lastPointerY = event.clientY;
+        lastMoveTime = now;
+    });
+
+    window.addEventListener('mouseup', function() {
+        if (!isPressed) {
+            return;
+        }
+
+        isPressed = false;
+        host.classList.remove('message-flow-panning');
+
+        // The pull's parting speed carries the canvas on
+        if (hasDragged) {
+            glideFrame = window.requestAnimationFrame(glideStep);
+        }
+    });
+
+    // A drag must not land as a click on whatever node it happened to end over
+    host.addEventListener('click', function(event) {
+        if (hasDragged) {
+            event.stopPropagation();
+            event.preventDefault();
+            hasDragged = false;
+        }
+    }, true);
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -438,6 +740,18 @@ demo.wireDrawing = function(svg) {
         svg.classList.add('message-flow-focus');
     };
 
+    // The root belongs to every branch, so under it they all stay lit and only
+    // the room around the drawing falls dark
+    var setLitAll = function() {
+        cancelUnlit();
+
+        for (var branchIndex = 0; branchIndex < branches.length; branchIndex++) {
+            branches[branchIndex].classList.add('message-flow-lit');
+        }
+
+        svg.classList.add('message-flow-focus');
+    };
+
     var scheduleUnlit = function() {
         cancelUnlit();
         unlitTimer = window.setTimeout(clearLit, demo.config.dimHoldMs);
@@ -470,6 +784,21 @@ demo.wireDrawing = function(svg) {
         wireBranch(branches[branchIndex]);
     }
 
+    // The root lights the whole drawing the way a branch lights itself
+    var root = svg.querySelector('.message-flow-root');
+
+    root.addEventListener('mouseenter', function() {
+        if (demo.selectedNode === null) {
+            setLitAll();
+        }
+    });
+
+    root.addEventListener('mouseleave', function() {
+        if (demo.selectedNode === null) {
+            scheduleUnlit();
+        }
+    });
+
     for (var nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
 
         var wireNode = function(node) {
@@ -489,15 +818,15 @@ demo.wireDrawing = function(svg) {
                 demo.selectedNode = node;
                 node.classList.add('message-flow-node-selected');
 
-                // The picked node's whole branch stays lit around it - the root
-                // stands outside every branch and dims nothing when picked
+                // The picked node's whole branch stays lit around it, and the
+                // root, standing outside every branch, keeps them all lit
                 var branch = node.closest('.message-flow-branch');
 
                 if (branch !== null) {
                     setLit(branch);
                 }
                 else {
-                    clearLit();
+                    setLitAll();
                 }
             });
         };

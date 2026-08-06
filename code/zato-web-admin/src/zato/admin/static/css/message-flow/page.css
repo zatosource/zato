@@ -26,9 +26,12 @@ body:has(.message-flow-page) .pure-css-nav {
     --message-flow-selected: rgb(246, 166, 5);
     --message-flow-selected-text: #f6c66a;
 
+    /* The room above and below the canvas - the same measure on both sides */
+    --message-flow-page-pad: 18px;
+
     box-sizing: border-box;
     min-height: calc(100dvh - var(--message-flow-top-offset));
-    padding: 18px 22px 26px;
+    padding: var(--message-flow-page-pad) 22px;
     background: var(--message-flow-surface);
     color: var(--message-flow-text);
     font-family: 'Roboto Mono', monospace;
@@ -44,12 +47,25 @@ body:has(.message-flow-page) .pure-css-nav {
 
 .message-flow-canvas {
     overflow: auto;
+    height: calc(100dvh - var(--message-flow-top-offset) - 2 * var(--message-flow-page-pad));
     border: 1px solid rgba(255, 255, 255, 0.16);
     border-radius: 6px;
     background-color: var(--message-flow-canvas-surface);
     background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
     background-size: 22px 22px;
     transition: background-color 0.25s;
+
+    /* The canvas is walked by dragging it, so it keeps no scrollbars */
+    scrollbar-width: none;
+    cursor: grab;
+}
+
+.message-flow-canvas::-webkit-scrollbar {
+    display: none;
+}
+
+.message-flow-canvas.message-flow-panning {
+    cursor: grabbing;
 }
 
 .message-flow-canvas:has(.message-flow-focus) {
@@ -170,12 +186,24 @@ body:has(.message-flow-page) .pure-css-nav {
     fill: #6fb6e8;
 }
 
-.message-flow-chip-out {
+/* The request an outgoing connection made */
+
+.message-flow-chip-request {
     fill: rgba(116, 207, 146, 0.18);
 }
 
-.message-flow-chip-text-out {
+.message-flow-chip-text-request {
     fill: #74cf92;
+}
+
+/* The answer to a message wears one word whichever way it travelled */
+
+.message-flow-chip-reply {
+    fill: rgba(157, 157, 184, 0.18);
+}
+
+.message-flow-chip-text-reply {
+    fill: #b9b9d4;
 }
 
 .message-flow-chip-good {
