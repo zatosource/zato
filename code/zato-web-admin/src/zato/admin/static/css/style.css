@@ -519,8 +519,12 @@ div.prompt form {
 /* The standard link face - also available as .zato-link-face for a span
    inside a larger anchor, when only part of the anchor's text is meant
    to carry the link look. A dashboard action badge that happens to be a
-   link keeps the badge's own face instead, so it is left out here. */
-a:not(.menu-link):not(.dashboard-panel-action-badge),
+   link keeps the badge's own face instead, so it is left out here. The
+   exclusions live in :where(), which weighs nothing, so this face always
+   sits at the bottom of the cascade and anything more specific - a table
+   header's own link rule, a badge's - wins by mere existence, never by
+   out-shooting it. */
+a:where(:not(.menu-link, .dashboard-panel-action-badge)),
 .zato-link-face {
     color: rgb(17, 17, 17);
     font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -539,8 +543,8 @@ a:not(.menu-link):not(.dashboard-panel-action-badge),
     padding-bottom: 2px;
 }
 
-a:not(.menu-link):not(.chosen-single):not(.status-badge):not(.dashboard-panel-action-badge):hover,
-a:not(.menu-link):hover .zato-link-face {
+a:where(:not(.menu-link):not(.chosen-single):not(.status-badge, .dashboard-panel-action-badge)):hover,
+a:where(:not(.menu-link)):hover .zato-link-face {
     color: var(--zato-link-hover) !important;
     background-color: transparent;
     text-decoration: none;
