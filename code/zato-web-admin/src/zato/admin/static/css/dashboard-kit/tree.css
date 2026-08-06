@@ -1,0 +1,78 @@
+/* ------------------------------------------------------------ */
+/* Dashboard kit - tree connectors                                */
+/* ------------------------------------------------------------ */
+
+/* Classic tree connectors for any nested list - each item gets an elbow: a vertical guide
+   running down the parent's edge and a horizontal stub from that guide to the item's own
+   row, with the last child stopping its guide at its own stub, closing the branch. The
+   geometry and the colour are variables, so a light page and a dark frame each draw the
+   same tree in their own ink:
+
+   --kit-tree-guide         the colour of the guides and the stubs
+   --kit-tree-inset         how far the guides stand in from the container's left edge
+   --kit-tree-child-indent  how much deeper each level starts
+   --kit-tree-stub-width    how far a stub reaches from the guide towards its row
+   --kit-tree-stub-top      where a stub crosses its row, the row's vertical centre */
+
+.kit-tree {
+    --kit-tree-guide: #cccccc;
+    --kit-tree-inset: 9px;
+    --kit-tree-child-indent: 15px;
+    --kit-tree-stub-width: 17px;
+    --kit-tree-stub-top: 12px;
+}
+
+.kit-tree,
+.kit-tree-children {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.kit-tree {
+    padding-left: var(--kit-tree-inset);
+}
+
+.kit-tree-children {
+    margin-left: var(--kit-tree-child-indent);
+    padding-left: var(--kit-tree-inset);
+}
+
+.kit-tree > .kit-tree-item,
+.kit-tree-children > .kit-tree-item {
+    position: relative;
+}
+
+/* The horizontal stub, at the vertical center of the row */
+
+.kit-tree > .kit-tree-item::before,
+.kit-tree-children > .kit-tree-item::before {
+    content: '';
+    position: absolute;
+    left: calc(0px - var(--kit-tree-inset));
+    top: var(--kit-tree-stub-top);
+    width: var(--kit-tree-stub-width);
+    height: 1px;
+    background: var(--kit-tree-guide);
+}
+
+/* The vertical guide, spanning the whole item .. */
+
+.kit-tree > .kit-tree-item::after,
+.kit-tree-children > .kit-tree-item::after {
+    content: '';
+    position: absolute;
+    left: calc(0px - var(--kit-tree-inset));
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--kit-tree-guide);
+}
+
+/* .. except on the last child, where it ends at the stub */
+
+.kit-tree > .kit-tree-item:last-child::after,
+.kit-tree-children > .kit-tree-item:last-child::after {
+    bottom: auto;
+    height: var(--kit-tree-stub-top);
+}

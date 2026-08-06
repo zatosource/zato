@@ -30,11 +30,13 @@ from zato.common.audit_log.api import event_link_table, event_table
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, intlist, intstrdict
+    from zato.common.typing_ import any_, anylist, intdict, intlist, intstrdict, strintdict
     any_ = any_
     anylist = anylist
+    intdict = intdict
     intlist = intlist
     intstrdict = intstrdict
+    strintdict = strintdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,10 +62,13 @@ Max_Flow_Rounds = 4
 
 @dataclass(init=False)
 class FlowIds:
-    """ The events of one flow - which they are and why each of them is in it, plus whether the
-    widening was stopped before it ran out of events to find.
+    """ The events of one flow - which they are, why each of them is in it, which held event each
+    of them was found through, plus whether the widening was stopped before it ran out of events
+    to find. An event found by sharing a cid or a message id has no via - those relations name no
+    one event in particular.
     """
     relation_by_id: 'intstrdict' = field(default_factory=dict)
+    via_by_id: 'intdict' = field(default_factory=dict)
     is_truncated: bool = False
 
 # ################################################################################################################################
@@ -71,6 +76,7 @@ class FlowIds:
 def _new_flow_ids() -> 'FlowIds':
     out = FlowIds()
     out.relation_by_id = {}
+    out.via_by_id = {}
     out.is_truncated = False
 
     return out
@@ -80,12 +86,16 @@ def _new_flow_ids() -> 'FlowIds':
 
 @dataclass(init=False)
 class _Frontier:
-    """ What the events of one round are known by, which is what the next round widens on.
+    """ What the events of one round are known by, which is what the next round widens on, and the
+    id of the held event behind each cid and each named origin, so whatever a cid leads to can be
+    traced back to the event it was found through.
     """
     cids: 'anylist' = field(default_factory=list)
     correl_ids: 'anylist' = field(default_factory=list)
     msg_id_pairs: 'anylist' = field(default_factory=list)
     ids: 'intlist' = field(default_factory=list)
+    id_by_cid: 'strintdict' = field(default_factory=dict)
+    id_by_correl_id: 'strintdict' = field(default_factory=dict)
 
 # ################################################################################################################################
 
@@ -98,8 +108,11 @@ def _read_frontier(connection:'any_', ids:'intlist') -> '_Frontier':
     out.correl_ids = []
     out.msg_id_pairs = []
     out.ids = ids
+    out.id_by_cid = {}
+    out.id_by_correl_id = {}
 
     statement = select(
+        event_table.c.id,
         event_table.c.cid,
         event_table.c.correl_id,
         event_table.c.msg_id,
@@ -109,14 +122,16 @@ def _read_frontier(connection:'any_', ids:'intlist') -> '_Frontier':
 
     result = connection.execute(statement)
 
-    for cid, correl_id, msg_id, source in result:
+    for event_id, cid, correl_id, msg_id, source in result:
 
         if cid:
             out.cids.append(cid)
+            out.id_by_cid[cid] = event_id
 
         # An event naming an origin is a resubmission, and the cid it names is the original's own
         if correl_id:
             out.correl_ids.append(correl_id)
+            out.id_by_correl_id[correl_id] = event_id
 
         # A message id is only a pair with the source that issued it - two sources may well
         # number their messages the same way
@@ -139,9 +154,10 @@ def _select_same_cid(frontier:'_Frontier') -> 'any_':
 
 def _select_resubmits_of_held(frontier:'_Frontier') -> 'any_':
     """ The resubmissions born from the events already held - each of them names one of their cids
-    as the cid of the message it is sending out again.
+    as the cid of the message it is sending out again. The named cid rides along so each found
+    resubmission can be traced back to the held event it was born from.
     """
-    statement = select(event_table.c.id)
+    statement = select(event_table.c.id, event_table.c.correl_id)
     statement = statement.where(event_table.c.correl_id.in_(frontier.cids))
 
     return statement
@@ -150,9 +166,10 @@ def _select_resubmits_of_held(frontier:'_Frontier') -> 'any_':
 
 def _select_origins_of_held(frontier:'_Frontier') -> 'any_':
     """ The other end of the same arrow - the original messages that the events already held were
-    born from, found by the cid each of those events names as its origin.
+    born from, found by the cid each of those events names as its origin. The cid rides along so
+    each found original can be traced back to the resubmission that named it.
     """
-    statement = select(event_table.c.id)
+    statement = select(event_table.c.id, event_table.c.cid)
     statement = statement.where(event_table.c.cid.in_(frontier.correl_ids))
 
     return statement
@@ -179,12 +196,14 @@ def _select_same_msg_id(frontier:'_Frontier') -> 'any_':
 
 # ################################################################################################################################
 
-def _add_found(flow_ids:'FlowIds', found:'intlist', relation:'str', new_ids:'intlist') -> 'None':
-    """ Records the events one widening step found. The first relation an event is found under is
-    the one it keeps - a batch item that also shares the seed's cid is read as the batch item it is,
-    because the steps run from the closest relation outwards.
+def _add_found(flow_ids:'FlowIds', found:'anylist', relation:'str', new_ids:'intlist') -> 'None':
+    """ Records the events one widening step found, each a pair of the event's own id and the id of
+    the held event it was found through, zero when the relation names no one event in particular.
+    The first relation an event is found under is the one it keeps - a batch item that also shares
+    the seed's cid is read as the batch item it is, because the steps run from the closest relation
+    outwards - and the via it keeps is the one recorded alongside that first relation.
     """
-    for event_id in found:
+    for event_id, via_id in found:
 
         if event_id in flow_ids.relation_by_id:
             continue
@@ -197,16 +216,35 @@ def _add_found(flow_ids:'FlowIds', found:'intlist', relation:'str', new_ids:'int
         flow_ids.relation_by_id[event_id] = relation
         new_ids.append(event_id)
 
+        if via_id:
+            flow_ids.via_by_id[event_id] = via_id
+
 # ################################################################################################################################
 
 def _run_step(connection:'any_', statement:'any_', flow_ids:'FlowIds', relation:'str', new_ids:'intlist') -> 'None':
-    """ One widening step - runs its select and records whatever of it is not in the flow yet.
+    """ One widening step whose relation is shared rather than pointed - runs its select and records
+    whatever of it is not in the flow yet, with no via for any of it.
     """
     result = connection.execute(statement)
-    found:'intlist' = []
+    found:'anylist' = []
 
     for db_row in result:
-        found.append(db_row[0])
+        found.append((db_row[0], 0))
+
+    _add_found(flow_ids, found, relation, new_ids)
+
+# ################################################################################################################################
+
+def _run_via_step(connection:'any_', statement:'any_', via_by_key:'strintdict', flow_ids:'FlowIds', relation:'str', new_ids:'intlist') -> 'None':
+    """ One widening step whose relation points at one held event - the select returns each found
+    event together with the cid that led to it, and the map turns that cid back into the id of the
+    held event it belongs to.
+    """
+    result = connection.execute(statement)
+    found:'anylist' = []
+
+    for event_id, key in result:
+        found.append((event_id, via_by_key[key]))
 
     _add_found(flow_ids, found, relation, new_ids)
 
@@ -214,17 +252,30 @@ def _run_step(connection:'any_', statement:'any_', flow_ids:'FlowIds', relation:
 
 def _widen_by_links(connection:'any_', frontier:'_Frontier', flow_ids:'FlowIds', new_ids:'intlist') -> 'None':
     """ The lineage of the events already held, read both ways - what they came out of and what came
-    out of them, which is batch membership on one side and resubmission on the other.
+    out of them, which is batch membership on one side and resubmission on the other. Either way the
+    held end of the link is the via of the event the link finds.
     """
-    parents_statement = select(event_link_table.c.parent_event_id)
+    parents_statement = select(event_link_table.c.parent_event_id, event_link_table.c.child_event_id)
     parents_statement = parents_statement.where(event_link_table.c.child_event_id.in_(frontier.ids))
 
-    _run_step(connection, parents_statement, flow_ids, Relation_Parent, new_ids)
+    result = connection.execute(parents_statement)
+    found:'anylist' = []
 
-    children_statement = select(event_link_table.c.child_event_id)
+    for parent_event_id, child_event_id in result:
+        found.append((parent_event_id, child_event_id))
+
+    _add_found(flow_ids, found, Relation_Parent, new_ids)
+
+    children_statement = select(event_link_table.c.child_event_id, event_link_table.c.parent_event_id)
     children_statement = children_statement.where(event_link_table.c.parent_event_id.in_(frontier.ids))
 
-    _run_step(connection, children_statement, flow_ids, Relation_Child, new_ids)
+    result = connection.execute(children_statement)
+    found = []
+
+    for child_event_id, parent_event_id in result:
+        found.append((child_event_id, parent_event_id))
+
+    _add_found(flow_ids, found, Relation_Child, new_ids)
 
 # ################################################################################################################################
 
@@ -257,12 +308,12 @@ def get_flow_ids(connection:'any_', seed_id:'int') -> 'FlowIds':
         _widen_by_links(connection, frontier, out, new_ids)
 
         # .. then the resubmission arrow, which is a cid named rather than shared, read from
-        # each of its two ends ..
+        # each of its two ends, either end tracing back to the held event at the other ..
         if frontier.cids:
-            _run_step(connection, _select_resubmits_of_held(frontier), out, Relation_Resubmit_Of, new_ids)
+            _run_via_step(connection, _select_resubmits_of_held(frontier), frontier.id_by_cid, out, Relation_Resubmit_Of, new_ids)
 
         if frontier.correl_ids:
-            _run_step(connection, _select_origins_of_held(frontier), out, Relation_Resubmitted_As, new_ids)
+            _run_via_step(connection, _select_origins_of_held(frontier), frontier.id_by_correl_id, out, Relation_Resubmitted_As, new_ids)
 
         # .. and last the pairing by message id, which is the only one of the four that says
         # nothing about who wrote either event down.

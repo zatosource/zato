@@ -125,6 +125,19 @@
     --audit-log-show-all-fill-hover: rgba(255, 255, 255, 0.13);
     --audit-log-flow-open-shadow-up: 0 -14px 30px rgba(0, 0, 0, 0.55);
     --audit-log-flow-open-shadow-down: 0 18px 36px rgba(0, 0, 0, 0.6);
+
+    /* The elbows joining an indented line of the thread to the line it was found through -
+       a quiet grey that reads on the navy without competing with the text */
+    --audit-log-flow-tree-guide: rgba(255, 255, 255, 0.22);
+
+    /* How much deeper each level of the thread starts, in the guides' inset and the item
+       indent together, and the narrower step a narrow pane falls back to before anything
+       else is given up */
+    --audit-log-flow-tree-inset: 9px;
+    --audit-log-flow-tree-indent: 15px;
+    --audit-log-flow-tree-inset-narrow: 5px;
+    --audit-log-flow-tree-indent-narrow: 7px;
+    --audit-log-flow-tree-stub-narrow: 11px;
 }
 
 /* ------------------------------------------------------------ */
@@ -563,6 +576,15 @@
 
     /* The room going dark and lighting back up is part of the same movement as the card */
     transition: background 0.2s;
+
+    /* The thread's elbows in the frame's own ink and geometry - the flow has no kit-tree
+       root of its own, the roots standing flush, so the variables the nested containers
+       read are set here. The stub crosses a line at its vertical centre. */
+    --kit-tree-guide: var(--audit-log-flow-tree-guide);
+    --kit-tree-inset: var(--audit-log-flow-tree-inset);
+    --kit-tree-child-indent: var(--audit-log-flow-tree-indent);
+    --kit-tree-stub-width: 17px;
+    --kit-tree-stub-top: 14px;
 }
 
 /* Nothing in the flow's actions is pushed away from what it acts on - the actions of a line
@@ -618,16 +640,16 @@
     background: var(--audit-log-flow-backdrop-surface);
 }
 
-.audit-log-flow.detail-dimmed > .detail-log-line {
+.audit-log-flow.detail-dimmed .detail-log-line {
     opacity: 1;
     filter: var(--audit-log-flow-backdrop-filter);
 }
 
-.audit-log-flow.detail-dimmed > .detail-log-line:hover {
+.audit-log-flow.detail-dimmed .detail-log-line:hover {
     filter: none;
 }
 
-.audit-log-flow.detail-dimmed > .detail-log-line[aria-expanded="true"] {
+.audit-log-flow.detail-dimmed .detail-log-line[aria-expanded="true"] {
     filter: none;
 }
 
@@ -694,8 +716,7 @@
 }
 
 .audit-log-flow-source,
-.audit-log-flow-event,
-.audit-log-flow-relation {
+.audit-log-flow-event {
     margin-right: 12px;
     font-size: 10px;
     font-weight: 700;
@@ -716,13 +737,6 @@
 .audit-log-flow-headline {
     margin-right: 12px;
     font-weight: 700;
-}
-
-.audit-log-flow-relation {
-    padding: 1px 5px;
-    border-radius: 3px;
-    color: var(--dashboard-flow-accent);
-    background: var(--dashboard-flow-accent-tint-tag);
 }
 
 /* ------------------------------------------------------------ */
@@ -848,7 +862,19 @@
 }
 
 /* A pane dragged narrow keeps what tells one line of the flow from another and drops the
-   rest, in the order the rest is least missed in */
+   rest, in the order the rest is least missed in - the thread's indent is the first thing
+   to shrink, before any part of a line is given up */
+
+@container audit-log-flow (max-width: 700px) {
+
+    /* The flow is the container itself, which a container query cannot reach, so the
+       narrower step is set on the nested containers the variables are read by */
+    .audit-log-flow .kit-tree-children {
+        --kit-tree-inset: var(--audit-log-flow-tree-inset-narrow);
+        --kit-tree-child-indent: var(--audit-log-flow-tree-indent-narrow);
+        --kit-tree-stub-width: var(--audit-log-flow-tree-stub-narrow);
+    }
+}
 
 @container audit-log-flow (max-width: 620px) {
 
