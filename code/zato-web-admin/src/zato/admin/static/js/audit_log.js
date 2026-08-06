@@ -15,6 +15,8 @@ $.fn.zato.audit_log.config = {
     pageSize: 25,
     detailsURL: '/zato/audit-log/details/',
     resubmitURL: '/zato/audit-log/resubmit/',
+    attachmentsURL: '/zato/audit-log/attachments/',
+    attachmentDownloadURL: '/zato/audit-log/attachment/',
 
     // Where one event's whole flow is read from, assigned in init
     flowURL: '',

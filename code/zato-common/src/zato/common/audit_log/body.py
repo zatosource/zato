@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from sqlalchemy import select
 
 # Zato
-from zato.common.audit_log.common import event_body_table
+from zato.common.audit_log.common import event_body_table, AuditBody
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -58,6 +58,11 @@ def resolve_body(engine:'Engine', source:'str', event_id:'int', kind:'str' = '')
 
     if kind:
         query = query.where(event_body_table.c.kind == kind)
+
+    # An empty kind means the newest message body - never an attachment,
+    # which would otherwise shadow the message the details view shows
+    else:
+        query = query.where(event_body_table.c.kind != AuditBody.Attachment)
 
     newest_first = event_body_table.c.id.desc()
     query = query.order_by(newest_first)

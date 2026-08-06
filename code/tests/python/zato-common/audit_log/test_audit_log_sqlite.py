@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 
 # Zato
+from attachments import run_attachment_scenario
 from common import audit_log_env, run_audit_log_scenario
 from config_audit import run_config_audit_scenario
 from resubmit_core import run_resubmit_core_scenario
@@ -36,6 +37,7 @@ def test_audit_log_sqlite(tmp_path:'os.PathLike') -> 'None':
         run_retention_tiers_scenario()
         run_resubmit_core_scenario()
         run_config_audit_scenario()
+        run_attachment_scenario()
 
     # The database file was created under the path the environment pointed at
     assert os.path.exists(db_path)

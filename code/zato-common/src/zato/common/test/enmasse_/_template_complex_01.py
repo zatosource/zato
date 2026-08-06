@@ -760,6 +760,13 @@ email_smtp:
     username: enmasse@example.com
     password: Zato_Enmasse_Env.SMTPPassword
 
+  - name: enmasse.email.smtp.2
+    host: smtp2.example.com
+    port: 465
+    username: enmasse2@example.com
+    password: Zato_Enmasse_Env.SMTPPassword
+    is_audit_log_active: false
+
 jira:
 
   - name: enmasse.jira.1

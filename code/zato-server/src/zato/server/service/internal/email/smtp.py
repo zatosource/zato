@@ -45,8 +45,10 @@ get_list_docs = 'SMTP connections'
 broker_message = EMAIL
 broker_message_prefix = 'SMTP_'
 list_func = email_smtp_list
-create_edit_input_optional_extra = [Boolean('needs_tls_verify'), 'ca_certs_path', 'helo_hostname', 'from_address']
-output_optional_extra = [Boolean('needs_tls_verify'), 'ca_certs_path', 'helo_hostname', 'from_address']
+create_edit_input_optional_extra = [Boolean('needs_tls_verify'), 'ca_certs_path', 'helo_hostname', 'from_address',
+    Boolean('is_audit_log_active')]
+output_optional_extra = [Boolean('needs_tls_verify'), 'ca_certs_path', 'helo_hostname', 'from_address',
+    Boolean('is_audit_log_active')]
 
 # ################################################################################################################################
 
@@ -58,6 +60,13 @@ def instance_hook(service:'any_', input:'any_', instance:'any_', attrs:'any_') -
         # while the column itself is NOT NULL, so an absent value is stored as an empty string.
         if not instance.ping_address:
             instance.ping_address = ''
+
+# ################################################################################################################################
+
+def pre_opaque_attrs_hook(service:'any_', input:'any_', instance:'any_', attrs:'any_') -> 'None':
+
+    # The audit log is enabled unless it was turned off explicitly
+    input.is_audit_log_active = input.get('is_audit_log_active', True)
 
 # ################################################################################################################################
 

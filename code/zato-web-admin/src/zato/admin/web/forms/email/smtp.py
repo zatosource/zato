@@ -25,8 +25,9 @@ class CreateForm(forms.Form):
     id = forms.CharField(widget=forms.HiddenInput())
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
 
-    # The checkbox cluster - active, TLS verification and protocol debugging
+    # The checkbox cluster - active, audit log, TLS verification and protocol debugging
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    is_audit_log_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     needs_tls_verify = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     is_debug = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
@@ -72,6 +73,7 @@ class CreateForm(forms.Form):
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_audit_log_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     needs_tls_verify = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     is_debug = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 

@@ -100,12 +100,14 @@ class TestEnmasseSMBExporter(TestCase):
 
     def get_definitions(self) -> 'list':
 
+        # The first connection also keeps the bytes of the files it moves
         first = {
             'name': ModuleCtx.Conn_Name,
             'host': self.smb_server.host,
             'port': self.smb_server.port,
             'username': self.smb_server.username,
             'password': self.smb_server.password,
+            'should_store_content': True,
         }
 
         second = {
@@ -164,6 +166,14 @@ class TestEnmasseSMBExporter(TestCase):
             for field in ['name', 'host', 'port', 'username']:
                 self.assertEqual(exported_def.get(field), yaml_def.get(field),
                                  f'Mismatch for "{field}" in SMB connection "{name}"')
+
+            # The content storage flag is exported only when it differs from the default of off
+            if yaml_def.get('should_store_content') is True:
+                self.assertIs(exported_def['should_store_content'], True,
+                              f'should_store_content not exported for "{name}"')
+            else:
+                self.assertNotIn('should_store_content', exported_def,
+                                 f'should_store_content was exported for "{name}"')
 
         # 5. The password must never appear in the exported data in plain text
         for item in exported_smb_list:

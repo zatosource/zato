@@ -105,6 +105,10 @@ class SMTPExporter:
             if item.get('is_debug') and (debug_level := item.get('debug_level')):
                 smtp_conn['debug_level'] = debug_level
 
+            # The flag is exported only when it differs from the default of on
+            if item.get('is_audit_log_active') is False:
+                smtp_conn['is_audit_log_active'] = False
+
             exported_smtp.append(smtp_conn)
 
         logger.info('Successfully prepared %d SMTP connection definitions for export', len(exported_smtp))

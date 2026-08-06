@@ -266,6 +266,8 @@ def _run_view_event_checks(audit_log:'AuditLog') -> 'None':
         viewed_event_id=viewed_id,
         screen='details-overlay',
         cid='cid-view-1',
+        viewed_source=AuditSource.HL7,
+        viewed_object_name='config.test.mllp',
     )
 
     row = _get_event_row(cast_('any_', view_id))
@@ -277,6 +279,11 @@ def _run_view_event_checks(audit_log:'AuditLog') -> 'None':
     attr_map = _get_attr_map(cast_('any_', view_id))
     assert attr_map['actor'][0] == _viewer
     assert attr_map['screen'][0] == 'details-overlay'
+
+    # .. so are the source and object of the viewed event - "who viewed the messages
+    # of this channel" is one attribute query ..
+    assert attr_map['viewed_source'][0] == AuditSource.HL7
+    assert attr_map['viewed_object_name'][0] == 'config.test.mllp'
 
     # .. the viewed event id is numeric so it can join against the event table ..
     assert float(attr_map['viewed_event_id'][1]) == float(viewed_id)

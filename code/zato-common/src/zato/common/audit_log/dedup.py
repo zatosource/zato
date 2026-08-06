@@ -52,9 +52,10 @@ def build_dedup_key(action:'str', event_id:'int', payload:'str') -> 'str':
 
 # ################################################################################################################################
 
-def acquire_dedup_key(engine:'Engine', dedup_key:'str', cid:'str', action:'str') -> 'bool':
+def acquire_dedup_key(engine:'Engine', dedup_key:'str', cid:'str', action:'str', actor:'str'='') -> 'bool':
     """ Claims one dedup key before dispatch. Returns False when the key is already claimed,
-    which means the same resubmit was applied - or started - before.
+    which means the same resubmit was applied - or started - before. The actor is who
+    asked for the resubmit, so the ledger says not only what was resubmitted but by whom.
     """
     now = utcnow()
     now_iso = now.isoformat()
@@ -63,6 +64,7 @@ def acquire_dedup_key(engine:'Engine', dedup_key:'str', cid:'str', action:'str')
         'dedup_key': dedup_key,
         'cid': cid,
         'action': action,
+        'actor': actor,
         'created_iso': now_iso,
         'outcome': '',
         'completed_iso': '',

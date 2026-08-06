@@ -324,7 +324,7 @@ class ConfigManager(_ConfigManagerBase):
     def init(self) -> 'None':
 
         # E-mail
-        self.email_smtp_api = SMTPAPI(SMTPConnStore())
+        self.email_smtp_api = SMTPAPI(SMTPConnStore(self.server.name))
         self.email_imap_api = IMAPAPI(IMAPConnStore(self.server.name))
 
         # AMQP
@@ -748,7 +748,7 @@ class ConfigManager(_ConfigManagerBase):
         """ Initializes SQL connections, first to ODB and then any user-defined ones.
         """
         # We need a store first
-        self.sql_pool_store = PoolStore()
+        self.sql_pool_store = PoolStore(server_name=self.server.name)
 
         # Connect to ODB
         self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.config_store.odb_data
@@ -766,7 +766,7 @@ class ConfigManager(_ConfigManagerBase):
         previously had (initially this would be a ConfigDict of connection definitions).
         """
         config_list = self.config_store.out_ftp.get_config_list()
-        self.config_store.out_ftp = FTPStore() # type: ignore
+        self.config_store.out_ftp = FTPStore(self.server.name) # type: ignore
         self.config_store.out_ftp.add_params(config_list)
 
     def init_http_soap(self, *, has_sec_config:'bool'=True) -> 'None':

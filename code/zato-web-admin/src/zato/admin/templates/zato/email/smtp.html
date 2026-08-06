@@ -53,7 +53,8 @@
             'needs_tls_verify',
             'ca_certs_path',
             'helo_hostname',
-            'from_address'
+            'from_address',
+            'is_audit_log_active'
         ]
     }
     </script>
@@ -103,6 +104,7 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -131,6 +133,7 @@
                         <td class='ignore'>{{ item.ca_certs_path }}</td>
                         <td class='ignore'>{{ item.helo_hostname }}</td>
                         <td class='ignore'>{{ item.from_address }}</td>
+                        <td class='ignore'>{{ item.is_audit_log_active }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -162,6 +165,11 @@
                                 <label for="id_is_active">
                                     Active
                                     {{ create_form.is_active }}
+                                </label>
+                                |
+                                <label for="id_is_audit_log_active">
+                                    Audit log
+                                    {{ create_form.is_audit_log_active }}
                                 </label>
                                 |
                                 <label for="id_needs_tls_verify">
@@ -286,6 +294,11 @@
                                 <label for="id_edit-is_active">
                                     Active
                                     {{ edit_form.is_active }}
+                                </label>
+                                |
+                                <label for="id_edit-is_audit_log_active">
+                                    Audit log
+                                    {{ edit_form.is_audit_log_active }}
                                 </label>
                                 |
                                 <label for="id_edit-needs_tls_verify">

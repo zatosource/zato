@@ -158,7 +158,7 @@ class SMTPConnectionRecorder:
         self.connection = connection
         self.calls = calls
 
-    def send(self, message:'any_') -> 'bool':
+    def send(self, message:'any_', cid:'str'='') -> 'bool':
         self.calls.append((self.connection, message.to, message.subject, message.body))
         return SMTP_Response
 

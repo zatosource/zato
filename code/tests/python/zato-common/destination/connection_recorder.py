@@ -90,7 +90,7 @@ class ConnectionRecorder:
 
 # ################################################################################################################################
 
-    def send(self, entry:'DestinationEntry', payload:'any_') -> 'str':
+    def send(self, entry:'DestinationEntry', payload:'any_', cid:'str'='') -> 'str':
         name = entry.name
         self.deliveries.append((name, payload))
 

@@ -1,0 +1,44 @@
+/* ------------------------------------------------------------ */
+/* Dashboard kit - the attachment strip                          */
+/* ------------------------------------------------------------ */
+
+/* The files one record carries, a badge to a file - the strip only exists at all when
+   the record carries any, so an empty host takes up no room */
+
+:root {
+    --dashboard-attachment-size: #9a9aae;
+}
+
+.dashboard-attachments {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+}
+
+.dashboard-attachments-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--dashboard-attachment-size);
+}
+
+/* A badge that is a download keeps the badge's own look rather than a link's */
+
+a.dashboard-attachment-badge {
+    text-decoration: none;
+    font-family: inherit;
+}
+
+.dashboard-attachment-size {
+    color: var(--dashboard-attachment-size);
+}
+
+/* A file whose bytes were not kept is named but offers nothing */
+
+.dashboard-attachment-not-kept {
+    cursor: default;
+    opacity: 0.6;
+}

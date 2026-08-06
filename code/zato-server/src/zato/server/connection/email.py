@@ -13,6 +13,7 @@ from io import BytesIO
 from json import dumps
 from logging import getLogger, INFO
 from mimetypes import guess_type as guess_mime_type
+from time import monotonic
 from traceback import format_exc
 
 # imbox
@@ -29,6 +30,7 @@ from zato.common.py23_.past.builtins import basestring, unicode
 # Zato
 from zato.common.api import IMAPMessage, EMAIL
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.attachment import build_attachment
 from zato.common.util.api import new_cid_server
 from zato.server.connection.cloud.microsoft_365 import Microsoft365Client
 from zato.server.store import BaseAPI, BaseStore
@@ -39,7 +41,8 @@ from zato.server.store import BaseAPI, BaseStore
 if 0:
     from O365.mailbox import MailBox
     from O365.message import Message as MS365Message
-    from zato.common.typing_ import any_, anylist, strnone
+    from zato.common.typing_ import any_, anylist, anylistnone, strnone
+    anylistnone = anylistnone
     MailBox = MailBox
     MS365Message = MS365Message
 
@@ -118,6 +121,7 @@ def _insert_imap_audit_event(
     folder:'str' = '',
     outcome:'str',
     data:'str' = '',
+    attachments:'anylistnone' = None,
     ) -> 'None':
     """ Writes one audit event describing an IMAP operation.
     """
@@ -131,7 +135,63 @@ def _insert_imap_audit_event(
         size=len(data),
         outcome=outcome,
         data=data,
+        attachments=attachments,
     )
+
+# ################################################################################################################################
+
+def _build_attachment_envelopes(attachments:'any_') -> 'anylist':
+    """ Turns the attachments of a parsed message into audit envelopes. The bytes are read
+    through getvalue, which leaves the stream's position untouched, so the service receiving
+    the message afterwards still reads every attachment in full.
+    """
+    out:'anylist' = []
+
+    for item in attachments:
+        content = item['content']
+        data = content.getvalue()
+
+        out.append(build_attachment(item['filename'], item['content-type'], data))
+
+    return out
+
+# ################################################################################################################################
+
+def _join_addresses(value:'any_') -> 'str':
+    """ Message recipients arrive as one address or as a list of them - either way,
+    what goes to the audit log is one comma-joined string.
+    """
+    if isinstance(value, basestring):
+        out = value
+    elif value:
+        out = ', '.join(value)
+    else:
+        out = ''
+
+    return out
+
+# ################################################################################################################################
+
+def _get_send_summary(msg:'any_', from_:'any_') -> 'str':
+    """ Builds a JSON summary of an outgoing SMTP message for the audit log.
+    """
+
+    # The body may be bytes, depending on how the caller built the message
+    body = msg.body
+
+    if isinstance(body, bytes):
+        body = body.decode('utf-8', errors='replace')
+
+    out = dumps({
+        'subject': msg.subject,
+        'from': from_ or msg.from_,
+        'to': _join_addresses(msg.to),
+        'cc': _join_addresses(msg.cc),
+        'bcc': _join_addresses(msg.bcc),
+        'body': body,
+    })
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -309,9 +369,17 @@ class _Connection:
 # ################################################################################################################################
 
 class SMTPConnection(_Connection):
-    def __init__(self, config, config_no_sensitive):
+    def __init__(self, config, config_no_sensitive, audit_log:'AuditLog') -> 'None':
         self.config = config
         self.config_no_sensitive = config_no_sensitive
+        self.audit_log = audit_log
+
+        # Each connection can have its audit log turned off individually - connections
+        # created before the flag existed have no such key stored at all.
+        if 'is_audit_log_active' in config:
+            self.needs_audit = config['is_audit_log_active']
+        else:
+            self.needs_audit = True
 
         self.conn_args = [
             self.config.host.encode('utf-8'),
@@ -368,16 +436,25 @@ class SMTPConnection(_Connection):
 
 # ################################################################################################################################
 
-    def send(self, msg, from_=None) -> 'bool':
+    def send(self, msg, from_=None, cid:'str'='') -> 'bool':
 
         headers = msg.headers or {}
         atts = []
+        attachment_envelopes = []
+
         if msg.attachments:
             for item in msg.attachments:
                 contents  = item['contents']
                 contents = contents.encode('utf8') if isinstance(contents, unicode) else contents
                 att = Attachment(item['name'], BytesIO(contents))
                 atts.append(att)
+
+                # The audit log keeps the attachment's bytes as they went out
+                if self.needs_audit:
+                    mime_type, _ = guess_mime_type(item['name'])
+                    if not mime_type:
+                        mime_type = 'text/plain'
+                    attachment_envelopes.append(build_attachment(item['name'], mime_type, contents))
 
         # Messages without an explicit From address use the connection's own one, filled in by the underlying transport
         if 'From' not in msg.headers:
@@ -393,13 +470,20 @@ class SMTPConnection(_Connection):
         body, html_body = (None, msg.body) if msg.is_html else (msg.body, None)
         email = Email(msg.to, msg.subject, body, html_body, msg.charset, headers, msg.is_rfc2231)
 
+        send_start = monotonic()
+
         try:
             with self.conn_class(*self.conn_args, **self.conn_kwargs) as conn:
                 conn.send(email, atts, from_ or msg.from_)
-        except Exception:
+        except Exception as e:
 
             # Log what happened ..
             logger.warning('Could not send an SMTP message to `%s`, e:`%s`', self.config_no_sensitive, format_exc())
+
+            # .. record the failure before telling the caller ..
+            if self.needs_audit:
+                self._insert_send_event(msg, from_, cid, send_start, attachment_envelopes,
+                    outcome=AuditOutcome.Error, status=str(e))
 
             # .. and tell the caller that the message was not sent.
             return False
@@ -411,8 +495,45 @@ class SMTPConnection(_Connection):
                 logger.info('SMTP message `%r` sent from `%r` to `%r`, attachments:`%r`',
                     msg.subject, msg.from_, msg.to, atts_info)
 
+            # .. record what went out on the wire ..
+            if self.needs_audit:
+                self._insert_send_event(msg, from_, cid, send_start, attachment_envelopes,
+                    outcome=AuditOutcome.OK)
+
             # .. and tell the caller that the message was sent successfully.
             return True
+
+# ################################################################################################################################
+
+    def _insert_send_event(
+        self,
+        msg:'any_',
+        from_:'any_',
+        cid:'str',
+        send_start:'float',
+        attachment_envelopes:'anylist',
+        *,
+        outcome:'str',
+        status:'str' = '',
+        ) -> 'None':
+        """ Writes one message-sent event describing a direct SMTP send, successful or not.
+        """
+        duration_ms = int((monotonic() - send_start) * 1000)
+        data = _get_send_summary(msg, from_)
+
+        self.audit_log.insert(
+            AuditSource.Email_SMTP,
+            AuditEvent.Message_Sent,
+            self.config.name,
+            cid=cid,
+            endpoint=_join_addresses(msg.to),
+            size=len(data),
+            outcome=outcome,
+            status=status,
+            duration_ms=duration_ms,
+            data=data,
+            attachments=attachment_envelopes,
+        )
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -427,9 +548,15 @@ class SMTPAPI(BaseAPI):
 class SMTPConnStore(BaseStore):
     """ Stores connections to SMTP.
     """
+    def __init__(self, server_name:'str') -> 'None':
+        super().__init__()
+
+        # All SMTP connections write their audit events through this object
+        self.audit_log = AuditLog(server_name)
+
     def create_impl(self, config, config_no_sensitive):
         config.mode_outbox = _modes[config.mode]
-        return SMTPConnection(config, config_no_sensitive)
+        return SMTPConnection(config, config_no_sensitive, self.audit_log)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -489,13 +616,15 @@ class GenericIMAPConnection(_IMAPConnection):
                     message.audit_cid = cid
                     message.needs_audit = self.needs_audit
 
-                    # .. record the received message in the audit log ..
+                    # .. record the received message in the audit log, its attachments included ..
                     if self.needs_audit:
                         msg_id = _uid_as_str(uid)
                         data = _get_message_summary(msg)
+                        attachment_envelopes = _build_attachment_envelopes(msg.attachments)
 
                         _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Received, self.config.name,
-                            cid=cid, msg_id=msg_id, folder=folder, outcome=AuditOutcome.OK, data=data)
+                            cid=cid, msg_id=msg_id, folder=folder, outcome=AuditOutcome.OK, data=data,
+                            attachments=attachment_envelopes)
 
                     # .. and hand the message over to the caller.
                     yield (uid, message)
@@ -718,12 +847,14 @@ class Microsoft365IMAPConnection(_IMAPConnection):
                     imap_message.audit_cid = cid
                     imap_message.needs_audit = self.needs_audit
 
-                    # .. record the received message in the audit log ..
+                    # .. record the received message in the audit log, its attachments included ..
                     if self.needs_audit:
                         data = _get_message_summary(imap_message.data)
+                        attachment_envelopes = _build_attachment_envelopes(imap_message.data.attachments)
 
                         _insert_imap_audit_event(self.audit_log, AuditEvent.Message_Received, self.config['name'],
-                            cid=cid, msg_id=msg_id, folder=folder, outcome=AuditOutcome.OK, data=data)
+                            cid=cid, msg_id=msg_id, folder=folder, outcome=AuditOutcome.OK, data=data,
+                            attachments=attachment_envelopes)
 
                     # .. and hand the message over to the caller.
                     yield msg_id, imap_message

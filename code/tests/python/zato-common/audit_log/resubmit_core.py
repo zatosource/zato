@@ -11,8 +11,9 @@ from sqlalchemy import select
 
 # Zato
 from common import delete_all_events
-from zato.common.audit_log.api import event_link_table, event_table, get_audit_engine, \
+from zato.common.audit_log.api import event_attr_table, event_link_table, event_table, get_audit_engine, \
     AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.common import event_dedup_table
 from zato.common.audit_log.dedup import acquire_dedup_key, build_dedup_key, complete_dedup_key, get_in_doubt, \
     release_dedup_key
 from zato.common.audit_log.resubmit import bulk_repair, find_event_ids, get_resubmit_handler, get_stored_payload, \
@@ -40,6 +41,9 @@ _hop_connection_name = 'audit.test.core.hop'
 # The connection the bulk repair checks deliver through
 _bulk_connection_name = 'audit.test.core.bulk'
 
+# Who asks for the resubmits in this scenario
+_actor = 'resubmit.operator'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -56,6 +60,41 @@ def _get_event_row(event_id:'int') -> 'anydict':
         row = result.first()
 
     out = dict(row._mapping)
+    return out
+
+# ################################################################################################################################
+
+def _get_attr_value(event_id:'int', name:'str') -> 'str':
+    """ Returns the value of one attribute of one event.
+    """
+    engine = get_audit_engine()
+
+    query = select(event_attr_table.c.value)
+    query = query.where(event_attr_table.c.event_id == event_id)
+    query = query.where(event_attr_table.c.name == name)
+
+    with engine.connect() as connection:
+        result = connection.execute(query)
+        row = result.first()
+
+    out = row[0]
+    return out
+
+# ################################################################################################################################
+
+def _get_ledger_actor(dedup_key:'str') -> 'str':
+    """ Returns who claimed one dedup key, straight off the ledger.
+    """
+    engine = get_audit_engine()
+
+    query = select(event_dedup_table.c.actor)
+    query = query.where(event_dedup_table.c.dedup_key == dedup_key)
+
+    with engine.connect() as connection:
+        result = connection.execute(query)
+        row = result.first()
+
+    out = row[0]
     return out
 
 # ################################################################################################################################
@@ -177,7 +216,7 @@ def _run_hop_resend_checks(audit_log:'AuditLog') -> 'None':
         sent.append(payload)
         return 'hop-response'
 
-    result = resend_hop(load_event(original_id), send, audit_log, 'cid-core-hop-new')
+    result = resend_hop(load_event(original_id), send, audit_log, 'cid-core-hop-new', _actor)
 
     # The exact stored payload went out and the target's answer came back ..
     assert sent == ['hop-payload']
@@ -195,6 +234,9 @@ def _run_hop_resend_checks(audit_log:'AuditLog') -> 'None':
     assert loads(row['data']) == {'payload': 'hop-payload'}
 
     assert _get_parent_ids(result.event_id) == [original_id]
+
+    # .. and the new event says who asked for the resend.
+    assert _get_attr_value(result.event_id, 'actor') == _actor
 
     # .. what the original carried beyond the payload is carried over too, so the attempt
     # is as repeatable as the original was ..
@@ -265,9 +307,11 @@ def _run_dedup_checks() -> 'None':
     assert first_key != build_dedup_key(Action_Resend, 124, 'payload-a')
     assert first_key != build_dedup_key(Action_Reprocess, 123, 'payload-a')
 
-    # .. a key is claimed exactly once ..
-    assert acquire_dedup_key(engine, first_key, 'cid-core-dedup-1', Action_Resend) is True
-    assert acquire_dedup_key(engine, first_key, 'cid-core-dedup-2', Action_Resend) is False
+    # .. a key is claimed exactly once, and the ledger says by whom ..
+    assert acquire_dedup_key(engine, first_key, 'cid-core-dedup-1', Action_Resend, _actor) is True
+    assert acquire_dedup_key(engine, first_key, 'cid-core-dedup-2', Action_Resend, _actor) is False
+
+    assert _get_ledger_actor(first_key) == _actor
 
     # .. a claimed key without an outcome is an interrupted resubmit - in doubt ..
     in_doubt = get_in_doubt(engine)
@@ -348,7 +392,7 @@ def _run_bulk_repair_checks(audit_log:'AuditLog') -> 'None':
 
     # .. the real run transforms and delivers, and the one failing row does not abort the rest ..
     first_result = bulk_repair(repair_filter, resubmit_one, audit_log, 'cid-core-bulk-first',
-        transform=str.upper)
+        transform=str.upper, actor=_actor)
 
     assert first_result.total == 3
     assert first_result.resubmitted_count == 2
@@ -368,6 +412,12 @@ def _run_bulk_repair_checks(audit_log:'AuditLog') -> 'None':
     assert bulk_row['event_type'] == AuditEvent.Bulk_Repair
     assert bulk_row['outcome'] == AuditOutcome.Error
     assert loads(bulk_row['data']) == {'rows': first_result.rows}
+
+    # .. the bulk event and every ledger row it claimed say who asked for the repair ..
+    assert _get_attr_value(first_result.bulk_event_id, 'actor') == _actor
+
+    first_bulk_key = build_dedup_key(Action_Resend, seeded_ids[0], 'BULK-ONE')
+    assert _get_ledger_actor(first_bulk_key) == _actor
 
     # .. rerunning catches the already-applied rows while the failed one stays retryable ..
     def fixed_resubmit_one(event:'anydict', payload:'str') -> 'None':

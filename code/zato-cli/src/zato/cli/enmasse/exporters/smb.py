@@ -94,6 +94,10 @@ class SMBExporter:
                 if value != default:
                     item[field] = value
 
+            # The flag is exported only when it differs from the default of off
+            if row.get('should_store_content') is True:
+                item['should_store_content'] = True
+
             # File transfer schedules travel in their portable YAML shape
             if schedules := row.get(FileTransfer.Scheduler.Schedules_Field):
                 item['schedules'] = export_schedule_list(schedules)

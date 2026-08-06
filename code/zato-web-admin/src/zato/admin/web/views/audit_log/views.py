@@ -5,8 +5,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
-The five views the audit log page is served by - the page itself, the poll of one page of rows,
-one event's whole flow, the full payload of one event and the resubmit of one event.
+The views the audit log page is served by - the page itself, the poll of one page of rows,
+one event's whole flow, the full payload of one event, the resubmit of one event,
+and the attachments of one event - their list and their download.
 """
 
 # stdlib
@@ -17,7 +18,7 @@ import logging
 from sqlalchemy import func, select
 
 # Django
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseNotFound
 from django.template.response import TemplateResponse
 
 # Zato
@@ -27,8 +28,10 @@ from zato.admin.web.views.audit_log.columns import _data_preview_len, _default_p
 from zato.admin.web.views.audit_log.query import _build_where, _hydrate_rows, _normalize_row
 from zato.admin.web.views.audit_log.sources import _get_resubmit_labels, _source_outstanding, _source_parse, \
     _source_resubmit
-from zato.common.audit_log.api import event_table, get_audit_engine
+from zato.common.audit_log.api import event_table, get_audit_engine, AuditLog
+from zato.common.audit_log.attachment import get_attachment, list_attachments
 from zato.common.audit_log.body import resolve_body
+from zato.common.audit_log.config_audit import record_view_event
 from zato.common.audit_log.flow import get_flow_ids, Relation_Seed
 from zato.common.defaults import default_cluster_id
 from zato.x12.render import render_document
@@ -46,6 +49,33 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# What the access log calls this application - the server name of every event it writes
+_dashboard_server_name = 'dashboard'
+
+# The screen the message bodies and attachments are read from, as the access log names it
+_screen_browser = 'audit-log-browser'
+
+# All the access events this module writes go through this one writer
+_access_log = AuditLog(_dashboard_server_name)
+
+# ################################################################################################################################
+
+def _record_content_view(req:'any_', event_id:'int', source:'str', object_name:'str') -> 'None':
+    """ Records who read the content of one event - a message body or an attachment.
+    Access to patient data is itself an audited operation.
+    """
+    _ = record_view_event(
+        _access_log,
+        actor=req.user.username,
+        viewed_event_id=event_id,
+        screen=_screen_browser,
+        viewed_source=source,
+        viewed_object_name=object_name,
+    )
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -311,9 +341,11 @@ def details(req:'any_') -> 'HttpResponse':
 
     data = ''
     source = ''
+    object_name = ''
 
     # Read the full payload of this one event from the shared audit log database.
-    details_query = select(event_table.c.source, event_table.c.data).where(event_table.c.id == event_id)
+    details_query = select(
+        event_table.c.source, event_table.c.object_name, event_table.c.data).where(event_table.c.id == event_id)
     engine = get_audit_engine()
 
     with engine.connect() as connection:
@@ -323,7 +355,12 @@ def details(req:'any_') -> 'HttpResponse':
 
         if row:
             source = row[0]
-            data = row[1]
+            object_name = row[1]
+            data = row[2]
+
+    # Whoever is reading this message is recorded - the event exists, so there is content to see
+    if row:
+        _record_content_view(req, event_id, source, object_name)
 
     # A named body is one the data column never holds, so it always comes out of the body store ..
     if kind:
@@ -363,6 +400,60 @@ def details(req:'any_') -> 'HttpResponse':
 # ################################################################################################################################
 
 @method_allowed('POST')
+def attachments(req:'any_') -> 'HttpResponse':
+    """ Returns the attachments of one audit event as JSON - the metadata of each of them,
+    never the bytes, which is what the detail pane's attachment strip is drawn out of.
+    """
+    body = json.loads(req.body)
+    event_id = body['id']
+
+    engine = get_audit_engine()
+    items = list_attachments(engine, event_id)
+
+    response_json = json.dumps({'attachments': items})
+    response_bytes = response_json.encode('utf-8')
+
+    out = HttpResponse(response_bytes, content_type='application/json')
+
+    return out
+
+# ################################################################################################################################
+
+@method_allowed('GET')
+def attachment_download(req:'any_') -> 'HttpResponse':
+    """ Streams one attachment's decoded bytes back under the filename and content type
+    it was stored with, or a 404 when there is no such attachment.
+    """
+    # Query parameters are always strings while the body-row id column is numeric
+    attachment_id = int(req.GET['id'])
+
+    engine = get_audit_engine()
+    attachment = get_attachment(engine, attachment_id)
+
+    if attachment is None:
+        out = HttpResponseNotFound('No such attachment')
+        return out
+
+    # Whoever is downloading this file is recorded, against the event the file arrived with
+    owner_query = select(
+        event_table.c.source, event_table.c.object_name).where(event_table.c.id == attachment['event_id'])
+
+    with engine.connect() as connection:
+        owner_row = connection.execute(owner_query).fetchone()
+
+    source, object_name = owner_row
+    _record_content_view(req, attachment['event_id'], source, object_name)
+
+    filename = attachment['filename']
+
+    out = HttpResponse(attachment['content'], content_type=attachment['content_type'])
+    out['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    return out
+
+# ################################################################################################################################
+
+@method_allowed('POST')
 def resubmit(req:'any_') -> 'HttpResponse':
     """ Resubmits one audit event - a resend for outbound rows, a reprocess for inbound ones,
     performed by the service the event's source registered for that event type.
@@ -385,7 +476,9 @@ def resubmit(req:'any_') -> 'HttpResponse':
     actions = _source_resubmit[source]
     action = actions[event_type]
 
-    out = invoke_action_handler(req, action['service'], extra={'event_id': event_id})
+    # Who asked for the resubmit travels with the request, so the new event carries the actor
+    out = invoke_action_handler(req, action['service'],
+        extra={'event_id': event_id, 'actor': req.user.username})
 
     return out
 

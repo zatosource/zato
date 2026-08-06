@@ -36,7 +36,7 @@ class Index(_Index):
 
     input_required = 'cluster_id',
     output_required = 'id', 'name', 'is_active', 'host', 'port', 'timeout', 'username', 'is_debug', 'mode', 'ping_address'
-    output_optional = 'username', 'needs_tls_verify', 'ca_certs_path', 'helo_hostname', 'from_address'
+    output_optional = 'username', 'needs_tls_verify', 'ca_certs_path', 'helo_hostname', 'from_address', 'is_audit_log_active'
     output_repeated = True
 
     def handle(self):
@@ -54,7 +54,8 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     input_required = 'name', 'is_active', 'host', 'port', 'timeout', 'username', 'is_debug', 'mode'
-    input_optional = 'ping_address', 'needs_tls_verify', 'ca_certs_path', 'helo_hostname', 'from_address'
+    input_optional = 'ping_address', 'needs_tls_verify', 'ca_certs_path', 'helo_hostname', 'from_address', \
+        'is_audit_log_active'
     output_required = 'id', 'name'
 
     def success_message(self, item):

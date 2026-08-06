@@ -120,6 +120,12 @@ class TestEnmasseEmailSMTPExporter(TestCase):
             # Verify password is not exported
             self.assertNotIn('password', exported_def, f'Password was exported for SMTP connection "{name}"')
 
+            # The audit log flag is exported only when it differs from the default of on
+            if yaml_def.get('is_audit_log_active') is False:
+                self.assertIs(exported_def['is_audit_log_active'], False, f'is_audit_log_active not exported for "{name}"')
+            else:
+                self.assertNotIn('is_audit_log_active', exported_def, f'is_audit_log_active was exported for "{name}"')
+
 # ################################################################################################################################
 # ################################################################################################################################
 

@@ -58,6 +58,7 @@
             {% comment %} 5 {% endcomment %}
             'port',
             'username',
+            'should_store_content',
         ]
     }
     </script>
@@ -112,6 +113,7 @@
                         {% comment %} 5 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                 </thead>
 
@@ -145,12 +147,13 @@
                         {% comment %} 5 {% endcomment %}
                         <td class='ignore'>{{ item.port|default:'' }}</td>
                         <td class='ignore'>{{ item.username|default:'' }}</td>
+                        <td class='ignore'>{{ item.should_store_content }}</td>
 
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='16'>No results</td>
+                        <td colspan='17'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -177,6 +180,13 @@
                                 <label for="{{ create_form.is_active.id_for_label }}">
                                 Active
                                 {{ create_form.is_active }}
+                                </label>
+
+                                |
+
+                                <label for="{{ create_form.should_store_content.id_for_label }}">
+                                Store file contents
+                                {{ create_form.should_store_content }}
                                 </label>
 
                             </td>
@@ -250,6 +260,13 @@
                                 <label for="{{ edit_form.is_active.id_for_label }}">
                                 Active
                                 {{ edit_form.is_active }}
+                                </label>
+
+                                |
+
+                                <label for="{{ edit_form.should_store_content.id_for_label }}">
+                                Store file contents
+                                {{ edit_form.should_store_content }}
                                 </label>
 
                             </td>
