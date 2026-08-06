@@ -1197,6 +1197,29 @@
         return out.join('\n');
     };
 
+    /* SQL is never coloured on the client - a statement is only told apart here, by
+       the word it opens with, and its colours come from the server's pygments through
+       the highlight endpoint */
+    kit._sql_starter_pattern = /^(select|insert|update|delete|merge|with|create|alter|drop|truncate)\b/i;
+
+    // One request to the server's own highlighter - pygments reads the text and the
+    // callback receives the coloured markup, or the text escaped when the server fails
+    kit._highlight_remote = function(text, lexer, callback) {
+        $.ajax({
+            type: 'POST',
+            url: '/zato/highlight/',
+            data: {text: text, lexer: lexer},
+            headers: {'X-CSRFToken': $.cookie('csrftoken')},
+            dataType: 'json',
+            success: function(response) {
+                callback(response.html);
+            },
+            error: function() {
+                callback(kit._esc_html(text));
+            }
+        });
+    };
+
     // Past this much text the colouring costs more than it gives back, so the text is
     // shown as it stands rather than made to wait for a pass over every character of it
     kit.highlight_max_chars = 200000;
@@ -1263,21 +1286,10 @@
             clearTimeout(kit._highlight_light_timer);
         }
 
-        // .. fire immediately on the first call, debounce subsequent ones ..
+        // .. fire immediately on the first call, debounce subsequent ones - the
+        // empty lexer leaves the server to tell the kind of text on its own ..
         var doRequest = function() {
-            $.ajax({
-                type: 'POST',
-                url: '/zato/highlight/',
-                data: {text: text},
-                headers: {'X-CSRFToken': $.cookie('csrftoken')},
-                dataType: 'json',
-                success: function(response) {
-                    callback(response.html);
-                },
-                error: function() {
-                    callback(escaped);
-                }
-            });
+            kit._highlight_remote(text, '', callback);
         };
 
         if (kit._highlight_light_first) {

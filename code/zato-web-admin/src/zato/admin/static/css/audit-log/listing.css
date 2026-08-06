@@ -102,23 +102,6 @@
     --audit-log-flow-open-label: #d9d9ec;
     --audit-log-flow-open-rim: rgba(255, 255, 255, 0.22);
 
-    /* A parsed / raw / kind badge standing open is raised off the bar - its fill barely
-       apart from the flat badges, lit along its top edge and standing on a shadow - while
-       the ones not chosen sink into it, a touch darker under an inward shadow, so the pair
-       reads as one thing pressed out and the others pressed in */
-    /* The raised badge carries a sheen rather than a wash - one soft pool of light centred
-       under its lit edge, thinning out towards the sides and the foot, the way a curved
-       surface catches light rather than the way a wall does */
-    --audit-log-chosen-badge-fill: radial-gradient(120% 130% at 50% 0%,
-        rgba(255, 255, 255, 0.20), rgba(255, 255, 255, 0.09));
-    --audit-log-chosen-badge-text: var(--dashboard-panel-text);
-    --audit-log-chosen-badge-shadow: 0 1px 4px rgba(0, 0, 0, 0.5),
-        inset 0 1px 0 rgba(255, 255, 255, 0.30);
-
-    --audit-log-unchosen-badge-fill: rgba(255, 255, 255, 0.07);
-    --audit-log-unchosen-badge-fill-hover: rgba(255, 255, 255, 0.14);
-    --audit-log-unchosen-badge-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.45);
-
     /* The way to the rest of a cut message - barely more than the caption beside it, a badge
        only by its shape */
     --audit-log-show-all-fill: rgba(255, 255, 255, 0.07);
@@ -817,9 +800,9 @@
 .detail-page-audit-log .audit-log-flow-body-kind.dashboard-panel-action-badge-active:hover,
 .detail-page-audit-log .dashboard-payload-tab.dashboard-panel-action-badge-active,
 .detail-page-audit-log .dashboard-payload-tab.dashboard-panel-action-badge-active:hover {
-    color: var(--audit-log-chosen-badge-text);
-    background: var(--audit-log-chosen-badge-fill);
-    box-shadow: var(--audit-log-chosen-badge-shadow);
+    color: var(--dashboard-chosen-badge-text);
+    background: var(--dashboard-chosen-badge-fill);
+    box-shadow: var(--dashboard-chosen-badge-shadow);
 }
 
 /* And the ones not chosen sink into it, coming part of the way back up under the pointer */
@@ -827,14 +810,14 @@
 .detail-page-audit-log .audit-log-flow-body-view:not(.dashboard-panel-action-badge-active),
 .detail-page-audit-log .audit-log-flow-body-kind:not(.dashboard-panel-action-badge-active),
 .detail-page-audit-log .dashboard-payload-tab:not(.dashboard-panel-action-badge-active) {
-    background: var(--audit-log-unchosen-badge-fill);
-    box-shadow: var(--audit-log-unchosen-badge-shadow);
+    background: var(--dashboard-unchosen-badge-fill);
+    box-shadow: var(--dashboard-unchosen-badge-shadow);
 }
 
 .detail-page-audit-log .audit-log-flow-body-view:not(.dashboard-panel-action-badge-active):hover,
 .detail-page-audit-log .audit-log-flow-body-kind:not(.dashboard-panel-action-badge-active):hover,
 .detail-page-audit-log .dashboard-payload-tab:not(.dashboard-panel-action-badge-active):hover {
-    background: var(--audit-log-unchosen-badge-fill-hover);
+    background: var(--dashboard-unchosen-badge-fill-hover);
 }
 
 .audit-log-flow-body-actions {

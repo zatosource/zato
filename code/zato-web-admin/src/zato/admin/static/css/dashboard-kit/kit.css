@@ -23,6 +23,22 @@
     --dashboard-badge-dark-fill-hover: rgba(255, 255, 255, 0.22);
     --dashboard-badge-dark-fill-active: rgba(255, 255, 255, 0.30);
 
+    /* A badge standing open in a row of them is raised off the bar - its fill barely
+       apart from the flat badges, lit along its top edge and standing on a shadow - while
+       the ones not chosen sink into it, a touch darker under an inward shadow, so the pair
+       reads as one thing pressed out and the others pressed in. The raised badge carries
+       a sheen rather than a wash - one soft pool of light centred under its lit edge,
+       thinning out towards the sides and the foot, the way a curved surface catches light. */
+    --dashboard-chosen-badge-fill: radial-gradient(120% 130% at 50% 0%,
+        rgba(255, 255, 255, 0.20), rgba(255, 255, 255, 0.09));
+    --dashboard-chosen-badge-text: var(--dashboard-panel-text);
+    --dashboard-chosen-badge-shadow: 0 1px 4px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.30);
+
+    --dashboard-unchosen-badge-fill: rgba(255, 255, 255, 0.07);
+    --dashboard-unchosen-badge-fill-hover: rgba(255, 255, 255, 0.14);
+    --dashboard-unchosen-badge-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.45);
+
     --dashboard-line: #e4e8ee;
     --dashboard-line-strong: #012845;
     --dashboard-muted: #6b7280;
