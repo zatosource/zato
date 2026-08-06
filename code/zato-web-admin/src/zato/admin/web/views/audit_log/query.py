@@ -56,8 +56,13 @@ def _build_where(
     # Our response to produce
     out:'anylist' = []
 
-    out.append(event_table.c.source == source)
-    out.append(event_table.c.object_name == object_name)
+    # An empty source is the all-events page - every source, every object - and an
+    # empty object name reads the whole of whatever source is given
+    if source:
+        out.append(event_table.c.source == source)
+
+    if object_name:
+        out.append(event_table.c.object_name == object_name)
 
     # The page can be scoped down to a time window, e.g. one clicked on an analytics chart -
     # event times are ISO timestamps, so string prefixes compare correctly.

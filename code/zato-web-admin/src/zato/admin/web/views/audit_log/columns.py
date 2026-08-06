@@ -59,6 +59,10 @@ _status_outstanding = 'outstanding'
 # ################################################################################################################################
 # ################################################################################################################################
 
+# What the all-events page - the one no source narrows down - calls itself and its section
+_all_sources_title = 'Audit log'
+_all_sources_section_title = 'All sources'
+
 # Per-source page titles - more sources will follow, e.g. REST outgoing connections
 _source_title = {
     'pubsub': 'Pub/sub audit log',
@@ -236,6 +240,20 @@ _fhir_columns = [
     {'key': 'action', 'label': 'Actions', 'type': 'action'},
 ]
 
+# The all-events page - every source in one listing - reads each row by the columns
+# every source shares, plus the source itself, which a single-source page never says
+_all_sources_columns = [
+    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
+    {'key': 'source', 'label': 'Source', 'type': 'text'},
+    {'key': 'event_type', 'label': 'Event', 'type': 'text'},
+    {'key': 'object_name', 'label': 'Object', 'type': 'text'},
+    {'key': 'msg_id', 'label': 'Message id', 'type': 'text'},
+    {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
+    {'key': 'size', 'label': 'Size', 'type': 'size'},
+    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
+]
+
 # Per-source table columns
 _source_columns = {
     'pubsub': _pubsub_columns,
@@ -280,12 +298,19 @@ _source_outcomes = {
     'pubsub': (AuditOutcome.OK, AuditOutcome.Error, AuditOutcome.Expired),
 }
 
+# The all-events page can show anything any source reports, so it offers every outcome there is
+_all_outcomes = (AuditOutcome.OK, AuditOutcome.Error, AuditOutcome.Expired)
+
 # ################################################################################################################################
 
 def _get_outcomes(source:'str') -> 'strtuple':
     """ Returns the outcomes this source's events report, so that a page offers filters for
-    the outcomes it can actually show and for no others.
+    the outcomes it can actually show and for no others. An empty source is the all-events
+    page, whose rows may report anything any source can.
     """
+    if source == '':
+        return _all_outcomes
+
     if source in _source_outcomes:
         out = _source_outcomes[source]
         return out

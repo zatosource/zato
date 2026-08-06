@@ -65,115 +65,29 @@
     var row_accent_color = '#2e7d6a';
 
     // ////////////////////////////////////////////////////////////////////////
-    // Generic dropdown - used by both CIDR pills and time range inputs
+    // Generic dropdown - used by both CIDR pills and time range inputs.
+    // The menu itself is the dashboard kit's - these are the names this file
+    // has always called it by.
     // ////////////////////////////////////////////////////////////////////////
 
     $.fn.zato.rate_limiting.show_dropdown = function(anchor_elem, grouped_items, filter_text, on_select, excluded, keep_open) {
-
-        $.fn.zato.rate_limiting.hide_dropdown();
-
-        var dropdown = document.createElement('div');
-        dropdown.className = 'zato-dropdown-menu';
-        dropdown.id = 'rate-limiting-dropdown-active';
-
-        var filter = (filter_text || '').trim().toLowerCase();
-        var total_items = 0;
-
-        for(var group_idx = 0; group_idx < grouped_items.length; group_idx++) {
-            var group = grouped_items[group_idx];
-            var matching_items = [];
-
-            for(var item_idx = 0; item_idx < group.items.length; item_idx++) {
-                var item = group.items[item_idx];
-
-                // Skip already-selected values
-                if(excluded && excluded[item.value]) {
-                    continue;
-                }
-
-                // Apply text filter
-                if(filter && item.value.toLowerCase().indexOf(filter) === -1 && item.label.toLowerCase().indexOf(filter) === -1) {
-                    continue;
-                }
-
-                matching_items.push(item);
-            }
-
-            if(matching_items.length === 0) {
-                continue;
-            }
-
-            // Add separator between groups
-            if(total_items > 0) {
-                var separator = document.createElement('div');
-                separator.className = 'zato-dropdown-separator';
-                dropdown.appendChild(separator);
-            }
-
-            // Group header
-            var header = document.createElement('div');
-            header.className = 'zato-dropdown-header';
-            header.textContent = group.group;
-            dropdown.appendChild(header);
-
-            // Items
-            for(var match_idx = 0; match_idx < matching_items.length; match_idx++) {
-                var match = matching_items[match_idx];
-                var row = $.fn.zato.rate_limiting.make_dropdown_item(match, on_select, keep_open);
-                dropdown.appendChild(row);
-                total_items++;
-            }
-        }
-
-        if(total_items === 0) {
-            return;
-        }
-
-        // Position below the anchor element
-        var rect = anchor_elem.getBoundingClientRect();
-        dropdown.style.position = 'fixed';
-        dropdown.style.top = (rect.bottom + 2) + 'px';
-        dropdown.style.left = rect.left + 'px';
-
-        document.body.appendChild(dropdown);
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-
-    $.fn.zato.rate_limiting.make_dropdown_item = function(item, on_select, keep_open) {
-        var row = document.createElement('div');
-        row.className = 'zato-dropdown-item';
-
-        var value_span = document.createElement('span');
-        value_span.className = 'zato-dropdown-item-value';
-        value_span.textContent = item.value;
-        row.appendChild(value_span);
-
-        var label_span = document.createElement('span');
-        label_span.className = 'zato-dropdown-item-label';
-        label_span.textContent = item.label;
-        row.appendChild(label_span);
-
-        row.onclick = function() {
-            on_select(item.value);
-            if(keep_open) {
-                row.parentNode.removeChild(row);
-            }
-            else {
-                $.fn.zato.rate_limiting.hide_dropdown();
-            }
-        };
-
-        return row;
+        $.fn.zato.dashboard_kit.select.show_menu({
+            anchor: anchor_elem,
+            groups: grouped_items,
+            filter: filter_text,
+            on_select: on_select,
+            excluded: excluded,
+            keep_open: keep_open,
+            item_style: 'value_label',
+            selected: '',
+            with_filter: false
+        });
     };
 
     // ////////////////////////////////////////////////////////////////////////
 
     $.fn.zato.rate_limiting.hide_dropdown = function() {
-        var existing = document.getElementById('rate-limiting-dropdown-active');
-        if(existing) {
-            existing.parentNode.removeChild(existing);
-        }
+        $.fn.zato.dashboard_kit.select.hide_menu();
     };
 
     // ////////////////////////////////////////////////////////////////////////
@@ -217,14 +131,8 @@
 
     // ////////////////////////////////////////////////////////////////////////
 
-    $.fn.zato.rate_limiting.close_dropdown_on_outside_click = function() {
-        $(document).on('mousedown.rate_limiting', function(event) {
-            var target = $(event.target);
-            if(!target.closest('.zato-dropdown-menu').length && !target.hasClass('rate-limiting-pill-input') && !target.hasClass('rate-limiting-time-input')) {
-                $.fn.zato.rate_limiting.hide_dropdown();
-            }
-        });
-    };
+    // Closing the dropdown on a click landing outside it is the kit's own doing -
+    // a click into the input the menu hangs off keeps it up, any other one puts it away
 
     // ////////////////////////////////////////////////////////////////////////
 
@@ -236,7 +144,6 @@
         stored_url_base = url_base;
         stored_with_clear_counters = Boolean(with_clear_counters);
         $.fn.zato.rate_limiting.setup_drag(container_id);
-        $.fn.zato.rate_limiting.close_dropdown_on_outside_click();
 
         $.fn.zato.rate_limiting.add_rule(container_id);
     };

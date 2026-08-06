@@ -577,6 +577,10 @@
                                 </ul>
                             </li>
 
+                            <li class="first-level">
+                                <a class="menu-link" href="{% url "audit-log" %}?cluster={{ cluster_id|default:"1" }}">Audit log</a>
+                            </li>
+
                             {% if 0 %}
                             <li class="first-level">
                                 <a class="menu-link">Analytics &darr;</a>

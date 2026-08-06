@@ -23,8 +23,9 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.views import invoke_action_handler, method_allowed
-from zato.admin.web.views.audit_log.columns import _data_preview_len, _default_page, _flow_columns, _get_outcomes, \
-    _poll_url, _preview_len, _row_columns, _source_columns, _source_title, _status_outstanding
+from zato.admin.web.views.audit_log.columns import _all_sources_columns, _all_sources_section_title, _all_sources_title, \
+    _data_preview_len, _default_page, _flow_columns, _get_outcomes, _poll_url, _preview_len, _row_columns, _source_columns, \
+    _source_title, _status_outstanding
 from zato.admin.web.views.audit_log.query import _build_where, _hydrate_rows, _normalize_row
 from zato.admin.web.views.audit_log.sources import _get_resubmit_labels, _source_outstanding, _source_parse, \
     _source_resubmit
@@ -80,14 +81,50 @@ def _record_content_view(req:'any_', event_id:'int', source:'str', object_name:'
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _get_filter_options() -> 'anylist':
+    """ Every source in the log and every object of it, which is what the all-events page
+    offers its filter selects - one entry per source, the source's objects inside it.
+    """
+    statement = select(event_table.c.source, event_table.c.object_name)
+    statement = statement.distinct()
+    statement = statement.order_by(event_table.c.source, event_table.c.object_name)
+
+    engine = get_audit_engine()
+
+    # One entry per source, in the order the database gave them out
+    by_source:'anydict' = {}
+    out:'anylist' = []
+
+    with engine.connect() as connection:
+        result = connection.execute(statement)
+
+        for source, object_name in result:
+
+            if source not in by_source:
+
+                # A source with a page title of its own is offered under it, one without
+                # is offered under its raw name - the log may hold sources this application
+                # has no title for yet.
+                entry = {'source': source, 'label': _source_title.get(source, source), 'objects': []}
+
+                by_source[source] = entry
+                out.append(entry)
+
+            # An event written down with no object at all adds nothing to filter by
+            if object_name:
+                by_source[source]['objects'].append(object_name)
+
+    return out
+
 # ################################################################################################################################
 
 @method_allowed('GET')
 def object_index(req:'any_') -> 'TemplateResponse':
-    """ The audit log page for one object of one source, e.g. a pub/sub topic.
+    """ The audit log page - for one object of one source, e.g. a pub/sub topic, or, with
+    no source named at all, for every event of every source in one listing.
     """
-    source = req.GET['source']
-    object_name = req.GET['object_name']
+    source = req.GET.get('source', '')
+    object_name = req.GET.get('object_name', '')
 
     # The page can open pre-filtered to the open exchanges of this source
     status = req.GET.get('status', '')
@@ -98,8 +135,21 @@ def object_index(req:'any_') -> 'TemplateResponse':
     time_to = req.GET.get('time_to', '')
     query = req.GET.get('query', '')
 
-    # The listing draws each row's cells and chips out of this source's columns
-    columns_json = json.dumps(_source_columns[source])
+    # The listing draws each row's cells and chips out of this source's columns - the
+    # all-events page reads by the columns every source shares, the source among them,
+    # and it alone offers the source and object filter selects.
+    if source:
+        columns = _source_columns[source]
+        audit_log_title = _source_title[source]
+        section_title = object_name
+        filter_options:'anylist' = []
+    else:
+        columns = _all_sources_columns
+        audit_log_title = _all_sources_title
+        section_title = _all_sources_section_title
+        filter_options = _get_filter_options()
+
+    columns_json = json.dumps(columns)
 
     # .. and offers filters for the outcomes this source's events actually report
     outcomes_json = json.dumps(list(_get_outcomes(source)))
@@ -120,8 +170,8 @@ def object_index(req:'any_') -> 'TemplateResponse':
         'cluster_id': default_cluster_id,
         'source': source,
         'object_name': object_name,
-        'audit_log_title': _source_title[source],
-        'section_title': object_name,
+        'audit_log_title': audit_log_title,
+        'section_title': section_title,
         'poll_url': _poll_url,
         'columns_json': columns_json,
         'outcomes_json': outcomes_json,
@@ -131,6 +181,7 @@ def object_index(req:'any_') -> 'TemplateResponse':
         'query': query,
         'resubmit_labels_json': resubmit_labels_json,
         'exchange_json': json.dumps(exchange),
+        'filter_options_json': json.dumps(filter_options),
         'zato_clusters': True,
         'zato_template_name': 'zato/audit_log.html',
     }

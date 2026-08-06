@@ -26,6 +26,15 @@ $.fn.zato.audit_log.config = {
     rawTabLabel: 'Raw',
     parsedTabLabel: 'Parsed',
 
+    // The filter selects of the all-events page - what each one is called and what
+    // its everything entry says, plus where each one is rendered
+    sourceSelectLabel: 'Source',
+    objectSelectLabel: 'Object',
+    allSourcesLabel: 'All',
+    allObjectsLabel: 'All',
+    sourceSelectHost: '#audit-log-filter-source',
+    objectSelectHost: '#audit-log-filter-object',
+
     // What the resubmit outcome is reported with
     resubmitModalTitle: 'Resubmit result',
     resubmitErrorLabel: 'Resubmit failed',
@@ -226,6 +235,105 @@ $.fn.zato.audit_log.parseResubmitResponse = function(jqXHR, textStatus) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// The filter selects of the all-events page - one for the source, one for the object.
+// Picking a source narrows both the list and what the object select has to offer,
+// picking an object narrows the list to that object alone.
+$.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
+    var kit = $.fn.zato.dashboard_kit;
+    var config = $.fn.zato.audit_log.config;
+    var pagination = $.fn.zato.audit_log.pagination;
+
+    // Every source in the log, the everything entry first
+    var sourceItems = [{value: '', label: config.allSourcesLabel}];
+
+    for (var optionIndex = 0; optionIndex < filterOptions.length; optionIndex++) {
+        var option = filterOptions[optionIndex];
+
+        sourceItems.push({value: option.source, label: option.label});
+    }
+
+    // The objects on offer, grouped by their source - all of them when no source is
+    // picked, one source's own when one is
+    var objectGroups = function(pickedSource) {
+        var out = [{group: '', items: [{value: '', label: config.allObjectsLabel}]}];
+
+        for (var optionIndex = 0; optionIndex < filterOptions.length; optionIndex++) {
+            var option = filterOptions[optionIndex];
+
+            if (pickedSource !== '' && option.source !== pickedSource) {
+                continue;
+            }
+
+            if (option.objects.length === 0) {
+                continue;
+            }
+
+            var items = [];
+
+            for (var objectIndex = 0; objectIndex < option.objects.length; objectIndex++) {
+                var name = option.objects[objectIndex];
+
+                items.push({value: name, label: name});
+            }
+
+            out.push({group: option.label, items: items});
+        }
+
+        return out;
+    };
+
+    // Whether an object is still on offer once the source has changed underneath it
+    var hasObject = function(groups, value) {
+        for (var groupIndex = 0; groupIndex < groups.length; groupIndex++) {
+            var items = groups[groupIndex].items;
+
+            for (var itemIndex = 0; itemIndex < items.length; itemIndex++) {
+                if (items[itemIndex].value === value) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    };
+
+    var objectSelect = kit.select.create({
+        host: config.objectSelectHost,
+        label: config.objectSelectLabel,
+        groups: objectGroups(''),
+        value: '',
+        on_change: function(value) {
+            pagination.set_filters({object_name: value});
+            pagination.fetch_page(1);
+        }
+    });
+
+    kit.select.create({
+        host: config.sourceSelectHost,
+        label: config.sourceSelectLabel,
+        groups: [{group: '', items: sourceItems}],
+        value: '',
+        on_change: function(value) {
+            var newGroups = objectGroups(value);
+
+            // An object of some other source is no filter for this one
+            var objectName = objectSelect.get_value();
+
+            if (!hasObject(newGroups, objectName)) {
+                objectName = '';
+                objectSelect.set_value(objectName);
+            }
+
+            objectSelect.set_groups(newGroups);
+
+            pagination.set_filters({source: value, object_name: objectName});
+            pagination.fetch_page(1);
+        }
+    });
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 // Puts one term into the search box and asks for the page it narrows down to, which is what
 // the Search beside a value in the detail pane does
 $.fn.zato.audit_log.search = function(query) {
@@ -307,6 +415,12 @@ $.fn.zato.audit_log.init = function(initConfig) {
 
     // .. the resubmit outcome handler refreshes the table through this reference ..
     $.fn.zato.audit_log.pagination = pagination;
+
+    // .. the all-events page - the one with sources to choose between at all - gets
+    // its source and object filter selects ..
+    if (initConfig.filter_options.length) {
+        $.fn.zato.audit_log.initFilterSelects(initConfig.filter_options);
+    }
 
     // .. let the search form filter the events ..
     $('#audit-log-search-form').on('submit', function(event) {
