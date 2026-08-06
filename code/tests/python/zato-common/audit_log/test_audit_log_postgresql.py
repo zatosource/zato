@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from attachments import run_attachment_scenario
 from common import audit_log_env, run_audit_log_scenario
 from config_audit import run_config_audit_scenario
+from flow_resolve import run_flow_resolve_scenario
 from resubmit_core import run_resubmit_core_scenario
 from retention_tiers import run_retention_tiers_scenario
 from structured import run_structured_events_scenario
@@ -34,6 +35,7 @@ def test_audit_log_postgresql(postgresql_server:'DatabaseServer') -> 'None':
         run_resubmit_core_scenario()
         run_config_audit_scenario()
         run_attachment_scenario()
+        run_flow_resolve_scenario()
 
 # ################################################################################################################################
 # ################################################################################################################################

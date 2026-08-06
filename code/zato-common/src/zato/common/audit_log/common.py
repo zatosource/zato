@@ -143,7 +143,7 @@ class AuditEvent:
     MCP_Tools_Call       = 'mcp-tools-call'
     MCP_Session_Delete   = 'mcp-session-delete'
     MCP_Batch            = 'mcp-batch'
-    Bulk_Repair          = 'bulk-repair'
+    Bulk_Resubmit        = 'bulk-resubmit'
     Config_Created       = 'config-created'
     Config_Edited        = 'config-edited'
     Config_Deleted       = 'config-deleted'

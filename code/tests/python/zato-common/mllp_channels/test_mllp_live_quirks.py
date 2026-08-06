@@ -137,14 +137,14 @@ class TestForceStandardDelimiters:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestRepairTruncatedMSH:
-    """ Verifies the repair_truncated_msh toggle.
+class TestRestoreTruncatedMSH:
+    """ Verifies the restore_truncated_msh toggle.
     """
 
-    def test_repair_truncated_msh_on(self) -> 'None':
-        """ With repair on, a message with a junk prefix before MSH should be recovered and accepted.
+    def test_restore_truncated_msh_on(self) -> 'None':
+        """ With restore on, a message with a junk prefix before MSH should be recovered and accepted.
         """
-        process, port = start_server(repair_truncated_msh=True)
+        process, port = start_server(restore_truncated_msh=True)
 
         try:
             # Prepend junk bytes before the actual MSH ..
@@ -159,10 +159,10 @@ class TestRepairTruncatedMSH:
 
 # ################################################################################################################################
 
-    def test_repair_truncated_msh_off(self) -> 'None':
-        """ With repair off, a clean message should still be processed normally.
+    def test_restore_truncated_msh_off(self) -> 'None':
+        """ With restore off, a clean message should still be processed normally.
         """
-        process, port = start_server(repair_truncated_msh=False)
+        process, port = start_server(restore_truncated_msh=False)
 
         try:
             response = _send_raw_and_recv(port, _standard_adt.encode('utf-8'))

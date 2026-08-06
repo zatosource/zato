@@ -678,7 +678,7 @@ class HL7MLLPServer:
         preprocessed = preprocess_message(
             raw_message_bytes,
             should_normalize_line_endings=settings.should_normalize_line_endings,
-            should_repair_truncated_msh=settings.should_repair_truncated_msh,
+            should_restore_truncated_msh=settings.should_restore_truncated_msh,
             should_split_concatenated_messages=settings.should_split_concatenated_messages,
             should_force_standard_delimiters=settings.should_force_standard_delimiters,
             should_use_msh18_encoding=settings.should_use_msh18_encoding,

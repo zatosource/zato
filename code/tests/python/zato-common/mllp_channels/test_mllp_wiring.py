@@ -63,7 +63,7 @@ def _make_config(**overrides:'object') -> 'MagicMock':
 
         # Quirks
         'normalize_line_endings': True,
-        'repair_truncated_msh': True,
+        'restore_truncated_msh': True,
         'split_concatenated_messages': True,
         'force_standard_delimiters': True,
         'use_msh18_encoding': True,
@@ -266,7 +266,7 @@ class TestRouteSettingsWiring(_WiringTestCase):
         """
         wrapper = self.make_wrapper(
             normalize_line_endings=False,
-            repair_truncated_msh=False,
+            restore_truncated_msh=False,
             split_concatenated_messages=False,
             force_standard_delimiters=False,
             use_msh18_encoding=False,
@@ -277,7 +277,7 @@ class TestRouteSettingsWiring(_WiringTestCase):
         settings = self.get_only_route_settings()
 
         self.assertFalse(settings.should_normalize_line_endings)
-        self.assertFalse(settings.should_repair_truncated_msh)
+        self.assertFalse(settings.should_restore_truncated_msh)
         self.assertFalse(settings.should_split_concatenated_messages)
         self.assertFalse(settings.should_force_standard_delimiters)
         self.assertFalse(settings.should_use_msh18_encoding)

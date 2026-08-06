@@ -101,7 +101,7 @@ def find_header(envelope:'any_') -> 'any_':
     """ Returns the Header element of an envelope, or None when the message came without one.
 
     This is what every read of a received document uses. A header is optional on the wire, so its
-    absence is a normal message rather than something to repair - and repairing it would mean
+    absence is a normal message rather than something to fix - and adding one would mean
     modifying a document the caller is only inspecting, which then serialises back differently
     from what arrived and invalidates any signature over the envelope.
     """

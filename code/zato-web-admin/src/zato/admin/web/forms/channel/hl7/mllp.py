@@ -117,7 +117,7 @@ class CreateForm(forms.Form):
     # Message tolerance toggles (MLLP preprocessing layer)
     normalize_line_endings        = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     force_standard_delimiters     = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    repair_truncated_msh          = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    restore_truncated_msh          = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     split_concatenated_messages   = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     use_msh18_encoding            = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 

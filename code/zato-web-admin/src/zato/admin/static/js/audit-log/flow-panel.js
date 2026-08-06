@@ -589,11 +589,11 @@ panel.onLineKeydown = function(event) {
 panel.init = function() {
     var panelSelector = flow.config.panelSelector;
 
-    // The keys a line answers to are bound above the list rather than on the page, so nothing
-    // outside the listing is walked by them
-    var $listing = $(listing.config.host);
+    // The keys a line answers to are bound above the flow rather than on the page, so nothing
+    // outside it is walked by them
+    var $flowHost = $(flow.config.host);
 
-    $listing.on('keydown', flow.config.lineSelector, panel.onLineKeydown);
+    $flowHost.on('keydown', flow.config.lineSelector, panel.onLineKeydown);
 
     // Each kind of body the event stored is read in its turn, and the one being read is
     // the one the panel says it is

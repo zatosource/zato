@@ -50,12 +50,95 @@ Relation_Resubmit_Of = 'resubmit-of'
 Relation_Resubmitted_As = 'resubmitted-as'
 Relation_Same_Msg_Id = 'same-msg-id'
 
+# What a search term resolved as, which is what the journey endpoint reports back
+Resolved_Event_Id = 'event-id'
+Resolved_Cid = 'cid'
+Resolved_Msg_Id = 'msg-id'
+
 # A flow past this many events is one nobody reads to the end, and the query behind it stops
 # being cheap, so it is cut short and the reader is told that it was
 Max_Flow_Events = 200
 
 # A resubmit of a batch item of a resubmit is as deep as anything seen in the field
 Max_Flow_Rounds = 4
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class ResolvedSeed:
+    """ What one search term led to - the event a flow is read from and which of the term's
+    possible meanings it turned out to carry, both empty when the term matched nothing.
+    """
+    seed_id: int = 0
+    resolved_by: str = ''
+
+# ################################################################################################################################
+
+def _new_resolved_seed() -> 'ResolvedSeed':
+    out = ResolvedSeed()
+    out.seed_id = 0
+    out.resolved_by = ''
+
+    return out
+
+# ################################################################################################################################
+
+def _newest_event_id(connection:'any_', column:'any_', term:'str') -> 'int':
+    """ The newest event whose given column carries the term, zero when there is none -
+    two events of one moment are told apart by their ids, the way the flow itself reads.
+    """
+    statement = select(event_table.c.id)
+    statement = statement.where(column == term)
+    statement = statement.order_by(event_table.c.event_time_iso.desc(), event_table.c.id.desc())
+    statement = statement.limit(1)
+
+    row = connection.execute(statement).fetchone()
+
+    if row is None:
+        return 0
+
+    return row[0]
+
+# ################################################################################################################################
+
+def resolve_seed(connection:'any_', term:'str') -> 'ResolvedSeed':
+    """ Resolves one search term to the event a flow is read from. The term is tried as an
+    event id, then as a cid, then as a control id (msg_id) - the first meaning that matches
+    wins, and within one meaning the newest matching event does. A term that matches nothing
+    resolves to nothing, which the caller reads off the empty resolved_by.
+    """
+    out = _new_resolved_seed()
+
+    # A term of digits alone may be the event's own number, which is the most exact
+    # of the three meanings, so it is tried first
+    if term.isdigit():
+        statement = select(event_table.c.id)
+        statement = statement.where(event_table.c.id == int(term))
+
+        row = connection.execute(statement).fetchone()
+
+        if row is not None:
+            out.seed_id = row[0]
+            out.resolved_by = Resolved_Event_Id
+            return out
+
+    # .. then the cid the message travelled under ..
+    event_id = _newest_event_id(connection, event_table.c.cid, term)
+
+    if event_id:
+        out.seed_id = event_id
+        out.resolved_by = Resolved_Cid
+        return out
+
+    # .. and last the control id the message's own protocol knows it by.
+    event_id = _newest_event_id(connection, event_table.c.msg_id, term)
+
+    if event_id:
+        out.seed_id = event_id
+        out.resolved_by = Resolved_Msg_Id
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

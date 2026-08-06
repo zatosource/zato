@@ -21,7 +21,7 @@ Segment_Terminator = b'\r'
 
 # What a segment may be seen to end with while routing, before the matched channel has had its
 # say on line endings. A sender that ends its segments with a bare newline still has to be routed
-# somewhere, and it is that channel that decides whether the ending is repaired or refused.
+# somewhere, and it is that channel that decides whether the ending is normalized or refused.
 _Routing_Terminators = (b'\r', b'\n')
 
 # What a sender that omits the start sequence altogether opens its message with instead

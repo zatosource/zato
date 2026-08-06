@@ -36,6 +36,10 @@ flow.config = {
     // The variant the direction tags and the fact rows wear, the flow being a dark frame
     darkVariant: 'dark',
 
+    // Where a line's Open leads - the event's own audit log page, named by path
+    // because the flow is read on more pages than that one
+    eventPagePath: '/zato/audit-log/',
+
     copyLabel: 'Copy',
     openLabel: 'Open'
 };
@@ -74,8 +78,10 @@ flow.buildRow = function(row) {
     out.objectName = row.object_name;
 
     // The event this one was found through, zero when it hangs off no event in particular -
-    // a non-zero via is what makes a line indent under its counterpart
+    // a non-zero via is what makes a line indent under its counterpart - and why it is in
+    // the flow at all, which is what the drawing writes on a connector
     out.viaId = row.via_id;
+    out.relation = row.relation;
 
     // A flow crosses sources, so a line of another one is named by that source rather than by
     // the one the page happens to be listing
@@ -236,7 +242,7 @@ flow.actionsHTML = function(rowModel) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The address of one event's own audit log page, opened on that event with its flow showing
+// The address of one event's own audit log page, opened on that event
 flow.eventURL = function(rowModel) {
     var config = $.fn.zato.audit_log.config;
 
@@ -246,9 +252,8 @@ flow.eventURL = function(rowModel) {
     params.set('object_name', rowModel.objectName);
     params.set('cluster', config.clusterId);
     params.set('event', rowModel.id);
-    params.set('tab', listing.config.flowTab);
 
-    var out = window.location.pathname + '?' + params.toString();
+    var out = flow.config.eventPagePath + '?' + params.toString();
 
     return out;
 };

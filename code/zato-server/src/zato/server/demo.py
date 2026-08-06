@@ -398,6 +398,8 @@ def import_demo_data(server:'ParallelServer', *, config:'SeedConfig | None'=None
         'fhir_pair_count': result.fhir_pair_count,
         'config_event_count': result.config_event_count,
         'dedup_count': result.dedup_count,
+        'resubmit_count': result.resubmit_count,
+        'view_count': result.view_count,
         'channel_names': result.channel_names,
         'burst_count': burst_count,
     }

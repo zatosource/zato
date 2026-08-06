@@ -33,8 +33,9 @@ logger = logging.getLogger(__name__)
 
 @method_allowed('GET')
 def index(req:'HttpRequest') -> 'TemplateResponse':
-    """ The message flow page - one message's whole journey, drawn and read. For now it renders
-    the node-granularity demo, everything on it coming from hardcoded data in the browser.
+    """ The message flow page - one message's whole journey, drawn and read. The page is a shell -
+    a search term is resolved and answered by the journey endpoint, and everything on the screen
+    is built in the browser out of what it returns.
     """
     return TemplateResponse(req, 'zato/message-flow/index.html', {
         'cluster_id': default_cluster_id,

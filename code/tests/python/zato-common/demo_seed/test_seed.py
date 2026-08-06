@@ -15,12 +15,12 @@ from sqlalchemy import select
 
 # Zato
 from zato.common.alerting.model import AlertState
-from zato.common.audit_log.api import event_link_table, event_table, get_audit_engine, AuditEvent, AuditLink, \
-    AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, \
+    get_audit_engine, AuditEvent, AuditLink, AuditOutcome, AuditSource
 from zato.common.audit_log.common import alert_table, event_dedup_table
 from zato.common.demo.seed import get_demo_rule_defs, purge_demo_data, seed_demo_data, Actor_Admin, Actor_Operator, \
-    Burst_End_Hour, Burst_Start_Hour, Channel_Clinic, Channel_Lab, Channel_Main, Clinic_Silent_Hour, Outconn_FHIR, \
-    Outconn_Forward, SeedConfig
+    Actors, Burst_End_Hour, Burst_Start_Hour, Channel_Clinic, Channel_Lab, Channel_Main, Clinic_Silent_Hour, \
+    In_Flight_Count, Outconn_FHIR, Outconn_Forward, SeedConfig
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,10 +39,11 @@ _server_name = 'test-demo-seed-server'
 # A fixed moment the assertions hinge on - a midday, so the day's curve has hours behind it
 _now = datetime(2026, 7, 15, 12, 30, 0)
 
-# How long one default-size run may take end to end - the writes land in one bulk
+# How long one default-size run may take end to end - a week of 1200 messages
+# per day is about 8,500 messages and their events. The writes land in one bulk
 # transaction, so nearly all of this budget covers content generation, with ample
 # headroom for slow CI machines
-_max_seed_seconds = 5.0
+_max_seed_seconds = 15.0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -100,11 +101,14 @@ class TestSeedContents:
         assert result.alert_count == 3
         assert result.rule_names == [rule_def['name'] for rule_def in get_demo_rule_defs()]
 
-        # The ledger holds the reprocess claim, a completed resend and an in-doubt one
-        assert result.dedup_count == 3
+        # The ledger holds one reprocess claim per resubmit chain,
+        # a completed resend and an in-doubt one
+        assert result.resubmit_count > 0
+        assert result.dedup_count == result.resubmit_count + 2
 
-        # Five creations, one edit and one view record
-        assert result.config_event_count == 7
+        # Five creations, one edit and the view-access records
+        assert result.view_count > 0
+        assert result.config_event_count == 6 + result.view_count
 
         assert result.fhir_pair_count == 5
         assert result.channel_names == [Channel_Main, Channel_Lab, Channel_Clinic]
@@ -139,6 +143,22 @@ class TestSeedContents:
         for event in _get_events():
             when = datetime.fromisoformat(event['event_time_iso'])
             assert when.microsecond, event['event_time_iso']
+
+# ################################################################################################################################
+
+    def test_no_body_carries_a_made_up_msh7(self) -> 'None':
+        """ No stored message body carries a fixed whole-second MSH-7 -
+        every acknowledgment and batch header holds its own moment.
+        """
+        _ = _run_seed()
+
+        engine = get_audit_engine()
+
+        with engine.connect() as connection:
+            rows = connection.execute(select(event_body_table.c.data)).fetchall()
+
+        for row in rows:
+            assert '20260101000000' not in row[0]
 
 # ################################################################################################################################
 
@@ -215,7 +235,7 @@ class TestSeedContents:
 
         outstanding = [event for event in sent_events if event['cid'] not in acked_cids]
 
-        assert len(outstanding) == 3
+        assert len(outstanding) == In_Flight_Count
 
 # ################################################################################################################################
 
@@ -241,27 +261,42 @@ class TestSeedContents:
 
 # ################################################################################################################################
 
-    def test_the_repair_story_is_linked(self) -> 'None':
-        """ The reprocessed message points back at the failed original
-        through its correlation id and a resubmit link.
+    def test_the_resubmit_chains_are_linked(self) -> 'None':
+        """ Every reprocessed message points back at its parent through
+        its correlation id and a resubmit link, and says who asked for it.
         """
-        _ = _run_seed()
+        result = _run_seed()
 
-        repair_events = _get_events(cid='demo-rp-00000001', event_type=AuditEvent.Message_Received)
-        assert len(repair_events) == 1
+        received = _get_events(event_type=AuditEvent.Message_Received, source=AuditSource.HL7)
+        chain_events = [event for event in received if event['cid'].startswith('demo-rp')]
 
-        repair = repair_events[0]
-        assert repair['correl_id'].startswith('demo-')
+        # Every chain has its first hop, and every few chains a second one
+        assert len(chain_events) >= result.resubmit_count
 
         engine = get_audit_engine()
 
-        statement = select(event_link_table).where(event_link_table.c.child_event_id == repair['id'])
-        statement = statement.where(event_link_table.c.link_type == AuditLink.Resubmit_Of)
+        for event in chain_events:
 
-        with engine.connect() as connection:
-            rows = connection.execute(statement).fetchall()
+            assert event['correl_id'].startswith('demo-')
 
-        assert len(rows) == 1
+            # The resubmit link to the parent
+            statement = select(event_link_table).where(event_link_table.c.child_event_id == event['id'])
+            statement = statement.where(event_link_table.c.link_type == AuditLink.Resubmit_Of)
+
+            with engine.connect() as connection:
+                rows = connection.execute(statement).fetchall()
+
+            assert len(rows) == 1
+
+            # Who asked for the resubmit rides on the receipt
+            statement = select(event_attr_table).where(event_attr_table.c.event_id == event['id'])
+            statement = statement.where(event_attr_table.c.name == 'actor')
+
+            with engine.connect() as connection:
+                attr_rows = [row._asdict() for row in connection.execute(statement)]
+
+            assert len(attr_rows) == 1
+            assert attr_rows[0]['value'] in Actors
 
 # ################################################################################################################################
 
@@ -293,9 +328,10 @@ class TestSeedContents:
 # ################################################################################################################################
 
     def test_the_dedup_ledger_has_an_in_doubt_entry(self) -> 'None':
-        """ The ledger holds completed claims and one still in doubt.
+        """ The ledger holds one completed claim per resubmit chain, each with
+        its actor, a completed resend and one claim still in doubt.
         """
-        _ = _run_seed()
+        result = _run_seed()
 
         engine = get_audit_engine()
 
@@ -304,17 +340,22 @@ class TestSeedContents:
 
         entries = [row._asdict() for row in rows]
         in_doubt = [entry for entry in entries if not entry['completed_iso']]
+        reprocessed = [entry for entry in entries if entry['action'] == 'reprocess']
 
-        assert len(entries) == 3
+        assert len(entries) == result.resubmit_count + 2
         assert len(in_doubt) == 1
+        assert len(reprocessed) == result.resubmit_count
+
+        for entry in reprocessed:
+            assert entry['actor'] in Actors
 
 # ################################################################################################################################
 
     def test_the_config_history_is_present(self) -> 'None':
         """ The config events tell the story - creations, one edit
-        and one view-access record.
+        and the view-access records.
         """
-        _ = _run_seed()
+        result = _run_seed()
 
         created = _get_events(source=AuditSource.Config, event_type=AuditEvent.Config_Created)
         edited = _get_events(source=AuditSource.Config, event_type=AuditEvent.Config_Edited)
@@ -322,7 +363,7 @@ class TestSeedContents:
 
         assert len(created) == 5
         assert len(edited) == 1
-        assert len(viewed) == 1
+        assert len(viewed) == result.view_count
 
         assert edited[0]['object_name'] == Channel_Lab
 

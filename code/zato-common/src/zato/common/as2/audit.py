@@ -139,7 +139,7 @@ def record_message_received(
 
     The payload entries are what a reprocess works from - they are lossless and they cover every
     attachment. The text payload next to them is the readable view of the first document, which is
-    what the audit log page displays and what the source-agnostic bulk repair transforms.
+    what the audit log page displays and what the source-agnostic bulk resubmit transforms.
     """
     as2_from = as2_from.strip()
     as2_to = as2_to.strip()

@@ -124,7 +124,7 @@ class OutconnMongoDBWrapper(Wrapper):
                     client_config['tlsAllowInvalidCertificates'] = True
 
             # Create the actual connection object - the client connects lazily
-            # and repairs its topology in the background, which is why there is
+            # and rebuilds its topology in the background, which is why there is
             # no ping here - pinging would block the init greenlet for the whole
             # server-selection timeout when a server is down and it would race
             # with edits or deletes that close the client mid-flight. Explicit

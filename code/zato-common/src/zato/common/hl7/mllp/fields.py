@@ -105,7 +105,7 @@ Channel_Fields:'mllp_field_list' = [
     # Message tolerance toggles
     MLLPField('normalize_line_endings', True),
     MLLPField('force_standard_delimiters', True),
-    MLLPField('repair_truncated_msh', True),
+    MLLPField('restore_truncated_msh', True),
     MLLPField('split_concatenated_messages', True),
     MLLPField('use_msh18_encoding', True),
 

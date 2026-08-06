@@ -189,7 +189,7 @@ class TestEnmasseChannelMLLPImporter(TestCase):
         # These should have their default True values
         self.assertTrue(opaque_1['normalize_line_endings'])
         self.assertTrue(opaque_1['force_standard_delimiters'])
-        self.assertTrue(opaque_1['repair_truncated_msh'])
+        self.assertTrue(opaque_1['restore_truncated_msh'])
         self.assertTrue(opaque_1['split_concatenated_messages'])
         self.assertTrue(opaque_1['use_msh18_encoding'])
         self.assertTrue(opaque_1['normalize_obx2_value_type'])

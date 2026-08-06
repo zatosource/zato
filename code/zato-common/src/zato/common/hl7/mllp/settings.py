@@ -160,7 +160,7 @@ class RouteSettings:
         default_character_encoding:'str' = Default_Encoding,
         should_use_msh18_encoding:'bool' = True,
         should_normalize_line_endings:'bool' = True,
-        should_repair_truncated_msh:'bool' = True,
+        should_restore_truncated_msh:'bool' = True,
         should_split_concatenated_messages:'bool' = True,
         should_force_standard_delimiters:'bool' = True,
         should_parse_on_input:'bool' = True,
@@ -187,7 +187,7 @@ class RouteSettings:
         self.default_character_encoding = default_character_encoding
         self.should_use_msh18_encoding = should_use_msh18_encoding
         self.should_normalize_line_endings = should_normalize_line_endings
-        self.should_repair_truncated_msh = should_repair_truncated_msh
+        self.should_restore_truncated_msh = should_restore_truncated_msh
         self.should_split_concatenated_messages = should_split_concatenated_messages
         self.should_force_standard_delimiters = should_force_standard_delimiters
 

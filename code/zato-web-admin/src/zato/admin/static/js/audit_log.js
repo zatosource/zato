@@ -17,9 +17,7 @@ $.fn.zato.audit_log.config = {
     resubmitURL: '/zato/audit-log/resubmit/',
     attachmentsURL: '/zato/audit-log/attachments/',
     attachmentDownloadURL: '/zato/audit-log/attachment/',
-
-    // Where one event's whole flow is read from, assigned in init
-    flowURL: '',
+    flowURL: '/zato/audit-log/flow/',
 
     // The name every source without a presenter of its own is drawn by
     defaultSource: 'default',
@@ -40,11 +38,12 @@ $.fn.zato.audit_log.config = {
     columns: [],
     resubmitLabels: {},
 
-    // Which source this page lists, which object of it, which cluster it belongs to, and how
-    // this source's exchanges open and close, all assigned in init
+    // Which source this page lists, which object of it and how this source's exchanges
+    // open and close, all assigned in init. The cluster is always the default one -
+    // pages that run init overwrite it with the same value the server rendered.
     source: '',
     objectName: '',
-    clusterId: '',
+    clusterId: '1',
     exchange: {}
 };
 
@@ -270,16 +269,12 @@ $.fn.zato.audit_log.init = function(initConfig) {
     config.resubmitLabels = initConfig.resubmitLabels;
     config.source = initConfig.source;
     config.exchange = initConfig.exchange;
-    config.flowURL = initConfig.flow_url;
     config.objectName = initConfig.object_name;
     config.clusterId = initConfig.cluster_id;
 
     // .. the listing puts its chrome and its two panes in place before the first page arrives ..
     var listing = $.fn.zato.audit_log.listing;
     listing.init(initConfig);
-
-    // .. the flow is bound to the pane it will be read in ..
-    $.fn.zato.audit_log.flow.init();
 
     // .. the first page is read through whichever window the page was opened on, which is
     // the one the address named or, failing that, the range this screen was last left on ..

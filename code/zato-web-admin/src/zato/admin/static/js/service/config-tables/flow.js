@@ -25,8 +25,6 @@
 var tables = $.fn.zato.service.config_tables;
 var flow = tables.flow;
 
-var svgNamespace = 'http://www.w3.org/2000/svg';
-
 // ////////////////////////////////////////////////////////////////////////
 
 flow.config = {
@@ -659,12 +657,13 @@ flow.addConnector = function(cursor, labelText) {
 };
 
 // ////////////////////////////////////////////////////////////////////////
-// The shapes
+// The shapes - the kit's SVG primitives, called with this drawing's own
+// corners, classes and arrowhead measures
 // ////////////////////////////////////////////////////////////////////////
 
 flow.createElement = function(name) {
 
-    var out = document.createElementNS(svgNamespace, name);
+    var out = $.fn.zato.dashboard_kit.draw.createElement(name);
     return out;
 };
 
@@ -672,50 +671,23 @@ flow.createElement = function(name) {
 
 flow.addRect = function(svg, x, y, width, height, className) {
 
-    var rect = flow.createElement('rect');
-
-    rect.setAttribute('x', x);
-    rect.setAttribute('y', y);
-    rect.setAttribute('width', width);
-    rect.setAttribute('height', height);
-    rect.setAttribute('rx', flow.config.corner);
-    rect.setAttribute('class', className);
-
-    svg.appendChild(rect);
-    return rect;
+    var out = $.fn.zato.dashboard_kit.draw.addRect(svg, x, y, width, height, className, flow.config.corner);
+    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
 flow.addText = function(svg, x, y, text, className, anchor) {
 
-    var element = flow.createElement('text');
-
-    element.setAttribute('x', x);
-    element.setAttribute('y', y);
-    element.setAttribute('text-anchor', anchor);
-    element.setAttribute('class', className);
-    element.textContent = text;
-
-    svg.appendChild(element);
-    return element;
+    var out = $.fn.zato.dashboard_kit.draw.addText(svg, x, y, text, className, anchor);
+    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// Text that runs on over several lines, one line under the other, all of them about the
-// same middle. The line the text starts on is where a single line would have stood, so a
-// name of one line is set exactly where it always was.
 flow.addTextLines = function(svg, x, baseline, textLineList, className, lineHeight) {
 
-    var out = [];
-
-    for(var lineIdx = 0; lineIdx < textLineList.length; lineIdx++) {
-
-        var y = baseline + lineIdx * lineHeight;
-        out.push(flow.addText(svg, x, y, textLineList[lineIdx], className, 'middle'));
-    }
-
+    var out = $.fn.zato.dashboard_kit.draw.addTextLines(svg, x, baseline, textLineList, className, lineHeight);
     return out;
 };
 
@@ -782,15 +754,8 @@ flow.markAll = function(elementList, lineList, text) {
 
 flow.addLine = function(svg, x1, y1, x2, y2) {
 
-    var line = flow.createElement('line');
-
-    line.setAttribute('x1', x1);
-    line.setAttribute('y1', y1);
-    line.setAttribute('x2', x2);
-    line.setAttribute('y2', y2);
-    line.setAttribute('class', flow.config.lineClass);
-
-    svg.appendChild(line);
+    var out = $.fn.zato.dashboard_kit.draw.addLine(svg, x1, y1, x2, y2, flow.config.lineClass);
+    return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -799,61 +764,25 @@ flow.addLine = function(svg, x1, y1, x2, y2) {
 flow.addArrow = function(svg, x, y) {
 
     var config = flow.config;
-    var top = y - config.arrowLength;
-    var arrow = flow.createElement('polygon');
 
-    var points = (x - config.arrowWidth) + ',' + top + ' ' +
-        (x + config.arrowWidth) + ',' + top + ' ' + x + ',' + y;
-
-    arrow.setAttribute('points', points);
-    arrow.setAttribute('class', config.arrowClass);
-
-    svg.appendChild(arrow);
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
-// Text longer than the room the drawing grew to, laid out over as many lines as it takes -
-// nothing is ever left out, since a value is there to be read whole. The break falls on the
-// last space that still fits, and text with no space in it is broken where the room ends.
-flow.wrap = function(text, room, charWidth) {
-
-    var maxLength = Math.max(1, Math.floor(room / charWidth));
-    var out = [];
-    var rest = text;
-
-    while(rest.length > maxLength) {
-
-        var cutIdx = maxLength;
-        var skipCount = 0;
-        var spaceIdx = rest.lastIndexOf(' ', maxLength);
-
-        if(spaceIdx > 0) {
-            cutIdx = spaceIdx;
-            skipCount = 1;
-        }
-
-        out.push(rest.slice(0, cutIdx));
-        rest = rest.slice(cutIdx + skipCount);
-    }
-
-    out.push(rest);
-
+    var out = $.fn.zato.dashboard_kit.draw.addArrow(svg, x, y, config.arrowLength, config.arrowWidth,
+        config.arrowClass);
     return out;
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-// How long the longest of the lines is, which is what says how wide the shape they go into
-// has to be.
+flow.wrap = function(text, room, charWidth) {
+
+    var out = $.fn.zato.dashboard_kit.draw.wrap(text, room, charWidth);
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 flow.getLongest = function(textLineList) {
 
-    var out = 0;
-
-    for(var lineIdx = 0; lineIdx < textLineList.length; lineIdx++) {
-        out = Math.max(out, textLineList[lineIdx].length);
-    }
-
+    var out = $.fn.zato.dashboard_kit.draw.getLongest(textLineList);
     return out;
 };
 
