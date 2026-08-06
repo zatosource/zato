@@ -35,6 +35,14 @@ $.fn.zato.audit_log.config = {
     allSourcesLabel: 'All',
     allObjectsLabel: 'All',
     manySourcesLabel: 'sources',
+    manyObjectsLabel: 'objects',
+
+    // The source whose events record who viewed other sources' objects - the names
+    // it carries are borrowed, so the object filter lists them under their owners
+    accessLogSource: 'config',
+    // Short on purpose - it stands in the same badge All does, so swapping
+    // the two must not resize the select
+    noMatchesLabel: 'None',
     sourceSelectHost: '#audit-log-filter-source',
     objectSelectHost: '#audit-log-filter-object',
     filterTriggerCls: 'dashboard-select-face',
@@ -257,19 +265,19 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
     }
 
     // The objects on offer, grouped by their source - all of them when no source is
-    // picked, the picked sources' own when some are
+    // picked, the picked sources' own when some are. Nothing picked means every one,
+    // so there is no All entry of its own. The filter matches events by name alone,
+    // so each name is listed once - the access log borrows the names of the objects
+    // whose viewings it records, and a borrowed name stands under its owner alone.
     var objectGroups = function(pickedSources) {
-        var out = [{group: '', items: [{value: '', label: config.allObjectsLabel}]}];
+        var out = [];
 
-        for (var optionIndex = 0; optionIndex < filterOptions.length; optionIndex++) {
-            var option = filterOptions[optionIndex];
+        var seen = {};
+        var itemsBySource = {};
 
+        var claim = function(option) {
             if (pickedSources.length && pickedSources.indexOf(option.source) === -1) {
-                continue;
-            }
-
-            if (option.objects.length === 0) {
-                continue;
+                return;
             }
 
             var items = [];
@@ -277,7 +285,38 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
             for (var objectIndex = 0; objectIndex < option.objects.length; objectIndex++) {
                 var name = option.objects[objectIndex];
 
+                if (seen[name]) {
+                    continue;
+                }
+
+                seen[name] = true;
                 items.push({value: name, label: name});
+            }
+
+            itemsBySource[option.source] = items;
+        };
+
+        // The owners claim their names first and the access log keeps only what
+        // no other source answered for ..
+        for (var ownerIndex = 0; ownerIndex < filterOptions.length; ownerIndex++) {
+            if (filterOptions[ownerIndex].source !== config.accessLogSource) {
+                claim(filterOptions[ownerIndex]);
+            }
+        }
+
+        for (var configIndex = 0; configIndex < filterOptions.length; configIndex++) {
+            if (filterOptions[configIndex].source === config.accessLogSource) {
+                claim(filterOptions[configIndex]);
+            }
+        }
+
+        // .. and the groups keep the catalog's own order whoever claimed first.
+        for (var optionIndex = 0; optionIndex < filterOptions.length; optionIndex++) {
+            var option = filterOptions[optionIndex];
+            var items = itemsBySource[option.source];
+
+            if (items === undefined || items.length === 0) {
+                continue;
             }
 
             out.push({group: option.label, items: items});
@@ -301,17 +340,26 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
         return false;
     };
 
+    var initialObjectGroups = objectGroups([]);
+
     var objectSelect = kit.select.create({
         host: config.objectSelectHost,
         trigger_cls: config.filterTriggerCls,
         label: config.objectSelectLabel,
-        groups: objectGroups([]),
-        value: '',
-        on_change: function(value) {
-            pagination.set_filters({object_name: value});
+        groups: initialObjectGroups,
+        multi: true,
+        values: [],
+        empty_label: config.allObjectsLabel,
+        many_label: config.manyObjectsLabel,
+        disabled_label: config.noMatchesLabel,
+        on_change: function(values) {
+            pagination.set_filters({object_names: values});
             pagination.fetch_page(1);
         }
     });
+
+    // With no objects on offer there is nothing to filter by and the select stands aside
+    objectSelect.set_enabled(initialObjectGroups.length > 0);
 
     kit.select.create({
         host: config.sourceSelectHost,
@@ -326,16 +374,20 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
             var newGroups = objectGroups(values);
 
             // An object of some source no longer picked is no filter for these
-            var objectName = objectSelect.get_value();
+            var pickedObjects = objectSelect.get_values();
+            var keptObjects = [];
 
-            if (!hasObject(newGroups, objectName)) {
-                objectName = '';
-                objectSelect.set_value(objectName);
+            for (var pickedIndex = 0; pickedIndex < pickedObjects.length; pickedIndex++) {
+                if (hasObject(newGroups, pickedObjects[pickedIndex])) {
+                    keptObjects.push(pickedObjects[pickedIndex]);
+                }
             }
 
             objectSelect.set_groups(newGroups);
+            objectSelect.set_values(keptObjects);
+            objectSelect.set_enabled(newGroups.length > 0);
 
-            pagination.set_filters({sources: values, object_name: objectName});
+            pagination.set_filters({sources: values, object_names: keptObjects});
             pagination.fetch_page(1);
         }
     });
@@ -401,12 +453,18 @@ $.fn.zato.audit_log.init = function(initConfig) {
         timeFrom = listing.rangeTimeFrom();
     }
 
-    // .. wire up the paginated listing - a per-source page polls for its one source,
-    // the all-events page starts with every one ..
+    // .. wire up the paginated listing - a per-source page polls for its one source
+    // and one object, the all-events page starts with every one of both ..
     var sources = [];
 
     if (initConfig.source !== '') {
         sources.push(initConfig.source);
+    }
+
+    var objectNames = [];
+
+    if (initConfig.object_name !== '') {
+        objectNames.push(initConfig.object_name);
     }
 
     var pagination = kit.pagination.init({
@@ -414,7 +472,7 @@ $.fn.zato.audit_log.init = function(initConfig) {
         page_size: config.pageSize,
         filters: {
             sources: sources,
-            object_name: initConfig.object_name,
+            object_names: objectNames,
             query: initConfig.query,
             status: initConfig.status,
             time_from: timeFrom,

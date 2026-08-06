@@ -24,6 +24,10 @@
     var open_class = 'dashboard-select-trigger-open';
     var active_row_class = 'zato-dropdown-item-active';
 
+    /* What the All row of a multi-select carries as its value - no real item
+       has an empty one */
+    var all_value = '';
+
     // ////////////////////////////////////////////////////////////////////////
 
     ns.select.hide_menu = function() {
@@ -83,10 +87,11 @@
         row.onclick = function() {
             config.on_select(item.value);
 
-            // A toggling pick flips its own mark and leaves the menu up, so several
-            // can be picked in one visit ..
+            // A toggling pick leaves the menu up, so several can be picked in one
+            // visit, and the rows are redrawn so every mark stays truthful - the
+            // pick's own, and the All row's, which stands for no picks at all ..
             if (config.toggle_pick) {
-                row.classList.toggle('zato-dropdown-item-selected');
+                config.rerender();
             }
 
             // .. a kept-open pick takes its row along, the suggestion flavour ..
@@ -194,36 +199,38 @@
         menu.className = 'zato-dropdown-menu';
         menu.id = menu_id;
 
-        /* The filter box narrows the rows in place - the menu itself stays up,
-           so what is typed is not lost to a rebuild. */
+        /* The rows live in a host of their own so they can be redrawn in place -
+           after a keystroke of the filter box and after every toggling pick -
+           while the menu itself stays up */
+        var rows_host = document.createElement('div');
+
+        config.rerender = function() {
+            var new_rows = ns.select.build_rows(config);
+            rows_host.textContent = '';
+
+            if (new_rows !== null) {
+                rows_host.appendChild(new_rows);
+            }
+        };
+
         if (config.with_filter) {
             var filter_input = document.createElement('input');
             filter_input.type = 'text';
             filter_input.className = 'dashboard-select-filter';
             filter_input.placeholder = 'Filter ..';
 
-            var rows_host = document.createElement('div');
-
             filter_input.oninput = function() {
                 config.filter = filter_input.value;
-
-                var new_rows = ns.select.build_rows(config);
-                rows_host.textContent = '';
-
-                if (new_rows !== null) {
-                    rows_host.appendChild(new_rows);
-                }
+                config.rerender();
             };
 
             menu.appendChild(filter_input);
-            menu.appendChild(rows_host);
-
-            if (rows !== null) {
-                rows_host.appendChild(rows);
-            }
         }
-        else {
-            menu.appendChild(rows);
+
+        menu.appendChild(rows_host);
+
+        if (rows !== null) {
+            rows_host.appendChild(rows);
         }
 
         // Position below the anchor element, never narrower than the anchor itself
@@ -234,6 +241,17 @@
         menu.style.minWidth = rect.width + 'px';
 
         document.body.appendChild(menu);
+
+        // The menu sizes itself to its widest row, but a vertical scrollbar then eats
+        // into that width from the inside - the widest row overflows into the padding
+        // and its checkmark drifts off the common edge - so the menu grows by the
+        // scrollbar's own width and every row keeps the full width it asked for
+        var scrollbar_width = menu.offsetWidth - menu.clientWidth;
+
+        if (scrollbar_width > 0) {
+            menu.style.width = (menu.offsetWidth + scrollbar_width) + 'px';
+        }
+
         active_anchor = config.anchor;
 
         if (config.with_filter) {
@@ -253,7 +271,8 @@
        With multi: true, several values can be picked at once - picks toggle and the menu
        stays up. Then `values` replaces `value`, on_change receives the picked list,
        `empty_label` is what the trigger says when nothing is picked and `many_label`
-       the word after the count when more than one is.
+       the word after the count when more than one is. The menu opens with an All row
+       at the top, named by `empty_label` - picking it lets every other pick go.
        Returns {set_groups} plus {get_value, set_value} or {get_values, set_values}. */
     ns.select.create = function(config) {
         var host = $(config.host)[0];
@@ -311,6 +330,13 @@
 
         var is_picked = function(value) {
             if (multi) {
+
+                // The All row stands for no picks at all, so it is the one
+                // marked while the list is empty
+                if (value === all_value) {
+                    return current_values.length === 0;
+                }
+
                 return current_values.indexOf(value) !== -1;
             }
 
@@ -323,10 +349,7 @@
                 return;
             }
 
-            // Nothing picked is everything on offer, one pick is named, more are
-            // counted - and the count wears its own small pill
-            value_span.classList.remove('dashboard-select-value-count');
-
+            // Nothing picked is everything on offer, one pick is named, more are counted
             if (current_values.length === 0) {
                 value_span.textContent = config.empty_label;
             }
@@ -335,19 +358,25 @@
             }
             else {
                 value_span.textContent = current_values.length + ' ' + config.many_label;
-                value_span.classList.add('dashboard-select-value-count');
             }
         };
 
         var pick = function(value) {
             if (multi) {
-                var value_idx = current_values.indexOf(value);
 
-                if (value_idx === -1) {
-                    current_values.push(value);
+                // Picking All is picking nothing - every other pick is let go
+                if (value === all_value) {
+                    current_values = [];
                 }
                 else {
-                    current_values.splice(value_idx, 1);
+                    var value_idx = current_values.indexOf(value);
+
+                    if (value_idx === -1) {
+                        current_values.push(value);
+                    }
+                    else {
+                        current_values.splice(value_idx, 1);
+                    }
                 }
 
                 apply();
@@ -375,9 +404,18 @@
                 return;
             }
 
+            // A multi-select's menu opens with an All row of its own at the top,
+            // the one pick that stands for no picks at all
+            var menu_groups = groups;
+
+            if (multi) {
+                var all_group = {group: '', items: [{value: all_value, label: config.empty_label}]};
+                menu_groups = [all_group].concat(groups);
+            }
+
             ns.select.show_menu({
                 anchor: trigger,
-                groups: groups,
+                groups: menu_groups,
                 filter: '',
                 on_select: pick,
                 excluded: null,
@@ -398,6 +436,25 @@
             set_groups: function(new_groups) {
                 groups = new_groups;
                 apply();
+            },
+
+            /* A disabled select stands aside - its menu, if up, goes away with it and
+               its value says why there is nothing to pick, coming back on re-enabling */
+            set_enabled: function(flag) {
+                trigger.classList.toggle('dashboard-select-trigger-disabled', !flag);
+
+                if (flag) {
+                    apply();
+                    return;
+                }
+
+                if (config.disabled_label !== undefined) {
+                    value_span.textContent = config.disabled_label;
+                }
+
+                if (active_anchor === trigger) {
+                    ns.select.hide_menu();
+                }
             }
         };
 

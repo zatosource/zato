@@ -1,26 +1,16 @@
 /* ------------------------------------------------------------ */
 /* Dropdown menu - anchored menu shared across pages             */
 /*                                                               */
-/* A floating surface with its edge drawn as shadow, entering    */
-/* with a small settle. Every gray is black at low alpha.        */
+/* A floating surface with its edge drawn as shadow, appearing   */
+/* in place with no motion of its own. Every gray is black at    */
+/* low alpha.                                                    */
 /* ------------------------------------------------------------ */
-
-@keyframes zato-dropdown-enter {
-    from {
-        opacity: 0;
-        transform: translateY(-4px) scale(0.98);
-    }
-    to {
-        opacity: 1;
-        transform: none;
-    }
-}
 
 .zato-dropdown-menu {
     position: absolute;
     z-index: 10000;
     background: #ffffff;
-    border-radius: 10px;
+    border-radius: 3px;
     box-shadow:
         0 0 0 1px rgba(0, 0, 0, 0.06),
         0 2px 6px rgba(0, 0, 0, 0.06),
@@ -30,38 +20,30 @@
     overflow-y: auto;
     padding: 5px 0;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    transform-origin: top;
-    animation: zato-dropdown-enter 0.14s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .zato-dropdown-menu {
-        animation: none;
-    }
 }
 
 .zato-dropdown-header {
     padding: 6px 14px 3px;
     font-size: 10px;
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: 0.5px;
     text-transform: uppercase;
     color: rgba(26, 32, 44, 0.45);
     user-select: none;
 }
 
-/* Rows highlight as rounded inset pills, not full-bleed bars */
-
 .zato-dropdown-item {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin: 0 5px;
-    padding: 5px 9px;
-    border-radius: 6px;
+    padding: 5px 14px;
     cursor: pointer;
     font-size: 12px;
     transition: background 0.1s ease;
+
+    /* One line per row, however long the name - the menu grows to its widest row,
+       so every row is the one width and every checkmark stands on the one edge */
+    white-space: nowrap;
 }
 
 .zato-dropdown-item:hover,
@@ -91,23 +73,8 @@
     background: rgba(84, 105, 212, 0.08);
 }
 
-.zato-dropdown-item-selected .zato-dropdown-item-text {
-    font-weight: 600;
-}
-
 /* A picked row carries a light floating checkmark - drawn strokes, no box.
    The space is held whether or not the mark is showing, so rows do not shift. */
-
-@keyframes zato-dropdown-check-in {
-    from {
-        opacity: 0;
-        transform: rotate(-45deg) scale(0.5);
-    }
-    to {
-        opacity: 1;
-        transform: rotate(-45deg) scale(1);
-    }
-}
 
 .zato-dropdown-item-check {
     position: relative;
@@ -123,16 +90,9 @@
     top: 2px;
     width: 8px;
     height: 4px;
-    border-left: 1.5px solid #5469d4;
-    border-bottom: 1.5px solid #5469d4;
+    border-left: 1.5px solid #2e7d6a;
+    border-bottom: 1.5px solid #2e7d6a;
     transform: rotate(-45deg);
-    animation: zato-dropdown-check-in 0.12s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .zato-dropdown-item-selected .zato-dropdown-item-check::after {
-        animation: none;
-    }
 }
 
 .zato-dropdown-separator {
