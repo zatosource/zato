@@ -36,9 +36,9 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The key an outgoing SQL connection sets in its extra field to opt into auditing,
-# e.g. audit_log=statement
-Extra_Audit_Log = 'audit_log'
+# The config key carrying an outgoing SQL connection's audit level - it comes from
+# the connection's own Audit log field in the dashboard, or from enmasse.
+Config_Audit_Log = 'audit_log'
 
 # How much of each statement travels with its event.
 Level_Off              = 'off'
@@ -46,7 +46,7 @@ Level_Statement        = 'statement'
 Level_Statement_Params = 'statement-params'
 Level_Full             = 'full'
 
-# Everything a connection may ask for - anything else in its extra field is a typo
+# Everything a connection may ask for - anything else in its configuration is a typo
 # that must not pass in silence, an audit trail that silently is not there is worse
 # than a connection that refuses to start.
 all_levels = {Level_Off, Level_Statement, Level_Statement_Params, Level_Full}

@@ -34,7 +34,7 @@ from sqlalchemy.sql.type_api import TypeEngine
 from zato.common.api import DEPLOYMENT_STATUS, HTTP_SOAP, MS_SQL, NotGiven, SEC_DEF_TYPE, SECRET_SHADOW, \
      SERVER_UP_STATUS, UNITTEST, ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.audit_log.api import AuditLog, AuditOutcome
-from zato.common.audit_log.sql import all_levels as all_sql_audit_levels, record_sql_execution, Extra_Audit_Log, \
+from zato.common.audit_log.sql import all_levels as all_sql_audit_levels, record_sql_execution, Config_Audit_Log, \
      Level_Off as SQL_Audit_Off
 from zato.common.exception import Inactive
 from zato.common.mssql_direct import MSSQLDirectAPI, SimpleSession
@@ -141,7 +141,7 @@ class SessionWrapper:
         self.logger = logging.getLogger(self.__class__.__name__)
 
         # Statement auditing - off unless the pool store attached a writer
-        # and the connection's own extra field asked for a level.
+        # and the connection's own Audit log setting asked for a level.
         self.audit_log = audit_log
         self.sql_audit_level = SQL_Audit_Off
         self.sql_audit_endpoint = ''
@@ -301,7 +301,7 @@ class SQLConnectionPool:
         self.engine = None
         self.engine_name:'str' = config['engine'] # self.engine.name is 'mysql' while 'self.engine_name' is mysql+pymysql
 
-        # Statement auditing is off until the connection's extra field says otherwise in init
+        # Statement auditing is off until the connection's own Audit log setting says otherwise in init
         self.sql_audit_level = SQL_Audit_Off
 
         self._is_oracle_db = self.engine_name.startswith('oracle')
@@ -343,10 +343,14 @@ class SQLConnectionPool:
 
         extra_parsed = parse_extra_into_dict(extra) # type: ignore
 
-        # The audit level is ours, not the driver's - it is taken out before anything
-        # reaches create_engine. An unknown level is refused outright because an audit
-        # trail that silently is not there is worse than a connection that will not start.
-        sql_audit_level = extra_parsed.pop(Extra_Audit_Log, SQL_Audit_Off)
+        # The audit level comes from the connection's own Audit log setting - a connection
+        # created before the setting existed carries none, which means off. An unknown level
+        # is refused outright because an audit trail that silently is not there is worse
+        # than a connection that will not start.
+        sql_audit_level = self.config.get(Config_Audit_Log)
+
+        if not sql_audit_level:
+            sql_audit_level = SQL_Audit_Off
 
         if sql_audit_level not in all_sql_audit_levels:
             level_names = sorted(all_sql_audit_levels)

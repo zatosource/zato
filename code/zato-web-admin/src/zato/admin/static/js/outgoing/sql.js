@@ -36,6 +36,7 @@ $.fn.zato.outgoing.sql.field_descriptions = {
     'id_engine': 'The database type - it selects the driver<br>and SQL dialect, and picking one fills in<br>the default port and database name below.',
     'id_host': 'Host name or IP address the database server<br>listens on, with the port in the field next to it.',
     'id_db_name': 'Name of the database to connect to,<br>with the database user in the field next to it.<br>The user\'s password is set with the Change password link.',
+    'id_audit_log': 'How much of each SQL statement is kept<br>in the audit log - nothing, the statement alone,<br>the statement with its parameters,<br>or everything including the rows returned.',
     'id_extra': 'Extra engine options as key=value pairs,<br>one per line, e.g. echo=True or pool_pre_ping=True.<br>They are passed to the underlying SQLAlchemy engine.',
 };
 
@@ -85,6 +86,8 @@ $.fn.zato.outgoing.sql.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.engine);
+    row += String.format("<td class='ignore'>{0}</td>", item.extra);
+    row += String.format("<td class='ignore'>{0}</td>", item.audit_log);
 
     if(include_tr) {
         row += '</tr>';

@@ -49,7 +49,8 @@
             'id',
             'is_active',
             'engine',
-            'extra'
+            'extra',
+            'audit_log'
         ]
     }
     </script>
@@ -129,6 +130,7 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -153,6 +155,7 @@
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.engine }}</td>
                         <td class='ignore'>{{ item.extra }}</td>
+                        <td class='ignore'>{{ item.audit_log }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -206,6 +209,11 @@
                             User
                             {{ create_form.username }}
                             </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"><label for="{{ create_form.audit_log.id_for_label }}">Audit log</label></td>
+                            <td colspan="3">{{ create_form.audit_log }}</td>
                         </tr>
 
                         <tr>
@@ -270,6 +278,11 @@
                             User
                             {{ edit_form.username }}
                             </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"><label for="{{ edit_form.audit_log.id_for_label }}">Audit log</label></td>
+                            <td colspan="3">{{ edit_form.audit_log }}</td>
                         </tr>
 
                         <tr>
