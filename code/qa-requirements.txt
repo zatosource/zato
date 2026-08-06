@@ -21,7 +21,7 @@ typing-extensions==4.12.2
 unify==0.5
 yapf
 yappi==1.7.6
-aiohttp==3.13.5
+aiohttp==3.14.3
 playwright
 hl7
 aiosmtpd
