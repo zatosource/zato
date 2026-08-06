@@ -730,10 +730,13 @@ listing.paneHTML = function(rowModel) {
 
     // The message itself and everything said about it are two ways of reading one event,
     // so the pane is one of them at a time rather than both at once. The flow the event
-    // belongs to is a page of its own, and its doorway stands beside the tabs.
+    // belongs to is a page of its own, and its doorway stands to the right of the tabs -
+    // beside the strip, not inside it, being a way out rather than a way to turn the page.
+    html += '<div class="audit-log-pane-tabs-row">';
     html += '<div class="dashboard-tabs audit-log-pane-tabs" role="tablist">';
     html += listing.paneTabHTML(config.dataTab, config.dataTabLabel);
     html += listing.paneTabHTML(config.detailsTab, config.detailsTabLabel);
+    html += '</div>';
     html += '<a class="audit-log-open-flow" href="' + config.flowPagePath + '?term=' + rowModel.id +
         '">' + config.openFlowLabel + '</a>';
     html += '</div>';

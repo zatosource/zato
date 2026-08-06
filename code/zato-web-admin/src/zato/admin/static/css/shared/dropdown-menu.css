@@ -64,6 +64,40 @@
     font-weight: 600;
 }
 
+/* The checkbox of a multi-pick row - an empty square until its row is picked,
+   then the accent green the rate limiting rows carry */
+
+.zato-dropdown-item-check {
+    box-sizing: border-box;
+    position: relative;
+    flex: none;
+    width: 13px;
+    height: 13px;
+    border: 1px solid #d0d0d0;
+    border-radius: 3px;
+    background: #ffffff;
+    transition: background 0.1s, border-color 0.1s;
+}
+
+.zato-dropdown-item-selected .zato-dropdown-item-check {
+    border-color: #2e7d6a;
+    background: #2e7d6a;
+}
+
+/* The tick is drawn, not typed - two white strokes turned into a check */
+
+.zato-dropdown-item-selected .zato-dropdown-item-check::after {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 1px;
+    width: 3px;
+    height: 7px;
+    border-right: 2px solid #ffffff;
+    border-bottom: 2px solid #ffffff;
+    transform: rotate(45deg);
+}
+
 .zato-dropdown-separator {
     height: 1px;
     background: #e9ecef;

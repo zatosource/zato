@@ -26,14 +26,18 @@ $.fn.zato.audit_log.config = {
     rawTabLabel: 'Raw',
     parsedTabLabel: 'Parsed',
 
-    // The filter selects of the all-events page - what each one is called and what
-    // its everything entry says, plus where each one is rendered
+    // The filter selects of the all-events page - what each one is called, what its
+    // everything entry says, what several picks at once are counted in, where each
+    // one is rendered and the face its trigger wears - the rate limiting forms'
+    // control look, kept in the kit under a common name
     sourceSelectLabel: 'Source',
     objectSelectLabel: 'Object',
     allSourcesLabel: 'All',
     allObjectsLabel: 'All',
+    manySourcesLabel: 'sources',
     sourceSelectHost: '#audit-log-filter-source',
     objectSelectHost: '#audit-log-filter-object',
+    filterTriggerCls: 'dashboard-select-face',
 
     // What the resubmit outcome is reported with
     resubmitModalTitle: 'Resubmit result',
@@ -235,16 +239,16 @@ $.fn.zato.audit_log.parseResubmitResponse = function(jqXHR, textStatus) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The filter selects of the all-events page - one for the source, one for the object.
-// Picking a source narrows both the list and what the object select has to offer,
-// picking an object narrows the list to that object alone.
+// The filter selects of the all-events page - one for the sources, one for the object.
+// Any number of sources can be picked at once - the picks narrow both the list and what
+// the object select has to offer - and picking an object narrows the list to it alone.
 $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
     var kit = $.fn.zato.dashboard_kit;
     var config = $.fn.zato.audit_log.config;
     var pagination = $.fn.zato.audit_log.pagination;
 
-    // Every source in the log, the everything entry first
-    var sourceItems = [{value: '', label: config.allSourcesLabel}];
+    // Every source there is, whether or not it has events yet
+    var sourceItems = [];
 
     for (var optionIndex = 0; optionIndex < filterOptions.length; optionIndex++) {
         var option = filterOptions[optionIndex];
@@ -253,14 +257,14 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
     }
 
     // The objects on offer, grouped by their source - all of them when no source is
-    // picked, one source's own when one is
-    var objectGroups = function(pickedSource) {
+    // picked, the picked sources' own when some are
+    var objectGroups = function(pickedSources) {
         var out = [{group: '', items: [{value: '', label: config.allObjectsLabel}]}];
 
         for (var optionIndex = 0; optionIndex < filterOptions.length; optionIndex++) {
             var option = filterOptions[optionIndex];
 
-            if (pickedSource !== '' && option.source !== pickedSource) {
+            if (pickedSources.length && pickedSources.indexOf(option.source) === -1) {
                 continue;
             }
 
@@ -282,7 +286,7 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
         return out;
     };
 
-    // Whether an object is still on offer once the source has changed underneath it
+    // Whether an object is still on offer once the sources have changed underneath it
     var hasObject = function(groups, value) {
         for (var groupIndex = 0; groupIndex < groups.length; groupIndex++) {
             var items = groups[groupIndex].items;
@@ -299,8 +303,9 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
 
     var objectSelect = kit.select.create({
         host: config.objectSelectHost,
+        trigger_cls: config.filterTriggerCls,
         label: config.objectSelectLabel,
-        groups: objectGroups(''),
+        groups: objectGroups([]),
         value: '',
         on_change: function(value) {
             pagination.set_filters({object_name: value});
@@ -310,13 +315,17 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
 
     kit.select.create({
         host: config.sourceSelectHost,
+        trigger_cls: config.filterTriggerCls,
         label: config.sourceSelectLabel,
         groups: [{group: '', items: sourceItems}],
-        value: '',
-        on_change: function(value) {
-            var newGroups = objectGroups(value);
+        multi: true,
+        values: [],
+        empty_label: config.allSourcesLabel,
+        many_label: config.manySourcesLabel,
+        on_change: function(values) {
+            var newGroups = objectGroups(values);
 
-            // An object of some other source is no filter for this one
+            // An object of some source no longer picked is no filter for these
             var objectName = objectSelect.get_value();
 
             if (!hasObject(newGroups, objectName)) {
@@ -326,7 +335,7 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
 
             objectSelect.set_groups(newGroups);
 
-            pagination.set_filters({source: value, object_name: objectName});
+            pagination.set_filters({sources: values, object_name: objectName});
             pagination.fetch_page(1);
         }
     });
@@ -392,12 +401,19 @@ $.fn.zato.audit_log.init = function(initConfig) {
         timeFrom = listing.rangeTimeFrom();
     }
 
-    // .. wire up the paginated listing ..
+    // .. wire up the paginated listing - a per-source page polls for its one source,
+    // the all-events page starts with every one ..
+    var sources = [];
+
+    if (initConfig.source !== '') {
+        sources.push(initConfig.source);
+    }
+
     var pagination = kit.pagination.init({
         poll_url: initConfig.poll_url,
         page_size: config.pageSize,
         filters: {
-            source: initConfig.source,
+            sources: sources,
             object_name: initConfig.object_name,
             query: initConfig.query,
             status: initConfig.status,

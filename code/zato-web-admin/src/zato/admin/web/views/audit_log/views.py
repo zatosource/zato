@@ -25,7 +25,7 @@ from django.template.response import TemplateResponse
 from zato.admin.web.views import invoke_action_handler, method_allowed
 from zato.admin.web.views.audit_log.columns import _all_sources_columns, _all_sources_section_title, _all_sources_title, \
     _data_preview_len, _default_page, _flow_columns, _get_outcomes, _poll_url, _preview_len, _row_columns, _source_columns, \
-    _source_title, _status_outstanding
+    _source_label, _source_title, _status_outstanding
 from zato.admin.web.views.audit_log.query import _build_where, _hydrate_rows, _normalize_row
 from zato.admin.web.views.audit_log.sources import _get_resubmit_labels, _source_outstanding, _source_parse, \
     _source_resubmit
@@ -82,30 +82,36 @@ def _record_content_view(req:'any_', event_id:'int', source:'str', object_name:'
 # ################################################################################################################################
 
 def _get_filter_options() -> 'anylist':
-    """ Every source in the log and every object of it, which is what the all-events page
-    offers its filter selects - one entry per source, the source's objects inside it.
+    """ What the all-events page offers its filter selects - every source there can be,
+    each under its human label and with the objects its events were written against.
     """
+
+    # Every source of the catalog is on offer whether or not it has events yet ..
+    by_source:'anydict' = {}
+    out:'anylist' = []
+
+    for source, label in _source_label.items():
+        entry = {'source': source, 'label': label, 'objects': []}
+
+        by_source[source] = entry
+        out.append(entry)
+
+    # .. and the objects come from the events themselves.
     statement = select(event_table.c.source, event_table.c.object_name)
     statement = statement.distinct()
     statement = statement.order_by(event_table.c.source, event_table.c.object_name)
 
     engine = get_audit_engine()
 
-    # One entry per source, in the order the database gave them out
-    by_source:'anydict' = {}
-    out:'anylist' = []
-
     with engine.connect() as connection:
         result = connection.execute(statement)
 
         for source, object_name in result:
 
+            # A source the log holds that the catalog does not know is still shown,
+            # under its raw name - the log may be ahead of this application.
             if source not in by_source:
-
-                # A source with a page title of its own is offered under it, one without
-                # is offered under its raw name - the log may hold sources this application
-                # has no title for yet.
-                entry = {'source': source, 'label': _source_title.get(source, source), 'objects': []}
+                entry = {'source': source, 'label': source, 'objects': []}
 
                 by_source[source] = entry
                 out.append(entry)
@@ -198,7 +204,7 @@ def poll(req:'any_') -> 'HttpResponse':
     """
     body = json.loads(req.body)
 
-    source = body['source']
+    sources = body['sources']
     object_name = body['object_name']
     query = body['query']
     status = body['status']
@@ -211,7 +217,7 @@ def poll(req:'any_') -> 'HttpResponse':
     if page < _default_page:
         page = _default_page
 
-    where_conditions = _build_where(source, object_name, query, status, time_from, time_to)
+    where_conditions = _build_where(sources, object_name, query, status, time_from, time_to)
 
     rows:'anylist' = []
 

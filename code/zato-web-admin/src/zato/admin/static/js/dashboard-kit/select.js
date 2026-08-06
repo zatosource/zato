@@ -1,9 +1,9 @@
 
 /* Dashboard kit - the select and the dropdown menu behind it.
    One home for the grouped, filterable menu that used to live in rate-limiting.js
-   and for a select built on top of it - a trigger showing the current value, opening
-   the menu underneath. The menu look is shared/dropdown-menu.css, the trigger look
-   is dashboard-kit/select.css. */
+   and for a select built on top of it - a trigger showing what is picked, opening
+   the menu underneath. The menu look is shared/dropdown-menu.css, the trigger wears
+   whatever classes its page hands it - it has no face of its own. */
 
 
 
@@ -35,7 +35,7 @@
 
     /* One row of the menu. item_style 'value_label' draws the value and its label as
        two spans - the suggestion flavour - and 'text' draws one plain span, the select
-       flavour, marked when it is the value currently picked. */
+       flavour, marked when config.is_picked says the value is a picked one. */
     ns.select.make_item = function(item, config) {
         var row = document.createElement('div');
         row.className = 'zato-dropdown-item';
@@ -52,8 +52,15 @@
             row.appendChild(label_span);
         }
         else {
-            if (item.value === config.selected) {
+            if (config.is_picked(item.value)) {
                 row.className = 'zato-dropdown-item zato-dropdown-item-selected';
+            }
+
+            // A toggling row carries a checkbox of its own, filled in when picked
+            if (config.toggle_pick) {
+                var check_span = document.createElement('span');
+                check_span.className = 'zato-dropdown-item-check';
+                row.appendChild(check_span);
             }
 
             var text_span = document.createElement('span');
@@ -65,9 +72,18 @@
         row.onclick = function() {
             config.on_select(item.value);
 
-            if (config.keep_open) {
+            // A toggling pick flips its own mark and leaves the menu up, so several
+            // can be picked in one visit ..
+            if (config.toggle_pick) {
+                row.classList.toggle('zato-dropdown-item-selected');
+            }
+
+            // .. a kept-open pick takes its row along, the suggestion flavour ..
+            else if (config.keep_open) {
                 row.parentNode.removeChild(row);
             }
+
+            // .. and a plain pick is the menu's last word.
             else {
                 ns.select.hide_menu();
             }
@@ -143,14 +159,15 @@
     // ////////////////////////////////////////////////////////////////////////
 
     /* Opens the menu under its anchor. config:
-         anchor:     the element the menu hangs off
-         groups:     [{group, items: [{value, label}]}]
-         filter:     text the items are narrowed by before the menu opens
-         on_select:  callback(value)
-         excluded:   map of values left out, e.g. ones already picked as pills
-         keep_open:  a pick removes its row rather than the menu
-         item_style: 'value_label' or 'text'
-         selected:   the value marked as the current one (item_style 'text')
+         anchor:      the element the menu hangs off
+         groups:      [{group, items: [{value, label}]}]
+         filter:      text the items are narrowed by before the menu opens
+         on_select:   callback(value)
+         excluded:    map of values left out, e.g. ones already picked as pills
+         keep_open:   a pick removes its row rather than the menu
+         toggle_pick: a pick flips its own mark and leaves the menu up
+         item_style:  'value_label' or 'text'
+         is_picked:   function(value) saying which rows are marked (item_style 'text')
          with_filter: put a filter box at the top of the menu */
     ns.select.show_menu = function(config) {
 
@@ -216,20 +233,29 @@
     // ////////////////////////////////////////////////////////////////////////
 
     /* A select - a trigger showing what is picked, the menu underneath picking it. config:
-         host:      selector or element the trigger is rendered into
-         label:     what the select is called, standing before the value
-         groups:    [{group, items: [{value, label}]}]
-         value:     the value picked at the start
-         on_change: callback(value), called on picks that change the value
-       Returns {get_value, set_value, set_groups}. */
+         host:        selector or element the trigger is rendered into
+         trigger_cls: the classes the trigger wears - the page's own look, not the kit's
+         label:       what the select is called, standing before the value
+         groups:      [{group, items: [{value, label}]}]
+         value:       the value picked at the start
+         on_change:   callback(value), called on picks that change the value
+       With multi: true, several values can be picked at once - picks toggle and the menu
+       stays up. Then `values` replaces `value`, on_change receives the picked list,
+       `empty_label` is what the trigger says when nothing is picked and `many_label`
+       the word after the count when more than one is.
+       Returns {set_groups} plus {get_value, set_value} or {get_values, set_values}. */
     ns.select.create = function(config) {
         var host = $(config.host)[0];
-        var current_value = config.value;
         var groups = config.groups;
+        var multi = config.multi === true;
 
-        var trigger = document.createElement('button');
-        trigger.type = 'button';
-        trigger.className = 'dashboard-select';
+        var current_value = config.value;
+        var current_values = config.values;
+
+        // The trigger has no look of the kit's own - dashboard-select-trigger is
+        // layout alone and everything visible about it comes from the caller
+        var trigger = document.createElement('span');
+        trigger.className = 'dashboard-select-trigger ' + config.trigger_cls;
 
         var label_span = document.createElement('span');
         label_span.className = 'dashboard-select-label';
@@ -242,6 +268,7 @@
 
         var chevron = document.createElement('span');
         chevron.className = 'dashboard-select-chevron';
+        chevron.textContent = '\u25be';
         trigger.appendChild(chevron);
 
         host.appendChild(trigger);
@@ -271,11 +298,50 @@
             return count;
         };
 
+        var is_picked = function(value) {
+            if (multi) {
+                return current_values.indexOf(value) !== -1;
+            }
+
+            return value === current_value;
+        };
+
         var apply = function() {
-            value_span.textContent = label_of(current_value);
+            if (!multi) {
+                value_span.textContent = label_of(current_value);
+                return;
+            }
+
+            // Nothing picked is everything on offer, one pick is named, more are counted
+            if (current_values.length === 0) {
+                value_span.textContent = config.empty_label;
+            }
+            else if (current_values.length === 1) {
+                value_span.textContent = label_of(current_values[0]);
+            }
+            else {
+                value_span.textContent = current_values.length + ' ' + config.many_label;
+            }
         };
 
         var pick = function(value) {
+            if (multi) {
+                var value_idx = current_values.indexOf(value);
+
+                if (value_idx === -1) {
+                    current_values.push(value);
+                }
+                else {
+                    current_values.splice(value_idx, 1);
+                }
+
+                apply();
+
+                // The caller gets a copy - what it does with the list is its own affair
+                config.on_change(current_values.slice());
+                return;
+            }
+
             // Picking what is already picked is not a change
             if (value === current_value) {
                 return;
@@ -301,27 +367,42 @@
                 on_select: pick,
                 excluded: null,
                 keep_open: false,
+                toggle_pick: multi,
                 item_style: 'text',
-                selected: current_value,
+                is_picked: is_picked,
                 with_filter: item_count() > filter_threshold
             });
         };
 
         apply();
 
-        return {
-            get_value: function() {
-                return current_value;
-            },
-            set_value: function(value) {
-                current_value = value;
-                apply();
-            },
+        var out = {
             set_groups: function(new_groups) {
                 groups = new_groups;
                 apply();
             }
         };
+
+        if (multi) {
+            out.get_values = function() {
+                return current_values.slice();
+            };
+            out.set_values = function(values) {
+                current_values = values.slice();
+                apply();
+            };
+        }
+        else {
+            out.get_value = function() {
+                return current_value;
+            };
+            out.set_value = function(value) {
+                current_value = value;
+                apply();
+            };
+        }
+
+        return out;
     };
 
     // ////////////////////////////////////////////////////////////////////////
