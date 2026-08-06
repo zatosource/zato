@@ -530,6 +530,7 @@
 }
 
 .audit-log-pane-tabs-row .audit-log-open-flow {
+    margin-left: auto;
     font-size: 11px;
     white-space: nowrap;
 }

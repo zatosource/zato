@@ -19,6 +19,11 @@
     /* How many items a select holds before its menu grows a filter box */
     var filter_threshold = 8;
 
+    /* The class a trigger wears while its menu is up, and the one the keyboard's
+       active row carries */
+    var open_class = 'dashboard-select-trigger-open';
+    var active_row_class = 'zato-dropdown-item-active';
+
     // ////////////////////////////////////////////////////////////////////////
 
     ns.select.hide_menu = function() {
@@ -26,6 +31,11 @@
 
         if (existing) {
             existing.parentNode.removeChild(existing);
+        }
+
+        // Whatever the menu hung off stops saying it is open
+        if (active_anchor !== null) {
+            active_anchor.classList.remove(open_class);
         }
 
         active_anchor = null;
@@ -56,17 +66,18 @@
                 row.className = 'zato-dropdown-item zato-dropdown-item-selected';
             }
 
-            // A toggling row carries a checkbox of its own, filled in when picked
+            var text_span = document.createElement('span');
+            text_span.className = 'zato-dropdown-item-text';
+            text_span.textContent = item.label;
+            row.appendChild(text_span);
+
+            // A toggling row holds room for a checkmark after its text - the mark
+            // itself appears only while the row is picked
             if (config.toggle_pick) {
                 var check_span = document.createElement('span');
                 check_span.className = 'zato-dropdown-item-check';
                 row.appendChild(check_span);
             }
-
-            var text_span = document.createElement('span');
-            text_span.className = 'zato-dropdown-item-text';
-            text_span.textContent = item.label;
-            row.appendChild(text_span);
         }
 
         row.onclick = function() {
@@ -266,9 +277,9 @@
         value_span.className = 'dashboard-select-value';
         trigger.appendChild(value_span);
 
+        // The chevron is drawn by the stylesheet, not a glyph, so it can turn over
         var chevron = document.createElement('span');
         chevron.className = 'dashboard-select-chevron';
-        chevron.textContent = '\u25be';
         trigger.appendChild(chevron);
 
         host.appendChild(trigger);
@@ -312,7 +323,10 @@
                 return;
             }
 
-            // Nothing picked is everything on offer, one pick is named, more are counted
+            // Nothing picked is everything on offer, one pick is named, more are
+            // counted - and the count wears its own small pill
+            value_span.classList.remove('dashboard-select-value-count');
+
             if (current_values.length === 0) {
                 value_span.textContent = config.empty_label;
             }
@@ -321,6 +335,7 @@
             }
             else {
                 value_span.textContent = current_values.length + ' ' + config.many_label;
+                value_span.classList.add('dashboard-select-value-count');
             }
         };
 
@@ -372,6 +387,9 @@
                 is_picked: is_picked,
                 with_filter: item_count() > filter_threshold
             });
+
+            // The trigger wears its open look until hide_menu takes it back
+            trigger.classList.add(open_class);
         };
 
         apply();
@@ -427,8 +445,87 @@
         ns.select.hide_menu();
     });
 
+    /* The row the arrow keys stand on moves one step, wrapping at either end,
+       and is kept in sight when the menu scrolls */
+    var move_active = function(menu, step) {
+        var rows = menu.querySelectorAll('.zato-dropdown-item');
+
+        if (rows.length === 0) {
+            return;
+        }
+
+        var current = -1;
+
+        for (var row_idx = 0; row_idx < rows.length; row_idx++) {
+            if (rows[row_idx].classList.contains(active_row_class)) {
+                current = row_idx;
+            }
+        }
+
+        var next = current + step;
+
+        if (next < 0) {
+            next = rows.length - 1;
+        }
+
+        if (next >= rows.length) {
+            next = 0;
+        }
+
+        if (current !== -1) {
+            rows[current].classList.remove(active_row_class);
+        }
+
+        rows[next].classList.add(active_row_class);
+        rows[next].scrollIntoView({block: 'nearest'});
+    };
+
+    /* The keyboard drives an open menu - arrows walk the rows, Enter picks the one
+       stood on, Escape first empties the filter and only then puts the menu away */
     $(document).on('keydown', function(event) {
+        var menu = document.getElementById(menu_id);
+
+        if (!menu) {
+            return;
+        }
+
+        if (event.key === 'ArrowDown') {
+            // The page must not scroll under the menu
+            event.preventDefault();
+            move_active(menu, 1);
+            return;
+        }
+
+        if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            move_active(menu, -1);
+            return;
+        }
+
+        if (event.key === 'Enter') {
+            // The trigger stands inside a form - Enter must not submit it
+            event.preventDefault();
+            var active = menu.querySelector('.' + active_row_class);
+
+            if (active) {
+                active.click();
+            }
+
+            return;
+        }
+
         if (event.key === 'Escape') {
+            var filter_input = menu.querySelector('.dashboard-select-filter');
+
+            // A filter with text in it is what Escape clears first ..
+            if (filter_input && filter_input.value !== '') {
+                filter_input.value = '';
+
+                // .. and the rows are rebuilt the same way typing rebuilds them
+                filter_input.dispatchEvent(new Event('input'));
+                return;
+            }
+
             ns.select.hide_menu();
         }
     });
