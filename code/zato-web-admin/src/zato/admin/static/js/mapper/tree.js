@@ -117,8 +117,9 @@
 
     function buildFieldItem(field, path) {
 
+        // The kit class brings the elbow connectors, the mapper one everything else
         var item = document.createElement('li');
-        item.className = 'mapper-tree-item';
+        item.className = 'mapper-tree-item kit-tree-item';
         item.setAttribute('data-path', path);
 
         var row = document.createElement('div');
@@ -155,7 +156,7 @@
 
         if (hasChildren) {
             var childList = document.createElement('ul');
-            childList.className = 'mapper-tree-children';
+            childList.className = 'mapper-tree-children kit-tree-children';
 
             for (var childIdx = 0; childIdx < childFields.length; childIdx++) {
                 var childField = childFields[childIdx];
@@ -192,7 +193,7 @@
     zato.mapper.tree.render = function(container, root) {
 
         var list = document.createElement('ul');
-        list.className = 'mapper-tree';
+        list.className = 'mapper-tree kit-tree';
 
         var fields = childFieldsOf(root);
         for (var fieldIdx = 0; fieldIdx < fields.length; fieldIdx++) {

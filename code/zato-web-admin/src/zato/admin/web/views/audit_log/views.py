@@ -240,6 +240,7 @@ def flow(req:'any_') -> 'HttpResponse':
         # Which events are in the flow and why each of them is comes first ..
         flow_ids = get_flow_ids(connection, seed_id)
         relation_by_id = flow_ids.relation_by_id
+        via_by_id = flow_ids.via_by_id
 
         # .. then they are read in the order they are to be shown in ..
         flow_query = select(*select_columns)
@@ -266,6 +267,13 @@ def flow(req:'any_') -> 'HttpResponse':
 
             row['relation'] = relation
             row['is_seed'] = relation == Relation_Seed
+
+            # Which event this one was found through, zero when its relation is a shared one
+            # that names no event in particular
+            if row['id'] in via_by_id:
+                row['via_id'] = via_by_id[row['id']]
+            else:
+                row['via_id'] = 0
 
             rows.append(row)
 

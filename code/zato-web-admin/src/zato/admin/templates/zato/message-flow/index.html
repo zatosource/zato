@@ -1,0 +1,17 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Message flow{% endblock %}
+
+{% block "extra_css" %}
+<link rel="stylesheet" type="text/css" href="/static/css/message-flow/page.css">
+{% endblock %}
+
+{% block "content" %}
+
+<div class="message-flow-page">
+    <div id="message-flow-canvas" class="message-flow-canvas"></div>
+</div>
+
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/demo.js"></script>
+
+{% endblock %}

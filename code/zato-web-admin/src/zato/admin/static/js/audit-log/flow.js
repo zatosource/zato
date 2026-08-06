@@ -37,17 +37,7 @@ flow.config = {
     darkVariant: 'dark',
 
     copyLabel: 'Copy',
-    openLabel: 'Open',
-
-    // What one relation of an event to the flow is called. The operation itself is left unnamed,
-    // because a line of the same operation is what a flow is mostly made of - and so is sharing
-    // a message id, which is why a line found by it wears no tag either.
-    relationLabels: {
-        'parent': 'Came out of',
-        'child': 'Led to',
-        'resubmit-of': 'Repeat of',
-        'resubmitted-as': 'Repeated as'
-    }
+    openLabel: 'Open'
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -79,10 +69,13 @@ flow.host = function() {
 flow.buildRow = function(row) {
     var out = listing.buildRow(row);
 
-    out.relation = row.relation;
     out.isSeed = row.is_seed;
     out.source = row.source;
     out.objectName = row.object_name;
+
+    // The event this one was found through, zero when it hangs off no event in particular -
+    // a non-zero via is what makes a line indent under its counterpart
+    out.viaId = row.via_id;
 
     // A flow crosses sources, so a line of another one is named by that source rather than by
     // the one the page happens to be listing
@@ -198,9 +191,9 @@ flow.elapsedHTML = function(previous, rowModel) {
 
 // What the event is - how long after the line below it it happened, the line below being
 // the one before it in time, which source wrote it down when that is not the source of the
-// page, what happened, what the message is known by, and why the event is in the flow
+// page, what happened, and what the message is known by. Why the event is in the flow is
+// not said in words - a line found through another one is drawn indented under it instead.
 flow.messageHTML = function(rowModel, previous) {
-    var config = flow.config;
     var pageSource = $.fn.zato.audit_log.config.source;
     var html = '';
 
@@ -221,13 +214,6 @@ flow.messageHTML = function(rowModel, previous) {
     }
 
     html += '<span class="audit-log-flow-headline">' + flow.escapeHTML(rowModel.headline) + '</span>';
-
-    // The operation itself is left unnamed, and so is the line the flow was read from
-    var relationLabel = config.relationLabels[rowModel.relation];
-
-    if (relationLabel !== undefined) {
-        html += '<span class="audit-log-flow-relation">' + relationLabel + '</span>';
-    }
 
     return html;
 };
@@ -326,20 +312,120 @@ flow.stepHTML = function(rowModel, previous) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-flow.render = function() {
-    var html = '<div class="detail-panel-log audit-log-flow">';
+// With the newest first, the event before a given one in time is the row after it
+// in the flat list, whatever branch of the thread either of them is drawn on
+flow.previousOf = function(rowModel) {
+    var out = null;
+
+    for (var rowIndex = 0; rowIndex < flow.rows.length; rowIndex++) {
+        if (String(flow.rows[rowIndex].id) === String(rowModel.id)) {
+            if (rowIndex + 1 < flow.rows.length) {
+                out = flow.rows[rowIndex + 1];
+            }
+            break;
+        }
+    }
+
+    return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The root of a row's family - the row itself when it hangs off nothing, otherwise
+// the end of its via chain, a batch item of a resubmission walking two steps up
+flow.rootOf = function(rowModel) {
+    var current = rowModel;
+
+    while (current.viaId) {
+        current = flow.rowById(current.viaId);
+    }
+
+    return current;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// Who hangs under whom - each row with a via listed under it, the lists reading
+// newest first because flow.rows does
+flow.childrenByVia = function() {
+    var out = {};
 
     for (var rowIndex = 0; rowIndex < flow.rows.length; rowIndex++) {
         var rowModel = flow.rows[rowIndex];
 
-        // With the newest first, the event before this one in time is the row after it
-        var previous = null;
-
-        if (rowIndex + 1 < flow.rows.length) {
-            previous = flow.rows[rowIndex + 1];
+        if (!rowModel.viaId) {
+            continue;
         }
 
-        html += flow.stepHTML(rowModel, previous);
+        var viaKey = String(rowModel.viaId);
+
+        if (!(viaKey in out)) {
+            out[viaKey] = [];
+        }
+
+        out[viaKey].push(rowModel);
+    }
+
+    return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// One row of the thread and everything hanging under it - the line, its panel, and a nested
+// container for the rows found through it, each of them an item of its own. A root sits flush
+// left with no connectors, a nested item wears the kit's elbow.
+flow.itemHTML = function(rowModel, childrenByVia, isRoot) {
+    var itemClasses = 'audit-log-flow-item';
+
+    if (!isRoot) {
+        itemClasses += ' kit-tree-item';
+    }
+
+    var html = '<div class="' + itemClasses + '" data-step-item="' + rowModel.id + '">';
+
+    html += flow.stepHTML(rowModel, flow.previousOf(rowModel));
+
+    var children = childrenByVia[String(rowModel.id)];
+
+    if (children !== undefined) {
+        html += '<div class="kit-tree-children">';
+
+        for (var childIndex = 0; childIndex < children.length; childIndex++) {
+            html += flow.itemHTML(children[childIndex], childrenByVia, false);
+        }
+
+        html += '</div>';
+    }
+
+    html += '</div>';
+
+    return html;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The flow drawn as a thread - rows found through another one indent under it, rows that are
+// merely part of the same exchange stay flush left. A family stands in the list where its
+// newest member would, the root drawn first and children nested newest-first under it, so
+// fresh activity stays on top while the family reads as one shape.
+flow.render = function() {
+    var childrenByVia = flow.childrenByVia();
+    var isRootDrawn = {};
+
+    var html = '<div class="detail-panel-log audit-log-flow">';
+
+    for (var rowIndex = 0; rowIndex < flow.rows.length; rowIndex++) {
+        var root = flow.rootOf(flow.rows[rowIndex]);
+        var rootKey = String(root.id);
+
+        // A family already on the screen was placed there by a newer member of it
+        if (isRootDrawn[rootKey]) {
+            continue;
+        }
+
+        isRootDrawn[rootKey] = true;
+
+        html += flow.itemHTML(root, childrenByVia, true);
     }
 
     html += '</div>';
@@ -419,8 +505,9 @@ flow.merge = function(rows) {
         return;
     }
 
-    // What arrives reads newest first like everything else, and each new line goes on top of
-    // the flow - so the arrivals are walked from the oldest of them up, each landing above
+    // What arrives reads newest first like everything else, and each new line goes on top -
+    // of its family when the event it was found through is on the screen, of the whole flow
+    // otherwise - so the arrivals are walked from the oldest of them up, each landing above
     // the one before it and the newest of them ending up topmost
     for (var rowIndex = rows.length - 1; rowIndex >= 0; rowIndex--) {
         var rowModel = rows[rowIndex];
@@ -437,13 +524,44 @@ flow.merge = function(rows) {
             previous = flow.rows[0];
         }
 
-        var $step = $(flow.stepHTML(rowModel, previous));
-        var $line = $step.filter(flow.config.lineSelector);
+        // A line whose via stands on the screen joins that line's family, one step deeper
+        var $viaItem = $();
+
+        if (rowModel.viaId) {
+            $viaItem = $flow.find('[data-step-item="' + rowModel.viaId + '"]');
+        }
+
+        var isNested = $viaItem.length > 0;
+        var itemClasses = 'audit-log-flow-item';
+
+        if (isNested) {
+            itemClasses += ' kit-tree-item';
+        }
+
+        var $item = $('<div class="' + itemClasses + '" data-step-item="' + rowModel.id + '"></div>');
+        $item.html(flow.stepHTML(rowModel, previous));
+
+        var $line = $item.find(flow.config.lineSelector);
 
         $line.addClass('kit-fade-in');
         $line.one('animationend', function() { $(this).removeClass('kit-fade-in'); });
 
-        $flow.prepend($step);
+        if (isNested) {
+
+            // The first child a line gets also brings the container the family nests in
+            var $children = $viaItem.children('.kit-tree-children');
+
+            if (!$children.length) {
+                $children = $('<div class="kit-tree-children"></div>');
+                $viaItem.append($children);
+            }
+
+            $children.prepend($item);
+        }
+        else {
+            $flow.prepend($item);
+        }
+
         flow.rows.unshift(rowModel);
     }
 };

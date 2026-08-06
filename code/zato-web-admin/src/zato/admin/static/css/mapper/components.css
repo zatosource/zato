@@ -2,62 +2,11 @@
 /* Mapper - schema tree                                          */
 /* ------------------------------------------------------------ */
 
-.mapper-tree,
-.mapper-tree-children {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-/* Classic tree connectors, at the root level like anywhere deeper.
-   Each row gets an elbow: a vertical guide running under the parent's
-   toggle box (or along the tree's left edge for root rows) and a
-   horizontal stub from that guide to the row's own toggle or spacer.
-   The last child stops its vertical guide at its own stub, closing
-   the branch. */
-.mapper-tree {
-    padding-left: 9px;
-}
-
-.mapper-tree-children {
-    margin-left: 15px;
-    padding-left: 9px;
-}
-
-.mapper-tree > .mapper-tree-item,
-.mapper-tree-children > .mapper-tree-item {
-    position: relative;
-}
-
-/* The horizontal stub, at the vertical center of the row. */
-.mapper-tree > .mapper-tree-item::before,
-.mapper-tree-children > .mapper-tree-item::before {
-    content: '';
-    position: absolute;
-    left: -9px;
-    top: 12px;
-    width: 17px;
-    height: 1px;
-    background: var(--mapper-border-light);
-}
-
-/* The vertical guide, spanning the whole item .. */
-.mapper-tree > .mapper-tree-item::after,
-.mapper-tree-children > .mapper-tree-item::after {
-    content: '';
-    position: absolute;
-    left: -9px;
-    top: 0;
-    bottom: 0;
-    width: 1px;
-    background: var(--mapper-border-light);
-}
-
-/* .. except on the last child, where it ends at the stub. */
-.mapper-tree > .mapper-tree-item:last-child::after,
-.mapper-tree-children > .mapper-tree-item:last-child::after {
-    bottom: auto;
-    height: 12px;
+/* The elbow connectors - the guides, the stubs and the indentation - come from the
+   dashboard kit's tree, the schema tree only saying what ink they are drawn in. The
+   geometry stays the kit's own defaults, which are these very measurements. */
+.kit-tree.mapper-tree {
+    --kit-tree-guide: var(--mapper-border-light);
 }
 
 /* The root rows hang off a virtual root above the tree - the first
@@ -81,8 +30,10 @@
     color: var(--mapper-color-path);
 }
 
-.mapper-tree-item:hover::before,
-.mapper-tree-item.mapper-tree-item-pathed::before {
+/* Both of the item's classes are named so the path colour outweighs the kit's own guide
+   colour whatever order the two stylesheets arrive in */
+.kit-tree-item.mapper-tree-item:hover::before,
+.kit-tree-item.mapper-tree-item.mapper-tree-item-pathed::before {
     background: var(--mapper-color-path);
 }
 
@@ -97,8 +48,8 @@
 /* .. while an item on the hovered path colors its own guide only down
    to its stub - below the stub the guide leads to its next siblings,
    which are not on the path. */
-.mapper-tree-item:hover::after,
-.mapper-tree-item.mapper-tree-item-pathed::after {
+.kit-tree-item.mapper-tree-item:hover::after,
+.kit-tree-item.mapper-tree-item.mapper-tree-item-pathed::after {
     background: linear-gradient(
         var(--mapper-color-path) 0,
         var(--mapper-color-path) 12px,

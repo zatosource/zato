@@ -43,9 +43,13 @@
     border-width: 0;
 }
 
+/* The vertical scrollbar is always drawn, so a pane growing past its height does not
+   shift everything in it sideways the moment the bar appears */
+
 .dashboard-list-detail-pane {
     height: var(--dashboard-list-detail-height);
-    overflow: auto;
+    overflow-x: auto;
+    overflow-y: scroll;
     padding: 10px 12px;
     border: 1px solid var(--dashboard-line);
     background: #fff;

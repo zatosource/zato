@@ -82,6 +82,7 @@ from zato.admin.web.views import b2b
 from zato.admin.web.views import channel_usage
 from zato.admin.web.views import detail_poll
 from zato.admin.web.views import mapping
+from zato.admin.web.views import message_flow
 from zato.admin.web.views import scheduler_dashboard
 from zato.admin.web.views.check_attr import check_attr_exists
 
@@ -382,6 +383,11 @@ urlpatterns += [
 
     url(r'^zato/mapping/$',
         login_required(mapping.index), name='mapping'),
+
+    # Message flow
+
+    url(r'^zato/message-flow/$',
+        login_required(message_flow.index), name='message-flow'),
 
     # Traffic analytics
 

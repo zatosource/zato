@@ -1,0 +1,137 @@
+/* ------------------------------------------------------------ */
+/* Message flow - the page and the drawing on it                 */
+/* ------------------------------------------------------------ */
+
+/* The light grey strip the nav menu stands on suits the light pages - on this
+   dark page it turns into a dark seam between the menu bar and the room below */
+
+body:has(.message-flow-page) .pure-css-nav {
+    border-bottom-color: #101018;
+}
+
+.message-flow-page {
+
+    /* The room under the top menu bar and the cluster colour strip */
+    --message-flow-top-offset: 81px;
+
+    /* The dark room and its inks */
+    --message-flow-surface: #1c1c28;
+    --message-flow-node-surface: #32324f;
+    --message-flow-text: #e9e9f4;
+    --message-flow-muted: #9d9db8;
+    --message-flow-guide: rgba(255, 255, 255, 0.45);
+    --message-flow-ok: #3fb27f;
+    --message-flow-ok-rim: #2a7a57;
+    --message-flow-error: #d64550;
+    --message-flow-error-rim: #932f37;
+    --message-flow-seed: rgb(246, 166, 5);
+
+    box-sizing: border-box;
+    min-height: calc(100dvh - var(--message-flow-top-offset));
+    padding: 18px 22px 26px;
+    background: var(--message-flow-surface);
+    color: var(--message-flow-text);
+    font-family: 'Roboto Mono', monospace;
+}
+
+.message-flow-page * {
+    box-sizing: border-box;
+}
+
+/* The drawing is drawn at its natural size, a window too narrow for it is scrolled */
+
+.message-flow-canvas {
+    overflow: auto;
+}
+
+.message-flow-canvas svg {
+    display: block;
+    font-family: Tahoma, Verdana, sans-serif;
+}
+
+/* ------------------------------------------------------------ */
+/* The drawing vocabulary                                        */
+/* ------------------------------------------------------------ */
+
+/* A step box */
+
+.mf-box {
+    fill: var(--message-flow-node-surface);
+}
+
+.mf-box-seed {
+    stroke: var(--message-flow-seed);
+    stroke-width: 1.6;
+}
+
+/* The words inside a box */
+
+.mf-title {
+    fill: var(--message-flow-text);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.mf-sub {
+    fill: var(--message-flow-muted);
+    font-size: 10px;
+}
+
+.mf-note {
+    fill: var(--message-flow-seed);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+/* Connectors - solid, touching what they join */
+
+.mf-connector {
+    fill: none;
+    stroke: var(--message-flow-guide);
+    stroke-width: 2;
+}
+
+.mf-connector-arrow {
+    fill: var(--message-flow-guide);
+}
+
+.mf-connector-label {
+    fill: var(--message-flow-muted);
+    font-size: 10px;
+}
+
+.mf-connector-seed {
+    stroke: var(--message-flow-seed);
+}
+
+.mf-connector-arrow-seed {
+    fill: var(--message-flow-seed);
+}
+
+/* Status balls - the green and red of how a step ended */
+
+.mf-ball-ok {
+    fill: var(--message-flow-ok);
+    stroke: var(--message-flow-ok-rim);
+    stroke-width: 1;
+}
+
+.mf-ball-error {
+    fill: var(--message-flow-error);
+    stroke: var(--message-flow-error-rim);
+    stroke-width: 1;
+}
+
+/* The corner squares carrying the event ids */
+
+.mf-number-frame {
+    fill: #454569;
+    stroke: rgba(255, 255, 255, 0.35);
+    stroke-width: 1;
+}
+
+.mf-number-text {
+    fill: var(--message-flow-text);
+    font-size: 9px;
+    font-weight: 700;
+}
