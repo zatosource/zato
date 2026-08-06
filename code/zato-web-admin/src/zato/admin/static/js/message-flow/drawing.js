@@ -4,8 +4,8 @@
 // Message flow - the drawing. One message's journey drawn from its flow rows - the
 // message on the left, each exchange of it a lit card to the right, exchanges that
 // grew out of another one chained behind a labelled connector. The rows come from
-// the journey endpoint and arrive as the thread's own models, so what is drawn is
-// what the thread reads.
+// the journey endpoint and arrive as the flow rows the List tab reads, so what is drawn is
+// what the list says.
 
 $.fn.zato.message_flow = {};
 $.fn.zato.message_flow.drawing = {};
@@ -275,7 +275,7 @@ drawing.chipWidth = function(label) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// A chip - the same tinted tag the listing and the thread wear. On the canvas it
+// A chip - the same tinted tag the listing and the list wear. On the canvas it
 // stands on a solid backing so a connector running under it is hidden.
 drawing.addChip = function(host, x, y, label, kind, onCanvas) {
     var config = drawing.config;
@@ -307,7 +307,7 @@ drawing.addDirectionChip = function(host, x, y, label, kind) {
 };
 
 // /////////////////////////////////////////////////////////////////////////////
-// From the thread's models to the drawing's own shapes
+// From the flow models to the drawing's own shapes
 // /////////////////////////////////////////////////////////////////////////////
 
 // One event written as one line of a node - the direction, the event's own id,
@@ -356,7 +356,7 @@ drawing.buildExchanges = function(models) {
     var byKey = {};
     var keyByEventId = {};
 
-    // The models arrive newest first the way the thread reads - the drawing
+    // The models arrive newest first the way the list reads - the drawing
     // reads time forward
     var ascending = models.slice().reverse();
 
@@ -662,7 +662,7 @@ drawing.clear = function() {
 
 // The whole journey - the hub on the left, one row per delivery, chained
 // exchanges continuing their rows and branch rows hanging off their parents.
-// `models` are the thread's own row models, newest first, `seedModel` is the
+// `models` are the flow's own row models, newest first, `seedModel` is the
 // model of the event the journey was resolved to.
 drawing.render = function(models, seedModel) {
     var config = drawing.config;

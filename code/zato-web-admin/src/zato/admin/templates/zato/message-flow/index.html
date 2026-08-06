@@ -28,27 +28,27 @@
                 <span class="dashboard-panel-action-badge dashboard-panel-action-badge-dark message-flow-search-clear"
                     id="message-flow-search-clear">Clear</span>
             </span>
-            <button type="submit" class="action-button">Search</button>
+            <button type="submit" class="message-flow-search-button">Search</button>
         </form>
 
         <div class="dashboard-tabs message-flow-tabs" role="tablist">
-            <button type="button" class="dashboard-tab message-flow-tab" role="tab" data-tab="drawing">Drawing</button>
-            <button type="button" class="dashboard-tab message-flow-tab" role="tab" data-tab="thread">Thread</button>
+            <button type="button" class="dashboard-tab message-flow-tab" role="tab" data-tab="flow">Message flow</button>
+            <button type="button" class="dashboard-tab message-flow-tab" role="tab" data-tab="list">List</button>
         </div>
 
         <span class="message-flow-status" id="message-flow-status"></span>
     </div>
 
-    <div class="dashboard-tab-panel message-flow-panel message-flow-panel-tab-drawing" id="message-flow-panel-drawing"
+    <div class="dashboard-tab-panel message-flow-panel message-flow-panel-tab-flow" id="message-flow-panel-flow"
         role="tabpanel">
         <div id="message-flow-canvas" class="message-flow-canvas"></div>
         <div id="message-flow-resize" class="message-flow-resize"></div>
         <div id="message-flow-detail" class="message-flow-detail"></div>
     </div>
 
-    <div class="dashboard-tab-panel message-flow-panel message-flow-panel-tab-thread" id="message-flow-panel-thread"
+    <div class="dashboard-tab-panel message-flow-panel message-flow-panel-tab-list" id="message-flow-panel-list"
         role="tabpanel">
-        <div id="audit-log-pane-flow" class="message-flow-thread"></div>
+        <div id="audit-log-pane-flow" class="message-flow-list"></div>
     </div>
 
 </div>
