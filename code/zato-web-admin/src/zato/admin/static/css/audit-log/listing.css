@@ -512,21 +512,24 @@
 }
 
 /* The pane's tabs are the dashboard's own, only smaller - the pane is a column of a
-   listing, not a page of its own */
+   listing, not a page of its own. The row they stand in also holds the doorway to the
+   event's flow - a link beside the strip, not a tab inside it. */
+
+.audit-log-pane-tabs-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
 
 .audit-log-pane-tabs {
     --tab-padding: 4px 14px;
     --tab-font-size: 10.5px;
 
-    margin-bottom: 10px;
+    margin-bottom: 0;
 }
 
-/* The doorway to the event's flow stands beside the tabs, a link rather than a tab -
-   it leaves the page instead of turning it */
-
-.audit-log-pane-tabs .audit-log-open-flow {
-    align-self: center;
-    margin-left: 8px;
+.audit-log-pane-tabs-row .audit-log-open-flow {
     font-size: 11px;
     white-space: nowrap;
 }

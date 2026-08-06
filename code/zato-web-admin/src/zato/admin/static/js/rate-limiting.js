@@ -78,8 +78,8 @@
             on_select: on_select,
             excluded: excluded,
             keep_open: keep_open,
+            toggle_pick: false,
             item_style: 'value_label',
-            selected: '',
             with_filter: false
         });
     };

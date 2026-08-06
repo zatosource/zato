@@ -43,23 +43,25 @@ def _escape_like(query:'str') -> 'str':
 # ################################################################################################################################
 
 def _build_where(
-    source:'str',
+    sources:'anylist',
     object_name:'str',
     query:'str',
     status:'str',
     time_from:'str' = '',
     time_to:'str' = '',
     ) -> 'anylist':
-    """ Builds the WHERE conditions for the poll query.
+    """ Builds the WHERE conditions for the poll query. A per-source page names its one
+    source, the all-events page names whichever ones its reader picked - none at all
+    reads everything.
     """
 
     # Our response to produce
     out:'anylist' = []
 
-    # An empty source is the all-events page - every source, every object - and an
-    # empty object name reads the whole of whatever source is given
-    if source:
-        out.append(event_table.c.source == source)
+    # No sources is the whole log - every source, every object - and an empty
+    # object name reads the whole of whatever sources are given
+    if sources:
+        out.append(event_table.c.source.in_(sources))
 
     if object_name:
         out.append(event_table.c.object_name == object_name)
@@ -87,8 +89,15 @@ def _build_where(
 
         # Sources with attr columns also search through them, with the attr-to-cid shape -
         # the cids of the events whose attr matches, then every event on those cids,
-        # so a search by an MRN returns the whole trace the MRN appears in.
-        if attr_names := _source_attr_columns.get(source):
+        # so a search by an MRN returns the whole trace the MRN appears in. With several
+        # sources picked, their attrs are searched together.
+        attr_names:'anylist' = []
+
+        for source in sources:
+            if source_attr_names := _source_attr_columns.get(source):
+                attr_names.extend(source_attr_names)
+
+        if attr_names:
 
             is_wanted_attr = event_attr_table.c.name.in_(attr_names)
             is_matching_attr = event_attr_table.c.value.like(pattern, escape='\\')
@@ -106,12 +115,16 @@ def _build_where(
         any_like_part = or_(*like_parts)
         out.append(any_like_part)
 
-    # The outstanding filter narrows the page down to the open exchanges of this source -
-    # the sent messages or interchanges whose acknowledgment has not arrived.
-    if status == _status_outstanding:
-        if outstanding := _source_outstanding.get(source):
+    # The outstanding filter narrows the page down to the open exchanges of one source -
+    # the sent messages or interchanges whose acknowledgment has not arrived. What counts
+    # as open is each source's own affair, so the filter takes one source alone, which is
+    # what a per-source page sends.
+    if status == _status_outstanding and len(sources) == 1:
+        one_source = sources[0]
+
+        if outstanding := _source_outstanding.get(one_source):
             conditions = outstanding_conditions(
-                source,
+                one_source,
                 outstanding.open_event,
                 outstanding.close_event,
                 outstanding.needs_object_name_match,

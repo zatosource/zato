@@ -1,71 +1,60 @@
 /* ------------------------------------------------------------ */
 /* Dashboard kit - the select trigger                            */
 /*                                                               */
-/* The look the rate limiting forms gave their selects, kept in  */
-/* one place under a common name. The menu the trigger opens is  */
-/* shared/dropdown-menu.css.                                     */
+/* The rate limiting forms' control language under a common      */
+/* name - the same white face, borders and inks as the inputs    */
+/* and the dropdown of shared/dropdown-menu.css. The menu the    */
+/* trigger opens is that same shared dropdown.                   */
 /* ------------------------------------------------------------ */
 
-.dashboard-select {
-    appearance: none;
-    -webkit-appearance: none;
+/* Layout the trigger always has, whatever face it wears */
+
+.dashboard-select-trigger {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    margin: 0;
-    padding: 4px 8px;
-    border: 1px solid #d0d0d0;
-    border-radius: 3px;
-    font-family: inherit;
-    font-size: 12px;
-    line-height: normal;
-    text-shadow: none;
-    background: #ffffff none;
-    background-image: none;
-    color: #2c3e50;
-    outline: none;
-    box-shadow: none;
     cursor: pointer;
     user-select: none;
+    white-space: nowrap;
+}
+
+/* The face itself - the rate limiting forms' input look */
+
+.dashboard-select-face {
+    padding: 4px 9px;
+    border: 1px solid #d0d0d0;
+    border-radius: 3px;
+    font-size: 12px;
+    background: #ffffff;
     transition: border-color 0.15s;
 }
 
-.dashboard-select:hover {
-    border-color: #a8b4c0;
-}
-
-.dashboard-select:focus,
-.dashboard-select:focus-visible {
+.dashboard-select-face:hover {
     border-color: #5794d0;
-    box-shadow: 0 0 0 2px #5794d01a;
 }
 
-/* What the select is called - quieter than the value it holds */
+/* What the select is called reads like the forms' own labels .. */
 
 .dashboard-select-label {
-    color: #666666;
-    font-size: 11px;
-    white-space: nowrap;
+    font-weight: 600;
+    color: #2c3e50;
 }
+
+/* .. and what is picked reads like the dropdown's own values */
 
 .dashboard-select-value {
-    font-weight: 600;
-    white-space: nowrap;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: #1a56a8;
 }
-
-/* The chevron is drawn rather than typed, so it reads the same in every font */
 
 .dashboard-select-chevron {
-    width: 7px;
-    height: 7px;
-    margin-top: -3px;
-    border-right: 1.5px solid #666666;
-    border-bottom: 1.5px solid #666666;
-    transform: rotate(45deg);
-    flex: none;
+    font-size: 9px;
+    color: #666666;
 }
 
-/* The filter box at the top of a long menu */
+/* The filter box at the top of a long menu, the same input look as the face */
 
 .dashboard-select-filter {
     box-sizing: border-box;

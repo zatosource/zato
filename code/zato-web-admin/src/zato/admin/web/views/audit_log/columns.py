@@ -11,7 +11,7 @@ is bounded by.
 """
 
 # Zato
-from zato.common.audit_log.common import AuditOutcome
+from zato.common.audit_log.common import AuditOutcome, AuditSource
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -62,6 +62,30 @@ _status_outstanding = 'outstanding'
 # What the all-events page - the one no source narrows down - calls itself and its section
 _all_sources_title = 'Audit log'
 _all_sources_section_title = 'All sources'
+
+# What each source is called where one word has to do - the filter selects of the
+# all-events page. Every member of AuditSource is here, in the order the selects
+# offer them, so every source there can be is on offer whether or not it has
+# written anything yet. The config source is the access log - who read what, when
+# and from which screen.
+_source_label = {
+    AuditSource.Config: 'Access log',
+    AuditSource.AS2: 'AS2',
+    AuditSource.AS4: 'AS4',
+    AuditSource.FHIR: 'FHIR',
+    AuditSource.File_Outgoing: 'File transfer',
+    AuditSource.HL7: 'HL7',
+    AuditSource.Email_IMAP: 'IMAP',
+    AuditSource.MCP: 'MCP',
+    AuditSource.REST_Outgoing: 'Outgoing REST',
+    AuditSource.SOAP_Outgoing: 'Outgoing SOAP',
+    AuditSource.PubSub: 'Pub/sub',
+    AuditSource.REST_Channel: 'REST channels',
+    AuditSource.Email_SMTP: 'SMTP',
+    AuditSource.SOAP_Channel: 'SOAP channels',
+    AuditSource.SQL_Outgoing: 'SQL',
+    AuditSource.X12: 'X12',
+}
 
 # Per-source page titles - more sources will follow, e.g. REST outgoing connections
 _source_title = {
