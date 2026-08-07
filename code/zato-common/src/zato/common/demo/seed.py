@@ -148,6 +148,10 @@ Second_Hop_Every = 3
 # How many content-viewed records the access log carries
 View_Count = 40
 
+# How many distinct message bodies the feed authors for the seeded traffic - the remaining
+# messages reuse them with control ids of their own, which is most of what keeps a run fast
+Unique_Body_Count = 256
+
 # The people whose names appear on resubmits and body views
 Actors = (Actor_Admin, Actor_Operator)
 
@@ -173,6 +177,9 @@ class SeedConfig:
 
     # How many FHIR request/response pairs the run writes
     fhir_pair_count:'int' = 30
+
+    # How many distinct message bodies the feed authors, the rest reusing them
+    unique_count:'int' = Unique_Body_Count
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -205,6 +212,7 @@ class _PlannedMessage:
     channel_name:'str' = ''
     text:'str' = ''
     control_id:'str' = ''
+    template_key:'int' = 0
     is_error:'bool' = False
     is_forwarded:'bool' = False
 
@@ -239,12 +247,16 @@ class _ResubmitSource:
 @dataclass(init=False)
 class _PlannedView:
     """ One content-viewed record planned during the traffic pass - it embeds
-    the viewed event's real database id, so it is written after the main commit.
+    the viewed event's real database id, so it is written once that id is known.
     """
 
     relative_event_id:'int' = 0
     actor:'str' = ''
     when:'datetime' = None # type: ignore[assignment]
+
+    # Which channel's message was on the screen - the record names what was
+    # viewed, not only which event row it was
+    object_name:'str' = ''
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -506,6 +518,7 @@ def _build_plan(config:'SeedConfig', now:'datetime') -> 'anylist':
 
     feed_config = FeedConfig()
     feed_config.seed = config.seed
+    feed_config.unique_count = config.unique_count
 
     items = generate_feed_items(total_count, feed_config)
 
@@ -528,6 +541,7 @@ def _build_plan(config:'SeedConfig', now:'datetime') -> 'anylist':
         planned = _PlannedMessage()
         planned.text = item.text
         planned.control_id = item.control_id
+        planned.template_key = item.template_key
 
         # A burst message lands inside the previous day's two-hour window
         # and fails most of the time ..
@@ -597,12 +611,21 @@ def _write_messages(
     # Every this many accepted receipts, one goes into the view candidates
     ok_sample_step = 100
 
+    # The parsed attributes of each distinct body - one template's messages all carry
+    # the same searchable attributes, the control id not being among them, so the parse
+    # runs once per template rather than once per message
+    attrs_by_template:'intanydict' = {}
+
     for index, planned in enumerate(plan):
 
         cid = f'{Cid_Prefix}{index + 1:08d}'
 
-        message = parse_hl7(planned.text, validate=False)
-        attrs = get_audit_attrs(message)
+        attrs = attrs_by_template.get(planned.template_key)
+
+        if attrs is None:
+            message = parse_hl7(planned.text, validate=False)
+            attrs = get_audit_attrs(message)
+            attrs_by_template[planned.template_key] = attrs
 
         # The receipt itself
         audit_log.set_event_time(planned.when)
@@ -623,11 +646,12 @@ def _write_messages(
             source.when = planned.when
             resubmit_sources.append(source)
 
-        # Every failure may have been looked at, accepted ones only now and then
+        # Every failure may have been looked at, accepted ones only now and then -
+        # each candidate remembers its channel so the view record can name it
         if planned.is_error:
-            failed_candidates.append((received_id, planned.when))
+            failed_candidates.append((received_id, planned.when, planned.channel_name))
         elif index % ok_sample_step == 0:
-            ok_candidates.append((received_id, planned.when))
+            ok_candidates.append((received_id, planned.when, planned.channel_name))
 
         # The acknowledgment follows within the handling time
         if planned.is_error:
@@ -1157,13 +1181,14 @@ def _plan_views(
         view.relative_event_id = source.relative_received_id
         view.actor = rng.choice(Actors)
         view.when = _draw_view_time(rng, source.when, now)
+        view.object_name = source.channel_name
         out.append(view)
 
     # Other failures and a few accepted ones fill the rest, failures first
     remaining = [item for item in failed_candidates if item[0] not in resubmitted_ids]
     remaining.extend(ok_candidates)
 
-    for relative_event_id, message_when in remaining:
+    for relative_event_id, message_when, channel_name in remaining:
 
         if len(out) >= View_Count:
             break
@@ -1172,6 +1197,7 @@ def _plan_views(
         view.relative_event_id = relative_event_id
         view.actor = rng.choice(Actors)
         view.when = _draw_view_time(rng, message_when, now)
+        view.object_name = channel_name
         out.append(view)
 
     return out
@@ -1180,8 +1206,8 @@ def _plan_views(
 
 def _write_view_events(audit_log:'_BulkAuditLog', planned_views:'anylist', id_map:'intanydict') -> 'int':
     """ Writes the view-access records - who opened which message's body and when.
-    This runs after the main commit because each record embeds the viewed event's
-    real database id. Returns how many were written.
+    This runs once the main bulk write is done, because each record embeds
+    the viewed event's real database id. Returns how many were written.
     """
 
     for index, view in enumerate(planned_views):
@@ -1193,6 +1219,8 @@ def _write_view_events(audit_log:'_BulkAuditLog', planned_views:'anylist', id_ma
             viewed_event_id=id_map[view.relative_event_id],
             screen=Screen_Browser,
             cid=f'{Cid_Prefix}view-{index + 1:04d}',
+            viewed_source=AuditSource.HL7,
+            viewed_object_name=view.object_name,
         )
 
     return len(planned_views)
@@ -1316,8 +1344,8 @@ def seed_demo_data(
     # The FHIR request/response pairs
     out.fhir_pair_count = _write_fhir_traffic(audit_log, config, now, rng)
 
-    # The content-viewed records are planned now and written after the main
-    # commit, once the real database ids of the viewed events exist
+    # The content-viewed records are planned now and written once the real
+    # database ids of the viewed events are known
     planned_views = _plan_views(resubmit_sources, failed_candidates, ok_candidates, now, rng)
 
     # Everything lands in the database at once - a rerun replaces the previous
@@ -1335,16 +1363,12 @@ def seed_demo_data(
         if alert_rows:
             _ = connection.execute(alert_table.insert(), alert_rows)
 
-    # Each view-access record embeds the viewed event's real database id,
-    # which exists only after the main commit - they follow in a write of their own
-    if planned_views:
-
-        out.view_count = _write_view_events(audit_log, planned_views, id_map)
-
-        with engine.begin() as connection:
+        # Each view-access record embeds the viewed event's real database id,
+        # which the id map already knows within this same transaction
+        if planned_views:
+            out.view_count = _write_view_events(audit_log, planned_views, id_map)
             _ = audit_log.write_collected(connection)
-
-        out.config_event_count += out.view_count
+            out.config_event_count += out.view_count
 
     # The final count is what the database actually holds
     statement = select(func.count()).select_from(event_table).where(event_table.c.cid.like(Cid_Prefix + '%'))

@@ -1092,7 +1092,7 @@ listing.chromeHTML = function() {
     var config = listing.config;
     var rangePillId = config.rangePillId;
 
-    var html = '<div class="detail-header-controls audit-log-chrome-controls">';
+    var html = '<div class="detail-header-controls">';
 
     html += '<span class="dashboard-time-range-wrapper">';
     html += '<span class="dashboard-pill dashboard-pill-clickable dashboard-refresh-badge" ' +
@@ -1200,9 +1200,35 @@ listing.refreshLive = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-listing.initChrome = function(initConfig) {
+// The legend that narrows the list down to one outcome - built afresh whenever what
+// the rows can report changes, e.g. the picked sources no longer include the one
+// whose messages can expire
+listing.buildLegend = function(outcomes) {
     var config = listing.config;
     var palette = kit.palette.outcome;
+
+    if (!outcomes.length) {
+        return;
+    }
+
+    kit.build_legend({
+        container: config.legendHost,
+        series_keys: outcomes,
+        palette: palette.bar_colors,
+        labels: palette.labels,
+        text_colors: palette.colors,
+        backgrounds: palette.backgrounds,
+        hidden: listing.hidden,
+        on_toggle: function() {
+            listing.draw();
+        }
+    });
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+listing.initChrome = function(initConfig) {
+    var config = listing.config;
 
     $(config.chromeHost).html(listing.chromeHTML());
 
@@ -1239,24 +1265,7 @@ listing.initChrome = function(initConfig) {
 
     // The legend offers this source's own outcomes - a delivery running out of time is
     // something only a pub/sub message does, and an HL7 log is not asked about it.
-    var outcomes = $.fn.zato.audit_log.config.outcomes;
-
-    if (!outcomes.length) {
-        return;
-    }
-
-    kit.build_legend({
-        container: config.legendHost,
-        series_keys: outcomes,
-        palette: palette.bar_colors,
-        labels: palette.labels,
-        text_colors: palette.colors,
-        backgrounds: palette.backgrounds,
-        hidden: listing.hidden,
-        on_toggle: function() {
-            listing.draw();
-        }
-    });
+    listing.buildLegend($.fn.zato.audit_log.config.outcomes);
 };
 
 // /////////////////////////////////////////////////////////////////////////////
