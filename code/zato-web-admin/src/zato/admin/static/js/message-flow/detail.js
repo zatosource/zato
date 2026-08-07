@@ -29,9 +29,9 @@ detail.config = {
     charactersLabel: 'characters',
 
     // The word each kind of line wears, the same words the drawing writes
-    directionLabels: {
-        'in': 'IN',
-        'out': 'OUT',
+    roleLabels: {
+        'request': 'REQ',
+        'response': 'REPLY',
         'none': 'SYS',
         'view': 'VIEW'
     },
@@ -69,30 +69,30 @@ detail.escapeHTML = function(value) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The ink a line's direction is written in, on the pane's tabs
-detail.directionOf = function(model) {
+// The ink a line's role is written in, on the pane's tabs
+detail.roleOf = function(model) {
     var config = detail.config;
 
     if (model.eventType === config.viewEventType) {
         return 'view';
     }
 
-    return model.direction;
+    return model.role;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// What one tab of the pane wears - the direction in its own ink, the event's
+// What one tab of the pane wears - the role in its own ink, the event's
 // id in amber, and an outcome in the outcome's own colour. The plain label
 // stays beside the markup, being what a tab is told apart by.
 detail.tabOf = function(model) {
     var config = detail.config;
 
-    var direction = detail.directionOf(model);
-    var directionLabel = config.directionLabels[direction];
+    var role = detail.roleOf(model);
+    var roleLabel = config.roleLabels[role];
 
-    var labelHtml = '<span class="message-flow-detail-tab-direction-' + direction + '">' +
-        directionLabel + '</span>';
+    var labelHtml = '<span class="message-flow-detail-tab-role-' + role + '">' +
+        roleLabel + '</span>';
     labelHtml += '<span class="message-flow-detail-tab-id">' + model.id + '</span>';
 
     // An event whose word is an outcome carries it on the tab, so a failed leg
@@ -105,7 +105,7 @@ detail.tabOf = function(model) {
     }
 
     var out = {
-        label: directionLabel + ' \u00b7 ' + model.id,
+        label: roleLabel + ' \u00b7 ' + model.id,
         label_html: labelHtml,
         eventId: model.id
     };

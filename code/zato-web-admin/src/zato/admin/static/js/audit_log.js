@@ -52,6 +52,12 @@ $.fn.zato.audit_log.config = {
     objectSelectHost: '#audit-log-filter-object',
     filterTriggerCls: 'dashboard-select-face',
 
+    // What the selects' picks are called in the address bar - distinct from the
+    // per-source page's source and object_name, so the index view keeps serving
+    // the all-events layout
+    sourcesURLKey: 'sources',
+    objectsURLKey: 'objects',
+
     // What the resubmit outcome is reported with
     resubmitModalTitle: 'Resubmit result',
     resubmitErrorLabel: 'Resubmit failed',
@@ -252,6 +258,35 @@ $.fn.zato.audit_log.parseResubmitResponse = function(jqXHR, textStatus) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// The picks one URL param carries, comma-separated - an absent param is no picks
+$.fn.zato.audit_log.filtersFromURL = function(key) {
+    var params = new URLSearchParams(window.location.search);
+    var value = params.get(key);
+
+    if (value === null || value === '') {
+        return [];
+    }
+
+    return value.split(',');
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// Writes one select's picks into the address bar, so a reloaded page is the same page
+$.fn.zato.audit_log.filtersToURL = function(key, values) {
+    var params = new URLSearchParams(window.location.search);
+
+    if (values.length) {
+        params.set(key, values.join(','));
+    } else {
+        params.delete(key);
+    }
+
+    history.replaceState(null, '', '?' + params.toString());
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 // The filter selects of the all-events page - one for the sources, one for the object.
 // Any number of sources can be picked at once - the picks narrow both the list and what
 // the object select has to offer - and picking an object narrows the list to it alone.
@@ -364,7 +399,11 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
         return false;
     };
 
-    var initialObjectGroups = objectGroups([]);
+    // The picks the address bar carries, so a reloaded page starts where it was left
+    var pickedSources = $.fn.zato.audit_log.filtersFromURL(config.sourcesURLKey);
+    var pickedObjects = $.fn.zato.audit_log.filtersFromURL(config.objectsURLKey);
+
+    var initialObjectGroups = objectGroups(pickedSources);
 
     var objectSelect = kit.select.create({
         host: config.objectSelectHost,
@@ -372,11 +411,13 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
         label: config.objectSelectLabel,
         groups: initialObjectGroups,
         multi: true,
-        values: [],
+        values: pickedObjects,
         empty_label: config.allObjectsLabel,
         many_label: config.manyObjectsLabel,
         disabled_label: config.noMatchesLabel,
         on_change: function(values) {
+            $.fn.zato.audit_log.filtersToURL(config.objectsURLKey, values);
+
             pagination.set_filters({object_names: values});
             pagination.fetch_page(1);
         }
@@ -391,7 +432,7 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
         label: config.sourceSelectLabel,
         groups: [{group: '', items: sourceItems}],
         multi: true,
-        values: [],
+        values: pickedSources,
         empty_label: config.allSourcesLabel,
         many_label: config.manySourcesLabel,
         on_change: function(values) {
@@ -411,15 +452,26 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
             objectSelect.set_values(keptObjects);
             objectSelect.set_enabled(newGroups.length > 0);
 
-            listing.buildLegend(legendOutcomes(values));
+            $.fn.zato.audit_log.filtersToURL(config.sourcesURLKey, values);
+            $.fn.zato.audit_log.filtersToURL(config.objectsURLKey, keptObjects);
 
-            pagination.set_filters({sources: values, object_names: keptObjects});
+            // The legend's offer follows the sources, so what its badges mean as
+            // a filter is recomputed along with it
+            var newOutcomes = legendOutcomes(values);
+            listing.buildLegend(newOutcomes);
+
+            pagination.set_filters({
+                sources: values,
+                object_names: keptObjects,
+                outcomes: listing.pickedOutcomes(newOutcomes)
+            });
             pagination.fetch_page(1);
         }
     });
 
-    // Nothing is picked when the page opens, so the legend starts without Expired
-    listing.buildLegend(legendOutcomes([]));
+    // The legend starts with what the address bar picked - without Expired
+    // unless pub/sub is among the picks
+    listing.buildLegend(legendOutcomes(pickedSources));
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -483,17 +535,20 @@ $.fn.zato.audit_log.init = function(initConfig) {
     }
 
     // .. wire up the paginated listing - a per-source page polls for its one source
-    // and one object, the all-events page starts with every one of both ..
+    // and one object, the all-events page starts with whatever picks the address
+    // bar carries, so a reload keeps the filters ..
     var sources = [];
+    var objectNames = [];
 
     if (initConfig.source !== '') {
         sources.push(initConfig.source);
-    }
 
-    var objectNames = [];
-
-    if (initConfig.object_name !== '') {
-        objectNames.push(initConfig.object_name);
+        if (initConfig.object_name !== '') {
+            objectNames.push(initConfig.object_name);
+        }
+    } else {
+        sources = $.fn.zato.audit_log.filtersFromURL(config.sourcesURLKey);
+        objectNames = $.fn.zato.audit_log.filtersFromURL(config.objectsURLKey);
     }
 
     var pagination = kit.pagination.init({
@@ -502,6 +557,7 @@ $.fn.zato.audit_log.init = function(initConfig) {
         filters: {
             sources: sources,
             object_names: objectNames,
+            outcomes: [],
             query: initConfig.query,
             status: initConfig.status,
             time_from: timeFrom,

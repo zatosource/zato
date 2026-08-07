@@ -33,7 +33,7 @@ flow.config = {
     // How long the flow and its panels wait for what they asked for before saying they are waiting
     spinnerDelayMs: 150,
 
-    // The variant the direction tags and the fact rows wear, the flow being a dark frame
+    // The variant the role tags and the fact rows wear, the flow being a dark frame
     darkVariant: 'dark',
 
     // Where a line's Open leads - the event's own audit log page, named by path
@@ -203,8 +203,8 @@ flow.messageHTML = function(rowModel, previous) {
     var pageSource = $.fn.zato.audit_log.config.source;
     var html = '';
 
-    // The elapsed time reads after the direction rather than before it, so the tag saying
-    // which way the event went stands right against the time it went that way at
+    // The elapsed time reads after the role tag rather than before it, so the tag saying
+    // what the event was stands right against the time it happened at
     if (previous !== null) {
         html += flow.elapsedHTML(previous, rowModel);
     }
@@ -262,9 +262,9 @@ flow.eventURL = function(rowModel) {
 
 // The line itself as it reads on one line, which is what taking it away puts on the clipboard
 flow.lineText = function(rowModel) {
-    var directionLabel = kit.direction.config.labels[rowModel.direction];
+    var roleLabel = kit.role.config.labels[rowModel.role];
 
-    var parts = [rowModel.timeLocal, directionLabel, rowModel.source,
+    var parts = [rowModel.timeLocal, roleLabel, rowModel.source,
         rowModel.eventType, rowModel.headline];
 
     var out = parts.join(' - ');
@@ -291,7 +291,7 @@ flow.lineHTML = function(rowModel, previous) {
         },
         stripe: flow.stripeOf(rowModel),
         lead_html: flow.leadHTML(rowModel),
-        badge_html: kit.direction.tag(rowModel.direction, rowModel.eventType, flow.config.darkVariant),
+        badge_html: kit.role.tag(rowModel.role, rowModel.eventType, flow.config.darkVariant),
         message_html: flow.messageHTML(rowModel, previous),
         actions_html: flow.actionsHTML(rowModel)
     });

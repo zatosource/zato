@@ -211,6 +211,42 @@ class SessionWrapper:
             result = [dict(zip(column_names, row)) for row in result] # type: ignore
             return result
 
+    def ping(self, fs_sql_config:'any_') -> 'any_':
+        """ Pings the database the pool's own way, putting the ping on record like
+        any other statement when this connection is audited.
+        """
+
+        # The common case - a connection whose statements are not audited pings as it always did
+        if self.sql_audit_level == SQL_Audit_Off:
+            return self.pool.ping(fs_sql_config)
+
+        # The same query the pool's ping runs - a direct-mode engine carries its own
+        engine:'any_' = self.pool.engine
+
+        if hasattr(engine, 'ping'):
+            query = engine.ping_query
+        else:
+            query = get_ping_query(fs_sql_config, self.config)
+
+        start = monotonic()
+
+        # A failed ping is recorded too, before the caller learns about it
+        try:
+            out = self.pool.ping(fs_sql_config)
+        except Exception:
+            duration_ms = int((monotonic() - start) * 1000)
+            _ = record_sql_execution(self.audit_log, self.config['name'], self.sql_audit_level, query,
+                cid=new_cid_server(), endpoint=self.sql_audit_endpoint, outcome=AuditOutcome.Error,
+                duration_ms=duration_ms, error=format_exc())
+            raise
+
+        duration_ms = int((monotonic() - start) * 1000)
+        _ = record_sql_execution(self.audit_log, self.config['name'], self.sql_audit_level, query,
+            cid=new_cid_server(), endpoint=self.sql_audit_endpoint, outcome=AuditOutcome.OK,
+            duration_ms=duration_ms)
+
+        return out
+
     def one(self, *args:'any_', **kwargs:'any_') -> 'any_':
         result = self.execute(*args, **kwargs)
 

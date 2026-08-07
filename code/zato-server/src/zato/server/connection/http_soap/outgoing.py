@@ -373,6 +373,7 @@ class BaseHTTPSOAPWrapper:
         endpoint:'str',
         outcome:'str',
         data:'any_',
+        status:'str' = '',
     ) -> 'None':
         """ Writes one audit event describing a request sent to or a response received
         from an outgoing REST or SOAP connection.
@@ -402,6 +403,7 @@ class BaseHTTPSOAPWrapper:
             endpoint=endpoint,
             size=len(data),
             outcome=outcome,
+            status=status,
             data=data,
         )
 
@@ -768,9 +770,32 @@ class BaseHTTPSOAPWrapper:
         ping_path = ping_path or '/'
         address = self.address.replace(r'{_zato_path}', ping_path)
 
+        # .. a ping is traffic like any other to the audit log, so it writes the same
+        # .. request/response pair a regular invocation does, sharing one CID ..
+        if self.needs_audit:
+            self._insert_audit_event(cid, AuditEvent.Request_Sent, f'{ping_method} {address}', AuditOutcome.OK, '')
+
         # .. invoke the other end ..
-        response = self.invoke_http(cid, ping_method, address, '', self._create_headers(cid, {}),
-            {'zato_pre_request':zato_pre_request_hook})
+        try:
+            response = self.invoke_http(cid, ping_method, address, '', self._create_headers(cid, {}),
+                {'zato_pre_request':zato_pre_request_hook})
+        except Exception as e:
+
+            # .. record the error in the audit log before re-raising, sharing the request's CID ..
+            if self.needs_audit:
+                self._insert_audit_event(cid, AuditEvent.Response_Received, f'{ping_method} {address}', AuditOutcome.Error, str(e))
+            raise
+
+        # .. record the received response in the audit log, with the HTTP status it came with ..
+        if self.needs_audit:
+            if response.ok:
+                response_outcome = AuditOutcome.OK
+            else:
+                response_outcome = AuditOutcome.Error
+            response_status = f'{response.status_code} {response.reason}'
+            self._insert_audit_event(
+                cid, AuditEvent.Response_Received, f'{ping_method} {address}', response_outcome, response.text,
+                status=response_status)
 
         # .. store additional info, get and close the stream.
         _ = verbose.write('Code: {}'.format(response.status_code))
@@ -1204,13 +1229,18 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         response = cast_('Response', response)
 
-        # .. record the received response in the audit log, sharing the request's CID ..
+        # .. record the received response in the audit log, sharing the request's CID -
+        # .. the HTTP status goes in whole, so a 500 reads as itself and not merely as
+        # .. an error outcome ..
         if needs_audit:
             if response.ok:
                 response_outcome = AuditOutcome.OK
             else:
                 response_outcome = AuditOutcome.Error
-            self._insert_audit_event(cid, AuditEvent.Response_Received, f'{method} {address}', response_outcome, response.text)
+            response_status = f'{response.status_code} {response.reason}'
+            self._insert_audit_event(
+                cid, AuditEvent.Response_Received, f'{method} {address}', response_outcome, response.text,
+                status=response_status)
 
         # .. by default, we have no parsed response at all, ..
         # .. which means that we can assume it will be the same as the raw, text response ..

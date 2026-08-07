@@ -49,13 +49,13 @@ drawing.config = {
     chipHeight: 16,
     chipPadX: 6,
     chipCharWidth: 6.4,
-    directionChipWidth: 46,
+    roleChipWidth: 52,
 
-    // The word each kind of line wears - which way the event went, and a pair
-    // of eyes reading a message after the fact
-    directionLabels: {
-        'in': 'IN',
-        'out': 'OUT',
+    // The word each kind of line wears - the part the event played in its exchange,
+    // and a pair of eyes reading a message after the fact
+    roleLabels: {
+        'request': 'REQ',
+        'response': 'REPLY',
         'none': 'SYS',
         'view': 'VIEW'
     },
@@ -296,11 +296,11 @@ drawing.addChip = function(host, x, y, label, kind, onCanvas) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// A direction chip - every one shares one width, so the lines of a node line up
-drawing.addDirectionChip = function(host, x, y, label, kind) {
+// A role chip - every one shares one width, so the lines of a node line up
+drawing.addRoleChip = function(host, x, y, label, kind) {
     var config = drawing.config;
 
-    var width = config.directionChipWidth;
+    var width = config.roleChipWidth;
 
     kit.draw.addRect(host, x, y, width, config.chipHeight, 'message-flow-chip-' + kind, 3);
     kit.draw.addText(host, x + width / 2, y + 12, label, 'message-flow-chip-text message-flow-chip-text-' + kind, 'middle');
@@ -312,20 +312,20 @@ drawing.addDirectionChip = function(host, x, y, label, kind) {
 // From the flow models to the drawing's own shapes
 // /////////////////////////////////////////////////////////////////////////////
 
-// One event written as one line of a node - the direction, the event's own id,
+// One event written as one line of a node - the role, the event's own id,
 // what happened or how it turned out, and when
 drawing.lineOf = function(model) {
     var config = drawing.config;
 
-    var direction = model.direction;
+    var role = model.role;
 
     // A person reading a stored message is its own kind of line
     if (model.eventType === config.viewEventType) {
-        direction = 'view';
+        role = 'view';
     }
 
     var line = {
-        direction: direction,
+        role: role,
         id: String(model.id),
         time: kit.time_ago_label(model.timeIso) + config.labelSeparator + model.timeLocal.slice(11)
     };
@@ -552,7 +552,7 @@ drawing.nodeWidth = function(node) {
 
         var timeWidth = Math.round(line.time.length * config.subCharWidth);
 
-        var lineWidth = config.bodyPadLeft + config.directionChipWidth + 6 + drawing.chipWidth(line.id) + 8 +
+        var lineWidth = config.bodyPadLeft + config.roleChipWidth + 6 + drawing.chipWidth(line.id) + 8 +
             labelWidth + config.lineMinGap + timeWidth + config.bodyPadLeft;
 
         if (lineWidth > width) {
@@ -591,7 +591,7 @@ drawing.addEventLine = function(group, x, lineY, width, line) {
 
     var cursor = x + config.bodyPadLeft;
 
-    cursor += drawing.addDirectionChip(group, cursor, lineY, config.directionLabels[line.direction], line.direction);
+    cursor += drawing.addRoleChip(group, cursor, lineY, config.roleLabels[line.role], line.role);
     cursor += 6;
     cursor += drawing.addChip(group, cursor, lineY, line.id, 'id', false);
     cursor += 8;

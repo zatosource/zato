@@ -34,10 +34,10 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     --message-flow-selected: rgb(246, 166, 5);
     --message-flow-selected-text: #f6c66a;
 
-    /* The inks a direction and an outcome are written in, on the nodes and on
+    /* The inks a role and an outcome are written in, on the nodes and on
        the detail pane's tabs alike */
-    --message-flow-in: #6fb6e8;
-    --message-flow-out: #74cf92;
+    --message-flow-request: #6fb6e8;
+    --message-flow-response: #74cf92;
     --message-flow-sys: #b9b9d4;
     --message-flow-view: #cfa9ea;
     --message-flow-good: #74cf92;
@@ -369,25 +369,25 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     fill: var(--message-flow-selected-text);
 }
 
-.message-flow-chip-in {
+.message-flow-chip-request {
     fill: rgba(111, 182, 232, 0.18);
 }
 
-.message-flow-chip-text-in {
-    fill: var(--message-flow-in);
+.message-flow-chip-text-request {
+    fill: var(--message-flow-request);
 }
 
-/* A message leaving, whatever it left as */
+/* The answering message, whatever shape the answer took */
 
-.message-flow-chip-out {
+.message-flow-chip-response {
     fill: rgba(116, 207, 146, 0.18);
 }
 
-.message-flow-chip-text-out {
-    fill: var(--message-flow-out);
+.message-flow-chip-text-response {
+    fill: var(--message-flow-response);
 }
 
-/* An event that went neither way - a message expiring, a ledger being written */
+/* An event that is neither a request nor a reply - a message expiring, a ledger being written */
 
 .message-flow-chip-none {
     fill: rgba(157, 157, 184, 0.18);
@@ -621,7 +621,7 @@ svg.message-flow-focus .message-flow-branch:not(.message-flow-lit) {
     }
 }
 
-/* A tab wears the exchange's own words - the direction in its ink, the id in
+/* A tab wears the exchange's own words - the role in its ink, the id in
    amber, an outcome in the outcome's colour */
 
 .message-flow-detail-panel .dashboard-payload-tab {
@@ -630,19 +630,19 @@ svg.message-flow-focus .message-flow-branch:not(.message-flow-lit) {
     align-items: center;
 }
 
-.message-flow-detail-tab-direction-in {
-    color: var(--message-flow-in);
+.message-flow-detail-tab-role-request {
+    color: var(--message-flow-request);
 }
 
-.message-flow-detail-tab-direction-out {
-    color: var(--message-flow-out);
+.message-flow-detail-tab-role-response {
+    color: var(--message-flow-response);
 }
 
-.message-flow-detail-tab-direction-none {
+.message-flow-detail-tab-role-none {
     color: var(--message-flow-sys);
 }
 
-.message-flow-detail-tab-direction-view {
+.message-flow-detail-tab-role-view {
     color: var(--message-flow-view);
 }
 

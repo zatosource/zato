@@ -66,7 +66,7 @@ listing.config = {
     // to the one it holds on to longest. Each name is the class the list carries while that
     // column is being left out, and the event's own number is not on the list at all - it is
     // what a row is pointed at by, so it is never given up.
-    dropOrder: ['action', 'chips', 'time', 'direction'],
+    dropOrder: ['action', 'chips', 'time', 'role'],
     dropClassPrefix: 'audit-log-drop-',
 
     emptyListing: 'No events found',
@@ -177,26 +177,28 @@ listing.config = {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Which way one event went - the audit event types are shared across sources,
-// so this reads the same everywhere
-listing.directions = {
-    'received': 'in',
-    'request-received': 'in',
-    'response-received': 'in',
-    'message-received': 'in',
-    'interchange-received': 'in',
-    'ack-received': 'in',
-    'mdn-received': 'in',
-    'receipt-received': 'in',
-    'request-sent': 'out',
-    'response-sent': 'out',
-    'message-sent': 'out',
-    'interchange-sent': 'out',
-    'ack-sent': 'out',
-    'mdn-sent': 'out',
-    'receipt-sent': 'out',
-    'delivered': 'out',
-    'delivery-failed': 'out'
+// The role one event plays in its exchange - a request is the request whichever way
+// it travelled, so a pair reads the same on a channel and on an outgoing connection.
+// The audit event types are shared across sources, so this reads the same everywhere.
+listing.roles = {
+    'received': 'request',
+    'request-received': 'request',
+    'request-sent': 'request',
+    'message-received': 'request',
+    'message-sent': 'request',
+    'interchange-received': 'request',
+    'interchange-sent': 'request',
+    'published': 'request',
+    'delivered': 'request',
+    'delivery-failed': 'request',
+    'response-received': 'response',
+    'response-sent': 'response',
+    'ack-received': 'response',
+    'ack-sent': 'response',
+    'mdn-received': 'response',
+    'mdn-sent': 'response',
+    'receipt-received': 'response',
+    'receipt-sent': 'response'
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -232,15 +234,15 @@ listing.escapeHTML = function(value) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-listing.directionOf = function(eventType) {
-    var direction = listing.directions[eventType];
+listing.roleOf = function(eventType) {
+    var role = listing.roles[eventType];
 
-    // An event type that is neither one way nor the other, e.g. a message expiring.
-    if (direction === undefined) {
-        direction = 'none';
+    // An event type that is neither a request nor a reply, e.g. a message expiring.
+    if (role === undefined) {
+        role = 'none';
     }
 
-    return direction;
+    return role;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -284,7 +286,7 @@ listing.buildRow = function(row) {
         children: row.children,
         bodyKinds: row.body_kinds,
         isResubmitted: row.is_resubmitted,
-        direction: listing.directionOf(row.event_type),
+        role: listing.roleOf(row.event_type),
         actionLabel: $.fn.zato.audit_log.config.resubmitLabels[row.event_type]
     };
 
@@ -434,16 +436,17 @@ listing.rowHTML = function(rowModel) {
     html += '<td class="audit-log-cell-time" title="' + listing.escapeHTML(rowModel.timeLocal) + '">' +
         listing.timeCellHTML(rowModel) + '</td>';
 
-    html += '<td class="audit-log-cell-direction">' +
-        kit.direction.tag(rowModel.direction, rowModel.eventType) + '</td>';
+    html += '<td class="audit-log-cell-role">' +
+        kit.role.tag(rowModel.role, rowModel.eventType) + '</td>';
 
     // What the message is called by its protocol is read in the pane rather than on the row -
     // a control id is a number to be copied, not a number to be scanned down a list.
     html += '<td class="audit-log-cell-main">';
 
-    // Saying an event was received next to a tag already reading IN is saying it twice.
-    // An event that went neither way has no tag to say what it was, so it says so itself.
-    if (rowModel.direction === 'none') {
+    // Saying an event is a request next to a tag already reading REQ is saying it twice.
+    // An event that is neither a request nor a reply has no tag to say what it was,
+    // so it says so itself.
+    if (rowModel.role === 'none') {
         html += '<span class="audit-log-row-event">' + listing.escapeHTML(rowModel.eventType) + '</span>';
     }
 
@@ -670,7 +673,7 @@ listing.paneHeadHTML = function(rowModel) {
     // and what a row is picked out of the list by
     var html = '<span class="audit-log-pane-event">' + config.eventLabel + ' ' + rowModel.id + '</span>';
 
-    html += kit.direction.tag(rowModel.direction, rowModel.eventType);
+    html += kit.role.tag(rowModel.role, rowModel.eventType);
     html += '<span class="audit-log-pane-title">' + listing.escapeHTML(rowModel.headline) + '</span>';
     html += listing.outcomeBadgeHTML(rowModel);
 
@@ -895,29 +898,6 @@ listing.urlTab = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The rows of the current page left after the legend has had its say. The range is not
-// asked about here - a window the reader picks is a window the whole result is read
-// through, so it is the poll that answers it and the pagination that counts it.
-listing.filterRows = function() {
-    var out = [];
-
-    for (var rowIndex = 0; rowIndex < listing.rowModels.length; rowIndex++) {
-        var rowModel = listing.rowModels[rowIndex];
-
-        // The legend switches outcomes off, and an event reporting no outcome of its own
-        // is not any of them, so nothing the legend says takes it off the page.
-        if (listing.hidden[rowModel.outcome]) {
-            continue;
-        }
-
-        out.push(rowModel);
-    }
-
-    return out;
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
 // The newest rows carry a fading tint, and a row that arrived on a live refresh puffs once.
 // A page the reader asked for - a search, a page turned, a filter - puffs nothing, because
 // everything on it is new and a whole list blinking says nothing about any of it.
@@ -1058,7 +1038,10 @@ listing.rail.schedule = function() {
 // /////////////////////////////////////////////////////////////////////////////
 
 listing.draw = function() {
-    listing.visible = listing.filterRows();
+
+    // Every row of the page is drawn - what the legend switches off never reaches
+    // the page at all, the poll filters it out in the database
+    listing.visible = listing.rowModels;
 
     // Which cells a row holds is settled before a single one of them is drawn.
     listing.updateColumns();
@@ -1200,9 +1183,31 @@ listing.refreshLive = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// What the legend still has switched on, as the filter the poll takes - the badges
+// name the outcomes to show, and all of them on means no filter at all, so events
+// reporting no outcome of their own stay on the page too
+listing.pickedOutcomes = function(outcomes) {
+    var visible = [];
+
+    for (var outcomeIndex = 0; outcomeIndex < outcomes.length; outcomeIndex++) {
+        var outcome = outcomes[outcomeIndex];
+
+        if (!listing.hidden[outcome]) {
+            visible.push(outcome);
+        }
+    }
+
+    if (visible.length === outcomes.length) {
+        return [];
+    }
+
+    return visible;
+};
+
 // The legend that narrows the list down to one outcome - built afresh whenever what
 // the rows can report changes, e.g. the picked sources no longer include the one
-// whose messages can expire
+// whose messages can expire. A toggled badge asks the server for page one of what
+// is left, it does not hide rows of the page already here.
 listing.buildLegend = function(outcomes) {
     var config = listing.config;
     var palette = kit.palette.outcome;
@@ -1220,7 +1225,10 @@ listing.buildLegend = function(outcomes) {
         backgrounds: palette.backgrounds,
         hidden: listing.hidden,
         on_toggle: function() {
-            listing.draw();
+            var pagination = $.fn.zato.audit_log.pagination;
+
+            pagination.set_filters({outcomes: listing.pickedOutcomes(outcomes)});
+            pagination.fetch_page(1);
         }
     });
 };

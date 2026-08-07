@@ -72,17 +72,17 @@ _source_label = {
     AuditSource.Config: 'Access log',
     AuditSource.AS2: 'AS2',
     AuditSource.AS4: 'AS4',
+    AuditSource.Email_IMAP: 'Email IMAP',
+    AuditSource.Email_SMTP: 'Email SMTP',
     AuditSource.FHIR: 'FHIR',
     AuditSource.File_Outgoing: 'File transfer',
     AuditSource.HL7: 'HL7',
-    AuditSource.Email_IMAP: 'IMAP',
     AuditSource.MCP: 'MCP',
-    AuditSource.REST_Outgoing: 'Outgoing REST',
-    AuditSource.SOAP_Outgoing: 'Outgoing SOAP',
     AuditSource.PubSub: 'Pub/sub',
     AuditSource.REST_Channel: 'REST channels',
-    AuditSource.Email_SMTP: 'SMTP',
+    AuditSource.REST_Outgoing: 'REST outgoing',
     AuditSource.SOAP_Channel: 'SOAP channels',
+    AuditSource.SOAP_Outgoing: 'SOAP outgoing',
     AuditSource.SQL_Outgoing: 'SQL',
     AuditSource.X12: 'X12',
 }
@@ -123,6 +123,7 @@ _rest_channel_columns = [
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'endpoint', 'label': 'Endpoint', 'type': 'text'},
     {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
+    {'key': 'status', 'label': 'Status', 'type': 'text'},
     {'key': 'size', 'label': 'Size', 'type': 'size'},
     {'key': 'data', 'label': 'Data preview', 'type': 'data'},
 ]
@@ -133,6 +134,7 @@ _soap_channel_columns = [
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'endpoint', 'label': 'Endpoint', 'type': 'text'},
     {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
+    {'key': 'status', 'label': 'Status', 'type': 'text'},
     {'key': 'size', 'label': 'Size', 'type': 'size'},
     {'key': 'data', 'label': 'Data preview', 'type': 'data'},
 ]
@@ -143,6 +145,7 @@ _rest_outgoing_columns = [
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'endpoint', 'label': 'Endpoint', 'type': 'text'},
     {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
+    {'key': 'status', 'label': 'Status', 'type': 'text'},
     {'key': 'size', 'label': 'Size', 'type': 'size'},
     {'key': 'data', 'label': 'Data preview', 'type': 'data'},
 ]
@@ -153,6 +156,7 @@ _soap_outgoing_columns = [
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
     {'key': 'endpoint', 'label': 'Endpoint', 'type': 'text'},
     {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
+    {'key': 'status', 'label': 'Status', 'type': 'text'},
     {'key': 'size', 'label': 'Size', 'type': 'size'},
     {'key': 'data', 'label': 'Data preview', 'type': 'data'},
 ]
