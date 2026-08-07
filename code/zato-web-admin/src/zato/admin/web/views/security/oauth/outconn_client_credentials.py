@@ -145,6 +145,7 @@ def get_token(req):
         return HttpResponse(dumps({
             'is_success': False,
             'exception_message': 'Either a definition ID or raw parameters are required',
+            'status_code': 0,
             'info': 'No ID or parameters were provided in the request.',
         }), content_type='application/json')
 
@@ -197,6 +198,7 @@ def get_token(req):
         return HttpResponse(dumps({
             'is_success': False,
             'exception_message': 'Error while obtaining token',
+            'status_code': 0,
             'info': str(e),
             'response_content_type': 'text/plain',
         }), content_type='application/json')

@@ -222,33 +222,52 @@ $.fn.zato.security.oauth.delete_ = function(id) {
 }
 
 $.fn.zato.security.oauth._get_token_parse = function(jqXHR) {
-    console.log('[get_token] parse: status=' + jqXHR.status + ' responseText=' + (jqXHR.responseText || '').substring(0, 500));
+    console.log('[get_token] parse: status=' + jqXHR.status + ' responseText=' + String(jqXHR.responseText).substring(0, 500));
     var parsed = null;
     try { parsed = JSON.parse(jqXHR.responseText); } catch(e) {
         console.log('[get_token] parse: JSON parse error: ' + e);
     }
     if(parsed && parsed.is_success) {
-        console.log('[get_token] parse: success, token length=' + (parsed.token || '').length);
-        return {is_success: true, label: 'OK', token: parsed.token, details_body: '', details_title: ''};
+        console.log('[get_token] parse: success, token length=' + parsed.token.length);
+        return {
+            is_success: true,
+            label: 'OK',
+            token: parsed.token,
+            details_title: '',
+            details_body: '',
+            details_lexer: '',
+            status_code: jqXHR.status
+        };
     }
+
+    // A body that was not JSON at all carries no details of its own
+    var details_body = '';
+    var status_code = jqXHR.status;
+
+    if(parsed) {
+        details_body = parsed.info;
+
+        // The remote server's own status arrives only when the token request reached it
+        if('status_code' in parsed) {
+            status_code = parsed.status_code;
+        }
+    }
+
     var label = 'Error while obtaining token';
-    var details_body = (parsed && parsed.info) || '';
-    var response_content_type = (parsed && parsed.response_content_type) || '';
-    var status_code = (parsed && parsed.status_code) || 0;
     console.log('[get_token] parse: failure, label=' + label);
     return {
         is_success: false,
         label: label,
         details_title: label,
         details_body: details_body,
-        response_content_type: response_content_type,
+        details_lexer: '',
         status_code: status_code
     };
 };
 
 $.fn.zato.security.oauth._get_token_success = function(instance, result) {
-    console.log('[get_token] success callback, token length=' + (result.token || '').length);
-    var token = result.token || '';
+    console.log('[get_token] success callback, token length=' + result.token.length);
+    var token = result.token;
     navigator.clipboard.writeText(token).then(function() {
         console.log('[get_token] token copied to clipboard');
     }, function(err) {

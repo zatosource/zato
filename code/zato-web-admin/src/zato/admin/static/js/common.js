@@ -2981,6 +2981,8 @@ $.fn.zato.inline_edit.submit = function(opts) {
                 label: is_http_ok ? config.saved_label : config.error_label,
                 details_title: config.error_label,
                 details_body: jqXHR.responseText,
+                details_lexer: '',
+                status_code: jqXHR.status,
                 jqXHR: jqXHR
             };
         },

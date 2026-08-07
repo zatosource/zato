@@ -340,7 +340,9 @@ $.fn.zato.outgoing.as2.parse_send_test_response = function(jqXHR, textStatus) {
             is_success: false,
             label: config.error_label,
             details_title: config.error_label,
-            details_body: body
+            details_body: body,
+            details_lexer: '',
+            status_code: jqXHR.status
         };
     }
 
@@ -352,7 +354,9 @@ $.fn.zato.outgoing.as2.parse_send_test_response = function(jqXHR, textStatus) {
         is_success: report.is_ok,
         label: label,
         details_title: label,
-        details_body: JSON.stringify(report, null, 2)
+        details_body: JSON.stringify(report, null, 2),
+        details_lexer: 'json',
+        status_code: jqXHR.status
     };
 }
 

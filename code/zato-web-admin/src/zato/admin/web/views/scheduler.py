@@ -27,7 +27,7 @@ from pytz import UTC
 
 # Zato
 from zato.admin.web import from_user_to_utc, from_utc_to_user
-from zato.admin.web.views import get_js_dt_format, method_allowed, Delete as _Delete
+from zato.admin.web.views import get_js_dt_format, method_allowed, ping_json_response, Delete as _Delete
 from zato.admin.settings import job_type_friendly_names
 from zato.admin.web.forms.scheduler import IntervalBasedSchedulerJobForm, OneTimeSchedulerJobForm
 from zato.common.api import SCHEDULER, TRACE1
@@ -480,7 +480,7 @@ def execute(req, job_id, cluster_id):
     except Exception:
         msg = 'Job could not be executed. job_id:`{}`, cluster_id:`{}`, e:`{}`'.format(job_id, cluster_id, format_exc())
         logger.error(msg)
-        return HttpResponseServerError(msg)
+        return ping_json_response(False, msg)
     else:
         # 200 OK
         return HttpResponse()
