@@ -130,6 +130,8 @@ urlpatterns += [
         login_required(service.Index()), name=service.Index.url_name),
     url(r'^zato/service/upload/$',
         login_required(service.upload), name='service-package-upload'),
+    url(r'^zato/service/import-demo-config$',
+        login_required(service.import_demo_config), name='service-import-demo-config'),
     url(r'^zato/service/edit/$',
         login_required(service.Edit()), name=service.Edit.url_name),
     url(r'^zato/service/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',

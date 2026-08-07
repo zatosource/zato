@@ -130,6 +130,9 @@ var _active_instance = null;
 var _details_store = {};
 var _details_seq = 0;
 
+// How wide the summary may render before it wraps onto the next line
+var _error_label_max_width_px = 280;
+
 function _make_overlay_draggable($overlay) {
     var is_dragging = false;
     var offset_x = 0;
@@ -176,6 +179,19 @@ function _default_parse(jqXHR, textStatus) {
     }
 
     if(parsed && typeof parsed === 'object') {
+
+        // The ping views send a display-ready shape - a one-line summary for the tippy,
+        // the full text for the details modal and the lexer the details highlight with
+        if('message' in parsed) {
+            return {
+                is_success: !!parsed.is_success,
+                label: parsed.message,
+                details_title: parsed.message,
+                details_body: parsed.details,
+                details_lexer: parsed.details_lexer
+            };
+        }
+
         var is_success = !!parsed.is_success;
         var label = parsed.inner_exception_message
             || parsed.exception_message
@@ -216,7 +232,11 @@ function _render_success(instance, label) {
 }
 
 function _render_error(instance, label, details_id) {
-    var html = '<span style="display:inline-flex;align-items:center;white-space:nowrap;font-size:13px;color:#f97583">' +
+
+    // The label wraps within the tippy's own width, so a long message never pushes
+    // the tippy out of the page when the link sits at the table's edge
+    var html = '<span style="display:inline-block;max-width:' + _error_label_max_width_px + 'px;' +
+        'white-space:normal;word-break:break-word;text-align:left;font-size:13px;color:#f97583">' +
         _escape_html(label) + '</span>' +
         '<br><a href="javascript:void(0)" style="font-size:12px;margin-top:2px;display:inline-block" ' +
         'onclick="$.fn.zato.action_runner.show_details(\'' + details_id + '\')">Show details</a>';
@@ -325,6 +345,7 @@ $.fn.zato.action_runner = {
                     title: details_modal_title,
                     heading: r.details_title || r.label,
                     body: r.details_body || '',
+                    lexer: r.details_lexer || '',
                     status_code: r.status_code || 0,
                     instance: instance
                 };
@@ -367,9 +388,10 @@ $.fn.zato.action_runner = {
                         '<span class="invoker-modal-response-label">Response body</span>' +
                         '<a class="invoker-modal-response-copy" href="javascript:void(0)">Copy</a>' +
                     '</div>' +
+                    // Error text wraps rather than scrolling sideways, so there is no line gutter here -
+                    // wrapped lines would not align with it anyway
                     '<div class="invoker-modal-response-wrap" style="flex:1;min-height:0;overflow:auto">' +
-                        '<div class="invoker-modal-response-gutter"></div>' +
-                        '<pre class="invoker-modal-response-pre"></pre>' +
+                        '<pre class="invoker-modal-response-pre" style="white-space:pre-wrap;word-break:break-word"></pre>' +
                     '</div>' +
                 '</div>' +
             '</div>' +
@@ -406,7 +428,9 @@ $.fn.zato.action_runner = {
         $('body').append($overlay);
 
         var $pre = $overlay.find('.invoker-modal-response-pre');
-        $.fn.zato.highlight_response($pre, body_text);
+
+        // The backend picked the lexer along with the details themselves
+        $.fn.zato.highlightElement($pre, body_text, details.lexer);
 
         _make_overlay_draggable($overlay);
     },

@@ -2128,6 +2128,15 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
+    def import_demo_tutorial(self):
+
+        from zato.server.demo_tutorial import import_demo_tutorial
+
+        result = import_demo_tutorial(self)
+        return result
+
+# ################################################################################################################################
+
     def get_hl7_mllp_port(self):
         """ Returns the port the shared HL7 MLLP listener accepts connections on in this process -
         zero when no listener is running, i.e. when there are no MLLP channels.

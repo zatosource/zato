@@ -667,7 +667,7 @@ def _write_messages(
         audit_log.set_event_time(ack_when)
         _ = audit_ack_sent(
             audit_log, planned.channel_name, ack_code, ack_text,
-            cid=cid, msg_id=planned.control_id, duration_ms=duration_ms)
+            cid=cid, msg_id=planned.control_id, facility=attrs['facility'], duration_ms=duration_ms)
 
         # The forwarded pair on the outgoing connection
         if planned.is_forwarded:
@@ -805,7 +805,7 @@ def _write_one_hop(
     audit_log.set_event_time(ack_when)
     _ = audit_ack_sent(
         audit_log, source.channel_name, ack_code, ack_text,
-        cid=cid, msg_id=source.control_id, duration_ms=duration_ms)
+        cid=cid, msg_id=source.control_id, facility=attrs['facility'], duration_ms=duration_ms)
 
     return received_id, ack_when
 

@@ -22,7 +22,7 @@ from zato.admin.web.forms import add_http_soap_select, add_select_from_service
 from zato.admin.web.forms.http_soap import SearchForm, CreateForm, EditForm
 from zato.admin.web.views import get_group_list as common_get_group_list, get_http_channel_security_id, \
     get_js_dt_format, get_security_id_from_select, get_security_groups_from_checkbox_list, id_only_service, \
-        method_allowed, SecurityList
+        method_allowed, ping_json_response, SecurityList
 from zato.admin.web.views.security.tier import get_tier_list
 from zato.common.api import generic_attrs, Groups, HTTP_SOAP, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
      SOAP_CHANNEL_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE
@@ -514,16 +514,10 @@ def ping(req, id, cluster_id): # type: ignore
 
     if isinstance(response, HttpResponseServerError):
         err = response.content.decode('utf-8', 'replace')
-        return JsonResponse({
-            'is_success': False,
-            'info': err,
-        })
+        return ping_json_response(False, err)
 
     data = response.data
-    return JsonResponse({
-        'is_success': data.is_success,
-        'info': data.info,
-    })
+    return ping_json_response(data.is_success, data.info)
 
 # ################################################################################################################################
 # ################################################################################################################################

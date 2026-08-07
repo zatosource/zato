@@ -256,6 +256,20 @@ def import_demo_scheduler_config(req):
 
 # ################################################################################################################################
 
+@method_allowed('POST')
+def import_demo_config(req):
+    """ Sets up everything the main tutorial builds - the service, the connections,
+    the API key, the REST channel and the scheduler job.
+    """
+    response = req.zato.client.invoke('zato.server.invoker', {'func_name': 'import_demo_tutorial'})
+
+    out = HttpResponse()
+    out.content = str(response.data)
+
+    return out
+
+# ################################################################################################################################
+
 @method_allowed('GET', 'POST')
 def download_openapi(req):
 

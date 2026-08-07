@@ -17,7 +17,7 @@ from zato.admin.web import from_user_to_utc, from_utc_to_user
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.email.imap import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, get_js_dt_format, \
-     id_only_service, Index as _Index, method_allowed
+     id_only_service, Index as _Index, method_allowed, ping_json_response
 from zato.common.api import EMAIL
 # Bunch
 from zato.common.ext.bunch import Bunch
@@ -123,8 +123,9 @@ class Delete(_Delete):
 def ping(req, id, cluster_id):
     ret = id_only_service(req, 'zato.email.imap.ping', id, 'IMAP ping error: {}')
     if isinstance(ret, HttpResponseServerError):
-        return ret
-    return HttpResponse(ret.data.info)
+        error_text = ret.content.decode('utf-8', 'replace')
+        return ping_json_response(False, error_text)
+    return ping_json_response(True, ret.data.info)
 
 # ################################################################################################################################
 

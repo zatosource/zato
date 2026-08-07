@@ -1,0 +1,39 @@
+security:
+
+  - name: My API Key
+    type: apikey
+    username: My API Key
+    password: abc
+
+outgoing_rest:
+
+  - name: CRM
+    host: https://zato.io
+    url_path: /tutorial/api/get-user
+    data_format: json
+
+sql:
+
+  - name: Billing
+    type: postgresql
+    host: zato.io
+    port: 35432
+    db_name: billing
+    username: tutorial
+    password: demo
+
+channel_rest:
+
+  - name: My REST Channel
+    service: api.my-service
+    security: My API Key
+    url_path: /tutorial/api/get-user-details
+    data_format: json
+
+scheduler:
+
+  - name: my.report.job
+    service: api.my-service
+    job_type: interval_based
+    seconds: 10
+    is_active: true

@@ -746,6 +746,62 @@ def id_only_service(req, service, id, error_template='{}', initial=None):
 
 # ################################################################################################################################
 
+# The longest error summary the ping tippy shows - the full text opens in the details modal
+Ping_Message_Max_Length = 100
+
+# A requests/urllib3 error inlines its root cause as a trailing clause, e.g.
+# "Max retries exceeded with url: /abc (Caused by NewConnectionError(..))" -
+# the summary keeps only what stands before it.
+_ping_cause_marker = ' (Caused by'
+
+# Details carrying this marker are a Python traceback and highlight as one -
+# anything else highlights as Python source, which colors the strings and numbers
+# an error message quotes.
+_traceback_marker = 'Traceback (most recent call last)'
+
+# ################################################################################################################################
+
+def _get_ping_error_message(error_text:'str') -> 'str':
+    """ The one-line summary of a ping error - the first line with the root-cause clause
+    dropped, capped at what the tippy can show.
+    """
+    out = error_text.split('\n')[0]
+
+    cause_idx = out.find(_ping_cause_marker)
+    if cause_idx > 0:
+        out = out[:cause_idx]
+
+    if len(out) > Ping_Message_Max_Length:
+        out = out[:Ping_Message_Max_Length] + ' ..'
+
+    return out
+
+# ################################################################################################################################
+
+def ping_json_response(is_success:'bool', info:'str') -> 'JsonResponse':
+    """ The shape every ping view answers with - a display-ready summary for the tippy,
+    the full text for the details modal and the lexer the details highlight with.
+    """
+    if is_success:
+        message = info
+    else:
+        message = _get_ping_error_message(info)
+
+    if _traceback_marker in info:
+        details_lexer = 'pytb'
+    else:
+        details_lexer = 'python'
+
+    out = JsonResponse({
+        'is_success': is_success,
+        'message': message,
+        'details': info,
+        'details_lexer': details_lexer,
+    })
+    return out
+
+# ################################################################################################################################
+
 def ping_connection(req, service, connection_id, connection_type='{}', ping_path=None) -> 'any_':
     error_template = 'Could not ping {}, e:`{{}}`'.format(connection_type)
     if ping_path:
@@ -753,19 +809,19 @@ def ping_connection(req, service, connection_id, connection_type='{}', ping_path
     else:
         initial = None
     response = id_only_service(req, service, connection_id, error_template, initial)
+
     if isinstance(response, HttpResponseServerError):
-        return response
+        error_text = response.content.decode('utf-8', 'replace')
+        return ping_json_response(False, error_text)
+
+    if 'info' in response.data:
+        is_success = response.data.is_success
+        info = response.data.info
     else:
+        is_success = True
+        info = 'Ping OK'
 
-        if 'info' in response.data:
-            is_success = response.data.is_success
-            response_class = HttpResponse if is_success else HttpResponseServerError
-            info = response.data.info
-        else:
-            response_class = HttpResponse
-            info = 'Ping OK'
-
-        return response_class(info)
+    return ping_json_response(is_success, info)
 
 # ################################################################################################################################
 
