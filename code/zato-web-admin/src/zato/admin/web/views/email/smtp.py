@@ -13,7 +13,7 @@ import logging
 from json import dumps
 
 # Django
-from django.http import HttpResponse, HttpResponseServerError
+from django.http import HttpResponseServerError
 
 # Zato
 from zato.admin.web.forms import ChangePasswordForm

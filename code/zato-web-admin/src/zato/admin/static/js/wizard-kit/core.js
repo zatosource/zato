@@ -820,7 +820,9 @@ kit.core.setup = function(wizard, config) {
                     is_success: isHttpOk,
                     label: isHttpOk ? inlineConfig.saved_label : inlineConfig.error_label,
                     details_title: inlineConfig.error_label,
-                    details_body: jqXHR.responseText
+                    details_body: jqXHR.responseText,
+                    details_lexer: '',
+                    status_code: jqXHR.status
                 };
             }
         });

@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Django
-from django.http import HttpResponseServerError, JsonResponse
+from django.http import HttpResponseServerError
 
 # Zato
 from zato.admin.web import from_user_to_utc, from_utc_to_user

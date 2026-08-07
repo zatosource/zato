@@ -186,6 +186,8 @@ $.fn.zato.channel.hl7.mllp.inline.save = function(link, id, data, on_saved, save
                 label: is_http_ok ? saved_label : config.error_label,
                 details_title: config.error_label,
                 details_body: jqXHR.responseText,
+                details_lexer: '',
+                status_code: jqXHR.status,
                 jqXHR: jqXHR
             };
         },

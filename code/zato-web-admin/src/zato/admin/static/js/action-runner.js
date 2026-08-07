@@ -11,10 +11,15 @@
  *       link_elem: <anchor element>,
  *       url: '<POST target>',
  *       data: '<optional POST body>',
- *       parse: function(jqXHR, textStatus) { return {is_success, label, details_title, details_body}; },
+ *       parse: function(jqXHR, textStatus) {
+ *           return {is_success, label, details_title, details_body, details_lexer, status_code};
+ *       },
  *       details_modal_title: 'Response',
  *       placement: 'left'
  *   });
+ *
+ *   Every parse function returns the full shape above - details_lexer is the Pygments
+ *   lexer the details highlight with, an empty string meaning server-side auto-detection.
  *
  *   $.fn.zato.action_runner.close_all();
  */
@@ -133,6 +138,30 @@ var _details_seq = 0;
 // How wide the summary may render before it wraps onto the next line
 var _error_label_max_width_px = 280;
 
+// What run() falls back to when a caller leaves an option out
+var _run_defaults = {
+    data: '',
+    details_modal_title: 'Response',
+    spinner_label: 'Pinging ..',
+    show_delay_ms: 0,
+    placement: 'top'
+};
+
+// What the details modal shows when the response body came back empty
+var _empty_body_label = '(empty response)';
+
+// What a plain-text response reads as when it came back empty
+var _empty_ok_label = 'OK';
+var _empty_error_label = 'Error';
+
+// Reads one optional run() argument, falling back to the defaults above
+function _opt(opts, name) {
+    if(name in opts) {
+        return opts[name];
+    }
+    return _run_defaults[name];
+}
+
 function _make_overlay_draggable($overlay) {
     var is_dragging = false;
     var offset_x = 0;
@@ -168,7 +197,13 @@ function _escape_html(text) {
 }
 
 function _default_parse(jqXHR, textStatus) {
-    var body = jqXHR.responseText || '';
+
+    // A request that never reached the server has no response text at all
+    var body = jqXHR.responseText;
+    if(body === undefined) {
+        body = '';
+    }
+
     var is_http_ok = (jqXHR.status >= 200 && jqXHR.status < 300);
 
     var parsed = null;
@@ -178,49 +213,49 @@ function _default_parse(jqXHR, textStatus) {
         parsed = null;
     }
 
+    // A JSON body is the backend's display-ready shape - a one-line summary for
+    // the tippy, the full text for the details modal and the lexer the details
+    // highlight with, all built by ping_json_response server-side. The transport
+    // itself answered with 200 whatever the ping's outcome, so there is
+    // no status code to show.
     if(parsed && typeof parsed === 'object') {
-
-        // The ping views send a display-ready shape - a one-line summary for the tippy,
-        // the full text for the details modal and the lexer the details highlight with
-        if('message' in parsed) {
-            return {
-                is_success: !!parsed.is_success,
-                label: parsed.message,
-                details_title: parsed.message,
-                details_body: parsed.details,
-                details_lexer: parsed.details_lexer
-            };
-        }
-
-        var is_success = !!parsed.is_success;
-        var label = parsed.inner_exception_message
-            || parsed.exception_message
-            || parsed.status_text
-            || (is_success ? 'OK' : 'No response');
-        var details_body = parsed.info || parsed.exception_message || '';
-        var details_title = parsed.exception_message || parsed.status_text || '';
         return {
-            is_success: is_success,
-            label: label,
-            details_title: details_title,
-            details_body: details_body
+            is_success: parsed.is_success,
+            label: parsed.message,
+            details_title: parsed.message,
+            details_body: parsed.details,
+            details_lexer: parsed.details_lexer,
+            status_code: 0
         };
     }
 
+    // A plain-text body answers with itself
     if(is_http_ok) {
+        var ok_label = body;
+        if(ok_label === '') {
+            ok_label = _empty_ok_label;
+        }
         return {
             is_success: true,
-            label: body ? body : 'OK',
+            label: ok_label,
             details_title: '',
-            details_body: body
+            details_body: body,
+            details_lexer: '',
+            status_code: jqXHR.status
         };
     }
 
+    var error_label = body;
+    if(error_label === '') {
+        error_label = _empty_error_label;
+    }
     return {
         is_success: false,
-        label: body || 'Error',
-        details_title: body || 'Error',
-        details_body: body
+        label: error_label,
+        details_title: error_label,
+        details_body: body,
+        details_lexer: '',
+        status_code: jqXHR.status
     };
 }
 
@@ -249,13 +284,21 @@ $.fn.zato.action_runner = {
 
         var link_elem = opts.link_elem;
         var url = opts.url;
-        var data = opts.data || '';
-        var parse = opts.parse || _default_parse;
-        var on_success = opts.on_success || null;
-        var details_modal_title = opts.details_modal_title || 'Response';
-        var spinner_label = opts.spinner_label || 'Pinging ..';
-        var show_delay_ms = opts.show_delay_ms || 0;
-        var placement = opts.placement || 'top';
+        var data = _opt(opts, 'data');
+        var details_modal_title = _opt(opts, 'details_modal_title');
+        var spinner_label = _opt(opts, 'spinner_label');
+        var show_delay_ms = _opt(opts, 'show_delay_ms');
+        var placement = _opt(opts, 'placement');
+
+        var parse = _default_parse;
+        if('parse' in opts) {
+            parse = opts.parse;
+        }
+
+        var on_success = null;
+        if('on_success' in opts) {
+            on_success = opts.on_success;
+        }
 
         console.log('[action_runner] run: url=' + url + ' data_length=' + data.length + ' has_on_success=' + !!on_success);
         console.log('[action_runner] run: link_elem=' + (link_elem ? link_elem.tagName + '.' + link_elem.className : 'null'));
@@ -320,7 +363,7 @@ $.fn.zato.action_runner = {
 
         var callback = function(jqXHR, textStatus) {
             console.log('[action_runner] callback: status=' + jqXHR.status + ' textStatus=' + textStatus);
-            console.log('[action_runner] callback: responseText=' + (jqXHR.responseText || '').substring(0, 300));
+            console.log('[action_runner] callback: responseText=' + String(jqXHR.responseText).substring(0, 300));
 
             // The response beat the lead-in - the spinner is no longer needed.
             if(show_timer) {
@@ -329,7 +372,7 @@ $.fn.zato.action_runner = {
             }
 
             var r = parse(jqXHR, textStatus);
-            console.log('[action_runner] callback: parsed is_success=' + r.is_success + ' label=' + (r.label || '').substring(0, 100));
+            console.log('[action_runner] callback: parsed is_success=' + r.is_success + ' label=' + r.label.substring(0, 100));
             if(r.is_success) {
                 if(on_success) {
                     on_success(instance, r);
@@ -343,10 +386,9 @@ $.fn.zato.action_runner = {
                 var details_id = 'action-details-' + _details_seq + '-' + Date.now();
                 _details_store[details_id] = {
                     title: details_modal_title,
-                    heading: r.details_title || r.label,
-                    body: r.details_body || '',
-                    lexer: r.details_lexer || '',
-                    status_code: r.status_code || 0,
+                    body: r.details_body,
+                    lexer: r.details_lexer,
+                    status_code: r.status_code,
                     instance: instance
                 };
                 _render_error(instance, r.label, details_id);
@@ -369,9 +411,15 @@ $.fn.zato.action_runner = {
 
         $.fn.zato.action_runner.close_details();
 
-        var body_text = details.body || '(empty response)';
-        var title_text = details.title || 'Response';
-        if (details.status_code) {
+        var body_text = details.body;
+        if(body_text === '') {
+            body_text = _empty_body_label;
+        }
+
+        var title_text = details.title;
+
+        // A status of 0 means the request never reached the server, so there is nothing to show
+        if(details.status_code) {
             title_text += ': ' + details.status_code;
         }
         var escapedTitle = _escape_html(title_text);
