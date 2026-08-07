@@ -56,7 +56,7 @@ _kind_label = {
 _range_label = {
     Range_Day:   'Last 24 hours',
     Range_Week:  'Last 7 days',
-    Range_Month: f'Retention window ({Retention_Days} days)',
+    Range_Month: f'{Retention_Days} days',
 }
 
 # Each exportable table maps to the query the page runs and its CSV renderer

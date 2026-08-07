@@ -12,6 +12,7 @@ is the document that did not happen.
 
 # stdlib
 from datetime import datetime, timedelta
+from urllib.parse import quote
 
 # SQLAlchemy
 from sqlalchemy import and_, select
@@ -249,7 +250,7 @@ def collect_missing_ship_notices(configs:'dictlist', now:'datetime', server_name
 
             message = f'No ship notice sent to `{name}` within {window_hours} {hour_suffix}'
             message += f' of order `{control_number}`, received {received_iso}'
-            link = f'/zato/audit-log/?source=x12&object_name={pair}&cluster={default_cluster_id}'
+            link = f'/zato/audit-log/?source=x12&object_name={quote(pair)}&cluster={default_cluster_id}'
 
             finding = new_finding(Kind_Ship_Notice_Missing, AuditSource.X12, pair, message, link)
             out.append(finding)

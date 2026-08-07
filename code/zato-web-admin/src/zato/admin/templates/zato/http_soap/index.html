@@ -179,8 +179,8 @@
                 '_audit_log',
             {% endif %}
 
-            // Usage report link (REST channels only)
-            {% if connection == 'channel' and transport == 'plain_http' %}
+            // Usage report link (REST channels and REST outgoing connections)
+            {% if transport == 'plain_http' %}
                 '_usage',
             {% endif %}
 
@@ -371,7 +371,7 @@
                         <th>&nbsp;</th> {% comment %} _audit_log {% endcomment %}
                         {% endif %}
 
-                        {% if connection == 'channel' and transport == 'plain_http' %}
+                        {% if transport == 'plain_http' %}
                         <th>&nbsp;</th> {% comment %} _usage {% endcomment %}
                         {% endif %}
 
@@ -539,7 +539,7 @@
 
                         {% if connection == 'channel' and transport == 'plain_http' %}
                         <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=rest-channel&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% endif %}</td>
-                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Usage</span>{% else %}<a href="/zato/channel-usage/?channel={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Usage</a>{% endif %}</td>
+                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Usage</span>{% else %}<a href="/zato/channel-usage/?sources=rest-channel&amp;objects={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Usage</a>{% endif %}</td>
                         {% endif %}
 
                         {% if connection == 'channel' and transport == 'soap' %}
@@ -548,6 +548,7 @@
 
                         {% if connection == 'outgoing' and transport == 'plain_http' %}
                         <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=rest-outgoing&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% endif %}</td>
+                        <td style="white-space:nowrap">{% if item.is_internal %}<span class="form_hint">Usage</span>{% else %}<a href="/zato/channel-usage/?sources=rest-outgoing&amp;objects={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Usage</a>{% endif %}</td>
                         {% endif %}
 
                         <!-- 31, 32 -->

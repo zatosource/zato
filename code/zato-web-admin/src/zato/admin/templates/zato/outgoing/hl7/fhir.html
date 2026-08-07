@@ -36,6 +36,7 @@
             'address',
             'security',
             '_audit_log',
+            '_usage',
             '_edit',
             '_delete',
             '_ping',
@@ -84,6 +85,7 @@
                         <th><a href="#">Security</a></th>
 
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
 
                         {% comment %} 3 {% endcomment %}
                         <th>&nbsp;</th>
@@ -128,6 +130,7 @@
 
                         {% comment %} 3 {% endcomment %}
                         <td><a href="/zato/audit-log/?source=fhir&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a></td>
+                        <td><a href="/zato/channel-usage/?sources=fhir&amp;objects={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Usage</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.hl7.fhir.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.hl7.fhir.delete_('{{ item.id }}')">Delete</a></td>
                         <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)">Ping</a></td>

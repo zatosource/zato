@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import json
 import logging
 
 # Django
@@ -16,9 +17,10 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.views import method_allowed
+from zato.admin.web.views.audit_log.columns import _source_label
 from zato.common.audit_log.api import Retention_Days
 from zato.common.audit_log.reports import Default_Range, Range_Day, Range_Hours, Range_Month, Range_Week
-from zato.common.audit_log.usage import get_channel_list, get_usage, usage_csv
+from zato.common.audit_log.usage import get_object_options, get_usage, normalize_sources, usage_csv, Usage_Sources
 from zato.common.defaults import default_cluster_id
 from zato.common.util.api import utcnow
 
@@ -26,9 +28,10 @@ from zato.common.util.api import utcnow
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, dictlist
+    from zato.common.typing_ import any_, dictlist, strlist
     any_ = any_
     dictlist = dictlist
+    strlist = strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,15 +46,28 @@ logger = logging.getLogger(__name__)
 _range_label = {
     Range_Day:   'Last 24 hours',
     Range_Week:  'Last 7 days',
-    Range_Month: f'Retention window ({Retention_Days} days)',
+    Range_Month: f'{Retention_Days} days',
 }
 
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _get_list_param(req:'any_', name:'str') -> 'strlist':
+    """ Reads one comma-separated filter list off the query string.
+    """
+    if value := req.GET.get(name):
+        out = [item for item in value.split(',') if item.strip()]
+    else:
+        out = []
+
+    return out
+
+# ################################################################################################################################
+
 def _get_report_filters(req:'any_') -> 'any_':
     """ Reads the report filters off the query string - an unknown or absent range
-    means the default one and the channel filter is optional.
+    means the default one, sources not covered by the report are dropped and the
+    object filter is optional.
     """
     if time_range := req.GET.get('range'):
         if time_range not in Range_Hours:
@@ -59,12 +75,10 @@ def _get_report_filters(req:'any_') -> 'any_':
     else:
         time_range = Default_Range
 
-    if channel := req.GET.get('channel'):
-        channel = channel.strip()
-    else:
-        channel = ''
+    sources = normalize_sources(_get_list_param(req, 'sources'))
+    objects = _get_list_param(req, 'objects')
 
-    out = time_range, channel
+    out = time_range, sources, objects
     return out
 
 # ################################################################################################################################
@@ -78,24 +92,54 @@ def _convert_row_times(rows:'any_', user_profile:'any_') -> 'None':
 
 # ################################################################################################################################
 
+def _set_row_type_labels(rows:'any_') -> 'None':
+    """ Gives each usage row the human name of its source for the Type column.
+    """
+    for row in rows:
+        row.type_label = _source_label[row.source]
+
+# ################################################################################################################################
+
+def _get_filter_options() -> 'dictlist':
+    """ What the page's filter selects offer - every covered source under its human
+    label, with the objects the audit log has completed exchanges for.
+    """
+    objects_by_source = get_object_options()
+
+    # Our response to produce
+    out:'dictlist' = []
+
+    for source in Usage_Sources:
+        objects = objects_by_source.get(source)
+
+        # A source with no exchanges yet is still offered, with nothing under it
+        if objects is None:
+            objects = []
+
+        out.append({'source': source, 'label': _source_label[source], 'objects': objects})
+
+    return out
+
+# ################################################################################################################################
+
 @method_allowed('GET')
 def index(req:'any_') -> 'TemplateResponse':
-    """ The channel usage page - who calls which channel and how often, over the data
-    the audit log already holds, filterable by channel and date range, with each row
-    linking back to the filtered audit log page. This is what deciding to retire
-    a deprecated channel runs on.
+    """ The usage page - who calls which channel or connection and how often, over
+    the data the audit log already holds, filterable by type, object and date range,
+    with each row linking back to the filtered audit log page. This is what deciding
+    to retire a deprecated channel runs on.
     """
-    time_range, channel = _get_report_filters(req)
+    time_range, sources, objects = _get_report_filters(req)
 
     now = utcnow()
 
-    rows = get_usage(now, time_range, channel)
+    rows = get_usage(now, time_range, sources, objects)
 
     # The audit log stores UTC times - the page shows them in the user's timezone
     _convert_row_times(rows, req.zato.user_profile)
 
-    # What the channel filter's dropdown lists
-    channels = get_channel_list()
+    # Each row says what kind of object it is about
+    _set_row_type_labels(rows)
 
     # The range choices of the filter form, in their display order
     ranges:'dictlist' = []
@@ -106,8 +150,9 @@ def index(req:'any_') -> 'TemplateResponse':
     return_data = {
         'cluster_id': default_cluster_id,
         'time_range': time_range,
-        'channel': channel,
-        'channels': channels,
+        'sources': ','.join(sources),
+        'objects': ','.join(objects),
+        'filter_options_json': json.dumps(_get_filter_options()),
         'ranges': ranges,
         'rows': rows,
         'zato_clusters': True,
@@ -124,11 +169,11 @@ def index(req:'any_') -> 'TemplateResponse':
 def index_csv(req:'any_') -> 'HttpResponse':
     """ The usage table as CSV - the same query the page runs, returned as text/csv.
     """
-    time_range, channel = _get_report_filters(req)
+    time_range, sources, objects = _get_report_filters(req)
 
     now = utcnow()
 
-    rows = get_usage(now, time_range, channel)
+    rows = get_usage(now, time_range, sources, objects)
 
     # The audit log stores UTC times - the CSV shows them in the user's timezone too
     _convert_row_times(rows, req.zato.user_profile)

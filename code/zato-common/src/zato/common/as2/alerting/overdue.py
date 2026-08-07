@@ -11,6 +11,7 @@ each turned into a finding once the partner's own window has passed without it a
 
 # stdlib
 from datetime import datetime, timedelta
+from urllib.parse import quote
 
 # Zato
 from zato.common.as2.alerting.common import get_overdue_seconds, index_configs_by_as2_pair, index_configs_by_isa_id, \
@@ -60,7 +61,7 @@ def collect_overdue_mdns(configs:'dictlist', now:'datetime', server_name:'str') 
             continue
 
         message = f'MDN overdue from `{pair}` for message `{pending.message_id}`, sent {pending.sent_time_iso}'
-        link = f'/zato/audit-log/?source=as2&object_name={pair}&status=outstanding&cluster={default_cluster_id}'
+        link = f'/zato/audit-log/?source=as2&object_name={quote(pair)}&status=outstanding&cluster={default_cluster_id}'
 
         finding = new_finding(Kind_MDN_Overdue, AuditSource.AS2, pair, message, link)
         out.append(finding)
@@ -99,7 +100,7 @@ def collect_overdue_acks(configs:'dictlist', now:'datetime', server_name:'str') 
         pair = f'{pending.sender}:{pending.receiver}'
         message = f'Acknowledgment overdue from `{pair}` for interchange `{pending.control_number}`,'
         message += f' sent {pending.sent_time_iso}'
-        link = f'/zato/audit-log/?source=x12&object_name={pair}&status=outstanding&cluster={default_cluster_id}'
+        link = f'/zato/audit-log/?source=x12&object_name={quote(pair)}&status=outstanding&cluster={default_cluster_id}'
 
         finding = new_finding(Kind_Ack_Overdue, AuditSource.X12, pair, message, link)
         out.append(finding)

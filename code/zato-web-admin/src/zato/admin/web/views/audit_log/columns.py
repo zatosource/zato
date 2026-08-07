@@ -142,6 +142,7 @@ _source_page_url = {
     AuditSource.SOAP_Outgoing: f'/zato/http-soap/?cluster={default_cluster_id}&connection=outgoing&transport=soap',
     AuditSource.MLLP_Channel: f'/zato/channel/hl7/mllp/?cluster={default_cluster_id}',
     AuditSource.MLLP_Outgoing: f'/zato/outgoing/hl7/mllp/?cluster={default_cluster_id}',
+    AuditSource.FHIR: f'/zato/outgoing/hl7/fhir/?cluster={default_cluster_id}',
     AuditSource.SQL_Outgoing: f'/zato/outgoing/sql/?cluster={default_cluster_id}',
     AuditSource.Email_IMAP: f'/zato/email/imap/?cluster={default_cluster_id}',
     AuditSource.Email_SMTP: f'/zato/email/smtp/?cluster={default_cluster_id}',

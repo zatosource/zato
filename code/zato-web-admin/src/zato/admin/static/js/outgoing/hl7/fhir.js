@@ -94,6 +94,7 @@ $.fn.zato.outgoing.hl7.fhir.data_table.new_row = function(item, data, include_tr
     // 3
     // The audit log of this connection's requests is filed under the connection's name
     row += String.format('<td><a href="/zato/audit-log/?source=fhir&object_name={0}&cluster=1">Audit log</a></td>', encodeURIComponent(item.name));
+    row += String.format('<td><a href="/zato/channel-usage/?sources=fhir&objects={0}&cluster=1">Usage</a></td>', encodeURIComponent(item.name));
 
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.hl7.fhir.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.hl7.fhir.delete_('{0}');\">Delete</a>", item.id));

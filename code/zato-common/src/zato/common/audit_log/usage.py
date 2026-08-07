@@ -6,11 +6,12 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Channel usage reporting - a per-channel aggregate built over the audit events REST
-# and SOAP channels already record. Each row counts the responses one caller received
-# from one channel over the range, where the caller is the security definition that
-# authenticated the requests. The table answers "who still calls this channel",
-# which is what retiring a deprecated API needs, and it renders as CSV too.
+# Usage reporting - a per-object aggregate built over the audit events channels and
+# outgoing connections already record. Each row counts the completed exchanges of one
+# caller with one object over the range, where the caller is the security definition
+# that authenticated the requests, when there was one. The table answers "who still
+# calls this channel" and "how much does this connection run", which is what retiring
+# a deprecated API needs, and it renders as CSV too.
 
 from __future__ import annotations
 
@@ -18,13 +19,14 @@ from __future__ import annotations
 import csv
 from dataclasses import dataclass
 from io import StringIO
+from urllib.parse import quote
 
 # SQLAlchemy
-from sqlalchemy import and_, select
+from sqlalchemy import and_, or_, select
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditSource, event_table, get_audit_engine
-from zato.common.audit_log.reports import Default_Range, get_range_cutoff
+from zato.common.audit_log.reports import get_range_cutoff
 from zato.common.defaults import default_cluster_id
 
 # ################################################################################################################################
@@ -32,21 +34,22 @@ from zato.common.defaults import default_cluster_id
 
 if 0:
     from datetime import datetime
-    from zato.common.typing_ import anylist, anytuple, strlist, strstrdict
+    from zato.common.typing_ import any_, anylist, anytuple, strlist
 
     # Dummy assignments to satisfy type checkers
     datetime = datetime
+    any_ = any_
     anylist = anylist
     anytuple = anytuple
     strlist = strlist
-    strstrdict = strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 #  Type aliases
-usage_row_list   = list['UsageRow']
-usage_state_dict = dict['anytuple', '_UsageState']
+usage_row_list      = list['UsageRow']
+usage_state_dict    = dict['anytuple', '_UsageState']
+object_options_dict = dict[str, list[str]]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,21 +57,40 @@ usage_state_dict = dict['anytuple', '_UsageState']
 # What a caller that authenticated with no security definition is reported as
 Caller_Anonymous = 'Anonymous'
 
+# The sources the usage page covers and, per source, the event marking one completed
+# exchange - the completing event rather than request-sent, so a destination delivery,
+# whose hop recorder writes an extra request-sent row, is never counted twice.
+_usage_event_by_source = {
+    AuditSource.REST_Channel:  AuditEvent.Response_Sent,
+    AuditSource.SOAP_Channel:  AuditEvent.Response_Sent,
+    AuditSource.REST_Outgoing: AuditEvent.Response_Received,
+    AuditSource.MLLP_Channel:  AuditEvent.Ack_Sent,
+    AuditSource.MLLP_Outgoing: AuditEvent.Ack_Received,
+    AuditSource.FHIR:          AuditEvent.Response_Received,
+}
+
+# The covered sources in their display order - what the page's source filter offers
+Usage_Sources = tuple(_usage_event_by_source)
+
 # The CSV headers of the usage table, matching the columns the page renders
-Usage_Headers = ('channel', 'caller', 'calls', 'first_call', 'last_call')
+Usage_Headers = ('channel', 'type', 'caller', 'calls', 'first_call', 'last_call')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @dataclass(init=False)
 class UsageRow:
-    """ The calls one caller made to one channel over the range.
+    """ The calls one caller exchanged with one object over the range.
     """
     channel:    str = ''
+    source:     str = ''
     caller:     str = ''
     calls:      int = 0
     first_call: str = ''
     last_call:  str = ''
+
+    # What the object's source is called on the page - the view fills it in
+    type_label: str = ''
 
     # The filtered audit log page behind this row
     link: str = ''
@@ -91,29 +113,63 @@ class _UsageState:
 def _audit_log_link(source:'str', channel:'str') -> 'str':
     """ Builds the drill-down path from one usage row to the filtered audit log page.
     """
+    # The name is user-defined and can hold characters that would split the query string
+    channel = quote(channel)
+
     out = f'/zato/audit-log/?source={source}&object_name={channel}&cluster={default_cluster_id}'
     return out
 
 # ################################################################################################################################
 
-def _load_usage_events(cutoff_iso:'str', channel:'str') -> 'anylist':
-    """ Reads all the channel responses recorded after the cutoff, oldest first -
-    responses are audited after authentication, so each one knows its caller.
+def normalize_sources(sources:'strlist') -> 'strlist':
+    """ Keeps only the sources the usage page covers - anything else came from
+    the address bar and never reaches a query. An empty list stays empty,
+    which downstream means all the covered sources.
     """
-    source_matches = event_table.c.source.in_((AuditSource.REST_Channel, AuditSource.SOAP_Channel))
-    event_type_matches = event_table.c.event_type == AuditEvent.Response_Sent
+    out = [item for item in sources if item in _usage_event_by_source]
+    return out
+
+# ################################################################################################################################
+
+def _completed_exchange_matches(sources:'strlist') -> 'any_':
+    """ The condition matching one completed exchange of any of the given sources -
+    each source pairs with its own completing event type.
+    """
+    # An empty filter means every covered source is reported on
+    if not sources:
+        sources = list(_usage_event_by_source)
+
+    per_source = []
+
+    for source in sources:
+        event_type = _usage_event_by_source[source]
+        matches = and_(
+            event_table.c.source == source,
+            event_table.c.event_type == event_type,
+        )
+        per_source.append(matches)
+
+    out = or_(*per_source)
+    return out
+
+# ################################################################################################################################
+
+def _load_usage_events(cutoff_iso:'str', sources:'strlist', objects:'strlist') -> 'anylist':
+    """ Reads all the completed exchanges recorded after the cutoff, oldest first -
+    channel responses are audited after authentication, so each one knows its caller.
+    """
+    exchange_matches = _completed_exchange_matches(sources)
     cutoff_matches = event_table.c.event_time_iso >= cutoff_iso
 
     conditions = and_(
-        source_matches,
-        event_type_matches,
+        exchange_matches,
         cutoff_matches,
     )
 
-    # An empty channel filter means all the channels are reported on
-    if channel:
-        channel_matches = event_table.c.object_name == channel
-        conditions = and_(conditions, channel_matches)
+    # An empty object filter means all the objects are reported on
+    if objects:
+        object_matches = event_table.c.object_name.in_(objects)
+        conditions = and_(conditions, object_matches)
 
     statement = select(
         event_table.c.source,
@@ -135,19 +191,23 @@ def _load_usage_events(cutoff_iso:'str', channel:'str') -> 'anylist':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_usage(now:'datetime', time_range:'str' = Default_Range, channel:'str' = '') -> 'usage_row_list':
-    """ Call counts per channel and caller over the range - one row per channel
+def get_usage(
+    now,        # type: datetime
+    time_range, # type: str
+    sources,    # type: strlist
+    objects,    # type: strlist
+) -> 'usage_row_list':
+    """ Call counts per object and caller over the range - one row per object
     and security definition, with the first and last call times of each pair.
     """
     cutoff_iso = get_range_cutoff(now, time_range)
 
-    events = _load_usage_events(cutoff_iso, channel)
+    sources = normalize_sources(sources)
+    events = _load_usage_events(cutoff_iso, sources, objects)
 
-    # Call counts and call times per channel and caller
+    # Call counts and call times per object and caller - the source is part of
+    # the key because one name can exist both as a channel and as a connection
     groups:'usage_state_dict' = {}
-
-    # Each channel's audit source, so the drill-down link filters the audit log correctly
-    channel_sources:'strstrdict' = {}
 
     for source, object_name, ext_client_id, event_time_iso in events:
 
@@ -155,9 +215,7 @@ def get_usage(now:'datetime', time_range:'str' = Default_Range, channel:'str' = 
         if not ext_client_id:
             ext_client_id = Caller_Anonymous
 
-        channel_sources[object_name] = source
-
-        key = (object_name, ext_client_id)
+        key = (object_name, source, ext_client_id)
 
         if group := groups.get(key):
             pass
@@ -178,17 +236,17 @@ def get_usage(now:'datetime', time_range:'str' = Default_Range, channel:'str' = 
 
     for key in sorted(groups):
 
-        channel_name, caller = key
+        object_name, source, caller = key
         group = groups[key]
-        source = channel_sources[channel_name]
 
         row = UsageRow()
-        row.channel = channel_name
+        row.channel = object_name
+        row.source = source
         row.caller = caller
         row.calls = group.calls
         row.first_call = group.first_call
         row.last_call = group.last_call
-        row.link = _audit_log_link(source, channel_name)
+        row.link = _audit_log_link(source, object_name)
 
         out.append(row)
 
@@ -197,21 +255,15 @@ def get_usage(now:'datetime', time_range:'str' = Default_Range, channel:'str' = 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_channel_list() -> 'strlist':
-    """ All the channel names the audit log has responses for, sorted by name -
-    this is what the channel filter on the usage page lists.
+def get_object_options() -> 'object_options_dict':
+    """ All the object names the audit log has completed exchanges for, grouped
+    by source and sorted by name - this is what the filters on the usage page list.
     """
-    source_matches = event_table.c.source.in_((AuditSource.REST_Channel, AuditSource.SOAP_Channel))
-    event_type_matches = event_table.c.event_type == AuditEvent.Response_Sent
+    conditions = _completed_exchange_matches([])
 
-    conditions = and_(
-        source_matches,
-        event_type_matches,
-    )
-
-    statement = select(event_table.c.object_name).distinct()
+    statement = select(event_table.c.source, event_table.c.object_name).distinct()
     statement = statement.where(conditions)
-    statement = statement.order_by(event_table.c.object_name)
+    statement = statement.order_by(event_table.c.source, event_table.c.object_name)
 
     engine = get_audit_engine()
 
@@ -220,10 +272,11 @@ def get_channel_list() -> 'strlist':
         rows = result.fetchall()
 
     # Our response to produce
-    out:'strlist' = []
+    out:'object_options_dict' = {}
 
     for row in rows:
-        out.append(row.object_name)
+        names = out.setdefault(row.source, [])
+        names.append(row.object_name)
 
     return out
 
@@ -239,7 +292,7 @@ def usage_csv(rows:'usage_row_list') -> 'str':
     _ = writer.writerow(Usage_Headers)
 
     for row in rows:
-        row_values = [row.channel, row.caller, row.calls, row.first_call, row.last_call]
+        row_values = [row.channel, row.source, row.caller, row.calls, row.first_call, row.last_call]
         _ = writer.writerow(row_values)
 
     out = buffer.getvalue()
