@@ -50,6 +50,7 @@ def _build_where(
     status:'str',
     time_from:'str' = '',
     time_to:'str' = '',
+    event_types:'anylist' = [],
     ) -> 'anylist':
     """ Builds the WHERE conditions for the poll query. A per-source page names its one
     source, the all-events page names whichever ones its reader picked - none at all
@@ -71,6 +72,11 @@ def _build_where(
     # naming none means the legend stands whole and filters nothing
     if outcomes:
         out.append(event_table.c.outcome.in_(outcomes))
+
+    # An event word clicked on the page filters the log down to events of that kind alone -
+    # none picked reads every kind, the same way the sources do
+    if event_types:
+        out.append(event_table.c.event_type.in_(event_types))
 
     # The page can be scoped down to a time window, e.g. one clicked on an analytics chart -
     # event times are ISO timestamps, so string prefixes compare correctly.

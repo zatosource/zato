@@ -543,7 +543,7 @@ a:where(:not(.menu-link, .dashboard-panel-action-badge)),
     padding-bottom: 2px;
 }
 
-a:where(:not(.menu-link):not(.chosen-single):not(.status-badge, .dashboard-panel-action-badge)):hover,
+a:where(:not(.menu-link):not(.chosen-single):not(.status-badge, .dashboard-panel-action-badge, .audit-log-pane-details a)):hover,
 a:where(:not(.menu-link)):hover .zato-link-face {
     color: var(--zato-link-hover) !important;
     background-color: transparent;

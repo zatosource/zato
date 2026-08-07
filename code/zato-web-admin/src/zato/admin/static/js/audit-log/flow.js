@@ -92,7 +92,7 @@ flow.buildRow = function(row) {
     // A headline that is only the message id says what the flow already says - most lines of
     // a flow share it, and the panel's facts carry it - so what happened stands in its place
     if (out.headline === '' || out.headline === row.msg_id) {
-        out.headline = out.eventType;
+        out.headline = out.eventLabel;
     }
 
     return out;
@@ -209,14 +209,16 @@ flow.messageHTML = function(rowModel, previous) {
         html += flow.elapsedHTML(previous, rowModel);
     }
 
-    // A flow crosses sources, so a line of another one says which it came from
+    // A flow crosses sources, so a line of another one says which it came from,
+    // by the name a reader knows the source under rather than by its code
     if (rowModel.source !== pageSource) {
-        html += '<span class="audit-log-flow-source">' + flow.escapeHTML(rowModel.source) + '</span>';
+        html += '<span class="audit-log-flow-source">' +
+            flow.escapeHTML($.fn.zato.audit_log.sourceLabel(rowModel.source)) + '</span>';
     }
 
     // An event whose headline is what happened does not say it a second time beside itself
-    if (rowModel.eventType !== rowModel.headline) {
-        html += '<span class="audit-log-flow-event">' + flow.escapeHTML(rowModel.eventType) + '</span>';
+    if (rowModel.headline !== rowModel.eventLabel) {
+        html += '<span class="audit-log-flow-event">' + flow.escapeHTML(rowModel.eventLabel) + '</span>';
     }
 
     html += '<span class="audit-log-flow-headline">' + flow.escapeHTML(rowModel.headline) + '</span>';
@@ -263,9 +265,10 @@ flow.eventURL = function(rowModel) {
 // The line itself as it reads on one line, which is what taking it away puts on the clipboard
 flow.lineText = function(rowModel) {
     var roleLabel = kit.role.config.labels[rowModel.role];
+    var sourceLabel = $.fn.zato.audit_log.sourceLabel(rowModel.source);
 
-    var parts = [rowModel.timeLocal, roleLabel, rowModel.source,
-        rowModel.eventType, rowModel.headline];
+    var parts = [rowModel.timeLocal, roleLabel, sourceLabel,
+        rowModel.eventLabel, rowModel.headline];
 
     var out = parts.join(' - ');
 
@@ -291,7 +294,7 @@ flow.lineHTML = function(rowModel, previous) {
         },
         stripe: flow.stripeOf(rowModel),
         lead_html: flow.leadHTML(rowModel),
-        badge_html: kit.role.tag(rowModel.role, rowModel.eventType, flow.config.darkVariant),
+        badge_html: kit.role.tag(rowModel.role, rowModel.eventLabel, flow.config.darkVariant),
         message_html: flow.messageHTML(rowModel, previous),
         actions_html: flow.actionsHTML(rowModel)
     });

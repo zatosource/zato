@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from sqlalchemy import select
 
 # Zato
+from zato.admin.web.views.audit_log.columns import _source_event_label
 from zato.common.as2.mdn import describe_disposition
 from zato.common.audit_log.api import event_table, AuditEvent
 from zato.common.hl7.display import parse_and_render
@@ -206,6 +207,27 @@ def _render_hl7_parsed(data:'str') -> 'str':
 
 # ################################################################################################################################
 
+# What each screen a view can happen from is called - a screen the map does not
+# know is named by its own code
+_screen_label = {
+    'audit-log-browser': 'Audit log',
+}
+
+# ################################################################################################################################
+
+def _view_source_label(source:'str') -> 'str':
+    """ What the viewed event's source is called - by its human name when the catalog
+    knows it, by its own code when the log is ahead of this application.
+    """
+    if source in _source_event_label:
+        out = _source_event_label[source]
+    else:
+        out = source
+
+    return out
+
+# ################################################################################################################################
+
 def render_view_record(engine:'any_', data:'str', event_time_iso:'str') -> 'str':
     """ Renders a view record of the access log as the answer it exists to give - who viewed
     what and when, in business terms. The viewed event is resolved against the event table
@@ -240,13 +262,9 @@ def render_view_record(engine:'any_', data:'str', event_time_iso:'str') -> 'str'
     if 'actor' in payload:
         lines.append(f'Viewed by:  {payload["actor"]}')
 
-    # When the reading happened is the view event's own moment
-    when = event_time_iso.replace('T', ' ')
-    lines.append(f'When:       {when}')
-
     # The viewed event answers for itself while it exists ..
     if viewed_row is not None:
-        lines.append(f'Viewed:     {viewed_row[0]} ({viewed_row[1]})')
+        lines.append(f'Viewed:     {viewed_row[0]} ({_view_source_label(viewed_row[1])})')
 
         # A message id the viewed event never had is not a line to show
         if viewed_row[2]:
@@ -254,9 +272,20 @@ def render_view_record(engine:'any_', data:'str', event_time_iso:'str') -> 'str'
 
     # .. and one pruned since reads by the coordinates written down at view time
     elif payload['viewed_object_name']:
-        lines.append(f'Viewed:     {payload["viewed_object_name"]} ({payload["viewed_source"]})')
+        viewed_source_label = _view_source_label(payload['viewed_source'])
+        lines.append(f'Viewed:     {payload["viewed_object_name"]} ({viewed_source_label})')
 
-    lines.append(f'Screen:     {payload["screen"]}')
+    screen = payload['screen']
+
+    if screen in _screen_label:
+        screen = _screen_label[screen]
+
+    lines.append(f'Screen:     {screen}')
+
+    # When the reading happened is the view event's own moment - trimmed of its
+    # microseconds and offset, and last, the way time reads everywhere on the page
+    when = event_time_iso.replace('T', ' ').split('.')[0]
+    lines.append(f'When:       {when} UTC')
 
     out = '\n'.join(lines)
     return out

@@ -1,0 +1,58 @@
+/* Dashboard kit - HTTP methods.
+   The ink each method is written in wherever an endpoint shows - the same greens, blues,
+   ambers and reds the chips' own tones already use, so no method invents a color. */
+
+.dashboard-method {
+    font-weight: 700;
+}
+
+.dashboard-method-get {
+    color: #1b813e;
+}
+
+.dashboard-method-post {
+    color: #0f6ea8;
+}
+
+.dashboard-method-put,
+.dashboard-method-patch {
+    color: #b35e00;
+}
+
+.dashboard-method-delete {
+    color: #b3261e;
+}
+
+.dashboard-method-head,
+.dashboard-method-options {
+    color: #6b7280;
+}
+
+/* ------------------------------------------------------------ */
+/* Inside a dark frame                                           */
+/* ------------------------------------------------------------ */
+
+/* The same inks lifted for the detail pane's dark fact rows, since a tone meant
+   to sit on white all but disappears on one */
+
+.dashboard-fact-rows-dark .dashboard-method-get {
+    color: #74cf92;
+}
+
+.dashboard-fact-rows-dark .dashboard-method-post {
+    color: #6fb6e8;
+}
+
+.dashboard-fact-rows-dark .dashboard-method-put,
+.dashboard-fact-rows-dark .dashboard-method-patch {
+    color: #f6c66a;
+}
+
+.dashboard-fact-rows-dark .dashboard-method-delete {
+    color: #ff8a94;
+}
+
+.dashboard-fact-rows-dark .dashboard-method-head,
+.dashboard-fact-rows-dark .dashboard-method-options {
+    color: #a8aebc;
+}

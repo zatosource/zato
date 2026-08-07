@@ -1,9 +1,11 @@
 @import url("../dashboard-kit/kit.css");
 @import url("../dashboard-kit/outcome.css");
 @import url("../dashboard-kit/time_range.css");
+@import url("../dashboard-kit/time-scrub.css");
 @import url("../dashboard-kit/main_chart.css");
 @import url("../dashboard-kit/chips.css");
 @import url("../dashboard-kit/role.css");
+@import url("../dashboard-kit/http-method.css");
 @import url("../dashboard-kit/payload_panel.css");
 @import url("../dashboard-kit/list_detail.css");
 @import url("../dashboard-kit/tabs.css");
@@ -405,6 +407,30 @@
     color: var(--dashboard-line-strong);
 }
 
+/* An outcome badge filters wherever it is worn */
+
+.audit-log-outcome-filter {
+    cursor: pointer;
+}
+
+/* The chip beside the legend naming the kind of event the list is narrowed down to,
+   with the cross that asks for every kind back */
+
+.audit-log-filter-chip {
+    gap: 7px;
+}
+
+.audit-log-filter-chip-clear {
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    opacity: 0.6;
+}
+
+.audit-log-filter-chip-clear:hover {
+    opacity: 1;
+}
+
 /* A tag in the list is read a hundred at a time, so it is kept smaller and quieter than
    the same tag in the pane, where one event is being read on its own.
 
@@ -563,10 +589,14 @@
     overflow: hidden;
 }
 
-/* The topmost rule of the fact rows would sit a pixel inside the frame's own */
+/* The topmost rule of the fact rows would sit a pixel inside the frame's own.
+   The label column keeps one width whatever event is being read - sized by content,
+   it would resize at every click down the list. 130px holds the widest label there
+   is at the labels' own 10px uppercase. */
 
 .audit-log-pane-details .dashboard-fact-rows {
     border-top: none;
+    grid-template-columns: 130px 1fr;
 }
 
 /* The CID opens the whole message and a lineage marker selects the event it names, so those
@@ -586,6 +616,21 @@
     /* The page's global link hover would turn the value dark blue - here it
        brightens within its own amber instead */
     color: var(--dashboard-flow-accent-bright);
+}
+
+/* The sign that a value leads off this page - kept small and quiet beside its own
+   text, speaking up only when the link itself does */
+
+.audit-log-external-icon {
+    width: 10px;
+    height: 10px;
+    margin-left: 4px;
+    vertical-align: -1px;
+    opacity: 0.65;
+}
+
+a:hover .audit-log-external-icon {
+    opacity: 1;
 }
 
 /* ------------------------------------------------------------ */

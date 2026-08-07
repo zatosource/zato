@@ -11,7 +11,8 @@ is bounded by.
 """
 
 # Zato
-from zato.common.audit_log.common import AuditOutcome, AuditSource
+from zato.common.audit_log.common import AuditEvent, AuditOutcome, AuditSource
+from zato.common.defaults import default_cluster_id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -72,8 +73,8 @@ _source_label = {
     AuditSource.Config: 'Access log',
     AuditSource.AS2: 'AS2',
     AuditSource.AS4: 'AS4',
-    AuditSource.Email_IMAP: 'Email IMAP',
-    AuditSource.Email_SMTP: 'Email SMTP',
+    AuditSource.Email_IMAP: 'IMAP',
+    AuditSource.Email_SMTP: 'SMTP',
     AuditSource.FHIR: 'FHIR',
     AuditSource.File_Outgoing: 'File transfer',
     AuditSource.HL7: 'HL7',
@@ -85,6 +86,130 @@ _source_label = {
     AuditSource.SOAP_Outgoing: 'SOAP outgoing',
     AuditSource.SQL_Outgoing: 'SQL',
     AuditSource.X12: 'X12',
+}
+
+# What one event's source is called on a row and in the detail pane - singular where
+# the filter select's group name is plural, because a row is one event of one object
+_source_event_label = {
+    AuditSource.Config: 'Access log',
+    AuditSource.AS2: 'AS2',
+    AuditSource.AS4: 'AS4',
+    AuditSource.Email_IMAP: 'IMAP',
+    AuditSource.Email_SMTP: 'SMTP',
+    AuditSource.FHIR: 'FHIR',
+    AuditSource.File_Outgoing: 'File transfer',
+    AuditSource.HL7: 'HL7',
+    AuditSource.MCP: 'MCP',
+    AuditSource.PubSub: 'Pub/sub',
+    AuditSource.REST_Channel: 'REST channel',
+    AuditSource.REST_Outgoing: 'REST outgoing',
+    AuditSource.SOAP_Channel: 'SOAP channel',
+    AuditSource.SOAP_Outgoing: 'SOAP outgoing',
+    AuditSource.SQL_Outgoing: 'SQL',
+    AuditSource.X12: 'X12',
+}
+
+# What the object of each source is called - the word its detail pane row is labelled
+# with, so the pane says "Channel" or "Topic" rather than a word that names nothing
+_source_object_label = {
+    AuditSource.Config: 'Screen',
+    AuditSource.AS2: 'Partner',
+    AuditSource.AS4: 'Partner',
+    AuditSource.Email_IMAP: 'Connection',
+    AuditSource.Email_SMTP: 'Connection',
+    AuditSource.FHIR: 'Connection',
+    AuditSource.File_Outgoing: 'Connection',
+    AuditSource.HL7: 'Channel',
+    AuditSource.MCP: 'Channel',
+    AuditSource.PubSub: 'Topic',
+    AuditSource.REST_Channel: 'Channel',
+    AuditSource.REST_Outgoing: 'Connection',
+    AuditSource.SOAP_Channel: 'Channel',
+    AuditSource.SOAP_Outgoing: 'Connection',
+    AuditSource.SQL_Outgoing: 'Connection',
+    AuditSource.X12: 'Partner',
+}
+
+# Where each source's own main page is - what the source's name in the detail pane
+# leads to. A source with no page of its own is not here and its name stays text.
+_source_page_url = {
+    AuditSource.REST_Channel: f'/zato/http-soap/?cluster={default_cluster_id}&connection=channel&transport=plain_http',
+    AuditSource.SOAP_Channel: f'/zato/http-soap/?cluster={default_cluster_id}&connection=channel&transport=soap',
+    AuditSource.REST_Outgoing: f'/zato/http-soap/?cluster={default_cluster_id}&connection=outgoing&transport=plain_http',
+    AuditSource.SOAP_Outgoing: f'/zato/http-soap/?cluster={default_cluster_id}&connection=outgoing&transport=soap',
+    AuditSource.HL7: f'/zato/channel/hl7/mllp/?cluster={default_cluster_id}',
+    AuditSource.SQL_Outgoing: f'/zato/outgoing/sql/?cluster={default_cluster_id}',
+    AuditSource.Email_IMAP: f'/zato/email/imap/?cluster={default_cluster_id}',
+    AuditSource.Email_SMTP: f'/zato/email/smtp/?cluster={default_cluster_id}',
+    AuditSource.PubSub: f'/zato/pubsub/topic/?cluster={default_cluster_id}',
+    AuditSource.File_Outgoing: f'/zato/outgoing/ftp/?cluster={default_cluster_id}',
+}
+
+# Where one object's own page is - the source's page opened on that object.
+# `{name}` is filled in with the object's name on the frontend. Built out of the
+# base map above so the two can never drift apart.
+_object_page_url = {source: f'{url}&query={{name}}' for source, url in _source_page_url.items()}
+
+# Where what a source writes into an event's endpoint leads. REST and SOAP channels
+# record the service the message was handed to, and a service has a page - an outgoing
+# URL, a folder or a host address does not, so no other source is here.
+_endpoint_page_url = {
+    AuditSource.REST_Channel: f'/zato/service/?cluster={default_cluster_id}&query={{name}}',
+    AuditSource.SOAP_Channel: f'/zato/service/?cluster={default_cluster_id}&query={{name}}',
+}
+
+# What each source writes into an event's endpoint, called by what it is - the service
+# a channel hands its messages to, the folder a mailbox was read from, the database
+# a query ran against. A source the map does not know keeps the plain Endpoint word.
+_source_endpoint_label = {
+    AuditSource.REST_Channel: 'Service',
+    AuditSource.SOAP_Channel: 'Service',
+    AuditSource.REST_Outgoing: 'Address',
+    AuditSource.SOAP_Outgoing: 'Address',
+    AuditSource.Email_IMAP: 'Folder',
+    AuditSource.Email_SMTP: 'Address',
+    AuditSource.SQL_Outgoing: 'Database',
+    AuditSource.File_Outgoing: 'Remote path',
+    AuditSource.HL7: 'Address',
+    AuditSource.MCP: 'Tool',
+    AuditSource.FHIR: 'Request',
+}
+
+# How one event type reads on the screen - every member of AuditEvent is here,
+# and an event type the map does not know is shown by its own raw name
+_event_type_label = {
+    AuditEvent.Published: 'Published',
+    AuditEvent.Delivered: 'Delivered',
+    AuditEvent.Delivery_Failed: 'Delivery failed',
+    AuditEvent.Expired: 'Expired',
+    AuditEvent.Received: 'Received',
+    AuditEvent.Request_Received: 'Request received',
+    AuditEvent.Response_Sent: 'Response sent',
+    AuditEvent.Request_Sent: 'Request sent',
+    AuditEvent.Response_Received: 'Response received',
+    AuditEvent.Message_Received: 'Message received',
+    AuditEvent.Message_Marked_Seen: 'Message marked seen',
+    AuditEvent.Message_Deleted: 'Message deleted',
+    AuditEvent.Interchange_Sent: 'Interchange sent',
+    AuditEvent.Interchange_Received: 'Interchange received',
+    AuditEvent.Ack_Sent: 'ACK sent',
+    AuditEvent.Ack_Received: 'ACK received',
+    AuditEvent.Message_Sent: 'Message sent',
+    AuditEvent.MDN_Sent: 'MDN sent',
+    AuditEvent.MDN_Received: 'MDN received',
+    AuditEvent.Receipt_Sent: 'Receipt sent',
+    AuditEvent.Receipt_Received: 'Receipt received',
+    AuditEvent.Alert_Raised: 'Alert raised',
+    AuditEvent.MCP_Initialize: 'MCP initialize',
+    AuditEvent.MCP_Tools_List: 'MCP tools list',
+    AuditEvent.MCP_Tools_Call: 'MCP tools call',
+    AuditEvent.MCP_Session_Delete: 'MCP session delete',
+    AuditEvent.MCP_Batch: 'MCP batch',
+    AuditEvent.Bulk_Resubmit: 'Bulk resubmit',
+    AuditEvent.Config_Created: 'Config created',
+    AuditEvent.Config_Edited: 'Config edited',
+    AuditEvent.Config_Deleted: 'Config deleted',
+    AuditEvent.Content_Viewed: 'Content viewed',
 }
 
 # Per-source page titles - more sources will follow, e.g. REST outgoing connections
@@ -121,7 +246,7 @@ _rest_channel_columns = [
     {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
-    {'key': 'endpoint', 'label': 'Endpoint', 'type': 'text'},
+    {'key': 'endpoint', 'label': 'Service', 'type': 'text'},
     {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
     {'key': 'status', 'label': 'Status', 'type': 'text'},
     {'key': 'size', 'label': 'Size', 'type': 'size'},
@@ -132,7 +257,7 @@ _soap_channel_columns = [
     {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
-    {'key': 'endpoint', 'label': 'Endpoint', 'type': 'text'},
+    {'key': 'endpoint', 'label': 'Service', 'type': 'text'},
     {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
     {'key': 'status', 'label': 'Status', 'type': 'text'},
     {'key': 'size', 'label': 'Size', 'type': 'size'},
@@ -143,7 +268,7 @@ _rest_outgoing_columns = [
     {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
-    {'key': 'endpoint', 'label': 'Endpoint', 'type': 'text'},
+    {'key': 'endpoint', 'label': 'Address', 'type': 'text'},
     {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
     {'key': 'status', 'label': 'Status', 'type': 'text'},
     {'key': 'size', 'label': 'Size', 'type': 'size'},
@@ -154,7 +279,7 @@ _soap_outgoing_columns = [
     {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
-    {'key': 'endpoint', 'label': 'Endpoint', 'type': 'text'},
+    {'key': 'endpoint', 'label': 'Address', 'type': 'text'},
     {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
     {'key': 'status', 'label': 'Status', 'type': 'text'},
     {'key': 'size', 'label': 'Size', 'type': 'size'},
@@ -273,8 +398,8 @@ _fhir_columns = [
 _all_sources_columns = [
     {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
-    {'key': 'source', 'label': 'Source', 'type': 'text'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
+    {'key': 'source', 'label': 'Source', 'type': 'text'},
     {'key': 'object_name', 'label': 'Object', 'type': 'text'},
     {'key': 'msg_id', 'label': 'Message id', 'type': 'text'},
     {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},

@@ -31,8 +31,10 @@ would be a box inside a box {% endcomment %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/outcome.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/time_range.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/time-scrub.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/chips.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/role.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/http-method.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/payload_panel.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/list_detail.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
@@ -56,11 +58,19 @@ $(document).ready(function() {
         time_from: '{{ time_from }}',
         time_to: '{{ time_to }}',
         query: '{{ query }}',
+        event_type: '{{ event_type }}',
         columns: {{ columns_json|safe }},
         outcomes: {{ outcomes_json|safe }},
         resubmitLabels: {{ resubmit_labels_json|safe }},
         exchange: {{ exchange_json|safe }},
-        filter_options: {{ filter_options_json|safe }}
+        filter_options: {{ filter_options_json|safe }},
+        source_labels: {{ source_labels_json|safe }},
+        object_links: {{ object_links_json|safe }},
+        object_labels: {{ object_labels_json|safe }},
+        source_links: {{ source_links_json|safe }},
+        endpoint_links: {{ endpoint_links_json|safe }},
+        endpoint_labels: {{ endpoint_labels_json|safe }},
+        event_labels: {{ event_labels_json|safe }}
     });
 });
 </script>

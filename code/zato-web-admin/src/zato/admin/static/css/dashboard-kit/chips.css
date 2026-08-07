@@ -8,6 +8,12 @@
     font-family: var(--dashboard-mono);
 }
 
+/* A chip with no label shows its value alone, so there is no gap where the label would stand */
+
+.dashboard-chip-value:first-child {
+    margin-left: 0;
+}
+
 .dashboard-tag-neutral {
     color: #012845;
     background: #e8eef4;
