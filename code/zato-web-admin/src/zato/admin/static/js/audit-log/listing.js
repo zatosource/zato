@@ -1517,6 +1517,15 @@ listing.initChrome = function(initConfig) {
     // says so before the first page has even arrived.
     listing.setRange(range.get_minutes());
 
+    // A page opened on a window of its own - a reloaded scrub pick, a link handed on -
+    // reads that window off the address, so the pill says the window rather than All
+    if (initConfig.time_from !== '' && initConfig.time_to !== '') {
+        listing.minutes = 0;
+
+        $('#' + config.rangePillId + '-pill').text(kit.time_scrub.window_label(
+            new Date(initConfig.time_from), new Date(initConfig.time_to)));
+    }
+
     // The legend offers this source's own outcomes - a delivery running out of time is
     // something only a pub/sub message does, and an HL7 log is not asked about it.
     listing.buildLegend($.fn.zato.audit_log.config.outcomes);
