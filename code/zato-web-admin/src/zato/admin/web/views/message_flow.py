@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import json
 import logging
 
 # Django
@@ -14,6 +15,8 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.views import method_allowed
+from zato.admin.web.views.audit_log.columns import _event_type_label, _object_page_url, _source_endpoint_label, \
+    _source_event_label
 from zato.common.defaults import default_cluster_id
 
 # ################################################################################################################################
@@ -39,6 +42,10 @@ def index(req:'HttpRequest') -> 'TemplateResponse':
     """
     return TemplateResponse(req, 'zato/message-flow/index.html', {
         'cluster_id': default_cluster_id,
+        'source_labels_json': json.dumps(_source_event_label),
+        'object_links_json': json.dumps(_object_page_url),
+        'endpoint_labels_json': json.dumps(_source_endpoint_label),
+        'event_labels_json': json.dumps(_event_type_label),
         'zato_clusters': True,
         'zato_template_name': 'zato/message-flow/index.html',
     })

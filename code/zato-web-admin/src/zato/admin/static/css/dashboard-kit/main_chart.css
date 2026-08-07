@@ -69,7 +69,10 @@
 }
 
 .dashboard-pill-clickable::after {
-    content: ' \25BE';
+    content: '\25BE';
+    /* The arrow stands a step off the label - a pill is a flex box, so a space
+       in the content would collapse instead of separating the two */
+    margin-left: 3px;
     font-size: 9px;
     opacity: 0.5;
 }

@@ -334,7 +334,7 @@ drawing.lineOf = function(model) {
     // is read by how it went
     if (model.outcome === '') {
         line.kind = 'type';
-        line.label = model.eventType;
+        line.label = model.eventLabel;
     }
     else if (model.outcome === config.goodOutcome) {
         line.kind = 'good';

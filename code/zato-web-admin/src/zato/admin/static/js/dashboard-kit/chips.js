@@ -22,16 +22,35 @@
     };
 
     /* One chip - {label, value, tone, key}. The key and the value travel on the element
-       so whatever is listening can act on the chip by name. */
+       so whatever is listening can act on the chip by name. A chip whose label is empty
+       shows its value alone, `text` shows in place of the value when the value is a code
+       the reader is not to be shown, and `value_html` is pre-rendered display markup
+       (already escaped by its maker) for values with markup of their own inside. */
     kit.chips.render_one = function(chip) {
         var tone_class = kit.chips.tone_classes[chip.tone];
         var escaped_value = kit._esc_html(chip.value);
 
+        var display_html;
+
+        if (chip.value_html !== undefined) {
+            display_html = chip.value_html;
+        }
+        else if (chip.text !== undefined) {
+            display_html = kit._esc_html(chip.text);
+        }
+        else {
+            display_html = escaped_value;
+        }
+
         var html = '<span class="detail-tag dashboard-chip ' + tone_class + '"';
         html += ' data-chip-key="' + kit._esc_html(chip.key) + '"';
         html += ' data-chip-value="' + escaped_value + '">';
-        html += kit._esc_html(chip.label);
-        html += '<span class="dashboard-chip-value">' + escaped_value + '</span>';
+
+        if (chip.label !== '') {
+            html += kit._esc_html(chip.label);
+        }
+
+        html += '<span class="dashboard-chip-value">' + display_html + '</span>';
         html += '</span>';
 
         return html;

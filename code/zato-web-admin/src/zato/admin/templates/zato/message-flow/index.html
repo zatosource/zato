@@ -63,6 +63,7 @@
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/palette.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/detail-kit/url_state.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/outcome.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/time-scrub.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/chips.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/role.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/payload_panel.js"></script>
@@ -79,8 +80,15 @@
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/default.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/config.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/sources/hl7.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/http-method.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/drawing.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/detail.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/message-flow/page.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$.fn.zato.audit_log.config.sourceLabels = {{ source_labels_json|safe }};
+$.fn.zato.audit_log.config.objectLinks = {{ object_links_json|safe }};
+$.fn.zato.audit_log.config.endpointLabels = {{ endpoint_labels_json|safe }};
+$.fn.zato.audit_log.config.eventLabels = {{ event_labels_json|safe }};
+</script>
 
 {% endblock %}

@@ -24,8 +24,9 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.views import invoke_action_handler, method_allowed
 from zato.admin.web.views.audit_log.columns import _all_sources_columns, _all_sources_section_title, _all_sources_title, \
-    _data_preview_len, _default_page, _flow_columns, _get_outcomes, _poll_url, _preview_len, _row_columns, _source_columns, \
-    _source_label, _source_title, _status_outstanding
+    _data_preview_len, _default_page, _endpoint_page_url, _event_type_label, _flow_columns, _get_outcomes, _object_page_url, \
+    _poll_url, _preview_len, _row_columns, _source_columns, _source_endpoint_label, _source_event_label, _source_label, \
+    _source_object_label, _source_page_url, _source_title, _status_outstanding
 from zato.admin.web.views.audit_log.query import _build_where, _hydrate_rows, _normalize_row
 from zato.admin.web.views.audit_log.sources import _get_resubmit_labels, _source_outstanding, _source_parse, \
     _source_resubmit, render_view_record
@@ -147,6 +148,9 @@ def object_index(req:'any_') -> 'TemplateResponse':
     time_to = req.GET.get('time_to', '')
     query = req.GET.get('query', '')
 
+    # And to events of one kind alone, which is what a clicked event word deep-links to
+    event_type = req.GET.get('event_type', '')
+
     # The listing draws each row's cells and chips out of this source's columns - the
     # all-events page reads by the columns every source shares, the source among them,
     # and it alone offers the source and object filter selects.
@@ -191,9 +195,17 @@ def object_index(req:'any_') -> 'TemplateResponse':
         'time_from': time_from,
         'time_to': time_to,
         'query': query,
+        'event_type': event_type,
         'resubmit_labels_json': resubmit_labels_json,
         'exchange_json': json.dumps(exchange),
         'filter_options_json': json.dumps(filter_options),
+        'source_labels_json': json.dumps(_source_event_label),
+        'object_links_json': json.dumps(_object_page_url),
+        'object_labels_json': json.dumps(_source_object_label),
+        'source_links_json': json.dumps(_source_page_url),
+        'endpoint_links_json': json.dumps(_endpoint_page_url),
+        'endpoint_labels_json': json.dumps(_source_endpoint_label),
+        'event_labels_json': json.dumps(_event_type_label),
         'zato_clusters': True,
         'zato_template_name': 'zato/audit_log.html',
     }
@@ -217,6 +229,7 @@ def poll(req:'any_') -> 'HttpResponse':
     status = body['status']
     time_from = body['time_from']
     time_to = body['time_to']
+    event_types = body['event_types']
 
     page = body['page']
     page_size = body['page_size']
@@ -224,7 +237,7 @@ def poll(req:'any_') -> 'HttpResponse':
     if page < _default_page:
         page = _default_page
 
-    where_conditions = _build_where(sources, object_names, outcomes, query, status, time_from, time_to)
+    where_conditions = _build_where(sources, object_names, outcomes, query, status, time_from, time_to, event_types)
 
     rows:'anylist' = []
 

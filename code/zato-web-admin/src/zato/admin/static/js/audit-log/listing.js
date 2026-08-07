@@ -23,6 +23,7 @@ listing.config = {
     itemsHost: '#audit-log-table-body',
     itemSelector: '.audit-log-row',
     legendHost: '#audit-log-legend',
+    eventChipHost: '#audit-log-event-chip',
     payloadHost: '#audit-log-pane-payload',
     rangePillId: 'audit-log-range',
 
@@ -154,14 +155,28 @@ listing.config = {
 
     // What the pane says about every event whatever source it came from, each one left out when
     // the source already declares a column of its own for it. `searchable` says whether Search is
-    // offered beside it - a moment in time is shared by nothing, so it is not.
+    // offered beside it. When the event happened is not here - a moment in time reads last of
+    // everything, so the pane adds it at the very end itself.
     paneFields: [
-        {label: 'Time', key: 'timeLocal', columnKey: 'event_time_iso', searchable: false},
         {label: 'Correlation id', key: 'correlId', columnKey: 'correl_id', searchable: true},
         {label: 'Status', key: 'status', columnKey: 'status', searchable: true},
         {label: 'Classification', key: 'classification', columnKey: 'classification', searchable: true},
         {label: 'Endpoint', key: 'endpoint', columnKey: 'endpoint', searchable: true}
     ],
+
+    // What the moment the event happened at is called, on the pane's own last line
+    timeLabel: 'Time',
+
+    // The access log's view record - the one event whose row says nothing about its kind,
+    // because its chips already name the viewer and the viewed thing
+    viewEventType: 'content-viewed',
+
+    // The sign a value leading off this page wears - the box with the arrow leaving it,
+    // drawn in the link's own ink
+    externalIconHTML: '<svg class="audit-log-external-icon" viewBox="0 0 24 24" fill="none"' +
+        ' stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"' +
+        ' aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1' +
+        ' 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>',
 
     // How far back the range pill reaches, in the order it offers the choice,
     // with the whole page last because it is where the page starts out
@@ -209,6 +224,11 @@ listing.visible = [];
 listing.hidden = {};
 listing.minutes = 0;
 
+// The kind of event the list is narrowed down to, empty while no event word has been
+// clicked, and the outcomes the legend now offers, so a clicked badge can redraw it
+listing.eventFilter = '';
+listing.currentOutcomes = [];
+
 // Which cells the events now on the page have anything to say in, so a list of events
 // that report no outcome of their own is not given a column of blanks
 listing.columns = {outcome: false, action: false};
@@ -249,12 +269,15 @@ listing.roleOf = function(eventType) {
 
 // Not every event type reports an outcome - a message arriving is neither a success nor
 // a failure until something is done with it, and an event with nothing to say here says nothing.
+// The badge doubles as a filter - clicking it narrows the legend down to its own outcome.
 listing.outcomeBadgeHTML = function(rowModel) {
     if (rowModel.outcome === '') {
         return '';
     }
 
-    var out = kit.outcome.badge(rowModel.outcome, kit.palette.outcome_palette);
+    var out = '<span class="audit-log-outcome-filter" data-outcome="' +
+        listing.escapeHTML(rowModel.outcome) + '">' +
+        kit.outcome.badge(rowModel.outcome, kit.palette.outcome_palette) + '</span>';
 
     return out;
 };
@@ -275,6 +298,7 @@ listing.buildRow = function(row) {
         correlId: row.correl_id,
         endpoint: row.endpoint,
         eventType: row.event_type,
+        eventLabel: $.fn.zato.audit_log.eventLabel(row.event_type),
         outcome: row.outcome,
         status: row.status,
         classification: row.classification,
@@ -401,7 +425,8 @@ listing.rowChips = function(rowModel) {
 
 // When an event happened - which day it was, read as how far back that day is, then the time of
 // day down to the last digit it was written down with, two events of one exchange sharing
-// everything above that digit
+// everything above that digit. The list is scanned, not scrubbed - the scrubber lives on
+// the pane's Time row, where one event is being read on its own.
 listing.timeCellHTML = function(rowModel) {
     var out = '<span class="audit-log-cell-day">' +
         listing.escapeHTML(kit.time_ago_label(rowModel.timeIso)) + '</span>' +
@@ -437,17 +462,19 @@ listing.rowHTML = function(rowModel) {
         listing.timeCellHTML(rowModel) + '</td>';
 
     html += '<td class="audit-log-cell-role">' +
-        kit.role.tag(rowModel.role, rowModel.eventType) + '</td>';
+        kit.role.tag(rowModel.role, rowModel.eventLabel) + '</td>';
 
     // What the message is called by its protocol is read in the pane rather than on the row -
     // a control id is a number to be copied, not a number to be scanned down a list.
     html += '<td class="audit-log-cell-main">';
 
     // Saying an event is a request next to a tag already reading REQ is saying it twice.
-    // An event that is neither a request nor a reply has no tag to say what it was,
-    // so it says so itself.
-    if (rowModel.role === 'none') {
-        html += '<span class="audit-log-row-event">' + listing.escapeHTML(rowModel.eventType) + '</span>';
+    // An event that is neither a request nor a reply has no tag to say what it was, so it
+    // says so itself - except a view record of the access log, whose chips already name
+    // the viewer and the viewed thing, so its row says nothing twice either. The words
+    // are read, not clicked - filtering by an event's kind is the pane's affair.
+    if (rowModel.role === 'none' && rowModel.eventType !== listing.config.viewEventType) {
+        html += '<span class="audit-log-row-event">' + listing.escapeHTML(rowModel.eventLabel) + '</span>';
     }
 
     html += kit.chips.render(listing.rowChips(rowModel));
@@ -518,7 +545,7 @@ listing.paneAttrs = function(rowModel) {
                 columnSearch = '';
             }
 
-            out.push({label: column.label, value: columnValue, search: columnSearch});
+            out.push({key: column.key, label: column.label, value: columnValue, search: columnSearch});
         }
     }
 
@@ -540,19 +567,20 @@ listing.paneAttrs = function(rowModel) {
                 fieldSearch = fieldValue;
             }
 
-            out.push({label: field.label, value: fieldValue, search: fieldSearch});
+            out.push({key: field.columnKey, label: field.label, value: fieldValue, search: fieldSearch});
         }
     }
 
     // An event that took no measurable time is one nothing was timed for, e.g. a message
     // being written down rather than being answered.
     if (rowModel.durationMs > 0) {
-        out.push({label: config.durationLabel,
+        out.push({key: 'duration', label: config.durationLabel,
             value: kit.format_duration_ms(rowModel.durationMs), search: ''});
     }
 
     if (rowModel.size > 0) {
-        out.push({label: config.sizeLabel, value: kit.format_number_full(rowModel.size), search: ''});
+        out.push({key: 'size', label: config.sizeLabel,
+            value: kit.format_number_full(rowModel.size), search: ''});
     }
 
     return out;
@@ -673,7 +701,7 @@ listing.paneHeadHTML = function(rowModel) {
     // and what a row is picked out of the list by
     var html = '<span class="audit-log-pane-event">' + config.eventLabel + ' ' + rowModel.id + '</span>';
 
-    html += kit.role.tag(rowModel.role, rowModel.eventType);
+    html += kit.role.tag(rowModel.role, rowModel.eventLabel);
     html += '<span class="audit-log-pane-title">' + listing.escapeHTML(rowModel.headline) + '</span>';
     html += listing.outcomeBadgeHTML(rowModel);
 
@@ -682,6 +710,115 @@ listing.paneHeadHTML = function(rowModel) {
     html += '</span>';
 
     return html;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// A value that leads to a page, drawn the way every other way out of the pane is drawn -
+// wearing the sign that it leads off this page, in its own ink
+listing.linkHTML = function(url, text) {
+    var out = '<a href="' + listing.escapeHTML(url) + '" class="audit-log-object-link">' +
+        listing.escapeHTML(text) + listing.config.externalIconHTML + '</a>';
+
+    return out;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// One object's name as the pane shows it - a link to the object's own page for a source
+// that has one, and the name as it stands for a source that does not
+listing.objectValueHTML = function(rowModel, name) {
+    var linkTemplate = $.fn.zato.audit_log.config.objectLinks[rowModel.raw.source];
+
+    if (linkTemplate === undefined) {
+        return listing.escapeHTML(name);
+    }
+
+    var url = linkTemplate.replace('{name}', encodeURIComponent(name));
+
+    return listing.linkHTML(url, name);
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// One attribute's value as the pane draws it - the source by its human name and as a way
+// to its own main page, the object as a way to its page, the event by what it reads as,
+// an endpoint as a way to the service it names or with its method in the method's own
+// ink, and everything else as the text it is
+listing.paneAttrValueHTML = function(rowModel, attr) {
+    var config = $.fn.zato.audit_log.config;
+
+    if (attr.key === 'source') {
+        var sourceLabel = $.fn.zato.audit_log.sourceLabel(attr.value);
+        var sourceLink = config.sourceLinks[attr.value];
+
+        if (sourceLink === undefined) {
+            return listing.escapeHTML(sourceLabel);
+        }
+
+        return listing.linkHTML(sourceLink, sourceLabel);
+    }
+
+    if (attr.key === 'object_name') {
+        return listing.objectValueHTML(rowModel, attr.value);
+    }
+
+    // The event word filters the log down to events of its kind, and the outcome drives
+    // the legend the same way clicking its badge up there does
+    if (attr.key === 'event_type') {
+        var eventWord = $.fn.zato.audit_log.eventLabel(attr.value);
+
+        return '<a href="javascript:void(0)" class="audit-log-event-filter" data-event-type="' +
+            listing.escapeHTML(attr.value) + '">' + listing.escapeHTML(eventWord) + '</a>';
+    }
+
+    if (attr.key === 'outcome') {
+        return '<a href="javascript:void(0)" class="audit-log-outcome-filter" data-outcome="' +
+            listing.escapeHTML(attr.value) + '">' + listing.escapeHTML(attr.value) + '</a>';
+    }
+
+    if (attr.key === 'endpoint') {
+        var endpointTemplate = config.endpointLinks[rowModel.raw.source];
+
+        if (endpointTemplate === undefined) {
+            return kit.http_method.html(attr.value);
+        }
+
+        var url = endpointTemplate.replace('{name}', encodeURIComponent(attr.value));
+
+        return listing.linkHTML(url, attr.value);
+    }
+
+    return listing.escapeHTML(attr.value);
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// One attribute's name as the pane draws it - the object and the endpoint are labelled
+// by the word their own source has for them, a channel by Channel, a service by Service,
+// a mailbox folder by Folder, so no row is headed by a word that names nothing
+listing.paneAttrLabel = function(rowModel, attr) {
+    var config = $.fn.zato.audit_log.config;
+
+    if (attr.key === 'object_name') {
+        var label = config.objectLabels[rowModel.raw.source];
+
+        if (label === undefined) {
+            label = config.defaultObjectLabel;
+        }
+
+        return label;
+    }
+
+    if (attr.key === 'endpoint') {
+        var endpointLabel = config.endpointLabels[rowModel.raw.source];
+
+        if (endpointLabel !== undefined) {
+            return endpointLabel;
+        }
+    }
+
+    return attr.label;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -702,10 +839,17 @@ listing.paneDetailsHTML = function(rowModel) {
     for (var attrIndex = 0; attrIndex < attrs.length; attrIndex++) {
         var attr = attrs[attrIndex];
 
-        facts.push(listing.paneFact(attr.label, listing.escapeHTML(attr.value), attr.value, attr.search));
+        facts.push(listing.paneFact(listing.paneAttrLabel(rowModel, attr),
+            listing.paneAttrValueHTML(rowModel, attr), attr.value, attr.search));
     }
 
     facts = facts.concat(listing.lineageFacts(rowModel));
+
+    // When the event happened reads last of everything - a moment in time is shared by
+    // nothing, so no Search stands beside it either. The stamp itself is the scrubber
+    // with every unit on it, the year and the month included.
+    facts.push(listing.paneFact(config.timeLabel, kit.time_scrub.stamp(rowModel.timeIso),
+        rowModel.timeLocal, ''));
 
     var html = kit.fact_rows.render(facts, config.paneFactVariant);
 
@@ -1102,6 +1246,10 @@ listing.chromeHTML = function() {
         html += '<div class="dashboard-chart-legend" id="' + config.legendHost.slice(1) + '"></div>';
     }
 
+    // Where the event filter says which kind of event the list is narrowed down to,
+    // holding nothing while no event word has been clicked
+    html += '<span id="' + config.eventChipHost.slice(1) + '"></span>';
+
     html += '</div>';
 
     return html;
@@ -1149,11 +1297,31 @@ listing.rangeTimeFrom = function() {
 // /////////////////////////////////////////////////////////////////////////////
 
 // A window the reader has just picked, asked of the whole log rather than of the page that
-// happens to be open, so the count and the pages agree with what is on the screen
+// happens to be open, so the count and the pages agree with what is on the screen. A preset
+// replaces whatever window a clicked stamp had picked, its far edge and its address included.
 listing.applyRange = function() {
     var pagination = $.fn.zato.audit_log.pagination;
 
-    pagination.set_filters({time_from: listing.rangeTimeFrom()});
+    kit.url_state.replace({time_from: '', time_to: ''});
+
+    pagination.set_filters({time_from: listing.rangeTimeFrom(), time_to: ''});
+    pagination.fetch_page(1);
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The window one clicked stamp unit means - the range pill reads it back and the address
+// bar carries it, so the view deep-links. It is not a rolling range, so the live refresh
+// leaves its edges where the click put them.
+listing.applyTimeWindow = function(picked) {
+    listing.minutes = 0;
+
+    $('#' + listing.config.rangePillId + '-pill').text(picked.label);
+
+    kit.url_state.replace({time_from: picked.time_from, time_to: picked.time_to});
+
+    var pagination = $.fn.zato.audit_log.pagination;
+    pagination.set_filters({time_from: picked.time_from, time_to: picked.time_to});
     pagination.fetch_page(1);
 };
 
@@ -1212,6 +1380,10 @@ listing.buildLegend = function(outcomes) {
     var config = listing.config;
     var palette = kit.palette.outcome;
 
+    // A clicked outcome badge elsewhere on the page drives this same legend,
+    // so what it now offers is kept at hand
+    listing.currentOutcomes = outcomes;
+
     if (!outcomes.length) {
         return;
     }
@@ -1235,10 +1407,84 @@ listing.buildLegend = function(outcomes) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// The chip beside the legend saying which kind of event the list is narrowed down to -
+// standing empty, and taking no room, while the list is not narrowed down at all
+listing.drawEventFilterChip = function() {
+    var host = $(listing.config.eventChipHost);
+
+    if (listing.eventFilter === '') {
+        host.html('');
+        return;
+    }
+
+    var eventWord = $.fn.zato.audit_log.eventLabel(listing.eventFilter);
+
+    var html = '<span class="dashboard-pill audit-log-filter-chip">' + listing.escapeHTML(eventWord) +
+        '<span class="audit-log-filter-chip-clear" title="Show every kind of event">&times;</span></span>';
+
+    host.html(html);
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The filter one clicked event word applies - the log narrows down to events of that kind,
+// the chip beside the legend says so and the address bar carries it, so the view deep-links
+listing.applyEventFilter = function(eventType) {
+    listing.eventFilter = eventType;
+    listing.drawEventFilterChip();
+
+    kit.url_state.replace({event_type: eventType});
+
+    var pagination = $.fn.zato.audit_log.pagination;
+    pagination.set_filters({event_types: [eventType]});
+    pagination.fetch_page(1);
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+listing.clearEventFilter = function() {
+    listing.eventFilter = '';
+    listing.drawEventFilterChip();
+
+    kit.url_state.replace({event_type: ''});
+
+    var pagination = $.fn.zato.audit_log.pagination;
+    pagination.set_filters({event_types: []});
+    pagination.fetch_page(1);
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// A clicked outcome badge narrows the legend down to its own outcome - every other badge
+// goes dim, and switching them back on is done up there, where the filter lives
+listing.applyOutcomeFilter = function(outcome) {
+    var outcomes = listing.currentOutcomes;
+
+    listing.hidden = {};
+
+    for (var outcomeIndex = 0; outcomeIndex < outcomes.length; outcomeIndex++) {
+        if (outcomes[outcomeIndex] !== outcome) {
+            listing.hidden[outcomes[outcomeIndex]] = true;
+        }
+    }
+
+    listing.buildLegend(outcomes);
+
+    var pagination = $.fn.zato.audit_log.pagination;
+    pagination.set_filters({outcomes: listing.pickedOutcomes(outcomes)});
+    pagination.fetch_page(1);
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 listing.initChrome = function(initConfig) {
     var config = listing.config;
 
     $(config.chromeHost).html(listing.chromeHTML());
+
+    // A page deep-linked to events of one kind opens with the chip already saying so
+    listing.eventFilter = initConfig.event_type;
+    listing.drawEventFilterChip();
 
     kit.auto_refresh.init({
         pill: '#audit-log-refresh-pill',
@@ -1274,6 +1520,13 @@ listing.initChrome = function(initConfig) {
     // The legend offers this source's own outcomes - a delivery running out of time is
     // something only a pub/sub message does, and an HL7 log is not asked about it.
     listing.buildLegend($.fn.zato.audit_log.config.outcomes);
+
+    // Every stamp on the page is a scrubber, and a clicked unit of one becomes the window
+    kit.time_scrub.init({
+        on_pick: function(picked) {
+            listing.applyTimeWindow(picked);
+        }
+    });
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -1347,6 +1600,27 @@ listing.init = function(initConfig) {
         event.stopPropagation();
 
         $.fn.zato.audit_log.search($(this).attr('data-search-value'));
+    });
+
+    // An event word narrows the list down to events of its kind, wherever it is worn -
+    // on a row or in the pane. The click filters, it does not also select the row under it.
+    $(document).on('click', '.audit-log-event-filter', function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        listing.applyEventFilter($(this).attr('data-event-type'));
+    });
+
+    // The chip's cross asks for every kind of event back
+    $(document).on('click', '.audit-log-filter-chip-clear', function() {
+        listing.clearEventFilter();
+    });
+
+    // An outcome badge drives the legend the way clicking the legend itself does
+    $(document).on('click', '.audit-log-outcome-filter', function(event) {
+        event.stopPropagation();
+
+        listing.applyOutcomeFilter($(this).attr('data-outcome'));
     });
 
     // The way the message is being read goes into the address bar, parsed being taken as

@@ -55,8 +55,9 @@ panel.config = {
 
 // One fact of the event, left out when the event has nothing to put there and when the line
 // the panel hangs under has already said it. `searchValue` is what its Search asks the list
-// for, empty when no Search is to be offered.
-panel.pushFact = function(facts, rowModel, label, value, searchValue) {
+// for, empty when no Search is to be offered. `valueHTML` is pre-rendered display markup,
+// already escaped by its maker, for values with markup of their own inside.
+panel.pushFact = function(facts, rowModel, label, value, searchValue, valueHTML) {
     if (value === '') {
         return;
     }
@@ -65,7 +66,11 @@ panel.pushFact = function(facts, rowModel, label, value, searchValue) {
         return;
     }
 
-    facts.push({label: label, value_html: flow.escapeHTML(value), copy_value: value,
+    if (valueHTML === undefined) {
+        valueHTML = flow.escapeHTML(value);
+    }
+
+    facts.push({label: label, value_html: valueHTML, copy_value: value,
         search_value: searchValue});
 };
 
@@ -83,7 +88,17 @@ panel.facts = function(rowModel) {
     panel.pushFact(facts, rowModel, config.cidLabel, rowModel.cid, rowModel.cid);
     panel.pushFact(facts, rowModel, presenter.identityLabel, rowModel.msgId, rowModel.msgId);
     panel.pushFact(facts, rowModel, config.correlIdLabel, rowModel.correlId, rowModel.correlId);
-    panel.pushFact(facts, rowModel, config.endpointLabel, rowModel.endpoint, rowModel.endpoint);
+
+    // The endpoint is called by the word its own source has for it - the service a channel
+    // hands its messages to, the folder a mailbox was read from - the plain word otherwise
+    var endpointLabel = $.fn.zato.audit_log.config.endpointLabels[rowModel.source];
+
+    if (endpointLabel === undefined) {
+        endpointLabel = config.endpointLabel;
+    }
+
+    panel.pushFact(facts, rowModel, endpointLabel, rowModel.endpoint, rowModel.endpoint,
+        kit.http_method.html(rowModel.endpoint));
     panel.pushFact(facts, rowModel, config.statusLabel, rowModel.status, rowModel.status);
     panel.pushFact(facts, rowModel, config.classificationLabel, rowModel.classification,
         rowModel.classification);

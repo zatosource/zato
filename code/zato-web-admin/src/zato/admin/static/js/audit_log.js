@@ -76,7 +76,21 @@ $.fn.zato.audit_log.config = {
     source: '',
     objectName: '',
     clusterId: '1',
-    exchange: {}
+    exchange: {},
+
+    // What one event's source is called on the screen, what its object is called,
+    // where the source's and the object's own pages are, where an endpoint leads and
+    // how one event type reads - all per source or per event type, all assigned in init
+    sourceLabels: {},
+    objectLinks: {},
+    objectLabels: {},
+    sourceLinks: {},
+    endpointLinks: {},
+    endpointLabels: {},
+    eventLabels: {},
+
+    // What the object row is labelled with for a source the catalog does not know
+    defaultObjectLabel: 'Object'
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -87,6 +101,34 @@ $.fn.zato.audit_log.escapeHTML = function(value) {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// What one source is called on the screen. The log may hold a source this application's
+// catalog does not know yet, which is then called by its own raw name.
+$.fn.zato.audit_log.sourceLabel = function(source) {
+    var label = $.fn.zato.audit_log.config.sourceLabels[source];
+
+    if (label === undefined) {
+        label = source;
+    }
+
+    return label;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// How one event type reads on the screen - "Request received" rather than its code.
+// An event type the catalog does not know yet reads by its own raw name.
+$.fn.zato.audit_log.eventLabel = function(eventType) {
+    var label = $.fn.zato.audit_log.config.eventLabels[eventType];
+
+    if (label === undefined) {
+        label = eventType;
+    }
+
+    return label;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -521,6 +563,13 @@ $.fn.zato.audit_log.init = function(initConfig) {
     config.exchange = initConfig.exchange;
     config.objectName = initConfig.object_name;
     config.clusterId = initConfig.cluster_id;
+    config.sourceLabels = initConfig.source_labels;
+    config.objectLinks = initConfig.object_links;
+    config.objectLabels = initConfig.object_labels;
+    config.sourceLinks = initConfig.source_links;
+    config.endpointLinks = initConfig.endpoint_links;
+    config.endpointLabels = initConfig.endpoint_labels;
+    config.eventLabels = initConfig.event_labels;
 
     // .. the listing puts its chrome and its two panes in place before the first page arrives ..
     var listing = $.fn.zato.audit_log.listing;
@@ -551,6 +600,14 @@ $.fn.zato.audit_log.init = function(initConfig) {
         objectNames = $.fn.zato.audit_log.filtersFromURL(config.objectsURLKey);
     }
 
+    // A page deep-linked to events of one kind opens filtered down to them,
+    // with the dismissible chip beside the legend saying so
+    var eventTypes = [];
+
+    if (initConfig.event_type !== '') {
+        eventTypes.push(initConfig.event_type);
+    }
+
     var pagination = kit.pagination.init({
         poll_url: initConfig.poll_url,
         page_size: config.pageSize,
@@ -561,7 +618,8 @@ $.fn.zato.audit_log.init = function(initConfig) {
             query: initConfig.query,
             status: initConfig.status,
             time_from: timeFrom,
-            time_to: initConfig.time_to
+            time_to: initConfig.time_to,
+            event_types: eventTypes
         },
         table_body: listing.config.itemsHost,
 
