@@ -182,8 +182,10 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
     });
 
 
-    // Set the initial baseline for deployment status from the current editor content BEFORE loading from localStorage
+    // Set the initial baseline for deployment status from the current editor content BEFORE loading from localStorage,
+    // keeping the previous baseline around so the draft below can be told apart from a copy of an older deployed version
     let key = $.fn.zato.ide.get_last_deployed_key();
+    let previous_baseline = localStorage.getItem(key);
     let editor_value = window.zato_editor.getValue();
     console.debug("init_editor: setting initial baseline with key:", JSON.stringify(key));
     console.debug("init_editor: editor_value length:", editor_value ? editor_value.length : null);
@@ -191,7 +193,7 @@ $.fn.zato.ide.init_editor = function(initial_header_status) {
     console.debug("init_editor: initial baseline set");
 
     // This will try to load the content from LocalStorage
-    $.fn.zato.ide.load_current_source_code_from_local_storage();
+    $.fn.zato.ide.load_current_source_code_from_local_storage(previous_baseline);
 
     window.zato_inactivity_interval = null;
     document.onkeydown = $.fn.zato.ide.reset_inactivity_timeout;
@@ -469,9 +471,18 @@ $.fn.zato.ide.save_current_source_code_to_local_storage = function() {
 
 /* ---------------------------------------------------------------------------------------------------------------------------- */
 
-$.fn.zato.ide.load_current_source_code_from_local_storage = function() {
+$.fn.zato.ide.load_current_source_code_from_local_storage = function(previous_baseline) {
     let key = $.fn.zato.ide.get_current_source_code_key()
     let value = localStorage.getItem(key)
+
+    // A draft equal to the deployed version it was saved against holds no edits of its own,
+    // e.g. the file has since changed on the server, so the draft goes away and what
+    // the server rendered into the editor stays
+    if(value && value == previous_baseline) {
+        localStorage.removeItem(key);
+        return;
+    }
+
     if(value) {
         window.zato_editor.setValue(value);
         window.zato_editor.clearSelection();

@@ -111,39 +111,31 @@ _channel_service_source = '''\
 from zato.server.service import Service
 
 # ################################################################################################################################
-# ################################################################################################################################
 
 class DemoHL7Ack(Service):
-    """ Runs for each message a demo MLLP channel accepts. The channel acknowledges the message
-    and delivers a copy to its destinations on its own - this is where your own logic goes.
+    """ Runs for each message an MLLP channel accepts.
     """
     name = '{ack_service}'
 
     def handle(self):
 
-        # The channel parses each message before handing it over
         message = self.request.raw_request
-
         control_id = message.get('msh.message_control_id')
+
         self.logger.info('Received message `%s`', control_id)
 
 # ################################################################################################################################
-# ################################################################################################################################
 
 class DemoHL7Archive(Service):
-    """ The archive the demo channels deliver to - a copy of each message they accept
-    arrives here through their REST destination.
+    """ Receives a copy of each accepted message through a REST destination.
     """
     name = '{archive_service}'
 
     def handle(self):
 
-        # A message delivered over REST arrives as bytes
-        message = self.request.raw_request.decode('utf-8')
-
+        message = self.request.raw_request
         self.logger.info('Archived message `%s`', message)
 
-# ################################################################################################################################
 # ################################################################################################################################
 '''.format(ack_service=_channel_service, archive_service=_archive_service)
 
