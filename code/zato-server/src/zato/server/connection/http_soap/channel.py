@@ -1567,6 +1567,10 @@ class RequestHandler:
         if channel_item['data_format'] == ModuleCtx.IO_FORM_DATA:
             wsgi_environ['zato.request.payload'] = post_data
 
+        # An HL7 channel hands its service the message as text, the same as an MLLP channel does
+        if channel_item['data_format'] == _data_format_hl7_v2:
+            raw_request = raw_request.decode('utf-8')
+
         # Invoke the service ..
         response = service.update_handle(self._set_response_data, service, raw_request,
             CHANNEL.HTTP_SOAP, channel_item.data_format, channel_item.transport, self.server,
