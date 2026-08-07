@@ -76,6 +76,9 @@ $(document).ready(function() {
 <div class="dashboard-tab-panel" id="dashboard-tab-panel-events" role="tabpanel">
 
     <form class="audit-log-search-form" id="audit-log-search-form">
+        <span class="audit-log-filter-select" id="audit-log-filter-source"></span>
+        <span class="audit-log-filter-select" id="audit-log-filter-object"></span>
+
         <span class="audit-log-search-field">
             <input type="text" class="audit-log-search-input" id="audit-log-search-input" placeholder="Search .." value="{{ query }}">
             <span class="dashboard-panel-action-badge dashboard-panel-action-badge-light audit-log-search-clear"
@@ -83,14 +86,13 @@ $(document).ready(function() {
         </span>
 
         <button type="submit" class="action-button">Search</button>
-
-        <span class="audit-log-filter-select" id="audit-log-filter-source"></span>
-        <span class="audit-log-filter-select" id="audit-log-filter-object"></span>
     </form>
 
-    <div id="audit-log-chrome"></div>
+    <div class="audit-log-controls-row">
+        <div id="audit-log-chrome"></div>
+        <div class="detail-pagination-controls" id="audit-log-pagination-top"></div>
+    </div>
 
-    <div class="detail-pagination-controls" id="audit-log-pagination-top"></div>
     <div class="audit-log-listing" id="audit-log-listing"></div>
 </div>
 {% endblock %}

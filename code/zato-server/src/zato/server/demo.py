@@ -16,7 +16,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from contextlib import closing
 from logging import getLogger
-from time import sleep
+from time import monotonic, sleep
 
 # Zato
 from zato.common.api import Audit_Config, HL7
@@ -40,9 +40,10 @@ from zato.server.generic.api.channel_hl7_mllp import get_internal_port, is_chann
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import stranydict, strlist
+    from zato.common.typing_ import anytuple, stranydict, strlist
     from zato.server.base.parallel import ParallelServer
 
+    anytuple = anytuple
     ParallelServer = ParallelServer
     stranydict = stranydict
     strlist = strlist
@@ -84,9 +85,10 @@ _burst_count = 20
 _burst_seed = 20260102
 
 # Hot deploy and the channel wrappers both run on their own, so the import waits for what
-# it needs rather than assuming it is there - this is how long it waits, in half-second steps
-_wait_steps = 20
-_wait_step_seconds = 0.5
+# it needs rather than assuming it is there - this is how long it waits, in steps short
+# enough that no time is lost once the awaited thing is up
+_wait_steps = 200
+_wait_step_seconds = 0.05
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -152,7 +154,7 @@ class DemoHL7Ack(Service):
 # ################################################################################################################################
 
 # What each demo connection is created with, beyond the shared boilerplate
-_connection_defs = (
+_connection_defs:'anytuple' = (
     {
         'name': Channel_Main,
         'type_': _type_channel_mllp,
@@ -229,26 +231,30 @@ def ensure_demo_service(server:'ParallelServer') -> 'bool':
 # ################################################################################################################################
 
 def ensure_demo_connections(server:'ParallelServer') -> 'strlist':
-    """ Creates the demo channels and outgoing connections, replacing any left by an earlier
-    import so that each run lays down the current definition. Returns the names created.
+    """ Creates the demo channels and outgoing connections that are not there yet. The ones
+    already in place keep running as they are - recreating them would restart their wrappers
+    and every rerun would then wait for the listeners to come back up. Returns the names created.
     """
 
     # What already exists is read straight from the database
     demo_names = [connection_def['name'] for connection_def in _connection_defs]
 
     with closing(server.odb.session()) as session:
-        rows = session.query(GenericConn.id, GenericConn.name).filter(GenericConn.name.in_(demo_names)).all()
+        rows = session.query(GenericConn.name).filter(GenericConn.name.in_(demo_names)).all()
 
-    # A connection from an earlier import would keep whatever it was created with, a channel
-    # its service among it, so what is already there goes before anything new is created
-    for connection_id, connection_name in rows:
-        _ = server.invoke('zato.generic.connection.delete', {'id': connection_id, 'cluster_id': default_cluster_id})
-        logger.info('Deleted the demo connection `%s` left by an earlier import', connection_name)
+    existing_names = set()
+
+    for row in rows:
+        existing_names.add(row[0])
 
     # Our response to produce
     out:'strlist' = []
 
     for connection_def in _connection_defs:
+
+        # A connection an earlier import created keeps running as it is
+        if connection_def['name'] in existing_names:
+            continue
 
         # The type's own defaults go in first so that what the demo asks for wins over them,
         # the audit log being on among it
@@ -373,19 +379,40 @@ def import_demo_data(server:'ParallelServer', *, config:'SeedConfig | None'=None
         config = SeedConfig()
 
     # The channels name this service, so it goes in before they do
+    phase_start = monotonic()
     service_deployed = ensure_demo_service(server)
 
+    service_seconds = monotonic() - phase_start
+    logger.info('Demo import: service ready in %.2fs', service_seconds)
+
+    phase_start = monotonic()
     created_names = ensure_demo_connections(server)
+
+    connections_seconds = monotonic() - phase_start
+    logger.info('Demo import: connections ready in %.2fs', connections_seconds)
+
+    phase_start = monotonic()
     rule_names = store_demo_rules(server)
+
+    rules_seconds = monotonic() - phase_start
+    logger.info('Demo import: rules stored in %.2fs', rules_seconds)
 
     # The seeded history goes into the same audit database the server writes to,
     # collected in memory first and landing in one bulk transaction
     engine = get_audit_engine()
 
+    phase_start = monotonic()
     result = seed_demo_data(engine, server_name=server.name, config=config)
 
+    seed_seconds = monotonic() - phase_start
+    logger.info('Demo import: history seeded in %.2fs', seed_seconds)
+
     # The live burst fills the in-process counters
+    phase_start = monotonic()
     burst_count = send_demo_burst()
+
+    burst_seconds = monotonic() - phase_start
+    logger.info('Demo import: live burst sent in %.2fs', burst_seconds)
 
     # Our response to produce
     out = {

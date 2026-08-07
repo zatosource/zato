@@ -159,14 +159,19 @@
 }
 
 /* The filter selects of the all-events page stand a step apart from the search itself -
-   they narrow the list by what an event is, not by what it says */
+   they narrow the list by what an event is, not by what it says. A single-source page
+   builds no selects at all and their empty hosts take no room from the row. */
 
 .audit-log-filter-select {
     display: inline-flex;
 }
 
-.audit-log-filter-select:first-of-type {
-    margin-left: 8px;
+.audit-log-filter-select:empty {
+    display: none;
+}
+
+.audit-log-filter-select + .audit-log-filter-select {
+    margin-right: 8px;
 }
 
 /* Clear stands inside the box, which keeps room for it so a long term is not typed underneath */
@@ -208,8 +213,19 @@
 /* The chrome above the listing                                  */
 /* ------------------------------------------------------------ */
 
-.audit-log-chrome-controls {
-    margin-bottom: 0.6rem;
+/* The chrome and the paginator share one row - the chrome against the left edge,
+   the pages against the right, the row keeping the listing at arm's length below */
+
+.audit-log-controls-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 0.6rem;
+}
+
+.audit-log-controls-row .detail-pagination-controls {
+    padding-top: 0;
+    padding-bottom: 0;
 }
 
 /* ------------------------------------------------------------ */

@@ -108,3 +108,8 @@ code/tests/java/hl7-mllp-client/.gradle/
 code/tests/java/hl7-mllp-server/build/
 code/tests/java/hl7-mllp-server/.gradle/
 code/tests/java/.gradle-dist/
+
+demo.css
+demo.js
+demo.html
+**/static/demo/

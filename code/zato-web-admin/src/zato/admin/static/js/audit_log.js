@@ -40,6 +40,11 @@ $.fn.zato.audit_log.config = {
     // The source whose events record who viewed other sources' objects - the names
     // it carries are borrowed, so the object filter lists them under their owners
     accessLogSource: 'config',
+
+    // The one source whose messages can run out of time, and the outcome only it
+    // reports - the legend offers Expired only while this source is picked
+    pubsubSource: 'pubsub',
+    expiredOutcome: 'expired',
     // Short on purpose - it stands in the same badge All does, so swapping
     // the two must not resize the select
     noMatchesLabel: 'None',
@@ -254,6 +259,25 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
     var kit = $.fn.zato.dashboard_kit;
     var config = $.fn.zato.audit_log.config;
     var pagination = $.fn.zato.audit_log.pagination;
+    var listing = $.fn.zato.audit_log.listing;
+
+    // Expired is a pub/sub outcome alone, so the legend offers it only while
+    // pub/sub is among the picked sources
+    var legendOutcomes = function(pickedSources) {
+        var out = [];
+
+        for (var outcomeIndex = 0; outcomeIndex < config.outcomes.length; outcomeIndex++) {
+            var outcome = config.outcomes[outcomeIndex];
+
+            if (outcome === config.expiredOutcome && pickedSources.indexOf(config.pubsubSource) === -1) {
+                continue;
+            }
+
+            out.push(outcome);
+        }
+
+        return out;
+    };
 
     // Every source there is, whether or not it has events yet
     var sourceItems = [];
@@ -387,10 +411,15 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
             objectSelect.set_values(keptObjects);
             objectSelect.set_enabled(newGroups.length > 0);
 
+            listing.buildLegend(legendOutcomes(values));
+
             pagination.set_filters({sources: values, object_names: keptObjects});
             pagination.fetch_page(1);
         }
     });
+
+    // Nothing is picked when the page opens, so the legend starts without Expired
+    listing.buildLegend(legendOutcomes([]));
 };
 
 // /////////////////////////////////////////////////////////////////////////////
