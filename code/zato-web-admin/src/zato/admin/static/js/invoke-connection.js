@@ -9,7 +9,17 @@ $(document).ready(function() {
         if(success) {
             let action_verb = $('#action_verb').val() || 'action-verb-html-js';
             $.fn.zato.user_message(true, 'OK, '+ action_verb +' successfully');
-            $('#response_data').text(JSON.stringify(data) || '(No response)');
+
+            // The payload arrives parsed, so pretty-printing it back keeps it readable,
+            // and a plain string, e.g. an MLLP ACK repr, reads better without the JSON quoting
+            var response_text;
+            if (typeof data === 'string') {
+                response_text = data;
+            }
+            else {
+                response_text = JSON.stringify(data, null, 2);
+            }
+            $('#response_data').text(response_text);
         }
         else {
             $.fn.zato.user_message(false, 'Invocation error -> `' + status + '`');

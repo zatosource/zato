@@ -21,7 +21,7 @@ from gevent.lock import BoundedSemaphore
 from zato.common.hl7.audit import audit_ack_sent, audit_batch_received, audit_message_received, get_audit_attrs, \
     get_control_id, get_wire_attrs
 from zato.common.hl7.exception import HL7Exception
-from zato.common.hl7.mllp.ack import build_ack, Condition_Data_Type_Error, ErrorCondition
+from zato.common.hl7.mllp.ack import build_ack, Condition_Data_Type_Error, Condition_Unsupported_Message, ErrorCondition
 from zato.common.hl7.mllp.codec import FrameReader, frame_encode
 from zato.common.hl7.mllp.dedup import extract_control_id
 from zato.common.hl7.mllp.preprocess import BatchPayload, preprocess_message
@@ -72,6 +72,10 @@ _Accept_Poll_Interval = 1.0
 
 # What a sender is told when its connection is refused before any message was read
 _Rejection_Ack_Code = 'AR'
+
+# Where MSH-9, the message type, sits when the header is split on the field separator -
+# a header with nothing there cannot be identified as any message at all
+_MSH9_Field_Index = 8
 
 # What a channel's own answer has to begin with to be sent back in place of a locally built
 # acknowledgment. A channel that replies from one of its destinations answers with the
@@ -767,6 +771,51 @@ class HL7MLLPServer:
                 # .. it receives the raw ER7 string.
                 if settings.should_parse_on_input:
 
+                    # .. a header with no message type cannot be identified as any message at all,
+                    # .. so it is turned away here rather than handed to a parser that can only
+                    # .. refuse it - the sender is told exactly what was missing ..
+                    msh_fields = msh_line.split('|')
+
+                    if len(msh_fields) > _MSH9_Field_Index:
+                        message_type = msh_fields[_MSH9_Field_Index]
+                    else:
+                        message_type = ''
+
+                    if not message_type:
+                        logger.warning('No message type in MSH-9 from %s, rejecting (MSH: %s)',
+                            connection_context.endpoint, msh_line)
+
+                        ack_code = 'AR'
+                        error_text = 'No message type in MSH-9'
+
+                        # .. suppress error details if the channel hides them ..
+                        if not settings.should_return_errors:
+                            error_text = ''
+
+                        # .. a reject is a negative acknowledgment in the channel's live state,
+                        # .. the matched channel's own included ..
+                        self.state.on_nack_sent()
+                        if channel_state:
+                            channel_state.on_nack_sent()
+
+                        ack_string = build_ack(msh_line, ack_code, error_text=error_text,
+                            error_condition=Condition_Unsupported_Message)
+
+                        # .. a rejected message still leaves its audit trail - the receipt
+                        # .. and the negative acknowledgment that answered it ..
+                        if audit_log and audit_channel_name:
+                            _ = audit_message_received(
+                                audit_log, audit_channel_name, message_text,
+                                cid=audit_cid, msg_id=audit_msg_id, attrs=audit_attrs, endpoint=peer_endpoint)
+                            _ = audit_ack_sent(
+                                audit_log, audit_channel_name, ack_code, ack_string,
+                                cid=audit_cid, msg_id=audit_msg_id)
+
+                        self._send_framed(active_socket, ack_string, settings, connection_context)
+
+                        # .. skip to the next message in the batch ..
+                        continue
+
                     # .. attempt to parse (and optionally validate) the message ..
                     try:
                         # Trace point 2: how long the parse took
@@ -784,10 +833,12 @@ class HL7MLLPServer:
                             audit_msg_id = get_control_id(callback_data)
 
                     # .. parsing or validation failed - send an AE reject ACK
-                    # .. back to the sender and skip this message ..
-                    except (ValueError, HL7ValidationError):
+                    # .. back to the sender and skip this message. A malformed message is the
+                    # .. sender's error rather than an internal one, so one line says what was
+                    # .. wrong without a traceback ..
+                    except (ValueError, HL7ValidationError) as e:
                         logger.warning('Parse/validation error for channel `%s` from %s; e:`%s`',
-                            matched_route.channel_name, connection_context.endpoint, format_exc())
+                            matched_route.channel_name, connection_context.endpoint, e)
                         ack_code = 'AE'
                         error_text = 'Message parsing or validation failed'
 

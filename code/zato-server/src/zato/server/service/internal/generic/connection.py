@@ -883,8 +883,8 @@ class Invoke(AdminService):
                 else:
                     response = client.invoke(request_data)
 
-                    # Results are objects, e.g. an AckResult for MLLP, and the caller needs text
-                    response = str(response)
+                    # The result is an AckResult and the caller needs the acknowledgment itself, i.e. the raw ER7 text
+                    response = response.ack_text
             except Exception:
                 exc = format_exc()
                 response = exc

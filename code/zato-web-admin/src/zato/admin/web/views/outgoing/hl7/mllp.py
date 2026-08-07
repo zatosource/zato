@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from http import HTTPStatus
 from time import monotonic
 
 # Django
@@ -16,7 +17,7 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.forms import populate_form_initial
 from zato.admin.web.forms.outgoing.hl7.mllp import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, invoke_action_handler, method_allowed
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.api import GENERIC, generic_attrs
 from zato.common.hl7.mllp.ack import new_control_id
 from zato.common.hl7.mllp.client import HL7MLLPClient
@@ -273,34 +274,37 @@ def wizard_test_action(req:'any_') -> 'JsonResponse':
 # ################################################################################################################################
 # ################################################################################################################################
 
-@method_allowed('GET')
-def invoke(
-    req:'any_',
-    conn_id:'str',
-    max_wait_time:'str',
-    conn_name:'str',
-    conn_slug:'str',
-    ) -> 'TemplateResponse':
-
-    return_data = {
-        'conn_id': conn_id,
-        'conn_name': conn_name,
-        'conn_slug': conn_slug,
-        'conn_type': GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP,
-        'timeout': max_wait_time,
-        'cluster_id': req.zato.cluster_id,
-    }
-
-    out = TemplateResponse(req, 'zato/outgoing/hl7/mllp-invoke.html', return_data)
-    return out
-
-# ################################################################################################################################
-
 @method_allowed('POST')
-def invoke_action(req:'any_', conn_name:'str') -> 'any_':
-    field_names = ('conn_name', 'conn_type', 'request_data', 'timeout')
+def invoke_action(req:'any_', conn_name:'str') -> 'JsonResponse':
+    """ Sends the popup invoker's message through the outgoing connection and returns the raw ER7 acknowledgment.
+    """
+    try:
+        request = {
+            'conn_type': GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP,
+            'conn_name': conn_name,
+            'request_data': req.POST['data-request'],
+        }
 
-    out = invoke_action_handler(req, 'zato.generic.connection.invoke', field_names)
-    return out
+        started_at = monotonic()
+        response = req.zato.client.invoke('zato.generic.connection.invoke', request)
+        elapsed_ms = (monotonic() - started_at) * _Ms_Per_Second
+
+        # A failed invocation still carries the details of what went wrong,
+        # which the error branch below turns into a response for the popup
+        if not response.ok:
+            raise Exception(response.details)
+
+        return JsonResponse({
+            'data': response.data['response_data'],
+            'response_time_human': '{:.1f}ms'.format(elapsed_ms),
+            'content_type': 'text/plain',
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'data': str(e),
+            'response_time_human': '',
+            'content_type': 'text/plain',
+        }, status=HTTPStatus.INTERNAL_SERVER_ERROR)
 
 # ################################################################################################################################

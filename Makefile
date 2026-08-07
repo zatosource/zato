@@ -215,14 +215,33 @@ file-pickup-listener: listener
 haproxy:
 	@mkdir -p $(HAPROXY_DEV_DIR)
 	@touch $(HOME)/env/qs-1/blocked-paths.txt
-	@sed \
+	@if [ -f $(HAPROXY_DEV_DIR)/zato.pem ]; then \
+		cp $(HAPROXY_DEV_DIR)/zato.pem $(HAPROXY_DEV_DIR)/user.pem; \
+	fi
+	@if [ "$(Zato_SSL_Key_Algorithm)" = "rsa" ]; then \
+		openssl genrsa -out $(HAPROXY_DEV_DIR)/auto.key $(Zato_SSL_Key_Size); \
+	else \
+		openssl ecparam -genkey -name secp384r1 -out $(HAPROXY_DEV_DIR)/auto.key; \
+	fi
+	@openssl req -new -key $(HAPROXY_DEV_DIR)/auto.key -out $(HAPROXY_DEV_DIR)/auto.csr \
+		-subj "$(Zato_SSL_Subject)" \
+		-addext "$(Zato_SSL_Subject_Alt_Name)"
+	@openssl x509 -req -days $(Zato_SSL_Cert_Days) -in $(HAPROXY_DEV_DIR)/auto.csr \
+		-signkey $(HAPROXY_DEV_DIR)/auto.key -out $(HAPROXY_DEV_DIR)/auto.crt -copy_extensions copy
+	@cat $(HAPROXY_DEV_DIR)/auto.crt $(HAPROXY_DEV_DIR)/auto.key > $(HAPROXY_DEV_DIR)/auto.pem
+	@rm -f $(HAPROXY_DEV_DIR)/auto.key $(HAPROXY_DEV_DIR)/auto.csr $(HAPROXY_DEV_DIR)/auto.crt
+	@pem_file=auto.pem; \
+	if [ -f $(HAPROXY_DEV_DIR)/user.pem ]; then pem_file=user.pem; fi; \
+	sed \
 		-e 's|/opt/zato/env/qs-1/blocked-paths.txt|$(HOME)/env/qs-1/blocked-paths.txt|g' \
+		-e 's|bind 0.0.0.0:$${Zato_Port_MLLP}$$|&\n    bind 0.0.0.0:$${Zato_Port_MLLP_SSL} ssl crt $(HAPROXY_DEV_DIR)/'"$$pem_file"'|' \
 		$(HAPROXY_CFG) > $(HAPROXY_DEV_DIR)/haproxy.cfg
 	Zato_Port_Server=$(Zato_Port_Server) \
 	Zato_Port_Dashboard=$(Zato_Port_Dashboard) \
 	Zato_Port_OpenAPI_Console=$(Zato_Port_OpenAPI_Console) \
 	Zato_Port_Load_Balancer=$(Zato_Port_Load_Balancer) \
 	Zato_Port_MLLP=$(Zato_Port_MLLP) \
+	Zato_Port_MLLP_SSL=$(Zato_Port_MLLP_SSL) \
 	Zato_HL7_MLLP_Port=$(Zato_HL7_MLLP_Port) \
 	Zato_Load_Balancer_Stats_Password=dev \
 	Zato_Load_Balancer_Metrics_Password=dev \
@@ -1424,6 +1443,14 @@ Zato_Port_Dashboard ?= 8183
 Zato_Port_OpenAPI_Console ?= 8185
 Zato_Port_Load_Balancer ?= 11223
 Zato_Port_MLLP ?= 11553
+Zato_Port_MLLP_SSL ?= 11554
+
+# The same variables and defaults the containers read, per /docs/admin/security/ssl
+Zato_SSL_Subject ?= /C=US/ST=State/L=City/O=Organization/CN=localhost
+Zato_SSL_Subject_Alt_Name ?= subjectAltName=DNS:localhost,IP:127.0.0.1
+Zato_SSL_Cert_Days ?= 3650
+Zato_SSL_Key_Algorithm ?= ecdsa
+Zato_SSL_Key_Size ?= 4096
 
 # Where the server's own MLLP listener sits on loopback, which is what the MLLP backend points at
 Zato_HL7_MLLP_Port ?= 31312
