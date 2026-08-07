@@ -45,6 +45,7 @@ def _escape_like(query:'str') -> 'str':
 def _build_where(
     sources:'anylist',
     object_names:'anylist',
+    outcomes:'anylist',
     query:'str',
     status:'str',
     time_from:'str' = '',
@@ -65,6 +66,11 @@ def _build_where(
 
     if object_names:
         out.append(event_table.c.object_name.in_(object_names))
+
+    # The outcome legend switches outcomes off - naming some means show these alone,
+    # naming none means the legend stands whole and filters nothing
+    if outcomes:
+        out.append(event_table.c.outcome.in_(outcomes))
 
     # The page can be scoped down to a time window, e.g. one clicked on an analytics chart -
     # event times are ISO timestamps, so string prefixes compare correctly.

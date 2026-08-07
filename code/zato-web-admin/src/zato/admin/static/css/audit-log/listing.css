@@ -3,7 +3,7 @@
 @import url("../dashboard-kit/time_range.css");
 @import url("../dashboard-kit/main_chart.css");
 @import url("../dashboard-kit/chips.css");
-@import url("../dashboard-kit/direction.css");
+@import url("../dashboard-kit/role.css");
 @import url("../dashboard-kit/payload_panel.css");
 @import url("../dashboard-kit/list_detail.css");
 @import url("../dashboard-kit/tabs.css");
@@ -61,6 +61,7 @@
     --audit-log-error-rail-gap: 10px;
 
     --dashboard-flow-accent: #f6c66a;
+    --dashboard-flow-accent-bright: #f9d99a;
     --dashboard-flow-accent-tint: rgba(246, 166, 5, 0.10);
     --dashboard-flow-accent-tint-strong: rgba(246, 166, 5, 0.18);
     --dashboard-flow-accent-tint-tag: rgba(246, 166, 5, 0.14);
@@ -451,10 +452,10 @@
     display: none;
 }
 
-/* Which way the event went is the last thing to go - past this the list has nothing left to
+/* The event's role tag is the last thing to go - past this the list has nothing left to
    give up and shuts altogether, which the kit sees to */
 
-.audit-log-drop-direction .audit-log-cell-direction {
+.audit-log-drop-role .audit-log-cell-role {
     display: none;
 }
 
@@ -581,6 +582,10 @@
 .audit-log-pane-details a:hover {
     background: none;
     text-decoration: underline;
+
+    /* The page's global link hover would turn the value dark blue - here it
+       brightens within its own amber instead */
+    color: var(--dashboard-flow-accent-bright);
 }
 
 /* ------------------------------------------------------------ */

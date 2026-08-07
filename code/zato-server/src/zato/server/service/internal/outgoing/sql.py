@@ -245,7 +245,8 @@ class Ping(AdminService):
                     filter(SQLConnectionPool.id==self.request.input.id).\
                     one()
 
-                ping = self.outgoing.sql.get(item.name, False).pool.ping
+                # The wrapper's ping puts the ping on record when the connection is audited
+                ping = self.outgoing.sql.get(item.name, False).ping
 
                 self.response.payload.id = self.request.input.id
                 response_time = ping(self.server.fs_sql_config)

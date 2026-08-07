@@ -68,7 +68,7 @@ def _record_audit(client:'SOAPClient') -> 'list':
     """
     recorded = []
 
-    def callback(cid:'any_', event:'any_', endpoint:'any_', outcome:'any_', data:'any_'):
+    def callback(cid:'any_', event:'any_', endpoint:'any_', outcome:'any_', data:'any_', status:'any_'=''):
         recorded.append((event, data))
 
     client.audit_callback = callback

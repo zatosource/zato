@@ -428,11 +428,43 @@ class SMTPConnection(_Connection):
         """ Connects to the server, authenticating as configured, without sending any message.
         Returns the server's EHLO response.
         """
+        cid = new_cid_server()
+        start = monotonic()
+
         # The transport opens and closes its own connection during a ping
         conn = self.conn_class(*self.conn_args, **self.conn_kwargs)
-        out = conn.ping()
+
+        # A failed ping is recorded too, before the caller learns about it
+        try:
+            out = conn.ping()
+        except Exception as e:
+            if self.needs_audit:
+                self._insert_ping_event(cid, start, outcome=AuditOutcome.Error, status=str(e))
+            raise
+
+        # A ping is traffic like any other to the audit log
+        if self.needs_audit:
+            self._insert_ping_event(cid, start, outcome=AuditOutcome.OK)
 
         return out
+
+# ################################################################################################################################
+
+    def _insert_ping_event(self, cid:'str', start:'float', *, outcome:'str', status:'str'='') -> 'None':
+        """ Writes one request-sent event describing a ping of this connection.
+        """
+        duration_ms = int((monotonic() - start) * 1000)
+
+        self.audit_log.insert(
+            AuditSource.Email_SMTP,
+            AuditEvent.Request_Sent,
+            self.config.name,
+            cid=cid,
+            endpoint=f'{self.config.host}:{self.config.port}',
+            outcome=outcome,
+            status=status,
+            duration_ms=duration_ms,
+        )
 
 # ################################################################################################################################
 
@@ -641,8 +673,24 @@ class GenericIMAPConnection(_IMAPConnection):
 # ################################################################################################################################
 
     def ping(self):
-        with self.get_connection() as conn: # type: Imbox
-            _ = conn.connection.noop()
+
+        cid = new_cid_server()
+
+        # A failed ping is recorded too, before the caller learns about it
+        try:
+            with self.get_connection() as conn: # type: Imbox
+                _ = conn.connection.noop()
+        except Exception:
+            if self.needs_audit:
+                error = format_exc()
+                _insert_imap_audit_event(self.audit_log, AuditEvent.Request_Sent, self.config.name,
+                    cid=cid, outcome=AuditOutcome.Error, data=error)
+            raise
+
+        # A ping is traffic like any other to the audit log
+        if self.needs_audit:
+            _insert_imap_audit_event(self.audit_log, AuditEvent.Request_Sent, self.config.name,
+                cid=cid, outcome=AuditOutcome.OK)
 
 # ################################################################################################################################
 
@@ -876,8 +924,24 @@ class Microsoft365IMAPConnection(_IMAPConnection):
 
     def ping(self):
 
+        cid = new_cid_server()
+
         mailbox = self._get_mailbox()
-        result = mailbox.get_folders()
+
+        # A failed ping is recorded too, before the caller learns about it
+        try:
+            result = mailbox.get_folders()
+        except Exception:
+            if self.needs_audit:
+                error = format_exc()
+                _insert_imap_audit_event(self.audit_log, AuditEvent.Request_Sent, self.config.name,
+                    cid=cid, outcome=AuditOutcome.Error, data=error)
+            raise
+
+        # A ping is traffic like any other to the audit log
+        if self.needs_audit:
+            _insert_imap_audit_event(self.audit_log, AuditEvent.Request_Sent, self.config.name,
+                cid=cid, outcome=AuditOutcome.OK)
 
         return result
 

@@ -532,10 +532,12 @@ class SOAPClient:
             # .. which the caller still needs to see.
             raise
 
-        # .. a fault envelope arrives with an HTTP error status, hence the outcome from response.ok.
+        # .. a fault envelope arrives with an HTTP error status, hence the outcome from response.ok -
+        # .. the status itself travels along, so a 500 reads as itself and not merely as an error.
         if self.audit_callback:
             outcome = AuditOutcome.OK if out.ok else AuditOutcome.Error
-            self.audit_callback(cid, AuditEvent.Response_Received, endpoint, outcome, out.content)
+            status = f'{out.status_code} {out.reason}'
+            self.audit_callback(cid, AuditEvent.Response_Received, endpoint, outcome, out.content, status=status)
 
         return out
 

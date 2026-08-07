@@ -1,7 +1,7 @@
-/* Dashboard kit - the direction tag.
-   A short uppercase word tinted by which way the message went. */
+/* Dashboard kit - the role tag.
+   A short uppercase word tinted by the part the message plays in its exchange. */
 
-.dashboard-direction {
+.dashboard-role {
     display: inline-block;
     min-width: 30px;
     padding: 1px 5px;
@@ -14,19 +14,19 @@
     user-select: none;
 }
 
-.dashboard-direction-in {
+.dashboard-role-request {
     color: #0f6ea8;
     background: rgba(15, 110, 168, 0.1);
 }
 
-.dashboard-direction-out {
+.dashboard-role-response {
     color: #1b813e;
     background: rgba(27, 129, 62, 0.1);
 }
 
-/* What the platform itself wrote down, which went nowhere and came from nowhere */
+/* What the platform itself wrote down, which asked for nothing and answered nothing */
 
-.dashboard-direction-none {
+.dashboard-role-none {
     color: #7d8794;
     background: rgba(110, 110, 115, 0.1);
 }
@@ -38,17 +38,17 @@
 /* The same three tags lifted to where they can be read against a dark panel, since a tint
    meant to sit on white all but disappears on one */
 
-.dashboard-direction-dark.dashboard-direction-in {
+.dashboard-role-dark.dashboard-role-request {
     color: #6fb6e8;
     background: rgba(111, 182, 232, 0.18);
 }
 
-.dashboard-direction-dark.dashboard-direction-out {
+.dashboard-role-dark.dashboard-role-response {
     color: #74cf92;
     background: rgba(116, 207, 146, 0.18);
 }
 
-.dashboard-direction-dark.dashboard-direction-none {
+.dashboard-role-dark.dashboard-role-none {
     color: #a8aebc;
     background: rgba(255, 255, 255, 0.12);
 }
