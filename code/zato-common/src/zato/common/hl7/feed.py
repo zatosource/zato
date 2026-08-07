@@ -26,8 +26,9 @@ from zato.hl7v2.tests.fakers.msg_oru import fake_orur01
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, callable_
+    from zato.common.typing_ import any_, anydict, anylist, callable_
     any_ = any_
+    anydict = anydict
     anylist = anylist
     callable_ = callable_
 
@@ -93,6 +94,11 @@ class FeedConfig:
     # The seed the message mix and error placement are drawn from
     seed:'int' = Default_Seed
 
+    # How many distinct message bodies the run authors in total - the remaining
+    # messages reuse them with control ids of their own. Zero means every message
+    # is authored individually.
+    unique_count:'int' = 0
+
     # The message mix - (message type, faker, weight) triples
     mix:'tuple' = Default_Mix
 
@@ -112,6 +118,10 @@ class FeedItem:
 
     # The control id the feed assigned - unique and sequential within a run
     control_id:'str' = ''
+
+    # Which distinct body this message came from - messages of one template share
+    # everything but their control id, so a consumer can cache per-template work
+    template_key:'int' = 0
 
     # Whether this message carries the injected-failure marker
     is_error:'bool' = False
@@ -171,6 +181,12 @@ def generate_feed_items(count:'int', config:'FeedConfig') -> 'anylist':
     entries = [(msg_type, faker) for msg_type, faker, _ in config.mix]
     weights = [weight for _, _, weight in config.mix]
 
+    # The distinct bodies authored so far, per message type, each one a pair of its
+    # template key and text - with a unique-body budget in force, later messages reuse
+    # them instead of paying the faker for a new body every time
+    templates_by_type:'anydict' = {}
+    template_count = 0
+
     # Our response to produce
     out:'anylist' = []
 
@@ -183,9 +199,31 @@ def generate_feed_items(count:'int', config:'FeedConfig') -> 'anylist':
         item.control_id = f'{Control_Id_Prefix}-{index + 1:08d}'
         item.is_error = random_source.random() < config.error_ratio
 
-        # The faker authors the message, the feed only stamps its own control id ..
-        text = faker()
-        text = rewrite_msh_field(text, MSH10_Index, item.control_id)
+        templates = templates_by_type.setdefault(msg_type, [])
+
+        # A body is authored anew while the unique budget lasts ..
+        needs_new = template_count < config.unique_count
+
+        # .. no budget at all means every message is authored individually ..
+        if config.unique_count == 0:
+            needs_new = True
+
+        # .. and a type with no template of its own yet always authors one.
+        if not templates:
+            needs_new = True
+
+        if needs_new:
+            template_count += 1
+            template_key = template_count
+            template_text = faker()
+            templates.append((template_key, template_text))
+        else:
+            template_key, template_text = random_source.choice(templates)
+
+        item.template_key = template_key
+
+        # The faker authored the body, the feed only stamps its own control id ..
+        text = rewrite_msh_field(template_text, MSH10_Index, item.control_id)
 
         # .. and an injected failure is a routing marker, not corrupted content -
         # a channel routes this MSH-3 value to a service that fails.

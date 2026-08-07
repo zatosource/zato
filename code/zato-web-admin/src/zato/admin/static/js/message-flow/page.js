@@ -62,7 +62,7 @@ page.config = {
 // and the number of the request the answer on screen belongs to
 page.state = {
     term: '',
-    controlId: '',
+    identity: '',
     token: 0
 };
 
@@ -106,7 +106,7 @@ page.showIdle = function() {
     var detail = $.fn.zato.message_flow.detail;
     var flow = $.fn.zato.audit_log.flow;
 
-    page.state.controlId = '';
+    page.state.identity = '';
 
     // The list's own state is let go too, so the next search draws afresh
     flow.seedId = null;
@@ -127,7 +127,7 @@ page.showNotFound = function(term) {
     var detail = $.fn.zato.message_flow.detail;
     var flow = $.fn.zato.audit_log.flow;
 
-    page.state.controlId = '';
+    page.state.identity = '';
 
     flow.seedId = null;
     flow.rows = [];
@@ -164,7 +164,7 @@ page.showJourney = function(data) {
         }
     }
 
-    page.state.controlId = seedModel.controlId;
+    page.state.identity = seedModel.identity;
 
     // The drawing reads the journey forward ..
     drawing.render(models, seedModel);

@@ -45,6 +45,21 @@ $.fn.zato.audit_log.sources['default'] = {
         }
 
         return row.msg_id;
+    },
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    // What a message of this source is named by and what that name is called -
+    // a source with no name of its own for its messages reads by the CID the
+    // message travelled under
+    identityLabel: 'Message id',
+
+    identity: function(row) {
+        if (row.msg_id === '') {
+            return row.cid;
+        }
+
+        return row.msg_id;
     }
 };
 

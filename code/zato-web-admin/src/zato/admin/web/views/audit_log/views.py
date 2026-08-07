@@ -28,8 +28,8 @@ from zato.admin.web.views.audit_log.columns import _all_sources_columns, _all_so
     _source_label, _source_title, _status_outstanding
 from zato.admin.web.views.audit_log.query import _build_where, _hydrate_rows, _normalize_row
 from zato.admin.web.views.audit_log.sources import _get_resubmit_labels, _source_outstanding, _source_parse, \
-    _source_resubmit
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditLog
+    _source_resubmit, render_view_record
+from zato.common.audit_log.api import event_table, get_audit_engine, AuditLog, AuditSource
 from zato.common.audit_log.attachment import get_attachment, list_attachments
 from zato.common.audit_log.body import resolve_body
 from zato.common.audit_log.config_audit import record_view_event
@@ -69,6 +69,12 @@ def _record_content_view(req:'any_', event_id:'int', source:'str', object_name:'
     """ Records who read the content of one event - a message body or an attachment.
     Access to patient data is itself an audited operation.
     """
+
+    # A view record holds no patient data, so reading one is not itself a recordable
+    # view - without this, browsing the access log writes views of views without end
+    if source == AuditSource.Config:
+        return
+
     _ = record_view_event(
         _access_log,
         actor=req.user.username,
@@ -443,10 +449,12 @@ def details(req:'any_') -> 'HttpResponse':
     data = ''
     source = ''
     object_name = ''
+    event_time_iso = ''
 
     # Read the full payload of this one event from the shared audit log database.
     details_query = select(
-        event_table.c.source, event_table.c.object_name, event_table.c.data).where(event_table.c.id == event_id)
+        event_table.c.source, event_table.c.object_name, event_table.c.data,
+        event_table.c.event_time_iso).where(event_table.c.id == event_id)
     engine = get_audit_engine()
 
     with engine.connect() as connection:
@@ -458,6 +466,7 @@ def details(req:'any_') -> 'HttpResponse':
             source = row[0]
             object_name = row[1]
             data = row[2]
+            event_time_iso = row[3]
 
     # Whoever is reading this message is recorded - the event exists, so there is content to see
     if row:
@@ -485,8 +494,12 @@ def details(req:'any_') -> 'HttpResponse':
 
     # .. and the whole message additionally gets its parsed view, from the source's own renderer
     # with the EDI renderer as the shared default - an empty result means no parsed tab at all.
+    # A view record of the access log resolves against the database - who viewed what and when -
+    # so it renders here, where the engine is at hand, rather than through _source_parse.
     else:
-        if renderer := _source_parse.get(source):
+        if source == AuditSource.Config:
+            parsed = render_view_record(engine, data, event_time_iso)
+        elif renderer := _source_parse.get(source):
             parsed = renderer(data)
         else:
             parsed = render_document(data)

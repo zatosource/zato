@@ -44,4 +44,17 @@ def index(req:'HttpRequest') -> 'TemplateResponse':
     })
 
 # ################################################################################################################################
+
+@method_allowed('GET')
+def demo(req:'HttpRequest') -> 'TemplateResponse':
+    """ The stage-0 demo page, temporarily back for demos - the hardcoded ADM-00004217 journey,
+    everything on it coming from data in the browser. To be removed when no longer needed.
+    """
+    return TemplateResponse(req, 'zato/message-flow/demo.html', {
+        'cluster_id': default_cluster_id,
+        'zato_clusters': True,
+        'zato_template_name': 'zato/message-flow/demo.html',
+    })
+
+# ################################################################################################################################
 # ################################################################################################################################

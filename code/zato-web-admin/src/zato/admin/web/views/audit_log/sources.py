@@ -13,16 +13,20 @@ can be resubmitted and by what, and the columns and parsed views it renders out 
 import json
 from dataclasses import dataclass
 
+# SQLAlchemy
+from sqlalchemy import select
+
 # Zato
 from zato.common.as2.mdn import describe_disposition
-from zato.common.audit_log.api import AuditEvent
+from zato.common.audit_log.api import event_table, AuditEvent
 from zato.common.hl7.display import parse_and_render
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import any_, anydict
+    any_ = any_
     anydict = anydict
 
 # ################################################################################################################################
@@ -202,8 +206,67 @@ def _render_hl7_parsed(data:'str') -> 'str':
 
 # ################################################################################################################################
 
+def render_view_record(engine:'any_', data:'str', event_time_iso:'str') -> 'str':
+    """ Renders a view record of the access log as the answer it exists to give - who viewed
+    what and when, in business terms. The viewed event is resolved against the event table
+    at render time, so the record reads by the message's own coordinates rather than by
+    a bare database id. Any other config payload simply has no parsed view.
+    """
+    try:
+        payload = json.loads(data)
+    except ValueError:
+        return ''
+
+    if not isinstance(payload, dict):
+        return ''
+
+    # Only the view records read this way - a config change keeps its raw payload
+    if 'viewed_event_id' not in payload:
+        return ''
+
+    # What the viewed event calls itself - its object, its source and its own message id
+    viewed_query = select(
+        event_table.c.object_name, event_table.c.source, event_table.c.msg_id).where(
+        event_table.c.id == payload['viewed_event_id'])
+
+    with engine.connect() as connection:
+        result = connection.execute(viewed_query)
+        viewed_row = result.fetchone()
+
+    lines = []
+
+    # A record written before the payload carried the viewer has no actor in it -
+    # the payload is read out of a database older code may have written to
+    if 'actor' in payload:
+        lines.append(f'Viewed by:  {payload["actor"]}')
+
+    # When the reading happened is the view event's own moment
+    when = event_time_iso.replace('T', ' ')
+    lines.append(f'When:       {when}')
+
+    # The viewed event answers for itself while it exists ..
+    if viewed_row is not None:
+        lines.append(f'Viewed:     {viewed_row[0]} ({viewed_row[1]})')
+
+        # A message id the viewed event never had is not a line to show
+        if viewed_row[2]:
+            lines.append(f'Message:    {viewed_row[2]}')
+
+    # .. and one pruned since reads by the coordinates written down at view time
+    elif payload['viewed_object_name']:
+        lines.append(f'Viewed:     {payload["viewed_object_name"]} ({payload["viewed_source"]})')
+
+    lines.append(f'Screen:     {payload["screen"]}')
+
+    out = '\n'.join(lines)
+    return out
+
+# ################################################################################################################################
+
 # Per-source parsed renderers - the default is the EDI renderer, which returns
-# an empty string for payloads that do not embed an EDI document.
+# an empty string for payloads that do not embed an EDI document. The config source
+# is not here - its view records resolve against the database and the details view
+# calls render_view_record for them itself.
 _source_parse = {
     'hl7': _render_hl7_parsed,
 }

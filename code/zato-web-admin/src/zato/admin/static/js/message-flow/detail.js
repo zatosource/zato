@@ -141,10 +141,10 @@ detail.show = function(nodeDetail) {
     meta.className = 'message-flow-detail-meta';
     header.appendChild(meta);
 
-    var controlId = document.createElement('span');
-    controlId.className = 'message-flow-detail-control-id';
-    controlId.textContent = page.state.controlId;
-    meta.appendChild(controlId);
+    var identity = document.createElement('span');
+    identity.className = 'message-flow-detail-identity';
+    identity.textContent = page.state.identity;
+    meta.appendChild(identity);
 
     var time = document.createElement('span');
     time.className = 'message-flow-detail-time';

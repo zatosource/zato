@@ -81,6 +81,15 @@ $.fn.zato.audit_log.sources['hl7'] = {
         }
 
         return row.msg_type + ' ' + row.msg_id;
+    },
+
+    // ////////////////////////////////////////////////////////////////////////
+
+    // An HL7 message is named by its control id, MSH-10
+    identityLabel: 'Control id',
+
+    identity: function(row) {
+        return row.msg_id;
     }
 };
 
