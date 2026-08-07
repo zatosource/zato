@@ -14,6 +14,7 @@ from __future__ import annotations
 # stdlib
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from urllib.parse import quote
 
 # SQLAlchemy
 from sqlalchemy import and_, select
@@ -212,6 +213,10 @@ class _AckState:
 def _audit_log_link(source:'str', partner:'str', status:'str' = '') -> 'str':
     """ Builds the drill-down path from one aggregate row to the filtered audit log page.
     """
+    # The pair is built out of partner-defined identifiers that can hold characters
+    # that would split the query string
+    partner = quote(partner)
+
     out = f'/zato/audit-log/?source={source}&object_name={partner}&cluster={default_cluster_id}'
 
     if status:

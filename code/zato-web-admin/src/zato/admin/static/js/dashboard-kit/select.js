@@ -16,6 +16,11 @@
     var menu_id = 'dashboard-select-menu-active';
     var active_anchor = null;
 
+    /* What to tell whoever opened the current menu once it goes away - optional,
+       registered by show_menu and fired exactly once by hide_menu, so a page that
+       reloads on its filters can apply several toggles in one visit to the menu */
+    var active_on_close = null;
+
     /* How many items a select holds before its menu grows a filter box */
     var filter_threshold = 8;
 
@@ -43,6 +48,15 @@
         }
 
         active_anchor = null;
+
+        // Whoever asked to hear about the closing hears it once, after the cleanup,
+        // so the callback sees the menu already gone
+        var on_close = active_on_close;
+        active_on_close = null;
+
+        if (on_close) {
+            on_close();
+        }
     };
 
     // ////////////////////////////////////////////////////////////////////////
@@ -184,7 +198,8 @@
          toggle_pick: a pick flips its own mark and leaves the menu up
          item_style:  'value_label' or 'text'
          is_picked:   function(value) saying which rows are marked (item_style 'text')
-         with_filter: put a filter box at the top of the menu */
+         with_filter: put a filter box at the top of the menu
+         on_close:    optional callback(), fired once when the menu goes away */
     ns.select.show_menu = function(config) {
 
         ns.select.hide_menu();
@@ -254,6 +269,14 @@
 
         active_anchor = config.anchor;
 
+        // Whoever opened the menu may ask to hear about it closing
+        if (config.on_close) {
+            active_on_close = config.on_close;
+        }
+        else {
+            active_on_close = null;
+        }
+
         if (config.with_filter) {
             menu.querySelector('.dashboard-select-filter').focus();
         }
@@ -273,6 +296,8 @@
        `empty_label` is what the trigger says when nothing is picked and `many_label`
        the word after the count when more than one is. The menu opens with an All row
        at the top, named by `empty_label` - picking it lets every other pick go.
+       An optional `on_close` is fired once when the menu goes away, which is where
+       a page that reloads on its filters applies what was toggled in one visit.
        Returns {set_groups} plus {get_value, set_value} or {get_values, set_values}. */
     ns.select.create = function(config) {
         var host = $(config.host)[0];
@@ -423,7 +448,8 @@
                 toggle_pick: multi,
                 item_style: 'text',
                 is_picked: is_picked,
-                with_filter: item_count() > filter_threshold
+                with_filter: item_count() > filter_threshold,
+                on_close: config.on_close
             });
 
             // The trigger wears its open look until hide_menu takes it back

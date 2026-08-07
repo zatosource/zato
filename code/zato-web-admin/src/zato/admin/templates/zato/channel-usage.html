@@ -1,19 +1,27 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}Channel usage{% endblock %}
+{% block html_title %}Usage{% endblock %}
 
 {% block "extra_css" %}
 <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/dropdown-menu.css">
+<link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/select.css">
 <link rel="stylesheet" type="text/css" href="/static/css/reports.css">
 {% endblock %}
 
 {% block "extra_js" %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/b2b_reports.js"></script>
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
     $.fn.zato.b2b.reports.init();
     $.fn.zato.b2b.reports.init_filter_tabs('report-filter-form', 'report-filter-range');
-    $.fn.zato.b2b.reports.init_filter_channel('report-filter-channel');
+
+    var filterOptions = {{ filter_options_json|safe }};
+    var pickedSources = '{{ sources|escapejs }}' ? '{{ sources|escapejs }}'.split(',') : [];
+    var pickedObjects = '{{ objects|escapejs }}' ? '{{ objects|escapejs }}'.split(',') : [];
+
+    $.fn.zato.b2b.reports.init_filter_selects('report-filter-form', filterOptions, pickedSources, pickedObjects);
 });
 </script>
 {% endblock %}
@@ -25,21 +33,16 @@ $(document).ready(function() {
     <form method="get" action="{% url "channel-usage" %}" class="report-filter-form" id="report-filter-form">
         <input type="hidden" name="cluster" value="{{ cluster_id }}">
         <input type="hidden" name="range" value="{{ time_range }}" id="report-filter-range">
+        <input type="hidden" name="sources" value="{{ sources }}" id="report-filter-sources">
+        <input type="hidden" name="objects" value="{{ objects }}" id="report-filter-objects">
 
         <div class="report-filter-bar">
-            <div class="report-filter-channel-group">
-                <label for="report-filter-channel">Channel</label>
-                <input list="report-channel-list" name="channel" value="{{ channel }}" placeholder="Any channel"
-                    autocomplete="off" class="report-filter-channel" id="report-filter-channel">
-                <datalist id="report-channel-list">
-                    {% for item in channels %}
-                    <option value="{{ item }}"></option>
-                    {% endfor %}
-                </datalist>
-                <input type="submit" value="Show" class="report-filter-submit">
+            <div class="report-filter-select-group">
+                <span class="report-filter-select" id="report-filter-source"></span>
+                <span class="report-filter-select" id="report-filter-object"></span>
             </div>
 
-            <a class="report-filter-csv" href="{% url "channel-usage-csv" %}?range={{ time_range }}&amp;channel={{ channel|urlencode }}&amp;cluster={{ cluster_id }}">Export to CSV</a>
+            <a class="report-filter-csv" href="{% url "channel-usage-csv" %}?range={{ time_range }}&amp;sources={{ sources|urlencode }}&amp;objects={{ objects|urlencode }}&amp;cluster={{ cluster_id }}">Export to CSV</a>
         </div>
 
         <div class="dashboard-tabs" role="tablist" aria-label="Time range">
@@ -59,7 +62,8 @@ $(document).ready(function() {
         <table class="zato-table b2b-report-table" id="channel-usage-table">
             <thead>
                 <tr>
-                    <th class="b2b-report-sortable" data-sort-type="text">Channel</th>
+                    <th class="b2b-report-sortable" data-sort-type="text">Name</th>
+                    <th class="b2b-report-sortable" data-sort-type="text">Type</th>
                     <th class="b2b-report-sortable" data-sort-type="text">Caller</th>
                     <th class="b2b-report-sortable report-count-centered" data-sort-type="number">Calls</th>
                     <th class="b2b-report-sortable" data-sort-type="text">First call</th>
@@ -70,6 +74,7 @@ $(document).ready(function() {
                 {% for row in rows %}
                 <tr class="{% cycle 'odd' 'even' %}">
                     <td><a href="{{ row.link }}">{{ row.channel }}</a></td>
+                    <td>{{ row.type_label }}</td>
                     <td>{{ row.caller }}</td>
                     <td class="report-count-centered">{{ row.calls }}</td>
                     <td>{{ row.first_call }}</td>
@@ -77,7 +82,7 @@ $(document).ready(function() {
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="5" class="report-empty-message">No calls in the selected range.</td>
+                    <td colspan="6" class="report-empty-message">No calls in the selected range.</td>
                 </tr>
                 {% endfor %}
             </tbody>

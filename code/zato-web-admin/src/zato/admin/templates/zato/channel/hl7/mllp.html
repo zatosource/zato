@@ -73,6 +73,7 @@
             '_service',
             '_destinations',
             '_audit_log',
+            '_usage',
             '_edit',
             '_delete',
             '_invoke',
@@ -131,6 +132,7 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
                 </thead>
@@ -171,6 +173,7 @@
                         <td id="mllp-destinations-cell-{{ item.id }}"></td>
 
                         <td><a href="/zato/audit-log/?source=mllp-channel&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a></td>
+                        <td><a href="/zato/channel-usage/?sources=mllp-channel&amp;objects={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Usage</a></td>
                         <td><a href="{% url "channel-hl7-mllp-wizard-edit" item.id %}?cluster={{ cluster_id }}">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.channel.hl7.mllp.delete_('{{ item.id }}')">Delete</a></td>
                         <td><a href="javascript:$.fn.zato.channel.hl7.mllp.invoke('{{ item.id }}')">Invoke</a></td>

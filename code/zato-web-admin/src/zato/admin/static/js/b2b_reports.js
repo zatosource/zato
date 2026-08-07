@@ -4,6 +4,25 @@
 $.fn.zato.b2b.reports.config = {
     sortTypeText: 'text',
     sortTypeNumber: 'number',
+
+    // The filter selects of the usage page - what each one is called, what its
+    // everything entry says, what several picks at once are counted in, where each
+    // one is rendered and the face its trigger wears, the same the audit log uses
+    sourceSelectLabel: 'Type',
+    objectSelectLabel: 'Name',
+    allLabel: 'All',
+    manySourcesLabel: 'types',
+    manyObjectsLabel: 'names',
+
+    // Short on purpose - it stands in the same badge All does, so swapping
+    // the two must not resize the select
+    noMatchesLabel: 'None',
+
+    sourceSelectHost: '#report-filter-source',
+    objectSelectHost: '#report-filter-object',
+    sourcesInput: '#report-filter-sources',
+    objectsInput: '#report-filter-objects',
+    filterTriggerCls: 'dashboard-select-face'
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -106,13 +125,136 @@ $.fn.zato.b2b.reports.init = function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.b2b.reports.init_filter_channel = function(inputId) {
-    var input = document.getElementById(inputId);
+$.fn.zato.b2b.reports.init_filter_selects = function(formId, filterOptions, pickedSources, pickedObjects) {
+    var config = $.fn.zato.b2b.reports.config;
+    var kit = $.fn.zato.dashboard_kit;
+    var form = $('#' + formId);
 
-    // The native datalist arrow is hidden, so clicking the field is what
-    // expands the full channel list.
-    input.addEventListener('click', function() {
-        input.showPicker();
+    // The type entries the source select offers, one per covered source
+    var sourceItems = [];
+
+    for (var optionIndex = 0; optionIndex < filterOptions.length; optionIndex++) {
+        var option = filterOptions[optionIndex];
+        sourceItems.push({value: option.source, label: option.label});
+    }
+
+    // The object groups the picked sources leave on offer - each name is listed once,
+    // because the report filters events by name alone
+    var objectGroups = function(sources) {
+        var out = [];
+        var seen = {};
+
+        for (var groupIndex = 0; groupIndex < filterOptions.length; groupIndex++) {
+            var option = filterOptions[groupIndex];
+
+            if (sources.length && sources.indexOf(option.source) === -1) {
+                continue;
+            }
+
+            var items = [];
+
+            for (var objectIndex = 0; objectIndex < option.objects.length; objectIndex++) {
+                var name = option.objects[objectIndex];
+
+                if (seen[name]) {
+                    continue;
+                }
+
+                seen[name] = true;
+                items.push({value: name, label: name});
+            }
+
+            if (items.length) {
+                out.push({group: option.label, items: items});
+            }
+        }
+
+        return out;
+    };
+
+    // Whether an object is still on offer once the sources have changed underneath it
+    var hasObject = function(groups, value) {
+        for (var groupIndex = 0; groupIndex < groups.length; groupIndex++) {
+            var items = groups[groupIndex].items;
+
+            for (var itemIndex = 0; itemIndex < items.length; itemIndex++) {
+                if (items[itemIndex].value === value) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    };
+
+    // The picks reload the report - they land in the hidden inputs and the GET form
+    // carries them, the same way the range tabs do. The reload waits until the menu
+    // closes, so several values can be toggled in one visit.
+    var submitWith = function(sources, objects) {
+        $(config.sourcesInput).val(sources.join(','));
+        $(config.objectsInput).val(objects.join(','));
+        form.trigger('submit');
+    };
+
+    var sourcesChanged = false;
+    var objectsChanged = false;
+
+    var initialObjectGroups = objectGroups(pickedSources);
+
+    var objectSelect = kit.select.create({
+        host: config.objectSelectHost,
+        trigger_cls: config.filterTriggerCls,
+        label: config.objectSelectLabel,
+        groups: initialObjectGroups,
+        multi: true,
+        values: pickedObjects,
+        empty_label: config.allLabel,
+        many_label: config.manyObjectsLabel,
+        disabled_label: config.noMatchesLabel,
+        on_change: function() {
+            objectsChanged = true;
+        },
+        on_close: function() {
+            if (objectsChanged) {
+                submitWith(sourceSelect.get_values(), objectSelect.get_values());
+            }
+        }
+    });
+
+    // With no objects on offer there is nothing to filter by and the select stands aside
+    objectSelect.set_enabled(initialObjectGroups.length > 0);
+
+    var sourceSelect = kit.select.create({
+        host: config.sourceSelectHost,
+        trigger_cls: config.filterTriggerCls,
+        label: config.sourceSelectLabel,
+        groups: [{group: '', items: sourceItems}],
+        multi: true,
+        values: pickedSources,
+        empty_label: config.allLabel,
+        many_label: config.manySourcesLabel,
+        on_change: function() {
+            sourcesChanged = true;
+        },
+        on_close: function() {
+            if (!sourcesChanged) {
+                return;
+            }
+
+            // An object of some source no longer picked is no filter for these
+            var values = sourceSelect.get_values();
+            var newGroups = objectGroups(values);
+            var currentObjects = objectSelect.get_values();
+            var keptObjects = [];
+
+            for (var pickedIndex = 0; pickedIndex < currentObjects.length; pickedIndex++) {
+                if (hasObject(newGroups, currentObjects[pickedIndex])) {
+                    keptObjects.push(currentObjects[pickedIndex]);
+                }
+            }
+
+            submitWith(values, keptObjects);
+        }
     });
 };
 

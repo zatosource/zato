@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import timedelta
+from urllib.parse import quote
 
 # Zato
 from zato.common.as2.audit import record_message_received
@@ -41,6 +42,9 @@ _pair     = f'{_as2_from}:{_as2_to}'
 _our_isa_id     = 'ZATORETAIL'
 _partner_isa_id = 'PARTNERCORP'
 _x12_pair       = f'{_our_isa_id}:{_partner_isa_id}'
+
+# What the pair looks like inside a link - the query string carries it URL-quoted
+_x12_pair_quoted = quote(_x12_pair)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -188,7 +192,7 @@ class TestVolume:
         link = rows[0].link
 
         assert 'source=x12' in link
-        assert f'object_name={_x12_pair}' in link
+        assert f'object_name={_x12_pair_quoted}' in link
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -369,11 +373,11 @@ class TestAckDiscipline:
         row = rows[0]
 
         assert 'source=x12' in row.link
-        assert f'object_name={_x12_pair}' in row.link
+        assert f'object_name={_x12_pair_quoted}' in row.link
         assert 'status=outstanding' not in row.link
 
         assert 'status=outstanding' in row.outstanding_link
-        assert f'object_name={_x12_pair}' in row.outstanding_link
+        assert f'object_name={_x12_pair_quoted}' in row.outstanding_link
 
 # ################################################################################################################################
 # ################################################################################################################################

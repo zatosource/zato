@@ -16,12 +16,14 @@ from http import HTTPStatus
 from itertools import chain
 from time import perf_counter
 from traceback import format_exc
+from urllib.parse import quote
 
 # bunch
 from zato.common.ext.bunch import Bunch
 
 # Django
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseServerError, JsonResponse
+from django.utils.html import escape
 
 # pytz
 from pytz import UTC
@@ -959,8 +961,10 @@ def get_security_name_link(req, sec_type, sec_name, *, needs_type=True):
     if sec_type == SEC_DEF_TYPE.OAUTH:
         sec_type_as_link += '/outconn/client-credentials'
 
-    security_href = f'/zato/security/{sec_type_as_link}/?cluster={req.zato.cluster_id}&amp;query={sec_name}'
-    security_link = f'<a href="{security_href}">{sec_name}</a>'
+    # The name is user-defined and this string is rendered as markup, so the name
+    # is quoted for the query string and escaped for the visible text
+    security_href = f'/zato/security/{sec_type_as_link}/?cluster={req.zato.cluster_id}&amp;query={quote(sec_name)}'
+    security_link = f'<a href="{security_href}">{escape(sec_name)}</a>'
     if needs_type:
         sec_name = f'{sec_type_name}<br/>{security_link}'
     else:

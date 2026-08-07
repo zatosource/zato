@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import timedelta
+from urllib.parse import quote
 
 # SQLAlchemy
 from sqlalchemy import select
@@ -63,8 +64,9 @@ class TestDigestAndEvents:
         assert subject == 'Zato B2B alert digest - 1 finding'
         assert 'msg-1@zato' in body
 
-        # Each line links to the filtered audit log page under the given Dashboard address.
-        assert f'{_dashboard_url}/zato/audit-log/?source=as2&object_name={Pair}' in body
+        # Each line links to the filtered audit log page under the given Dashboard address,
+        # with the pair URL-quoted the way the link builder writes it.
+        assert f'{_dashboard_url}/zato/audit-log/?source=as2&object_name={quote(Pair)}' in body
 
 # ################################################################################################################################
 
