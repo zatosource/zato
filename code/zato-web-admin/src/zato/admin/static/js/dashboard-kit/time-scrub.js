@@ -70,8 +70,8 @@
     };
 
     /* The whole stamp, local time, every part scrubbable - year down to second,
-       with the fraction the event was written down with following as plain text,
-       because no two moments share it and a filter by it would be a filter by one row. */
+       the fraction the event was written down with riding along on its own second,
+       because the two are one moment and a click on either means that second. */
     kit.time_scrub.stamp = function(time_iso) {
         var config = kit.time_scrub.config;
         var moment = new Date(time_iso);
@@ -82,6 +82,12 @@
         var hour = ('0' + moment.getHours()).slice(-2);
         var minute = ('0' + moment.getMinutes()).slice(-2);
         var second = ('0' + moment.getSeconds()).slice(-2);
+
+        var fraction = time_iso.match(/\.(\d+)/);
+
+        if (fraction !== null) {
+            second += '.' + fraction[1];
+        }
 
         var inner = kit.time_scrub.seg('year', year);
         inner += config.date_separator;
@@ -95,22 +101,105 @@
         inner += config.time_separator;
         inner += kit.time_scrub.seg('second', second);
 
-        // The fraction is read, not clicked - it follows the scrubbable parts as it is
-        var fraction = time_iso.match(/\.(\d+)/);
+        return kit.time_scrub.container(time_iso, inner);
+    };
 
-        if (fraction !== null) {
-            inner += '.' + fraction[1];
+    /* One local moment's date, written the way the log's own stamps are. */
+    kit.time_scrub._format_date = function(moment) {
+        var config = kit.time_scrub.config;
+
+        var out = String(moment.getFullYear()) + config.date_separator +
+            ('0' + (moment.getMonth() + 1)).slice(-2) + config.date_separator +
+            ('0' + moment.getDate()).slice(-2);
+
+        return out;
+    };
+
+    /* One local moment's time of day, in full down to the second. */
+    kit.time_scrub._format_time = function(moment) {
+        var config = kit.time_scrub.config;
+
+        var out = ('0' + moment.getHours()).slice(-2) + config.time_separator +
+            ('0' + moment.getMinutes()).slice(-2) + config.time_separator +
+            ('0' + moment.getSeconds()).slice(-2);
+
+        return out;
+    };
+
+    /* Whether a local moment stands at its own day's start - a window whose both
+       edges do is a window of whole days and says nothing about the time of day. */
+    kit.time_scrub._is_day_start = function(moment) {
+        var out = moment.getHours() === 0 && moment.getMinutes() === 0 && moment.getSeconds() === 0;
+        return out;
+    };
+
+    /* What a window reads back as, from its own two edges alone - so the same words
+       come out of a click and out of an address bar being reloaded. Whole days read
+       as dates - one day by its date, one month as "2026-08", one year as "2026".
+       A window of time of day reads both edges out in full, the far edge as the last
+       second still inside - "2026-08-07 10:00:00-10:59:59" - the date said once when
+       both edges share it, and a single second as its own whole stamp. */
+    kit.time_scrub.window_label = function(start, end) {
+        var config = kit.time_scrub.config;
+
+        var start_date = kit.time_scrub._format_date(start);
+
+        // One second is its own whole label
+        if (end.getTime() - start.getTime() === 1000) {
+            return start_date + config.date_time_separator + kit.time_scrub._format_time(start);
         }
 
-        return kit.time_scrub.container(time_iso, inner);
+        // The far edge as the reader sees it - the last second still inside the window,
+        // the poll's own edge staying exclusive as it is
+        var last_inside = new Date(end.getTime() - 1000);
+        var end_date = kit.time_scrub._format_date(last_inside);
+
+        // Whole days carry no time of day worth writing out
+        if (kit.time_scrub._is_day_start(start) && kit.time_scrub._is_day_start(end)) {
+
+            // One day is its date
+            if (end_date === start_date) {
+                return start_date;
+            }
+
+            var is_month_start = start.getDate() === 1 && end.getDate() === 1;
+
+            // One month says the year and the month, one year the year alone
+            if (is_month_start) {
+                var months_apart = (end.getFullYear() - start.getFullYear()) * 12 +
+                    (end.getMonth() - start.getMonth());
+
+                if (months_apart === 12 && start.getMonth() === 0) {
+                    return String(start.getFullYear());
+                }
+
+                if (months_apart === 1) {
+                    return String(start.getFullYear()) + config.date_separator +
+                        ('0' + (start.getMonth() + 1)).slice(-2);
+                }
+            }
+
+            // Any other run of days names its first and its last one
+            return start_date + '-' + end_date;
+        }
+
+        var label = start_date + config.date_time_separator + kit.time_scrub._format_time(start) + '-';
+
+        // A window inside one day says the day once - one crossing days names both in full
+        if (end_date !== start_date) {
+            label += end_date + config.date_time_separator;
+        }
+
+        label += kit.time_scrub._format_time(last_inside);
+
+        return label;
     };
 
     /* The window one clicked unit means - the start of that local year, month, day,
        hour, minute or second up to the start of the next one, both written the way
        the log's own stamps are, UTC with the offset spelled out, and the label the
-       window reads back as, which is the local prefix down to the clicked unit. */
+       window reads back as. */
     kit.time_scrub.window_of = function(time_iso, unit) {
-        var config = kit.time_scrub.config;
         var moment = new Date(time_iso);
 
         var year = moment.getFullYear();
@@ -122,52 +211,36 @@
 
         var start;
         var end;
-        var label;
-
-        // Each label is the stamp cut off at the clicked unit, so the window reads
-        // back exactly the way it was picked
-        var date_label = String(year) + config.date_separator +
-            ('0' + (month + 1)).slice(-2) + config.date_separator +
-            ('0' + day).slice(-2);
 
         if (unit === 'year') {
             start = new Date(year, 0, 1);
             end = new Date(year + 1, 0, 1);
-            label = String(year);
         }
         else if (unit === 'month') {
             start = new Date(year, month, 1);
             end = new Date(year, month + 1, 1);
-            label = String(year) + config.date_separator + ('0' + (month + 1)).slice(-2);
         }
         else if (unit === 'day') {
             start = new Date(year, month, day);
             end = new Date(year, month, day + 1);
-            label = date_label;
         }
         else if (unit === 'hour') {
             start = new Date(year, month, day, hour);
             end = new Date(year, month, day, hour + 1);
-            label = date_label + config.date_time_separator + ('0' + hour).slice(-2);
         }
         else if (unit === 'minute') {
             start = new Date(year, month, day, hour, minute);
             end = new Date(year, month, day, hour, minute + 1);
-            label = date_label + config.date_time_separator +
-                ('0' + hour).slice(-2) + config.time_separator + ('0' + minute).slice(-2);
         }
         else {
             start = new Date(year, month, day, hour, minute, second);
             end = new Date(year, month, day, hour, minute, second + 1);
-            label = date_label + config.date_time_separator +
-                ('0' + hour).slice(-2) + config.time_separator +
-                ('0' + minute).slice(-2) + config.time_separator + ('0' + second).slice(-2);
         }
 
         var out = {
             time_from: start.toISOString().replace('Z', '+00:00'),
             time_to: end.toISOString().replace('Z', '+00:00'),
-            label: label
+            label: kit.time_scrub.window_label(start, end)
         };
 
         return out;
