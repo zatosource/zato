@@ -54,8 +54,9 @@ class TestAuditSource:
 
     def test_hl7_source_and_event_types_exist(self) -> 'None':
 
-        # The HL7 source sits next to the other audit sources ..
-        assert AuditSource.HL7 == 'hl7'
+        # The MLLP sources sit next to the other audit sources, one per direction ..
+        assert AuditSource.MLLP_Channel == 'mllp-channel'
+        assert AuditSource.MLLP_Outgoing == 'mllp-outgoing'
 
         # .. and the four HL7 event types are the shared ones every message exchange uses.
         assert AuditEvent.Message_Received == 'message-received'

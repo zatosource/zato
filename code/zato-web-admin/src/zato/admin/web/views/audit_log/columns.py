@@ -77,8 +77,9 @@ _source_label = {
     AuditSource.Email_SMTP: 'SMTP',
     AuditSource.FHIR: 'FHIR',
     AuditSource.File_Outgoing: 'File transfer',
-    AuditSource.HL7: 'HL7',
     AuditSource.MCP: 'MCP',
+    AuditSource.MLLP_Channel: 'MLLP channels',
+    AuditSource.MLLP_Outgoing: 'MLLP outgoing',
     AuditSource.PubSub: 'Pub/sub',
     AuditSource.REST_Channel: 'REST channels',
     AuditSource.REST_Outgoing: 'REST outgoing',
@@ -98,8 +99,9 @@ _source_event_label = {
     AuditSource.Email_SMTP: 'SMTP',
     AuditSource.FHIR: 'FHIR',
     AuditSource.File_Outgoing: 'File transfer',
-    AuditSource.HL7: 'HL7',
     AuditSource.MCP: 'MCP',
+    AuditSource.MLLP_Channel: 'MLLP channel',
+    AuditSource.MLLP_Outgoing: 'MLLP outgoing',
     AuditSource.PubSub: 'Pub/sub',
     AuditSource.REST_Channel: 'REST channel',
     AuditSource.REST_Outgoing: 'REST outgoing',
@@ -119,8 +121,9 @@ _source_object_label = {
     AuditSource.Email_SMTP: 'Connection',
     AuditSource.FHIR: 'Connection',
     AuditSource.File_Outgoing: 'Connection',
-    AuditSource.HL7: 'Channel',
     AuditSource.MCP: 'Channel',
+    AuditSource.MLLP_Channel: 'Channel',
+    AuditSource.MLLP_Outgoing: 'Connection',
     AuditSource.PubSub: 'Topic',
     AuditSource.REST_Channel: 'Channel',
     AuditSource.REST_Outgoing: 'Connection',
@@ -137,7 +140,8 @@ _source_page_url = {
     AuditSource.SOAP_Channel: f'/zato/http-soap/?cluster={default_cluster_id}&connection=channel&transport=soap',
     AuditSource.REST_Outgoing: f'/zato/http-soap/?cluster={default_cluster_id}&connection=outgoing&transport=plain_http',
     AuditSource.SOAP_Outgoing: f'/zato/http-soap/?cluster={default_cluster_id}&connection=outgoing&transport=soap',
-    AuditSource.HL7: f'/zato/channel/hl7/mllp/?cluster={default_cluster_id}',
+    AuditSource.MLLP_Channel: f'/zato/channel/hl7/mllp/?cluster={default_cluster_id}',
+    AuditSource.MLLP_Outgoing: f'/zato/outgoing/hl7/mllp/?cluster={default_cluster_id}',
     AuditSource.SQL_Outgoing: f'/zato/outgoing/sql/?cluster={default_cluster_id}',
     AuditSource.Email_IMAP: f'/zato/email/imap/?cluster={default_cluster_id}',
     AuditSource.Email_SMTP: f'/zato/email/smtp/?cluster={default_cluster_id}',
@@ -170,8 +174,9 @@ _source_endpoint_label = {
     AuditSource.Email_SMTP: 'Address',
     AuditSource.SQL_Outgoing: 'Database',
     AuditSource.File_Outgoing: 'Remote path',
-    AuditSource.HL7: 'Address',
     AuditSource.MCP: 'Tool',
+    AuditSource.MLLP_Channel: 'Address',
+    AuditSource.MLLP_Outgoing: 'Address',
     AuditSource.FHIR: 'Request',
 }
 
@@ -226,7 +231,8 @@ _source_title = {
     'as4': 'AS4 audit log',
     'x12': 'X12 audit log',
     'mcp': 'MCP audit log',
-    'hl7': 'HL7 audit log',
+    'mllp-channel': 'MLLP channel audit log',
+    'mllp-outgoing': 'Outgoing MLLP audit log',
     'fhir': 'FHIR audit log',
 }
 
@@ -366,7 +372,7 @@ _mcp_columns = [
     {'key': 'data', 'label': 'Data preview', 'type': 'data'},
 ]
 
-_hl7_columns = [
+_mllp_columns = [
     {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
     {'key': 'event_type', 'label': 'Event', 'type': 'text'},
@@ -421,7 +427,8 @@ _source_columns = {
     'as4': _as4_columns,
     'x12': _x12_columns,
     'mcp': _mcp_columns,
-    'hl7': _hl7_columns,
+    'mllp-channel': _mllp_columns,
+    'mllp-outgoing': _mllp_columns,
     'fhir': _fhir_columns,
 }
 
@@ -431,7 +438,8 @@ _source_columns = {
 # Per-source attr columns - these render as columns of their own, read out of the event_attr
 # table in one query per page, and the free-text search covers them through the attr-to-cid shape.
 _source_attr_columns = {
-    'hl7': ('msg_type', 'mrn', 'facility', 'ack_status'),
+    'mllp-channel': ('msg_type', 'mrn', 'facility', 'ack_status'),
+    'mllp-outgoing': ('msg_type', 'mrn', 'facility', 'ack_status'),
     'fhir': ('resource_type', 'method'),
 
     # Who viewed what - a view record is named by these two rather than by an event id
@@ -439,7 +447,7 @@ _source_attr_columns = {
 }
 
 # The sources whose payloads live in the event_body table rather than the data column
-_source_body_preview = {'hl7'}
+_source_body_preview = {'mllp-channel', 'mllp-outgoing'}
 
 # ################################################################################################################################
 # ################################################################################################################################

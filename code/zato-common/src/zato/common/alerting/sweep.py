@@ -52,9 +52,9 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The audit source a rule runs over when it does not set one - the HL7 collector pack
-# is the first consumer of the sweep, so its source is the default.
-Default_Source = AuditSource.HL7
+# The audit source a rule runs over when it does not set one - the MLLP channels were
+# the first consumers of the sweep, so their source is the default.
+Default_Source = AuditSource.MLLP_Channel
 
 # The event types the follow-up collectors pair up when a rule does not name its own -
 # sent-not-acked is the canonical absence check.

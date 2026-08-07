@@ -55,7 +55,7 @@ class TestEnmasseAlertRuleExporter(TestCase):
         self.rule_def = {
             'name': f'enmasse.test_alert_rule_export_{unique_suffix}',
             'kind': 'missing-followup',
-            'source': 'hl7',
+            'source': 'mllp-channel',
             'object_name': 'channel.oru.inbound',
             'action': 'teams',
             'action_config': {'webhook_url': 'https://example.webhook.office.com/webhookb2/abc'},

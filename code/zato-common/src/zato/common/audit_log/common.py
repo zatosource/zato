@@ -60,7 +60,8 @@ class AuditSource:
     AS4           = 'as4'
     X12           = 'x12'
     MCP           = 'mcp'
-    HL7           = 'hl7'
+    MLLP_Channel  = 'mllp-channel'
+    MLLP_Outgoing = 'mllp-outgoing'
     FHIR          = 'fhir'
     Config        = 'config'
 

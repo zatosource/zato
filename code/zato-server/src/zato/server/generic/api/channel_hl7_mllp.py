@@ -25,6 +25,7 @@ from zato.common.typing_ import cast_
 from zato.common.util.api import asbool, hex_sequence_to_bytes, spawn_greenlet
 from zato.server.connection.wrapper import Wrapper
 from zato.server.destination.channel import new_channel_item, run_for_channel
+from zato.server.destination.hook import get_message_text
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -56,18 +57,6 @@ channel_int_config_keys = Channel_Int_Names
 # What a channel is left accepting when the security definition it names cannot be resolved.
 # No certificate carries this, so the channel refuses everything rather than everything through.
 _Unresolvable_Common_Name = '\x00unresolvable'
-
-# ################################################################################################################################
-
-def _get_message_text(data:'any_') -> 'str':
-    """ Returns the ER7 text of what the listener handed a channel - a channel that parses on
-    input is given a parsed message and one that does not is given the text itself.
-    """
-    if isinstance(data, str):
-        return data
-
-    out = data.to_er7()
-    return out
 
 # What serialises the workers that all hold the same channel when its REST bridge is deleted
 _Rest_Channel_Lock_Prefix = 'zato.channel.hl7.mllp.rest-channel.'
@@ -244,7 +233,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
         """
         # A channel that parses on input is handed a parsed message, and what a destination
         # receives is the message rather than an object, so the text of it is what goes out
-        message_text = _get_message_text(data)
+        message_text = get_message_text(data)
 
         result = run_for_channel(self.parallel_server, self._build_channel_item(), message_text, cid=cid)
 

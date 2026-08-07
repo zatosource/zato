@@ -395,7 +395,7 @@ class TestMLLPAudit:
             audit_db_path, 'test-mllp-audit-accept', 1, AuditEvent.Message_Received)
 
         received = received_events[-1]
-        assert received['source'] == AuditSource.HL7
+        assert received['source'] == AuditSource.MLLP_Channel
         assert received['msg_id'] == 'AUDIT-001'
         assert received['outcome'] == AuditOutcome.OK
 
@@ -579,7 +579,7 @@ class TestMLLPAudit:
             audit_db_path, _forward_outconn_name, 1, AuditEvent.Message_Sent)
 
         sent = sent_events[-1]
-        assert sent['source'] == AuditSource.HL7
+        assert sent['source'] == AuditSource.MLLP_Outgoing
         assert sent['msg_id'] == 'AUDIT-FWD-001'
         assert sent['endpoint'] == f'127.0.0.1:{backend_port}'
 
@@ -599,7 +599,7 @@ class TestMLLPAudit:
 
     def test_07_rest_channel_is_retagged_as_hl7(self, zato_client:'object', zato_server:'dict') -> 'None':
         """ HL7 arriving over REST is re-tagged at the writer - the events land
-        as the HL7 source with HL7 fields, not as rest-channel noise.
+        as the channel-side MLLP source with HL7 fields, not as rest-channel noise.
         """
         audit_db_path = zato_server['audit_db_path']
 
@@ -639,7 +639,7 @@ class TestMLLPAudit:
             audit_db_path, self.__class__.rest_channel_name, 1, AuditEvent.Message_Received)
 
         received = received_events[-1]
-        assert received['source'] == AuditSource.HL7
+        assert received['source'] == AuditSource.MLLP_Channel
         assert received['msg_id'] == 'AUDIT-REST-001'
 
         attrs = _get_attr_map(audit_db_path, received['id'])
@@ -651,7 +651,7 @@ class TestMLLPAudit:
             audit_db_path, self.__class__.rest_channel_name, 1, AuditEvent.Ack_Sent)
 
         ack = ack_events[-1]
-        assert ack['source'] == AuditSource.HL7
+        assert ack['source'] == AuditSource.MLLP_Channel
         assert ack['cid'] == received['cid']
 
 # ################################################################################################################################

@@ -79,7 +79,7 @@ class _TransportRecorder:
 # ################################################################################################################################
 
 def _new_finding(*, severity:'str'=AlertSeverity.Warning) -> 'Finding':
-    out = new_finding(FindingKind.Feed_Silent, AuditSource.HL7, _channel_name,
+    out = new_finding(FindingKind.Feed_Silent, AuditSource.MLLP_Channel, _channel_name,
         'Feed on `hl7.test.channel` silent for 400s', link='/zato/hl7/channels/', severity=severity)
     return out
 
@@ -349,7 +349,7 @@ class TestAuditTrail:
 
         row = dict(rows[0]._mapping)
 
-        assert row['source'] == AuditSource.HL7
+        assert row['source'] == AuditSource.MLLP_Channel
         assert row['object_name'] == _channel_name
         assert row['cid'] == 'cid-trail'
 

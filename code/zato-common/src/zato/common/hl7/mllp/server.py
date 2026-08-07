@@ -82,6 +82,10 @@ _MSH9_Field_Index = 8
 # acknowledgment that destination gave it, and everything else is not an answer at all.
 _Reply_Segment_Prefix = 'MSH'
 
+# What a message that matched no channel is filed under in the audit log - there is no channel
+# whose name it could carry, yet a turned-away message is still worth finding afterwards
+Unmatched_Object_Name = 'unmatched'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -726,15 +730,21 @@ class HL7MLLPServer:
             else:
                 channel_state = None
 
-            # .. a message is audited when its channel says so - with no route there is no channel
-            # .. to ask, and the channel it is filed under is what says afterwards whether it was ..
+            # .. a matched message is audited when its channel says so, and one that matched
+            # .. nothing is always audited, filed under a reserved name of its own, since there
+            # .. is no channel whose audit setting could be consulted ..
             audit_log = self.audit_log
             audit_channel_name = ''
 
+            if audit_log:
+                if matched_route is None:
+                    audit_channel_name = Unmatched_Object_Name
+                elif matched_route.is_audit_log_active:
+                    audit_channel_name = matched_route.channel_name
+
             # .. the received event and its acknowledgment share one correlation id,
             # .. with the wire-level attributes as the fallback the parsed ones replace ..
-            if audit_log and matched_route and matched_route.is_audit_log_active:
-                audit_channel_name = matched_route.channel_name
+            if audit_channel_name:
                 audit_cid = new_cid_server()
                 audit_msg_id = extract_control_id(msh_line)
                 audit_attrs = get_wire_attrs(msh_line)
@@ -756,6 +766,13 @@ class HL7MLLPServer:
                     connection_context.endpoint, msh_line)
                 ack_code = 'AR'
                 error_text = 'No matching channel for this message'
+
+                # .. a turned-away message still leaves its receipt behind, the acknowledgment
+                # .. that answers it landing on the same correlation id further below ..
+                if audit_log and audit_channel_name:
+                    _ = audit_message_received(
+                        audit_log, audit_channel_name, message_text,
+                        cid=audit_cid, msg_id=audit_msg_id, attrs=audit_attrs, endpoint=peer_endpoint)
 
             # .. invoke the matched route's callback ..
             else:

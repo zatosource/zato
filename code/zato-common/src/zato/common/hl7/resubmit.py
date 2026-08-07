@@ -141,7 +141,7 @@ def resend(
     # so the delivery history has no holes - then the caller learns about it.
     except Exception as e:
         _ = audit_log.insert(
-            AuditSource.HL7, AuditEvent.Message_Sent, event.object_name,
+            AuditSource.MLLP_Outgoing, AuditEvent.Message_Sent, event.object_name,
             outcome=AuditOutcome.Error, status=str(e), **values)
         raise
 
@@ -150,7 +150,7 @@ def resend(
     out.control_id = control_id
 
     out.event_id = audit_log.insert(
-        AuditSource.HL7, AuditEvent.Message_Sent, event.object_name,
+        AuditSource.MLLP_Outgoing, AuditEvent.Message_Sent, event.object_name,
         outcome=AuditOutcome.OK, **values)
 
     # An acknowledgment that rode back on the send is interpreted and recorded
@@ -164,7 +164,7 @@ def resend(
         out.ack_outcome = ack_result.outcome
 
         _ = audit_log.insert(
-            AuditSource.HL7, AuditEvent.Ack_Received, event.object_name,
+            AuditSource.MLLP_Outgoing, AuditEvent.Ack_Received, event.object_name,
             cid=cid,
             msg_id=control_id,
             correl_id=event.cid,
@@ -225,7 +225,7 @@ def reprocess(
     out.destination_names = destination_names
 
     out.event_id = audit_log.insert(
-        AuditSource.HL7, AuditEvent.Message_Received, event.object_name,
+        AuditSource.MLLP_Channel, AuditEvent.Message_Received, event.object_name,
         cid=cid,
         msg_id=control_id,
         correl_id=event.cid,
@@ -241,10 +241,11 @@ def reprocess(
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The HL7 handlers are found through the shared registry - the service layer
-# supplies the callables when it wires the real connections in.
-register_resubmit_handler(AuditSource.HL7, Action_Resend, resend)
-register_resubmit_handler(AuditSource.HL7, Action_Reprocess, reprocess)
+# The HL7 handlers are found through the shared registry - the service layer supplies
+# the callables when it wires the real connections in. A resend repeats a delivery an
+# outgoing connection made, while a reprocess re-runs what a channel received.
+register_resubmit_handler(AuditSource.MLLP_Outgoing, Action_Resend, resend)
+register_resubmit_handler(AuditSource.MLLP_Channel, Action_Reprocess, reprocess)
 
 # ################################################################################################################################
 # ################################################################################################################################

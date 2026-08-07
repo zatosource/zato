@@ -122,7 +122,7 @@ $.fn.zato.channel.hl7.dashboard.range_names = {
     // The address of the audit log pre-filtered to one channel.
     dash.audit_href = function(name) {
         var href = dash.config.audit_log_page;
-        href += '?source=hl7';
+        href += '?source=mllp-channel';
         href += '&object_name=' + encodeURIComponent(name);
         href += '&cluster=' + dash.config.cluster_id;
 

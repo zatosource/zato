@@ -257,7 +257,7 @@ def _run_view_event_checks(audit_log:'AuditLog') -> 'None':
     """
 
     # The event whose body is about to be viewed
-    viewed_id = audit_log.insert(AuditSource.HL7, AuditEvent.Message_Received, 'config.test.mllp',
+    viewed_id = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Message_Received, 'config.test.mllp',
         cid='cid-view-target', outcome=AuditOutcome.OK)
 
     view_id = record_view_event(
@@ -266,7 +266,7 @@ def _run_view_event_checks(audit_log:'AuditLog') -> 'None':
         viewed_event_id=viewed_id,
         screen='details-overlay',
         cid='cid-view-1',
-        viewed_source=AuditSource.HL7,
+        viewed_source=AuditSource.MLLP_Channel,
         viewed_object_name='config.test.mllp',
     )
 
@@ -279,7 +279,7 @@ def _run_view_event_checks(audit_log:'AuditLog') -> 'None':
     payload = loads(row['data'])
     assert payload['actor'] == _viewer
     assert payload['viewed_event_id'] == viewed_id
-    assert payload['viewed_source'] == AuditSource.HL7
+    assert payload['viewed_source'] == AuditSource.MLLP_Channel
     assert payload['viewed_object_name'] == 'config.test.mllp'
 
     # The viewer and the viewed event are both searchable ..
@@ -289,7 +289,7 @@ def _run_view_event_checks(audit_log:'AuditLog') -> 'None':
 
     # .. so are the source and object of the viewed event - "who viewed the messages
     # of this channel" is one attribute query ..
-    assert attr_map['viewed_source'][0] == AuditSource.HL7
+    assert attr_map['viewed_source'][0] == AuditSource.MLLP_Channel
     assert attr_map['viewed_object_name'][0] == 'config.test.mllp'
 
     # .. the viewed event id is numeric so it can join against the event table ..

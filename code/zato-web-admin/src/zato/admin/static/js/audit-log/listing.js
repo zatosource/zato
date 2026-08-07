@@ -123,7 +123,7 @@ listing.config = {
     recencyRGB: '218, 165, 32',
 
     // How often the listing asks for what has arrived since, until it is told otherwise
-    refreshDefaultSeconds: 0,
+    refreshDefaultSeconds: 5,
 
     // The columns the list draws places of its own for, so the neutral presenter knows
     // which of a source's columns are left to become chips

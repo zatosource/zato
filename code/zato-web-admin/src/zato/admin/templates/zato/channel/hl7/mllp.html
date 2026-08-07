@@ -170,7 +170,7 @@
                         {# The outgoing connections each message is delivered to, written in by the page #}
                         <td id="mllp-destinations-cell-{{ item.id }}"></td>
 
-                        <td><a href="/zato/audit-log/?source=hl7&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a></td>
+                        <td><a href="/zato/audit-log/?source=mllp-channel&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a></td>
                         <td><a href="{% url "channel-hl7-mllp-wizard-edit" item.id %}?cluster={{ cluster_id }}">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.channel.hl7.mllp.delete_('{{ item.id }}')">Delete</a></td>
                         <td><a href="javascript:$.fn.zato.channel.hl7.mllp.invoke('{{ item.id }}')">Invoke</a></td>

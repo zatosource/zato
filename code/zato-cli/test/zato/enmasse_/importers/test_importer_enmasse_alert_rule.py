@@ -74,7 +74,7 @@ class TestEnmasseAlertRules(TestCase):
         rule_defs = [{
             'name': f'enmasse.test_alert_rule_{unique_suffix}',
             'kind': 'feed-silent',
-            'source': 'hl7',
+            'source': 'mllp-channel',
             'object_name': 'channel.adt.inbound',
             'action': 'slack',
             'action_config': {'webhook_url': 'https://hooks.slack.example.com/services/abc'},

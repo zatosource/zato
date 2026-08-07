@@ -87,7 +87,7 @@ def get_channel_dashboard(engine:'Engine', now:'datetime', time_range:'str') -> 
         func.count(),
         func.max(event_table.c.event_time_iso),
     )
-    query = query.where(event_table.c.source == AuditSource.HL7)
+    query = query.where(event_table.c.source == AuditSource.MLLP_Channel)
     query = query.where(event_table.c.event_type == AuditEvent.Ack_Sent)
     query = query.where(period_column >= cutoff_period)
     query = query.group_by(event_table.c.object_name, period_column, event_table.c.outcome)

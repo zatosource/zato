@@ -63,7 +63,7 @@ _source_outstanding = {
     'as2': _new_outstanding_filter(AuditEvent.Message_Sent, AuditEvent.MDN_Received, False),
     'as4': _new_outstanding_filter(AuditEvent.Message_Sent, AuditEvent.Receipt_Received, True),
     'x12': _new_outstanding_filter(AuditEvent.Interchange_Sent, AuditEvent.Ack_Received, True),
-    'hl7': _new_outstanding_filter(AuditEvent.Message_Sent, AuditEvent.Ack_Received, True),
+    'mllp-outgoing': _new_outstanding_filter(AuditEvent.Message_Sent, AuditEvent.Ack_Received, True),
 }
 
 # ################################################################################################################################
@@ -81,13 +81,17 @@ _as4_resubmit = {
     AuditEvent.Message_Received: {'label': 'Reprocess', 'service': 'zato.audit-log.as4.reprocess'},
 }
 
-_hl7_resubmit = {
-    AuditEvent.Message_Sent:     {'label': 'Resend',    'service': 'zato.audit-log.hl7.resend'},
+# What a channel received is re-run through the channel's own machinery
+_mllp_channel_resubmit = {
     AuditEvent.Message_Received: {'label': 'Reprocess', 'service': 'zato.audit-log.hl7.reprocess'},
+}
 
-    # A message a channel fanned out to one of its destinations is repeated per hop, that one
-    # delivery going out again without the rest of the destinations being involved
-    AuditEvent.Request_Sent:     {'label': 'Resend',    'service': 'zato.audit-log.resend-hop'},
+# What an outgoing connection delivered is sent through it again, and a message a channel
+# fanned out to one of its destinations is repeated per hop, that one delivery going out
+# again without the rest of the destinations being involved
+_mllp_outgoing_resubmit = {
+    AuditEvent.Message_Sent: {'label': 'Resend', 'service': 'zato.audit-log.hl7.resend'},
+    AuditEvent.Request_Sent: {'label': 'Resend', 'service': 'zato.audit-log.resend-hop'},
 }
 
 # One recorded delivery to one destination is repeated on its own, whatever kind of connection
@@ -100,7 +104,8 @@ _hop_resubmit = {
 _source_resubmit = {
     'as2': _as2_resubmit,
     'as4': _as4_resubmit,
-    'hl7': _hl7_resubmit,
+    'mllp-channel': _mllp_channel_resubmit,
+    'mllp-outgoing': _mllp_outgoing_resubmit,
     'fhir': _hop_resubmit,
     'rest-outgoing': _hop_resubmit,
     'email-smtp': _hop_resubmit,
@@ -297,7 +302,8 @@ def render_view_record(engine:'any_', data:'str', event_time_iso:'str') -> 'str'
 # is not here - its view records resolve against the database and the details view
 # calls render_view_record for them itself.
 _source_parse = {
-    'hl7': _render_hl7_parsed,
+    'mllp-channel': _render_hl7_parsed,
+    'mllp-outgoing': _render_hl7_parsed,
 }
 
 # ################################################################################################################################
