@@ -230,47 +230,75 @@ def ensure_demo_service(server:'ParallelServer') -> 'bool':
 
 # ################################################################################################################################
 
+def _build_connection_request(connection_def:'stranydict') -> 'stranydict':
+    """ Builds the request a demo connection is created or corrected with - the type's own
+    defaults first so that what the demo asks for wins over them, the audit log being on among it.
+    """
+    out = dict(_type_defaults[connection_def['type_']])
+
+    out.update({
+        'cluster_id': default_cluster_id,
+        'is_active': True,
+        'is_internal': False,
+        'pool_size': 1,
+        'is_audit_log_active': True,
+    })
+    out.update(connection_def)
+
+    return out
+
+# ################################################################################################################################
+
 def ensure_demo_connections(server:'ParallelServer') -> 'strlist':
     """ Creates the demo channels and outgoing connections that are not there yet. The ones
     already in place keep running as they are - recreating them would restart their wrappers
-    and every rerun would then wait for the listeners to come back up. Returns the names created.
+    and every rerun would then wait for the listeners to come back up. The one exception is
+    a stored address that no longer says what the demo definition says - an earlier import's
+    address left in place would keep pointing the connection at something real, so it is
+    corrected in place. Returns the names created or corrected.
     """
 
-    # What already exists is read straight from the database
+    # What already exists is read straight from the database, the address included,
+    # because a stale one is the one thing a rerun does correct
     demo_names = [connection_def['name'] for connection_def in _connection_defs]
 
     with closing(server.odb.session()) as session:
-        rows = session.query(GenericConn.name).filter(GenericConn.name.in_(demo_names)).all()
+        rows = session.query(GenericConn.id, GenericConn.name, GenericConn.address).filter(
+            GenericConn.name.in_(demo_names)).all()
 
-    existing_names = set()
+    existing_by_name = {}
 
     for row in rows:
-        existing_names.add(row[0])
+        existing_by_name[row[1]] = row
 
     # Our response to produce
     out:'strlist' = []
 
     for connection_def in _connection_defs:
 
-        # A connection an earlier import created keeps running as it is
-        if connection_def['name'] in existing_names:
+        name = connection_def['name']
+
+        # A connection an earlier import created keeps running as it is, unless its address
+        # no longer matches the definition - only the outconns carry one to compare
+        if name in existing_by_name:
+
+            existing = existing_by_name[name]
+
+            if 'address' in connection_def:
+                if existing[2] != connection_def['address']:
+
+                    request = _build_connection_request(connection_def)
+                    request['id'] = existing[0]
+
+                    _ = server.invoke('zato.generic.connection.edit', request)
+                    out.append(name)
+
             continue
 
-        # The type's own defaults go in first so that what the demo asks for wins over them,
-        # the audit log being on among it
-        request = dict(_type_defaults[connection_def['type_']])
-
-        request.update({
-            'cluster_id': default_cluster_id,
-            'is_active': True,
-            'is_internal': False,
-            'pool_size': 1,
-            'is_audit_log_active': True,
-        })
-        request.update(connection_def)
+        request = _build_connection_request(connection_def)
 
         _ = server.invoke('zato.generic.connection.create', request)
-        out.append(connection_def['name'])
+        out.append(name)
 
     return out
 

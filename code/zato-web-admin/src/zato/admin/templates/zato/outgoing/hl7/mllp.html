@@ -5,6 +5,9 @@
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/zato_highlight_pane.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
 {% endblock %}
 
@@ -19,6 +22,12 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
 
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/ace.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/mode-hl7.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_ui_helpers.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_highlight_pane.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/invoker.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/hl7/mllp.js"></script>
 
@@ -35,10 +44,10 @@
             '_is_active',
             'address',
             'pool_size',
-            '_invoke',
             '_audit_log',
             '_edit',
             '_delete',
+            '_invoke',
             'id',
         ]
     }
@@ -77,9 +86,9 @@
                         <th><a href="#">Address</a></th>
 
                         <th><a href="#">Pool size</a></th>
-                        <th></th>
 
                         {% comment %} 2 {% endcomment %}
+                        <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
@@ -100,13 +109,11 @@
                         <td>{{ item.address }}</td>
 
                         <td>{{ item.pool_size }}</td>
-                        <td>
-                            <a href="{% url "outgoing-hl7-mllp-invoke" item.id item.max_wait_time item.name item.name|slugify %}?cluster={{ cluster_id }}">Invoke</a>
-                        </td>
 
                         <td><a href="/zato/audit-log/?source=hl7&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a></td>
                         <td><a href="{% url "outgoing-hl7-mllp-wizard-edit" item.id %}?cluster={{ cluster_id }}">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.hl7.mllp.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.hl7.mllp.invoke('{{ item.id }}')">Invoke</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
 
                     </tr>
