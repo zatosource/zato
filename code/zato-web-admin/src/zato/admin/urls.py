@@ -388,6 +388,8 @@ urlpatterns += [
 
     url(r'^zato/message-flow/$',
         login_required(message_flow.index), name='message-flow'),
+    url(r'^zato/message-flow/demo/$',
+        login_required(message_flow.demo), name='message-flow-demo'),
     url(r'^zato/message-flow/journey/$',
         login_required(audit_log.journey), name='message-flow-journey'),
 

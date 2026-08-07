@@ -275,6 +275,13 @@ def _run_view_event_checks(audit_log:'AuditLog') -> 'None':
     assert row['event_type'] == AuditEvent.Content_Viewed
     assert row['object_name'] == 'details-overlay'
 
+    # The payload alone answers who viewed what - no attr table needed to read it
+    payload = loads(row['data'])
+    assert payload['actor'] == _viewer
+    assert payload['viewed_event_id'] == viewed_id
+    assert payload['viewed_source'] == AuditSource.HL7
+    assert payload['viewed_object_name'] == 'config.test.mllp'
+
     # The viewer and the viewed event are both searchable ..
     attr_map = _get_attr_map(cast_('any_', view_id))
     assert attr_map['actor'][0] == _viewer

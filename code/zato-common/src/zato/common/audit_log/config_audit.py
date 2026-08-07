@@ -224,7 +224,10 @@ def record_view_event(
     if viewed_object_name:
         attrs['viewed_object_name'] = viewed_object_name
 
+    # The payload itself says who viewed what - an auditor reading this one record
+    # alone, with no attr table in front of them, still has the whole answer
     data = dumps({
+        'actor': actor,
         'viewed_event_id': viewed_event_id,
         'screen': screen,
         'viewed_source': viewed_source,

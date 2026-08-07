@@ -38,7 +38,6 @@ panel.config = {
     // What the panel says about the event, each one left out when the event has nothing to
     // put there and when the line above it already said it
     cidLabel: 'CID',
-    controlIdLabel: 'Control id',
     correlIdLabel: 'Correlation id',
     endpointLabel: 'Endpoint',
     statusLabel: 'Status',
@@ -77,9 +76,12 @@ panel.facts = function(rowModel) {
     var facts = [];
 
     // What the event is named by is what other events are found by, so each of these is offered
-    // for the list to be asked for
+    // for the list to be asked for. The name of the source's own identity - control id,
+    // message id - comes from the source's presenter.
+    var presenter = $.fn.zato.audit_log.presenterFor(rowModel.source);
+
     panel.pushFact(facts, rowModel, config.cidLabel, rowModel.cid, rowModel.cid);
-    panel.pushFact(facts, rowModel, config.controlIdLabel, rowModel.msgId, rowModel.msgId);
+    panel.pushFact(facts, rowModel, presenter.identityLabel, rowModel.msgId, rowModel.msgId);
     panel.pushFact(facts, rowModel, config.correlIdLabel, rowModel.correlId, rowModel.correlId);
     panel.pushFact(facts, rowModel, config.endpointLabel, rowModel.endpoint, rowModel.endpoint);
     panel.pushFact(facts, rowModel, config.statusLabel, rowModel.status, rowModel.status);

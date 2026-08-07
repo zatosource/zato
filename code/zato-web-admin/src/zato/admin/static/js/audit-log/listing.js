@@ -40,6 +40,9 @@ listing.config = {
     flowPagePath: '/zato/message-flow/',
     openFlowLabel: 'Open flow',
 
+    // What stands in for a message body that could not be read
+    detailsErrorLabel: 'Could not load the message',
+
     // What the proportions of one source's listing are remembered under
     storagePrefix: 'zato_audit_log_layout_',
     refreshStorageKey: 'zato_audit_log_refresh',
@@ -285,14 +288,9 @@ listing.buildRow = function(row) {
         actionLabel: $.fn.zato.audit_log.config.resubmitLabels[row.event_type]
     };
 
-    // A source names its messages by whatever it calls a control id, and one with no
-    // name of its own for them is read by the CID the message travelled under.
-    if (out.msgId === '') {
-        out.controlId = out.cid;
-    }
-    else {
-        out.controlId = out.msgId;
-    }
+    // A source names its messages by something of its own - its control id, its message
+    // id - and the presenter is where the source says what that is.
+    out.identity = presenter.identity(row);
 
     out.chips = presenter.chips(row);
     out.headline = presenter.headline(row);
@@ -300,7 +298,7 @@ listing.buildRow = function(row) {
     // An event a source has no name of its own for is still called something, so the pane
     // heading it always reads as the message the list was pointed at.
     if (out.headline === '') {
-        out.headline = out.controlId;
+        out.headline = out.identity;
     }
 
     return out;
@@ -638,6 +636,16 @@ listing.fetchDetails = function(eventId, kind, isPreview, onDone) {
                 data = JSON.parse(data);
             }
             onDone(data);
+        },
+
+        // A failed read says so where the body would have stood - without this,
+        // whatever pane asked keeps its spinner up forever
+        error: function(jqXHR) {
+            onDone({
+                data: listing.config.detailsErrorLabel + ' - HTTP ' + jqXHR.status,
+                parsed: '',
+                total_len: 0
+            });
         }
     });
 };

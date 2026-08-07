@@ -304,6 +304,9 @@ _source_columns = {
 _source_attr_columns = {
     'hl7': ('msg_type', 'mrn', 'facility', 'ack_status'),
     'fhir': ('resource_type', 'method'),
+
+    # Who viewed what - a view record is named by these two rather than by an event id
+    'config': ('actor', 'viewed_object_name'),
 }
 
 # The sources whose payloads live in the event_body table rather than the data column

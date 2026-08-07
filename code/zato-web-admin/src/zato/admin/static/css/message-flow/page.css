@@ -333,7 +333,7 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     font-size: 10px;
 }
 
-.message-flow-control-id {
+.message-flow-identity {
     fill: var(--message-flow-selected-text);
     font-size: 11px;
     font-weight: 700;
@@ -564,7 +564,7 @@ svg.message-flow-focus .message-flow-branch:not(.message-flow-lit) {
     font-size: 10px;
 }
 
-.message-flow-detail-control-id {
+.message-flow-detail-identity {
     color: var(--message-flow-selected-text);
     font-weight: 700;
 }

@@ -90,10 +90,12 @@ drawing.config = {
     arrowWidth: 4.5,
     branchElbowOffset: 16,
 
-    // The message itself, standing before its deliveries
+    // The message itself, standing before its deliveries - two lines tall when
+    // it has a control id to show under its name, one line tall when it does not
     hubX: 24,
     hubMinWidth: 200,
     hubHeight: 64,
+    hubHeightOneLine: 40,
     hubFanGap: 40,
 
     // The room the drawing keeps around itself
@@ -669,9 +671,10 @@ drawing.render = function(models, seedModel) {
 
     drawing.clear();
 
-    // What the message is known by - the hub's own words
+    // What the message is known by - the hub's own words, the headline above
+    // and the source's own identity for the message under it
     var hubTitle = seedModel.headline;
-    var hubControlId = seedModel.controlId;
+    var hubIdentity = seedModel.identity;
 
     // The exchanges, their pointed links and the rows they lay out into
     var exchanges = drawing.buildExchanges(models);
@@ -702,8 +705,8 @@ drawing.render = function(models, seedModel) {
 
     // The hub is as wide as its own words ask, and the fan starts past it
     var hubTitleWidth = Math.round(hubTitle.length * config.titleCharWidth) + 4 * config.bodyPadLeft;
-    var hubControlIdWidth = Math.round(hubControlId.length * config.titleCharWidth) + 4 * config.bodyPadLeft;
-    var hubWidth = Math.max(config.hubMinWidth, hubTitleWidth, hubControlIdWidth);
+    var hubIdentityWidth = Math.round(hubIdentity.length * config.titleCharWidth) + 4 * config.bodyPadLeft;
+    var hubWidth = Math.max(config.hubMinWidth, hubTitleWidth, hubIdentityWidth);
 
     var hubRight = config.hubX + hubWidth;
     var fanX = hubRight + config.hubFanGap;
@@ -871,9 +874,13 @@ drawing.render = function(models, seedModel) {
         }
     }
 
-    // The message itself, standing before all of its deliveries
+    // The message itself, standing before all of its deliveries. The card is only
+    // as tall as it has words - a message says its identity under its name, and the
+    // rare one whose identity is genuinely empty stands as a single centred line.
     var hub = drawing.addGroup(svg, 'message-flow-node message-flow-node-selectable message-flow-root');
-    var hubTop = hubCenterY - config.hubHeight / 2;
+
+    var hubHeight = hubIdentity === '' ? config.hubHeightOneLine : config.hubHeight;
+    var hubTop = hubCenterY - hubHeight / 2;
 
     hub.setAttribute('data-node-index', drawing.nodeDetails.length);
     drawing.nodeDetails.push({
@@ -882,11 +889,18 @@ drawing.render = function(models, seedModel) {
         models: [seedModel]
     });
 
-    kit.draw.addRect(hub, config.hubX, hubTop, hubWidth, config.hubHeight, 'message-flow-box', 4);
+    kit.draw.addRect(hub, config.hubX, hubTop, hubWidth, hubHeight, 'message-flow-box', 4);
     drawing.addPolyline(hub, [[config.hubX + 4, hubTop + 1], [config.hubX + hubWidth - 4, hubTop + 1]],
         'message-flow-rim');
-    kit.draw.addText(hub, config.hubX + hubWidth / 2, hubCenterY - 8, hubTitle, 'message-flow-title', 'middle');
-    kit.draw.addText(hub, config.hubX + hubWidth / 2, hubCenterY + 14, hubControlId, 'message-flow-control-id', 'middle');
+
+    if (hubIdentity === '') {
+        kit.draw.addText(hub, config.hubX + hubWidth / 2, hubCenterY + 5, hubTitle, 'message-flow-title', 'middle');
+    }
+    else {
+        kit.draw.addText(hub, config.hubX + hubWidth / 2, hubCenterY - 8, hubTitle, 'message-flow-title', 'middle');
+        kit.draw.addText(hub, config.hubX + hubWidth / 2, hubCenterY + 14, hubIdentity,
+            'message-flow-identity', 'middle');
+    }
 
     drawing.wireDrawing(svg);
 
