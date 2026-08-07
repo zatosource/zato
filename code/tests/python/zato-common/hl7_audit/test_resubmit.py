@@ -97,9 +97,15 @@ def audit_db_env(tmp_path:'os.PathLike') -> 'any_':
 # ################################################################################################################################
 
 def _seed_event(audit_log:'AuditLog', event_type:'str', object_name:'str', payload:'str') -> 'int':
-    """ Stores one original event the way the live pipeline would have recorded it.
+    """ Stores one original event the way the live pipeline would have recorded it -
+    a sent message under the outgoing source and a received one under the channel source.
     """
-    out = audit_log.insert(AuditSource.HL7, event_type, object_name,
+    if event_type == AuditEvent.Message_Sent:
+        source = AuditSource.MLLP_Outgoing
+    else:
+        source = AuditSource.MLLP_Channel
+
+    out = audit_log.insert(source, event_type, object_name,
         cid='cid-original', msg_id='MSG000001', outcome=AuditOutcome.Error,
         status='Connection timeout', data=dumps({'payload': payload}))
 
@@ -458,9 +464,10 @@ class TestRegistry:
 
     def test_the_hl7_handlers_are_registered(self) -> 'None':
 
-        # The service layer finds the HL7 semantics through the shared registry.
-        assert get_resubmit_handler(AuditSource.HL7, Action_Resend) is resend
-        assert get_resubmit_handler(AuditSource.HL7, Action_Reprocess) is reprocess
+        # The service layer finds the HL7 semantics through the shared registry - a resend
+        # repeats an outgoing delivery and a reprocess re-runs what a channel received.
+        assert get_resubmit_handler(AuditSource.MLLP_Outgoing, Action_Resend) is resend
+        assert get_resubmit_handler(AuditSource.MLLP_Channel, Action_Reprocess) is reprocess
 
 # ################################################################################################################################
 # ################################################################################################################################

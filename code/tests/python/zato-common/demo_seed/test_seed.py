@@ -121,7 +121,7 @@ class TestSeedContents:
         """
         _ = _run_seed()
 
-        events = _get_events(event_type=AuditEvent.Message_Received, source=AuditSource.HL7)
+        events = _get_events(event_type=AuditEvent.Message_Received, source=AuditSource.MLLP_Channel)
 
         days = set()
 
@@ -267,7 +267,7 @@ class TestSeedContents:
         """
         result = _run_seed()
 
-        received = _get_events(event_type=AuditEvent.Message_Received, source=AuditSource.HL7)
+        received = _get_events(event_type=AuditEvent.Message_Received, source=AuditSource.MLLP_Channel)
         chain_events = [event for event in received if event['cid'].startswith('demo-rp')]
 
         # Every chain has its first hop, and every few chains a second one
@@ -409,10 +409,10 @@ class TestSeedBehaviour:
         """ Two runs with one seed produce the same events at the same moments.
         """
         _ = _run_seed()
-        first_events = [(event['cid'], event['event_time_iso']) for event in _get_events(source=AuditSource.HL7)]
+        first_events = [(event['cid'], event['event_time_iso']) for event in _get_events(source=AuditSource.MLLP_Channel)]
 
         _ = _run_seed()
-        second_events = [(event['cid'], event['event_time_iso']) for event in _get_events(source=AuditSource.HL7)]
+        second_events = [(event['cid'], event['event_time_iso']) for event in _get_events(source=AuditSource.MLLP_Channel)]
 
         assert sorted(first_events) == sorted(second_events)
 

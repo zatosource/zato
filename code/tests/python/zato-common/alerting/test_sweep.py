@@ -96,7 +96,7 @@ def _backdate(event_id:'int', event_time:'datetime') -> 'None':
 def _seed_outcome(audit_log:'AuditLog', cid:'str', outcome:'str', *, object_name:'str'=_channel_name) -> 'None':
     """ Stores one inbound acknowledgment event with the given outcome.
     """
-    _ = audit_log.insert(AuditSource.HL7, AuditEvent.Ack_Sent, object_name, cid=cid, outcome=outcome)
+    _ = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Ack_Sent, object_name, cid=cid, outcome=outcome)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -106,7 +106,7 @@ class TestParseRule:
     def test_a_full_definition_round_trips(self) -> 'None':
         rule_data = {
             'kind': FindingKind.Error_Rate,
-            'source': AuditSource.HL7,
+            'source': AuditSource.MLLP_Channel,
             'object_name': _channel_name,
             'action': AlertAction.Slack,
             'action_config': {'webhook_url': 'https://hooks.example.com/services/T000/B000/XXX'},
@@ -119,7 +119,7 @@ class TestParseRule:
 
         assert rule.name == 'degraded-channels'
         assert rule.kind == FindingKind.Error_Rate
-        assert rule.source == AuditSource.HL7
+        assert rule.source == AuditSource.MLLP_Channel
         assert rule.object_name == _channel_name
         assert rule.action == AlertAction.Slack
         assert rule.action_config['webhook_url'] == 'https://hooks.example.com/services/T000/B000/XXX'
@@ -201,12 +201,13 @@ class TestCollectForRule:
         now = utcnow()
 
         # One message sent past the deadline, never acknowledged
-        event_id = audit_log.insert(AuditSource.HL7, AuditEvent.Message_Sent, _channel_name,
+        event_id = audit_log.insert(AuditSource.MLLP_Outgoing, AuditEvent.Message_Sent, _channel_name,
             cid='sweep-mf-1', msg_id='MSG-sweep-mf-1', outcome=AuditOutcome.OK)
         _backdate(event_id, now - timedelta(seconds=600))
 
         rule = parse_rule('sent-not-acked', {
             'kind': FindingKind.Missing_Followup,
+            'source': AuditSource.MLLP_Outgoing,
             'config': {'deadline_seconds': 300},
         })
 

@@ -2,12 +2,13 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// What a row of the HL7 audit log shows - the trigger and the patient the message is about,
-// the facility it came from, and what the receiver acknowledged it with.
+// What a row of the MLLP audit log shows - the trigger and the patient the message is about,
+// the facility it came from, and what the receiver acknowledged it with. The channel and
+// outgoing sides read the same way, so one presenter serves them both.
 
 (function($) {
 
-var hl7 = {
+var mllp = {
 
     config: {
 
@@ -30,7 +31,7 @@ var hl7 = {
     // ////////////////////////////////////////////////////////////////////////
 
     ackTone: function(ackStatus) {
-        var tone = hl7.config.ackTones[ackStatus];
+        var tone = mllp.config.ackTones[ackStatus];
 
         // A receiver may answer with a code of its own that HL7 itself does not define.
         if (tone === undefined) {
@@ -43,10 +44,10 @@ var hl7 = {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.audit_log.sources['hl7'] = {
+var presenter = {
 
     chips: function(row) {
-        var config = hl7.config;
+        var config = mllp.config;
         var out = [];
 
         if (row.msg_type !== '') {
@@ -63,7 +64,7 @@ $.fn.zato.audit_log.sources['hl7'] = {
 
         if (row.ack_status !== '') {
             out.push({key: 'ack_status', label: config.ackLabel, value: row.ack_status,
-                tone: hl7.ackTone(row.ack_status)});
+                tone: mllp.ackTone(row.ack_status)});
         }
 
         return out;
@@ -92,6 +93,11 @@ $.fn.zato.audit_log.sources['hl7'] = {
         return row.msg_id;
     }
 };
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.audit_log.sources['mllp-channel'] = presenter;
+$.fn.zato.audit_log.sources['mllp-outgoing'] = presenter;
 
 // /////////////////////////////////////////////////////////////////////////////
 

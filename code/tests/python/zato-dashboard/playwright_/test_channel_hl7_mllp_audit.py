@@ -36,8 +36,8 @@ _Test_Name_Prefix = 'test.mllp.audit.' + CryptoManager.generate_hex_string(32) +
 # The sender the channel's routing criteria are about
 _Audit_App = 'AUDIT_SENDER'
 
-# The audit log page of one channel, by the source the HL7 events are filed under
-_Audit_Page_Url = '/zato/audit-log/?source=hl7&object_name={name}&cluster=1'
+# The audit log page of one channel, by the source the channel-side MLLP events are filed under
+_Audit_Page_Url = '/zato/audit-log/?source=mllp-channel&object_name={name}&cluster=1'
 
 # The audit row of one arrived message, by the control id its sender gave it
 _Received_Row = '#audit-log-table-body tr:has(td:text-is("{control_id}")):has(td:text-is("message-received"))'

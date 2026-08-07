@@ -22,7 +22,7 @@ from zato.common.util.api import utcnow
 _server_name = 'test-alerting-server'
 
 # The source and object the tests raise findings about
-_source = 'hl7'
+_source = 'mllp-channel'
 _channel_name = 'hl7.test.channel'
 
 # The dedup window all the test rules use, in seconds

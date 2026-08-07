@@ -43,7 +43,7 @@ class TestAuditTrail:
         assert len(rows) == 3
 
         # Each type is recorded under the source that type belongs to ..
-        assert rows[0]['source'] == AuditSource.HL7
+        assert rows[0]['source'] == AuditSource.MLLP_Outgoing
         assert rows[1]['source'] == AuditSource.REST_Outgoing
         assert rows[2]['source'] == AuditSource.FHIR
 
@@ -149,7 +149,7 @@ class TestAuditTrail:
         assert get_option(entry, DestinationOption.Method, '') == 'PUT'
 
         # An MLLP delivery is the message alone, so a row of one needs nothing beyond its connection
-        mllp_entry = get_hop_entry(AuditSource.HL7, MLLP_Connection, {'payload': Request_Payload})
+        mllp_entry = get_hop_entry(AuditSource.MLLP_Outgoing, MLLP_Connection, {'payload': Request_Payload})
 
         assert mllp_entry.type == DestinationType.MLLP
         assert mllp_entry.connection == MLLP_Connection

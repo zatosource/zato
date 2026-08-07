@@ -315,7 +315,7 @@ def audit_message_received(
     always succeeds - whatever happens next is the acknowledgment's story.
     """
     out = audit_log.insert(
-        AuditSource.HL7,
+        AuditSource.MLLP_Channel,
         AuditEvent.Message_Received,
         channel_name,
         cid=cid,
@@ -347,7 +347,7 @@ def audit_ack_sent(
     result = interpret_ack_code(ack_code)
 
     out = audit_log.insert(
-        AuditSource.HL7,
+        AuditSource.MLLP_Channel,
         AuditEvent.Ack_Sent,
         channel_name,
         cid=cid,
@@ -377,7 +377,7 @@ def audit_message_sent(
     """ Writes the event of one HL7 message leaving through an outgoing connection.
     """
     out = audit_log.insert(
-        AuditSource.HL7,
+        AuditSource.MLLP_Outgoing,
         AuditEvent.Message_Sent,
         outconn_name,
         cid=cid,
@@ -415,7 +415,7 @@ def audit_ack_received(
         result = interpret_ack_code(ack_code)
 
     out = audit_log.insert(
-        AuditSource.HL7,
+        AuditSource.MLLP_Outgoing,
         AuditEvent.Ack_Received,
         outconn_name,
         cid=cid,
@@ -461,7 +461,7 @@ def audit_batch_received(
 
     # The parent event describes the batch as a unit
     out = audit_log.insert(
-        AuditSource.HL7,
+        AuditSource.MLLP_Channel,
         AuditEvent.Interchange_Received,
         channel_name,
         cid=cid,
@@ -486,7 +486,7 @@ def audit_batch_received(
         control_id = get_control_id(message)
 
         _ = audit_log.insert(
-            AuditSource.HL7,
+            AuditSource.MLLP_Channel,
             AuditEvent.Message_Received,
             channel_name,
             cid=cid,

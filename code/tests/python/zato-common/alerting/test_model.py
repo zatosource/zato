@@ -13,7 +13,7 @@ from zato.common.alerting.model import new_finding, new_rule, rule_matches, Aler
 # ################################################################################################################################
 
 # The source and object the tests raise findings about
-_source = 'hl7'
+_source = 'mllp-channel'
 _channel_name = 'hl7.test.channel'
 
 # ################################################################################################################################

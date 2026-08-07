@@ -37,7 +37,7 @@ if 0:
 # Which audit source a delivery belongs to, by the type of connection it goes through
 _source_by_type = {
     DestinationType.REST: AuditSource.REST_Outgoing,
-    DestinationType.MLLP: AuditSource.HL7,
+    DestinationType.MLLP: AuditSource.MLLP_Outgoing,
     DestinationType.FHIR: AuditSource.FHIR,
     DestinationType.SMTP: AuditSource.Email_SMTP,
 }

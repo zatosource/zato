@@ -61,7 +61,7 @@ def _backdate(event_id:'int', event_time:'datetime') -> 'None':
 def _seed_sent(audit_log:'AuditLog', cid:'str', event_time:'datetime', *, object_name:'str'=_channel_name) -> 'int':
     """ Stores one outbound message the way the live pipeline would have recorded it.
     """
-    event_id = audit_log.insert(AuditSource.HL7, AuditEvent.Message_Sent, object_name,
+    event_id = audit_log.insert(AuditSource.MLLP_Outgoing, AuditEvent.Message_Sent, object_name,
         cid=cid, msg_id=f'MSG-{cid}', outcome=AuditOutcome.OK)
 
     _backdate(event_id, event_time)
@@ -73,7 +73,7 @@ def _seed_sent(audit_log:'AuditLog', cid:'str', event_time:'datetime', *, object
 def _seed_ack(audit_log:'AuditLog', cid:'str', event_time:'datetime') -> 'None':
     """ Stores the acknowledgment that answers one outbound message.
     """
-    event_id = audit_log.insert(AuditSource.HL7, AuditEvent.Ack_Received, _channel_name,
+    event_id = audit_log.insert(AuditSource.MLLP_Outgoing, AuditEvent.Ack_Received, _channel_name,
         cid=cid, outcome=AuditOutcome.OK)
 
     _backdate(event_id, event_time)
@@ -98,13 +98,13 @@ class TestMissingFollowups:
         # .. sent a moment ago - still inside its deadline.
         _ = _seed_sent(audit_log, 'cid-recent', now - timedelta(seconds=10))
 
-        findings = collect_missing_followups(engine, AuditSource.HL7,
+        findings = collect_missing_followups(engine, AuditSource.MLLP_Outgoing,
             AuditEvent.Message_Sent, AuditEvent.Ack_Received, _deadline_seconds, now)
 
         # Only the overdue unanswered one raises a finding
         assert len(findings) == 1
         assert findings[0].kind == FindingKind.Missing_Followup
-        assert findings[0].source == AuditSource.HL7
+        assert findings[0].source == AuditSource.MLLP_Outgoing
         assert findings[0].object_name == _channel_name
         assert 'MSG-cid-overdue' in findings[0].message
 
@@ -118,7 +118,7 @@ class TestMissingFollowups:
         _ = _seed_sent(audit_log, 'cid-ours', now - timedelta(seconds=600))
         _ = _seed_sent(audit_log, 'cid-other', now - timedelta(seconds=600), object_name=_other_channel_name)
 
-        findings = collect_missing_followups(engine, AuditSource.HL7,
+        findings = collect_missing_followups(engine, AuditSource.MLLP_Outgoing,
             AuditEvent.Message_Sent, AuditEvent.Ack_Received, _deadline_seconds, now,
             object_name=_other_channel_name)
 
@@ -141,7 +141,7 @@ class TestOutstandingThreshold:
 
         _ = _seed_sent(audit_log, 'cid-single', now, object_name=_other_channel_name)
 
-        findings = collect_outstanding_threshold(engine, AuditSource.HL7,
+        findings = collect_outstanding_threshold(engine, AuditSource.MLLP_Outgoing,
             AuditEvent.Message_Sent, AuditEvent.Ack_Received, 3)
 
         # Only the channel that reached the threshold raises a finding
@@ -162,7 +162,7 @@ class TestOutstandingThreshold:
 
         _ = _seed_sent(audit_log, 'cid-waiting', now)
 
-        findings = collect_outstanding_threshold(engine, AuditSource.HL7,
+        findings = collect_outstanding_threshold(engine, AuditSource.MLLP_Outgoing,
             AuditEvent.Message_Sent, AuditEvent.Ack_Received, 2)
 
         assert findings == []
@@ -179,18 +179,18 @@ class TestErrorRate:
 
         # Half of the recent messages on one channel failed ..
         for index in range(2):
-            _ = audit_log.insert(AuditSource.HL7, AuditEvent.Message_Received, _channel_name,
+            _ = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Message_Received, _channel_name,
                 cid=f'cid-rate-ok-{index}', outcome=AuditOutcome.OK)
 
         for index in range(2):
-            _ = audit_log.insert(AuditSource.HL7, AuditEvent.Message_Received, _channel_name,
+            _ = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Message_Received, _channel_name,
                 cid=f'cid-rate-error-{index}', outcome=AuditOutcome.Error)
 
         # .. while the other channel stays clean.
-        _ = audit_log.insert(AuditSource.HL7, AuditEvent.Message_Received, _other_channel_name,
+        _ = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Message_Received, _other_channel_name,
             cid='cid-rate-clean', outcome=AuditOutcome.OK)
 
-        findings = collect_error_rate(engine, AuditSource.HL7, 300, 0.5, now)
+        findings = collect_error_rate(engine, AuditSource.MLLP_Channel, 300, 0.5, now)
 
         assert len(findings) == 1
         assert findings[0].kind == FindingKind.Error_Rate
@@ -204,11 +204,11 @@ class TestErrorRate:
         engine = get_audit_engine()
         now = utcnow()
 
-        event_id = audit_log.insert(AuditSource.HL7, AuditEvent.Message_Received, _channel_name,
+        event_id = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Message_Received, _channel_name,
             cid='cid-rate-old', outcome=AuditOutcome.Error)
         _backdate(event_id, now - timedelta(seconds=600))
 
-        findings = collect_error_rate(engine, AuditSource.HL7, 300, 0.5, now)
+        findings = collect_error_rate(engine, AuditSource.MLLP_Channel, 300, 0.5, now)
 
         assert findings == []
 
@@ -230,7 +230,7 @@ class TestFeedSilent:
             _other_channel_name: active,
         }
 
-        findings = collect_feed_silent(metrics_by_name, AuditSource.HL7, 300.0)
+        findings = collect_feed_silent(metrics_by_name, AuditSource.MLLP_Channel, 300.0)
 
         assert len(findings) == 1
         assert findings[0].kind == FindingKind.Feed_Silent
@@ -245,7 +245,7 @@ class TestFeedSilent:
         never_started = EndpointMetrics()
         never_started.silence_seconds = 0.0
 
-        findings = collect_feed_silent({_channel_name: never_started}, AuditSource.HL7, 300.0)
+        findings = collect_feed_silent({_channel_name: never_started}, AuditSource.MLLP_Channel, 300.0)
 
         assert findings == []
 

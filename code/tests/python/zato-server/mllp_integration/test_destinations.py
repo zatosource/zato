@@ -9,8 +9,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # What a live MLLP channel does with the destinations it declares - the message reaching each of
 # them through the real outgoing connections, what a service says each of them is to receive, the
 # acknowledgment a channel replying from a destination answers its sender with, a channel with no
-# service at all, both delivery orders and a paused destination, every delivery read back
-# from the audit database the server wrote it to.
+# service at all, a channel that parses on input still delivering text, both delivery orders and
+# a paused destination, every delivery read back from the audit database the server wrote it to.
 
 # stdlib
 import json
@@ -71,6 +71,7 @@ _reply_channel  = 'test-destinations-reply'
 _dead_channel   = 'test-destinations-dead'
 _plain_channel  = 'test-destinations-plain'
 _order_channel  = 'test-destinations-order'
+_parsed_channel = 'test-destinations-parsed'
 
 # The MSH-3 values routing a message to each of them
 _fanout_sender = 'DESTINATIONS_FANOUT'
@@ -78,6 +79,7 @@ _reply_sender  = 'DESTINATIONS_REPLY'
 _dead_sender   = 'DESTINATIONS_DEAD'
 _plain_sender  = 'DESTINATIONS_PLAIN'
 _order_sender  = 'DESTINATIONS_ORDER'
+_parsed_sender = 'DESTINATIONS_PARSED'
 
 # The outgoing connections the destinations point at
 _forward_outconn = 'test-destinations-outconn'
@@ -416,6 +418,7 @@ class TestChannelDestinations:
     dead_channel_id:'int' = 0
     plain_channel_id:'int' = 0
     order_channel_id:'int' = 0
+    parsed_channel_id:'int' = 0
 
     forward_outconn_id:'int' = 0
     reply_outconn_id:'int' = 0
@@ -652,6 +655,29 @@ class TestChannelDestinations:
         assert 'id' in response
         self.__class__.order_channel_id = response['id']
 
+        # .. and the channel that parses each message on input, whose destination is still
+        # to receive the message as text rather than the parsed object its service is given.
+        response = zato_client.create(
+            f'{_generic_service_name}.create',
+            cluster_id=1,
+            name=_parsed_channel,
+            type_=_connection_type_channel,
+            is_active=True,
+            is_internal=False,
+            is_channel=True,
+            is_outconn=False,
+            service='test.hl7.mllp.accept',
+            msh3_sending_app=_parsed_sender,
+            pool_size=1,
+            is_audit_log_active=True,
+            should_parse_on_input=True,
+            destinations=_as_stored([_new_destination(_rest_destination, DestinationType.REST, _rest_outconn, method='POST')]),
+            respond_from=Respond_From_Service,
+        )
+
+        assert 'id' in response
+        self.__class__.parsed_channel_id = response['id']
+
         wait_for_port_open(mllp_port)
 
         # The routes and the connection pools register after the create calls return -
@@ -684,7 +710,7 @@ class TestChannelDestinations:
         # The MLLP destination was sent the message as it arrived ..
         forward_hop = _get_hop_by_destination(hops, audit_db_path, _forward_destination)
 
-        assert forward_hop['source'] == AuditSource.HL7
+        assert forward_hop['source'] == AuditSource.MLLP_Outgoing
         assert forward_hop['object_name'] == _forward_outconn
         assert forward_hop['outcome'] == AuditOutcome.OK
         assert control_id in _get_details(forward_hop)['payload']
@@ -949,7 +975,41 @@ class TestChannelDestinations:
 
 # ################################################################################################################################
 
-    def test_10_cleanup(self, zato_client:'any_') -> 'None':
+    def test_10_a_channel_that_parses_on_input_delivers_text(
+        self,
+        zato_server:'dict',
+        mllp_port:'int',
+        rest_echo:'_TrackingTCPServer',
+        ) -> 'None':
+        """ A channel that parses each message on input hands its service the parsed object,
+        yet its destination receives the ER7 text of the message.
+        """
+        audit_db_path = zato_server['audit_db_path']
+
+        control_id = 'DEST-PARSED-001'
+        acknowledgment = _send_and_receive(mllp_port, _build_adt_a01(control_id, _parsed_sender))
+
+        assert b'MSA|AA|' + control_id.encode() in acknowledgment
+
+        cid = _get_message_cid(audit_db_path, _parsed_channel, control_id)
+        hops = _wait_for_hops(audit_db_path, cid, 1)
+
+        assert len(hops) == 1
+        assert hops[0]['outcome'] == AuditOutcome.OK
+
+        # What went out is the message itself, as text ..
+        details = _get_details(hops[0])
+
+        assert details['payload'].startswith('MSH|')
+        assert control_id in details['payload']
+
+        # .. and the same text is what the destination's server was posted.
+        assert rest_echo.last_body.startswith(b'MSH|')
+        assert control_id.encode() in rest_echo.last_body
+
+# ################################################################################################################################
+
+    def test_11_cleanup(self, zato_client:'any_') -> 'None':
         """ Deletes everything this module created, so the other test modules start from the
         same clean slate as before.
         """
@@ -959,6 +1019,7 @@ class TestChannelDestinations:
             self.__class__.dead_channel_id,
             self.__class__.plain_channel_id,
             self.__class__.order_channel_id,
+            self.__class__.parsed_channel_id,
             self.__class__.forward_outconn_id,
             self.__class__.reply_outconn_id,
             self.__class__.fhir_outconn_id,

@@ -24,13 +24,14 @@ from zato.common.audit_log.api import get_audit_engine
 from zato.common.defaults import default_cluster_id
 from zato.common.demo.seed import get_demo_rule_defs, purge_demo_data, seed_demo_data, Channel_Clinic, Channel_Lab, \
     Channel_Main, Outconn_FHIR, Outconn_Forward, Route_Clinic, Route_Lab, Route_Main, SeedConfig
+from zato.common.destination.constants import DestinationType
 from zato.common.hl7.feed import generate_feed_items, rewrite_msh_field, FeedConfig, MSH3_Index
 from zato.common.hl7.fhir.fields import Outconn_Config_Defaults as FHIR_Outconn_Defaults
 from zato.common.hl7.mllp.client import HL7MLLPClient
 from zato.common.hl7.mllp.fields import Channel_Defaults as MLLP_Channel_Defaults, \
     Outconn_Defaults as MLLP_Outconn_Defaults
-from zato.common.json_internal import dumps
-from zato.common.odb.model import GenericConn
+from zato.common.json_internal import dumps, loads
+from zato.common.odb.model import GenericConn, HTTPSOAP
 from zato.common.odb.query.generic import GenericObjectWrapper
 from zato.common.util.api import hex_sequence_to_bytes
 from zato.common.util.open_ import open_w
@@ -66,12 +67,19 @@ _type_defaults = {
     _type_outconn_fhir: FHIR_Outconn_Defaults,
 }
 
-# The service behind the demo channels - nothing on a fresh server answers an HL7 message
-# with an acknowledgment of its own, so the import deploys one, its source below
+# The service behind the demo MLLP channels and the one behind the archive's REST intake -
+# both deployed from the one file whose source is below
 _channel_service = 'demo.hl7.ack'
+_archive_service = 'demo.hl7.archive'
 
-# What the demo service is deployed as
+# What the demo services are deployed as
 _channel_service_file_name = 'demo_hl7_ack.py'
+
+# The REST pieces the archive destination runs on - the outgoing connection the channels
+# deliver through and the channel that receives what they deliver, both on this very server
+_archive_outconn = 'demo.hl7.archive'
+_archive_intake_channel = 'demo.hl7.archive.intake'
+_archive_url_path = '/demo/hl7/archive'
 
 # The addresses the demo outgoing connections point at - reserved names
 # that never resolve, the demo only needs the objects to exist
@@ -93,62 +101,63 @@ _wait_step_seconds = 0.05
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The demo service's own source, deployed as it is - a sender that gets its own message back
-# has not been acknowledged, so the demo answers with what the protocol calls for
+# The demo services' own source, deployed as it is. The channel handles the protocol itself -
+# the acknowledgment goes back to the sender and each destination receives a copy of every
+# accepted message with no help from the services below.
 _channel_service_source = '''\
 # -*- coding: utf-8 -*-
 
 # Zato
-from zato.common.hl7.audit import ACKStatus
-from zato.common.hl7.mllp.ack import build_ack
 from zato.server.service import Service
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-if 0:
-    from zato.common.typing_ import any_
-    any_ = any_
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _get_message_text(request:'any_') -> 'str':
-    """ Returns the ER7 text of what a channel handed over - a REST channel delivers bytes,
-    an MLLP channel that parses on input delivers a parsed message, and one that does not
-    delivers the text itself.
-    """
-    if isinstance(request, bytes):
-        return request.decode('utf-8')
-
-    if isinstance(request, str):
-        return request
-
-    out = request.to_er7()
-    return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class DemoHL7Ack(Service):
-    """ Answers every message with an HL7 acknowledgment - the sender and receiver of the
-    message swapped, a control id of this side's own and the sender's echoed back in MSA-2.
+    """ Runs for each message a demo MLLP channel accepts. The channel acknowledges the message
+    and delivers a copy to its destinations on its own - this is where your own logic goes.
     """
-    name = '{service_name}'
+    name = '{ack_service}'
 
     def handle(self):
 
-        message_text = _get_message_text(self.request.raw_request)
+        # The channel parses each message before handing it over
+        message = self.request.raw_request
 
-        # An acknowledgment is built from the MSH line alone, and a sender may end its
-        # lines with a carriage return, a newline or both
-        msh_line = message_text.splitlines()[0]
-
-        self.response.payload = build_ack(msh_line, ACKStatus.Application_Accept)
+        control_id = message.get('msh.message_control_id')
+        self.logger.info('Received message `%s`', control_id)
 
 # ################################################################################################################################
 # ################################################################################################################################
-'''.format(service_name=_channel_service)
+
+class DemoHL7Archive(Service):
+    """ The archive the demo channels deliver to - a copy of each message they accept
+    arrives here through their REST destination.
+    """
+    name = '{archive_service}'
+
+    def handle(self):
+
+        # A message delivered over REST arrives as bytes
+        message = self.request.raw_request.decode('utf-8')
+
+        self.logger.info('Archived message `%s`', message)
+
+# ################################################################################################################################
+# ################################################################################################################################
+'''.format(ack_service=_channel_service, archive_service=_archive_service)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Every demo channel delivers a copy of each accepted message to the archive
+_channel_destinations = dumps([{
+    'name': _archive_outconn,
+    'type': DestinationType.REST,
+    'connection': _archive_outconn,
+    'is_active': True,
+    'options': {'method': 'POST'},
+}])
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -162,6 +171,8 @@ _connection_defs:'anytuple' = (
         'is_outconn': False,
         'service': _channel_service,
         'msh3_sending_app': Route_Main,
+        'should_return_errors': True,
+        'destinations': _channel_destinations,
     },
     {
         'name': Channel_Lab,
@@ -170,6 +181,8 @@ _connection_defs:'anytuple' = (
         'is_outconn': False,
         'service': _channel_service,
         'msh3_sending_app': Route_Lab,
+        'should_return_errors': True,
+        'destinations': _channel_destinations,
     },
     {
         'name': Channel_Clinic,
@@ -178,6 +191,8 @@ _connection_defs:'anytuple' = (
         'is_outconn': False,
         'service': _channel_service,
         'msh3_sending_app': Route_Clinic,
+        'should_return_errors': True,
+        'destinations': _channel_destinations,
     },
     {
         'name': Outconn_Forward,
@@ -199,33 +214,30 @@ _connection_defs:'anytuple' = (
 # ################################################################################################################################
 
 def ensure_demo_service(server:'ParallelServer') -> 'bool':
-    """ Deploys the service the demo channels answer with, unless it is already there, and waits
-    for it to come up. Returns whether the channels can be pointed at it.
+    """ Deploys the demo services and waits for them to come up. The file is always written,
+    so a rerun replaces an earlier version in place. Returns whether the channels can be
+    pointed at what it deploys.
     """
-
-    # Already deployed, so there is nothing to write and nothing to wait for
-    if server.service_store.is_deployed(_channel_service):
-        return True
-
     file_path = os.path.join(server.hot_deploy_config.pickup_dir, _channel_service_file_name)
 
     with open_w(file_path) as f:
         _ = f.write(_channel_service_source)
 
-    # Hot deploy picks the file up on its own, so the service is not there the moment
-    # its source is - the channels and the burst that follow both need it to be
+    # Hot deploy picks the file up on its own, so the services are not there the moment
+    # their source is - the channels and the burst that follow both need them to be
     steps_left = _wait_steps
 
     while steps_left:
 
         if server.service_store.is_deployed(_channel_service):
-            logger.info('Deployed the demo service `%s` from %s', _channel_service, file_path)
-            return True
+            if server.service_store.is_deployed(_archive_service):
+                logger.info('Deployed the demo services from %s', file_path)
+                return True
 
         sleep(_wait_step_seconds)
         steps_left -= 1
 
-    logger.warning('The demo service `%s` did not deploy from %s', _channel_service, file_path)
+    logger.warning('The demo services did not deploy from %s', file_path)
     return False
 
 # ################################################################################################################################
@@ -249,21 +261,44 @@ def _build_connection_request(connection_def:'stranydict') -> 'stranydict':
 
 # ################################################################################################################################
 
+def _connection_matches(connection_def:'stranydict', existing:'any_') -> 'bool':
+    """ Whether a connection stored in the database still says what its demo definition says.
+    Only the fields a definition pins down are compared - the address of an outgoing connection
+    and the destinations of a channel, the latter kept in the opaque attributes the row carries.
+    """
+    if 'address' in connection_def:
+        if existing[2] != connection_def['address']:
+            return False
+
+    if 'destinations' in connection_def:
+
+        if existing[3]:
+            opaque = loads(existing[3])
+        else:
+            opaque = {}
+
+        if opaque.get('destinations') != connection_def['destinations']:
+            return False
+
+    return True
+
+# ################################################################################################################################
+
 def ensure_demo_connections(server:'ParallelServer') -> 'strlist':
     """ Creates the demo channels and outgoing connections that are not there yet. The ones
     already in place keep running as they are - recreating them would restart their wrappers
     and every rerun would then wait for the listeners to come back up. The one exception is
-    a stored address that no longer says what the demo definition says - an earlier import's
-    address left in place would keep pointing the connection at something real, so it is
-    corrected in place. Returns the names created or corrected.
+    a connection that no longer stores what the demo definition says - an earlier import's
+    address or destinations left in place would keep the old wiring alive, so such a
+    connection is corrected in place. Returns the names created or corrected.
     """
 
-    # What already exists is read straight from the database, the address included,
-    # because a stale one is the one thing a rerun does correct
+    # What already exists is read straight from the database, the address and the opaque
+    # attributes included, because stale ones are what a rerun does correct
     demo_names = [connection_def['name'] for connection_def in _connection_defs]
 
     with closing(server.odb.session()) as session:
-        rows = session.query(GenericConn.id, GenericConn.name, GenericConn.address).filter(
+        rows = session.query(GenericConn.id, GenericConn.name, GenericConn.address, GenericConn.opaque1).filter(
             GenericConn.name.in_(demo_names)).all()
 
     existing_by_name = {}
@@ -278,20 +313,19 @@ def ensure_demo_connections(server:'ParallelServer') -> 'strlist':
 
         name = connection_def['name']
 
-        # A connection an earlier import created keeps running as it is, unless its address
-        # no longer matches the definition - only the outconns carry one to compare
+        # A connection an earlier import created keeps running as it is,
+        # unless what it stores no longer matches the definition
         if name in existing_by_name:
 
             existing = existing_by_name[name]
 
-            if 'address' in connection_def:
-                if existing[2] != connection_def['address']:
+            if not _connection_matches(connection_def, existing):
 
-                    request = _build_connection_request(connection_def)
-                    request['id'] = existing[0]
+                request = _build_connection_request(connection_def)
+                request['id'] = existing[0]
 
-                    _ = server.invoke('zato.generic.connection.edit', request)
-                    out.append(name)
+                _ = server.invoke('zato.generic.connection.edit', request)
+                out.append(name)
 
             continue
 
@@ -299,6 +333,99 @@ def ensure_demo_connections(server:'ParallelServer') -> 'strlist':
 
         _ = server.invoke('zato.generic.connection.create', request)
         out.append(name)
+
+    return out
+
+# ################################################################################################################################
+
+def _build_archive_outconn_request(archive_host:'str') -> 'stranydict':
+    """ The request the archive's outgoing REST connection is created or corrected with.
+    """
+    out = {
+        'cluster_id': default_cluster_id,
+        'name': _archive_outconn,
+        'is_active': True,
+        'is_internal': False,
+        'connection': 'outgoing',
+        'transport': 'plain_http',
+        'host': archive_host,
+        'url_path': _archive_url_path,
+    }
+
+    return out
+
+# ################################################################################################################################
+
+def _build_archive_channel_request() -> 'stranydict':
+    """ The request the archive's intake REST channel is created with - the same shape
+    the Dashboard gives an HL7 REST channel.
+    """
+    out = {
+        'cluster_id': default_cluster_id,
+        'name': _archive_intake_channel,
+        'is_active': True,
+        'is_internal': False,
+        'connection': 'channel',
+        'transport': 'plain_http',
+        'url_path': _archive_url_path,
+        'service': _archive_service,
+        'data_format': HL7.Const.Version.v2.id,
+        'should_parse_on_input': True,
+        'match_slash': False,
+        'merge_url_params_req': True,
+    }
+
+    return out
+
+# ################################################################################################################################
+
+def ensure_demo_rest_objects(server:'ParallelServer') -> 'strlist':
+    """ Creates the REST pieces the archive destination runs on - the outgoing connection
+    the channels deliver through and the channel that receives what they deliver, both on
+    this very server. What is already in place is left alone, except a host that no longer
+    points back here. Returns the names created or corrected.
+    """
+    archive_host = f'http://127.0.0.1:{server.port}'
+
+    demo_names = [_archive_outconn, _archive_intake_channel]
+
+    with closing(server.odb.session()) as session:
+        rows = session.query(HTTPSOAP.id, HTTPSOAP.name, HTTPSOAP.host).filter(HTTPSOAP.name.in_(demo_names)).all()
+
+    existing_by_name = {}
+
+    for row in rows:
+        existing_by_name[row[1]] = row
+
+    # Our response to produce
+    out:'strlist' = []
+
+    # The outgoing connection points back at this very server, so an earlier import's
+    # host is corrected when the server's own address has changed since ..
+    if _archive_outconn in existing_by_name:
+
+        existing = existing_by_name[_archive_outconn]
+
+        if existing[2] != archive_host:
+
+            request = _build_archive_outconn_request(archive_host)
+            request['id'] = existing[0]
+
+            _ = server.invoke('zato.http-soap.edit', request)
+            out.append(_archive_outconn)
+    else:
+        request = _build_archive_outconn_request(archive_host)
+
+        _ = server.invoke('zato.http-soap.create', request)
+        out.append(_archive_outconn)
+
+    # .. and the intake channel receives what goes out through it.
+    if _archive_intake_channel not in existing_by_name:
+
+        request = _build_archive_channel_request()
+
+        _ = server.invoke('zato.http-soap.create', request)
+        out.append(_archive_intake_channel)
 
     return out
 
@@ -406,12 +533,19 @@ def import_demo_data(server:'ParallelServer', *, config:'SeedConfig | None'=None
     if config is None:
         config = SeedConfig()
 
-    # The channels name this service, so it goes in before they do
+    # The channels and the archive intake name these services, so they go in first
     phase_start = monotonic()
     service_deployed = ensure_demo_service(server)
 
     service_seconds = monotonic() - phase_start
-    logger.info('Demo import: service ready in %.2fs', service_seconds)
+    logger.info('Demo import: services ready in %.2fs', service_seconds)
+
+    # The channels deliver to the archive, so its REST pieces go in before they do
+    phase_start = monotonic()
+    rest_names = ensure_demo_rest_objects(server)
+
+    rest_seconds = monotonic() - phase_start
+    logger.info('Demo import: REST archive ready in %.2fs', rest_seconds)
 
     phase_start = monotonic()
     created_names = ensure_demo_connections(server)
@@ -445,6 +579,7 @@ def import_demo_data(server:'ParallelServer', *, config:'SeedConfig | None'=None
     # Our response to produce
     out = {
         'created_connections': created_names,
+        'created_rest_objects': rest_names,
         'service_deployed': service_deployed,
         'rule_names': rule_names,
         'message_count': result.message_count,
@@ -478,6 +613,15 @@ def remove_demo_data(server:'ParallelServer') -> 'stranydict':
     for connection_id, connection_name in rows:
         _ = server.invoke('zato.generic.connection.delete', {'id': connection_id, 'cluster_id': default_cluster_id})
         deleted_connections.append(connection_name)
+
+    # The archive's REST pieces go the same way
+    with closing(server.odb.session()) as session:
+        rest_rows = session.query(HTTPSOAP.id, HTTPSOAP.name).filter(
+            HTTPSOAP.name.in_([_archive_outconn, _archive_intake_channel])).all()
+
+    for rest_id, rest_name in rest_rows:
+        _ = server.invoke('zato.http-soap.delete', {'id': rest_id, 'cluster_id': default_cluster_id})
+        deleted_connections.append(rest_name)
 
     # The alert rules follow
     deleted_rules:'strlist' = []

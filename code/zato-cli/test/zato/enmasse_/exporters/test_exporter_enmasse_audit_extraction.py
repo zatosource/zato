@@ -54,7 +54,7 @@ class TestEnmasseAuditExtractionExporter(TestCase):
 
         self.extraction_def = {
             'name': f'enmasse.test_audit_extraction_export_{unique_suffix}',
-            'source': 'hl7',
+            'source': 'mllp-channel',
             'rules': [
                 {'attr_name': 'mrn', 'rule_type': 'regex', 'expression': r'PID\|.*?\|(?P<value>[^|^]+)'},
                 {'attr_name': 'sending_facility', 'rule_type': 'regex', 'expression': r'MSH\|[^|]*\|[^|]*\|(?P<value>[^|]+)'},

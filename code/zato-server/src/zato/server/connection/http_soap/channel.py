@@ -1216,13 +1216,13 @@ class RequestDispatcher:
         if not isinstance(data, str):
             data = str(data)
 
-        # .. HL7 arriving over REST is re-tagged at the writer - the event lands as the HL7 source
-        # .. with HL7 fields, so the message browser shows one consistent HL7 view
+        # .. HL7 arriving over REST is re-tagged at the writer - the event lands as the channel-side
+        # .. MLLP source with HL7 fields, so the message browser shows one consistent HL7 view
         # .. regardless of transport (WS.1.4). A request is the message itself
         # .. and the response is the acknowledgment answering it ..
         if channel_item['data_format'] == _data_format_hl7_v2:
 
-            source = AuditSource.HL7
+            source = AuditSource.MLLP_Channel
 
             if event_type == AuditEvent.Request_Received:
                 event_type = AuditEvent.Message_Received

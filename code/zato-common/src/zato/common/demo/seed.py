@@ -395,7 +395,7 @@ def get_demo_rule_defs() -> 'dictlist':
             'name': Rule_Feed_Silent,
             'is_active': True,
             'kind': FindingKind.Feed_Silent,
-            'source': AuditSource.HL7,
+            'source': AuditSource.MLLP_Channel,
             'object_name': Channel_Clinic,
             'action': AlertAction.Email_Digest,
             'action_config': {},
@@ -406,7 +406,7 @@ def get_demo_rule_defs() -> 'dictlist':
             'name': Rule_Error_Rate,
             'is_active': True,
             'kind': FindingKind.Error_Rate,
-            'source': AuditSource.HL7,
+            'source': AuditSource.MLLP_Channel,
             'object_name': Channel_Lab,
             'action': AlertAction.Email_Digest,
             'action_config': {},
@@ -417,7 +417,7 @@ def get_demo_rule_defs() -> 'dictlist':
             'name': Rule_Missing_Ack,
             'is_active': True,
             'kind': FindingKind.Missing_Followup,
-            'source': AuditSource.HL7,
+            'source': AuditSource.MLLP_Outgoing,
             'object_name': Outconn_Forward,
             'action': AlertAction.Email_Digest,
             'action_config': {},
@@ -788,7 +788,7 @@ def _write_one_hop(
 
     audit_log.set_event_time(when)
     received_id = audit_log.insert(
-        AuditSource.HL7, AuditEvent.Message_Received, source.channel_name,
+        AuditSource.MLLP_Channel, AuditEvent.Message_Received, source.channel_name,
         cid=cid,
         msg_id=source.control_id,
         correl_id=correl_id,
@@ -1006,7 +1006,7 @@ def _write_alerts(audit_log:'_BulkAuditLog', now:'datetime', rng:'Random') -> 'd
     # and the finding repeated every half hour since
     silent_rule = rules[Rule_Feed_Silent]
     silent_finding = new_finding(
-        FindingKind.Feed_Silent, AuditSource.HL7, Channel_Clinic,
+        FindingKind.Feed_Silent, AuditSource.MLLP_Channel, Channel_Clinic,
         f'Feed on {Channel_Clinic} has been silent since {Clinic_Silent_Hour:02d}:00 UTC',
         severity=AlertSeverity.Warning)
 
@@ -1038,7 +1038,7 @@ def _write_alerts(audit_log:'_BulkAuditLog', now:'datetime', rng:'Random') -> 'd
     # The observed alert - yesterday's error burst, acknowledged that evening
     error_rule = rules[Rule_Error_Rate]
     error_finding = new_finding(
-        FindingKind.Error_Rate, AuditSource.HL7, Channel_Lab,
+        FindingKind.Error_Rate, AuditSource.MLLP_Channel, Channel_Lab,
         f'Error rate on {Channel_Lab} exceeded 10 failures within 15 minutes',
         severity=AlertSeverity.Critical)
 
@@ -1067,7 +1067,7 @@ def _write_alerts(audit_log:'_BulkAuditLog', now:'datetime', rng:'Random') -> 'd
     # The resolved alert - a delivery stall from three days ago, resolved the same day
     missing_rule = rules[Rule_Missing_Ack]
     missing_finding = new_finding(
-        FindingKind.Missing_Followup, AuditSource.HL7, Outconn_Forward,
+        FindingKind.Missing_Followup, AuditSource.MLLP_Outgoing, Outconn_Forward,
         f'Messages sent through {Outconn_Forward} received no acknowledgment within 5 minutes',
         severity=AlertSeverity.Warning)
 
@@ -1219,7 +1219,7 @@ def _write_view_events(audit_log:'_BulkAuditLog', planned_views:'anylist', id_ma
             viewed_event_id=id_map[view.relative_event_id],
             screen=Screen_Browser,
             cid=f'{Cid_Prefix}view-{index + 1:04d}',
-            viewed_source=AuditSource.HL7,
+            viewed_source=AuditSource.MLLP_Channel,
             viewed_object_name=view.object_name,
         )
 

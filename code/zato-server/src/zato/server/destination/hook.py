@@ -37,6 +37,24 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def get_message_text(payload:'any_') -> 'str':
+    """ Returns the text of what a channel handed over - a channel that parses on input hands
+    over a parsed message and a REST channel hands over bytes, while a destination receives
+    the message itself, as text.
+    """
+    if isinstance(payload, bytes):
+        out = payload.decode('utf-8')
+        return out
+
+    if isinstance(payload, str):
+        return payload
+
+    out = payload.to_er7()
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ConnectionDispatcher:
     """ Delivers to a destination through the very connections a service reaches by itself.
     """
@@ -148,8 +166,12 @@ def run_for_service(service:'Service', channel_item:'stranydict') -> 'DeliveryRe
     overrides = service.destination.get_overrides()
     transports = build_transports(service)
 
+    # A channel that parses on input handed the service a parsed message, and what
+    # a destination receives is the message itself, as text
+    request_payload = get_message_text(service.request.raw)
+
     out = run_destinations(
-        config, overrides, service.request.raw, transports,
+        config, overrides, request_payload, transports,
         cid=service.cid, server_name=service.server.name)
 
     return out
