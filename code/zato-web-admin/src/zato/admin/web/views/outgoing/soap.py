@@ -14,7 +14,7 @@ from zato.admin.web import from_user_to_utc, from_utc_to_user
 from zato.admin.web.forms import add_http_soap_select, add_select_from_service
 from zato.admin.web.forms.outgoing.soap import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, extract_security_id, get_js_dt_format, id_only_service, \
-    Index as _Index, method_allowed
+    Index as _Index, method_allowed, ping_json_response
 from zato.common.api import CONNECTION, HTTP_SOAP, SEC_DEF_TYPE_NAME, URL_TYPE, ZATO_NONE
 
 # ################################################################################################################################
@@ -258,16 +258,10 @@ def ping(req, id, cluster_id): # type: ignore
 
     if isinstance(response, HttpResponseServerError):
         err = response.content.decode('utf-8', 'replace')
-        return JsonResponse({
-            'is_success': False,
-            'info': err,
-        })
+        return ping_json_response(False, err)
 
     data = response.data
-    return JsonResponse({
-        'is_success': data.is_success,
-        'info': data.info,
-    })
+    return ping_json_response(data.is_success, data.info)
 
 # ################################################################################################################################
 # ################################################################################################################################

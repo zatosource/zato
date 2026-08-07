@@ -11,7 +11,8 @@ from django.http import HttpResponseServerError, JsonResponse
 
 # Zato
 from zato.admin.web.forms.outgoing.as4 import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, id_only_service, Index as _Index, method_allowed
+from zato.admin.web.views import CreateEdit, Delete as _Delete, id_only_service, Index as _Index, method_allowed, \
+    ping_json_response
 from zato.admin.web.views.audit_log.as4 import get_audit_log_object_name
 from zato.common.api import AS4, CONNECTION, URL_TYPE
 from zato.common.util.xml_.keystore import load_certificates_pem
@@ -182,17 +183,11 @@ def ping(req:'any_', id:'str', cluster_id:'str') -> 'JsonResponse':
     # A server-side failure arrives as an error response whose body is the error's text.
     if isinstance(response, HttpResponseServerError):
         error = response.content.decode('utf-8', 'replace')
-        out = JsonResponse({
-            'is_success': False,
-            'info': error,
-        })
+        out = ping_json_response(False, error)
         return out
 
     data = response.data
-    out = JsonResponse({
-        'is_success': data.is_success,
-        'info': data.info,
-    })
+    out = ping_json_response(data.is_success, data.info)
 
     return out
 

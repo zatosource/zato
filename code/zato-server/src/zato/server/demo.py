@@ -41,9 +41,10 @@ from zato.server.generic.api.channel_hl7_mllp import get_internal_port, is_chann
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anytuple, stranydict, strlist
+    from zato.common.typing_ import any_, anytuple, stranydict, strlist
     from zato.server.base.parallel import ParallelServer
 
+    any_ = any_
     anytuple = anytuple
     ParallelServer = ParallelServer
     stranydict = stranydict
@@ -331,7 +332,8 @@ def ensure_demo_connections(server:'ParallelServer') -> 'strlist':
 # ################################################################################################################################
 
 def _build_archive_outconn_request(archive_host:'str') -> 'stranydict':
-    """ The request the archive's outgoing REST connection is created or corrected with.
+    """ The request the archive's outgoing REST connection is created or corrected with -
+    the audit log is on so the usage page sees what goes out through it.
     """
     out = {
         'cluster_id': default_cluster_id,
@@ -342,6 +344,7 @@ def _build_archive_outconn_request(archive_host:'str') -> 'stranydict':
         'transport': 'plain_http',
         'host': archive_host,
         'url_path': _archive_url_path,
+        'is_audit_log_active': True,
     }
 
     return out
@@ -350,7 +353,8 @@ def _build_archive_outconn_request(archive_host:'str') -> 'stranydict':
 
 def _build_archive_channel_request() -> 'stranydict':
     """ The request the archive's intake REST channel is created with - the same shape
-    the Dashboard gives an HL7 REST channel.
+    the Dashboard gives an HL7 REST channel, with the audit log on so the usage page
+    sees what it receives.
     """
     out = {
         'cluster_id': default_cluster_id,
@@ -365,7 +369,26 @@ def _build_archive_channel_request() -> 'stranydict':
         'should_parse_on_input': True,
         'match_slash': False,
         'merge_url_params_req': True,
+        'is_audit_log_active': True,
     }
+
+    return out
+
+# ################################################################################################################################
+
+def _is_rest_audit_on(opaque_text:'str | None') -> 'bool':
+    """ Whether an http-soap row's opaque attributes say its audit log is on -
+    a row from before the flag was set stores it as null, which counts as off.
+    """
+    if opaque_text:
+        opaque = loads(opaque_text)
+    else:
+        opaque = {}
+
+    if 'is_audit_log_active' in opaque:
+        out = opaque['is_audit_log_active'] is True
+    else:
+        out = False
 
     return out
 
@@ -375,14 +398,16 @@ def ensure_demo_rest_objects(server:'ParallelServer') -> 'strlist':
     """ Creates the REST pieces the archive destination runs on - the outgoing connection
     the channels deliver through and the channel that receives what they deliver, both on
     this very server. What is already in place is left alone, except a host that no longer
-    points back here. Returns the names created or corrected.
+    points back here or an audit log left off by an earlier import - the usage page needs
+    it on. Returns the names created or corrected.
     """
     archive_host = f'http://127.0.0.1:{server.port}'
 
     demo_names = [_archive_outconn, _archive_intake_channel]
 
     with closing(server.odb.session()) as session:
-        rows = session.query(HTTPSOAP.id, HTTPSOAP.name, HTTPSOAP.host).filter(HTTPSOAP.name.in_(demo_names)).all()
+        rows = session.query(HTTPSOAP.id, HTTPSOAP.name, HTTPSOAP.host, HTTPSOAP.opaque1).filter(
+            HTTPSOAP.name.in_(demo_names)).all()
 
     existing_by_name = {}
 
@@ -393,12 +418,13 @@ def ensure_demo_rest_objects(server:'ParallelServer') -> 'strlist':
     out:'strlist' = []
 
     # The outgoing connection points back at this very server, so an earlier import's
-    # host is corrected when the server's own address has changed since ..
+    # host is corrected when the server's own address has changed since, as is
+    # an audit log an earlier import left off ..
     if _archive_outconn in existing_by_name:
 
         existing = existing_by_name[_archive_outconn]
 
-        if existing[2] != archive_host:
+        if existing[2] != archive_host or not _is_rest_audit_on(existing[3]):
 
             request = _build_archive_outconn_request(archive_host)
             request['id'] = existing[0]
@@ -412,8 +438,18 @@ def ensure_demo_rest_objects(server:'ParallelServer') -> 'strlist':
         out.append(_archive_outconn)
 
     # .. and the intake channel receives what goes out through it.
-    if _archive_intake_channel not in existing_by_name:
+    if _archive_intake_channel in existing_by_name:
 
+        existing = existing_by_name[_archive_intake_channel]
+
+        if not _is_rest_audit_on(existing[3]):
+
+            request = _build_archive_channel_request()
+            request['id'] = existing[0]
+
+            _ = server.invoke('zato.http-soap.edit', request)
+            out.append(_archive_intake_channel)
+    else:
         request = _build_archive_channel_request()
 
         _ = server.invoke('zato.http-soap.create', request)

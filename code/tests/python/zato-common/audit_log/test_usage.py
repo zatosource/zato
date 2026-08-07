@@ -16,6 +16,7 @@ from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditS
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
 from zato.common.audit_log.reports import Range_Day
 from zato.common.audit_log.usage import get_object_options, get_usage, normalize_sources, usage_csv, Usage_Sources
+from zato.common.hl7.audit import audit_ack_sent
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
@@ -44,7 +45,10 @@ _fhir_outgoing = 'usage.test.fhir-outgoing'
 # The security definition the REST channel's caller authenticated with
 _rest_caller = 'usage.test.caller'
 
-# What a caller with no security definition is reported as
+# The sending facility of the MLLP channel's messages - MLLP's caller identity
+_mllp_facility = 'CLINIC_A'
+
+# What a caller with no identity at all is reported as
 _caller_anonymous = 'Anonymous'
 
 # Hostile object values that must be treated as plain names - no error, no match
@@ -87,13 +91,15 @@ def _seed_events() -> 'None':
     audit_log.insert(AuditSource.REST_Channel, AuditEvent.Response_Sent, _rest_channel,
         cid='cid-rest-2', ext_client_id=_rest_caller, outcome=AuditOutcome.OK)
 
-    # One completing event for each of the other covered sources
+    # One completing event for each of the other covered sources - the MLLP channel's
+    # acknowledgment goes through the real writer, which records the sending facility
+    # as the caller identity
     audit_log.insert(AuditSource.SOAP_Channel, AuditEvent.Response_Sent, _soap_channel,
         cid='cid-soap-1', outcome=AuditOutcome.OK)
     audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Response_Received, _rest_outgoing,
         cid='cid-out-1', outcome=AuditOutcome.OK)
-    audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Ack_Sent, _mllp_channel,
-        cid='cid-mllp-1', outcome=AuditOutcome.OK)
+    _ = audit_ack_sent(audit_log, _mllp_channel, 'AA', 'MSA|AA|MSG00001',
+        cid='cid-mllp-1', msg_id='MSG00001', facility=_mllp_facility)
     audit_log.insert(AuditSource.MLLP_Outgoing, AuditEvent.Ack_Received, _mllp_outgoing,
         cid='cid-mllp-out-1', outcome=AuditOutcome.OK)
     audit_log.insert(AuditSource.FHIR, AuditEvent.Response_Received, _fhir_outgoing,
@@ -156,13 +162,15 @@ class TestGetUsage:
             assert rest_row.caller == _rest_caller
             assert rest_row.calls == 2
 
-            # An exchange recorded without a security definition came from an anonymous caller
+            # An MLLP channel's caller is the sending facility of its messages
             mllp_row = _rows_for(rows, _mllp_channel)[0]
             assert mllp_row.source == AuditSource.MLLP_Channel
-            assert mllp_row.caller == _caller_anonymous
+            assert mllp_row.caller == _mllp_facility
 
+            # An exchange recorded with no identity at all came from an anonymous caller
             fhir_row = _rows_for(rows, _fhir_outgoing)[0]
             assert fhir_row.source == AuditSource.FHIR
+            assert fhir_row.caller == _caller_anonymous
 
 # ################################################################################################################################
 
@@ -260,8 +268,8 @@ class TestNormalizeSources:
 
         expected = (
             AuditSource.REST_Channel,
-            AuditSource.SOAP_Channel,
             AuditSource.REST_Outgoing,
+            AuditSource.SOAP_Channel,
             AuditSource.MLLP_Channel,
             AuditSource.MLLP_Outgoing,
             AuditSource.FHIR,

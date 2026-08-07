@@ -60,10 +60,12 @@ Caller_Anonymous = 'Anonymous'
 # The sources the usage page covers and, per source, the event marking one completed
 # exchange - the completing event rather than request-sent, so a destination delivery,
 # whose hop recorder writes an extra request-sent row, is never counted twice.
+# The order is the display order of the page's type filter - each protocol's
+# channels and outgoing connections stand together.
 _usage_event_by_source = {
     AuditSource.REST_Channel:  AuditEvent.Response_Sent,
-    AuditSource.SOAP_Channel:  AuditEvent.Response_Sent,
     AuditSource.REST_Outgoing: AuditEvent.Response_Received,
+    AuditSource.SOAP_Channel:  AuditEvent.Response_Sent,
     AuditSource.MLLP_Channel:  AuditEvent.Ack_Sent,
     AuditSource.MLLP_Outgoing: AuditEvent.Ack_Received,
     AuditSource.FHIR:          AuditEvent.Response_Received,

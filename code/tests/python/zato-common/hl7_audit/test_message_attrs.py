@@ -8,7 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditSource
-from zato.common.hl7.audit import get_audit_attrs, get_control_id, get_message_type, get_mrn, get_sending_facility
+from zato.common.hl7.audit import get_audit_attrs, get_control_id, get_message_type, get_mrn, get_sending_facility, \
+    get_wire_attrs
 from zato.hl7v2 import parse_hl7
 from zato.hl7v2.tests.fakers import fake
 from zato.hl7v2.tests.fakers.msg_adt import fake_adta01
@@ -126,6 +127,46 @@ class TestSendingFacilityAndControlID:
     def test_control_id_comes_from_msh_10(self) -> 'None':
         msg = parse_hl7(_adt_a01)
         assert get_control_id(msg) == 'MSG000001'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestWireAttrs:
+
+    def test_type_and_trigger_come_off_the_wire(self) -> 'None':
+        msh_line = _adt_a01.split('\r', 1)[0]
+
+        attrs = get_wire_attrs(msh_line)
+
+        assert attrs == {
+            'msg_type': 'ADT^A01',
+            'facility': 'GENERAL_HOSPITAL',
+        }
+
+# ################################################################################################################################
+
+    def test_a_type_without_a_trigger_stands_alone(self) -> 'None':
+        msh_line = 'MSH|^~\\&|HIS|GENERAL_HOSPITAL|LAB_SYSTEM|CENTRAL_LAB|20260115103000||ACK|MSG000004|P|2.9'
+
+        attrs = get_wire_attrs(msh_line)
+
+        assert attrs['msg_type'] == 'ACK'
+        assert attrs['facility'] == 'GENERAL_HOSPITAL'
+
+# ################################################################################################################################
+
+    def test_a_line_with_no_msh_yields_empty_attrs(self) -> 'None':
+
+        # Wire data is external input - an empty message sent from the Dashboard invoker
+        # must yield empty attributes rather than an error.
+        for msh_line in ('', 'MSH', 'abc'):
+
+            attrs = get_wire_attrs(msh_line)
+
+            assert attrs == {
+                'msg_type': '',
+                'facility': '',
+            }
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -36,6 +36,7 @@ _Lexer_Whitelist = frozenset({
     'json',
     'markdown',
     'pytb',
+    'python',
     'sql',
 })
 

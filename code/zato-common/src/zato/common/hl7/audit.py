@@ -265,6 +265,15 @@ def get_wire_attrs(msh_line:'str') -> 'stranydict':
 
     fields = parse_msh_fields(msh_line)
 
+    # A line too short to carry MSH fields parses to nothing - wire data is external input,
+    # e.g. an empty message sent from the Dashboard invoker, so there is nothing to report
+    if not fields:
+        out = {
+            'msg_type': '',
+            'facility': '',
+        }
+        return out
+
     # The type and trigger combine the same way a parsed message's attributes do
     if fields['msh9_trigger']:
         msg_type = f'{fields["msh9_type"]}^{fields["msh9_trigger"]}'
@@ -314,12 +323,16 @@ def audit_message_received(
     """ Writes the event of one HL7 message arriving on a channel. The receipt itself
     always succeeds - whatever happens next is the acknowledgment's story.
     """
+
+    # The sending facility is who the message came from - MLLP's counterpart
+    # of the security definition a REST caller authenticates with
     out = audit_log.insert(
         AuditSource.MLLP_Channel,
         AuditEvent.Message_Received,
         channel_name,
         cid=cid,
         msg_id=msg_id,
+        ext_client_id=attrs['facility'],
         endpoint=endpoint,
         size=len(message_text),
         outcome=AuditOutcome.OK,
@@ -339,10 +352,13 @@ def audit_ack_sent(
     *,
     cid:'str',
     msg_id:'str',
+    facility:'str',
     duration_ms:'int' = 0,
     ) -> 'intnone':
     """ Writes the event of an acknowledgment leaving a channel - the ACK code decides
     the outcome, so a rejected message is visibly a failure on its own row.
+    The facility is who sent the message being acknowledged - the usage report
+    reads its callers off this row.
     """
     result = interpret_ack_code(ack_code)
 
@@ -352,6 +368,7 @@ def audit_ack_sent(
         channel_name,
         cid=cid,
         msg_id=msg_id,
+        ext_client_id=facility,
         outcome=result.outcome,
         application_outcome=result.application_outcome,
         classification=result.classification,
@@ -491,6 +508,7 @@ def audit_batch_received(
             channel_name,
             cid=cid,
             msg_id=control_id,
+            ext_client_id=attrs['facility'],
             endpoint=endpoint,
             outcome=AuditOutcome.OK,
             attrs=attrs,

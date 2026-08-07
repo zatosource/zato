@@ -503,7 +503,8 @@ class HL7MLLPServer:
         if self.audit_log and route.is_audit_log_active:
             _ = audit_ack_sent(
                 self.audit_log, route.channel_name, _Rejection_Ack_Code, ack_string,
-                cid=new_cid_server(), msg_id=extract_control_id(msh_line))
+                cid=new_cid_server(), msg_id=extract_control_id(msh_line),
+                facility=get_wire_attrs(msh_line)['facility'])
 
         self._send_framed(active_socket, ack_string, settings, connection_context)
 
@@ -627,7 +628,8 @@ class HL7MLLPServer:
         if audit_log and audit_channel_name:
             _ = audit_ack_sent(
                 audit_log, audit_channel_name, ack_code, ack_string,
-                cid=audit_cid, msg_id=extract_control_id(msh_line))
+                cid=audit_cid, msg_id=extract_control_id(msh_line),
+                facility=get_wire_attrs(msh_line)['facility'])
 
         self._send_framed(active_socket, ack_string, settings, connection_context)
 
@@ -826,7 +828,7 @@ class HL7MLLPServer:
                                 cid=audit_cid, msg_id=audit_msg_id, attrs=audit_attrs, endpoint=peer_endpoint)
                             _ = audit_ack_sent(
                                 audit_log, audit_channel_name, ack_code, ack_string,
-                                cid=audit_cid, msg_id=audit_msg_id)
+                                cid=audit_cid, msg_id=audit_msg_id, facility=audit_attrs['facility'])
 
                         self._send_framed(active_socket, ack_string, settings, connection_context)
 
@@ -880,7 +882,7 @@ class HL7MLLPServer:
                                 cid=audit_cid, msg_id=audit_msg_id, attrs=audit_attrs, endpoint=peer_endpoint)
                             _ = audit_ack_sent(
                                 audit_log, audit_channel_name, ack_code, ack_string,
-                                cid=audit_cid, msg_id=audit_msg_id)
+                                cid=audit_cid, msg_id=audit_msg_id, facility=audit_attrs['facility'])
 
                         self._send_framed(active_socket, ack_string, settings, connection_context)
 
@@ -954,7 +956,8 @@ class HL7MLLPServer:
 
                 _ = audit_ack_sent(
                     audit_log, audit_channel_name, ack_code, ack_string,
-                    cid=audit_cid, msg_id=audit_msg_id, duration_ms=callback_duration_ms)
+                    cid=audit_cid, msg_id=audit_msg_id, facility=audit_attrs['facility'],
+                    duration_ms=callback_duration_ms)
 
                 _trace('audit ack done %.1fms (%s)', (monotonic() - audit_ack_start) * _ms_per_second, audit_msg_id)
 

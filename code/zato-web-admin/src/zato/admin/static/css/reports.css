@@ -58,6 +58,33 @@
     display: inline-flex;
 }
 
+/* Each select keeps one width whatever is picked, so changing a filter never
+   shifts the bar - the chevron stays pinned to the right edge and a pick too
+   long for its badge is ellipsized inside it. */
+
+.report-filter-select .dashboard-select-face {
+    box-sizing: border-box;
+}
+
+#report-filter-source .dashboard-select-face {
+    width: 190px;
+}
+
+#report-filter-object .dashboard-select-face {
+    width: 280px;
+}
+
+.report-filter-select .dashboard-select-chevron {
+    margin-left: auto;
+}
+
+.report-filter-select .dashboard-select-value {
+    display: block;
+    max-width: 190px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .report-filter-csv {
     margin-left: auto;
     font-size: 11px;
