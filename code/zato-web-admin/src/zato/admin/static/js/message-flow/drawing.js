@@ -117,7 +117,11 @@ drawing.config = {
     panVelocityFrameMs: 16,
 
     // Where the browser keeps how closely the drawing was being looked at
-    zoomStorageKey: 'zato.message-flow.zoom'
+    zoomStorageKey: 'zato.message-flow.zoom',
+
+    // Where a click does not let a held selection go - the pane the selection
+    // is being read in and the bar over it
+    deselectExemptSelector: '#message-flow-detail, #message-flow-resize'
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -126,6 +130,10 @@ drawing.config = {
 // and the node the reader picked
 drawing.nodeDetails = [];
 drawing.selectedNode = null;
+
+// Lets a held selection go - each render leaves its own here, closing over that
+// drawing's nodes and branches, and there is nothing to let go before the first one
+drawing.deselect = null;
 
 // How closely the drawing is looked at - created once, in init
 drawing.zoom = null;
@@ -1233,19 +1241,44 @@ drawing.wireDrawing = function(svg) {
         wireNode(nodes[nodeIndex]);
     }
 
-    // A click on the empty canvas lets a held selection go
-    svg.addEventListener('click', function() {
+    // Letting a held selection go - the canvas click and the Esc key, both wired
+    // once in init, call whatever render left here last
+    drawing.deselect = function() {
         if (drawing.selectedNode !== null) {
             clearSelection();
             clearLit();
         }
-    });
+    };
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
 drawing.init = function() {
     drawing.wirePanning();
+
+    // A click anywhere on the page that is not a node lets a held selection go -
+    // the canvas, the room around it, the head, all of it. Only the pane the
+    // selection is being read in and the bar over it stay out of this. A node's
+    // own click never bubbles this far, and a pan is not a click, which the
+    // panning's own suppressor already sees to.
+    document.addEventListener('click', function(event) {
+        if (drawing.deselect === null) {
+            return;
+        }
+
+        if (event.target.closest(drawing.config.deselectExemptSelector) !== null) {
+            return;
+        }
+
+        drawing.deselect();
+    });
+
+    // Esc lets go too, from wherever the pointer happens to be
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape' && drawing.deselect !== null) {
+            drawing.deselect();
+        }
+    });
 
     drawing.zoom = kit.draw_zoom.create({
         host: drawing.canvas,
