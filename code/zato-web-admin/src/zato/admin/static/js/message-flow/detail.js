@@ -3,9 +3,10 @@
 
 // Message flow - the pane under the drawing. One constant size whatever it is
 // holding, so opening, switching and closing nodes never moves anything around
-// it. A clicked node's exchange opens here - one tab per event, each body
-// fetched from the audit log the first time its tab is opened, the files an
-// event carried offered over the bodies.
+// it. A clicked node's exchange opens here in two sides - the request's and
+// the reply's, sharing the pane by the bar between them - one tab per event,
+// each body fetched from the audit log the first time its tab is opened, the
+// files an event carried offered over the bodies.
 
 $.fn.zato.message_flow.detail = {};
 
@@ -27,6 +28,20 @@ detail.config = {
     // What the pane says with nothing picked and while a body is on its way
     hint: 'No node selected',
     charactersLabel: 'characters',
+
+    // What either side of the pane says when the exchange has no events
+    // of its own kind for it
+    sideHints: {
+        'request': 'No request',
+        'response': 'No reply'
+    },
+
+    // How the two sides share the pane - where the browser keeps the share,
+    // what it is before anyone pulls the bar, and the least share either
+    // side keeps
+    splitStorageKey: 'zato.message-flow.detail-split',
+    splitDefaultPercent: 50,
+    splitMinPercent: 20,
 
     // The word each kind of line wears, the same words the drawing writes
     roleLabels: {
@@ -121,7 +136,8 @@ detail.tabOf = function(model) {
 // /////////////////////////////////////////////////////////////////////////////
 
 // The pane brought to one exchange - the header, the files its events carried,
-// and one tab per event, each body asked for the first time its tab is opened
+// and the body in two sides, the request's and the reply's, each with one tab
+// per event, each body asked for the first time its tab is opened
 detail.show = function(nodeDetail) {
     var listing = $.fn.zato.audit_log.listing;
     var page = $.fn.zato.message_flow.page;
@@ -162,12 +178,20 @@ detail.show = function(nodeDetail) {
     attachments.className = 'message-flow-detail-attachments';
     host.appendChild(attachments);
 
-    var tabs = [];
+    // The events split between the two sides - a reply to the right, every
+    // other kind of line to the left with the request it belongs to
+    var requestModels = [];
+    var responseModels = [];
 
     for (var modelIndex = 0; modelIndex < nodeDetail.models.length; modelIndex++) {
         var model = nodeDetail.models[modelIndex];
 
-        tabs.push(detail.tabOf(model));
+        if (detail.roleOf(model) === 'response') {
+            responseModels.push(model);
+        }
+        else {
+            requestModels.push(model);
+        }
 
         var attachmentsHost = document.createElement('div');
         attachmentsHost.className = 'message-flow-detail-attachments-host';
@@ -180,16 +204,58 @@ detail.show = function(nodeDetail) {
         listing.loadAttachments(model, $(attachmentsHost));
     }
 
+    var split = document.createElement('div');
+    split.className = 'message-flow-detail-split';
+    host.appendChild(split);
+
+    detail.addSide(split, 'request', requestModels);
+
+    var splitBar = document.createElement('div');
+    splitBar.className = 'message-flow-detail-split-bar';
+    split.appendChild(splitBar);
+
+    detail.addSide(split, 'response', responseModels);
+
+    detail.applySplit(split);
+    detail.updateCaption();
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// One side of the pane - its events' badges always on top, each tab's body
+// fetched the first time it is opened, parsed when the source's reader made
+// sense of it, as it went down the wire otherwise. A side the exchange has
+// no events for says so.
+detail.addSide = function(split, role, models) {
+    var listing = $.fn.zato.audit_log.listing;
+
+    var side = document.createElement('div');
+    side.className = 'message-flow-detail-side message-flow-detail-side-' + role;
+    split.appendChild(side);
+
+    if (models.length === 0) {
+        var hint = document.createElement('div');
+        hint.className = 'message-flow-detail-hint';
+        hint.textContent = detail.config.sideHints[role];
+        side.appendChild(hint);
+
+        return;
+    }
+
+    var tabs = [];
+
+    for (var modelIndex = 0; modelIndex < models.length; modelIndex++) {
+        tabs.push(detail.tabOf(models[modelIndex]));
+    }
+
     var panelHost = document.createElement('div');
     panelHost.className = 'message-flow-detail-panel';
-    host.appendChild(panelHost);
+    side.appendChild(panelHost);
 
     var caption = document.createElement('div');
     caption.className = 'message-flow-detail-caption';
-    host.appendChild(caption);
+    side.appendChild(caption);
 
-    // Each tab fetches its own body the first time it is opened - parsed when
-    // the source's reader made sense of it, as it went down the wire otherwise
     kit.payload_panel.lazy($(panelHost), tabs, function(tab, onDone) {
         listing.fetchDetails(tab.eventId, '', false, function(details) {
             var text = details.data;
@@ -204,36 +270,113 @@ detail.show = function(nodeDetail) {
             onDone(text);
         });
     });
-
-    detail.updateCaption();
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The words under the body - how much of it there is, in the same dim ink the
-// list's captions use, and nothing while the open body is still on its way
+// The words under each side's body - how much of it there is, in the same dim
+// ink the list's captions use, and nothing while the open body is still on
+// its way. The pane may have been emptied while a body was coming, in which
+// case there are simply no captions to bring up.
 detail.updateCaption = function() {
     var host = detail.host();
-    var caption = host.querySelector('.message-flow-detail-caption');
+    var captions = host.querySelectorAll('.message-flow-detail-caption');
 
-    // The pane may have been emptied while a body was on its way
-    if (caption === null) {
-        return;
+    for (var captionIndex = 0; captionIndex < captions.length; captionIndex++) {
+        var caption = captions[captionIndex];
+        var side = caption.parentElement;
+
+        var $openTab = $(side).find('.dashboard-payload-tab.dashboard-panel-action-badge-active');
+
+        var tabs = $(side).find('.dashboard-payload').data('payload_tabs');
+        var tab = tabs[parseInt($openTab.attr('data-tab-index'), 10)];
+
+        var length = detail.bodyLengths[String(tab.eventId)];
+
+        if (length === undefined) {
+            caption.textContent = '';
+            continue;
+        }
+
+        caption.textContent = length.toLocaleString('en-US') + ' ' + detail.config.charactersLabel;
+    }
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// How the two sides share the pane - the remembered share put back on every
+// opening, the default an even split
+detail.applySplit = function(split) {
+    var kept = window.localStorage.getItem(detail.config.splitStorageKey);
+    var percent = detail.config.splitDefaultPercent;
+
+    if (kept !== null) {
+        percent = Number(kept);
     }
 
-    var $openTab = $(host).find('.dashboard-payload-tab.dashboard-panel-action-badge-active');
+    split.style.setProperty('--message-flow-detail-split', percent + '%');
+};
 
-    var tabs = $(host).find('.dashboard-payload').data('payload_tabs');
-    var tab = tabs[parseInt($openTab.attr('data-tab-index'), 10)];
+// /////////////////////////////////////////////////////////////////////////////
 
-    var length = detail.bodyLengths[String(tab.eventId)];
+// The bar between the two sides - a press and a pull shares the pane's width
+// between the request and the reply, neither side ever pushed below its least
+// share. Wired once, through the document, because the bar itself is built
+// anew with every opened node.
+detail.wireSplit = function() {
+    var config = detail.config;
 
-    if (length === undefined) {
-        caption.textContent = '';
-        return;
-    }
+    var isPressed = false;
+    var split = null;
+    var splitBar = null;
 
-    caption.textContent = length.toLocaleString('en-US') + ' ' + detail.config.charactersLabel;
+    document.addEventListener('mousedown', function(event) {
+
+        // Only the main button grabs the bar
+        if (event.button !== 0) {
+            return;
+        }
+
+        if (!event.target.classList.contains('message-flow-detail-split-bar')) {
+            return;
+        }
+
+        isPressed = true;
+        splitBar = event.target;
+        split = splitBar.parentElement;
+
+        splitBar.classList.add('message-flow-detail-splitting');
+
+        // The pull must not start selecting the page's text
+        event.preventDefault();
+    });
+
+    window.addEventListener('mousemove', function(event) {
+        if (!isPressed) {
+            return;
+        }
+
+        var rect = split.getBoundingClientRect();
+        var percent = (event.clientX - rect.left) / rect.width * 100;
+
+        if (percent < config.splitMinPercent) {
+            percent = config.splitMinPercent;
+        }
+
+        if (percent > 100 - config.splitMinPercent) {
+            percent = 100 - config.splitMinPercent;
+        }
+
+        split.style.setProperty('--message-flow-detail-split', percent + '%');
+        window.localStorage.setItem(config.splitStorageKey, String(Math.round(percent)));
+    });
+
+    window.addEventListener('mouseup', function() {
+        if (isPressed) {
+            isPressed = false;
+            splitBar.classList.remove('message-flow-detail-splitting');
+        }
+    });
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -329,6 +472,7 @@ detail.wireResize = function() {
 
 detail.init = function() {
     detail.wireResize();
+    detail.wireSplit();
     detail.hide();
 };
 

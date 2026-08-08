@@ -24,6 +24,16 @@ replay.floatConfig = {
     // and when a remembered position no longer fits the frame
     margin: 12,
 
+    // How much of the bar must always stay inside the frame - the bar may
+    // hang off any edge, but never further than this, so there is always
+    // well more than the grip left to take it back by
+    keepVisibleX: 96,
+    keepVisibleY: 20,
+
+    // What on the bar a drag can never start from - every working control
+    // keeps answering to its own presses
+    dragExemptSelector: 'button, input, .message-flow-replay-track, .message-flow-replay-shortcuts',
+
     // What the docked tab says
     dockLabel: 'Replay'
 };
@@ -39,7 +49,11 @@ replay.floatState = {
 
     isMinimized: false,
 
-    dock: null
+    dock: null,
+
+    // A drag of the bar ends in a click the page also hears - this says the
+    // very next click is the drag's own and reaches for nothing
+    isDragClick: false
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -82,15 +96,18 @@ replay.saveFloatState = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// A remembered position is only as good as the room it was remembered in -
-// whatever no longer fits is pulled back inside the frame
+// The bar may hang off any edge of the frame, but never entirely - enough of
+// it always stays inside to be read and taken back by, whichever way it went
 replay.clampFloat = function(x, y) {
-    var margin = replay.floatConfig.margin;
+    var config = replay.floatConfig;
     var frame = replay.floatFrame();
     var bar = replay.bar();
 
-    var maxX = frame.clientWidth - bar.offsetWidth - margin;
-    var maxY = frame.clientHeight - bar.offsetHeight - margin;
+    var minX = config.keepVisibleX - bar.offsetWidth;
+    var maxX = frame.clientWidth - config.keepVisibleX;
+
+    var minY = config.keepVisibleY - bar.offsetHeight;
+    var maxY = frame.clientHeight - config.keepVisibleY;
 
     if (x > maxX) {
         x = maxX;
@@ -100,12 +117,12 @@ replay.clampFloat = function(x, y) {
         y = maxY;
     }
 
-    if (x < margin) {
-        x = margin;
+    if (x < minX) {
+        x = minX;
     }
 
-    if (y < margin) {
-        y = margin;
+    if (y < minY) {
+        y = minY;
     }
 
     return {x: x, y: y};
@@ -233,8 +250,8 @@ replay.buildFloat = function() {
     var bar = replay.bar();
     var frame = replay.floatFrame();
 
-    // The grip stands first on the bar - the one place a drag starts from,
-    // so the track and the buttons keep answering to their own presses
+    // The grip stands first on the bar - the drag's own handle, though any
+    // idle place on the bar picks it up just the same
     var grip = document.createElement('span');
     grip.className = 'message-flow-replay-grip';
     grip.title = replay.config.moveLabel;
@@ -265,16 +282,22 @@ replay.buildFloat = function() {
         replay.restoreBar();
     });
 
-    // The drag - the pointer picks the bar up by the grip, carries it in the
-    // frame's own coordinates and puts it down where it lets go
+    // The drag - the pointer picks the bar up by the grip or by any idle
+    // place on it, carries it in the frame's own coordinates and puts it
+    // down where it lets go
     var isDragging = false;
     var pointerOffsetX = 0;
     var pointerOffsetY = 0;
 
-    grip.addEventListener('mousedown', function(event) {
+    bar.addEventListener('mousedown', function(event) {
 
         // Only the main button picks the bar up
         if (event.button !== 0) {
+            return;
+        }
+
+        // A press on a working control is that control's own
+        if (event.target.closest(replay.floatConfig.dragExemptSelector) !== null) {
             return;
         }
 
@@ -327,6 +350,15 @@ replay.buildFloat = function() {
 
         isDragging = false;
         bar.classList.remove('message-flow-replay-bar-dragging');
+
+        // The click the browser fires right after this mouseup is the drag's
+        // own - it reaches for nothing and must close nothing. The flag is
+        // let go on its own in case that click never arrives.
+        state.isDragClick = true;
+
+        setTimeout(function() {
+            state.isDragClick = false;
+        }, 0);
 
         replay.saveFloatState();
     });

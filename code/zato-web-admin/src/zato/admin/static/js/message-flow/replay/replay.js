@@ -28,20 +28,19 @@ replay.config = {
 
     barId: 'message-flow-replay-bar',
 
-    // How long one whole pass takes on the compressed clock, whatever the
-    // flow's real span was
-    compressedDurationMs: 6000,
+    // How long one whole auto-play pass takes, whatever the flow's real
+    // span was
+    autoPlayDurationMs: 6000,
 
-    // Each event holds the compressed clock for at least this long, so two
+    // Each event holds the auto-play clock for at least this long, so two
     // events of the same millisecond still read one after another, and the
     // clock runs this much past the last event before the pass is over
     eventBeat: 0.6,
 
-    // The three clocks - the compressed one, the real one and no clock at all,
-    // the arrows alone moving the playhead
+    // The two ways the playhead moves - auto-play walking the whole pass on
+    // its own, and step, no clock at all, the arrows alone moving it
     modes: [
-        {key: 'compressed', label: 'Compressed', icon: 'compressed'},
-        {key: 'real', label: 'Real time', icon: 'clock'},
+        {key: 'auto', label: 'Auto-play', icon: 'autoplay'},
         {key: 'step', label: 'Step', icon: 'step'}
     ],
 
@@ -65,7 +64,8 @@ replay.config = {
         {keys: 'Space', label: 'Play and pause'},
         {keys: 'Right', label: 'Next event'},
         {keys: 'Left', label: 'Previous event'},
-        {keys: 'Up / Down', label: 'Clock mode'},
+        {keys: 'Home / End', label: 'Start / end'},
+        {keys: 'Up / Down', label: 'Playback mode'},
         {keys: 'Esc', label: 'End the pass'}
     ],
 
@@ -86,21 +86,20 @@ replay.state = {
     // How fast the clock runs against its own speed - one is the clock's own
     speed: 1,
 
-    // Where the playhead stands on the compressed axis
+    // Where the playhead stands on the scaled axis
     position: 0,
 
     // The timeline - every event of the drawing in the order it happened,
-    // each entry carrying its real moment and its place on the compressed axis
+    // each entry carrying its real moment and its place on the scaled axis
     events: [],
     totalScaled: 0,
     startMs: 0,
     endMs: 0,
 
-    // The drawn things the playback moves - the nodes by their exchange key,
-    // the connector sets, and the chips the replay itself put on the drawing
+    // The drawn things the playback moves - the nodes by their exchange key
+    // and the connector sets with their words
     nodes: {},
     connectors: [],
-    replayChips: [],
     svg: null,
 
     // How many events the last frame had already played, which is what a new
@@ -135,9 +134,9 @@ replay.isBadOutcome = function(model) {
 // The pass's dress on the drawing - put on when a pass starts, taken off by Esc
 // /////////////////////////////////////////////////////////////////////////////
 
-// The room falls dark, the connectors ready their dashes and the elapsed chips
-// take their places - the first press of Play, a step or a scrub is what asks
-// for this, the bar itself is always on the page
+// The room falls dark and the connectors ready their dashes - the first press
+// of Play, a step or a scrub is what asks for this, the bar itself is always
+// on the page
 replay.arm = function() {
     var drawing = $.fn.zato.message_flow.drawing;
     var state = replay.state;
@@ -151,8 +150,6 @@ replay.arm = function() {
         drawing.deselect();
     }
 
-    replay.addElapsedChips();
-
     state.isActive = true;
 
     state.svg.classList.add('message-flow-replay');
@@ -160,8 +157,8 @@ replay.arm = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Everything the pass put on the drawing comes off it - classes, inline dash
-// styles and chips alike - and the drawing stands as it stood before, the bar
+// Everything the pass put on the drawing comes off it - classes and inline
+// dash styles alike - and the drawing stands as it stood before, the bar
 // standing by with the playhead back at the start
 replay.disarm = function() {
     var state = replay.state;
@@ -201,19 +198,6 @@ replay.disarm = function() {
         }
     }
 
-    // The chips the pass added leave the drawing and their connectors' own
-    // registers alike, so the next pass starts from a clean slate
-    for (var replayChipIndex = 0; replayChipIndex < state.replayChips.length; replayChipIndex++) {
-        var replayChip = state.replayChips[replayChipIndex];
-
-        replayChip.element.remove();
-
-        var chipPlace = replayChip.connector.chipGroups.indexOf(replayChip.element);
-        replayChip.connector.chipGroups.splice(chipPlace, 1);
-    }
-
-    state.replayChips = [];
-
     state.svg.classList.remove('message-flow-replay');
 
     replay.setNote('');
@@ -226,6 +210,12 @@ replay.disarm = function() {
 // drawing that is gone, and the bar stands ready over the new one
 replay.onJourney = function() {
     replay.disarm();
+
+    // The keys belong to the pass now - the field the search was typed into
+    // lets the focus go, so the space bar plays rather than types
+    if (document.activeElement.matches('input, textarea')) {
+        document.activeElement.blur();
+    }
 
     replay.buildTimeline();
     replay.buildTicks();

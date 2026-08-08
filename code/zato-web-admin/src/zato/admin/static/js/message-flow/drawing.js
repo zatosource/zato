@@ -33,6 +33,10 @@ drawing.config = {
     lineStride: 22,
     lineBottomPad: 2,
 
+    // The strip across every node's foot, where the node says how long after
+    // the flow's first moment its own exchange began
+    footerHeight: 19,
+
     // The writing inside a node
     bodyPadLeft: 10,
 
@@ -310,18 +314,13 @@ drawing.addChip = function(host, x, y, label, kind, onCanvas) {
 // One connector - the line and the arrowhead - held in a group of its own that
 // says which branch and which node it leads into and out of what, which is what
 // lets it light with its branch and lets the replay draw it in as its node's
-// moment comes. The anchor is where the connector's words stand on its run,
-// and the run bounds are where along the horizontal run such words may stand.
-drawing.addConnectorSet = function(connectorLayer, branchIndex, toKey, fromKey, anchorX, anchorY, runFromX, runToX) {
+// moment comes.
+drawing.addConnectorSet = function(connectorLayer, branchIndex, toKey, fromKey) {
     var group = drawing.addGroup(connectorLayer, 'message-flow-connector-set');
 
     group.setAttribute('data-branch-index', branchIndex);
     group.setAttribute('data-connector-to', toKey);
     group.setAttribute('data-connector-from', fromKey);
-    group.setAttribute('data-anchor-x', anchorX);
-    group.setAttribute('data-anchor-y', anchorY);
-    group.setAttribute('data-run-from-x', runFromX);
-    group.setAttribute('data-run-to-x', runToX);
 
     return group;
 };
@@ -546,7 +545,7 @@ drawing.firstMsOf = function(exchange) {
 
 // The pointed relations chained onto the cards - an event found through an event
 // of another exchange hangs that exchange behind this one, the later of the two
-// always behind the earlier, wearing the relation's word and the elapsed time
+// always behind the earlier, wearing the relation's word
 drawing.linkExchanges = function(exchanges, models) {
     var config = drawing.config;
 
@@ -590,8 +589,9 @@ drawing.linkExchanges = function(exchanges, models) {
 
         later.parentKey = earlier.key;
 
-        var elapsedMs = drawing.firstMsOf(later) - drawing.firstMsOf(earlier);
-        later.connectorLabel = word + config.labelSeparator + '+' + kit.format_duration_ms(elapsedMs);
+        // The connector carries the relation's word alone - how long after the
+        // flow began each exchange spoke is on the exchange's own footer
+        later.connectorLabel = word;
     }
 };
 
@@ -714,10 +714,13 @@ drawing.connectorLength = function(node) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// How tall one node stands - the band plus one line for each event it holds
+// How tall one node stands - the band, one line for each event it holds, and
+// the footer strip with the node's own elapsed words
 drawing.nodeHeight = function(node) {
     var config = drawing.config;
-    return config.bandHeight + config.lineTop + node.lines.length * config.lineStride + config.lineBottomPad;
+
+    return config.bandHeight + config.lineTop + node.lines.length * config.lineStride +
+        config.lineBottomPad + config.footerHeight;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -791,6 +794,15 @@ drawing.addNode = function(host, x, y, width, node) {
 
         drawing.addEventLine(group, x, lineY, width, node.lines[lineIndex]);
     }
+
+    // The footer strip - how long after the flow's first moment this node's
+    // own exchange began, always on the card, in the caption's dim ink
+    var footerTop = y + height - config.footerHeight;
+
+    drawing.addPolyline(group, [[x + 1, footerTop], [x + width - 1, footerTop]],
+        'message-flow-node-footer-line');
+    kit.draw.addText(group, x + config.bodyPadLeft, footerTop + 13, node.footerLabel,
+        'message-flow-node-footer', 'start');
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -826,7 +838,19 @@ drawing.render = function(models, seedModel) {
 
     var layoutRows = drawing.buildLayoutRows(exchanges);
 
-    // Every exchange becomes a node - the card, its lines and its connector words
+    // The flow's first moment - what every node's footer counts from
+    var flowStartMs = drawing.firstMsOf(exchanges.list[0]);
+
+    for (var startIndex = 1; startIndex < exchanges.list.length; startIndex++) {
+        var startCandidateMs = drawing.firstMsOf(exchanges.list[startIndex]);
+
+        if (startCandidateMs < flowStartMs) {
+            flowStartMs = startCandidateMs;
+        }
+    }
+
+    // Every exchange becomes a node - the card, its lines, its connector words
+    // and its footer's elapsed words
     var nodeByKey = {};
 
     for (var nodeIndex = 0; nodeIndex < exchanges.list.length; nodeIndex++) {
@@ -838,10 +862,13 @@ drawing.render = function(models, seedModel) {
             lines.push(drawing.lineOf(exchange.models[lineModelIndex]));
         }
 
+        var footerElapsedMs = drawing.firstMsOf(exchange) - flowStartMs;
+
         nodeByKey[exchange.key] = {
             key: exchange.key,
             channel: exchange.objectName,
             connectorLabel: exchange.connectorLabel,
+            footerLabel: '+' + kit.format_duration_ms(footerElapsedMs),
             lines: lines,
             models: exchange.models
         };
@@ -1042,8 +1069,7 @@ drawing.render = function(models, seedModel) {
                 // The row's opening connector - from the hub, or from the parent
                 // node an earlier row holds
                 if (item.fromKey === '') {
-                    var fanSet = drawing.addConnectorSet(connectorLayer, rowIndex, item.exchange.key, '',
-                        (fanElbowX + placement.x) / 2, centerY, fanElbowX, placement.x);
+                    var fanSet = drawing.addConnectorSet(connectorLayer, rowIndex, item.exchange.key, '');
 
                     drawing.addRoundedPath(fanSet, [
                         [hubRight, hubCenterY],
@@ -1059,7 +1085,7 @@ drawing.render = function(models, seedModel) {
                     var branchElbowX = parent.right + config.branchElbowOffset;
 
                     var branchSet = drawing.addConnectorSet(connectorLayer, rowIndex, item.exchange.key,
-                        item.fromKey, (branchElbowX + placement.x) / 2, centerY, branchElbowX, placement.x);
+                        item.fromKey);
 
                     drawing.addRoundedPath(branchSet, [
                         [parent.right, parentCenterY],
@@ -1092,8 +1118,7 @@ drawing.render = function(models, seedModel) {
                 var previousPlacement = placementByKey[previousKey];
 
                 var chainSet = drawing.addConnectorSet(connectorLayer, rowIndex, item.exchange.key,
-                    previousKey, (previousPlacement.right + placement.x) / 2, centerY,
-                    previousPlacement.right, placement.x);
+                    previousKey);
 
                 drawing.addPolyline(chainSet, [[previousPlacement.right, centerY], [placement.x, centerY]],
                     'message-flow-connector');

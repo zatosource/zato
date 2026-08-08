@@ -2,8 +2,8 @@
 // /////////////////////////////////////////////////////////////////////////////
 
 // Message flow replay - the playback. What the drawing shows at a given
-// playhead, the clock that moves it one frame at a time, and every deliberate
-// move of it - play, pause, a seek, a step, a change of clock.
+// playhead, the auto-play clock that moves it one frame at a time, and every
+// deliberate move of it - play, pause, a seek, a step, a change of mode.
 
 // /////////////////////////////////////////////////////////////////////////////
 
@@ -108,25 +108,15 @@ replay.tick = function(frameMs) {
         return;
     }
 
-    // The speed control stretches or shrinks the frame's own ms, so it bends
-    // both clocks alike - the real one and the compressed one
+    // The speed control stretches or shrinks the frame's own ms, bending
+    // the auto-play clock with it
     var frameElapsedMs = (frameMs - state.lastFrameMs) * state.speed;
     state.lastFrameMs = frameMs;
 
     var previousCount = state.playedCount;
-    var mode = replay.config.modes[state.modeIndex].key;
 
-    if (mode === 'real') {
-
-        // The real clock - the playhead advances by the wall's own ms
-        var realMs = replay.positionToRealMs(state.position) + frameElapsedMs;
-        state.position = replay.realMsToPosition(realMs);
-    }
-    else {
-
-        // The compressed clock - the whole pass fits its few seconds
-        state.position += frameElapsedMs * state.totalScaled / replay.config.compressedDurationMs;
-    }
+    // The auto-play clock - the whole pass fits its few seconds
+    state.position += frameElapsedMs * state.totalScaled / replay.config.autoPlayDurationMs;
 
     if (state.position > state.totalScaled) {
         state.position = state.totalScaled;
