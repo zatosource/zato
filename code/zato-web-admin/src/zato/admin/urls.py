@@ -434,6 +434,8 @@ urlpatterns += [
         login_required(audit_log.attachments), name='audit-log-attachments'),
     url(r'^zato/audit-log/attachment/$',
         login_required(audit_log.attachment_download), name='audit-log-attachment-download'),
+    url(r'^zato/audit-log/map/$',
+        login_required(audit_log.weather_map_index), name='audit-log-weather-map'),
 
     # Channel destinations
 

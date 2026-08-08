@@ -1,0 +1,38 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Weather map{% endblock %}
+
+{% block "extra_css" %}
+<link rel="stylesheet" type="text/css" href="/static/css/audit-log/weather-map.css">
+{% endblock %}
+
+{% block "content" %}
+
+<div class="weather-map-page">
+    <div class="weather-map-frame" id="weather-map-frame">
+        <canvas id="weather-map-canvas" class="weather-map-canvas"></canvas>
+        <div id="weather-map-card" class="weather-map-card"></div>
+        <div id="weather-map-empty" class="weather-map-empty">No connections yet</div>
+    </div>
+</div>
+
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/weather-map/geography.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/weather-map/field.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/weather-map/coast.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/weather-map/terrain.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/weather-map/render.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/weather-map/cards.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/audit-log/weather-map/weather-map.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.weather_map.init({
+        inventory: {{ inventory_json|safe }},
+        sourceLinks: {{ source_links_json|safe }},
+        objectLinks: {{ object_links_json|safe }},
+        auditLogPage: '{% url "audit-log" %}',
+        clusterId: '{{ cluster_id }}'
+    });
+});
+</script>
+
+{% endblock %}

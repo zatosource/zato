@@ -1,0 +1,132 @@
+/* ------------------------------------------------------------ */
+/* Weather map - the page and the map on it                      */
+/* ------------------------------------------------------------ */
+
+/* The light strip the menu stands on suits the light pages - over this dark
+   room it turns into a seam, so the bar casts a quiet shadow instead, the
+   same treatment the message flow page gives it */
+
+body:has(.weather-map-page) .pure-css-nav {
+    border-bottom-color: #101018;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+}
+
+body:has(.weather-map-page) .pure-css-nav > nav ul ul {
+    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.3));
+}
+
+.weather-map-page {
+
+    /* The room under the top menu bar and the cluster colour strip */
+    --weather-map-top-offset: 81px;
+
+    /* The dark room and its inks - the same family the message flow speaks */
+    --weather-map-surface: #1c1c28;
+    --weather-map-text: #e9e9f4;
+    --weather-map-muted: #9d9db8;
+    --weather-map-rim: rgba(255, 255, 255, 0.22);
+
+    /* The face a floating panel wears - opaque enough to stay readable
+       over whatever the map draws under it */
+    --weather-map-card-face: rgba(28, 28, 40, 0.92);
+
+    /* The ink a link out of a card is written in */
+    --weather-map-link: #6fb6e8;
+
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - var(--weather-map-top-offset));
+    padding: 18px 22px;
+    background: var(--weather-map-surface);
+    color: var(--weather-map-text);
+    font-family: 'Roboto Mono', monospace;
+}
+
+.weather-map-page * {
+    box-sizing: border-box;
+}
+
+/* ------------------------------------------------------------ */
+/* Weather map - the frame the canvas fills                      */
+/* ------------------------------------------------------------ */
+
+.weather-map-frame {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    border-radius: 6px;
+}
+
+.weather-map-canvas {
+    display: block;
+}
+
+/* ------------------------------------------------------------ */
+/* Weather map - the card                                        */
+/* ------------------------------------------------------------ */
+
+.weather-map-card {
+    position: absolute;
+    display: none;
+    max-width: 320px;
+    padding: 10px 14px 12px;
+    border: 1px solid var(--weather-map-rim);
+    border-radius: 6px;
+    background: var(--weather-map-card-face);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    pointer-events: auto;
+    z-index: 2;
+}
+
+.weather-map-card-visible {
+    display: block;
+}
+
+.weather-map-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--weather-map-text);
+    overflow-wrap: anywhere;
+}
+
+.weather-map-card-detail {
+    margin-top: 3px;
+    font-size: 11px;
+    color: var(--weather-map-muted);
+}
+
+.weather-map-card-links {
+    display: flex;
+    gap: 14px;
+    margin-top: 9px;
+}
+
+.weather-map-card-link {
+    font-size: 11px;
+    color: var(--weather-map-link);
+    text-decoration: none;
+}
+
+.weather-map-card-link:hover {
+    text-decoration: underline;
+}
+
+/* ------------------------------------------------------------ */
+/* Weather map - the empty state                                 */
+/* ------------------------------------------------------------ */
+
+.weather-map-empty {
+    display: none;
+    position: absolute;
+    inset: 0;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    color: var(--weather-map-muted);
+}
+
+.weather-map-empty-visible {
+    display: flex;
+}
