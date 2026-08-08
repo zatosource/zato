@@ -197,7 +197,7 @@ def job_detail(req, job_id:'int'):
     except Exception as e:
         logger.error('Scheduler job state error: %s', e)
 
-    return TemplateResponse(req, 'zato/scheduler/job_detail.html', {
+    return TemplateResponse(req, 'zato/scheduler/job-detail.html', {
         'cluster_id': default_cluster_id,
         'range_minutes': range_minutes,
         'job_id': job_id,
@@ -205,7 +205,7 @@ def job_detail(req, job_id:'int'):
         'dashboard_base_url': dashboard_base_url,
         'poll_url': '/zato/dashboard/detail-poll/',
         'zato_clusters': True,
-        'zato_template_name': 'zato/scheduler/job_detail.html',
+        'zato_template_name': 'zato/scheduler/job-detail.html',
     })
 
 # ################################################################################################################################

@@ -210,10 +210,10 @@ def object_index(req:'any_') -> 'TemplateResponse':
         'endpoint_labels_json': json.dumps(_source_endpoint_label),
         'event_labels_json': json.dumps(_event_type_label),
         'zato_clusters': True,
-        'zato_template_name': 'zato/audit_log.html',
+        'zato_template_name': 'zato/audit-log.html',
     }
 
-    out = TemplateResponse(req, 'zato/audit_log.html', return_data)
+    out = TemplateResponse(req, 'zato/audit-log.html', return_data)
 
     return out
 

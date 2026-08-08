@@ -238,7 +238,7 @@ _source_title = {
 }
 
 # Each column tells the frontend which row key to read, what header label to show
-# and how to render the cell - the types are implemented in audit_log.js
+# and how to render the cell - the types are implemented in audit-log.js
 _pubsub_columns = [
     {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
