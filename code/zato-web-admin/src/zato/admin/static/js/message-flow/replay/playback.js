@@ -77,6 +77,17 @@ replay.applyState = function() {
         node.element.classList.toggle('message-flow-replay-current', key === currentKey);
     }
 
+    // The whole way from the root to the node the pass stands on wears the
+    // selection amber, the same way a hand-picked node's does - every key on
+    // the walk from the current node back to the hub is on it
+    var wayKeys = {};
+    var wayKey = currentKey;
+
+    while (wayKey !== '') {
+        wayKeys[wayKey] = true;
+        wayKey = state.connectorByTo[wayKey].fromKey;
+    }
+
     // A connector draws itself in the moment its node first speaks - seeking
     // back undraws it the same way
     for (var connectorIndex = 0; connectorIndex < state.connectors.length; connectorIndex++) {
@@ -90,6 +101,7 @@ replay.applyState = function() {
         }
 
         connector.element.classList.toggle('message-flow-replay-drawn', isDrawn);
+        connector.element.classList.toggle('message-flow-connector-current', wayKeys[connector.toKey] === true);
 
         // The connector's words in the chip layer fade in and out with it
         for (var chipIndex = 0; chipIndex < connector.chipGroups.length; chipIndex++) {

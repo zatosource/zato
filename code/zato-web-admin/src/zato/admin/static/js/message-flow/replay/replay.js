@@ -97,9 +97,11 @@ replay.state = {
     endMs: 0,
 
     // The drawn things the playback moves - the nodes by their exchange key
-    // and the connector sets with their words
+    // and the connector sets with their words, each also found by the node
+    // it leads into
     nodes: {},
     connectors: [],
+    connectorByTo: {},
     svg: null,
 
     // How many events the last frame had already played, which is what a new
@@ -192,6 +194,7 @@ replay.disarm = function() {
         var connector = state.connectors[connectorIndex];
 
         connector.element.classList.remove('message-flow-replay-drawn');
+        connector.element.classList.remove('message-flow-connector-current');
 
         for (var chipIndex = 0; chipIndex < connector.chipGroups.length; chipIndex++) {
             connector.chipGroups[chipIndex].classList.remove('message-flow-replay-drawn');
