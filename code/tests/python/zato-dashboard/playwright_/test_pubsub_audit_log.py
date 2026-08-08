@@ -44,7 +44,7 @@ _No_Events_Text       = 'No events found'
 # The section title for the pub/sub source, compared lowercase because the heading is styled with CSS
 _PubSub_Title = 'pub/sub audit log'
 
-# What the table shows for empty values, from the config object in audit_log.js
+# What the table shows for empty values, from the config object in audit-log.js
 _Empty_Value = '---'
 
 # How long a permission needs to reach the runtime pattern matcher after a form submission

@@ -263,7 +263,7 @@ $.fn.zato.scheduler.dashboard.outcome_palette = $.fn.zato.dashboard_kit.palette.
         };
     };
 
-    // Thin aliases so job_detail.js (and any future callers that used
+    // Thin aliases so job-detail.js (and any future callers that used
     // the old scheduler-level API) keep working without changes.
     dash.format_duration = kit.format_duration_ms;
     dash.relative_time_future = kit.relative_time_future;
