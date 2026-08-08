@@ -32,8 +32,20 @@ detail.config = {
     // What either side of the pane says when the exchange has no events
     // of its own kind for it
     sideHints: {
-        'request': 'No request',
-        'response': 'No reply'
+        'request': '(Empty request)',
+        'response': '(Empty reply)'
+    },
+
+    // The words of the root's own right side - the message's whole flow
+    // summed up, where a reply side would have nothing truthful to say
+    summaryLabel: 'FLOW',
+    summaryWords: {
+        exchanges: 'Exchanges',
+        events: 'Events',
+        first: 'First event',
+        last: 'Last event',
+        span: 'End to end',
+        errors: 'Errors'
     },
 
     // How the two sides share the pane - where the browser keeps the share,
@@ -214,7 +226,14 @@ detail.show = function(nodeDetail) {
     splitBar.className = 'message-flow-detail-split-bar';
     split.appendChild(splitBar);
 
-    detail.addSide(split, 'response', responseModels);
+    // The root stands for the message itself and has no reply of its own to
+    // wait for - its right side sums the whole flow up instead
+    if (nodeDetail.flowSummary === null) {
+        detail.addSide(split, 'response', responseModels);
+    }
+    else {
+        detail.addSummarySide(split, nodeDetail.flowSummary);
+    }
 
     detail.applySplit(split);
     detail.updateCaption();
@@ -235,7 +254,7 @@ detail.addSide = function(split, role, models) {
 
     if (models.length === 0) {
         var hint = document.createElement('div');
-        hint.className = 'message-flow-detail-hint';
+        hint.className = 'message-flow-detail-side-hint';
         hint.textContent = detail.config.sideHints[role];
         side.appendChild(hint);
 
@@ -270,6 +289,66 @@ detail.addSide = function(split, role, models) {
             onDone(text);
         });
     });
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The root's own right side - the message's whole flow summed up, its badge
+// standing where the reply side's badges stand and one row per measure under
+// it, the error row wearing the bad ink the moment there is anything to wear
+// it for
+detail.addSummarySide = function(split, summary) {
+    var config = detail.config;
+    var words = config.summaryWords;
+
+    var side = document.createElement('div');
+    side.className = 'message-flow-detail-side message-flow-detail-side-response';
+    split.appendChild(side);
+
+    var bar = document.createElement('div');
+    bar.className = 'message-flow-detail-summary-bar';
+    side.appendChild(bar);
+
+    var badge = document.createElement('span');
+    badge.className = 'message-flow-detail-summary-badge';
+    badge.textContent = config.summaryLabel;
+    bar.appendChild(badge);
+
+    var rows = document.createElement('div');
+    rows.className = 'message-flow-detail-summary';
+    side.appendChild(rows);
+
+    var entries = [
+        [words.exchanges, String(summary.exchangeCount), false],
+        [words.events, String(summary.eventCount), false],
+        [words.first, summary.firstLocal, false],
+        [words.last, summary.lastLocal, false],
+        [words.span, kit.format_duration_ms(summary.spanMs), false],
+        [words.errors, String(summary.errorCount), summary.errorCount > 0]
+    ];
+
+    for (var entryIndex = 0; entryIndex < entries.length; entryIndex++) {
+        var entry = entries[entryIndex];
+
+        var row = document.createElement('div');
+        row.className = 'message-flow-detail-summary-row';
+        rows.appendChild(row);
+
+        var label = document.createElement('span');
+        label.className = 'message-flow-detail-summary-label';
+        label.textContent = entry[0];
+        row.appendChild(label);
+
+        var value = document.createElement('span');
+        value.className = 'message-flow-detail-summary-value';
+
+        if (entry[2]) {
+            value.className += ' message-flow-detail-summary-value-bad';
+        }
+
+        value.textContent = entry[1];
+        row.appendChild(value);
+    }
 };
 
 // /////////////////////////////////////////////////////////////////////////////

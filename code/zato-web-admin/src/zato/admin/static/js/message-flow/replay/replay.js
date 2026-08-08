@@ -62,8 +62,8 @@ replay.config = {
     // What the keys do, read under the keyboard control
     shortcuts: [
         {keys: 'Space', label: 'Play and pause'},
-        {keys: 'Right', label: 'Next event'},
-        {keys: 'Left', label: 'Previous event'},
+        {keys: 'Right', label: 'Next node'},
+        {keys: 'Left', label: 'Previous node'},
         {keys: 'Home / End', label: 'Start / end'},
         {keys: 'Up / Down', label: 'Playback mode'},
         {keys: 'Esc', label: 'End the pass'}
@@ -108,6 +108,9 @@ replay.state = {
 
     // The event whose node the canvas last drifted toward
     cameraFocusIndex: -1,
+
+    // The node whose exchange the pass last opened under the drawing
+    detailKey: '',
 
     frameHandle: null,
     lastFrameMs: 0
@@ -174,6 +177,7 @@ replay.disarm = function() {
     state.position = 0;
     state.playedCount = 0;
     state.cameraFocusIndex = -1;
+    state.detailKey = '';
 
     for (var key in state.nodes) {
         var element = state.nodes[key].element;

@@ -28,14 +28,16 @@ replay.icons = {
         {d: 'M14 5h4v14h-4z', isFilled: true}
     ],
 
+    // Auto-play is the clock running on its own
     autoplay: [
-        {d: 'M5 6l6 6-6 6'},
-        {d: 'M13 6l6 6-6 6'}
+        {d: 'M12 3a9 9 0 1 1-0.01 0'},
+        {d: 'M12 7v5l3.5 2'}
     ],
 
+    // Step mode is a chevron leaving a dot behind - one move at a time
     step: [
-        {d: 'M5 6l8 6-8 6'},
-        {d: 'M19 5v14'}
+        {d: 'M5 12h0.01'},
+        {d: 'M10 7l5 5-5 5'}
     ],
 
     keyboard: [
@@ -381,7 +383,10 @@ replay.onKeyDown = function(event) {
         replay.stepBack();
     }
     else if (event.key === 'Home') {
-        replay.seek(0);
+
+        // Home is the first node standing lit with its exchange open, not
+        // the dark room before it
+        replay.seek(replay.state.events[0].scaled);
     }
     else if (event.key === 'End') {
         replay.seek(replay.state.totalScaled);

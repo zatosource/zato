@@ -16,6 +16,9 @@ var replay = $.fn.zato.message_flow.replay;
 // What the drawing shows at the current playhead - idempotent, so the same
 // walk serves the clock, a scrub in either direction and a step
 replay.applyState = function() {
+    var drawing = $.fn.zato.message_flow.drawing;
+    var detail = $.fn.zato.message_flow.detail;
+
     var state = replay.state;
     var playedCount = replay.playedCountAt(state.position);
 
@@ -26,6 +29,22 @@ replay.applyState = function() {
 
     if (playedCount > 0) {
         currentKey = state.events[playedCount - 1].key;
+    }
+
+    // The pass's node opens its request and reply under the drawing the way
+    // a click would - once per node, not once per event of it
+    if (currentKey !== state.detailKey) {
+        state.detailKey = currentKey;
+
+        if (currentKey === '') {
+            detail.hide();
+        }
+        else {
+            var currentElement = state.nodes[currentKey].element;
+            var detailIndex = parseInt(currentElement.getAttribute('data-node-index'), 10);
+
+            detail.show(drawing.nodeDetails[detailIndex]);
+        }
     }
 
     for (var key in state.nodes) {
@@ -83,7 +102,8 @@ replay.applyState = function() {
     }
 
     // The room follows the pass - the newest played event's node is what the
-    // canvas drifts toward, gently, never in a jump
+    // canvas drifts toward, gently, never in a jump, and a playhead pulled
+    // back before the first event drifts the room home to the hub
     if (playedCount > 0) {
         var focusIndex = playedCount - 1;
 
@@ -94,6 +114,9 @@ replay.applyState = function() {
     }
     else {
         state.cameraFocusIndex = -1;
+
+        // Wherever the reader left the room standing, home is home
+        replay.followNode(state.svg.querySelector('.message-flow-root'));
     }
 };
 
@@ -237,32 +260,66 @@ replay.seek = function(position) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// A step is node to node, not event to event - an exchange's own further
+// events change nothing worth a keypress of their own, so the playhead lands
+// on the first moment of the next exchange, playing whatever the current one
+// still held on the way
 replay.stepForward = function() {
     var state = replay.state;
     var events = state.events;
 
-    // The next unplayed event's own moment, or the end once there is none left
-    if (state.playedCount < events.length) {
-        replay.seek(events[state.playedCount].scaled);
+    var currentKey = '';
+
+    if (state.playedCount > 0) {
+        currentKey = events[state.playedCount - 1].key;
     }
-    else {
-        replay.seek(state.totalScaled);
+
+    for (var eventIndex = state.playedCount; eventIndex < events.length; eventIndex++) {
+        if (events[eventIndex].key !== currentKey) {
+            replay.seek(events[eventIndex].scaled);
+            return;
+        }
     }
+
+    replay.seek(state.totalScaled);
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// Back one node - past the current exchange's own events and onto the first
+// moment of the one before it, or into the dark room before the first event
 replay.stepBack = function() {
     var state = replay.state;
+    var events = state.events;
 
-    // Back to the moment of the event before the last played one, or all the
-    // way to the dark room before the first
-    if (state.playedCount >= 2) {
-        replay.seek(state.events[state.playedCount - 2].scaled);
-    }
-    else {
+    if (state.playedCount === 0) {
         replay.seek(0);
+        return;
     }
+
+    var currentKey = events[state.playedCount - 1].key;
+
+    // Past the current exchange's own played events first ..
+    var eventIndex = state.playedCount - 1;
+
+    while (eventIndex >= 0 && events[eventIndex].key === currentKey) {
+        eventIndex -= 1;
+    }
+
+    // .. with nothing earlier, the pass stands before its first event
+    if (eventIndex < 0) {
+        replay.seek(0);
+        return;
+    }
+
+    // .. and to the first moment of the exchange right before this one
+    var previousKey = events[eventIndex].key;
+
+    while (eventIndex >= 0 && events[eventIndex].key === previousKey) {
+        eventIndex -= 1;
+    }
+
+    replay.seek(events[eventIndex + 1].scaled);
 };
 
 // /////////////////////////////////////////////////////////////////////////////

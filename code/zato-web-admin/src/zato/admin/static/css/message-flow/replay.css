@@ -17,9 +17,10 @@
        buttons' icons, there to be found when reached for and silent otherwise */
     --message-flow-replay-speed-accent: #767b88;
 
-    /* The bar speaks in greys alone - the chosen mode is a raised patch of
-       light and the playhead a pale line, no amber anywhere on the player */
-    --message-flow-replay-chosen-fill: rgba(255, 255, 255, 0.22);
+    /* The playhead is a pale line and the chosen mode a raised patch with
+       just a breath of the page's amber in it - a tint, not a lamp */
+    --message-flow-replay-chosen-fill: rgba(246, 166, 5, 0.16);
+    --message-flow-replay-chosen-rim: rgba(246, 166, 5, 0.22);
     --message-flow-replay-playhead-fill: #c6cad4;
 }
 
@@ -72,14 +73,13 @@
     display: block;
 }
 
-/* The chosen mode is a raised patch of light - the player keeps to its greys
-   and leaves the amber to the drawing */
+/* The chosen mode is a raised patch with a breath of amber in it */
 
 .message-flow-replay-mode.dashboard-panel-action-badge-active,
 .message-flow-replay-mode.dashboard-panel-action-badge-active:hover {
     color: var(--message-flow-text);
     background: var(--message-flow-replay-chosen-fill);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    box-shadow: inset 0 1px 0 var(--message-flow-replay-chosen-rim);
 }
 
 /* An unchosen button on the glass is a breath of light rather than a solid
