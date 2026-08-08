@@ -368,23 +368,15 @@ listing.modelById = function(eventId) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+// The action cell holds the link alone - being resubmitted already is a fact about the
+// message, so it stands among the row's other badges, not next to an action
 listing.actionHTML = function(rowModel) {
-    var config = $.fn.zato.audit_log.config;
     var html = '';
 
     // Only the event types their source declared resubmittable have anything to offer here.
     if (rowModel.actionLabel !== undefined) {
         html += '<a href="javascript:void(0)" class="audit-log-resubmit-link" data-id="' +
             rowModel.id + '">' + rowModel.actionLabel + '</a>';
-    }
-
-    // The marker trails the link on a row that has both, and stands at the link's own x
-    // on a row that only has the marker
-    if (rowModel.isResubmitted) {
-        if (html !== '') {
-            html += ' ';
-        }
-        html += '<span class="audit-log-resubmitted-marker">' + config.resubmittedMarkerLabel + '</span>';
     }
 
     return html;
@@ -399,7 +391,7 @@ listing.updateColumns = function() {
     for (var rowIndex = 0; rowIndex < listing.visible.length; rowIndex++) {
         var rowModel = listing.visible[rowIndex];
 
-        if (rowModel.actionLabel !== undefined || rowModel.isResubmitted) {
+        if (rowModel.actionLabel !== undefined) {
             columns.action = true;
         }
     }
@@ -490,6 +482,13 @@ listing.rowHTML = function(rowModel) {
     }
 
     html += kit.chips.render(listing.rowChips(rowModel));
+
+    // A message that went out again wears that as one more badge after the others
+    if (rowModel.isResubmitted) {
+        html += '<span class="audit-log-resubmitted-marker">' +
+            listing.escapeHTML($.fn.zato.audit_log.config.resubmittedMarkerLabel) + '</span>';
+    }
+
     html += '</td>';
 
     if (columns.action) {
