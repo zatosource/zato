@@ -756,9 +756,13 @@ drawing.render = function(models, seedModel) {
 
     // Pass two - how tall every row stands and where its connector line runs.
     // A connector aims at the centre of a node's main section, under the band.
+    // The rows pack like a skyline - a row only goes below the earlier rows it
+    // overlaps horizontally, so a branch stack on the right does not punch a
+    // hole through a column on the left.
     var rowTops = [];
     var rowCenters = [];
-    var layoutY = config.marginTop;
+    var rowBottoms = [];
+    var rowExtents = [];
 
     for (var heightRowIndex = 0; heightRowIndex < layoutRows.length; heightRowIndex++) {
         var heightRow = layoutRows[heightRowIndex];
@@ -772,13 +776,52 @@ drawing.render = function(models, seedModel) {
             }
         }
 
-        rowTops.push(layoutY);
-        rowCenters.push(layoutY + config.bandHeight + (rowHeight - config.bandHeight) / 2);
+        // The row's horizontal reach - from where its opening connector leaves, so
+        // nothing slides up into the elbow band, to its last node's right edge
+        var extentLeft;
 
-        layoutY += rowHeight + config.rowGap;
+        if (heightRow[0].fromKey === '') {
+            extentLeft = fanX;
+        }
+        else {
+            extentLeft = placementByKey[heightRow[0].fromKey].right;
+        }
+
+        var extentRight = placementByKey[heightRow[heightRow.length - 1].exchange.key].right;
+
+        // The row lands just under the lowest of the earlier rows it overlaps -
+        // rows sharing no x-band share their vertical band instead
+        var rowTop = config.marginTop;
+
+        for (var earlierIndex = 0; earlierIndex < heightRowIndex; earlierIndex++) {
+            var earlierExtent = rowExtents[earlierIndex];
+
+            // Two rows overlap when neither one ends before the other begins
+            if (earlierExtent.left < extentRight && extentLeft < earlierExtent.right) {
+                var rowTopCandidate = rowBottoms[earlierIndex] + config.rowGap;
+
+                if (rowTopCandidate > rowTop) {
+                    rowTop = rowTopCandidate;
+                }
+            }
+        }
+
+        rowExtents.push({left: extentLeft, right: extentRight});
+        rowTops.push(rowTop);
+        rowCenters.push(rowTop + config.bandHeight + (rowHeight - config.bandHeight) / 2);
+        rowBottoms.push(rowTop + rowHeight);
     }
 
-    var height = layoutY - config.rowGap + config.marginBottom;
+    // The drawing is as tall as the lowest row reaches
+    var lowestBottom = config.marginTop;
+
+    for (var bottomIndex = 0; bottomIndex < rowBottoms.length; bottomIndex++) {
+        if (rowBottoms[bottomIndex] > lowestBottom) {
+            lowestBottom = rowBottoms[bottomIndex];
+        }
+    }
+
+    var height = lowestBottom + config.marginBottom;
 
     // The drawing's width is the furthest right edge of anything on it
     var width = fanX;

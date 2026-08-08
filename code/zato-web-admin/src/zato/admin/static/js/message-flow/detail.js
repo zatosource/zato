@@ -45,7 +45,12 @@ detail.config = {
     // How small either side of the split may get when the bar between the
     // drawing and the pane is pulled
     detailMinHeight: 120,
-    canvasMinHeight: 160
+    canvasMinHeight: 160,
+
+    // Lower than this the pane has room for nothing worth reading, so it is shut
+    // all the way rather than left standing as a strip - the bar stays where it
+    // is and the same pull upward opens it back
+    detailSnapHeight: 60
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -291,13 +296,23 @@ detail.wireResize = function() {
         // Neither side gives up the least room it needs
         var maxHeight = page.clientHeight - config.canvasMinHeight;
 
-        if (height < config.detailMinHeight) {
+        // A pane too low to read anything in is shut all the way rather than
+        // left ajar, which is the snap - between shut and the least height it
+        // can be read at there is nothing to stand at
+        if (height < config.detailSnapHeight) {
+            height = 0;
+        }
+        else if (height < config.detailMinHeight) {
             height = config.detailMinHeight;
         }
 
         if (height > maxHeight) {
             height = maxHeight;
         }
+
+        // With no height the pane is fully gone, its border included - a shut
+        // pane must not linger as a seam over the page's bottom edge
+        page.classList.toggle('message-flow-detail-shut', height === 0);
 
         page.style.setProperty('--message-flow-detail-height', height + 'px');
     });

@@ -473,6 +473,14 @@ svg.message-flow-focus .message-flow-branch:not(.message-flow-lit) {
     overflow: hidden;
 }
 
+/* A pane snapped shut is fully gone - a height of zero with a border still on
+   would linger as a seam over the page's bottom edge. The bar above it stays
+   where it is, and the same pull upward brings the pane back. */
+
+.message-flow-detail-shut .message-flow-detail {
+    display: none;
+}
+
 /* The bar between the drawing and the pane - grabbing it and pulling shares
    the room between the two. Its handle is a small lit card of the drawing's
    own family - gradient face, rim of light, a shadow into the room - standing
