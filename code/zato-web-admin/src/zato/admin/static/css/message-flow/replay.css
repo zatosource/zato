@@ -105,12 +105,14 @@
     padding: 0;
     border: none;
     background: transparent;
+    box-shadow: none;
     accent-color: var(--message-flow-selected);
     cursor: pointer;
 }
 
 .message-flow-replay-speed:focus {
     outline: none;
+    box-shadow: none;
 }
 
 /* ------------------------------------------------------------ */
@@ -269,72 +271,98 @@
 }
 
 /* ------------------------------------------------------------ */
-/* The bar off its moorings - the grip, the fold-away and the tab */
+/* The bar as a movable instrument - the grip, the fold-away     */
+/* control and the docked tab                                    */
 /* ------------------------------------------------------------ */
 
-/* The grip at the bar's left end - the handle the whole bar is pulled by */
-
-.message-flow-replay-grip {
-    flex: 0 0 auto;
-    color: var(--message-flow-muted);
-    font-size: 10px;
-    letter-spacing: 2px;
-    line-height: 1;
-    cursor: grab;
-    user-select: none;
-}
-
-.message-flow-replay-bar-dragging .message-flow-replay-grip {
-    cursor: grabbing;
-}
-
-/* Pulled loose, the bar gives up the full width and stands wherever it was
-   left, its place pinned by the inline coordinates the pull writes */
+/* A bar picked up by its grip floats free - its spot is written on it directly
+   and its stretched anchors stand down */
 
 .message-flow-replay-bar-floating {
     right: auto;
     bottom: auto;
 }
 
-.message-flow-replay-bar-dragging {
-    opacity: 0.92;
-}
+/* A bar folded away is fully gone - the docked tab stands for it */
 
-/* Folded away, the bar leaves only the tab at the canvas foot */
-
-.message-flow-replay-bar.message-flow-replay-bar-minimized {
+.message-flow-replay-bar-minimized {
     display: none;
 }
 
-.message-flow-replay-dock {
-    position: absolute;
-    right: 12px;
-    bottom: 12px;
-    display: none;
-    appearance: none;
-    margin-left: 0;
-    padding: 4px 14px;
-    border: 1px solid var(--message-flow-glass-border);
-    border-radius: 999px;
-    background: var(--message-flow-glass-fill);
-    color: var(--message-flow-text);
-    font-family: inherit;
-    font-size: 11px;
-    line-height: inherit;
-    text-shadow: none;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+/* The grip - the one place a drag starts from, a strip of raised dots the way
+   instrument handles read */
+
+.message-flow-replay-grip {
+    flex: 0 0 auto;
+    align-self: stretch;
+    width: 12px;
+    border-radius: 3px;
+    background-image: radial-gradient(var(--message-flow-glass-border) 1px, transparent 1px);
+    background-size: 4px 4px;
+    background-position: center;
+    cursor: grab;
+}
+
+.message-flow-replay-bar-dragging .message-flow-replay-grip {
+    cursor: grabbing;
+}
+
+/* The fold-away control - a small square of the same glass the buttons wear */
+
+.message-flow-replay-minimize {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    color: var(--message-flow-muted);
+    background: var(--message-flow-glass-button-fill);
     cursor: pointer;
-    z-index: 1;
 }
 
-.message-flow-replay-dock:focus,
-.message-flow-replay-dock:active {
+.message-flow-replay-minimize:focus,
+.message-flow-replay-minimize:active {
     outline: none;
+    box-shadow: none;
     background-image: none;
 }
 
+.message-flow-replay-minimize:hover {
+    color: var(--message-flow-text);
+    background: var(--message-flow-glass-button-fill-hover);
+}
+
+/* The docked tab - the bar folded away to the canvas edge, on the same glass,
+   its word standing on end. A pointer merely passing gets no paint - the amber
+   waits out the same short delay every hover on this page does. */
+
+.message-flow-replay-dock {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: none;
+    padding: 12px 7px;
+    border: 1px solid var(--message-flow-glass-border);
+    border-right: none;
+    border-radius: 6px 0 0 6px;
+    color: var(--message-flow-muted);
+    font-size: 10px;
+    letter-spacing: 0.4px;
+    writing-mode: vertical-rl;
+    background: var(--message-flow-glass-fill);
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+    z-index: 1;
+    transition: color 0.15s;
+}
+
 .message-flow-replay-dock:hover {
-    border-color: var(--message-flow-selected);
+    color: var(--message-flow-selected-text);
+    transition-delay: 0.15s;
 }
 
 .message-flow-replay-dock-active {
@@ -364,6 +392,22 @@ svg.message-flow-replay .message-flow-node {
 svg.message-flow-replay .message-flow-node.message-flow-replay-unplayed {
     opacity: 0.3;
     filter: grayscale(1) brightness(0.6);
+}
+
+/* A node the reader picks by hand comes fully up whatever the clock says -
+   a selection is a selection, dark room or not */
+
+svg.message-flow-replay .message-flow-node.message-flow-node-selected {
+    opacity: 1;
+    filter: none;
+}
+
+/* The node the pass currently stands on wears the page's own selection
+   amber, the way a picked node does */
+
+svg.message-flow-replay .message-flow-replay-current:not(.message-flow-replay-failed) .message-flow-box {
+    stroke: var(--message-flow-selected);
+    stroke-width: 1.6;
 }
 
 /* A node mid-exchange - the message is in and the answer is not - wears the

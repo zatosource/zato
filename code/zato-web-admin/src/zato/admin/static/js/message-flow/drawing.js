@@ -104,6 +104,9 @@ drawing.config = {
     marginRight: 28,
     rowGap: 30,
 
+    // The least room a chip keeps to any card it steers clear of
+    chipClearance: 4,
+
     // How long a branch stays lit - long enough to walk the pointer over
     // the gap to the next one without the room flickering back to light
     dimHoldMs: 180,
@@ -307,8 +310,9 @@ drawing.addChip = function(host, x, y, label, kind, onCanvas) {
 // One connector - the line and the arrowhead - held in a group of its own that
 // says which branch and which node it leads into and out of what, which is what
 // lets it light with its branch and lets the replay draw it in as its node's
-// moment comes. The anchor is where the connector's words stand on its run.
-drawing.addConnectorSet = function(connectorLayer, branchIndex, toKey, fromKey, anchorX, anchorY) {
+// moment comes. The anchor is where the connector's words stand on its run,
+// and the run bounds are where along the horizontal run such words may stand.
+drawing.addConnectorSet = function(connectorLayer, branchIndex, toKey, fromKey, anchorX, anchorY, runFromX, runToX) {
     var group = drawing.addGroup(connectorLayer, 'message-flow-connector-set');
 
     group.setAttribute('data-branch-index', branchIndex);
@@ -316,16 +320,18 @@ drawing.addConnectorSet = function(connectorLayer, branchIndex, toKey, fromKey, 
     group.setAttribute('data-connector-from', fromKey);
     group.setAttribute('data-anchor-x', anchorX);
     group.setAttribute('data-anchor-y', anchorY);
+    group.setAttribute('data-run-from-x', runFromX);
+    group.setAttribute('data-run-to-x', runToX);
 
     return group;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// One connector's words, held in the layer between the lines and the cards -
-// painted over every connector, so no crossing line can run through an elapsed
-// label, and under every node, so no label can stand over a card. The group
-// knows its branch, so it lights and dims with it, and the connector it
+// One connector's words, held in the layer over the whole drawing - painted
+// after every line and every card, so nothing can run through them, while the
+// words themselves steer clear of the cards, so they stand on lines only. The
+// group knows its branch, so it lights and dims with it, and the connector it
 // speaks for.
 drawing.addChipGroup = function(chipLayer, branchIndex, toKey) {
     var group = drawing.addGroup(chipLayer, 'message-flow-connector-chip');
@@ -334,6 +340,97 @@ drawing.addChipGroup = function(chipLayer, branchIndex, toKey) {
     group.setAttribute('data-connector-to', toKey);
 
     return group;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// Every card's box, for the chips to steer clear of - filled anew by each
+// render, read both while the drawing goes up and when the replay writes its
+// own elapsed words onto it
+drawing.nodeRects = [];
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// Where on its run a chip can stand without standing on any card - the spot it
+// asks for when that spot is clear, otherwise the clear spot nearest to it
+// along the run, and the asked-for spot again when the whole run is covered
+drawing.clearChipX = function(desiredX, chipWidth, chipTop, chipBottom, runFromX, runToX) {
+    var clearance = drawing.config.chipClearance;
+
+    var lowX = runFromX + clearance;
+    var highX = runToX - chipWidth - clearance;
+
+    // A run too short to choose on - the chip stands where it was asked to
+    if (highX < lowX) {
+        return desiredX;
+    }
+
+    if (desiredX < lowX) {
+        desiredX = lowX;
+    }
+
+    if (desiredX > highX) {
+        desiredX = highX;
+    }
+
+    // Only the cards sharing the chip's vertical band can be stood on
+    var blockers = [];
+
+    for (var rectIndex = 0; rectIndex < drawing.nodeRects.length; rectIndex++) {
+        var rect = drawing.nodeRects[rectIndex];
+
+        if (rect.top < chipBottom && chipTop < rect.bottom) {
+            blockers.push(rect);
+        }
+    }
+
+    var isClear = function(x) {
+        for (var blockerIndex = 0; blockerIndex < blockers.length; blockerIndex++) {
+            var blocker = blockers[blockerIndex];
+
+            if (blocker.left < x + chipWidth + clearance && x - clearance < blocker.right) {
+                return false;
+            }
+        }
+
+        return true;
+    };
+
+    if (isClear(desiredX)) {
+        return desiredX;
+    }
+
+    // The clear spots hug the covering cards' edges - the one nearest to the
+    // asked-for spot wins
+    var bestX = desiredX;
+    var bestDistance = Infinity;
+
+    for (var edgeIndex = 0; edgeIndex < blockers.length; edgeIndex++) {
+        var edgeBlocker = blockers[edgeIndex];
+
+        var candidates = [edgeBlocker.left - chipWidth - clearance, edgeBlocker.right + clearance];
+
+        for (var sideIndex = 0; sideIndex < candidates.length; sideIndex++) {
+            var candidate = candidates[sideIndex];
+
+            if (candidate < lowX || candidate > highX) {
+                continue;
+            }
+
+            if (!isClear(candidate)) {
+                continue;
+            }
+
+            var distance = Math.abs(candidate - desiredX);
+
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                bestX = candidate;
+            }
+        }
+    }
+
+    return bestX;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -897,12 +994,33 @@ drawing.render = function(models, seedModel) {
 
     var hubCenterY = (hubRowCenters[0] + hubRowCenters[hubRowCenters.length - 1]) / 2;
 
-    // The drawing stands in three layers - every connector line first, every
-    // connector's words over the lines, and every node card over both, so a
-    // crossing line can never run through a label and a label can never stand
-    // over a card
+    // Every card's box - what the chips steer clear of when they choose where
+    // on their runs to stand
+    drawing.nodeRects = [];
+
+    for (var rectRowIndex = 0; rectRowIndex < layoutRows.length; rectRowIndex++) {
+        var rectRow = layoutRows[rectRowIndex];
+
+        for (var rectItemIndex = 0; rectItemIndex < rectRow.length; rectItemIndex++) {
+            var rectPlacement = placementByKey[rectRow[rectItemIndex].exchange.key];
+            var rectNode = nodeByKey[rectRow[rectItemIndex].exchange.key];
+
+            drawing.nodeRects.push({
+                left: rectPlacement.x,
+                right: rectPlacement.right,
+                top: rowTops[rectRowIndex],
+                bottom: rowTops[rectRowIndex] + drawing.nodeHeight(rectNode)
+            });
+        }
+    }
+
+    // The drawing stands in layers - every connector line first, under the
+    // cards, so a crossing line passes behind them, and the connectors' words
+    // last, over everything, standing only where no card is
     var connectorLayer = drawing.addGroup(svg, 'message-flow-connector-layer');
-    var chipLayer = drawing.addGroup(svg, 'message-flow-chip-layer');
+
+    var chipLayer = kit.draw.createElement('g');
+    chipLayer.setAttribute('class', 'message-flow-chip-layer');
 
     // The rows - each one a branch group of its own, so its nodes light up
     // as one, its lines and words lighting with them by their branch index
@@ -925,7 +1043,7 @@ drawing.render = function(models, seedModel) {
                 // node an earlier row holds
                 if (item.fromKey === '') {
                     var fanSet = drawing.addConnectorSet(connectorLayer, rowIndex, item.exchange.key, '',
-                        (fanElbowX + placement.x) / 2, centerY);
+                        (fanElbowX + placement.x) / 2, centerY, fanElbowX, placement.x);
 
                     drawing.addRoundedPath(fanSet, [
                         [hubRight, hubCenterY],
@@ -941,7 +1059,7 @@ drawing.render = function(models, seedModel) {
                     var branchElbowX = parent.right + config.branchElbowOffset;
 
                     var branchSet = drawing.addConnectorSet(connectorLayer, rowIndex, item.exchange.key,
-                        item.fromKey, (branchElbowX + placement.x) / 2, centerY);
+                        item.fromKey, (branchElbowX + placement.x) / 2, centerY, branchElbowX, placement.x);
 
                     drawing.addRoundedPath(branchSet, [
                         [parent.right, parentCenterY],
@@ -951,9 +1069,14 @@ drawing.render = function(models, seedModel) {
                     ], 'message-flow-connector');
                     drawing.addArrow(branchSet, placement.x, centerY, 'message-flow-connector-arrow');
 
-                    // The words of how the message got here, on the horizontal run
+                    // The words of how the message got here, on the horizontal
+                    // run, standing where no card is
                     var branchChipWidth = drawing.chipWidth(node.connectorLabel);
                     var branchChipX = branchElbowX + (placement.x - branchElbowX - branchChipWidth) / 2;
+
+                    branchChipX = drawing.clearChipX(branchChipX, branchChipWidth,
+                        centerY - config.chipHeight / 2, centerY + config.chipHeight / 2,
+                        branchElbowX, placement.x);
 
                     var branchChipGroup = drawing.addChipGroup(chipLayer, rowIndex, item.exchange.key);
 
@@ -969,7 +1092,8 @@ drawing.render = function(models, seedModel) {
                 var previousPlacement = placementByKey[previousKey];
 
                 var chainSet = drawing.addConnectorSet(connectorLayer, rowIndex, item.exchange.key,
-                    previousKey, (previousPlacement.right + placement.x) / 2, centerY);
+                    previousKey, (previousPlacement.right + placement.x) / 2, centerY,
+                    previousPlacement.right, placement.x);
 
                 drawing.addPolyline(chainSet, [[previousPlacement.right, centerY], [placement.x, centerY]],
                     'message-flow-connector');
@@ -977,6 +1101,10 @@ drawing.render = function(models, seedModel) {
 
                 var chipWidth = drawing.chipWidth(node.connectorLabel);
                 var chipX = previousPlacement.right + (placement.x - previousPlacement.right - chipWidth) / 2;
+
+                chipX = drawing.clearChipX(chipX, chipWidth,
+                    centerY - config.chipHeight / 2, centerY + config.chipHeight / 2,
+                    previousPlacement.right, placement.x);
 
                 var chainChipGroup = drawing.addChipGroup(chipLayer, rowIndex, item.exchange.key);
 
@@ -1016,6 +1144,10 @@ drawing.render = function(models, seedModel) {
         kit.draw.addText(hub, config.hubX + hubWidth / 2, hubCenterY + 14, hubIdentity,
             'message-flow-identity', 'middle');
     }
+
+    // The connectors' words go on last, over everything - having already
+    // chosen spots where no card is, they stand over lines only
+    svg.appendChild(chipLayer);
 
     drawing.wireDrawing(svg);
 

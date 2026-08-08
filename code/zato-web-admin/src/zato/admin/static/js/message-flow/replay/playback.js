@@ -21,6 +21,13 @@ replay.applyState = function() {
 
     state.playedCount = playedCount;
 
+    // The node the pass currently stands on - the newest played event's
+    var currentKey = '';
+
+    if (playedCount > 0) {
+        currentKey = state.events[playedCount - 1].key;
+    }
+
     for (var key in state.nodes) {
         var node = state.nodes[key];
 
@@ -46,6 +53,9 @@ replay.applyState = function() {
         node.element.classList.toggle('message-flow-replay-waiting',
             playedOfNode > 0 && playedOfNode < node.eventIndexes.length);
         node.element.classList.toggle('message-flow-replay-failed', hasPlayedFailure);
+
+        // The node the pass stands on wears the page's own selection amber
+        node.element.classList.toggle('message-flow-replay-current', key === currentKey);
     }
 
     // A connector draws itself in the moment its node first speaks - seeking

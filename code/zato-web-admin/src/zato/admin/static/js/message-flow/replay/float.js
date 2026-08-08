@@ -1,10 +1,11 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Message flow replay - the bar off its moorings. A grip at its left end lets
-// it be pulled anywhere over the canvas, a control at its right end folds it
-// away into a small tab at the canvas foot, and wherever it is left is where
-// the next journey finds it.
+// Message flow replay - the bar as a movable instrument. A grip on its left
+// end lets it be picked up and put down anywhere over the canvas, a control on
+// its right end folds it away into a small tab docked to the canvas edge, and
+// the tab brings it back. Where the bar stands and whether it is folded away
+// is kept by the browser, so it comes up the way it was left.
 
 // /////////////////////////////////////////////////////////////////////////////
 
@@ -16,104 +17,95 @@ var replay = $.fn.zato.message_flow.replay;
 
 replay.floatConfig = {
 
-    // Where the bar's whereabouts survive a reload
+    // Where the browser keeps how the bar was left
     storageKey: 'zato.message-flow.replay-bar',
 
-    // A bar off its moorings gives up the full width for this one
-    floatWidth: 640,
+    // The least room the bar keeps to the frame's edges, both when dragged
+    // and when a remembered position no longer fits the frame
+    margin: 12,
 
-    // What the folded-away tab says
+    // What the docked tab says
     dockLabel: 'Replay'
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Where the bar stands - on its moorings across the canvas foot, pulled loose
-// to a place of its own, or folded away into the tab
 replay.floatState = {
-    isFloating: false,
+
+    // Where the bar was put down, in the frame's own coordinates - null while
+    // it has never been dragged and still rides the frame's foot
+    x: null,
+    y: null,
+
     isMinimized: false,
-    x: 0,
-    y: 0
+
+    dock: null
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-replay.dock = function() {
-    return replay.bar().parentElement.querySelector('.message-flow-replay-dock');
+replay.floatFrame = function() {
+    return replay.bar().parentElement;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
 replay.loadFloatState = function() {
-    var stored = window.localStorage.getItem(replay.floatConfig.storageKey);
+    var state = replay.floatState;
+    var kept = window.localStorage.getItem(replay.floatConfig.storageKey);
 
-    if (stored !== null) {
-        replay.floatState = JSON.parse(stored);
+    // Nothing kept yet - the bar rides the frame's foot, unfolded
+    if (kept === null) {
+        return;
     }
+
+    var parsed = JSON.parse(kept);
+
+    state.x = parsed.x;
+    state.y = parsed.y;
+    state.isMinimized = parsed.isMinimized;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
 replay.saveFloatState = function() {
-    window.localStorage.setItem(replay.floatConfig.storageKey, JSON.stringify(replay.floatState));
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
-// The bar and the tab wear whatever the state says - full width on the
-// moorings, pinned at its own place when floating, folded away when minimized
-replay.applyFloat = function() {
     var state = replay.floatState;
-    var bar = replay.bar();
 
-    bar.classList.toggle('message-flow-replay-bar-floating', state.isFloating);
-    bar.classList.toggle('message-flow-replay-bar-minimized', state.isMinimized);
+    var kept = {
+        x: state.x,
+        y: state.y,
+        isMinimized: state.isMinimized
+    };
 
-    if (state.isFloating) {
-        var clamped = replay.clampFloat(state.x, state.y);
-
-        bar.style.width = replay.floatConfig.floatWidth + 'px';
-        bar.style.left = clamped.x + 'px';
-        bar.style.top = clamped.y + 'px';
-    }
-    else {
-        bar.style.width = '';
-        bar.style.left = '';
-        bar.style.top = '';
-    }
-
-    // The tab stands in for the bar only while a journey is on the canvas
-    var isBarWanted = bar.classList.contains('message-flow-replay-bar-active');
-    var dock = replay.dock();
-
-    dock.classList.toggle('message-flow-replay-dock-active', isBarWanted && state.isMinimized);
+    window.localStorage.setItem(replay.floatConfig.storageKey, JSON.stringify(kept));
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The bar stays on the canvas whole - however far it is pulled
+// A remembered position is only as good as the room it was remembered in -
+// whatever no longer fits is pulled back inside the frame
 replay.clampFloat = function(x, y) {
+    var margin = replay.floatConfig.margin;
+    var frame = replay.floatFrame();
     var bar = replay.bar();
-    var frame = bar.parentElement;
 
-    var mostX = frame.clientWidth - replay.floatConfig.floatWidth;
-    var mostY = frame.clientHeight - bar.offsetHeight;
+    var maxX = frame.clientWidth - bar.offsetWidth - margin;
+    var maxY = frame.clientHeight - bar.offsetHeight - margin;
 
-    if (x > mostX) {
-        x = mostX;
+    if (x > maxX) {
+        x = maxX;
     }
 
-    if (y > mostY) {
-        y = mostY;
+    if (y > maxY) {
+        y = maxY;
     }
 
-    if (x < 0) {
-        x = 0;
+    if (x < margin) {
+        x = margin;
     }
 
-    if (y < 0) {
-        y = 0;
+    if (y < margin) {
+        y = margin;
     }
 
     return {x: x, y: y};
@@ -121,60 +113,167 @@ replay.clampFloat = function(x, y) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-replay.hideDock = function() {
-    replay.dock().classList.remove('message-flow-replay-dock-active');
+// The bar standing where it was left - at its remembered spot once it has one,
+// riding the frame's foot until then - and folded away if that is how it was left
+replay.applyFloat = function() {
+    var state = replay.floatState;
+    var bar = replay.bar();
+
+    if (state.x !== null) {
+
+        // The bar keeps the width it has at the frame's foot even once it
+        // floats free, so the track never collapses under it
+        bar.classList.add('message-flow-replay-bar-floating');
+
+        var clamped = replay.clampFloat(state.x, state.y);
+
+        state.x = clamped.x;
+        state.y = clamped.y;
+
+        bar.style.left = clamped.x + 'px';
+        bar.style.top = clamped.y + 'px';
+    }
+    else {
+        bar.classList.remove('message-flow-replay-bar-floating');
+        bar.style.left = '';
+        bar.style.top = '';
+        bar.style.width = '';
+    }
+
+    if (state.isMinimized) {
+        replay.minimizeBar();
+    }
+    else {
+        replay.restoreBar();
+    }
 };
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The grip, the fold-away control and the tab - built once with the bar
-replay.buildFloat = function() {
+// The bar folded away - only the docked tab stays, at the height the bar
+// stood at, and the pass keeps running behind it
+replay.minimizeBar = function() {
+    var state = replay.floatState;
     var bar = replay.bar();
-    var frame = bar.parentElement;
+    var frame = replay.floatFrame();
+    var margin = replay.floatConfig.margin;
+
+    var dockTop = bar.offsetTop;
+
+    bar.classList.add('message-flow-replay-bar-minimized');
+
+    // The tab is stood up before it is measured - hidden it has no height
+    state.dock.classList.add('message-flow-replay-dock-active');
+
+    var maxTop = frame.clientHeight - state.dock.offsetHeight - margin;
+
+    if (dockTop > maxTop) {
+        dockTop = maxTop;
+    }
+
+    if (dockTop < margin) {
+        dockTop = margin;
+    }
+
+    state.dock.style.top = dockTop + 'px';
+
+    state.isMinimized = true;
+    replay.saveFloatState();
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+replay.restoreBar = function() {
     var state = replay.floatState;
 
+    replay.bar().classList.remove('message-flow-replay-bar-minimized');
+    state.dock.classList.remove('message-flow-replay-dock-active');
+
+    state.isMinimized = false;
+    replay.saveFloatState();
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The tab standing off the canvas edge while the bar is folded away
+replay.hideDock = function() {
+    replay.floatState.dock.classList.remove('message-flow-replay-dock-active');
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// A small chevron pointing the way the bar folds, built as an SVG of its own
+replay.newChevron = function() {
+    var svgNamespace = 'http://www.w3.org/2000/svg';
+
+    var icon = document.createElementNS(svgNamespace, 'svg');
+    icon.setAttribute('viewBox', '0 0 24 24');
+    icon.setAttribute('width', '12');
+    icon.setAttribute('height', '12');
+
+    var line = document.createElementNS(svgNamespace, 'path');
+    line.setAttribute('d', 'M9 18l6-6-6-6');
+    line.setAttribute('fill', 'none');
+    line.setAttribute('stroke', 'currentColor');
+    line.setAttribute('stroke-width', '2');
+    line.setAttribute('stroke-linecap', 'round');
+    line.setAttribute('stroke-linejoin', 'round');
+
+    icon.appendChild(line);
+
+    return icon;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The grip, the fold-away control and the docked tab, and the drag that
+// carries the bar around the frame
+replay.buildFloat = function() {
+    var state = replay.floatState;
+    var bar = replay.bar();
+    var frame = replay.floatFrame();
+
+    // The grip stands first on the bar - the one place a drag starts from,
+    // so the track and the buttons keep answering to their own presses
     var grip = document.createElement('span');
     grip.className = 'message-flow-replay-grip';
     grip.title = replay.config.moveLabel;
-    grip.textContent = '\u2059\u2059';
     bar.insertBefore(grip, bar.firstChild);
 
-    var minimize = document.createElement('button');
-    minimize.type = 'button';
-    minimize.className = 'message-flow-replay-button message-flow-replay-minimize';
-    minimize.title = replay.config.minimizeLabel;
-    minimize.appendChild(replay.newIcon('fold', 'message-flow-replay-icon'));
-    bar.appendChild(minimize);
+    // The fold-away control stands last
+    var minimizeButton = document.createElement('button');
+    minimizeButton.type = 'button';
+    minimizeButton.className = 'message-flow-replay-minimize';
+    minimizeButton.title = replay.config.minimizeLabel;
+    minimizeButton.appendChild(replay.newChevron());
+    bar.appendChild(minimizeButton);
 
-    var dock = document.createElement('button');
-    dock.type = 'button';
+    minimizeButton.addEventListener('click', function(event) {
+        replay.minimizeBar();
+        event.currentTarget.blur();
+    });
+
+    // The docked tab, waiting off the edge for the bar to fold away
+    var dock = document.createElement('div');
     dock.className = 'message-flow-replay-dock';
     dock.textContent = replay.floatConfig.dockLabel;
     frame.appendChild(dock);
 
-    minimize.addEventListener('click', function(event) {
-        state.isMinimized = true;
-
-        replay.saveFloatState();
-        replay.applyFloat();
-
-        event.currentTarget.blur();
-    });
+    state.dock = dock;
 
     dock.addEventListener('click', function() {
-        state.isMinimized = false;
-
-        replay.saveFloatState();
-        replay.applyFloat();
+        replay.restoreBar();
     });
 
-    // The pull itself - the first press pins the bar where it stands, so a
-    // click with no movement still leaves it exactly in place
-    var dragOffsetX = 0;
-    var dragOffsetY = 0;
+    // The drag - the pointer picks the bar up by the grip, carries it in the
+    // frame's own coordinates and puts it down where it lets go
     var isDragging = false;
+    var pointerOffsetX = 0;
+    var pointerOffsetY = 0;
 
     grip.addEventListener('mousedown', function(event) {
+
+        // Only the main button picks the bar up
         if (event.button !== 0) {
             return;
         }
@@ -182,17 +281,21 @@ replay.buildFloat = function() {
         var barRect = bar.getBoundingClientRect();
         var frameRect = frame.getBoundingClientRect();
 
-        // Off the moorings and pinned at its own coordinates before any move
-        state.isFloating = true;
+        // The bar is pinned exactly where it stands before it floats free,
+        // and it keeps the width it had, so letting go of its stretched
+        // anchors moves nothing and folds nothing under it
         state.x = barRect.left - frameRect.left;
         state.y = barRect.top - frameRect.top;
 
-        replay.applyFloat();
+        bar.style.width = barRect.width + 'px';
+        bar.style.left = state.x + 'px';
+        bar.style.top = state.y + 'px';
+        bar.classList.add('message-flow-replay-bar-floating');
 
-        dragOffsetX = event.clientX - barRect.left;
-        dragOffsetY = event.clientY - barRect.top;
+        pointerOffsetX = event.clientX - barRect.left;
+        pointerOffsetY = event.clientY - barRect.top;
+
         isDragging = true;
-
         bar.classList.add('message-flow-replay-bar-dragging');
 
         // The pull must not start selecting the page's text
@@ -207,8 +310,8 @@ replay.buildFloat = function() {
         var frameRect = frame.getBoundingClientRect();
 
         var clamped = replay.clampFloat(
-            event.clientX - frameRect.left - dragOffsetX,
-            event.clientY - frameRect.top - dragOffsetY);
+            event.clientX - frameRect.left - pointerOffsetX,
+            event.clientY - frameRect.top - pointerOffsetY);
 
         state.x = clamped.x;
         state.y = clamped.y;
