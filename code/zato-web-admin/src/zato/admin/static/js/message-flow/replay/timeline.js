@@ -133,6 +133,8 @@ replay.buildTimeline = function() {
             fromKey: setElement.getAttribute('data-connector-from'),
             anchorX: Number(setElement.getAttribute('data-anchor-x')),
             anchorY: Number(setElement.getAttribute('data-anchor-y')),
+            runFromX: Number(setElement.getAttribute('data-run-from-x')),
+            runToX: Number(setElement.getAttribute('data-run-to-x')),
             lines: lines,
             lineLengths: lineLengths,
             chipGroups: chipGroups
@@ -145,8 +147,8 @@ replay.buildTimeline = function() {
 // The elapsed chips the replay leaves behind - a connector off the hub carries
 // none of its own, so the replay writes how long after the flow's first moment
 // its node first spoke. Chained connectors already carry their elapsed words.
-// The chips go into the chip layer, over every line and under every card, so
-// no crossing connector runs through them and they stand over no node.
+// The chips go into the chip layer over the whole drawing, each one steering
+// clear of the cards, so nothing runs through them and they stand on no node.
 replay.addElapsedChips = function() {
     var drawing = $.fn.zato.message_flow.drawing;
     var state = replay.state;
@@ -169,8 +171,13 @@ replay.addElapsedChips = function() {
 
         var chipWidth = drawing.chipWidth(label);
 
-        drawing.addChip(chipGroup, connector.anchorX - chipWidth / 2, connector.anchorY - chipHeight / 2,
-            label, 'muted', true);
+        // The words stand midway along the run when that spot is clear, and
+        // steer to the nearest clear one when a card covers it
+        var chipX = drawing.clearChipX(connector.anchorX - chipWidth / 2, chipWidth,
+            connector.anchorY - chipHeight / 2, connector.anchorY + chipHeight / 2,
+            connector.runFromX, connector.runToX);
+
+        drawing.addChip(chipGroup, chipX, connector.anchorY - chipHeight / 2, label, 'muted', true);
 
         // The pass fades the chip in with its connector, and the disarm takes
         // it off both the drawing and the connector's own register

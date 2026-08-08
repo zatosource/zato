@@ -467,10 +467,10 @@ svg.message-flow-focus .message-flow-connector-set:not(.message-flow-lit) {
     filter: grayscale(1) brightness(0.75);
 }
 
-/* The layer the connectors' words stand on - over every line, so no crossing
-   connector can run through an elapsed label, and under every card, so no
-   label can stand over a node. Made of labels only, it answers to no pointer,
-   and each group of words dims with its own branch. */
+/* The layer the connectors' words stand on - over the whole drawing, so
+   nothing can run through an elapsed label, the words themselves standing
+   only where no card is. Made of labels only, it answers to no pointer, and
+   each group of words dims with its own branch. */
 
 .message-flow-chip-layer {
     pointer-events: none;

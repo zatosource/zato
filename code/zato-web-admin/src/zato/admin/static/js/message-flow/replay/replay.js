@@ -184,6 +184,7 @@ replay.disarm = function() {
         element.classList.remove('message-flow-replay-unplayed');
         element.classList.remove('message-flow-replay-waiting');
         element.classList.remove('message-flow-replay-failed');
+        element.classList.remove('message-flow-replay-current');
     }
 
     for (var connectorIndex = 0; connectorIndex < state.connectors.length; connectorIndex++) {
