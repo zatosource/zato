@@ -28,14 +28,9 @@ replay.icons = {
         {d: 'M14 5h4v14h-4z', isFilled: true}
     ],
 
-    compressed: [
+    autoplay: [
         {d: 'M5 6l6 6-6 6'},
         {d: 'M13 6l6 6-6 6'}
-    ],
-
-    clock: [
-        {d: 'M12 3a9 9 0 1 0 0 18 9 9 0 1 0 0-18'},
-        {d: 'M12 7v5l3 2'}
     ],
 
     step: [
@@ -183,6 +178,11 @@ replay.buildBar = function() {
         event.currentTarget.title = config.speedLabel + ' ' + (hundredths / 100) + config.speedUnit;
     });
 
+    // The slider lets the focus go once set, so the keys stay the pass's own
+    speed.addEventListener('change', function(event) {
+        event.currentTarget.blur();
+    });
+
     var modes = document.createElement('div');
     modes.className = 'message-flow-replay-modes';
     bar.appendChild(modes);
@@ -318,6 +318,11 @@ replay.buildBar = function() {
             return;
         }
 
+        // The click a drag of the bar ends in reaches for nothing
+        if (replay.floatState.isDragClick) {
+            return;
+        }
+
         if (event.target.closest('.message-flow-replay-shortcuts, .message-flow-replay-keyboard') !== null) {
             return;
         }
@@ -328,7 +333,7 @@ replay.buildBar = function() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// One tick per event, standing where the event stands on the compressed axis,
+// One tick per event, standing where the event stands on the scaled axis,
 // a failure's tick in the failure's own ink
 replay.buildTicks = function() {
     var state = replay.state;
@@ -360,8 +365,9 @@ replay.onKeyDown = function(event) {
         return;
     }
 
-    // Whatever is being typed elsewhere is not for the clock
-    if (event.target.matches('input, textarea')) {
+    // Whatever is being typed elsewhere is not for the clock - only the
+    // bar's own slider is no such place, its keys stay the pass's own
+    if (event.target.matches('input, textarea') && !event.target.matches('.message-flow-replay-speed')) {
         return;
     }
 
@@ -373,6 +379,12 @@ replay.onKeyDown = function(event) {
     }
     else if (event.key === 'ArrowLeft') {
         replay.stepBack();
+    }
+    else if (event.key === 'Home') {
+        replay.seek(0);
+    }
+    else if (event.key === 'End') {
+        replay.seek(replay.state.totalScaled);
     }
     else if (event.key === 'ArrowDown') {
         replay.setMode((replay.state.modeIndex + 1) % replay.config.modes.length);

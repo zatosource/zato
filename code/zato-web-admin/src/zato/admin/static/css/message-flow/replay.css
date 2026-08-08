@@ -4,22 +4,34 @@
 /* ------------------------------------------------------------ */
 
 /* The glass everything of the replay stands on - one fill and one edge, dark
-   enough to read on without any blurring of what runs underneath */
+   enough to read on yet letting the drawing show through, with no blurring
+   of what runs underneath */
 
 .message-flow-page {
-    --message-flow-glass-fill: rgba(16, 16, 26, 0.88);
+    --message-flow-glass-fill: rgba(16, 16, 26, 0.72);
     --message-flow-glass-border: rgba(255, 255, 255, 0.14);
     --message-flow-glass-button-fill: rgba(255, 255, 255, 0.08);
     --message-flow-glass-button-fill-hover: rgba(255, 255, 255, 0.14);
+
+    /* The speed slider's thumb - a quiet grey of the same presence as the
+       buttons' icons, there to be found when reached for and silent otherwise */
+    --message-flow-replay-speed-accent: #767b88;
+
+    /* The bar speaks in greys alone - the chosen mode is a raised patch of
+       light and the playhead a pale line, no amber anywhere on the player */
+    --message-flow-replay-chosen-fill: rgba(255, 255, 255, 0.22);
+    --message-flow-replay-playhead-fill: #c6cad4;
 }
 
-/* The room the canvas and the bar share */
+/* The room the canvas and the bar share - whatever hangs off its edges is
+   simply cut off, never a reason for the page to grow a scrollbar */
 
 .message-flow-canvas-frame {
     position: relative;
     display: flex;
     flex: 1 1 auto;
     min-height: 0;
+    overflow: hidden;
 }
 
 .message-flow-canvas-frame .message-flow-canvas {
@@ -41,7 +53,7 @@
     margin-left: 0;
     padding: 0;
     border: none;
-    border-radius: 5px;
+    border-radius: 3px;
     color: var(--message-flow-text);
     font-family: inherit;
     line-height: inherit;
@@ -60,13 +72,14 @@
     display: block;
 }
 
-/* The chosen clock reads in the amber everything chosen on this page reads in */
+/* The chosen mode is a raised patch of light - the player keeps to its greys
+   and leaves the amber to the drawing */
 
 .message-flow-replay-mode.dashboard-panel-action-badge-active,
 .message-flow-replay-mode.dashboard-panel-action-badge-active:hover {
-    color: var(--message-flow-selected-text);
-    background: var(--dashboard-chosen-badge-fill);
-    box-shadow: var(--dashboard-chosen-badge-shadow);
+    color: var(--message-flow-text);
+    background: var(--message-flow-replay-chosen-fill);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 /* An unchosen button on the glass is a breath of light rather than a solid
@@ -96,23 +109,67 @@
     display: block;
 }
 
-/* How fast the clock runs, worn the way a volume slider is */
+/* How fast the clock runs, worn the way a volume slider is - drawn in the
+   bar's own materials, a hairline track and a small quiet thumb, rather than
+   the browser's bright groove and bordered knob */
 
 .message-flow-replay-speed {
+    appearance: none;
+    -webkit-appearance: none;
     flex: 0 0 auto;
-    width: 72px;
+    width: 84px;
+    height: 24px;
     margin: 0;
     padding: 0;
     border: none;
     background: transparent;
     box-shadow: none;
-    accent-color: var(--message-flow-selected);
     cursor: pointer;
 }
 
 .message-flow-replay-speed:focus {
     outline: none;
     box-shadow: none;
+}
+
+/* The track is a groove sunk into the glass, the thumb a raised knob - the
+   faint shadows are what keep the control from reading flat */
+
+.message-flow-replay-speed::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--message-flow-glass-border);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.message-flow-replay-speed::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+
+    /* The thumb rides a track thinner than itself and must sit on its centre */
+    margin-top: -4px;
+
+    border: none;
+    border-radius: 50%;
+    background: var(--message-flow-replay-speed-accent);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.message-flow-replay-speed::-moz-range-track {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--message-flow-glass-border);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.message-flow-replay-speed::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border: none;
+    border-radius: 50%;
+    background: var(--message-flow-replay-speed-accent);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 /* ------------------------------------------------------------ */
@@ -131,8 +188,13 @@
     align-items: center;
     gap: 14px;
     padding: 8px 14px;
+
+    /* Any idle place on the bar picks it up, and none of its words are
+       there to be selected */
+    cursor: grab;
+    user-select: none;
     border: 1px solid var(--message-flow-glass-border);
-    border-radius: 8px;
+    border-radius: 4px;
     background: var(--message-flow-glass-fill);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
     z-index: 1;
@@ -188,8 +250,8 @@
     height: 100%;
     margin-left: -1px;
     border-radius: 1px;
-    background: var(--message-flow-selected);
-    box-shadow: 0 0 6px rgba(246, 166, 5, 0.6);
+    background: var(--message-flow-replay-playhead-fill);
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.35);
 }
 
 /* The clock face - the wall time the playhead stands at and how far past the
@@ -238,7 +300,7 @@
     gap: 7px;
     padding: 10px 12px;
     border: 1px solid var(--message-flow-glass-border);
-    border-radius: 8px;
+    border-radius: 4px;
     background: var(--message-flow-glass-fill);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
@@ -259,7 +321,7 @@
     min-width: 74px;
     padding: 1px 7px;
     border: 1px solid var(--message-flow-glass-border);
-    border-radius: 4px;
+    border-radius: 2px;
     background: var(--message-flow-glass-button-fill);
     color: var(--message-flow-text);
     font-size: 10px;
@@ -289,8 +351,8 @@
     display: none;
 }
 
-/* The grip - the one place a drag starts from, a strip of raised dots the way
-   instrument handles read */
+/* The grip - the drag's own handle, a strip of raised dots the way instrument
+   handles read, though any idle place on the bar drags it just the same */
 
 .message-flow-replay-grip {
     flex: 0 0 auto;
@@ -303,6 +365,7 @@
     cursor: grab;
 }
 
+.message-flow-replay-bar-dragging,
 .message-flow-replay-bar-dragging .message-flow-replay-grip {
     cursor: grabbing;
 }
@@ -337,8 +400,9 @@
 }
 
 /* The docked tab - the bar folded away to the canvas edge, on the same glass,
-   its word standing on end. A pointer merely passing gets no paint - the amber
-   waits out the same short delay every hover on this page does. */
+   its word standing on end. A pointer merely passing gets no paint - the
+   brighter ink waits out the same short delay every hover on this page does,
+   and like the rest of the player it speaks in greys, not amber. */
 
 .message-flow-replay-dock {
     position: absolute;
@@ -361,7 +425,7 @@
 }
 
 .message-flow-replay-dock:hover {
-    color: var(--message-flow-selected-text);
+    color: var(--message-flow-text);
     transition-delay: 0.15s;
 }
 

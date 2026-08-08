@@ -3,14 +3,13 @@
 
 // Message flow replay - the timeline. Every event of the drawing in the order
 // it happened, each entry tied to the node it lights, and the two axes the
-// playback runs on - the compressed one the playhead walks and the real one
-// the clock face reads, tied together at every event.
+// playback runs on - the scaled one the playhead walks and the real one the
+// clock face reads, tied together at every event.
 
 // /////////////////////////////////////////////////////////////////////////////
 
 (function($) {
 
-var kit = $.fn.zato.dashboard_kit;
 var replay = $.fn.zato.message_flow.replay;
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -23,7 +22,6 @@ replay.buildTimeline = function() {
     state.events = [];
     state.nodes = {};
     state.connectors = [];
-    state.replayChips = [];
 
     // Every exchange node's events, each remembering the node it lights -
     // the hub stands for the message itself and holds no moment of its own
@@ -39,8 +37,7 @@ replay.buildTimeline = function() {
         state.nodes[nodeDetail.key] = {
             element: nodeElement,
             title: nodeDetail.title,
-            eventIndexes: [],
-            firstMs: 0
+            eventIndexes: []
         };
 
         for (var modelIndex = 0; modelIndex < nodeDetail.models.length; modelIndex++) {
@@ -66,9 +63,10 @@ replay.buildTimeline = function() {
     state.startMs = state.events[0].ms;
     state.endMs = state.events[state.events.length - 1].ms;
 
-    // The compressed axis - every event holds the clock for at least a beat,
-    // and a real gap adds its logarithm, so a 2ms hop still reads next to a
-    // 3s one and a view days later does not push the pass into next week
+    // The scaled axis the auto-play clock walks - every event holds it for at
+    // least a beat, and a real gap adds its logarithm, so a 2ms hop still
+    // reads next to a 3s one and a view days later does not push the pass
+    // into next week
     var scaled = 0;
 
     for (var eventIndex = 0; eventIndex < state.events.length; eventIndex++) {
@@ -84,10 +82,6 @@ replay.buildTimeline = function() {
         event.scaled = scaled;
 
         var node = state.nodes[event.key];
-
-        if (node.eventIndexes.length === 0) {
-            node.firstMs = event.ms;
-        }
 
         node.eventIndexes.push(eventIndex);
     }
@@ -131,58 +125,10 @@ replay.buildTimeline = function() {
             element: setElement,
             toKey: toKey,
             fromKey: setElement.getAttribute('data-connector-from'),
-            anchorX: Number(setElement.getAttribute('data-anchor-x')),
-            anchorY: Number(setElement.getAttribute('data-anchor-y')),
-            runFromX: Number(setElement.getAttribute('data-run-from-x')),
-            runToX: Number(setElement.getAttribute('data-run-to-x')),
             lines: lines,
             lineLengths: lineLengths,
             chipGroups: chipGroups
         });
-    }
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
-// The elapsed chips the replay leaves behind - a connector off the hub carries
-// none of its own, so the replay writes how long after the flow's first moment
-// its node first spoke. Chained connectors already carry their elapsed words.
-// The chips go into the chip layer over the whole drawing, each one steering
-// clear of the cards, so nothing runs through them and they stand on no node.
-replay.addElapsedChips = function() {
-    var drawing = $.fn.zato.message_flow.drawing;
-    var state = replay.state;
-    var chipHeight = drawing.config.chipHeight;
-
-    var chipLayer = state.svg.querySelector('.message-flow-chip-layer');
-
-    for (var connectorIndex = 0; connectorIndex < state.connectors.length; connectorIndex++) {
-        var connector = state.connectors[connectorIndex];
-
-        if (connector.fromKey !== '') {
-            continue;
-        }
-
-        var elapsedMs = state.nodes[connector.toKey].firstMs - state.startMs;
-        var label = '+' + kit.format_duration_ms(elapsedMs);
-
-        var chipGroup = drawing.addGroup(chipLayer, 'message-flow-connector-chip message-flow-replay-chip');
-        chipGroup.setAttribute('data-connector-to', connector.toKey);
-
-        var chipWidth = drawing.chipWidth(label);
-
-        // The words stand midway along the run when that spot is clear, and
-        // steer to the nearest clear one when a card covers it
-        var chipX = drawing.clearChipX(connector.anchorX - chipWidth / 2, chipWidth,
-            connector.anchorY - chipHeight / 2, connector.anchorY + chipHeight / 2,
-            connector.runFromX, connector.runToX);
-
-        drawing.addChip(chipGroup, chipX, connector.anchorY - chipHeight / 2, label, 'muted', true);
-
-        // The pass fades the chip in with its connector, and the disarm takes
-        // it off both the drawing and the connector's own register
-        connector.chipGroups.push(chipGroup);
-        state.replayChips.push({element: chipGroup, connector: connector});
     }
 };
 
@@ -224,51 +170,6 @@ replay.positionToRealMs = function(position) {
     }
 
     return lastEvent.ms - state.startMs;
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
-// Where on the compressed axis a real moment falls - the real-time clock
-// advances real ms and lands back here
-replay.realMsToPosition = function(realMs) {
-    var state = replay.state;
-    var events = state.events;
-
-    if (realMs <= 0) {
-        return events[0].scaled;
-    }
-
-    var lastRealMs = events[events.length - 1].ms - state.startMs;
-
-    if (realMs >= lastRealMs) {
-        return state.totalScaled;
-    }
-
-    for (var eventIndex = 1; eventIndex < events.length; eventIndex++) {
-        var current = events[eventIndex];
-        var currentRealMs = current.ms - state.startMs;
-
-        if (realMs > currentRealMs) {
-            continue;
-        }
-
-        var previous = events[eventIndex - 1];
-        var previousRealMs = previous.ms - state.startMs;
-
-        // Events of one moment share a point on the real axis - the playhead
-        // steps past all of them at once, which is what truly happened
-        if (currentRealMs === previousRealMs) {
-            return current.scaled;
-        }
-
-        var segmentShare = (realMs - previousRealMs) / (currentRealMs - previousRealMs);
-
-        var out = previous.scaled + segmentShare * (current.scaled - previous.scaled);
-
-        return out;
-    }
-
-    return state.totalScaled;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
