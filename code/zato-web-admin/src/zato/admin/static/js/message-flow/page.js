@@ -108,6 +108,9 @@ page.showIdle = function() {
 
     page.state.identity = '';
 
+    // No drawing, so nothing to play
+    $.fn.zato.message_flow.replay.onCleared();
+
     // The list's own state is let go too, so the next search draws afresh
     flow.seedId = null;
     flow.rows = [];
@@ -128,6 +131,8 @@ page.showNotFound = function(term) {
     var flow = $.fn.zato.audit_log.flow;
 
     page.state.identity = '';
+
+    $.fn.zato.message_flow.replay.onCleared();
 
     flow.seedId = null;
     flow.rows = [];
@@ -170,6 +175,9 @@ page.showJourney = function(data) {
     drawing.render(models, seedModel);
     detail.hide();
 
+    // .. and the replay stands ready over it
+    $.fn.zato.message_flow.replay.onJourney();
+
     // .. and the list reads it the way the audit log does, newest first,
     // with whatever steps the address bar names already open
     flow.seedId = data.seed_id;
@@ -202,6 +210,9 @@ page.search = function(term) {
 
     page.state.token += 1;
     var token = page.state.token;
+
+    // Whatever pass was running belonged to the journey being left behind
+    $.fn.zato.message_flow.replay.onCleared();
 
     // The wait is only announced once it is long enough to be worth announcing
     var spinnerTimer = setTimeout(function() {
@@ -257,6 +268,7 @@ page.init = function() {
 
     $.fn.zato.message_flow.drawing.init();
     $.fn.zato.message_flow.detail.init();
+    $.fn.zato.message_flow.replay.init();
 
     // The list's lines and panels answer to the same handlers they answer to
     // everywhere, bound once for the page

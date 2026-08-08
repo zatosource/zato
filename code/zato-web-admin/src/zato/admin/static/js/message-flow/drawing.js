@@ -120,8 +120,8 @@ drawing.config = {
     zoomStorageKey: 'zato.message-flow.zoom',
 
     // Where a click does not let a held selection go - the pane the selection
-    // is being read in and the bar over it
-    deselectExemptSelector: '#message-flow-detail, #message-flow-resize'
+    // is being read in, the bar over it, and the replay's own bar
+    deselectExemptSelector: '#message-flow-detail, #message-flow-resize, #message-flow-replay-bar, .message-flow-replay-dock'
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -300,6 +300,40 @@ drawing.addChip = function(host, x, y, label, kind, onCanvas) {
     kit.draw.addText(host, x + width / 2, y + 12, label, 'message-flow-chip-text message-flow-chip-text-' + kind, 'middle');
 
     return width;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// One connector - the line and the arrowhead - held in a group of its own that
+// says which branch and which node it leads into and out of what, which is what
+// lets it light with its branch and lets the replay draw it in as its node's
+// moment comes. The anchor is where the connector's words stand on its run.
+drawing.addConnectorSet = function(connectorLayer, branchIndex, toKey, fromKey, anchorX, anchorY) {
+    var group = drawing.addGroup(connectorLayer, 'message-flow-connector-set');
+
+    group.setAttribute('data-branch-index', branchIndex);
+    group.setAttribute('data-connector-to', toKey);
+    group.setAttribute('data-connector-from', fromKey);
+    group.setAttribute('data-anchor-x', anchorX);
+    group.setAttribute('data-anchor-y', anchorY);
+
+    return group;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// One connector's words, held in the layer between the lines and the cards -
+// painted over every connector, so no crossing line can run through an elapsed
+// label, and under every node, so no label can stand over a card. The group
+// knows its branch, so it lights and dims with it, and the connector it
+// speaks for.
+drawing.addChipGroup = function(chipLayer, branchIndex, toKey) {
+    var group = drawing.addGroup(chipLayer, 'message-flow-connector-chip');
+
+    group.setAttribute('data-branch-index', branchIndex);
+    group.setAttribute('data-connector-to', toKey);
+
+    return group;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -629,9 +663,13 @@ drawing.addNode = function(host, x, y, width, node) {
     var group = drawing.addGroup(host, 'message-flow-node message-flow-node-selectable');
 
     // Clicking the node opens its exchange under the drawing - the detail the
-    // node stands for is remembered by its place in the register
+    // node stands for is remembered by its place in the register, and the key
+    // is what the replay finds the node's connector by
     group.setAttribute('data-node-index', drawing.nodeDetails.length);
+    group.setAttribute('data-exchange-key', node.key);
+
     drawing.nodeDetails.push({
+        key: node.key,
         title: node.channel,
         time: node.lines[0].time,
         models: node.models
@@ -704,6 +742,7 @@ drawing.render = function(models, seedModel) {
         }
 
         nodeByKey[exchange.key] = {
+            key: exchange.key,
             channel: exchange.objectName,
             connectorLabel: exchange.connectorLabel,
             lines: lines,
@@ -858,13 +897,22 @@ drawing.render = function(models, seedModel) {
 
     var hubCenterY = (hubRowCenters[0] + hubRowCenters[hubRowCenters.length - 1]) / 2;
 
-    // The rows - each one a branch group of its own, so it lights up as one
+    // The drawing stands in three layers - every connector line first, every
+    // connector's words over the lines, and every node card over both, so a
+    // crossing line can never run through a label and a label can never stand
+    // over a card
+    var connectorLayer = drawing.addGroup(svg, 'message-flow-connector-layer');
+    var chipLayer = drawing.addGroup(svg, 'message-flow-chip-layer');
+
+    // The rows - each one a branch group of its own, so its nodes light up
+    // as one, its lines and words lighting with them by their branch index
     for (var rowIndex = 0; rowIndex < layoutRows.length; rowIndex++) {
         var row = layoutRows[rowIndex];
         var y = rowTops[rowIndex];
         var centerY = rowCenters[rowIndex];
 
         var branch = drawing.addGroup(svg, 'message-flow-branch');
+        branch.setAttribute('data-branch-index', rowIndex);
 
         for (var itemIndex = 0; itemIndex < row.length; itemIndex++) {
             var item = row[itemIndex];
@@ -876,49 +924,64 @@ drawing.render = function(models, seedModel) {
                 // The row's opening connector - from the hub, or from the parent
                 // node an earlier row holds
                 if (item.fromKey === '') {
-                    drawing.addRoundedPath(branch, [
+                    var fanSet = drawing.addConnectorSet(connectorLayer, rowIndex, item.exchange.key, '',
+                        (fanElbowX + placement.x) / 2, centerY);
+
+                    drawing.addRoundedPath(fanSet, [
                         [hubRight, hubCenterY],
                         [fanElbowX, hubCenterY],
                         [fanElbowX, centerY],
                         [placement.x, centerY]
                     ], 'message-flow-connector');
-                    drawing.addArrow(branch, placement.x, centerY, 'message-flow-connector-arrow');
+                    drawing.addArrow(fanSet, placement.x, centerY, 'message-flow-connector-arrow');
                 }
                 else {
                     var parent = placementByKey[item.fromKey];
                     var parentCenterY = rowCenters[parent.rowIndex];
                     var branchElbowX = parent.right + config.branchElbowOffset;
 
-                    drawing.addRoundedPath(branch, [
+                    var branchSet = drawing.addConnectorSet(connectorLayer, rowIndex, item.exchange.key,
+                        item.fromKey, (branchElbowX + placement.x) / 2, centerY);
+
+                    drawing.addRoundedPath(branchSet, [
                         [parent.right, parentCenterY],
                         [branchElbowX, parentCenterY],
                         [branchElbowX, centerY],
                         [placement.x, centerY]
                     ], 'message-flow-connector');
-                    drawing.addArrow(branch, placement.x, centerY, 'message-flow-connector-arrow');
+                    drawing.addArrow(branchSet, placement.x, centerY, 'message-flow-connector-arrow');
 
                     // The words of how the message got here, on the horizontal run
                     var branchChipWidth = drawing.chipWidth(node.connectorLabel);
                     var branchChipX = branchElbowX + (placement.x - branchElbowX - branchChipWidth) / 2;
 
-                    drawing.addChip(branch, branchChipX, centerY - config.chipHeight / 2, node.connectorLabel,
-                        'muted', true);
+                    var branchChipGroup = drawing.addChipGroup(chipLayer, rowIndex, item.exchange.key);
+
+                    drawing.addChip(branchChipGroup, branchChipX, centerY - config.chipHeight / 2,
+                        node.connectorLabel, 'muted', true);
                 }
             }
             else {
 
                 // From the second station of a row on, the connector to it
                 // carries the words of how the message got there
-                var previousPlacement = placementByKey[row[itemIndex - 1].exchange.key];
+                var previousKey = row[itemIndex - 1].exchange.key;
+                var previousPlacement = placementByKey[previousKey];
 
-                drawing.addPolyline(branch, [[previousPlacement.right, centerY], [placement.x, centerY]],
+                var chainSet = drawing.addConnectorSet(connectorLayer, rowIndex, item.exchange.key,
+                    previousKey, (previousPlacement.right + placement.x) / 2, centerY);
+
+                drawing.addPolyline(chainSet, [[previousPlacement.right, centerY], [placement.x, centerY]],
                     'message-flow-connector');
-                drawing.addArrow(branch, placement.x, centerY, 'message-flow-connector-arrow');
+                drawing.addArrow(chainSet, placement.x, centerY, 'message-flow-connector-arrow');
 
                 var chipWidth = drawing.chipWidth(node.connectorLabel);
                 var chipX = previousPlacement.right + (placement.x - previousPlacement.right - chipWidth) / 2;
 
-                drawing.addChip(branch, chipX, centerY - config.chipHeight / 2, node.connectorLabel, 'muted', true);
+                var chainChipGroup = drawing.addChipGroup(chipLayer, rowIndex, item.exchange.key);
+
+                drawing.addChip(chainChipGroup, chipX, centerY - config.chipHeight / 2, node.connectorLabel,
+                    'muted', true);
             }
 
             drawing.addNode(branch, placement.x, y, placement.width, node);
@@ -935,6 +998,7 @@ drawing.render = function(models, seedModel) {
 
     hub.setAttribute('data-node-index', drawing.nodeDetails.length);
     drawing.nodeDetails.push({
+        key: '',
         title: hubTitle,
         time: kit.time_ago_label(seedModel.timeIso) + config.labelSeparator + seedModel.timeLocal.slice(11),
         models: [seedModel]
@@ -1112,6 +1176,12 @@ drawing.wireDrawing = function(svg) {
     var branches = svg.querySelectorAll('.message-flow-branch');
     var nodes = svg.querySelectorAll('.message-flow-node-selectable');
 
+    // The lines and their words live in layers of their own under the cards,
+    // so they light and dim by the branch they speak for rather than by
+    // where they sit
+    var connectorSets = svg.querySelectorAll('.message-flow-connector-set');
+    var chipGroups = svg.querySelectorAll('.message-flow-connector-chip');
+
     drawing.selectedNode = null;
 
     // The pending return to full light - leaving a branch only starts it, and
@@ -1126,19 +1196,47 @@ drawing.wireDrawing = function(svg) {
         }
     };
 
-    var clearLit = function() {
-        cancelUnlit();
+    // Everything of one branch, wherever its layer - the branch group itself,
+    // its lines and its words
+    var setLitOn = function(element, isLit) {
+        element.classList.toggle('message-flow-lit', isLit);
+    };
 
+    var setLitEverywhere = function(litIndex, isLit) {
         for (var branchIndex = 0; branchIndex < branches.length; branchIndex++) {
-            branches[branchIndex].classList.remove('message-flow-lit');
+            var branch = branches[branchIndex];
+
+            if (litIndex === null || branch.getAttribute('data-branch-index') === litIndex) {
+                setLitOn(branch, isLit);
+            }
         }
 
+        for (var setIndex = 0; setIndex < connectorSets.length; setIndex++) {
+            var connectorSet = connectorSets[setIndex];
+
+            if (litIndex === null || connectorSet.getAttribute('data-branch-index') === litIndex) {
+                setLitOn(connectorSet, isLit);
+            }
+        }
+
+        for (var chipIndex = 0; chipIndex < chipGroups.length; chipIndex++) {
+            var chipGroup = chipGroups[chipIndex];
+
+            if (litIndex === null || chipGroup.getAttribute('data-branch-index') === litIndex) {
+                setLitOn(chipGroup, isLit);
+            }
+        }
+    };
+
+    var clearLit = function() {
+        cancelUnlit();
+        setLitEverywhere(null, false);
         svg.classList.remove('message-flow-focus');
     };
 
     var setLit = function(branch) {
         clearLit();
-        branch.classList.add('message-flow-lit');
+        setLitEverywhere(branch.getAttribute('data-branch-index'), true);
         svg.classList.add('message-flow-focus');
     };
 
@@ -1146,11 +1244,7 @@ drawing.wireDrawing = function(svg) {
     // the room around the drawing falls dark
     var setLitAll = function() {
         cancelUnlit();
-
-        for (var branchIndex = 0; branchIndex < branches.length; branchIndex++) {
-            branches[branchIndex].classList.add('message-flow-lit');
-        }
-
+        setLitEverywhere(null, true);
         svg.classList.add('message-flow-focus');
     };
 
@@ -1185,6 +1279,30 @@ drawing.wireDrawing = function(svg) {
         };
 
         wireBranch(branches[branchIndex]);
+    }
+
+    // A line lights its branch the way the branch's own cards do - the lines
+    // live in their own layer, so they answer for their branch by its index
+    for (var wireSetIndex = 0; wireSetIndex < connectorSets.length; wireSetIndex++) {
+
+        var wireConnectorSet = function(connectorSet) {
+            var setIndex = connectorSet.getAttribute('data-branch-index');
+            var setBranch = svg.querySelector('.message-flow-branch[data-branch-index="' + setIndex + '"]');
+
+            connectorSet.addEventListener('mouseenter', function() {
+                if (drawing.selectedNode === null) {
+                    setLit(setBranch);
+                }
+            });
+
+            connectorSet.addEventListener('mouseleave', function() {
+                if (drawing.selectedNode === null) {
+                    scheduleUnlit();
+                }
+            });
+        };
+
+        wireConnectorSet(connectorSets[wireSetIndex]);
     }
 
     // The root lights the whole drawing the way a branch lights itself
@@ -1273,9 +1391,14 @@ drawing.init = function() {
         drawing.deselect();
     });
 
-    // Esc lets go too, from wherever the pointer happens to be
+    // Esc lets go too, from wherever the pointer happens to be - unless the
+    // replay is on, whose own Esc it then is
     document.addEventListener('keydown', function(event) {
         if (event.key === 'Escape' && drawing.deselect !== null) {
+            if ($.fn.zato.message_flow.replay.state.isActive) {
+                return;
+            }
+
             drawing.deselect();
         }
     });

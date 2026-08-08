@@ -1,0 +1,413 @@
+/* ------------------------------------------------------------ */
+/* Message flow - the replay: the bar over the canvas foot and   */
+/* what the drawing wears while the clock runs                   */
+/* ------------------------------------------------------------ */
+
+/* The glass everything of the replay stands on - one fill and one edge, dark
+   enough to read on without any blurring of what runs underneath */
+
+.message-flow-page {
+    --message-flow-glass-fill: rgba(16, 16, 26, 0.88);
+    --message-flow-glass-border: rgba(255, 255, 255, 0.14);
+    --message-flow-glass-button-fill: rgba(255, 255, 255, 0.08);
+    --message-flow-glass-button-fill-hover: rgba(255, 255, 255, 0.14);
+}
+
+/* The room the canvas and the bar share */
+
+.message-flow-canvas-frame {
+    position: relative;
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.message-flow-canvas-frame .message-flow-canvas {
+    flex: 1 1 auto;
+}
+
+/* Every control on the bar is a small square wearing an icon that says its
+   own name natively - the only styling of its own is undoing what the base
+   stylesheets force on a button element */
+
+.message-flow-replay-button {
+    appearance: none;
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 24px;
+    margin-left: 0;
+    padding: 0;
+    border: none;
+    border-radius: 5px;
+    color: var(--message-flow-text);
+    font-family: inherit;
+    line-height: inherit;
+    text-shadow: none;
+    cursor: pointer;
+}
+
+.message-flow-replay-button:focus,
+.message-flow-replay-button:active {
+    outline: none;
+    box-shadow: none;
+    background-image: none;
+}
+
+.message-flow-replay-button svg {
+    display: block;
+}
+
+/* The chosen clock reads in the amber everything chosen on this page reads in */
+
+.message-flow-replay-mode.dashboard-panel-action-badge-active,
+.message-flow-replay-mode.dashboard-panel-action-badge-active:hover {
+    color: var(--message-flow-selected-text);
+    background: var(--dashboard-chosen-badge-fill);
+    box-shadow: var(--dashboard-chosen-badge-shadow);
+}
+
+/* An unchosen button on the glass is a breath of light rather than a solid
+   card, so the bar reads as one instrument */
+
+.message-flow-replay-button:not(.dashboard-panel-action-badge-active) {
+    background: var(--message-flow-glass-button-fill);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.message-flow-replay-button:not(.dashboard-panel-action-badge-active):hover {
+    background: var(--message-flow-glass-button-fill-hover);
+}
+
+/* The one control that changes its face - the triangle while the clock
+   stands, the bars while it runs */
+
+.message-flow-replay-play .message-flow-replay-icon-pause {
+    display: none;
+}
+
+.message-flow-replay-play.message-flow-replay-playing .message-flow-replay-icon-play {
+    display: none;
+}
+
+.message-flow-replay-play.message-flow-replay-playing .message-flow-replay-icon-pause {
+    display: block;
+}
+
+/* How fast the clock runs, worn the way a volume slider is */
+
+.message-flow-replay-speed {
+    flex: 0 0 auto;
+    width: 72px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    accent-color: var(--message-flow-selected);
+    cursor: pointer;
+}
+
+.message-flow-replay-speed:focus {
+    outline: none;
+}
+
+/* ------------------------------------------------------------ */
+/* The bar - play, the three clocks, the track and the clock face */
+/* ------------------------------------------------------------ */
+
+/* The bar stands full width over the drawing's foot whenever there is a
+   journey on the canvas - it never moves and nothing around it moves */
+
+.message-flow-replay-bar {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    display: none;
+    align-items: center;
+    gap: 14px;
+    padding: 8px 14px;
+    border: 1px solid var(--message-flow-glass-border);
+    border-radius: 8px;
+    background: var(--message-flow-glass-fill);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    z-index: 1;
+}
+
+.message-flow-replay-bar-active {
+    display: flex;
+}
+
+.message-flow-replay-modes {
+    display: flex;
+    gap: 6px;
+}
+
+/* The track - a hairline the events stand on and the playhead walks */
+
+.message-flow-replay-track {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 200px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.message-flow-replay-track::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.22);
+}
+
+.message-flow-replay-tick {
+    position: absolute;
+    top: 5px;
+    width: 2px;
+    height: 10px;
+    margin-left: -1px;
+    border-radius: 1px;
+    background: var(--message-flow-guide);
+}
+
+.message-flow-replay-tick-bad {
+    background: var(--message-flow-bad);
+}
+
+.message-flow-replay-playhead {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    margin-left: -1px;
+    border-radius: 1px;
+    background: var(--message-flow-selected);
+    box-shadow: 0 0 6px rgba(246, 166, 5, 0.6);
+}
+
+/* The clock face - the wall time the playhead stands at and how far past the
+   first event that is, held to one width so the bar never shifts under it */
+
+.message-flow-replay-clock {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 10px;
+    min-width: 190px;
+    font-size: 11px;
+}
+
+.message-flow-replay-wall {
+    color: var(--message-flow-text);
+}
+
+.message-flow-replay-elapsed {
+    color: var(--message-flow-muted);
+}
+
+/* A failure's freeze note, in the failure's own ink */
+
+.message-flow-replay-note {
+    flex: 0 0 auto;
+    font-size: 11px;
+}
+
+.message-flow-replay-note-bad {
+    color: var(--message-flow-bad);
+    font-weight: 700;
+}
+
+/* The keyboard control and the overlay over the bar that reads its keys out */
+
+.message-flow-replay-keyboard {
+    color: var(--message-flow-muted);
+}
+
+.message-flow-replay-shortcuts {
+    position: absolute;
+    right: 10px;
+    bottom: calc(100% + 10px);
+    display: none;
+    flex-direction: column;
+    gap: 7px;
+    padding: 10px 12px;
+    border: 1px solid var(--message-flow-glass-border);
+    border-radius: 8px;
+    background: var(--message-flow-glass-fill);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.message-flow-replay-shortcuts-open {
+    display: flex;
+}
+
+.message-flow-replay-shortcut {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+}
+
+.message-flow-replay-shortcut-keys {
+    flex: 0 0 auto;
+    min-width: 74px;
+    padding: 1px 7px;
+    border: 1px solid var(--message-flow-glass-border);
+    border-radius: 4px;
+    background: var(--message-flow-glass-button-fill);
+    color: var(--message-flow-text);
+    font-size: 10px;
+    text-align: center;
+}
+
+.message-flow-replay-shortcut-label {
+    color: var(--message-flow-muted);
+}
+
+/* ------------------------------------------------------------ */
+/* The bar off its moorings - the grip, the fold-away and the tab */
+/* ------------------------------------------------------------ */
+
+/* The grip at the bar's left end - the handle the whole bar is pulled by */
+
+.message-flow-replay-grip {
+    flex: 0 0 auto;
+    color: var(--message-flow-muted);
+    font-size: 10px;
+    letter-spacing: 2px;
+    line-height: 1;
+    cursor: grab;
+    user-select: none;
+}
+
+.message-flow-replay-bar-dragging .message-flow-replay-grip {
+    cursor: grabbing;
+}
+
+/* Pulled loose, the bar gives up the full width and stands wherever it was
+   left, its place pinned by the inline coordinates the pull writes */
+
+.message-flow-replay-bar-floating {
+    right: auto;
+    bottom: auto;
+}
+
+.message-flow-replay-bar-dragging {
+    opacity: 0.92;
+}
+
+/* Folded away, the bar leaves only the tab at the canvas foot */
+
+.message-flow-replay-bar.message-flow-replay-bar-minimized {
+    display: none;
+}
+
+.message-flow-replay-dock {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    display: none;
+    appearance: none;
+    margin-left: 0;
+    padding: 4px 14px;
+    border: 1px solid var(--message-flow-glass-border);
+    border-radius: 999px;
+    background: var(--message-flow-glass-fill);
+    color: var(--message-flow-text);
+    font-family: inherit;
+    font-size: 11px;
+    line-height: inherit;
+    text-shadow: none;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    cursor: pointer;
+    z-index: 1;
+}
+
+.message-flow-replay-dock:focus,
+.message-flow-replay-dock:active {
+    outline: none;
+    background-image: none;
+}
+
+.message-flow-replay-dock:hover {
+    border-color: var(--message-flow-selected);
+}
+
+.message-flow-replay-dock-active {
+    display: block;
+}
+
+/* ------------------------------------------------------------ */
+/* What the drawing wears while the clock runs                   */
+/* ------------------------------------------------------------ */
+
+/* The pointer's own branch lighting stands down - the clock is what lights
+   the room now */
+
+svg.message-flow-replay.message-flow-focus .message-flow-branch:not(.message-flow-lit),
+svg.message-flow-replay.message-flow-focus .message-flow-connector-set:not(.message-flow-lit),
+svg.message-flow-replay.message-flow-focus .message-flow-connector-chip:not(.message-flow-lit) {
+    filter: none;
+}
+
+/* A node whose moment has not come yet stands dark - the fade rides on the
+   opacity, so a node lighting up comes up smoothly */
+
+svg.message-flow-replay .message-flow-node {
+    transition: opacity 0.35s;
+}
+
+svg.message-flow-replay .message-flow-node.message-flow-replay-unplayed {
+    opacity: 0.3;
+    filter: grayscale(1) brightness(0.6);
+}
+
+/* A node mid-exchange - the message is in and the answer is not - wears the
+   dwell glow, and the glow heats with the wait */
+
+svg.message-flow-replay .message-flow-node.message-flow-replay-waiting:not(.message-flow-replay-failed) {
+    animation: message-flow-replay-dwell 1.6s ease-in infinite alternate;
+}
+
+@keyframes message-flow-replay-dwell {
+    from {
+        filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 2px rgba(246, 166, 5, 0.2));
+    }
+
+    to {
+        filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 12px rgba(246, 166, 5, 0.75));
+    }
+}
+
+/* A node that failed keeps the failure on it for the rest of the pass */
+
+svg.message-flow-replay .message-flow-replay-failed .message-flow-box {
+    stroke: var(--message-flow-bad);
+    stroke-width: 1.6;
+}
+
+svg.message-flow-replay .message-flow-node.message-flow-replay-failed {
+    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 9px rgba(255, 138, 148, 0.5));
+}
+
+/* A connector draws itself in as its node's moment comes - the line runs in
+   along its own dash, the arrowhead and its words in the chip layer fading
+   up behind it */
+
+svg.message-flow-replay .message-flow-connector-set .message-flow-connector {
+    transition: stroke-dashoffset 0.45s ease-out;
+}
+
+svg.message-flow-replay .message-flow-connector-set .message-flow-connector-arrow,
+svg.message-flow-replay .message-flow-connector-chip {
+    transition: opacity 0.3s ease-out;
+}
+
+svg.message-flow-replay .message-flow-connector-set:not(.message-flow-replay-drawn) .message-flow-connector-arrow,
+svg.message-flow-replay .message-flow-connector-chip:not(.message-flow-replay-drawn) {
+    opacity: 0;
+}
