@@ -137,9 +137,11 @@ drawing.config = {
 // /////////////////////////////////////////////////////////////////////////////
 
 // The details the nodes on the canvas stand for, by their place in this register,
-// and the node the reader picked
+// and the node the reader picked - held by its element and by its exchange key,
+// which is what the amber on its connector is set and cleared by
 drawing.nodeDetails = [];
 drawing.selectedNode = null;
+drawing.selectedKey = '';
 
 // Lets a held selection go - each render leaves its own here, closing over that
 // drawing's nodes and branches, and there is nothing to let go before the first one
@@ -820,6 +822,7 @@ drawing.clear = function() {
     drawing.canvas().textContent = '';
     drawing.nodeDetails = [];
     drawing.selectedNode = null;
+    drawing.selectedKey = '';
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -1384,6 +1387,7 @@ drawing.wireDrawing = function(svg) {
     var chipGroups = svg.querySelectorAll('.message-flow-connector-chip');
 
     drawing.selectedNode = null;
+    drawing.selectedKey = '';
 
     // The pending return to full light - leaving a branch only starts it, and
     // reaching another branch in time cancels it, so walking the pointer from
@@ -1397,25 +1401,38 @@ drawing.wireDrawing = function(svg) {
         }
     };
 
-    // Everything of one branch, wherever its layer - the branch group itself,
-    // its lines and its words
+    // Everything of one branch, wherever its layer - the cards one by one,
+    // the lines and the words. The cards light and dim each on its own, so a
+    // selection can keep one node of a row in colour without its row-mates.
     var setLitOn = function(element, isLit) {
         element.classList.toggle('message-flow-lit', isLit);
     };
 
-    var setLitEverywhere = function(litIndex, isLit) {
-        for (var branchIndex = 0; branchIndex < branches.length; branchIndex++) {
-            var branch = branches[branchIndex];
+    // `litIndexes` is null to mean every branch, or an object whose keys are
+    // the branch indexes to light
+    var setLitEverywhere = function(litIndexes, isLit) {
+        var isChosen = function(element) {
+            return litIndexes === null || litIndexes[element.getAttribute('data-branch-index')] === true;
+        };
 
-            if (litIndex === null || branch.getAttribute('data-branch-index') === litIndex) {
-                setLitOn(branch, isLit);
+        for (var litNodeIndex = 0; litNodeIndex < nodes.length; litNodeIndex++) {
+            var litNode = nodes[litNodeIndex];
+            var litNodeBranch = litNode.closest('.message-flow-branch');
+
+            // The root stands outside every branch and never dims
+            if (litNodeBranch === null) {
+                continue;
+            }
+
+            if (isChosen(litNodeBranch)) {
+                setLitOn(litNode, isLit);
             }
         }
 
         for (var setIndex = 0; setIndex < connectorSets.length; setIndex++) {
             var connectorSet = connectorSets[setIndex];
 
-            if (litIndex === null || connectorSet.getAttribute('data-branch-index') === litIndex) {
+            if (isChosen(connectorSet)) {
                 setLitOn(connectorSet, isLit);
             }
         }
@@ -1423,7 +1440,7 @@ drawing.wireDrawing = function(svg) {
         for (var chipIndex = 0; chipIndex < chipGroups.length; chipIndex++) {
             var chipGroup = chipGroups[chipIndex];
 
-            if (litIndex === null || chipGroup.getAttribute('data-branch-index') === litIndex) {
+            if (isChosen(chipGroup)) {
                 setLitOn(chipGroup, isLit);
             }
         }
@@ -1436,8 +1453,11 @@ drawing.wireDrawing = function(svg) {
     };
 
     var setLit = function(branch) {
+        var litIndexes = {};
+        litIndexes[branch.getAttribute('data-branch-index')] = true;
+
         clearLit();
-        setLitEverywhere(branch.getAttribute('data-branch-index'), true);
+        setLitEverywhere(litIndexes, true);
         svg.classList.add('message-flow-focus');
     };
 
@@ -1454,10 +1474,89 @@ drawing.wireDrawing = function(svg) {
         unlitTimer = window.setTimeout(clearLit, drawing.config.dimHoldMs);
     };
 
+    // Which connector leads into which node and which card wears which key -
+    // the way back to the root is walked along these
+    var connectorByTo = {};
+
+    for (var mapSetIndex = 0; mapSetIndex < connectorSets.length; mapSetIndex++) {
+        var mapSet = connectorSets[mapSetIndex];
+        connectorByTo[mapSet.getAttribute('data-connector-to')] = mapSet;
+    }
+
+    var nodeByKey = {};
+
+    for (var mapNodeIndex = 0; mapNodeIndex < nodes.length; mapNodeIndex++) {
+        var mapNode = nodes[mapNodeIndex];
+        var mapNodeKey = mapNode.getAttribute('data-exchange-key');
+
+        // The root carries no exchange key and is in no walk
+        if (mapNodeKey !== null) {
+            nodeByKey[mapNodeKey] = mapNode;
+        }
+    }
+
+    // The whole way from the root to one node wears the selection amber with
+    // it - every connector from the node back to the hub, and every node the
+    // way came by wears the selection border too, the root included, though
+    // only the picked node holds the selection itself. The key names the
+    // node, and no key lights nothing.
+    var setConnectorCurrent = function(key, isOn) {
+        var wayKey = key;
+
+        while (wayKey !== '') {
+            var waySet = connectorByTo[wayKey];
+
+            waySet.classList.toggle('message-flow-connector-current', isOn);
+            wayKey = waySet.getAttribute('data-connector-from');
+
+            // The next node up the way - the picked node itself already
+            // wears its own border
+            if (wayKey !== '') {
+                nodeByKey[wayKey].classList.toggle('message-flow-node-way', isOn);
+            }
+        }
+
+        // The root heads every way there is
+        if (key !== '') {
+            root.classList.toggle('message-flow-node-way', isOn);
+        }
+    };
+
+    // A picked node keeps its whole ancestry in colour - the way itself and
+    // nothing more: the cards the walk passes, the connectors between them
+    // and their words. A row-mate of an ancestor - another resubmission off
+    // the same parent - is not on the way and dims like the rest of the room.
+    var setLitWay = function(key) {
+        clearLit();
+
+        var wayKey = key;
+
+        while (wayKey !== '') {
+            setLitOn(nodeByKey[wayKey], true);
+
+            var waySet = connectorByTo[wayKey];
+            setLitOn(waySet, true);
+
+            for (var wayChipIndex = 0; wayChipIndex < chipGroups.length; wayChipIndex++) {
+                if (chipGroups[wayChipIndex].getAttribute('data-connector-to') === wayKey) {
+                    setLitOn(chipGroups[wayChipIndex], true);
+                }
+            }
+
+            wayKey = waySet.getAttribute('data-connector-from');
+        }
+
+        svg.classList.add('message-flow-focus');
+    };
+
     var clearSelection = function() {
         if (drawing.selectedNode !== null) {
             drawing.selectedNode.classList.remove('message-flow-node-selected');
             drawing.selectedNode = null;
+
+            setConnectorCurrent(drawing.selectedKey, false);
+            drawing.selectedKey = '';
+
             detail.hide();
         }
     };
@@ -1540,16 +1639,25 @@ drawing.wireDrawing = function(svg) {
                 drawing.selectedNode = node;
                 node.classList.add('message-flow-node-selected');
 
+                // The way in lights up with the node - the root has no way in
+                // and no key, and lights nothing
+                drawing.selectedKey = node.getAttribute('data-exchange-key');
+
+                if (drawing.selectedKey === null) {
+                    drawing.selectedKey = '';
+                }
+
+                setConnectorCurrent(drawing.selectedKey, true);
+
                 // The picked node's exchange opens under the drawing
                 var detailIndex = parseInt(node.getAttribute('data-node-index'), 10);
                 detail.show(drawing.nodeDetails[detailIndex]);
 
-                // The picked node's whole branch stays lit around it, and the
-                // root, standing outside every branch, keeps them all lit
-                var branch = node.closest('.message-flow-branch');
-
-                if (branch !== null) {
-                    setLit(branch);
+                // The picked node's whole way from the root stays lit around
+                // it, and the root, standing outside every branch, keeps them
+                // all lit
+                if (drawing.selectedKey !== '') {
+                    setLitWay(drawing.selectedKey);
                 }
                 else {
                     setLitAll();

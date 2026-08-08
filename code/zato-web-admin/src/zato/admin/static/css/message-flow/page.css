@@ -277,6 +277,7 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
 
 .message-flow-node {
     filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5));
+    transition: filter 0.25s;
 }
 
 .message-flow-node-selectable {
@@ -287,9 +288,12 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     fill: url(#message-flow-node-fill);
 }
 
-/* The node the reader picked - amber says selection and nothing else */
+/* The node the reader picked - amber says selection and nothing else - and
+   the nodes the selection came by, the root included, wearing the same
+   border without holding the selection */
 
-.message-flow-node-selected .message-flow-box {
+.message-flow-node-selected .message-flow-box,
+.message-flow-node-way .message-flow-box {
     stroke: var(--message-flow-selected);
     stroke-width: 1.6;
 }
@@ -447,16 +451,30 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     fill: var(--message-flow-guide);
 }
 
-/* A branch under the pointer or held by a click stays in colour, the rest of the
-   room is drained the way the flow sets its closed lines back */
+/* The connector into the node currently standing out - picked by hand or
+   stood on by the pass - draws in the selection amber */
+
+.message-flow-connector-set.message-flow-connector-current .message-flow-connector {
+    stroke: var(--message-flow-selected);
+}
+
+.message-flow-connector-set.message-flow-connector-current .message-flow-connector-arrow {
+    fill: var(--message-flow-selected);
+}
+
+/* What is under the pointer or held by a click stays in colour, the rest of
+   the room is drained. The cards dim one by one rather than row by row, so a
+   selection can keep just its own ancestry lit, and the root never dims. */
 
 .message-flow-branch {
     cursor: pointer;
-    transition: filter 0.25s;
 }
 
-svg.message-flow-focus .message-flow-branch:not(.message-flow-lit) {
-    filter: grayscale(1) brightness(0.75);
+/* During a replay pass the clock is what lights the cards, so the pointer's
+   own dimming stands down there and only the connector layers keep theirs */
+
+svg.message-flow-focus:not(.message-flow-replay) .message-flow-node:not(.message-flow-lit):not(.message-flow-root) {
+    filter: grayscale(1) brightness(0.75) drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5));
 }
 
 /* The lines live in a layer of their own under the cards - each one lights

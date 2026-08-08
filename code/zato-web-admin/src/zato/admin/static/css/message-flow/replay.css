@@ -440,7 +440,6 @@
 /* The pointer's own branch lighting stands down - the clock is what lights
    the room now */
 
-svg.message-flow-replay.message-flow-focus .message-flow-branch:not(.message-flow-lit),
 svg.message-flow-replay.message-flow-focus .message-flow-connector-set:not(.message-flow-lit),
 svg.message-flow-replay.message-flow-focus .message-flow-connector-chip:not(.message-flow-lit) {
     filter: none;

@@ -22,6 +22,7 @@ replay.buildTimeline = function() {
     state.events = [];
     state.nodes = {};
     state.connectors = [];
+    state.connectorByTo = {};
 
     // Every exchange node's events, each remembering the node it lights -
     // the hub stands for the message itself and holds no moment of its own
@@ -121,14 +122,20 @@ replay.buildTimeline = function() {
             }
         }
 
-        state.connectors.push({
+        var connector = {
             element: setElement,
             toKey: toKey,
             fromKey: setElement.getAttribute('data-connector-from'),
             lines: lines,
             lineLengths: lineLengths,
             chipGroups: chipGroups
-        });
+        };
+
+        state.connectors.push(connector);
+
+        // Each node has one way in - the walk from a node back to the root
+        // goes connector by connector along this map
+        state.connectorByTo[toKey] = connector;
     }
 };
 
