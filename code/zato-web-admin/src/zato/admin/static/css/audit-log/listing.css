@@ -396,13 +396,13 @@
 }
 
 /* Wide enough for a Resubmit link with the resubmitted marker after it, and kept at that
-   width whatever a row carries - a resubmit adds the marker to its row, and a column sized
-   by content would widen for everyone the moment it appeared. Left-aligned, so every link
-   stands at the same x whether or not its row is marked. */
+   width whatever a row carries, so no row widens the column for everyone else. The link is
+   glued to the right edge, away from the badges of the cell before it, so every Resubmit
+   stands at the same x down the whole list. */
 
 .audit-log-cell-action {
     width: 140px;
-    text-align: left;
+    text-align: right;
 }
 
 /* The one cell that asks for everything, which is what a table hands its leftover room to. It
@@ -498,6 +498,7 @@
 /* A tag is what an event has in common with others rather than what it is */
 
 .audit-log-drop-chips .audit-log-cell-main .dashboard-chip,
+.audit-log-drop-chips .audit-log-cell-main .audit-log-resubmitted-marker,
 .audit-log-drop-chips .audit-log-row-event {
     display: none;
 }
@@ -528,6 +529,9 @@
     cursor: pointer;
 }
 
+/* One more badge among the row's chips, saying the message went out again - its
+   background leaning a touch towards green, everything else as the other tags */
+
 .audit-log-resubmitted-marker {
     display: inline-block;
     padding: 1px 6px;
@@ -536,7 +540,8 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    background: #e0f0ff;
+    vertical-align: middle;
+    background: #e0f0e8;
     color: var(--dashboard-line-strong);
 }
 
