@@ -18,6 +18,13 @@ $.fn.zato.audit_log.config = {
     attachmentsURL: '/zato/audit-log/attachments/',
     attachmentDownloadURL: '/zato/audit-log/attachment/',
     flowURL: '/zato/audit-log/flow/',
+    stripURL: '/zato/audit-log/strip/',
+
+    // The activity strip over the listing - where it renders, what it says with
+    // nothing to draw, and how the pill reads a window clicked out of it
+    stripHost: '#audit-log-strip',
+    stripEmptyText: 'No events in this window',
+    stripWindowSeparator: ' - ',
 
     // The name every source without a presenter of its own is drawn by
     defaultSource: 'default',
@@ -275,6 +282,113 @@ $.fn.zato.audit_log.parseResubmitResponse = function(jqXHR, textStatus) {
         details_lexer: parsed.details_lexer,
         status_code: 0
     };
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The activity strip over the listing, drawn out of what the strip endpoint counted -
+// the same series and colours the outcome legend wears. A bucket click narrows the
+// listing down to that bucket's window, the way a clicked stamp unit does.
+$.fn.zato.audit_log.renderStrip = function(serverBuckets) {
+    var kit = $.fn.zato.dashboard_kit;
+    var config = $.fn.zato.audit_log.config;
+    var palette = kit.palette.outcome;
+
+    // The strip reads a count for every series it knows - the endpoint names
+    // only the outcomes a bucket actually saw
+    var buckets = [];
+
+    for (var bucketIndex = 0; bucketIndex < serverBuckets.length; bucketIndex++) {
+        var serverBucket = serverBuckets[bucketIndex];
+
+        var bucket = {
+            start: new Date(serverBucket.start_iso).getTime(),
+            end: new Date(serverBucket.end_iso).getTime()
+        };
+
+        for (var keyIndex = 0; keyIndex < config.outcomes.length; keyIndex++) {
+            var key = config.outcomes[keyIndex];
+
+            if (key in serverBucket.counts) {
+                bucket[key] = serverBucket.counts[key];
+            } else {
+                bucket[key] = 0;
+            }
+        }
+
+        buckets.push(bucket);
+    }
+
+    kit.activity_strip.render({
+        host: config.stripHost,
+        series_keys: config.outcomes,
+        colors: palette.bar_colors,
+        labels: palette.labels,
+
+        // The legend already filters the poll and the strip endpoint alike, so an
+        // outcome switched off up there never reaches the strip in the first place
+        hidden: {},
+        empty_text: config.stripEmptyText,
+        buckets: buckets,
+        on_bucket_click: function(startISO, endISO) {
+            var listing = $.fn.zato.audit_log.listing;
+
+            var label = kit.format_local_time(startISO) +
+                config.stripWindowSeparator + kit.format_local_time(endISO);
+
+            listing.applyTimeWindow({label: label, time_from: startISO, time_to: endISO});
+        }
+    });
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// Asks the strip endpoint for the events the listing's own filters match, counted
+// into as many buckets as the strip has room for
+$.fn.zato.audit_log.refreshStrip = function() {
+    var kit = $.fn.zato.dashboard_kit;
+    var config = $.fn.zato.audit_log.config;
+    var stripConfig = kit.activity_strip.config;
+
+    // A source whose events report no outcome at all has no series to draw
+    if (config.outcomes.length === 0) {
+        $(config.stripHost).hide();
+        return;
+    }
+
+    var width = $(config.stripHost).width();
+
+    var bucketCount = Math.min(stripConfig.max_buckets,
+        Math.max(stripConfig.min_buckets, Math.floor(width / stripConfig.px_per_bucket)));
+
+    var filters = $.fn.zato.audit_log.pagination.get_filters();
+
+    var body = {
+        sources: filters.sources,
+        object_names: filters.object_names,
+        outcomes: filters.outcomes,
+        query: filters.query,
+        status: filters.status,
+        time_from: filters.time_from,
+        time_to: filters.time_to,
+        event_types: filters.event_types,
+        bucket_count: bucketCount
+    };
+
+    $.ajax({
+        url: config.stripURL,
+        type: 'POST',
+        data: JSON.stringify(body),
+        contentType: 'application/json',
+        headers: {'X-CSRFToken': $.cookie('csrftoken')},
+        success: function(data) {
+            if (typeof data === 'string') {
+                data = JSON.parse(data);
+            }
+
+            $.fn.zato.audit_log.renderStrip(data.buckets);
+        }
+    });
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -668,7 +782,14 @@ $.fn.zato.audit_log.init = function(initConfig) {
         // scrolls inside itself, so a second row of them at the foot of it would be reached
         // by scrolling the page it is meant to keep still
         container_top: '#audit-log-pagination-top',
-        render_page: listing.renderPage
+
+        // The strip follows the listing - the same filters, redrawn whenever a page
+        // of it arrives, whoever asked - a filter change, a page turn or the clock
+        render_page: function(tableBody, rows, total) {
+            listing.renderPage(tableBody, rows, total);
+
+            $.fn.zato.audit_log.refreshStrip();
+        }
     });
 
     // .. the resubmit outcome handler refreshes the table through this reference ..

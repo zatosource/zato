@@ -266,6 +266,7 @@
             fetch_page: fetch_page,
             poll_new: poll_new,
             set_filters: set_filters,
+            get_filters: function() { return filters; },
             current_page: function() { return current_page; },
             total: function() { return total_count; },
             set_total: function(n) { total_count = n; update_controls(); },

@@ -222,6 +222,17 @@
 /* The chrome and the paginator share one row - the chrome against the left edge,
    the pages against the right, the row keeping the listing at arm's length below */
 
+/* The activity strip over the listing - as tall with events as without any,
+   so an empty window does not shift the rows under it */
+.audit-log-activity-strip {
+    height: 36px;
+    margin: 0 0 0.6rem 0;
+}
+
+.audit-log-activity-strip .dashboard-inline-empty {
+    line-height: 36px;
+}
+
 .audit-log-controls-row {
     display: flex;
     align-items: center;

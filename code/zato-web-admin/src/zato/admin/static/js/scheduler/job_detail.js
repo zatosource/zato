@@ -445,288 +445,35 @@ $.fn.zato.scheduler.job_detail._build_legend = function() {
 
 $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
     var detail = $.fn.zato.scheduler.job_detail;
-    var container = $('#detail-timeline');
-    var filtered = detail._filter_by_range(history);
-    var kit = $.fn.zato.dashboard_kit;
     var dashboard = detail._dashboard();
-    var bar_colors = dashboard.outcome_bar_colors;
-    var outcome_labels = dashboard.outcome_labels;
-    var outcome_keys = ['ok', 'skipped_already_in_flight', 'timeout', 'error'];
-    var hidden = detail._get_hidden_series();
-
-    var _dbg_minutes = detail._time_range_minutes;
-    var _dbg_cutoff = (_dbg_minutes && _dbg_minutes > 0) ? new Date(Date.now() - _dbg_minutes * 60000).toISOString() : '(none)';
-    console.log('[timeline-debug] render_timeline called, _time_range_minutes=' + _dbg_minutes +
-        ', history.length=' + (history ? history.length : 0) +
-        ', filtered.length=' + (filtered ? filtered.length : 0) +
-        ', cutoff=' + _dbg_cutoff);
 
     detail._build_legend();
 
-    if (!filtered || filtered.length === 0) {
-        container.html('<div class="dashboard-inline-empty">' + detail.config.empty_history_text + '</div>');
-        return;
-    }
-
-    var chart_width = container.width();
-    var chart_height = 36;
-    var pad_top = 7;
-    var pad_bot = 2;
-    var draw_h = chart_height - pad_top - pad_bot;
-
-    var timestamps = [];
-    for (var i = 0; i < filtered.length; i++) {
-        timestamps.push(new Date(filtered[i].actual_fire_time_iso).getTime());
-    }
-
-    if (timestamps.length === 0) {
-        container.html('<div class="dashboard-inline-empty">' + detail.config.empty_history_text + '</div>');
-        return;
-    }
-
-    var min_time = Math.min.apply(null, timestamps);
-    var max_time = Math.max.apply(null, timestamps);
-    var interval_ms = detail._job_data.interval_ms;
-    var min_span = interval_ms ? interval_ms * 10 : 3600000;
-    var time_span = max_time - min_time;
-    var _dbg_min_time_adjusted = time_span < min_span;
-    if (time_span < min_span) {
-        min_time = max_time - min_span;
-        time_span = min_span;
-    }
-
-    console.log('[timeline-debug] time window: min_time=' + new Date(min_time).toISOString() +
-        ', max_time=' + new Date(max_time).toISOString() +
-        ', time_span=' + time_span + 'ms (' + (time_span / 1000).toFixed(1) + 's)' +
-        ', interval_ms=' + interval_ms +
-        ', min_span=' + min_span +
-        ', min_time_was_adjusted=' + _dbg_min_time_adjusted);
-
-    var visible_keys = [];
-    for (var vk = 0; vk < outcome_keys.length; vk++) {
-        if (!hidden[outcome_keys[vk]]) visible_keys.push(outcome_keys[vk]);
-    }
-
-    var bucket_count = Math.min(80, Math.max(16, Math.floor(chart_width / 14)));
-    var bucket_ms = time_span / bucket_count;
-    var buckets = [];
-    for (var b = 0; b < bucket_count; b++) {
-        var bk = {total: 0, start: min_time + b * bucket_ms, end: min_time + (b + 1) * bucket_ms};
-        for (var k = 0; k < outcome_keys.length; k++) bk[outcome_keys[k]] = 0;
-        buckets.push(bk);
-    }
-
-    console.log('[timeline-debug] bucket config: bucket_count=' + bucket_count +
-        ', bucket_ms=' + bucket_ms.toFixed(1) + ' (' + (bucket_ms / 1000).toFixed(2) + 's per bucket)' +
-        ', chart_width=' + chart_width + 'px, seg_w=' + (chart_width / bucket_count).toFixed(2) + 'px');
-
-    console.group('[timeline-debug] record assignment (' + filtered.length + ' records)');
-    for (var r = 0; r < filtered.length; r++) {
-        var row_t = new Date(filtered[r].actual_fire_time_iso).getTime();
-        var bi = Math.min(bucket_count - 1, Math.max(0, Math.floor((row_t - min_time) / bucket_ms)));
-        var outcome = filtered[r].outcome;
-        console.log('[timeline-debug]   r=' + r +
-            ' ts=' + filtered[r].actual_fire_time_iso +
-            ' ms=' + row_t +
-            ' bucket=' + bi +
-            ' outcome=' + outcome);
-        if (buckets[bi].hasOwnProperty(outcome)) {
-            buckets[bi][outcome]++;
-        } else {
-            buckets[bi]['ok']++;
+    // The drawing itself is the kit's activity strip - this screen only says
+    // which records, which series and what window they stretch over at least
+    var strip = {
+        host: '#detail-timeline',
+        series_keys: detail._outcome_keys,
+        colors: dashboard.outcome_bar_colors,
+        labels: dashboard.outcome_labels,
+        hidden: detail._get_hidden_series(),
+        empty_text: detail.config.empty_history_text,
+        records: detail._filter_by_range(history),
+        record_time: function(record) {
+            return new Date(record.actual_fire_time_iso).getTime();
+        },
+        record_series: function(record) {
+            return record.outcome;
         }
-        buckets[bi].total++;
-    }
-    console.groupEnd();
-
-    var _dbg_bucket_table = [];
-    for (var _dbt = 0; _dbt < buckets.length; _dbt++) {
-        _dbg_bucket_table.push({
-            bucket: _dbt,
-            start: new Date(buckets[_dbt].start).toISOString(),
-            end: new Date(buckets[_dbt].end).toISOString(),
-            total: buckets[_dbt].total,
-            ok: buckets[_dbt]['ok'],
-            error: buckets[_dbt]['error'],
-            timeout: buckets[_dbt]['timeout'],
-            skipped: buckets[_dbt]['skipped_already_in_flight']
-        });
-    }
-    console.log('[timeline-debug] bucket totals:\n' + JSON.stringify(_dbg_bucket_table));
-
-    var max_stack = 0;
-    for (var ms = 0; ms < buckets.length; ms++) {
-        var stack_sum = 0;
-        for (var sv = 0; sv < outcome_keys.length; sv++) {
-            stack_sum += buckets[ms][outcome_keys[sv]];
-        }
-        if (stack_sum > max_stack) max_stack = stack_sum;
-    }
-    if (max_stack === 0) max_stack = 1;
-
-    var seg_w = chart_width / bucket_count;
-    var baseline = chart_height - pad_bot;
-
-    console.log('[timeline-debug] scaling: max_stack=' + max_stack +
-        ', baseline=' + baseline + 'px, draw_h=' + draw_h + 'px' +
-        ', pad_top=' + pad_top + ', pad_bot=' + pad_bot +
-        ', seg_w=' + seg_w.toFixed(2) + 'px');
-
-    var _bezier = function(pts) {
-        if (pts.length < 2) return '';
-        var d = 'M' + pts[0].x.toFixed(1) + ',' + pts[0].y.toFixed(1);
-        for (var ci = 1; ci < pts.length; ci++) {
-            var p = pts[ci - 1];
-            var c = pts[ci];
-            var cpx = (p.x + c.x) / 2;
-            d += ' C' + cpx.toFixed(1) + ',' + p.y.toFixed(1) +
-                ' ' + cpx.toFixed(1) + ',' + c.y.toFixed(1) +
-                ' ' + c.x.toFixed(1) + ',' + c.y.toFixed(1);
-        }
-        return d;
     };
 
-    // .. precompute cumulative stacking positions for ALL series
-    var series_top = {};
-    var series_bot = {};
-    var cumulative = [];
-    for (var ci2 = 0; ci2 < bucket_count; ci2++) cumulative.push(0);
-
-    for (var pre = 0; pre < outcome_keys.length; pre++) {
-        var pre_key = outcome_keys[pre];
-        var pre_tops = [];
-        var pre_bots = [];
-        for (var pb = 0; pb < bucket_count; pb++) {
-            var x_pre = pb * seg_w + seg_w / 2;
-            var val_pre = buckets[pb][pre_key];
-            var prev_cum = cumulative[pb];
-            var new_cum = prev_cum + val_pre;
-
-            var y_bot_pre = baseline - (prev_cum / max_stack) * draw_h;
-            var y_top_pre = baseline - (new_cum / max_stack) * draw_h;
-
-            if (val_pre > 0 && (y_bot_pre - y_top_pre) < 6) {
-                y_top_pre = y_bot_pre - 6;
-            }
-
-            pre_tops.push({x: x_pre, y: y_top_pre});
-            pre_bots.push({x: x_pre, y: y_bot_pre});
-            cumulative[pb] = new_cum;
-        }
-        series_top[pre_key] = pre_tops;
-        series_bot[pre_key] = pre_bots;
+    // A job with an interval spreads its strip over at least ten of them -
+    // one with no interval keeps the strip's own default window
+    if (detail._job_data.interval_ms) {
+        strip.min_span_ms = detail._job_data.interval_ms * 10;
     }
 
-    for (var _dbgv = 0; _dbgv < visible_keys.length; _dbgv++) {
-        var _dbgk = visible_keys[_dbgv];
-        var _dbg_pts = series_top[_dbgk];
-        if (_dbg_pts) {
-            var _dbg_pos = [];
-            for (var _dbgp = 0; _dbgp < _dbg_pts.length; _dbgp++) {
-                _dbg_pos.push({bucket: _dbgp, x: _dbg_pts[_dbgp].x.toFixed(1), y: _dbg_pts[_dbgp].y.toFixed(1)});
-            }
-            console.log('[timeline-debug] pixel positions ' + _dbgk + ':\n' + JSON.stringify(_dbg_pos));
-        }
-    }
-
-    var _sanitize = function(k) { return String(k).replace(/[^A-Za-z0-9_]/g, '_'); };
-
-    var svg = '<svg width="' + chart_width + '" height="' + chart_height + '" style="overflow:visible" xmlns="http://www.w3.org/2000/svg">';
-    svg += '<defs>';
-    for (var gd = 0; gd < visible_keys.length; gd++) {
-        var gd_c = bar_colors[visible_keys[gd]];
-        svg += '<linearGradient id="tlGrad_' + _sanitize(visible_keys[gd]) + '" x1="0" y1="0" x2="0" y2="1">' +
-            '<stop offset="0" stop-color="' + gd_c + '" stop-opacity="0.25"/>' +
-            '<stop offset="1" stop-color="' + gd_c + '" stop-opacity="0.03"/>' +
-            '</linearGradient>';
-    }
-    svg += '</defs>';
-
-    for (var li = 0; li < visible_keys.length; li++) {
-        var okey = visible_keys[li];
-        var color = bar_colors[okey];
-        var top_pts = series_top[okey];
-        var bot_pts = series_bot[okey];
-
-        var has_any = false;
-        for (var chk = 0; chk < bucket_count; chk++) {
-            if (buckets[chk][okey] > 0) { has_any = true; break; }
-        }
-        if (!has_any) continue;
-
-        var stroke_pts = [];
-        for (var sp = 0; sp < bucket_count; sp++) {
-            if (buckets[sp][okey] > 0) {
-                stroke_pts.push(top_pts[sp]);
-            } else {
-                stroke_pts.push({x: top_pts[sp].x, y: baseline});
-            }
-        }
-
-        var spline_d = _bezier(stroke_pts);
-        var area_fill = spline_d +
-            ' L' + stroke_pts[stroke_pts.length - 1].x.toFixed(1) + ',' + baseline.toFixed(1) +
-            ' L' + stroke_pts[0].x.toFixed(1) + ',' + baseline.toFixed(1) + ' Z';
-
-        svg += '<path d="' + area_fill + '" fill="url(#tlGrad_' + _sanitize(okey) + ')" />';
-        svg += '<path d="' + spline_d + '" fill="none" stroke="' + color + '" stroke-width="1.5" stroke-opacity="0.7" stroke-linecap="round" stroke-linejoin="round" />';
-
-        var last_pt = stroke_pts[stroke_pts.length - 1];
-        svg += '<circle cx="' + last_pt.x.toFixed(2) + '" cy="' + last_pt.y.toFixed(2) + '" r="5.5" fill="none" stroke="' + color + '" stroke-opacity="0.35" stroke-width="1"/>';
-        svg += '<circle cx="' + last_pt.x.toFixed(2) + '" cy="' + last_pt.y.toFixed(2) + '" r="3.5" fill="' + color + '"/>';
-    }
-
-    for (var hi = 0; hi < bucket_count; hi++) {
-        svg += '<rect class="dashboard-chart-hitrect" x="' + (hi * seg_w).toFixed(1) + '" y="0" ' +
-            'width="' + seg_w.toFixed(1) + '" height="' + chart_height + '" ' +
-            'fill="transparent" data-bucket="' + hi + '" />';
-    }
-
-    svg += '</svg>';
-    container.html(svg);
-
-    container.off('mousemove.timeline mouseleave.timeline');
-    container.on('mousemove.timeline', function(event) {
-        var target = event.target;
-        if (!$(target).attr('data-bucket')) {
-            kit.tooltip.hide();
-            return;
-        }
-
-        var idx = parseInt($(target).attr('data-bucket'), 10);
-        var bkt = buckets[idx];
-        if (!bkt || bkt.total === 0) { kit.tooltip.hide(); return; }
-
-        var t_from = kit.format_local_time(new Date(bkt.start).toISOString());
-        var t_to = kit.format_local_time(new Date(bkt.end).toISOString());
-
-        var tt = '<div class="dashboard-tooltip-header">' +
-            '<div class="dashboard-tooltip-title">' + t_from + '</div>' +
-            '<div class="dashboard-tooltip-subtitle">to ' + t_to + '</div>' +
-            '</div>';
-
-        tt += '<div class="dashboard-tooltip-body">';
-        for (var oi = 0; oi < outcome_keys.length; oi++) {
-            var ok2 = outcome_keys[oi];
-            if (hidden[ok2]) continue;
-            var ov = bkt[ok2];
-            if (ov === 0) continue;
-            var pct = Math.round((ov / bkt.total) * 100);
-            tt += '<div class="dashboard-tooltip-row">' +
-                '<span class="dashboard-tooltip-dot" style="background:' + bar_colors[ok2] + '"></span>' +
-                outcome_labels[ok2] + ': ' + kit.format_number_full(ov) +
-                ' <span class="dashboard-tooltip-muted">(' + pct + '%)</span>' +
-                '</div>';
-        }
-        tt += '<div class="dashboard-tooltip-total">Total: ' + kit.format_number_full(bkt.total) + '</div>';
-        tt += '</div>';
-
-        kit.tooltip.show(event, tt);
-    });
-
-    container.on('mouseleave.timeline', function() {
-        kit.tooltip.hide();
-    });
+    $.fn.zato.dashboard_kit.activity_strip.render(strip);
 };
 
 // ////////////////////////////////////////////////////////////////////////////
