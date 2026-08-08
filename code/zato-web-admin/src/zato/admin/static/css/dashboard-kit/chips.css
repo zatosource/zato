@@ -2,16 +2,12 @@
    The tones a chip can be given, and the value it carries next to its label.
    The shape of a chip itself comes from .detail-tag. */
 
+/* The gap between a label and its value is a space in the chip's own markup,
+   so the value here only takes its weight and face */
+
 .dashboard-chip-value {
-    margin-left: 5px;
     font-weight: 700;
     font-family: var(--dashboard-mono);
-}
-
-/* A chip with no label shows its value alone, so there is no gap where the label would stand */
-
-.dashboard-chip-value:first-child {
-    margin-left: 0;
 }
 
 .dashboard-tag-neutral {

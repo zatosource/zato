@@ -23,6 +23,8 @@ from zato.common.audit_log.resubmit import resend_hop
 from zato.common.destination.audit import get_hop_entry
 from zato.common.hl7.resubmit import reprocess as hl7_reprocess, resend as hl7_resend
 from zato.common.json_internal import dumps
+from zato.common.util.api import asbool
+from zato.hl7v2 import parse_hl7
 from zato.server.connection.as4 import AS4ChannelRuntime
 from zato.server.destination.channel import new_channel_item, run_for_channel
 from zato.server.destination.dispatch import send as dispatch_send
@@ -473,7 +475,16 @@ class ReprocessHL7Message(AdminService):
                 # A channel with a service of its own fans out at the end of that service's
                 # pipeline, so the channel rides along with the invocation to be read there ..
                 if service_name:
-                    _ = self.server.invoke(service_name, payload,
+
+                    # A live delivery hands the service a parsed message when the channel
+                    # parses on input, so a reprocess hands it the same shape - without
+                    # re-validating, because the message was already accepted once.
+                    if asbool(config['should_parse_on_input']):
+                        service_payload = parse_hl7(payload, validate=False)
+                    else:
+                        service_payload = payload
+
+                    _ = self.server.invoke(service_name, service_payload,
                         channel=CHANNEL.HL7_MLLP, zato_ctx={'zato.channel_item': channel_item})
 
                 # .. and one without a service delivers the message as it stands, the same as

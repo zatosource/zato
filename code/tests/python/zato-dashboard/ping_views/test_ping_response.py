@@ -14,7 +14,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from json import loads
 
 # Zato
-from zato.admin.web.views import ping_json_response, Ping_Message_Max_Length, _get_ping_error_message
+from zato.admin.web.views import ping_json_response, Action_Message_Max_Length, _get_ping_error_message
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,7 +52,7 @@ class TestPingErrorMessage:
     def test_the_root_cause_clause_is_dropped_and_the_rest_capped(self):
         message = _get_ping_error_message(_fhir_error)
 
-        assert message == _fhir_error_head[:Ping_Message_Max_Length] + ' ..'
+        assert message == _fhir_error_head[:Action_Message_Max_Length] + ' ..'
 
 # ################################################################################################################################
 
@@ -89,7 +89,7 @@ class TestPingJSONResponse:
         body = _body(ping_json_response(False, _fhir_error))
 
         assert body['is_success'] is False
-        assert body['message'] == _fhir_error_head[:Ping_Message_Max_Length] + ' ..'
+        assert body['message'] == _fhir_error_head[:Action_Message_Max_Length] + ' ..'
         assert body['details'] == _fhir_error
         assert body['details_lexer'] == 'python'
 

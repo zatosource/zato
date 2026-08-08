@@ -30,9 +30,10 @@ _Test_Name_Prefix = 'test.as4.resubmit.' + CryptoManager.generate_hex_string(32)
 
 _Audit_Source = 'as4'
 
-# What the two row actions of an AS4 exchange are labelled
-_Label_Resend    = 'Resend'
-_Label_Reprocess = 'Reprocess'
+# What the two row actions of an AS4 exchange are labelled - one word for both,
+# the service behind each row is what tells a resend from a reprocess
+_Label_Resend    = 'Resubmit'
+_Label_Reprocess = 'Resubmit'
 
 # Log lines the propagation retries of this suite can produce on the server
 _AS4_Log_Patterns = ('AS4 request rejected',)
@@ -88,7 +89,7 @@ class TestAS4AuditLogResubmit:
             sent_row = row_selector_of_event(Event_Message_Sent)
 
             label = get_resubmit_label(page, sent_row)
-            assert label == _Label_Resend, f'Expected a Resend link, got: "{label}"'
+            assert label == _Label_Resend, f'Expected a Resubmit link, got: "{label}"'
 
             # .. clicking it delivers the stored payloads through the real pipeline once more ..
             report = resubmit_until(page, sent_row, is_report_ok)
@@ -138,7 +139,7 @@ class TestAS4AuditLogResubmit:
             received_row = row_selector_of_event(Event_Message_Received)
 
             label = get_resubmit_label(page, received_row)
-            assert label == _Label_Reprocess, f'Expected a Reprocess link, got: "{label}"'
+            assert label == _Label_Reprocess, f'Expected a Resubmit link, got: "{label}"'
 
             # .. clicking it routes the stored payloads to the channel's target again ..
             report = resubmit_until(page, received_row, _is_reprocessed_to_service)
