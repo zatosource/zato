@@ -13,6 +13,7 @@ and the attachments of one event - their list and their download.
 # stdlib
 import json
 import logging
+from datetime import datetime, timezone
 
 # SQLAlchemy
 from sqlalchemy import func, select
@@ -305,6 +306,138 @@ def poll(req:'any_') -> 'HttpResponse':
         _hydrate_rows(connection, rows)
 
     response_json = json.dumps({'rows': rows, 'total': total, 'page': page})
+    response_bytes = response_json.encode('utf-8')
+
+    out = HttpResponse(response_bytes, content_type='application/json')
+
+    return out
+
+# ################################################################################################################################
+
+# The activity strip never answers with more buckets than this, nor with fewer,
+# whatever width the screen reports
+_strip_max_buckets = 80
+_strip_min_buckets = 16
+
+# Events all within one short burst still spread over at least this much - an hour -
+# so one busy minute does not fill the whole strip
+_strip_min_span_ms = 60 * 60 * 1000
+
+# ################################################################################################################################
+
+def _strip_edge_iso(epoch_ms:'float') -> 'str':
+    """ An epoch-ms moment as an ISO string of the very format the event times are stored in,
+    so a bucket's edges can serve as time filters over them.
+    """
+    moment = datetime.fromtimestamp(epoch_ms / 1000, timezone.utc)
+
+    out = moment.isoformat()
+
+    return out
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def strip(req:'any_') -> 'HttpResponse':
+    """ Returns the matching events cut into time buckets with per-outcome counts, for the
+    activity strip over the listing - the same filter keys the poll reads, without paging.
+    """
+    body = json.loads(req.body)
+
+    sources = body['sources']
+    object_names = body['object_names']
+    outcomes = body['outcomes']
+    query = body['query']
+    status = body['status']
+    time_from = body['time_from']
+    time_to = body['time_to']
+    event_types = body['event_types']
+
+    # How many buckets the screen has room for, kept within what the strip may answer with
+    bucket_count = body['bucket_count']
+
+    if bucket_count > _strip_max_buckets:
+        bucket_count = _strip_max_buckets
+
+    if bucket_count < _strip_min_buckets:
+        bucket_count = _strip_min_buckets
+
+    where_conditions = _build_where(sources, object_names, outcomes, query, status, time_from, time_to, event_types)
+
+    events_query = select(event_table.c.event_time_iso, event_table.c.outcome)
+    events_query = events_query.where(*where_conditions)
+
+    engine = get_audit_engine()
+
+    # Each matching event as its moment in epoch ms and its outcome
+    events:'anylist' = []
+
+    with engine.connect() as connection:
+        result = connection.execute(events_query)
+
+        for event_time_iso, outcome in result:
+            moment = datetime.fromisoformat(event_time_iso)
+            event_ms = moment.timestamp() * 1000
+
+            events.append((event_ms, outcome))
+
+    # With nothing matching there is nothing to draw and the frontend says so in words
+    if not events:
+        response_json = json.dumps({'buckets': []})
+        response_bytes = response_json.encode('utf-8')
+
+        out = HttpResponse(response_bytes, content_type='application/json')
+
+        return out
+
+    # The window is what the events cover ..
+    times:'anylist' = []
+
+    for event_ms, _ in events:
+        times.append(event_ms)
+
+    min_ms = min(times)
+    max_ms = max(times)
+
+    # .. stretched to the least window when they all sit within one short burst ..
+    span_ms = max_ms - min_ms
+
+    if span_ms < _strip_min_span_ms:
+        min_ms = max_ms - _strip_min_span_ms
+        span_ms = _strip_min_span_ms
+
+    # .. and it is cut into as many equal buckets as were asked for.
+    bucket_ms = span_ms / bucket_count
+
+    buckets:'anylist' = []
+
+    for bucket_index in range(bucket_count):
+        start_ms = min_ms + bucket_index * bucket_ms
+        end_ms = min_ms + (bucket_index + 1) * bucket_ms
+
+        buckets.append({
+            'start_iso': _strip_edge_iso(start_ms),
+            'end_iso': _strip_edge_iso(end_ms),
+            'counts': {},
+        })
+
+    # Each event counts into the bucket its moment falls in, under its own outcome
+    for event_ms, outcome in events:
+        offset_ms = event_ms - min_ms
+        target = int(offset_ms // bucket_ms)
+
+        # The window's very last moment belongs to the last bucket rather than one past it
+        if target >= bucket_count:
+            target = bucket_count - 1
+
+        counts = buckets[target]['counts']
+
+        if outcome not in counts:
+            counts[outcome] = 0
+
+        counts[outcome] += 1
+
+    response_json = json.dumps({'buckets': buckets})
     response_bytes = response_json.encode('utf-8')
 
     out = HttpResponse(response_bytes, content_type='application/json')

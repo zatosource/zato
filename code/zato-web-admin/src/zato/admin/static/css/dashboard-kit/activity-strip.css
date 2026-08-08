@@ -1,0 +1,8 @@
+
+
+/* Dashboard kit - the activity strip. The drawing itself is inline SVG - only how
+   a strip whose buckets take clicks presents itself lives here. */
+
+.dashboard-activity-strip-clickable .dashboard-chart-hitrect {
+    cursor: pointer;
+}

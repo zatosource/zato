@@ -15,7 +15,7 @@ The audit log page of the Dashboard, spread over one module per concern.
 
 # Zato
 from zato.admin.web.views.audit_log.views import attachment_download, attachments, details, flow, journey, object_index, \
-    poll, resubmit
+    poll, resubmit, strip
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,6 +29,7 @@ __all__ = (
     'object_index',
     'poll',
     'resubmit',
+    'strip',
 )
 
 # ################################################################################################################################
