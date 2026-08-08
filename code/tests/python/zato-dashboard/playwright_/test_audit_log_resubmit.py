@@ -291,7 +291,7 @@ class TestAuditLogResubmit:
             _goto_audit_log(page, base_url, pair)
 
             link_text = page.inner_text(_row_selector(original_id) + ' a.audit-log-resubmit-link')
-            assert link_text == 'Resend', f'Expected a Resend link, got: "{link_text}"'
+            assert link_text == 'Resubmit', f'Expected a Resubmit link, got: "{link_text}"'
 
             # .. clicking it sends the stored payload out again through the real pipeline,
             # retrying while the connections propagate to the server ..
@@ -374,7 +374,7 @@ class TestAuditLogResubmit:
             _goto_audit_log(page, base_url, pair)
 
             link_text = page.inner_text(_row_selector(original_id) + ' a.audit-log-resubmit-link')
-            assert link_text == 'Reprocess', f'Expected a Reprocess link, got: "{link_text}"'
+            assert link_text == 'Resubmit', f'Expected a Resubmit link, got: "{link_text}"'
 
             # .. clicking it re-publishes the stored payload to the partner's routing target,
             # retrying while the connection propagates to the server - until it has,

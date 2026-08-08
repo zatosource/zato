@@ -26,9 +26,9 @@ $.fn.zato.audit_log.config = {
     rawTabLabel: 'Raw',
     parsedTabLabel: 'Parsed',
 
-    // The filter selects of the all-events page - what each one is called, what its
-    // everything entry says, what several picks at once are counted in, where each
-    // one is rendered and the face its trigger wears - the rate limiting forms'
+    // The filter selects every rendering of the page carries - what each one is called,
+    // what its everything entry says, what several picks at once are counted in, where
+    // each one is rendered and the face its trigger wears - the rate limiting forms'
     // control look, kept in the kit under a common name
     sourceSelectLabel: 'Source',
     objectSelectLabel: 'Object',
@@ -58,15 +58,14 @@ $.fn.zato.audit_log.config = {
     sourcesURLKey: 'sources',
     objectsURLKey: 'objects',
 
-    // What the resubmit outcome is reported with
+    // What the resubmit outcome is reported with - the message itself comes
+    // display-ready from the backend
     resubmitModalTitle: 'Resubmit result',
     resubmitErrorLabel: 'Resubmit failed',
-    resentLabel: 'Resent',
-    reprocessedLabel: 'Reprocessed to',
-    reprocessedDocumentsLabel: 'documents',
     resubmittedMarkerLabel: 'resubmitted',
 
-    // The per-source column list and resubmit labels, assigned in init
+    // The per-source column list and the resubmit labels keyed by source and event
+    // type, both assigned in init
     columns: [],
     resubmitLabels: {},
 
@@ -240,37 +239,11 @@ $.fn.zato.audit_log.openMessageOverlay = function(eventId, cid) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.audit_log.buildResubmitLabel = function(report) {
-    var config = $.fn.zato.audit_log.config;
-
-    // A resubmit that raised an exception carries its traceback in the details ..
-    if (report.error) {
-        return config.resubmitErrorLabel;
-    }
-
-    // .. a reprocess is reported by where the payload went, with the document count
-    // added when the delivery carried attachments next to the EDI document ..
-    if (report.action === 'reprocess') {
-        var label = config.reprocessedLabel + ' ' + report.target_kind + ' ' + report.target_name;
-
-        if (report.message_count > 1) {
-            label = label + ' (' + report.message_count + ' ' + config.reprocessedDocumentsLabel + ')';
-        }
-
-        return label;
-    }
-
-    // .. and a resend by the CID its new attempt travels under.
-    return config.resentLabel + '; CID ' + report.cid;
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
 $.fn.zato.audit_log.parseResubmitResponse = function(jqXHR, textStatus) {
     var config = $.fn.zato.audit_log.config;
     var body = jqXHR.responseText;
 
-    // A non-2xx response carries an exception message rather than a report ..
+    // A non-2xx response carries an exception message rather than the display-ready shape ..
     var isHTTPOK = (jqXHR.status >= 200 && jqXHR.status < 300);
 
     if (!isHTTPOK) {
@@ -284,21 +257,23 @@ $.fn.zato.audit_log.parseResubmitResponse = function(jqXHR, textStatus) {
         };
     }
 
-    // .. a report is JSON with the outcome inside.
-    var report = JSON.parse(body);
-    var label = $.fn.zato.audit_log.buildResubmitLabel(report);
+    // .. the backend answers display-ready - a one-line summary for the tippy,
+    // the details for the modal and the lexer they highlight with.
+    var parsed = JSON.parse(body);
 
     // The new attempt and the marker on the original row appear once the table refreshes.
     var pagination = $.fn.zato.audit_log.pagination;
     pagination.fetch_page(pagination.current_page());
 
+    // The transport itself answered with 200 whatever the resubmit's outcome,
+    // so there is no status code to show
     return {
-        is_success: report.is_ok,
-        label: label,
-        details_title: label,
-        details_body: JSON.stringify(report, null, 2),
-        details_lexer: 'json',
-        status_code: jqXHR.status
+        is_success: parsed.is_success,
+        label: parsed.message,
+        details_title: parsed.message,
+        details_body: parsed.details,
+        details_lexer: parsed.details_lexer,
+        status_code: 0
     };
 };
 
@@ -333,9 +308,40 @@ $.fn.zato.audit_log.filtersToURL = function(key, values) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// The filter selects of the all-events page - one for the sources, one for the object.
-// Any number of sources can be picked at once - the picks narrow both the list and what
-// the object select has to offer - and picking an object narrows the list to it alone.
+// Where changed picks lead from a page rendered for one source - its columns were baked
+// for that source at render time, so a change of picks is a navigation, not a re-poll.
+// One source with at most one object gets that source's own page, any other mix gets
+// the all-events listing with the picks in the address.
+$.fn.zato.audit_log.filterPicksURL = function(sources, objects) {
+    var config = $.fn.zato.audit_log.config;
+    var params = new URLSearchParams();
+
+    if (sources.length === 1 && objects.length <= 1) {
+        params.set('source', sources[0]);
+
+        if (objects.length === 1) {
+            params.set('object_name', objects[0]);
+        }
+    } else {
+        if (sources.length) {
+            params.set(config.sourcesURLKey, sources.join(','));
+        }
+
+        if (objects.length) {
+            params.set(config.objectsURLKey, objects.join(','));
+        }
+    }
+
+    params.set('cluster', config.clusterId);
+
+    return '/zato/audit-log/?' + params.toString();
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+// The filter selects - one for the sources, one for the object. Any number of sources
+// can be picked at once - the picks narrow both the list and what the object select
+// has to offer - and picking an object narrows the list to it alone.
 $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
     var kit = $.fn.zato.dashboard_kit;
     var config = $.fn.zato.audit_log.config;
@@ -445,9 +451,22 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
         return false;
     };
 
-    // The picks the address bar carries, so a reloaded page starts where it was left
-    var pickedSources = $.fn.zato.audit_log.filtersFromURL(config.sourcesURLKey);
-    var pickedObjects = $.fn.zato.audit_log.filtersFromURL(config.objectsURLKey);
+    // A page rendered for one source opens with that source and its object picked,
+    // and any change of picks leaves for the page the new picks belong to
+    var isSourcePage = config.source !== '';
+
+    var pickedSources;
+    var pickedObjects;
+
+    if (isSourcePage) {
+        pickedSources = [config.source];
+        pickedObjects = config.objectName === '' ? [] : [config.objectName];
+    } else {
+
+        // The picks the address bar carries, so a reloaded page starts where it was left
+        pickedSources = $.fn.zato.audit_log.filtersFromURL(config.sourcesURLKey);
+        pickedObjects = $.fn.zato.audit_log.filtersFromURL(config.objectsURLKey);
+    }
 
     var initialObjectGroups = objectGroups(pickedSources);
 
@@ -462,6 +481,14 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
         many_label: config.manyObjectsLabel,
         disabled_label: config.noMatchesLabel,
         on_change: function(values) {
+
+            // A page baked for one source has no way to redraw itself around the new
+            // picks, so they are taken to the page that owns them
+            if (isSourcePage) {
+                window.location = $.fn.zato.audit_log.filterPicksURL(sourceSelect.get_values(), values);
+                return;
+            }
+
             $.fn.zato.audit_log.filtersToURL(config.objectsURLKey, values);
 
             pagination.set_filters({object_names: values});
@@ -472,7 +499,7 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
     // With no objects on offer there is nothing to filter by and the select stands aside
     objectSelect.set_enabled(initialObjectGroups.length > 0);
 
-    kit.select.create({
+    var sourceSelect = kit.select.create({
         host: config.sourceSelectHost,
         trigger_cls: config.filterTriggerCls,
         label: config.sourceSelectLabel,
@@ -492,6 +519,13 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
                 if (hasObject(newGroups, pickedObjects[pickedIndex])) {
                     keptObjects.push(pickedObjects[pickedIndex]);
                 }
+            }
+
+            // A page baked for one source has no way to redraw itself around the new
+            // picks, so they are taken to the page that owns them
+            if (isSourcePage) {
+                window.location = $.fn.zato.audit_log.filterPicksURL(values, keptObjects);
+                return;
             }
 
             objectSelect.set_groups(newGroups);
@@ -515,9 +549,12 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
         }
     });
 
-    // The legend starts with what the address bar picked - without Expired
-    // unless pub/sub is among the picks
-    listing.buildLegend(legendOutcomes(pickedSources));
+    // A page rendered for one source built its legend from that source's own outcomes
+    // already - only the all-events legend follows the picks, without Expired unless
+    // pub/sub is among them
+    if (!isSourcePage) {
+        listing.buildLegend(legendOutcomes(pickedSources));
+    }
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -637,11 +674,9 @@ $.fn.zato.audit_log.init = function(initConfig) {
     // .. the resubmit outcome handler refreshes the table through this reference ..
     $.fn.zato.audit_log.pagination = pagination;
 
-    // .. the all-events page - the one with sources to choose between at all - gets
-    // its source and object filter selects ..
-    if (initConfig.filter_options.length) {
-        $.fn.zato.audit_log.initFilterSelects(initConfig.filter_options);
-    }
+    // .. every rendering of the page gets its source and object filter selects,
+    // a per-source one opening with its own source and object picked ..
+    $.fn.zato.audit_log.initFilterSelects(initConfig.filter_options);
 
     // .. let the search form filter the events ..
     $('#audit-log-search-form').on('submit', function(event) {

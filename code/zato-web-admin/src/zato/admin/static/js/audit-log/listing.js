@@ -310,9 +310,16 @@ listing.buildRow = function(row) {
         children: row.children,
         bodyKinds: row.body_kinds,
         isResubmitted: row.is_resubmitted,
-        role: listing.roleOf(row.event_type),
-        actionLabel: $.fn.zato.audit_log.config.resubmitLabels[row.event_type]
+        role: listing.roleOf(row.event_type)
     };
+
+    // The labels come keyed by source, so any row of any listing knows what its action
+    // link says - a source with no resubmit of its own is simply absent from the map.
+    var sourceLabels = $.fn.zato.audit_log.config.resubmitLabels[row.source];
+
+    if (sourceLabels !== undefined) {
+        out.actionLabel = sourceLabels[row.event_type];
+    }
 
     // A source names its messages by something of its own - its control id, its message
     // id - and the presenter is where the source says what that is.
@@ -371,8 +378,13 @@ listing.actionHTML = function(rowModel) {
             rowModel.id + '">' + rowModel.actionLabel + '</a>';
     }
 
+    // The marker trails the link on a row that has both, and stands at the link's own x
+    // on a row that only has the marker
     if (rowModel.isResubmitted) {
-        html += ' <span class="audit-log-resubmitted-marker">' + config.resubmittedMarkerLabel + '</span>';
+        if (html !== '') {
+            html += ' ';
+        }
+        html += '<span class="audit-log-resubmitted-marker">' + config.resubmittedMarkerLabel + '</span>';
     }
 
     return html;

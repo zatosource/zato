@@ -32,7 +32,10 @@
        wash is faint enough to leave the row's own colours - the tint of a new arrival underneath
        it, the blue of the selection over it - reading through. */
     --audit-log-error-rgb: 224, 34, 110;
-    --audit-log-error-frame-width: 2px;
+
+    /* The frame sits inside each row's own box, so two framed rows meeting show both their
+       edges - at 1px the seam between them reads as the one 2px line it used to be */
+    --audit-log-error-frame-width: 1px;
     --audit-log-error-frame: var(--audit-log-error-frame-width) dashed rgb(var(--audit-log-error-rgb));
     --audit-log-error-tint: rgba(var(--audit-log-error-rgb), 0.05);
 
@@ -265,11 +268,11 @@
     font-weight: 700;
 }
 
-/* No column of this table says how wide it is. Every one of them is as wide as what it holds and
-   no wider, nothing wraps, and the room the row has over goes to the empty cell at its end, so
-   the columns are laid out by the data rather than by a number written down here. A list dragged
-   narrow drops the columns it no longer has room for one at a time, which is the only thing that
-   ever changes where a column stands. */
+/* The columns before the main one each hold one width, written down where the cell is styled -
+   sized by content they would be laid out anew every time a filter changes which rows are on
+   view, moving everything to their right. The main column stays as wide as what it holds,
+   nothing wraps, and the room the row has over goes to the empty cell at its end. A list dragged
+   narrow drops the columns it no longer has room for one at a time. */
 
 /* A cell asks for the row's height, which a table reads as the least it may be */
 
@@ -281,14 +284,15 @@
     white-space: nowrap;
 }
 
-/* A failed event wears a frame and a wash of the error red. The frame is the row's own border, so
-   no cell being dropped or shrunk can take a side off it, and being wider it wins over the line
-   each cell carries below it. Collapsed borders also mean two framed rows meeting share one line
-   rather than doubling up. The wash stays on the cells, where it covers the tint of a new arrival
-   and is itself covered by the blue of the selection. */
+/* A failed event wears a frame and a wash of the error red. The frame is an outline pulled
+   inside the row's own box, not a border - an outline takes no part in layout, so a list of
+   framed rows and a list of plain ones stand at the very same heights and switching between
+   the ok-only and errors-only views moves nothing. The wash stays on the cells, where it covers
+   the tint of a new arrival and is itself covered by the blue of the selection. */
 
 .audit-log-row-error {
-    border: var(--audit-log-error-frame);
+    outline: var(--audit-log-error-frame);
+    outline-offset: calc(-1 * var(--audit-log-error-frame-width));
 }
 
 .audit-log-row-error > td {
@@ -341,7 +345,10 @@
 /* The event's own number, which is how one event is pointed at - it is the first thing
    read on a row and the first thing read in the pane, so it is not kept quiet */
 
+/* Wide enough for a six-digit event number and its hash sign */
+
 .audit-log-cell-number {
+    width: 7ch;
     padding-right: 8px;
     font-family: var(--dashboard-mono);
     font-size: 12px;
@@ -354,21 +361,48 @@
    what tells them apart - the cell holds the whole fraction the event was written down with,
    which is the same count of digits on every row */
 
+/* Wide enough for the longest day word a 30-day retention window can name - "2 weeks ago" -
+   with the separator and a time carrying its whole six-digit fraction after it */
+
 .audit-log-cell-time {
+    width: 29ch;
     font-family: var(--dashboard-mono);
     font-size: 12px;
     color: var(--audit-log-time-text);
 }
 
 /* The day is read before the time and not instead of it - it is set apart by its colour alone,
-   a column of names in bold being a column shouting the one thing every row has in common */
+   a column of names in bold being a column shouting the one thing every row has in common.
+
+   It is a box of one width whatever it says - sized to the widest word it can carry,
+   "2 weeks ago" - because in a table laid out by content the widest cell of the set on view
+   decides the column, and a day word longer than its neighbours' would move everything
+   right of it every time a filter changes the set. */
 
 .audit-log-cell-day {
+    display: inline-block;
+    width: 11ch;
+    overflow: hidden;
+    white-space: nowrap;
+    vertical-align: bottom;
     color: var(--dashboard-line-strong);
 }
 
+/* Wide enough for the REQ and REP tags, and kept at that width on the rows
+   that carry no tag at all */
+
+.audit-log-cell-role {
+    width: 40px;
+}
+
+/* Wide enough for a Resubmit link with the resubmitted marker after it, and kept at that
+   width whatever a row carries - a resubmit adds the marker to its row, and a column sized
+   by content would widen for everyone the moment it appeared. Left-aligned, so every link
+   stands at the same x whether or not its row is marked. */
+
 .audit-log-cell-action {
-    text-align: right;
+    width: 140px;
+    text-align: left;
 }
 
 /* The one cell that asks for everything, which is what a table hands its leftover room to. It

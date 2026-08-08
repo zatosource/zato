@@ -46,8 +46,10 @@
         html += ' data-chip-key="' + kit._esc_html(chip.key) + '"';
         html += ' data-chip-value="' + escaped_value + '">';
 
+        // The space is part of the markup, not a margin, so the label and the value
+        // stay apart on any page whatever stylesheets it happens to load
         if (chip.label !== '') {
-            html += kit._esc_html(chip.label);
+            html += kit._esc_html(chip.label) + ' ';
         }
 
         html += '<span class="dashboard-chip-value">' + display_html + '</span>';

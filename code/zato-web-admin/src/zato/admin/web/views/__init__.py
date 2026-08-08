@@ -746,8 +746,8 @@ def id_only_service(req, service, id, error_template='{}', initial=None):
 
 # ################################################################################################################################
 
-# The longest error summary the ping tippy shows - the full text opens in the details modal
-Ping_Message_Max_Length = 100
+# The longest error summary an action's tippy shows - the full text opens in the details modal
+Action_Message_Max_Length = 100
 
 # A requests/urllib3 error inlines its root cause as a trailing clause, e.g.
 # "Max retries exceeded with url: /abc (Caused by NewConnectionError(..))" -
@@ -771,16 +771,30 @@ def _get_ping_error_message(error_text:'str') -> 'str':
     if cause_idx > 0:
         out = out[:cause_idx]
 
-    if len(out) > Ping_Message_Max_Length:
-        out = out[:Ping_Message_Max_Length] + ' ..'
+    if len(out) > Action_Message_Max_Length:
+        out = out[:Action_Message_Max_Length] + ' ..'
 
     return out
 
 # ################################################################################################################################
 
-def ping_json_response(is_success:'bool', info:'str') -> 'JsonResponse':
-    """ The shape every ping view answers with - a display-ready summary for the tippy,
+def action_json_response(is_success:'bool', message:'str', details:'str', details_lexer:'str') -> 'JsonResponse':
+    """ The shape every action's view answers with - a display-ready summary for the tippy,
     the full text for the details modal and the lexer the details highlight with.
+    """
+    out = JsonResponse({
+        'is_success': is_success,
+        'message': message,
+        'details': details,
+        'details_lexer': details_lexer,
+    })
+    return out
+
+# ################################################################################################################################
+
+def ping_json_response(is_success:'bool', info:'str') -> 'JsonResponse':
+    """ A ping's answer - the message is the info itself on success and its one-line
+    summary on failure, the info in full being the details.
     """
     if is_success:
         message = info
@@ -792,12 +806,7 @@ def ping_json_response(is_success:'bool', info:'str') -> 'JsonResponse':
     else:
         details_lexer = 'python'
 
-    out = JsonResponse({
-        'is_success': is_success,
-        'message': message,
-        'details': info,
-        'details_lexer': details_lexer,
-    })
+    out = action_json_response(is_success, message, info, details_lexer)
     return out
 
 # ################################################################################################################################
