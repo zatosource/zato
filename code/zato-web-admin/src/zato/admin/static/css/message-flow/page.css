@@ -353,16 +353,6 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     font-weight: 700;
 }
 
-/* A timestamp under the pointer turns amber, the way the flow's do */
-
-.message-flow-timestamp {
-    transition: fill 0.15s;
-}
-
-.message-flow-timestamp:hover {
-    fill: var(--message-flow-selected-text);
-}
-
 /* Chips - the same tones the listing and the flow wear, lifted for a dark frame */
 
 .message-flow-chip-back {
@@ -658,6 +648,73 @@ svg.message-flow-focus .message-flow-connector-chip:not(.message-flow-lit) {
 
 .message-flow-detail-side-response {
     flex: 1 1 auto;
+}
+
+/* A side with no events of its own kind says so where its badges would
+   stand - the first row and column, not the middle of the room */
+
+.message-flow-detail-side-hint {
+    flex: 0 0 auto;
+    padding: 8px 10px;
+    color: var(--message-flow-muted);
+    font-size: 11px;
+}
+
+/* The root's own right side - the message's whole flow summed up. Its badge
+   bar stands where the reply side's badges stand, and under it one quiet row
+   per measure, the error row in the bad ink when there is anything to say. */
+
+.message-flow-detail-summary-bar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--dashboard-panel-border);
+}
+
+.message-flow-detail-summary-badge {
+    display: inline-flex;
+    padding: 3px 8px;
+    border-radius: 3px;
+    color: var(--message-flow-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    background: var(--dashboard-unchosen-badge-fill);
+    box-shadow: var(--dashboard-unchosen-badge-shadow);
+}
+
+.message-flow-detail-summary {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: 8px 12px;
+    font-size: 11px;
+}
+
+.message-flow-detail-summary-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.message-flow-detail-summary-row:last-child {
+    border-bottom: none;
+}
+
+.message-flow-detail-summary-label {
+    color: var(--message-flow-muted);
+}
+
+.message-flow-detail-summary-value {
+    color: var(--message-flow-text);
+    font-weight: 600;
+}
+
+.message-flow-detail-summary-value-bad {
+    color: var(--message-flow-bad);
 }
 
 /* The bar between the sides - a hairline with room around it to grab, lit a

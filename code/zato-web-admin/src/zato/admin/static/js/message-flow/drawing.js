@@ -67,6 +67,10 @@ drawing.config = {
     // The one event type that is a person reading rather than a message moving
     viewEventType: 'content-viewed',
 
+    // What the hub's top line says when the seed's source has no message id
+    // of its own and the message reads by its CID alone
+    cidLabel: 'CID',
+
     // The outcome worn as a good chip - every other reported outcome is a bad one
     goodOutcome: 'ok',
 
@@ -79,8 +83,7 @@ drawing.config = {
         'child': 'Linked'
     },
 
-    // What stands between a connector's word and the elapsed time on its chip,
-    // and between the day and the time of day on a node's lines
+    // What stands between the day and the time of day on a node's lines
     labelSeparator: ' \u00b7 ',
 
     // How much of a labelled connector's line shows on each side of its chip,
@@ -772,7 +775,11 @@ drawing.addNode = function(host, x, y, width, node) {
         key: node.key,
         title: node.channel,
         time: node.lines[0].time,
-        models: node.models
+        models: node.models,
+
+        // Only the root sums the flow up - an exchange's card speaks for
+        // its own events alone
+        flowSummary: null
     });
 
     kit.draw.addRect(group, x, y, width, height, 'message-flow-box', 4);
@@ -831,6 +838,13 @@ drawing.render = function(models, seedModel) {
     var hubTitle = seedModel.headline;
     var hubIdentity = seedModel.identity;
 
+    // A seed whose source has no message id of its own reads by its CID, and
+    // its headline says the same thing - one id written twice names nothing,
+    // so the top line says what kind of id the reader is looking at
+    if (hubTitle === hubIdentity) {
+        hubTitle = config.cidLabel;
+    }
+
     // The exchanges, their pointed links and the rows they lay out into
     var exchanges = drawing.buildExchanges(models);
 
@@ -838,14 +852,33 @@ drawing.render = function(models, seedModel) {
 
     var layoutRows = drawing.buildLayoutRows(exchanges);
 
-    // The flow's first moment - what every node's footer counts from
-    var flowStartMs = drawing.firstMsOf(exchanges.list[0]);
+    // One walk over every event of the flow - its first and last moments, of
+    // which the first is what every node's footer counts from, and how many
+    // events reported a bad outcome, all of which the root's pane says
+    var firstModel = models[0];
+    var lastModel = models[0];
 
-    for (var startIndex = 1; startIndex < exchanges.list.length; startIndex++) {
-        var startCandidateMs = drawing.firstMsOf(exchanges.list[startIndex]);
+    var flowStartMs = new Date(firstModel.timeIso).getTime();
+    var flowEndMs = flowStartMs;
 
-        if (startCandidateMs < flowStartMs) {
-            flowStartMs = startCandidateMs;
+    var errorCount = 0;
+
+    for (var summaryIndex = 0; summaryIndex < models.length; summaryIndex++) {
+        var summaryModel = models[summaryIndex];
+        var summaryMs = new Date(summaryModel.timeIso).getTime();
+
+        if (summaryMs < flowStartMs) {
+            flowStartMs = summaryMs;
+            firstModel = summaryModel;
+        }
+
+        if (summaryMs > flowEndMs) {
+            flowEndMs = summaryMs;
+            lastModel = summaryModel;
+        }
+
+        if (summaryModel.outcome !== '' && summaryModel.outcome !== config.goodOutcome) {
+            errorCount += 1;
         }
     }
 
@@ -1154,7 +1187,18 @@ drawing.render = function(models, seedModel) {
         key: '',
         title: hubTitle,
         time: kit.time_ago_label(seedModel.timeIso) + config.labelSeparator + seedModel.timeLocal.slice(11),
-        models: [seedModel]
+        models: [seedModel],
+
+        // The root stands for the message itself, so its pane's right side
+        // sums the whole flow up rather than looking for a reply of its own
+        flowSummary: {
+            exchangeCount: exchanges.list.length,
+            eventCount: models.length,
+            firstLocal: firstModel.timeLocal,
+            lastLocal: lastModel.timeLocal,
+            spanMs: flowEndMs - flowStartMs,
+            errorCount: errorCount
+        }
     });
 
     kit.draw.addRect(hub, config.hubX, hubTop, hubWidth, hubHeight, 'message-flow-box', 4);
