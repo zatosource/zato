@@ -1197,6 +1197,98 @@
         return out.join('\n');
     };
 
+    /* A run report - the story a scheduler run tells and any text shaped like it: a header
+       of aligned "Key:   value" lines, section headings like "Log:" on lines of their own,
+       and timestamped log lines led by a level word. The keys and the levels are what the
+       eye scans for, so they carry the colours, the moments stay quiet, and a value that
+       is an amount or an outcome reads in the colour of what it says. */
+    kit._run_report_probe = /^[A-Z][\w ]*: {2,}\S.*\n[A-Z][\w ]*: {2,}\S/;
+
+    kit._run_report_header_pattern = /^([A-Z][\w ]*:)( {2,})(.*)$/;
+    kit._run_report_section_pattern = /^[A-Z][\w ]*:$/;
+    kit._run_report_log_pattern = /^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})( +)([A-Z]+)( +)(.*)$/;
+
+    // A value that is an amount - a count, a duration - reads as a number
+    kit._run_report_amount_pattern = /^(?:< )?-?\d+(?:\.\d+)?(?:ms|s)?$/;
+
+    // An outcome value wears the colour of what it says
+    kit._run_report_outcome_class = {
+        'ok': 'gi',
+        'error': 'gd',
+        'timeout': 'gd',
+        'expired': 'gd',
+        'running': 'c'
+    };
+
+    // A log level's own colour - anything unlisted reads as plain text
+    kit._run_report_level_class = {
+        'SYSTEM': 'k',
+        'INFO': 'gi',
+        'DEBUG': 'c',
+        'WARN': 's',
+        'WARNING': 's',
+        'ERROR': 'gd',
+        'CRITICAL': 'gd'
+    };
+
+    kit._highlight_run_report = function(text) {
+        var lines = text.split('\n');
+        var out = [];
+
+        for (var line_index = 0; line_index < lines.length; line_index++) {
+            var line = lines[line_index];
+
+            // A timestamped log line - the moment quiet, the level in its colour
+            var log_parts = kit._run_report_log_pattern.exec(line);
+
+            if (log_parts) {
+                var level_class = kit._run_report_level_class[log_parts[3]];
+
+                if (level_class === undefined) {
+                    level_class = 'n';
+                }
+
+                out.push('<span class="c">' + log_parts[1] + '</span>' + log_parts[2] +
+                    '<span class="' + level_class + '">' + log_parts[3] + '</span>' + log_parts[4] +
+                    kit._esc_html(log_parts[5]));
+                continue;
+            }
+
+            // A header line - the key in front, the value coloured by what it is
+            var header_parts = kit._run_report_header_pattern.exec(line);
+
+            if (header_parts) {
+                var value = header_parts[3];
+                var value_class = kit._run_report_outcome_class[value];
+
+                if (value_class === undefined && kit._run_report_amount_pattern.test(value)) {
+                    value_class = 'm';
+                }
+
+                var value_html = kit._esc_html(value);
+
+                if (value_class !== undefined) {
+                    value_html = '<span class="' + value_class + '">' + value_html + '</span>';
+                }
+
+                out.push('<span class="k">' + header_parts[1] + '</span>' + header_parts[2] + value_html);
+                continue;
+            }
+
+            // A section heading opens what follows it, so it stands out
+            if (kit._run_report_section_pattern.test(line)) {
+                out.push('<span class="nt">' + line + '</span>');
+                continue;
+            }
+
+            // Anything else - an error's traceback among it - reads the way
+            // a traceback reads anywhere, and plain text passes through escaped
+            out.push(kit._highlight_traceback(line));
+        }
+
+        return out.join('\n');
+    };
+
     /* SQL is never coloured on the client - a statement is only told apart here, by
        the word it opens with, and its colours come from the server's pygments through
        the highlight endpoint */
@@ -1246,6 +1338,11 @@
         // .. try a document already read into a tree of fields
         if (!html && kit._field_tree_probe.test(text)) {
             html = kit._highlight_field_tree(text);
+        }
+
+        // .. try a report of aligned header fields with optional log lines
+        if (!html && kit._run_report_probe.test(trimmed)) {
+            html = kit._highlight_run_report(text);
         }
 
         // .. try Python traceback
