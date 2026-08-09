@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.typing_ import any_, stranydict
+from zato.common.typing_ import any_, stranydict, strlist
 from zato.common.util.safeguards.common import SafeguardConfig
 
 # ################################################################################################################################
@@ -58,8 +58,17 @@ def build_safeguard_config(config:'stranydict') -> 'SafeguardConfig':
     out.markup_mode     = _get(config, 'safeguards_markup_mode', SafeguardConfig.markup_mode)
 
     # URL policy - the allow list is another list field assigned unconditionally.
+    allow_list = _get(config, 'safeguards_url_allow_list', [])
+    url_allow_list:'strlist' = []
+
+    for entry in allow_list:
+        entry = entry.strip()
+
+        if entry:
+            url_allow_list.append(entry)
+
     out.url_policy_enabled = _get(config, 'safeguards_url_policy_enabled', SafeguardConfig.url_policy_enabled)
-    out.url_allow_list     = _get(config, 'safeguards_url_allow_list', [])
+    out.url_allow_list     = url_allow_list
     out.url_mode           = _get(config, 'safeguards_url_mode', SafeguardConfig.url_mode)
 
     return out

@@ -65,6 +65,18 @@ class ConfigParsingTestCase(TestCase):
         self.assertTrue(config.include_body_in_key)
 
 # ################################################################################################################################
+
+    def test_list_entries_are_stripped_and_empty_ones_dropped(self) -> 'None':
+        raw = {
+            'vary_by_headers': [' Accept-Language ', '', '  '],
+            'ignored_query_parameters': [' utm_source ', ''],
+        }
+        config = parse_config(raw, URL_TYPE.PLAIN_HTTP)
+
+        self.assertEqual(config.vary_by_headers, ['accept-language'])
+        self.assertEqual(config.ignored_query_parameters, ['utm_source'])
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':

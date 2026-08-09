@@ -151,6 +151,11 @@ def evaluate_param_rows(rows:'dictlist', context:'any_') -> 'stranydict':
         value = row['value']
         mode = row['mode']
 
+        key = key.strip()
+
+        if not key:
+            continue
+
         # JSONata values are evaluated each time this runs - text values are sent exactly as typed
         if mode == _invocation.ValueMode.JSONata:
             value = evaluate_jsonata(value, context)

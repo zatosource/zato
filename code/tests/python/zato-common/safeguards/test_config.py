@@ -85,6 +85,16 @@ class TestBuildSafeguardConfig:
         assert config.url_allow_list == ['example.com', 'api.invoicing.example']
         assert config.url_mode == Url_Mode_Neutralize
 
+    def test_allow_list_entries_are_stripped_and_empty_ones_dropped(self) -> 'None':
+
+        gateway_config = {
+            'safeguards_url_allow_list': [' example.com ', '', '  '],
+        }
+
+        config = build_safeguard_config(gateway_config)
+
+        assert config.url_allow_list == ['example.com']
+
     def test_stored_false_is_kept_and_not_replaced_by_a_default(self) -> 'None':
 
         gateway_config = {

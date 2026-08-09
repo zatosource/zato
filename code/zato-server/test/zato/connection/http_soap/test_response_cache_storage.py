@@ -93,6 +93,31 @@ class StorageRulesTestCase(TestCase):
 
 # ################################################################################################################################
 
+    def test_responses_with_uncacheable_directives_are_never_stored(self) -> 'None':
+        for value in ('no-store', 'No-Store', 'Private', 'NO-CACHE', 'max-age=60, no-store'):
+            ctx = self.get_ctx()
+            headers = ctx.wsgi_environ['zato.http.response.headers']
+            headers['Content-Type'] = 'application/json'
+            headers['Cache-Control'] = value
+
+            store(ctx, '{"result":"ok"}', OK)
+
+            self.assertEqual(self.cache.data, {})
+
+# ################################################################################################################################
+
+    def test_cacheable_directives_never_block_storage(self) -> 'None':
+        ctx = self.get_ctx()
+        headers = ctx.wsgi_environ['zato.http.response.headers']
+        headers['Content-Type'] = 'application/json'
+        headers['Cache-Control'] = 'max-age=60, public'
+
+        store(ctx, '{"result":"ok"}', OK)
+
+        self.assertEqual(len(self.cache.data), 1)
+
+# ################################################################################################################################
+
     def test_responses_above_the_size_cap_are_never_stored(self) -> 'None':
         raw_config = make_raw_config(max_body_size=10)
         ctx = self.get_ctx(raw_config)

@@ -270,12 +270,27 @@ def _validate_invocation_config(service:'AdminService', input:'Bunch') -> 'None'
     for field_name in _row_fields:
         if rows_json := input.get(field_name):
             rows = parse_param_rows(rows_json)
+            kept_rows:'anylist' = []
+
             for row in rows:
+                key = row['key']
+                key = key.strip()
+
+                if not key:
+                    continue
+
                 mode = row['mode']
                 if mode not in _invocation.ValueModeList:
                     raise BadRequest(service.cid, f'Value mode `{mode}` in `{field_name}` is not one of `{_invocation.ValueModeList}`')
                 if mode == _invocation.ValueMode.JSONata:
                     _validate_expression(service, row['value'], _invocation.ValueMode.JSONata, field_name)
+
+                # The parsed rows are shared through a cache, so the stripped key goes into a copy
+                row = dict(row)
+                row['key'] = key
+                kept_rows.append(row)
+
+            input[field_name] = dumps(kept_rows)
 
     # .. so must a JSONata-mode body ..
     if input.request_data:

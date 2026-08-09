@@ -14,7 +14,7 @@ from time import time
 # Zato
 from zato.common.api import HTTP_SOAP
 from zato.common.exception import HTTP_RESPONSES
-from zato.server.connection.http_soap.response_cache.common import ModuleCtx
+from zato.server.connection.http_soap.response_cache.common import ModuleCtx, parse_cache_control
 from zato.server.metrics import zato_rest_channel_cache_operations_total
 
 # ################################################################################################################################
@@ -111,8 +111,8 @@ def lookup(ctx:'ResponseCacheContext') -> 'strnone':
 
 def store(ctx:'ResponseCacheContext', body:'any_', status_code:'int') -> 'None':
     """ Stores a fresh response under the request's key, subject to the storage rules -
-    only 200-class responses, never ones carrying Set-Cookie, size-capped, and behind
-    the admission marker when cache-on-second-request is on.
+    only 200-class responses, never ones carrying Set-Cookie or a Cache-Control that excludes
+    them from caches, size-capped, and behind the admission marker when cache-on-second-request is on.
     """
     headers = ctx.wsgi_environ['zato.http.response.headers']
 
@@ -133,10 +133,19 @@ def store(ctx:'ResponseCacheContext', body:'any_', status_code:'int') -> 'None':
     if not (_min_ok_status <= status_code < _max_ok_status):
         return
 
-    # .. responses that set cookies are never shared through the cache ..
-    for header_name in headers:
-        if header_name.lower() == 'set-cookie':
+    # .. responses that set cookies or whose Cache-Control excludes them from caches are never stored ..
+    for header_name, header_value in headers.items():
+        header_name = header_name.lower()
+
+        if header_name == 'set-cookie':
             return
+
+        if header_name == 'cache-control':
+            directives = parse_cache_control(header_value)
+
+            for directive in directives:
+                if directive in ModuleCtx.Uncacheable_Directives:
+                    return
 
     # .. and responses above the size cap bypass caching entirely.
     if len(body) > ctx.config.max_body_size:

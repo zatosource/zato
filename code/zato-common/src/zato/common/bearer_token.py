@@ -32,7 +32,7 @@ from zato.common.util.api import parse_extra_into_dict
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, dtnone, intnone, stranydict
+    from zato.common.typing_ import any_, dtnone, intnone, stranydict, strlist
     from zato.server.base.parallel import ParallelServer
     from zato.server.connection.cache import CacheAPI
 
@@ -40,6 +40,25 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def normalize_scopes(scopes:'str') -> 'str':
+    """ Turns a multi-line scopes string into the single-line form OAuth requests carry -
+    each line is stripped of surrounding whitespace, empty lines are dropped and the rest
+    is joined with single spaces.
+    """
+    scope_list:'strlist' = []
+
+    for scope in scopes.splitlines():
+        scope = scope.strip()
+
+        if scope:
+            scope_list.append(scope)
+
+    out = ' '.join(scope_list)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -58,9 +77,10 @@ class BearerTokenManager:
     def _get_bearer_token_config(self, sec_def:'stranydict') -> 'BearerTokenConfig':
 
         # Scopes require preprocessing ..
-        scopes = (sec_def.get('scopes') or '').splitlines()
-        scopes = [elem.strip() for elem in scopes]
-        scopes = ' '.join(scopes)
+        scopes = sec_def.get('scopes')
+        if scopes is None:
+            scopes = ''
+        scopes = normalize_scopes(scopes)
 
         # .. same goes for extra fields ..
         extra_fields = sec_def.get('extra_fields') or ''

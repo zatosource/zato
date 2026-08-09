@@ -50,6 +50,41 @@ class ModuleCtx:
     Outcome_Bypass           = 'bypass'
     Outcome_Not_Modified     = 'not_modified'
 
+    # The Cookie request header - its WSGI key and its HTTP name
+    Cookie_Header      = 'HTTP_COOKIE'
+    Cookie_Header_Name = 'cookie'
+
+    # The request directive that skips the cache lookup
+    Directive_No_Cache = 'no-cache'
+
+    # Response directives that keep a response out of the cache
+    Uncacheable_Directives = ('no-store', 'no-cache', 'private')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def parse_cache_control(value:'str') -> 'strlist':
+    """ Splits a Cache-Control header value into a list of its directive names,
+    lowercased since HTTP directives are case-insensitive, with any per-directive
+    arguments after `=` discarded.
+    """
+    out:'strlist' = []
+
+    for item in value.split(','):
+        item = item.strip()
+        item = item.lower()
+
+        # Only the name before the optional `=argument` identifies the directive ..
+        parts = item.split('=')
+        directive = parts[0]
+        directive = directive.strip()
+
+        # .. and empty tokens carry no directive at all.
+        if directive:
+            out.append(directive)
+
+    return out
+
 # ################################################################################################################################
 # ################################################################################################################################
 

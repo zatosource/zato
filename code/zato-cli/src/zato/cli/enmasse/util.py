@@ -200,7 +200,21 @@ def serialize_invocation_rows(item:'anydict') -> 'None':
     for field_name in Invocation_Row_Fields:
         value = item.get(field_name)
         if value and not isinstance(value, str):
-            item[field_name] = json_dumps(value)
+
+            rows = []
+
+            for row in value:
+                key = row['key']
+                key = key.strip()
+
+                if not key:
+                    continue
+
+                row = dict(row)
+                row['key'] = key
+                rows.append(row)
+
+            item[field_name] = json_dumps(rows)
 
 # ################################################################################################################################
 

@@ -32,6 +32,7 @@ from requests_toolbelt import MultipartEncoder
 from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, EnvVariable, HTTP_SOAP, MISC, NotGiven, SEC_DEF_TYPE, \
     URL_TYPE, Wrapper_Name_Prefix_List
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.bearer_token import normalize_scopes
 from zato.common.exception import BadRequest, Inactive, BackendInvocationError
 from zato.common.json_ import dumps, loads
 from zato.common.soap.client import SOAPClient
@@ -674,9 +675,10 @@ class BaseHTTPSOAPWrapper:
 
                     # .. otherwise, we can check if they are provided in the security definition itself ..
                     if not scopes:
-                        scopes = sec_def.get('scopes') or ''
-                        scopes = scopes.splitlines()
-                        scopes = ' '.join(scopes)
+                        scopes = sec_def.get('scopes')
+                        if scopes is None:
+                            scopes = ''
+                        scopes = normalize_scopes(scopes)
 
                     # .. get a Bearer token ..
                     result = self._get_bearer_token_auth(sec_def_name, scopes, data_format)

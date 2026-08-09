@@ -48,6 +48,7 @@ class Create(AdminService):
 
         # Extract and validate the input ..
         input = self.request.input
+        input.name = input.name.strip()
         rule_dicts = _parse_and_validate_rules(input.rules_json)
 
         # .. refuse to create a duplicate ..
@@ -87,6 +88,7 @@ class Edit(AdminService):
 
         # Extract and validate the input ..
         input = self.request.input
+        input.name = input.name.strip()
         tier_id = int(input.id)
         rule_dicts = _parse_and_validate_rules(input.rules_json)
 

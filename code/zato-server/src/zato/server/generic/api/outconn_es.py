@@ -72,7 +72,15 @@ class OutconnESWrapper(Wrapper):
             # Each line of the configuration is one full http(s):// URL to connect to -
             # whether TLS is used follows from the scheme of each URL. Duplicates
             # are removed because the underlying client rejects repeated addresses.
-            address_list:'strlist' = list(dict.fromkeys(self.config.address_list.splitlines()))
+            address_list:'strlist' = []
+
+            for address in self.config.address_list.splitlines():
+                address = address.strip()
+
+                if address:
+                    address_list.append(address)
+
+            address_list = list(dict.fromkeys(address_list))
 
             # The password may still be encrypted if it went through a path
             # that did not decrypt it - decrypting a plain string is a no-op.

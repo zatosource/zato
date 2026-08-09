@@ -38,6 +38,11 @@ def validate_topic_name(topic_name:'str') -> 'None':
     if not topic_name:
         raise ValueError('Topic name cannot be empty')
 
+    stripped = topic_name.strip()
+
+    if topic_name != stripped:
+        raise ValueError(f'Topic name cannot begin or end with whitespace: `{topic_name}`')
+
     if len(topic_name) > ModuleCtx.Max_Length:
         raise ValueError(f'Topic name exceeds maximum length of {ModuleCtx.Max_Length} characters: {len(topic_name)}')
 

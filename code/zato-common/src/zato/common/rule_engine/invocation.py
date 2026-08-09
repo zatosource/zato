@@ -207,6 +207,7 @@ def is_ruleset_allowed(name:'str', patterns:'strlist') -> 'bool':
     or everything (`*`).
     """
     for pattern in patterns:
+        pattern = pattern.strip()
 
         # A lone star grants every ruleset ..
         if pattern == Match_All_Pattern:
@@ -247,6 +248,7 @@ def unmatched_ruleset_patterns(patterns:'strlist', published_names:'strlist') ->
 
     # Check each grant independently ..
     for pattern in patterns:
+        pattern = pattern.strip()
 
         # .. a global grant matches whenever at least one published ruleset exists ..
         if pattern == Match_All_Pattern:

@@ -18,7 +18,7 @@ from unittest import TestCase, main
 # Zato
 from zato.common.api import URL_TYPE
 from zato.common.typing_ import any_, anydict
-from zato.server.connection.http_soap.response_cache import get_context
+from zato.server.connection.http_soap.response_cache import get_context, ResponseCacheContext
 
 # Zato - test helpers
 from test.zato.connection.http_soap.common import FakeCacheAPI, make_channel_item, make_environ, make_raw_config
@@ -41,6 +41,14 @@ class KeyConstructionTestCase(TestCase):
         assert ctx is not None
 
         return ctx.key
+
+    def get_ctx(self, **environ_kwargs:'any_') -> 'ResponseCacheContext':
+        channel_item = make_channel_item(make_raw_config())
+        environ = make_environ(**environ_kwargs)
+        ctx = get_context(self.cache, channel_item, environ, b'')
+        assert ctx is not None
+
+        return ctx
 
 # ################################################################################################################################
 
@@ -96,6 +104,63 @@ class KeyConstructionTestCase(TestCase):
         key1 = self.get_key(HTTP_ACCEPT_LANGUAGE='en')
         key2 = self.get_key(HTTP_ACCEPT_LANGUAGE='de')
         self.assertEqual(key1, key2)
+
+# ################################################################################################################################
+
+    def test_cookie_requests_are_served_without_the_cache(self) -> 'None':
+        channel_item = make_channel_item(make_raw_config())
+        environ = make_environ(HTTP_COOKIE='session=abc123')
+        ctx = get_context(self.cache, channel_item, environ, b'')
+        self.assertIsNone(ctx)
+
+# ################################################################################################################################
+
+    def test_cookie_in_vary_by_headers_varies_the_key(self) -> 'None':
+        raw_config = make_raw_config(vary_by_headers=['Cookie'])
+
+        key1 = self.get_key(raw_config, HTTP_COOKIE='session=abc123')
+        key2 = self.get_key(raw_config, HTTP_COOKIE='session=def456')
+        self.assertNotEqual(key1, key2)
+
+# ################################################################################################################################
+
+    def test_padded_vary_by_headers_behave_like_clean_ones(self) -> 'None':
+        padded_config = make_raw_config(vary_by_headers=[' Accept-Language '])
+        clean_config = make_raw_config(vary_by_headers=['Accept-Language'])
+
+        key1 = self.get_key(padded_config, HTTP_ACCEPT_LANGUAGE='en')
+        key2 = self.get_key(clean_config, HTTP_ACCEPT_LANGUAGE='en')
+        self.assertEqual(key1, key2)
+
+        key3 = self.get_key(padded_config, HTTP_ACCEPT_LANGUAGE='de')
+        self.assertNotEqual(key1, key3)
+
+# ################################################################################################################################
+
+    def test_padded_ignored_query_parameters_behave_like_clean_ones(self) -> 'None':
+        raw_config = make_raw_config(ignored_query_parameters=[' utm_source '])
+
+        key1 = self.get_key(raw_config, query='a=1&utm_source=news')
+        key2 = self.get_key(raw_config, query='a=1')
+        self.assertEqual(key1, key2)
+
+# ################################################################################################################################
+
+    def test_no_cache_directives_are_case_insensitive(self) -> 'None':
+        ctx = self.get_ctx(HTTP_CACHE_CONTROL='No-Cache')
+        self.assertTrue(ctx.skip_lookup)
+
+        ctx = self.get_ctx(HTTP_CACHE_CONTROL='NO-CACHE')
+        self.assertTrue(ctx.skip_lookup)
+
+        ctx = self.get_ctx(HTTP_CACHE_CONTROL='no-cache, max-age=0')
+        self.assertTrue(ctx.skip_lookup)
+
+# ################################################################################################################################
+
+    def test_similar_directive_names_never_skip_the_lookup(self) -> 'None':
+        ctx = self.get_ctx(HTTP_CACHE_CONTROL='x-no-cache-foo')
+        self.assertFalse(ctx.skip_lookup)
 
 # ################################################################################################################################
 

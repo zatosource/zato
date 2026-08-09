@@ -14,7 +14,7 @@ from zato.server.connection.http_soap.response_cache.common import ResponseCache
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, stranydict
+    from zato.common.typing_ import anydict, stranydict, strlist
     anydict = anydict
 
 # ################################################################################################################################
@@ -59,8 +59,30 @@ def parse_config(raw:'stranydict', transport:'str') -> 'ResponseCacheConfig':
     out.ttl_seconds = int(config['ttl']) * _TTL_Multipliers[ttl_unit]
 
     out.is_shared_across_callers = bool(config['is_shared_across_callers'])
-    out.vary_by_headers          = list(config['vary_by_headers'])
-    out.ignored_query_parameters = list(config['ignored_query_parameters'])
+
+    # Each entry of both lists is stripped, with empty entries dropped ..
+    vary_by_headers:'strlist' = []
+
+    for header_name in config['vary_by_headers']:
+        header_name = header_name.strip()
+
+        # .. header names are lowercased too, since HTTP header names are case-insensitive ..
+        header_name = header_name.lower()
+
+        if header_name:
+            vary_by_headers.append(header_name)
+
+    # .. while query parameter names keep their case, as URLs are case-sensitive.
+    ignored_query_parameters:'strlist' = []
+
+    for name in config['ignored_query_parameters']:
+        name = name.strip()
+
+        if name:
+            ignored_query_parameters.append(name)
+
+    out.vary_by_headers          = vary_by_headers
+    out.ignored_query_parameters = ignored_query_parameters
 
     # SOAP operations live in the POST body, so method plus path identifies nothing there -
     # the body hash is always part of the key for SOAP channels.

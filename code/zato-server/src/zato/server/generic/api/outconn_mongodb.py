@@ -80,7 +80,13 @@ class OutconnMongoDBWrapper(Wrapper):
         with self.update_lock:
 
             # Each line of the configuration is one host:port pair to connect to
-            server_list:'strlist' = self.config.server_list.splitlines()
+            server_list:'strlist' = []
+
+            for server in self.config.server_list.splitlines():
+                server = server.strip()
+
+                if server:
+                    server_list.append(server)
 
             # The password may still be encrypted if it went through a path
             # that did not decrypt it - decrypting a plain string is a no-op.

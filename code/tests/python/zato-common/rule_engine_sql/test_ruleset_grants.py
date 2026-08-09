@@ -51,4 +51,21 @@ def test_every_grant_is_unmatched_when_nothing_is_published() -> 'None':
     assert out == patterns
 
 # ################################################################################################################################
+
+def test_padded_grants_behave_like_clean_ones() -> 'None':
+    """ Grants are compared in their stripped form.
+    """
+    published_names = [
+        'payments.discounts',
+    ]
+    patterns = [
+        ' payments.discounts ',
+        ' payments.* ',
+    ]
+
+    out = unmatched_ruleset_patterns(patterns, published_names)
+
+    assert out == []
+
+# ################################################################################################################################
 # ################################################################################################################################

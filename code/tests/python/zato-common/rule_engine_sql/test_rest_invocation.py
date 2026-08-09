@@ -82,6 +82,10 @@ def test_is_ruleset_allowed_patterns() -> 'None':
     # .. a lone star matches everything ..
     assert is_ruleset_allowed('pricing.default', ['*'])
 
+    # .. grants are compared in their stripped form ..
+    assert is_ruleset_allowed('payments.discounts', [' payments.discounts '])
+    assert is_ruleset_allowed('payments.eu.discounts', [' payments.* '])
+
     # .. and without grants nothing is allowed.
     assert not is_ruleset_allowed('payments.discounts', [])
 

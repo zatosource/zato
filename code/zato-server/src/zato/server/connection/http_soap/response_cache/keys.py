@@ -12,7 +12,7 @@ from urllib.parse import parse_qsl
 
 # Zato
 from zato.common.api import HTTP_SOAP
-from zato.server.connection.http_soap.response_cache.common import ModuleCtx, ResponseCacheContext
+from zato.server.connection.http_soap.response_cache.common import ModuleCtx, parse_cache_control, ResponseCacheContext
 from zato.server.connection.http_soap.response_cache.config import get_channel_config
 from zato.server.metrics import zato_rest_channel_cache_operations_total
 
@@ -128,7 +128,13 @@ def get_context(
 
     channel_name = channel_item['name']
 
-    # GET and HEAD are cacheable as they are, POST only when the body joins the key ..
+    # Requests carrying cookies are cached only when the channel varies its entries by the Cookie header ..
+    if ModuleCtx.Cookie_Header in wsgi_environ:
+        if ModuleCtx.Cookie_Header_Name not in config.vary_by_headers:
+            zato_rest_channel_cache_operations_total.labels(channel_name, ModuleCtx.Outcome_Bypass).inc()
+            return None
+
+    # .. GET and HEAD are cacheable as they are, POST only when the body joins the key ..
     method = wsgi_environ['REQUEST_METHOD']
 
     if method not in ModuleCtx.Safe_Methods:
@@ -168,7 +174,8 @@ def get_context(
     if cache_control is None:
         cache_control = ''
 
-    out.skip_lookup = 'no-cache' in cache_control
+    directives = parse_cache_control(cache_control)
+    out.skip_lookup = ModuleCtx.Directive_No_Cache in directives
 
     if_none_match = wsgi_environ.get('HTTP_IF_NONE_MATCH')
 

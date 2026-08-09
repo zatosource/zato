@@ -18,6 +18,7 @@ from fhirpy import SyncFHIRClient
 # Zato
 from zato.common.api import HL7
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.bearer_token import normalize_scopes
 from zato.common.hl7.fhir.fields import Outconn_Config_Defaults, Outconn_Int_Names
 from zato.common.json_internal import dumps
 from zato.common.pubsub.outgoing import OutgoingPublisher, OutgoingType
@@ -254,7 +255,7 @@ class _HL7FHIRConnection(SyncFHIRClient):
         data_format = sec_def['data_format']
 
         if scopes := sec_def.get('scopes'):
-            scopes = ' '.join(scopes.splitlines())
+            scopes = normalize_scopes(scopes)
         else:
             scopes = ''
 

@@ -82,13 +82,15 @@ class Create(AdminService):
         if not patterns:
             raise Exception('At least one valid pattern is required')
 
+        pattern = '\n'.join(patterns)
+
         with closing(self.odb.session()) as session:
             try:
                 # Check if permission already exists for this security definition and pattern combination
                 existing_perm = session.query(PubSubPermission).\
                     filter(PubSubPermission.cluster_id==cluster_id).\
                     filter(PubSubPermission.sec_base_id==input.sec_base_id).\
-                    filter(PubSubPermission.pattern==input.pattern).\
+                    filter(PubSubPermission.pattern==pattern).\
                     filter(PubSubPermission.access_type==input.access_type).first()
 
                 if existing_perm:
@@ -98,7 +100,7 @@ class Create(AdminService):
                 permission = PubSubPermission()
                 permission.sec_base_id = input.sec_base_id
                 permission.access_type = input.access_type
-                permission.pattern = '\n'.join(patterns) # type: ignore
+                permission.pattern = pattern # type: ignore
                 permission.cluster_id = cluster_id       # type: ignore
 
                 set_instance_opaque_attrs(permission, input)
@@ -145,6 +147,8 @@ class Edit(AdminService):
         if not patterns:
             raise Exception('At least one valid pattern is required')
 
+        pattern = '\n'.join(patterns)
+
         with closing(self.odb.session()) as session:
             try:
                 permission = session.query(PubSubPermission).filter_by(id=input.id).one()
@@ -157,7 +161,7 @@ class Edit(AdminService):
                 # Update permission fields
                 permission.sec_base_id = input.sec_base_id
                 permission.access_type = input.access_type
-                permission.pattern = '\n'.join(patterns)
+                permission.pattern = pattern
 
                 set_instance_opaque_attrs(permission, input)
 
