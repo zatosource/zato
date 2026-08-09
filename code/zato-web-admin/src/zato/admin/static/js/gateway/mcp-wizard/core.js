@@ -42,7 +42,11 @@ wizard.config_own = {
     // what their element ids are derived from, with the security picker
     // additionally carrying the sec- prefix its loader adds on its own
     pickerAction: 'wizard',
-    securityPickerAction: 'sec-wizard'
+    securityPickerAction: 'sec-wizard',
+
+    // What the edit endpoint reads its input under - the edit page's Django
+    // form is built with the same prefix and the kit's fieldPrefix follows it
+    editFieldPrefix: 'edit-'
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -51,7 +55,11 @@ wizard.config_own = {
 wizard.state = {
 
     // Which of the two actions the page is serving
-    isEdit: false
+    isEdit: false,
+
+    // The gateway being edited - the badge pickers load with it so the
+    // assigned zones open on what the gateway already exposes
+    itemId: ''
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -64,8 +72,8 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
     // How many steps the wizard has
     stepCount: 3,
 
-    // What the create page is - the edit page will say so in its init options
-    // in a later stage
+    // What the create page is - the edit page says so in its init options
+    // and the key is switched to the edit prefix before the kit's own init runs
     fieldPrefix: '',
     finishLabel: wizard.config_own.saveLabel,
 
@@ -109,20 +117,25 @@ $.fn.zato.wizard_kit.core.setup(wizard, {
 
         var ownConfig = wizard.config_own;
 
+        // The shared control wiring reads its fields under action-derived ids,
+        // and on edit the pickers load with the gateway so their assigned
+        // zones open on what it already exposes
+        var action = wizard.state.isEdit ? 'edit' : 'create';
+        var itemId = wizard.state.isEdit ? wizard.state.itemId : null;
+
         // The size caps line and the option cards of step 2 ..
         wizard.forms.initRows();
         wizard.review.initOptionCards();
 
         // .. the PII multi-selects and the master toggles enabling the
-        // safeguard fields under them - the same wiring the gateway list
-        // uses, reading the fields under their create-page ids ..
-        $.fn.zato.gateway.mcp._init_pii_selects('create');
-        $.fn.zato.gateway.mcp._init_safeguard_toggles('create');
+        // safeguard fields under them - the same wiring both actions share ..
+        $.fn.zato.gateway.mcp._init_pii_selects(action);
+        $.fn.zato.gateway.mcp._init_safeguard_toggles(action);
 
         // .. the services and the security definitions the gateway exposes
         // and authenticates with, each in a badge picker of its own ..
-        $.fn.zato.gateway.mcp.badge_picker.load(ownConfig.pickerAction, null);
-        $.fn.zato.gateway.mcp.security_badge_picker.load(ownConfig.pickerAction, null);
+        $.fn.zato.gateway.mcp.badge_picker.load(ownConfig.pickerAction, itemId);
+        $.fn.zato.gateway.mcp.security_badge_picker.load(ownConfig.pickerAction, itemId);
 
         // .. and a live uniqueness indicator for the URL path - the name
         // has its own check through the kit config above.
@@ -148,6 +161,13 @@ wizard._kitInit = wizard.init;
 wizard.init = function(options) {
 
     wizard.state.isEdit = options.is_edit;
+    wizard.state.itemId = options.item_id;
+
+    // On edit the Django form carries the edit- prefix its endpoint reads its
+    // input under, and every field lookup in the wizard follows it
+    if(options.is_edit) {
+        wizard.config.fieldPrefix = wizard.config_own.editFieldPrefix;
+    }
 
     wizard._kitInit(options);
 };

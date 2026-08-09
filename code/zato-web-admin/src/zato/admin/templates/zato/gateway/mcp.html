@@ -4,14 +4,15 @@
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
-    <link rel="stylesheet" type="text/css" href="/static/chosen/chosen.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/shared/autocomplete.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
     <link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/shared/form-tabs.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
     <link rel="stylesheet" type="text/css" href="/static/css/zato_highlight_pane.css">
+
+    {% comment %} The Size caps column edits each row in the wizard's own popover {% endcomment %}
+    <link rel="stylesheet" type="text/css" href="/static/css/settings.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -20,7 +21,6 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/chosen/chosen.jquery.min.js"></script>
 
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
@@ -29,14 +29,18 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/mode-javascript.js"></script>
 
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_ui_helpers.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_highlight_pane.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
+
+    {% comment %} What the Size caps column's popover is built from - the wizard kit's
+    popover engine, the chrome it wears and the descriptor both pages open {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/badge-picker.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/forms.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-descriptions.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-controls.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-size-caps.js"></script>
+
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
@@ -47,6 +51,8 @@
             'name',
             '_is_active',
             'url_path',
+            '_client_filters',
+            '_size_cap',
             '_services',
             '_security',
             '_audit_log',
@@ -55,29 +61,7 @@
             '_delete',
                 'id',
                 'is_active',
-                'validate_input',
-                'is_audit_log_active',
-                'allow_client_filters',
-            'max_response_size',
-            'size_cap_mode',
-            'min_size_threshold',
-            'characters_per_token',
-            'safeguards_strip_nulls',
-            'safeguards_collapse_whitespace',
-            'safeguards_strip_base64',
-            'safeguards_pii_enabled',
-            'safeguards_pii_lands',
-            'safeguards_pii_detectors',
-            'safeguards_pii_exclude',
-            'safeguards_pii_validate',
-            'safeguards_pii_stable_tokens',
-            'safeguards_normalize_unicode',
-            'safeguards_unicode_mode',
-            'safeguards_sanitize_markup',
-            'safeguards_markup_mode',
-            'safeguards_url_policy_enabled',
-            'safeguards_url_allow_list',
-            'safeguards_url_mode'
+                'allow_client_filters'
         ]
     }
     </script>
@@ -111,6 +95,8 @@
                         <th><a href="#">Name</a></th>
                         <th style="text-align:center"><a href="#">Active</a></th>
                         <th><a href="#">URL path</a></th>
+                        <th style="text-align:center"><a href="#">Client filters</a></th>
+                        <th><a href="#">Size caps</a></th>
                         <th style="text-align:center"><a href="#">Services</a></th>
                         <th style="text-align:center"><a href="#">Security</a></th>
                         <th>&nbsp;</th>
@@ -120,511 +106,60 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
                 {% if items %}
                 {% for item in items %}
-                    <tr id='tr_{{ item.id }}'>
+                    {# What the row's size caps popover opens on #}
+                    <tr id='tr_{{ item.id }}' data-max-response-size="{{ item.max_response_size }}"
+                        data-min-size-threshold="{{ item.min_size_threshold }}"
+                        data-characters-per-token="{{ item.characters_per_token }}"
+                        data-size-cap-mode="{{ item.size_cap_mode }}">
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
-                        <td class="text-center">{{ item.is_active|yesno:'Yes,No' }}</td>
+                        {# Both flags are turned over where they are read #}
+                        <td class="text-center"><a href="javascript:void(0)" onclick="$.fn.zato.gateway.mcp.toggle_active('{{ item.id }}', this)">{{ item.is_active|yesno:'Yes,No' }}</a></td>
                         <td>{{ item.url_path }}</td>
+                        <td class="text-center"><a href="javascript:void(0)" onclick="$.fn.zato.gateway.mcp.toggle_client_filters('{{ item.id }}', this)">{{ item.allow_client_filters|yesno:'Yes,No' }}</a></td>
+                        {# What the gateway caps responses at, the line opening the very editor the wizard uses #}
+                        <td><a href="javascript:void(0)" class="zato-table-note" data-id="{{ item.id }}"
+                            onclick="$.fn.zato.gateway.mcp.size_caps.open(this)">{{ item.size_cap_label }}</a></td>
                         <td class="text-center" id="service_count_{{ item.id }}">{{ item.services|length }}</td>
                         <td class="text-center" id="security_count_{{ item.id }}">{{ item.security_member_count }}</td>
                         <td><a href="/zato/audit-log/?source=mcp&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a></td>
                         <td><a href="{% url "gateway-mcp-export" item.id %}">Export</a></td>
-                        <td><a href="javascript:$.fn.zato.gateway.mcp.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="{% url "gateway-mcp-wizard-edit" item.id %}?cluster={{ cluster_id }}">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.gateway.mcp.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        {# What the two flags stand at #}
                         <td class='ignore'>{{ item.is_active }}</td>
-                        <td class='ignore'>{{ item.validate_input }}</td>
-                        <td class='ignore'>{{ item.is_audit_log_active }}</td>
                         <td class='ignore'>{{ item.allow_client_filters }}</td>
-                        <td class='ignore'>{{ item.max_response_size }}</td>
-                        <td class='ignore'>{{ item.size_cap_mode }}</td>
-                        <td class='ignore'>{{ item.min_size_threshold }}</td>
-                        <td class='ignore'>{{ item.characters_per_token }}</td>
-                        <td class='ignore'>{{ item.safeguards_strip_nulls }}</td>
-                        <td class='ignore'>{{ item.safeguards_collapse_whitespace }}</td>
-                        <td class='ignore'>{{ item.safeguards_strip_base64 }}</td>
-                        <td class='ignore'>{{ item.safeguards_pii_enabled }}</td>
-                        <td class='ignore'>{{ item.safeguards_pii_lands|join:"," }}</td>
-                        <td class='ignore'>{{ item.safeguards_pii_detectors|join:"," }}</td>
-                        <td class='ignore'>{{ item.safeguards_pii_exclude|join:"," }}</td>
-                        <td class='ignore'>{{ item.safeguards_pii_validate }}</td>
-                        <td class='ignore'>{{ item.safeguards_pii_stable_tokens }}</td>
-                        <td class='ignore'>{{ item.safeguards_normalize_unicode }}</td>
-                        <td class='ignore'>{{ item.safeguards_unicode_mode }}</td>
-                        <td class='ignore'>{{ item.safeguards_sanitize_markup }}</td>
-                        <td class='ignore'>{{ item.safeguards_markup_mode }}</td>
-                        <td class='ignore'>{{ item.safeguards_url_policy_enabled }}</td>
-                        <td class='ignore'>{{ item.safeguards_url_allow_list|join:"," }}</td>
-                        <td class='ignore'>{{ item.safeguards_url_mode }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='36'>No results</td>
+                        <td colspan='16'>No results</td>
                     </tr>
                 {% endif %}
 
                 </tbody>
             </table>
 
+{% comment %}
+The size caps of whichever row is being edited. The popover reads and writes fields
+rather than rows, the same as it does on the wizard's own form, so one set of them
+serves the whole table - the row clicked fills them in before the popover opens.
+{% endcomment %}
+<div id="mcp-row-fields" hidden>
+    {{ row_form.max_response_size }}
+    {{ row_form.min_size_threshold }}
+    {{ row_form.characters_per_token }}
+    {{ row_form.size_cap_mode }}
+</div>
+
 {% include "zato/paginate/action-panel.html" %}
-        </div>
-
-        <div id="create-div" class='data-popup ignore'>
-            <div class="bd">
-                <form novalidate action="{% url "gateway-mcp-create" %}" method="post" id="create-form">
-
-                    <div class="dashboard-tabs" role="tablist" aria-label="Gateway settings">
-                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="access_control" role="tab" aria-selected="true">Access control</button>
-                        <button type="button" class="dashboard-tab" data-tab="response_shaping" role="tab" aria-selected="false">Response shaping</button>
-                        <button type="button" class="dashboard-tab" data-tab="pii_removal" role="tab" aria-selected="false">PII removal</button>
-                        <button type="button" class="dashboard-tab" data-tab="content_safety" role="tab" aria-selected="false">Content safety</button>
-                    </div>
-
-                    <div class="dashboard-tab-panel" id="mcp-create-tab-panel-access_control" role="tabpanel">
-                    <table class="form-data">
-                        <tr>
-                            <td style="vertical-align:middle; width:14%"><label for="id_name">Name</label></td>
-                            <td>{{ create_form.name }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle"></td>
-                            <td>
-
-                                <label for="id_is_active">Active</label> {{ create_form.is_active }}
-                                |
-                                <label for="id_validate_input">Validate input</label> {{ create_form.validate_input }}
-                                |
-                                <label for="id_is_audit_log_active">Audit log</label> {{ create_form.is_audit_log_active }}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle"><label for="id_url_path">URL path</label></td>
-                            <td>{{ create_form.url_path }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:top;padding-top:8px">
-                                <label>Services</label>
-                            </td>
-                            <td>
-                                <div class="badge-picker-filter" id="badge-filter-create">
-                                    <input type="text" id="badge-filter-text-create" placeholder="Filter services..." />
-                                    <button type="button" class="badge-filter-clear" id="badge-filter-clear-create">Clear</button>
-                                </div>
-                                <div class="badge-picker" id="badge-picker-create">
-                                    <div class="badge-zone" id="badge-zone-available-create">
-                                        <div class="badge-zone-header">Available (<span class="badge-zone-count">0</span>)</div>
-                                        <div class="badge-zone-body"></div>
-                                    </div>
-                                    <div class="badge-picker-resizer"></div>
-                                    <div class="badge-zone" id="badge-zone-assigned-create">
-                                        <div class="badge-zone-header">Assigned (<span class="badge-zone-count">0</span>)</div>
-                                        <div class="badge-zone-body"></div>
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:top;padding-top:8px">
-                                <label>Security</label>
-                            </td>
-                            <td>
-                                <div class="badge-picker-filter" id="badge-filter-sec-create">
-                                    <input type="text" id="badge-filter-text-sec-create" placeholder="Filter security..." />
-                                    <button type="button" class="badge-filter-clear" id="badge-filter-clear-sec-create">Clear</button>
-                                </div>
-                                <div class="badge-picker" id="badge-picker-sec-create">
-                                    <div class="badge-zone" id="badge-zone-available-sec-create">
-                                        <div class="badge-zone-header">Available (<span class="badge-zone-count">0</span>)</div>
-                                        <div class="badge-zone-body"></div>
-                                    </div>
-                                    <div class="badge-picker-resizer"></div>
-                                    <div class="badge-zone" id="badge-zone-assigned-sec-create">
-                                        <div class="badge-zone-header">Assigned (<span class="badge-zone-count">0</span>)</div>
-                                        <div class="badge-zone-body"></div>
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                    </table>
-                    </div>
-
-                    <div class="dashboard-tab-panel" id="mcp-create-tab-panel-response_shaping" role="tabpanel" hidden>
-                        <table class="form-data">
-                            <tr>
-                                <td colspan="2" class="form-data-section">Filtering</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_allow_client_filters">Allow client filters</label></td>
-                                <td>{{ create_form.allow_client_filters }}</td>
-                            </tr>
-                            <tr>
-                                <td colspan="2" class="form-data-section">Size caps</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label">
-                                    <label for="id_max_response_size">Max response size</label><br/>
-                                    <span class="form_hint">In tokens</span>
-                                </td>
-                                <td>
-                                    {{ create_form.max_response_size }}
-                                    &nbsp;&nbsp;<label for="id_min_size_threshold">Activation threshold</label>
-                                    {{ create_form.min_size_threshold }}
-                                    &nbsp;|&nbsp;
-                                    <label for="id_characters_per_token">Characters per token</label>
-                                    {{ create_form.characters_per_token }}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_size_cap_mode">Cap mode</label></td>
-                                <td>{{ create_form.size_cap_mode }}</td>
-                            </tr>
-                            <tr>
-                                <td colspan="2" class="form-data-section">Compaction</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_safeguards_strip_nulls">Strip null fields</label></td>
-                                <td>{{ create_form.safeguards_strip_nulls }}</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_safeguards_collapse_whitespace">Collapse whitespace</label></td>
-                                <td>{{ create_form.safeguards_collapse_whitespace }}</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_safeguards_strip_base64">Strip binary blobs</label></td>
-                                <td>{{ create_form.safeguards_strip_base64 }}</td>
-                            </tr>
-                        </table>
-                    </div>
-
-                    <div class="dashboard-tab-panel" id="mcp-create-tab-panel-pii_removal" role="tabpanel" hidden>
-                        <table class="form-data">
-                            <tr>
-                                <td class="form-data-label"><label for="id_safeguards_pii_enabled">Enabled</label></td>
-                                <td>{{ create_form.safeguards_pii_enabled }}</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_safeguards_pii_lands">Lands</label></td>
-                                <td>{{ create_form.safeguards_pii_lands }}</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_safeguards_pii_detectors">Detectors</label></td>
-                                <td>{{ create_form.safeguards_pii_detectors }}</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_safeguards_pii_exclude">Exclude</label></td>
-                                <td>{{ create_form.safeguards_pii_exclude }}</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_safeguards_pii_validate">Validate checksums</label></td>
-                                <td>{{ create_form.safeguards_pii_validate }}</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_safeguards_pii_stable_tokens">Stable tokens</label></td>
-                                <td>{{ create_form.safeguards_pii_stable_tokens }}</td>
-                            </tr>
-                        </table>
-                    </div>
-
-                    <div class="dashboard-tab-panel" id="mcp-create-tab-panel-content_safety" role="tabpanel" hidden>
-                        <table class="form-data">
-                            <tr>
-                                <td colspan="2" class="form-data-section">Unicode</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_safeguards_normalize_unicode">Normalize unicode</label></td>
-                                <td>{{ create_form.safeguards_normalize_unicode }}</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_safeguards_unicode_mode">Mode</label></td>
-                                <td>{{ create_form.safeguards_unicode_mode }}</td>
-                            </tr>
-                            <tr>
-                                <td colspan="2" class="form-data-section">Markup</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_safeguards_sanitize_markup">Sanitize markup</label></td>
-                                <td>{{ create_form.safeguards_sanitize_markup }}</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_safeguards_markup_mode">Mode</label></td>
-                                <td>{{ create_form.safeguards_markup_mode }}</td>
-                            </tr>
-                            <tr>
-                                <td colspan="2" class="form-data-section">URL policy</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_safeguards_url_policy_enabled">Enabled</label></td>
-                                <td>{{ create_form.safeguards_url_policy_enabled }}</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_safeguards_url_allow_list">Allow list</label></td>
-                                <td>{{ create_form.safeguards_url_allow_list }}</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_safeguards_url_mode">Mode</label></td>
-                                <td>{{ create_form.safeguards_url_mode }}</td>
-                            </tr>
-                        </table>
-                    </div>
-
-                    <table class="form-data">
-                        <tr>
-                            <td style="text-align:left;vertical-align:middle">
-                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
-                            </td>
-                            <td style="text-align:right">
-                                <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
-                            </td>
-                        </tr>
-                    </table>
-                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
-                </form>
-            </div>
-        </div>
-
-        <div id="edit-div" class='data-popup ignore'>
-            <div class="bd">
-                <form novalidate action="{% url "gateway-mcp-edit" %}" method="post" id="edit-form">
-
-                    <div class="dashboard-tabs" role="tablist" aria-label="Gateway settings">
-                        <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="access_control" role="tab" aria-selected="true">Access control</button>
-                        <button type="button" class="dashboard-tab" data-tab="response_shaping" role="tab" aria-selected="false">Response shaping</button>
-                        <button type="button" class="dashboard-tab" data-tab="pii_removal" role="tab" aria-selected="false">PII removal</button>
-                        <button type="button" class="dashboard-tab" data-tab="content_safety" role="tab" aria-selected="false">Content safety</button>
-                    </div>
-
-                    <div class="dashboard-tab-panel" id="mcp-edit-tab-panel-access_control" role="tabpanel">
-                    <table class="form-data">
-                        <tr>
-                            <td style="vertical-align:middle; width:14%"><label for="id_edit-name">Name</label></td>
-                            <td>{{ edit_form.name }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle"></td>
-                            <td>
-
-                                <label for="id_edit-is_active">Active</label> {{ edit_form.is_active }}
-                                |
-                                <label for="id_edit-validate_input">Validate input</label> {{ edit_form.validate_input }}
-                                |
-                                <label for="id_edit-is_audit_log_active">Audit log</label> {{ edit_form.is_audit_log_active }}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle"><label for="id_edit-url_path">URL path</label></td>
-                            <td>{{ edit_form.url_path }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:top;padding-top:8px">
-                                <label>Services</label>
-                            </td>
-                            <td>
-                                <div class="badge-picker-filter" id="badge-filter-edit">
-                                    <input type="text" id="badge-filter-text-edit" placeholder="Filter services..." />
-                                    <button type="button" class="badge-filter-clear" id="badge-filter-clear-edit">Clear</button>
-                                </div>
-                                <div class="badge-picker" id="badge-picker-edit">
-                                    <div class="badge-zone" id="badge-zone-available-edit">
-                                        <div class="badge-zone-header">Available (<span class="badge-zone-count">0</span>)</div>
-                                        <div class="badge-zone-body"></div>
-                                    </div>
-                                    <div class="badge-picker-resizer"></div>
-                                    <div class="badge-zone" id="badge-zone-assigned-edit">
-                                        <div class="badge-zone-header">Assigned (<span class="badge-zone-count">0</span>)</div>
-                                        <div class="badge-zone-body"></div>
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:top;padding-top:8px">
-                                <label>Security</label>
-                            </td>
-                            <td>
-                                <div class="badge-picker-filter" id="badge-filter-sec-edit">
-                                    <input type="text" id="badge-filter-text-sec-edit" placeholder="Filter security..." />
-                                    <button type="button" class="badge-filter-clear" id="badge-filter-clear-sec-edit">Clear</button>
-                                </div>
-                                <div class="badge-picker" id="badge-picker-sec-edit">
-                                    <div class="badge-zone" id="badge-zone-available-sec-edit">
-                                        <div class="badge-zone-header">Available (<span class="badge-zone-count">0</span>)</div>
-                                        <div class="badge-zone-body"></div>
-                                    </div>
-                                    <div class="badge-picker-resizer"></div>
-                                    <div class="badge-zone" id="badge-zone-assigned-sec-edit">
-                                        <div class="badge-zone-header">Assigned (<span class="badge-zone-count">0</span>)</div>
-                                        <div class="badge-zone-body"></div>
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                    </table>
-                    </div>
-
-                    <div class="dashboard-tab-panel" id="mcp-edit-tab-panel-response_shaping" role="tabpanel" hidden>
-                        <table class="form-data">
-                            <tr>
-                                <td colspan="2" class="form-data-section">Filtering</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_edit-allow_client_filters">Allow client filters</label></td>
-                                <td>{{ edit_form.allow_client_filters }}</td>
-                            </tr>
-                            <tr>
-                                <td colspan="2" class="form-data-section">Size caps</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label">
-                                    <label for="id_edit-max_response_size">Max response size</label><br/>
-                                    <span class="form_hint">In tokens</span>
-                                </td>
-                                <td>
-                                    {{ edit_form.max_response_size }}
-                                    &nbsp;&nbsp;<label for="id_edit-min_size_threshold">Activation threshold</label>
-                                    {{ edit_form.min_size_threshold }}
-                                    &nbsp;|&nbsp;
-                                    <label for="id_edit-characters_per_token">Characters per token</label>
-                                    {{ edit_form.characters_per_token }}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_edit-size_cap_mode">Cap mode</label></td>
-                                <td>{{ edit_form.size_cap_mode }}</td>
-                            </tr>
-                            <tr>
-                                <td colspan="2" class="form-data-section">Compaction</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_edit-safeguards_strip_nulls">Strip null fields</label></td>
-                                <td>{{ edit_form.safeguards_strip_nulls }}</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_edit-safeguards_collapse_whitespace">Collapse whitespace</label></td>
-                                <td>{{ edit_form.safeguards_collapse_whitespace }}</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_edit-safeguards_strip_base64">Strip binary blobs</label></td>
-                                <td>{{ edit_form.safeguards_strip_base64 }}</td>
-                            </tr>
-                        </table>
-                    </div>
-
-                    <div class="dashboard-tab-panel" id="mcp-edit-tab-panel-pii_removal" role="tabpanel" hidden>
-                        <table class="form-data">
-                            <tr>
-                                <td class="form-data-label"><label for="id_edit-safeguards_pii_enabled">Enabled</label></td>
-                                <td>{{ edit_form.safeguards_pii_enabled }}</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_edit-safeguards_pii_lands">Lands</label></td>
-                                <td>{{ edit_form.safeguards_pii_lands }}</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_edit-safeguards_pii_detectors">Detectors</label></td>
-                                <td>{{ edit_form.safeguards_pii_detectors }}</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_edit-safeguards_pii_exclude">Exclude</label></td>
-                                <td>{{ edit_form.safeguards_pii_exclude }}</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_edit-safeguards_pii_validate">Validate checksums</label></td>
-                                <td>{{ edit_form.safeguards_pii_validate }}</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_edit-safeguards_pii_stable_tokens">Stable tokens</label></td>
-                                <td>{{ edit_form.safeguards_pii_stable_tokens }}</td>
-                            </tr>
-                        </table>
-                    </div>
-
-                    <div class="dashboard-tab-panel" id="mcp-edit-tab-panel-content_safety" role="tabpanel" hidden>
-                        <table class="form-data">
-                            <tr>
-                                <td colspan="2" class="form-data-section">Unicode</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_edit-safeguards_normalize_unicode">Normalize unicode</label></td>
-                                <td>{{ edit_form.safeguards_normalize_unicode }}</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_edit-safeguards_unicode_mode">Mode</label></td>
-                                <td>{{ edit_form.safeguards_unicode_mode }}</td>
-                            </tr>
-                            <tr>
-                                <td colspan="2" class="form-data-section">Markup</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_edit-safeguards_sanitize_markup">Sanitize markup</label></td>
-                                <td>{{ edit_form.safeguards_sanitize_markup }}</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_edit-safeguards_markup_mode">Mode</label></td>
-                                <td>{{ edit_form.safeguards_markup_mode }}</td>
-                            </tr>
-                            <tr>
-                                <td colspan="2" class="form-data-section">URL policy</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_edit-safeguards_url_policy_enabled">Enabled</label></td>
-                                <td>{{ edit_form.safeguards_url_policy_enabled }}</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_edit-safeguards_url_allow_list">Allow list</label></td>
-                                <td>{{ edit_form.safeguards_url_allow_list }}</td>
-                            </tr>
-                            <tr>
-                                <td class="form-data-label"><label for="id_edit-safeguards_url_mode">Mode</label></td>
-                                <td>{{ edit_form.safeguards_url_mode }}</td>
-                            </tr>
-                        </table>
-                    </div>
-
-                    <table class="form-data">
-                        <tr>
-                            <td style="text-align:left;vertical-align:middle">
-                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
-                            </td>
-                            <td style="text-align:right">
-                                <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
-                            </td>
-                        </tr>
-                    </table>
-                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
-                    <input type="hidden" id="id_edit-id" name="id" />
-                </form>
-            </div>
         </div>
 
     {% endif %}

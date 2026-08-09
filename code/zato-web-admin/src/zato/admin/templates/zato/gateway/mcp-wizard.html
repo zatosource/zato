@@ -8,7 +8,8 @@ More options line. The generic machinery and look come from the wizard
 kit. The view provides:
 
 * cluster_id - the current cluster
-* form       - CreateForm, its fields carrying all the defaults
+* form       - CreateForm with the defaults on create, EditForm carrying
+               the edit- prefix and the stored values on edit
 * is_edit    - whether the wizard opened on an existing gateway
 * item_id    - the id of the gateway being edited, empty on create
 {% endcomment %}
@@ -43,6 +44,7 @@ a failed one opens when its details are asked for {% endcomment %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/review.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-descriptions.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-controls.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-size-caps.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/core.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/forms.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/review.js"></script>
@@ -51,7 +53,8 @@ a failed one opens when its details are asked for {% endcomment %}
 $(document).ready(function() {
     $.fn.zato.gateway.mcp.wizard.init({
         list_url: '{% url "gateway-mcp" %}?cluster={{ cluster_id }}',
-        is_edit: {% if is_edit %}true{% else %}false{% endif %}
+        is_edit: {% if is_edit %}true{% else %}false{% endif %},
+        item_id: '{{ item_id }}'
     });
 });
 </script>

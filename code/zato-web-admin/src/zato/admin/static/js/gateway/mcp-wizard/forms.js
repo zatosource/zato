@@ -21,20 +21,9 @@ $.fn.zato.wizard_kit.forms.setup(wizard, {
 
     descriptors: {
 
-        'size_caps': {
-            title: 'Size caps',
-            width: '430px',
-            pages: [[
-                [
-                    {field: 'max_response_size', label: 'Max response size (tokens)', kind: 'number'},
-                    {field: 'min_size_threshold', label: 'Activation threshold (tokens)', kind: 'number'}
-                ],
-                [
-                    {field: 'size_cap_mode', label: 'Over the cap', kind: 'select'},
-                    {field: 'characters_per_token', label: 'Characters per token', kind: 'text'}
-                ]
-            ]]
-        },
+        // The size caps live in mcp-size-caps.js - the gateway list opens
+        // the very same micro-form on each of its rows
+        'size_caps': $.fn.zato.gateway.mcp.size_caps_descriptor,
 
         'gateway_options': {
             title: 'Gateway options',

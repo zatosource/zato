@@ -15,248 +15,260 @@ $.fn.zato.data_table.MCPGateway = new Class({
 $(document).ready(function() {
     $('#data-table').tablesorter();
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.MCPGateway;
-    $.fn.zato.data_table.new_row_func = $.fn.zato.gateway.mcp.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'url_path']);
-    // Generic connection names are unique per connection type,
-    // so the check is scoped to this page's own type.
-    var unique_constraints = [
-        {field: 'name', entity_type: 'generic_connection', attr_name: 'name',
-            filter_name: 'type_', filter_value: 'gateway-mcp'},
-        {field: 'url_path', entity_type: 'http_soap', attr_name: 'url_path'}
-    ];
-    $.each(unique_constraints, function(index, constraint) {
-        $.fn.zato.validate_unique('#id_' + constraint.field, constraint.entity_type, constraint.attr_name, constraint);
-        $.fn.zato.validate_unique('#id_edit-' + constraint.field, constraint.entity_type, constraint.attr_name, constraint);
-    });
-
-    $.fn.zato.data_table.before_submit_hook = function(form) {
-        var action = form.attr('id').replace('-form', '');
-
-        // Inject hidden inputs for both badge pickers into the same form
-        $.fn.zato.badge_picker.inject_hidden_inputs(action, $.fn.zato.gateway.mcp.badge_picker_config);
-
-        // The security picker uses 'sec-' prefixed zone IDs but must inject into the same form
-        form.find('input.badge-member-input[name^="mcp_security_"]').remove();
-        var sec_assigned = $('#badge-zone-assigned-sec-' + action + ' .badge-zone-body .security-badge');
-        sec_assigned.each(function() {
-            $.fn.zato.gateway.mcp.security_badge_picker_config.inject_hidden_input(form, $(this));
-        });
-
-        return true;
-    };
-
-    // Multi-selects serialize one entry per selected option - the data table instance
-    // needs all of them joined into one comma-separated value.
-    $.fn.zato.data_table.add_row_hook = function(instance, name, html_elem, data) {
-        if($.fn.zato.gateway.mcp.pii_select_names.indexOf(name) !== -1) {
-            instance[name] = html_elem.val().join(',');
-        }
-    };
-
-    $.fn.zato.gateway.mcp._init_token_combos();
 })
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// The badge picker configurations, their loaders, the PII multi-selects and
-// the safeguard master toggles live in mcp-controls.js, and the help texts
-// in mcp-descriptions.js - both files are shared with the wizard page.
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.gateway.mcp.tab_labels = {
-    access_control:   'Access control',
-    response_shaping: 'Response shaping',
-    pii_removal:      'PII removal',
-    content_safety:   'Content safety'
-};
-
-$.fn.zato.gateway.mcp._reset_tabs = function(action) {
-    var is_edit = action === 'edit';
-    $.fn.zato.form_tabs.reset({
-        div_id:       is_edit ? '#edit-div' : '#create-div',
-        panel_prefix: is_edit ? 'mcp-edit-tab-panel-' : 'mcp-create-tab-panel-',
-        default_tab:  'access_control',
-        tab_labels:   $.fn.zato.gateway.mcp.tab_labels
-    });
-}
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Response shaping fields kept in the data table's hidden columns - the order matches
-// get_columns in the page and each value is what a field defaults to when an instance lacks it.
+// Creating and editing happen in the wizard on its own page - this file holds
+// only what the list edits where it stands: the two flags each row turns over
+// and the size caps popover, opened on the very micro-form the wizard uses.
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.gateway.mcp.config = {
-    'cluster_id': '1'
-};
+    cluster_id: '1',
 
-$.fn.zato.gateway.mcp.shaping_field_defaults = {
-    'validate_input': false,
-    'is_audit_log_active': false,
-    'allow_client_filters': false,
-    'max_response_size': '',
-    'size_cap_mode': 'truncate',
-    'min_size_threshold': '',
-    'characters_per_token': '4.0',
-    'safeguards_strip_nulls': false,
-    'safeguards_collapse_whitespace': false,
-    'safeguards_strip_base64': false,
-    'safeguards_pii_enabled': false,
-    'safeguards_pii_lands': '',
-    'safeguards_pii_detectors': '',
-    'safeguards_pii_exclude': '',
-    'safeguards_pii_validate': false,
-    'safeguards_pii_stable_tokens': false,
-    'safeguards_normalize_unicode': false,
-    'safeguards_unicode_mode': 'clean',
-    'safeguards_sanitize_markup': false,
-    'safeguards_markup_mode': 'clean',
-    'safeguards_url_policy_enabled': false,
-    'safeguards_url_allow_list': '',
-    'safeguards_url_mode': 'remove'
+    // Where a row goes when it is edited where it stands, its id following it
+    inline_edit_url: '/zato/gateway/mcp/inline-edit/',
+
+    // What the two flags read as, in the order a boolean puts them
+    flag_labels: ['No', 'Yes'],
+
+    // How long a confirmation takes to fade once it has been read
+    confirmation_fade_ms: 200
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Size caps - the two token fields are editable jQuery UI comboboxes with preset values.
+
+// Everything a row changes without leaving the page, worded the way every inline edit is
+$.fn.zato.gateway.mcp.inline = {};
+
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.gateway.mcp.token_presets = {
-    'max_response_size': ['5000', '10000', '25000', '50000', '100000'],
-    'min_size_threshold': ['100', '250', '500', '1000']
-};
+// Says beside a row that it went through, for as long as that takes to read
+$.fn.zato.gateway.mcp.inline.flash = function(link, message) {
 
-$.fn.zato.gateway.mcp._init_token_combos = function() {
+    var config = $.fn.zato.inline_edit.config;
 
-    $.each($.fn.zato.gateway.mcp.token_presets, function(field_name, presets) {
-
-        var inputs = $('#id_' + field_name + ', #id_edit-' + field_name);
-
-        inputs.autocomplete({
-            source: presets,
-            minLength: 0
-        });
-
-        // Clicking the input opens the full preset list right away - typing still filters it.
-        inputs.on('click', function() {
-            $(this).autocomplete('search', '');
-        });
+    var instance = tippy(link, {
+        content: message,
+        theme: 'dark',
+        trigger: 'manual',
+        placement: config.confirmation_placement,
+        hideOnClick: false,
+        allowHTML: false
     });
+
+    instance.show();
+
+    // The tooltip leaves nothing of itself behind
+    setTimeout(function() {
+        instance.hide();
+        setTimeout(function() {
+            instance.destroy();
+        }, $.fn.zato.gateway.mcp.config.confirmation_fade_ms);
+    }, config.saved_hide_ms);
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.gateway.mcp._populate_pii_selects = function(instance) {
+// Sends what one row changed and hands the answer over to whoever asked for the save
+$.fn.zato.gateway.mcp.inline.save = function(link, id, data, on_saved, saved_label) {
 
-    var select_names = $.fn.zato.gateway.mcp.pii_select_names;
+    var config = $.fn.zato.inline_edit.config;
+    var url = $.fn.zato.gateway.mcp.config.inline_edit_url + id + '/';
 
-    for(var select_idx = 0; select_idx < select_names.length; select_idx++) {
+    $.fn.zato.action_runner.run({
+        link_elem: link,
+        url: url,
+        data: data,
+        spinner_label: config.saving_label,
+        details_modal_title: config.details_modal_title,
+        show_delay_ms: config.saving_lead_in_ms,
 
-        // The instance keeps each multi-select's value as a comma-separated string ..
-        var name = select_names[select_idx];
-        var value = instance[name];
-        var selected = [];
+        // The endpoint answers with JSON when it saved and with an error page when it did not
+        parse: function(jqXHR) {
 
-        if(value) {
-            selected = value.split(',');
+            var is_http_ok = (jqXHR.status >= 200 && jqXHR.status < 300);
+
+            return {
+                is_success: is_http_ok,
+                label: is_http_ok ? saved_label : config.error_label,
+                details_title: config.error_label,
+                details_body: jqXHR.responseText,
+                details_lexer: '',
+                status_code: jqXHR.status,
+                jqXHR: jqXHR
+            };
+        },
+
+        on_success: function(instance, result) {
+
+            // The spinner makes way for the confirmation
+            instance.hide();
+            instance.destroy();
+
+            on_saved(JSON.parse(result.jqXHR.responseText));
+
+            $.fn.zato.gateway.mcp.inline.flash(link, saved_label);
         }
-
-        // .. apply it to the underlying select and let Chosen redraw its chips.
-        var select = $('#id_edit-' + name);
-        select.val(selected);
-        select.trigger('chosen:updated');
-        $.fn.zato.gateway.mcp._format_chip_prefixes(select);
-    }
-};
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.gateway.mcp.create = function() {
-    $.fn.zato.gateway.mcp._reset_tabs('create');
-    $.fn.zato.gateway.mcp._init_pii_selects('create');
-    $.fn.zato.gateway.mcp._init_safeguard_toggles('create');
-    $.fn.zato.gateway.mcp.badge_picker.load('create', null);
-    $.fn.zato.gateway.mcp.security_badge_picker.load('create', null);
-    $.fn.zato.data_table._create_edit('create', 'Create a new MCP gateway', null);
-    $('#create-div').dialog('option', 'width', '45em');
-    $.fn.zato.how_it_works.init({
-        badgeId: 'create-how-it-works',
-        divId: '#create-div',
-        descriptions: $.fn.zato.gateway.mcp.field_descriptions
     });
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.gateway.mcp.edit = function(id) {
+// Yes or No, the way a row shows a flag of its own
+$.fn.zato.gateway.mcp.flag_label = function(value) {
+    var out = $.fn.zato.gateway.mcp.config.flag_labels[value ? 1 : 0];
+    return out;
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Turns one flag of one row over, the opposite of what the row stands at being what is sent
+$.fn.zato.gateway.mcp.toggle_flag = function(id, link, name) {
+
+    var mcp = $.fn.zato.gateway.mcp;
     var instance = $.fn.zato.data_table.data[id];
-    $.fn.zato.gateway.mcp._reset_tabs('edit');
-    $.fn.zato.gateway.mcp._init_pii_selects('edit');
-    $.fn.zato.gateway.mcp.badge_picker.load('edit', instance.id);
-    $.fn.zato.gateway.mcp.security_badge_picker.load('edit', instance.id);
-    $.fn.zato.data_table._create_edit('edit', 'Update the MCP gateway', id);
 
-    // The generic populate above cannot handle multi-selects, so their values
-    // are applied here, and only then can the master toggles reflect the populated state.
-    $.fn.zato.gateway.mcp._populate_pii_selects(instance);
-    $.fn.zato.gateway.mcp._init_safeguard_toggles('edit');
+    var data = {};
+    data[name] = !$.fn.zato.to_bool(instance[name]);
 
-    $('#edit-div').dialog('option', 'width', '45em');
-    $.fn.zato.how_it_works.init({
-        badgeId: 'edit-how-it-works',
-        divId: '#edit-div',
-        descriptions: $.fn.zato.gateway.mcp.field_descriptions
-    });
+    var on_saved = function(saved) {
+
+        // The row stands at what came back
+        instance[name] = saved[name];
+        link.textContent = mcp.flag_label(saved[name]);
+    };
+
+    mcp.inline.save(link, id, data, on_saved, $.fn.zato.inline_edit.config.saved_label);
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.gateway.mcp.data_table.new_row = function(item, data, include_tr) {
-    var row = '';
-
-    if(include_tr) {
-        row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
-    }
-
-    var is_active = item.is_active == true;
-    var service_count = data.service_count !== undefined ? data.service_count : ($("#service_count_"+item.id).text() || 0);
-    var security_count = data.security_count !== undefined ? data.security_count : ($("#security_count_"+item.id).text() || 0);
-    var url_path = item.url_path;
-
-    row += "<td class='numbering'>&nbsp;</td>";
-    row += "<td class='impexp'><input type='checkbox' /></td>";
-
-    row += String.format('<td>{0}</td>', item.name);
-    row += String.format('<td class="text-center">{0}</td>', is_active ? 'Yes' : 'No');
-    row += String.format('<td>{0}</td>', url_path);
-    row += String.format('<td class="text-center" id="service_count_{0}">{1}</td>', item.id, service_count);
-    row += String.format('<td class="text-center" id="security_count_{0}">{1}</td>', item.id, security_count);
-
-    row += String.format('<td><a href="/zato/audit-log/?source=mcp&object_name={0}&cluster={1}">Audit log</a></td>',
-        encodeURIComponent(item.name), $.fn.zato.gateway.mcp.config.cluster_id);
-
-    row += String.format('<td>{0}</td>', String.format('<a href="/zato/gateway/mcp/export/{0}/">Export</a>', item.id));
-    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.gateway.mcp.edit('{0}')\">Edit</a>", item.id));
-    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.gateway.mcp.delete_('{0}');\">Delete</a>", item.id));
-
-    row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
-    row += String.format("<td class='ignore'>{0}</td>", is_active);
-
-    // The response shaping fields live in hidden columns so a later edit sees fresh values -
-    // fields the instance lacks, e.g. unchecked checkboxes absent from form serialization,
-    // render as their defaults.
-    $.each($.fn.zato.gateway.mcp.shaping_field_defaults, function(field_name, default_value) {
-        var field_value = item[field_name];
-        if(field_value === undefined) {
-            field_value = default_value;
-        }
-        row += String.format("<td class='ignore'>{0}</td>", field_value);
-    });
-
-    if(include_tr) {
-        row += '</tr>';
-    }
-
-    return row;
+$.fn.zato.gateway.mcp.toggle_active = function(id, link) {
+    $.fn.zato.gateway.mcp.toggle_flag(id, link, 'is_active');
 };
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.gateway.mcp.toggle_client_filters = function(id, link) {
+    $.fn.zato.gateway.mcp.toggle_flag(id, link, 'allow_client_filters');
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// The Size caps column - each row's caps are edited in the very popover the wizard
+// edits them in, hosted here on a handful of hidden fields instead of on a wizard form.
+$.fn.zato.gateway.mcp.size_caps = {
+
+    // The kit installs the popover engine here
+    forms: {},
+
+    config: {
+
+        // Every element the popover makes is named after this
+        idPrefix: 'mcp-row',
+
+        // Which micro-form of the ones the kit was given is the one this page opens
+        form_name: 'size_caps',
+
+        // What a saved row is told beside itself
+        saved_message: 'OK, size caps saved',
+
+        // The fields the popover reads and writes, in the shape the endpoint stores them
+        field_names: ['max_response_size', 'min_size_threshold', 'characters_per_token', 'size_cap_mode'],
+
+        // What a row's fields are kept under between opens - the dataset keys
+        // the page writes the values into, one per field above
+        dataset_keys: ['maxResponseSize', 'minSizeThreshold', 'charactersPerToken', 'sizeCapMode'],
+
+        // The row being edited, held while its popover is open
+        link: null
+    }
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// The hidden fields the popover reads and writes, named the way it expects
+$.fn.zato.gateway.mcp.size_caps.field = function(name) {
+    var out = $('#id_' + $.fn.zato.gateway.mcp.size_caps.config.idPrefix + '-' + name);
+    return out;
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// A cap is explained in the same words wherever it is shown, the popover inputs
+// carrying ids of their own for the help to find them under
+$.fn.zato.gateway.mcp.size_caps.helpDescriptions = function() {
+    var size_caps = $.fn.zato.gateway.mcp.size_caps;
+    var out = size_caps.forms.helpDescriptions($.fn.zato.gateway.mcp.field_descriptions);
+    return out;
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Opens the size caps of one row, the popover hanging off the very line that was clicked
+$.fn.zato.gateway.mcp.size_caps.open = function(link) {
+
+    var size_caps = $.fn.zato.gateway.mcp.size_caps;
+    var config = size_caps.config;
+    var row = document.getElementById('tr_' + link.dataset.id);
+
+    config.link = link;
+
+    for(var field_idx = 0; field_idx < config.field_names.length; field_idx++) {
+        var name = config.field_names[field_idx];
+        var dataset_key = config.dataset_keys[field_idx];
+        size_caps.field(name).val(row.dataset[dataset_key]);
+    }
+
+    size_caps.forms.open(config.form_name, link);
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Stores what the popover answered - the whole of a gateway is not the page's to send,
+// so only the caps travel and the endpoint puts them into the gateway it names
+$.fn.zato.gateway.mcp.size_caps.save = function() {
+
+    var size_caps = $.fn.zato.gateway.mcp.size_caps;
+    var config = size_caps.config;
+    var link = config.link;
+
+    var data = {};
+
+    for(var field_idx = 0; field_idx < config.field_names.length; field_idx++) {
+        var name = config.field_names[field_idx];
+        data[name] = size_caps.field(name).val();
+    }
+
+    var on_saved = function(saved) {
+
+        // The row now caps at what was just sent, so it says so and opens on it next time
+        var row = document.getElementById('tr_' + link.dataset.id);
+
+        for(var field_idx = 0; field_idx < config.field_names.length; field_idx++) {
+            var name = config.field_names[field_idx];
+            var dataset_key = config.dataset_keys[field_idx];
+            row.dataset[dataset_key] = saved[name];
+        }
+
+        link.textContent = saved.size_cap_label;
+    };
+
+    $.fn.zato.gateway.mcp.inline.save(link, link.dataset.id, data, on_saved, config.saved_message);
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// The popover itself, the descriptor coming from the module both this page and the
+// wizard build it from - all this page adds is where a saved row goes
+$.fn.zato.wizard_kit.forms.setup($.fn.zato.gateway.mcp.size_caps, {
+    descriptors: {'size_caps': $.fn.zato.gateway.mcp.size_caps_descriptor},
+    showCancel: true,
+    doneLabel: 'Save',
+    onDone: $.fn.zato.gateway.mcp.size_caps.save
+});
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

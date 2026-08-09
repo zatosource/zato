@@ -14,14 +14,16 @@ from json import dumps
 from urllib.parse import urlsplit
 
 # Django
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.template.response import TemplateResponse
 
 # Zato
+from zato.admin.web.forms import populate_form_initial
 from zato.admin.web.forms.gateway.mcp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.api import API_Key, GENERIC, Groups, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME
 from zato.common.defaults import http_plain_server_port
+from zato.common.util.api import asbool
 from zato.common.util.safeguards.common import Mode_Clean, Url_Mode_Remove
 from zato.common.util.tcp import get_current_ip
 from zato.common.util.truncate.tokens import Default_Characters_Per_Token, Size_Cap_Mode_Truncate
@@ -44,8 +46,23 @@ _service_input_prefix = 'mcp_service_'
 _security_input_prefix = 'mcp_security_'
 _mcp_group_name_prefix = 'mcp.'
 
-# The multi-step wizard template - the create page today, the edit page in a later stage.
+# The multi-step wizard template, serving both the create and the edit page.
 _wizard_template = 'zato/gateway/mcp-wizard.html'
+
+# What the fields the gateway list's size caps popover reads and writes are named after.
+_row_edit_prefix = 'mcp-row'
+
+# The two flags a row of the gateway list turns over where it stands.
+_inline_flag_names = ['is_active', 'allow_client_filters']
+
+# Everything the size caps popover holds, edited on the list without the wizard being opened.
+_inline_size_cap_names = ['max_response_size', 'min_size_threshold', 'characters_per_token', 'size_cap_mode']
+
+# Everything a row of the gateway list may change without the wizard being opened.
+_inline_field_names = _inline_flag_names + _inline_size_cap_names
+
+# What the list's size caps cell says of a gateway that caps nothing.
+_no_size_cap_label = 'No cap'
 
 # Checkboxes persisted in the gateway's opaque configuration - absent from POST means unchecked, i.e. False.
 _shaping_checkbox_fields = (
@@ -153,6 +170,21 @@ _sec_type_to_export_header = {
 # ################################################################################################################################
 # ################################################################################################################################
 
+def get_size_cap_label(max_response_size:'any_', size_cap_mode:'str') -> 'str':
+    """ Says in one line what the list's size caps cell shows - how many tokens a response
+    may carry and what happens over the cap, or that nothing is capped at all.
+    """
+    if not max_response_size:
+        return _no_size_cap_label
+
+    amount = int(max_response_size)
+
+    out = f'{amount:,} tokens, {size_cap_mode}'
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Index(_Index):
     method_allowed = 'GET'
     url_name = 'gateway-mcp'
@@ -193,13 +225,18 @@ class Index(_Index):
             if not hasattr(item, name):
                 setattr(item, name, default_value)
 
+        # What the size caps cell of this row says before it is clicked
+        item.size_cap_label = get_size_cap_label(item.max_response_size, item.size_cap_mode)
+
         return item
 
     def handle(self) -> 'strdict':
+
+        # Creating and editing happen in the wizard on its own page, so the list renders
+        # no dialog - the row form is what the size caps popover edits a row through.
         out = {
             'show_search_form': True,
-            'create_form': CreateForm(),
-            'edit_form': EditForm(prefix='edit'),
+            'row_form': CreateForm(prefix=_row_edit_prefix),
         }
         return out
 
@@ -609,6 +646,112 @@ def wizard_create(req:'any_') -> 'TemplateResponse':
     }
 
     out = TemplateResponse(req, _wizard_template, return_data)
+    return out
+
+# ################################################################################################################################
+
+def _read_gateway(req:'any_', id:'str') -> 'strdict':
+    """ One gateway as it currently stands, every response shaping field it predates
+    filled in with its default.
+    """
+    response = req.zato.client.invoke('zato.generic.connection.get-by-id', {'id': id})
+
+    if not response.ok:
+        raise Exception(f'MCP gateway with id `{id}` could not be read')
+
+    item_dict = response.data
+
+    # A gateway stored before a field existed says nothing about it, so what the pages
+    # open on is the very default a new gateway would be created with
+    for name, default_value in _shaping_display_defaults.items():
+        if name not in item_dict:
+            item_dict[name] = default_value
+
+    return item_dict
+
+# ################################################################################################################################
+
+@method_allowed('GET')
+def wizard_edit(req:'any_', id:'str') -> 'TemplateResponse':
+    """ The same wizard, opened on one existing MCP gateway.
+    """
+    item_dict = _read_gateway(req, id)
+
+    # The URL allow list is stored as a list of host suffixes and edited as one comma-separated line
+    allow_list = item_dict['safeguards_url_allow_list']
+    if isinstance(allow_list, list):
+        item_dict['safeguards_url_allow_list'] = ', '.join(allow_list)
+
+    # The edit endpoint reads its input under the edit- prefix, which is what the form
+    # is built with and what the wizard's own fieldPrefix mirrors
+    form = EditForm(prefix='edit')
+    populate_form_initial(form, item_dict)
+
+    return_data = {
+        'cluster_id': req.zato.cluster_id,
+        'form': form,
+        'is_edit': True,
+        'item_id': item_dict['id'],
+    }
+
+    out = TemplateResponse(req, _wizard_template, return_data)
+    return out
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def inline_edit(req:'any_', id:'str') -> 'JsonResponse':
+    """ Stores what the gateway list edited without leaving the page - only the fields posted change.
+    """
+    item_dict = _read_gateway(req, id)
+
+    for name in _inline_field_names:
+        if name in req.POST:
+            value = req.POST[name]
+
+            # A flag travels as the word it is written with ..
+            if name in _inline_flag_names:
+                value = asbool(value)
+
+            # .. the token counts as strings, an empty input meaning no cap or no threshold ..
+            elif name in _shaping_int_fields:
+                if value:
+                    value = int(value)
+                else:
+                    value = 0
+
+            # .. and the ratio as a float with a well-known default.
+            elif name == 'characters_per_token':
+                if value:
+                    value = float(value)
+                else:
+                    value = Default_Characters_Per_Token
+
+            item_dict[name] = value
+
+    response = req.zato.client.invoke('zato.generic.connection.edit', item_dict)
+
+    if not response.ok:
+        raise Exception(f'MCP gateway with id `{id}` could not be saved')
+
+    # The two token counts go back the way the page renders them - a zero means no cap
+    # or no threshold and shows as an empty input rather than as a number
+    max_response_size = item_dict['max_response_size']
+    min_size_threshold = item_dict['min_size_threshold']
+
+    size_cap_mode = item_dict['size_cap_mode']
+
+    # What the row now says of itself
+    out = JsonResponse({
+        'is_active': asbool(item_dict['is_active']),
+        'allow_client_filters': asbool(item_dict['allow_client_filters']),
+        'max_response_size': max_response_size if max_response_size else '',
+        'min_size_threshold': min_size_threshold if min_size_threshold else '',
+        'characters_per_token': item_dict['characters_per_token'],
+        'size_cap_mode': size_cap_mode,
+        'size_cap_label': get_size_cap_label(max_response_size, size_cap_mode),
+    })
+
     return out
 
 # ################################################################################################################################

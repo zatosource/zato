@@ -44,3 +44,18 @@
 
 /* The token preset dropdowns wear the shared autocomplete menu, which is in
    css/shared/autocomplete.css */
+
+/* ------------------------------------------------------------ */
+/* Size caps popover on the gateway list                        */
+/* ------------------------------------------------------------ */
+
+/* Both answers of the popover's second row are a word or a short number -
+   the controls take the width their content needs, the same as they do
+   in the wizard's own popover */
+#mcp-row-popup select#mcp-row-tippy-size_cap_mode {
+    width: auto;
+}
+
+#mcp-row-popup input#mcp-row-tippy-characters_per_token {
+    width: 5.5em;
+}
