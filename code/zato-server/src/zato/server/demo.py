@@ -31,6 +31,7 @@ from zato.common.hl7.mllp.fields import Channel_Defaults as MLLP_Channel_Default
     Outconn_Defaults as MLLP_Outconn_Defaults
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import GenericConn, HTTPSOAP
+from zato.common.typing_ import cast_
 from zato.common.util.api import hex_sequence_to_bytes
 from zato.common.util.open_ import open_w
 from zato.server.generic.api.channel_hl7_mllp import get_internal_port, is_channel_routed
@@ -402,10 +403,11 @@ def ensure_demo_rest_objects(server:'ParallelServer') -> 'strlist':
     archive_host = f'http://127.0.0.1:{server.port}'
 
     demo_names = [_archive_outconn, _archive_intake_channel]
+    rest_name_column = cast_('any_', HTTPSOAP.name)
 
     with closing(server.odb.session()) as session:
         rows = session.query(HTTPSOAP.id, HTTPSOAP.name, HTTPSOAP.host, HTTPSOAP.opaque1).filter(
-            HTTPSOAP.name.in_(demo_names)).all()
+            rest_name_column.in_(demo_names)).all()
 
     existing_by_name = {}
 
@@ -603,17 +605,25 @@ def remove_demo_data(server:'ParallelServer') -> 'stranydict':
         deleted_connections.append(connection_name)
 
     # The archive's REST pieces go the same way
+    rest_name_column = cast_('any_', HTTPSOAP.name)
+
     with closing(server.odb.session()) as session:
         rest_rows = session.query(HTTPSOAP.id, HTTPSOAP.name).filter(
-            HTTPSOAP.name.in_([_archive_outconn, _archive_intake_channel])).all()
+            rest_name_column.in_([_archive_outconn, _archive_intake_channel])).all()
 
     for rest_id, rest_name in rest_rows:
         _ = server.invoke('zato.http-soap.delete', {'id': rest_id, 'cluster_id': default_cluster_id})
         deleted_connections.append(rest_name)
 
-    # The audit rows go last
+    # The audit rows go next
     engine = get_audit_engine()
     purge_demo_data(engine)
+
+    # The services file the import once wrote goes away too, so a restart does not redeploy it
+    file_path = os.path.join(server.hot_deploy_config.pickup_dir, _channel_service_file_name)
+
+    if os.path.exists(file_path):
+        os.remove(file_path)
 
     # Our response to produce
     out = {

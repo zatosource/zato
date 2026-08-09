@@ -224,6 +224,9 @@ class ServerInvoker(AdminService):
             raw_params_json = self.request.raw.get('raw_params_json', '')
             raw_params = json_loads(raw_params_json) if raw_params_json else None
             response = func(security_id, raw_params)
+        elif func_name == 'save_demo_config':
+            states = self.request.raw['states']
+            response = func(states)
         else:
             response = func()
 

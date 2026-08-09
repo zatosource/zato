@@ -13,7 +13,7 @@ from django.views.static import serve as static_serve
 
 # Zato
 from zato.admin import settings
-from zato.admin.web.views import account, config_db, datadog, destinations, env_variables, grafana_cloud, \
+from zato.admin.web.views import account, config_db, datadog, demo_config, destinations, env_variables, grafana_cloud, \
     highlight as highlight_view, http_soap, live_form_updates, log_streaming, logging_, \
     main, news, openapi_, python_packages, sbom, scheduler, service, updates
 from zato.admin.web.views.channel import amqp_ as channel_amqp
@@ -402,6 +402,8 @@ urlpatterns += [
         login_required(alerting.action), name='alert-rules-action'),
     url(r'^zato/alerting/api/definitions/$',
         login_required(alerting.api_definitions), name='alert-rules-api-definitions'),
+    url(r'^zato/alerting/api/search/$',
+        login_required(alerting.api_search), name='alert-rules-api-search'),
     path('zato/alerting/api/preview/<int:definition_id>/',
         login_required(alerting.api_preview), name='alert-rules-api-preview'),
     path('zato/alerting/api/vocabulary/<int:definition_id>/',
@@ -1769,6 +1771,18 @@ urlpatterns += [
         login_required(config_db.redis_test), name='config-db-redis-test'),
     url(r'^zato/config-db/redis/save$',
         login_required(config_db.redis_save), name='config-db-redis-save'),
+]
+# ################################################################################################################################
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # System - Demo config
+
+    url(r'^zato/demo-config/$',
+        login_required(demo_config.index), name='demo-config'),
+    url(r'^zato/demo-config/save$',
+        login_required(demo_config.save), name='demo-config-save'),
 ]
 # ################################################################################################################################
 # ################################################################################################################################

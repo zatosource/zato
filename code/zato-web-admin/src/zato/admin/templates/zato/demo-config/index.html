@@ -1,0 +1,131 @@
+{% extends "zato/dashboard_base.html" %}
+
+{% comment %}
+The demo config sets the server can import or remove - one card per set, each
+with a slider that applies itself the moment it is flipped, plus a master
+"Everything" slider above the grid. Each card says whether its set is imported
+and shows count pills linking to the screens its objects live on. While a
+change is on its way, a Running badge shows by the sliders it touches, and
+once it is done, a green confirmation takes its place for a moment. The view
+provides:
+
+* demo_config_sets - per set, whether it is present and which of its objects exist
+* demo_config_all_on - whether every set is present, for the master slider
+
+The sliders render pre-checked straight from the view, so the page paints in
+its final state and nothing visibly slides at load.
+{% endcomment %}
+
+{% block html_title %}Demo config{% endblock %}
+
+{% block dashboard_extra_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/settings.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
+<link rel="stylesheet" type="text/css" href="/static/css/demo-config/index.css">
+{% endblock %}
+
+{% block dashboard_domain_js %}
+{{ demo_config_sets|json_script:"demo-config-data" }}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/demo-config/index.js"></script>
+{% endblock %}
+
+{% block dashboard_tiles %}{% endblock %}
+{% block dashboard_header_pill %}{% endblock %}
+{% block dashboard_chart_header_content %}{% endblock %}
+{% block dashboard_time_range_options %}{% endblock %}
+{% block dashboard_refresh_options %}{% endblock %}
+
+{% block dashboard_grid %}
+
+        <div class="demo-config" id="demo-config">
+
+            {% comment %} The one slider that rules them all, its Running badge and
+                 a line where an error of any length has room to wrap {% endcomment %}
+            <div class="demo-config-master" id="demo-config-master">
+                <label class="demo-config-master-label" for="id_demo_config_all">Demo config | Everything</label>
+                <input type="checkbox" id="id_demo_config_all"{% if demo_config_all_on %} checked{% endif %}>
+                <span class="dashboard-outcome-badge dashboard-outcome-running demo-config-running"><span class="badge-running-spinner"></span>Running</span>
+                <span class="demo-config-ok" id="demo-config-ok-all"></span>
+                <span class="demo-config-error" id="demo-config-error"></span>
+            </div>
+
+            <div class="demo-config-grid">
+
+                <div class="dashboard-card demo-config-set-card" id="demo-config-card-tutorial">
+                    <div class="demo-config-set-header">
+                        <label class="demo-config-set-title" for="id_demo_config_tutorial">Tutorial</label>
+                        <span class="dashboard-outcome-badge dashboard-outcome-running demo-config-running"><span class="badge-running-spinner"></span>Running</span>
+                        <span class="demo-config-ok" id="demo-config-ok-tutorial"></span>
+                        <input type="checkbox" id="id_demo_config_tutorial"{% if demo_config_sets.tutorial.is_present %} checked{% endif %}>
+                    </div>
+                    <div class="demo-config-set-status" id="demo-config-status-tutorial"></div>
+                    <div class="demo-config-set-body" id="demo-config-body-tutorial"></div>
+                </div>
+
+                <div class="dashboard-card demo-config-set-card" id="demo-config-card-hl7">
+                    <div class="demo-config-set-header">
+                        <label class="demo-config-set-title" for="id_demo_config_hl7">MLLP</label>
+                        <span class="dashboard-outcome-badge dashboard-outcome-running demo-config-running"><span class="badge-running-spinner"></span>Running</span>
+                        <span class="demo-config-ok" id="demo-config-ok-hl7"></span>
+                        <input type="checkbox" id="id_demo_config_hl7"{% if demo_config_sets.hl7.is_present %} checked{% endif %}>
+                    </div>
+                    <div class="demo-config-set-status" id="demo-config-status-hl7"></div>
+                    <div class="demo-config-set-body" id="demo-config-body-hl7"></div>
+                </div>
+
+                <div class="dashboard-card demo-config-set-card" id="demo-config-card-scheduler">
+                    <div class="demo-config-set-header">
+                        <label class="demo-config-set-title" for="id_demo_config_scheduler">Scheduler</label>
+                        <span class="dashboard-outcome-badge dashboard-outcome-running demo-config-running"><span class="badge-running-spinner"></span>Running</span>
+                        <span class="demo-config-ok" id="demo-config-ok-scheduler"></span>
+                        <input type="checkbox" id="id_demo_config_scheduler"{% if demo_config_sets.scheduler.is_present %} checked{% endif %}>
+                    </div>
+                    <div class="demo-config-set-status" id="demo-config-status-scheduler"></div>
+                    <div class="demo-config-set-body" id="demo-config-body-scheduler"></div>
+                </div>
+
+                <div class="dashboard-card demo-config-set-card" id="demo-config-card-pubsub">
+                    <div class="demo-config-set-header">
+                        <label class="demo-config-set-title" for="id_demo_config_pubsub">Pub/sub</label>
+                        <span class="dashboard-outcome-badge dashboard-outcome-running demo-config-running"><span class="badge-running-spinner"></span>Running</span>
+                        <span class="demo-config-ok" id="demo-config-ok-pubsub"></span>
+                        <input type="checkbox" id="id_demo_config_pubsub"{% if demo_config_sets.pubsub.is_present %} checked{% endif %}>
+                    </div>
+                    <div class="demo-config-set-status" id="demo-config-status-pubsub"></div>
+                    <div class="demo-config-set-body" id="demo-config-body-pubsub"></div>
+                </div>
+
+                <div class="dashboard-card demo-config-set-card" id="demo-config-card-kafka">
+                    <div class="demo-config-set-header">
+                        <label class="demo-config-set-title" for="id_demo_config_kafka">Kafka</label>
+                        <span class="dashboard-outcome-badge dashboard-outcome-running demo-config-running"><span class="badge-running-spinner"></span>Running</span>
+                        <span class="demo-config-ok" id="demo-config-ok-kafka"></span>
+                        <input type="checkbox" id="id_demo_config_kafka"{% if demo_config_sets.kafka.is_present %} checked{% endif %}>
+                    </div>
+                    <div class="demo-config-set-status" id="demo-config-status-kafka"></div>
+                    <div class="demo-config-set-body" id="demo-config-body-kafka"></div>
+                </div>
+
+                <div class="dashboard-card demo-config-set-card" id="demo-config-card-ibm_mq">
+                    <div class="demo-config-set-header">
+                        <label class="demo-config-set-title" for="id_demo_config_ibm_mq">IBM MQ</label>
+                        <span class="dashboard-outcome-badge dashboard-outcome-running demo-config-running"><span class="badge-running-spinner"></span>Running</span>
+                        <span class="demo-config-ok" id="demo-config-ok-ibm_mq"></span>
+                        <input type="checkbox" id="id_demo_config_ibm_mq"{% if demo_config_sets.ibm_mq.is_present %} checked{% endif %}>
+                    </div>
+                    <div class="demo-config-set-status" id="demo-config-status-ibm_mq"></div>
+                    <div class="demo-config-set-body" id="demo-config-body-ibm_mq"></div>
+                </div>
+
+            </div>
+
+            {% comment %} Help for the page as a whole, anchored at the Everything slider {% endcomment %}
+            <div class="demo-config-footer">
+                <span class="how-it-works-badge" id="demo-config-how-it-works">How does it work?</span>
+            </div>
+
+        </div>
+
+{% endblock %}

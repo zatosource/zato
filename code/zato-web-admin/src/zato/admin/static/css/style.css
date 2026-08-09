@@ -523,8 +523,11 @@ div.prompt form {
    exclusions live in :where(), which weighs nothing, so this face always
    sits at the bottom of the cascade and anything more specific - a table
    header's own link rule, a badge's - wins by mere existence, never by
-   out-shooting it. */
-a:where(:not(.menu-link, .dashboard-panel-action-badge)),
+   out-shooting it.
+
+   A link that wants nothing from these rules - no face, no hover - carries
+   .zato-link-unstyled and is left entirely alone, no edits here needed. */
+a:where(:not(.menu-link, .dashboard-panel-action-badge, .zato-link-unstyled)),
 .zato-link-face {
     color: rgb(17, 17, 17);
     font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -543,7 +546,7 @@ a:where(:not(.menu-link, .dashboard-panel-action-badge)),
     padding-bottom: 2px;
 }
 
-a:where(:not(.menu-link):not(.chosen-single):not(.status-badge, .dashboard-panel-action-badge, .audit-log-pane-details a)):hover,
+a:where(:not(.menu-link):not(.chosen-single):not(.status-badge, .dashboard-panel-action-badge, .audit-log-pane-details a, .zato-link-unstyled)):hover,
 a:where(:not(.menu-link)):hover .zato-link-face {
     color: var(--zato-link-hover) !important;
     background-color: transparent;

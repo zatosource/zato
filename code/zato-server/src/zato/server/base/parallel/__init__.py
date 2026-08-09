@@ -1016,6 +1016,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # Optionally, if we appear to be a Docker quickstart environment, log all details about the environment.
         self.log_environment_details()
 
+        # A new environment that holds no user-defined objects receives all the demo config
+        # on its first start - the pass runs in the background so startup never waits for it.
+        _ = spawn_greenlet(self._import_demo_config_on_first_start)
+
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
 
 # ################################################################################################################################
@@ -2245,6 +2249,32 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                 result.stdout.strip(), result.stderr.strip())
 
         return result.is_ok
+
+# ################################################################################################################################
+
+    def get_demo_config(self) -> 'strdict':
+
+        from zato.server.demo_config import get_demo_config_details
+
+        result = get_demo_config_details(self)
+        return result
+
+# ################################################################################################################################
+
+    def save_demo_config(self, states:'strdict') -> 'strdict':
+
+        from zato.server.demo_config import save_demo_config
+
+        result = save_demo_config(self, states)
+        return result
+
+# ################################################################################################################################
+
+    def _import_demo_config_on_first_start(self) -> 'None':
+
+        from zato.server.demo_config import import_demo_config_on_first_start
+
+        import_demo_config_on_first_start(self)
 
 # ################################################################################################################################
 

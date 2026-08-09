@@ -1,0 +1,172 @@
+/*
+ * Demo config - the cards screen.
+ *
+ * One card per demo config set, each with a self-applying slider in its
+ * header, a status line saying whether the set is imported and a count
+ * pill per kind of object. Above the grid sits the master "Everything"
+ * slider and the one line where errors have room to wrap, and below it
+ * the page-wide help badge.
+ */
+
+/* ------------------------------------------------------------ */
+/* Demo config - the grid                                        */
+/* ------------------------------------------------------------ */
+
+/* The wizard kit narrows the section to one wizard's width - a grid of
+   cards needs the room back */
+.dashboard-grid-section {
+    max-width: 1100px;
+}
+
+.demo-config-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+    gap: 16px;
+}
+
+/* ------------------------------------------------------------ */
+/* Demo config - the master slider                               */
+/* ------------------------------------------------------------ */
+
+.demo-config-master {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 2px 2px 16px;
+}
+
+.demo-config-master-label {
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--wizard-text);
+    cursor: pointer;
+}
+
+/* Where a failed change explains itself, with room to wrap */
+.demo-config-error {
+    font-size: 12px;
+    color: var(--wizard-error);
+    overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------ */
+/* Demo config - a set's card                                    */
+/* ------------------------------------------------------------ */
+
+/* The kit sizes dashboard cards for charts - these hold a short list of
+   names and stand only as tall as that */
+.dashboard-grid-section .demo-config-set-card {
+    min-height: 0;
+    padding: 1.3rem;
+}
+
+.demo-config-set-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--wizard-border);
+}
+
+/* Clicking the title flips the card's slider */
+.demo-config-set-title {
+    flex: 1;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--wizard-text);
+    cursor: pointer;
+}
+
+/* A card whose set is off keeps its header bright - only its contents
+   step back, since they are what does not exist */
+.demo-config-set-off .demo-config-set-body {
+    opacity: 0.62;
+}
+
+/* ------------------------------------------------------------ */
+/* Demo config - the Running badge of a change on its way        */
+/* ------------------------------------------------------------ */
+
+/* The badge sits by the sliders a change touches - to the right of the
+   master slider and to the left of a card's own - and only shows while
+   the request is on its way */
+.demo-config-running {
+    display: none;
+}
+
+.demo-config-busy .demo-config-running {
+    display: inline-block;
+}
+
+/* Once a change is done, a green confirmation stands where Running was,
+   for the moment its JS timer gives it - plain text, not a badge */
+.demo-config-ok {
+    display: none;
+    color: var(--wizard-done);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.demo-config-ok-visible {
+    display: inline-block;
+}
+
+/* ------------------------------------------------------------ */
+/* Demo config - the status line below a card's header           */
+/* ------------------------------------------------------------ */
+
+.demo-config-set-status {
+    padding-bottom: 6px;
+}
+
+/* Green for what is there, grey for what is not */
+.demo-config-status-on {
+    color: var(--wizard-done);
+    background: rgba(40, 167, 69, 0.12);
+}
+
+.demo-config-status-off {
+    color: #888;
+    background: rgba(136, 136, 136, 0.12);
+}
+
+/* ------------------------------------------------------------ */
+/* Demo config - a card's object pills                           */
+/* ------------------------------------------------------------ */
+
+.demo-config-set-body {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 4px;
+}
+
+/* The kit's pill, doubling as a link to the objects' own screen - it opts
+   out of the global link face and hover, keeping its own face with just
+   a tinge of a darker background under the pointer */
+a.demo-config-pill {
+    text-decoration: none;
+}
+
+a.demo-config-pill:hover {
+    background: #d9ebfc;
+}
+
+/* A kind none of whose objects exist steps back */
+.demo-config-pill-empty {
+    background: #eef1f4;
+    color: var(--wizard-text-muted);
+}
+
+a.demo-config-pill.demo-config-pill-empty:hover {
+    background: #e2e6ea;
+}
+
+/* ------------------------------------------------------------ */
+/* Demo config - the page-wide help below the grid               */
+/* ------------------------------------------------------------ */
+
+.demo-config-footer {
+    padding-top: 16px;
+}
