@@ -39,19 +39,6 @@
     --audit-log-error-frame: var(--audit-log-error-frame-width) dashed rgb(var(--audit-log-error-rgb));
     --audit-log-error-tint: rgba(var(--audit-log-error-rgb), 0.05);
 
-    /* The room the search box keeps for Clear, how far in from its edge it stands, how far it sits
-       below the middle, and which layer it is drawn in. The layer is what keeps it on the screen
-       while the box is being typed into: formalize.css gives a focused input z-index 1, which
-       counts here because the input is a flex item, and an input painted over the badge hides it
-       behind its own background. */
-    --audit-log-search-clear-room: 58px;
-    --audit-log-search-clear-inset: 5px;
-    --audit-log-search-clear-drop: 0px;
-
-    /* How far the word inside the badge sits above the badge's own middle */
-    --audit-log-search-clear-text-lift: 1px;
-    --audit-log-search-clear-layer: 2;
-
     /* The room left between the end of a row and the list's own edge, so that a framed row stops
        short of the scrollbar the list carries rather than running into it */
     --audit-log-list-end-gap: 6px;
@@ -180,37 +167,11 @@
     margin-right: 8px;
 }
 
-/* Clear stands inside the box, which keeps room for it so a long term is not typed underneath */
-
-.audit-log-search-field {
-    position: relative;
-    display: inline-flex;
-}
+/* Clear stands inside the box - the shared search-clear component provides both the badge
+   and the room the box keeps for it, the width alone is this page's own */
 
 .audit-log-search-input {
     width: 24rem;
-    padding-right: var(--audit-log-search-clear-room);
-}
-
-.audit-log-search-clear {
-    position: absolute;
-    top: 50%;
-    right: var(--audit-log-search-clear-inset);
-    z-index: var(--audit-log-search-clear-layer);
-    transform: translateY(calc(-50% + var(--audit-log-search-clear-drop)));
-    margin-left: 0;
-    font-weight: 400;
-
-    /* The badge keeps the height it has - the room above the word is moved below it */
-    padding-top: 0;
-    padding-bottom: calc(2 * var(--audit-log-search-clear-text-lift));
-}
-
-/* It reads the same pointed at as not - the cursor is what says it can be clicked */
-
-.audit-log-search-clear:hover {
-    color: var(--dashboard-muted);
-    background: rgba(0, 0, 0, 0.05);
 }
 
 

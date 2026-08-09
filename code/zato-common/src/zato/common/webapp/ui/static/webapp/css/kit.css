@@ -212,6 +212,11 @@
     background: transparent;
     border: none;
     outline: none;
+
+    /* A host page may glow every focused input - the field's own focus-within border
+       is the one focus mark here, not a second edge inside it */
+    box-shadow: none;
+
     color: var(--text);
     font-family: var(--font);
     font-size: 12px;
@@ -227,19 +232,9 @@
     font-variant-numeric: tabular-nums lining-nums;
     white-space: nowrap;
 }
+/* Only the place in the row is the kit's - the look is the shared search-clear badge */
 .rule-engine-ui .command-clear {
-    display: flex;
-    align-items: center;
-    padding: 2px;
-    border: none;
-    border-radius: var(--radius-1);
-    background: transparent;
-    color: var(--text5);
-    cursor: pointer;
-}
-.rule-engine-ui .command-clear:hover {
-    color: var(--text);
-    background-image: var(--hover-veil);
+    flex-shrink: 0;
 }
 
 .rule-engine-ui .command-suggest {

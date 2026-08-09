@@ -9,6 +9,7 @@
 <link rel="stylesheet" type="text/css" href="/shared-ui/webapp/css/tokens.css">
 <link rel="stylesheet" type="text/css" href="/shared-ui/webapp/css/themes/zato-light.css">
 <link rel="stylesheet" type="text/css" href="/shared-ui/webapp/css/kit.css">
+<link rel="stylesheet" type="text/css" href="/shared-ui/webapp/css/search-clear.css">
 <link rel="stylesheet" type="text/css" href="/shared-ui/rule-engine/css/rulesets.css">
 <link rel="stylesheet" type="text/css" href="/static/css/alerting.css">
 {% endblock %}
@@ -58,6 +59,8 @@ $(document).ready(function() {
         showRename: false,
         showRowMenu: false,
         showProblems: false,
+        showSuggestions: false,
+        showCount: false,
         showSidePane: false,
         showRuleState: true,
         rulesetLabels: {'{{ ruleset_name }}': 'Default monitoring rules'},
@@ -98,13 +101,13 @@ $(document).ready(function() {
                 <div class="command-bar">
                     <button class="button-ghost" data-action="new">Create a new alert rule</button>
                     <span class="command-bar-pipe">|</span>
-                    <div class="command-field field" id="rulesets-field" data-hint="Filter rules">
-                        <input class="command-input" id="rulesets-search" type="text" autocomplete="off"
-                            spellcheck="false" placeholder=" ">
-                        <span class="command-count" id="rulesets-count"></span>
-                        <button class="command-clear" id="rulesets-clear" data-action="clear-all"></button>
+                    <span class="search-clear-anchor" id="rulesets-field">
+                        <input class="alerting-filter-input" id="rulesets-search" type="text" autocomplete="off"
+                            spellcheck="false" placeholder="Filter rules">
+                        <span id="rulesets-count"></span>
+                        <button class="search-clear" id="rulesets-clear" data-action="clear-all"></button>
                         <div class="command-suggest" id="rulesets-suggest"></div>
-                    </div>
+                    </span>
                 </div>
 
                 <div class="rulesets-split">

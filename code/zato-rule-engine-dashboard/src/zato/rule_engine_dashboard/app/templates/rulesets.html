@@ -5,6 +5,7 @@
 
 {% block styles %}
 {{ block.super }}
+<link rel="stylesheet" href="{% static 'webapp/css/search-clear.css' %}">
 <link rel="stylesheet" href="{% static 'rule-engine/css/rulesets.css' %}">
 {% endblock %}
 
@@ -17,7 +18,7 @@
       <input class="command-input" id="rulesets-search" type="text" autocomplete="off" spellcheck="false"
         placeholder=" ">
       <span class="command-count" id="rulesets-count"></span>
-      <button class="command-clear" id="rulesets-clear" data-action="clear-all"></button>
+      <button class="command-clear search-clear" id="rulesets-clear" data-action="clear-all"></button>
       <div class="command-suggest" id="rulesets-suggest"></div>
     </div>
   </div>

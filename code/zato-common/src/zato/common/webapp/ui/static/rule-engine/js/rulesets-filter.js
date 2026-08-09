@@ -88,6 +88,9 @@ rulesetsView.buildSuggestions = function() {
 // ////////////////////////////////////////////////////////////////////////
 
 rulesetsView.openSuggestions = function() {
+    // A host without the pane never opens it - everything else keys off suggestOpen staying false
+    if (!this.config.showSuggestions) { return; }
+
     this.suggestOpen = true;
     this.suggestionIndex = -1;
     this.buildSuggestions();
@@ -350,7 +353,11 @@ rulesetsView.initFilter = function() {
     var input = this.element('#rulesets-search');
     var pane = this.element('#rulesets-suggest');
 
-    this.element('#rulesets-clear').innerHTML = shared.icon('x', 11);
+    var clear = this.element('#rulesets-clear');
+
+    // The badge waits for the first render to say whether there is anything to clear
+    clear.textContent = this.config.clearLabel;
+    clear.style.visibility = 'hidden';
 
     // A press anywhere in the field belongs to the input, the way a search field behaves, while the
     // pane runs its own presses. The input can already hold the focus with the pane closed, when

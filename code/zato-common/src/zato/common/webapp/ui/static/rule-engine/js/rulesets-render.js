@@ -18,6 +18,7 @@ var rulesetsView = {
         saveViewLabel: 'Create view',
         countNoun: 'ruleset',
         countNounPlural: 'rulesets',
+        clearLabel: 'Clear',
         searchDelayMilliseconds: 160,
 
         rulesetNamePattern: /^\w+(\.\w+)*$/,
@@ -44,6 +45,13 @@ var rulesetsView = {
         showRename: true,
         showRowMenu: true,
         showProblems: true,
+
+        // Whether the filter input opens the suggestion pane at all - a host with
+        // no facets and no saved views has nothing to suggest
+        showSuggestions: true,
+
+        // Whether the count next to the filter input is shown
+        showCount: true,
 
         // Whether the side pane with the preview shows at all - a host where every
         // rule is always live has nothing to preview, so the list takes the width
@@ -533,7 +541,8 @@ var rulesetsView = {
         var reading = narrowed ? matching + ' of ' + total : String(total);
         var noun = total === 1 ? this.config.countNoun : this.config.countNounPlural;
 
-        count.textContent = reading + ' ' + noun;
+        // A host without the count still keeps the clear button, so a typed query can be undone
+        count.textContent = this.config.showCount ? reading + ' ' + noun : '';
         clear.style.visibility = narrowed ? 'visible' : 'hidden';
     },
 

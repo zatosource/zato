@@ -55,6 +55,13 @@
     min-height: 0;
 }
 
+/* The filter box is the same plain search box the audit log has - the width is this
+   screen's own, the badge and the room the box keeps for it come from the shared
+   search-clear component */
+.alerting-card .alerting-filter-input {
+    width: 24rem;
+}
+
 /* With no side pane the rule rows take the full width of the card */
 .alerting-card .rulesets-rule {
     max-width: none;

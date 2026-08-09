@@ -768,13 +768,6 @@ $.fn.zato.audit_log.search = function(query) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// Clear stands in the box only while there is a term in it to be cleared
-$.fn.zato.audit_log.showSearchClear = function() {
-    $('#audit-log-search-clear').toggle($('#audit-log-search-input').val() !== '');
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
 $.fn.zato.audit_log.resubmit = function(linkElement) {
     var config = $.fn.zato.audit_log.config;
 
@@ -892,29 +885,26 @@ $.fn.zato.audit_log.init = function(initConfig) {
     // a per-source one opening with its own source and object picked ..
     $.fn.zato.audit_log.initFilterSelects(initConfig.filter_options);
 
-    // .. let the search form filter the events ..
+    // .. Clear follows the first character typed and the last one deleted, starting from
+    // whatever term the page came up with, a term the pane set included, and clearing
+    // the box asks for the whole log back ..
+    $.fn.zato.audit_log.refreshSearchClear = searchClear.init({
+        input: document.getElementById('audit-log-search-input'),
+        button: document.getElementById('audit-log-search-clear'),
+        onClear: function() { $('#audit-log-search-form').submit(); },
+    });
+
+    // .. let the search form filter the events - a term put into the box programmatically
+    // fires no input event, so the badge is refreshed here as well ..
     $('#audit-log-search-form').on('submit', function(event) {
         event.preventDefault();
 
         var query = $('#audit-log-search-input').val();
 
-        $.fn.zato.audit_log.showSearchClear();
+        $.fn.zato.audit_log.refreshSearchClear();
 
         pagination.set_filters({query: query});
         pagination.fetch_page(1);
-    });
-
-    // .. Clear follows the first character typed and the last one deleted, starting from
-    // whatever term the page came up with, a term the pane set included ..
-    $.fn.zato.audit_log.showSearchClear();
-
-    $('#audit-log-search-input').on('input', $.fn.zato.audit_log.showSearchClear);
-
-    // .. and clearing the box asks for the whole log back ..
-    $('#audit-log-search-clear').on('click', function() {
-        $('#audit-log-search-input').val('');
-        $.fn.zato.audit_log.showSearchClear();
-        $('#audit-log-search-form').submit();
     });
 
     // .. each resubmit link sends its row's payload out again ..

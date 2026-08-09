@@ -1,0 +1,72 @@
+/* A Clear control standing inside a search box - the badge itself and, for a plain input,
+   the wrapper that keeps room for it so a long term is not typed underneath. Self-contained,
+   every value it reads is defined here. */
+
+.search-clear {
+
+    /* The badge's own colours - a quiet grey word on a faint wash */
+    --search-clear-text: #6b7280;
+    --search-clear-fill: rgba(0, 0, 0, 0.05);
+
+    display: inline-block;
+    min-width: 42px;
+    padding: 1px 6px;
+    border: none;
+    border-radius: 3px;
+    box-sizing: border-box;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 400;
+    line-height: normal;
+    text-align: center;
+    text-shadow: none;
+    vertical-align: middle;
+    user-select: none;
+    cursor: pointer;
+    color: var(--search-clear-text);
+    background: var(--search-clear-fill);
+}
+
+/* It reads the same pointed at as not - the cursor is what says it can be clicked.
+   Said in as many words because the control may be a button, and a host's stylesheet
+   may dress every hovered or pressed button in gradients and shadows of its own. */
+
+.search-clear:hover,
+.search-clear:active {
+    color: var(--search-clear-text);
+    background: var(--search-clear-fill);
+    box-shadow: none;
+}
+
+.search-clear-anchor {
+
+    /* The room the box keeps for the badge, how far in from its edge the badge stands,
+       and how far the word inside it sits above the badge's own middle */
+    --search-clear-room: 58px;
+    --search-clear-inset: 5px;
+    --search-clear-text-lift: 1px;
+
+    /* What keeps the badge on the screen while the box is being typed into - a host's
+       stylesheet may give a focused input z-index 1, and an input painted over the badge
+       hides it behind its own background */
+    --search-clear-layer: 2;
+
+    position: relative;
+    display: inline-flex;
+}
+
+.search-clear-anchor input {
+    padding-right: var(--search-clear-room);
+}
+
+.search-clear-anchor .search-clear {
+    position: absolute;
+    top: 50%;
+    right: var(--search-clear-inset);
+    z-index: var(--search-clear-layer);
+    transform: translateY(-50%);
+
+    /* The badge keeps the height it has - the room above the word is moved below it */
+    padding-top: 0;
+    padding-bottom: calc(2 * var(--search-clear-text-lift));
+}
