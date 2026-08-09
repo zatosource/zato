@@ -299,7 +299,7 @@ class TestSubEdit:
 
 # ################################################################################################################################
 
-    def test_07_edit_does_not_leak_queue_state(self, zato_server:'any_') -> 'None':
+    def test_07_edit_does_not_carry_over_queue_state(self, zato_server:'any_') -> 'None':
         """ GAP 12: after removing topic.two earlier, re-add it.
         Publish and pull succeeds - proves old consumer group was cleaned and new one works.
         """

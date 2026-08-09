@@ -349,7 +349,7 @@ class TestIdempotentSubscribeNoCorruption:
 # ################################################################################################################################
 
 class TestResubscribeAfterUnsubscribeNoStaleMessages:
-    """ Edge case 6: unsubscribe + resubscribe must not leak stale messages.
+    """ Edge case 6: unsubscribe + resubscribe must not carry over stale messages.
     """
 
     def test_resubscribe_after_unsubscribe_no_stale_messages(self, zato_server:'any_') -> 'None':

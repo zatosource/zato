@@ -48,7 +48,7 @@ class TestCollectFamilyPatterns:
 
         assert patterns == ['api.one', 'api.two']
 
-    def test_families_do_not_leak_into_each_other(self) -> 'None':
+    def test_families_do_not_cross_into_each_other(self) -> 'None':
 
         environ = {
             'Zato_Auto_REST_Channel_Include': 'included',

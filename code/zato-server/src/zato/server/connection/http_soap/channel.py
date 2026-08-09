@@ -1611,7 +1611,7 @@ class RequestHandler:
         """
 
         # A model that was vivified by a read but never given any field is the same
-        # as no response at all - it must not leak a half-built instance to the wire.
+        # as no response at all - the wire carries an empty response, never a half-built instance.
         # The payload has to be read first because it is that read that vivifies the model.
         payload = response.payload
         if response._payload_vivified and isinstance(payload, Model) and not payload.__dict__:

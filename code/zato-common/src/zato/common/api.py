@@ -1366,11 +1366,10 @@ class Quota_Tiers:
 # ################################################################################################################################
 
 class Audit_Config:
-    """ Generic-object types storing audit-related definitions - alert rules,
-    the retention policy and per-channel attribute-extraction rules.
+    """ Generic-object types storing audit-related definitions - the retention
+    policy and per-channel attribute-extraction rules.
     """
     class Type:
-        Alert_Rule       = 'zato-audit-alert-rule'
         Retention_Policy = 'zato-audit-retention-policy'
         Extraction_Rules = 'zato-audit-extraction-rules'
 
@@ -1383,8 +1382,9 @@ class Audit_Config:
 # ################################################################################################################################
 
 class Alerting:
-    """ The generic alerting sweep - rule-driven collectors over the audit database
-    and live channel metrics, dispatched through each rule's action.
+    """ The generic alerting sweep - collectors measure the audit database and live
+    channel metrics into facts, the alerts ruleset in the rule engine decides which
+    facts matter, and matches dispatch through the actions their outcomes name.
     """
 
     # The interval job every server ensures exists, the service it invokes
@@ -1400,6 +1400,55 @@ class Alerting:
     Extra_From          = 'from'
     Extra_Default_To    = 'default_to'
     Extra_Dashboard_URL = 'dashboard_url'
+
+    # The rule engine ruleset the alert rules live in and the vocabulary its editor completes from.
+    Ruleset_Name    = 'alerts'
+    Vocabulary_Name = 'alerting'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Incidents:
+    """ Incidents - diagnoses of failing connections, produced by an LLM guided by a per-connection
+    diagnostic skill and stored as generic objects until a person approves or rejects them.
+    """
+
+    # The generic-object type incidents are stored under.
+    class Type:
+        Incident = 'zato-incident'
+
+    # The lifecycle of an incident - the status lives in the generic object's subtype column.
+    class Status:
+        New               = 'new'
+        Awaiting_Approval = 'awaiting-approval'
+        Approved          = 'approved'
+        Rejected          = 'rejected'
+        Resolved          = 'resolved'
+
+    # The service an alert rule's invoke-service action points at to turn its findings into incidents.
+    Service_Diagnose = 'zato.incidents.diagnose'
+
+    # The name shared by the notification connections - one Slack, one Microsoft Teams, one SMTP,
+    # all created when the environment is, inactive and with placeholder details.
+    Notification_Conn_Name = 'default.incidents.notifications'
+
+    # The keys an incident rule's action_config may carry - which LLM connection diagnoses,
+    # where the notification links point to and where each transport delivers.
+    Config_LLM_Conn      = 'llm_conn'
+    Config_Dashboard_URL = 'dashboard_url'
+    Config_Slack_Channel = 'slack_channel'
+    Config_Teams_To      = 'teams_to'
+    Config_Email_To      = 'email_to'
+    Config_Email_From    = 'email_from'
+
+    # The one remediation the diagnosis may propose for REST outgoing connections.
+    Remediation_Resubmit = 'resubmit'
+
+    # How many recent audit events go into an incident's evidence pack.
+    Evidence_Max_Events = 20
+
+    # The Dashboard path an incident's detail screen lives under.
+    Dashboard_Path = '/zato/incidents/detail/'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1991,7 +2040,7 @@ class Echo(Service):
 # ################################################################################################################################
 
 class Raise(Service):
-    \"\"\" Always raises an exception. Used to test that exception details are not leaked to MCP clients.
+    \"\"\" Always raises an exception. Used to verify how errors are reported to callers.
     \"\"\"
 
     name = 'test.raise'

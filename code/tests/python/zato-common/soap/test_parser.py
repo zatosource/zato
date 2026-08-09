@@ -115,7 +115,7 @@ class TestDocumentTypeDeclarations:
 
     def test_malformed_xml_raises_our_own_exception(self):
         # The bytes come off the wire, so a caller has one exception type to handle rather than
-        # lxml's leaking through whatever it happens to be.
+        # lxml's showing through whatever it happens to be.
         with pytest.raises(XMLException) as e:
             _ = parse_xml(b'<soap:Envelope><unclosed>')
 

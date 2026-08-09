@@ -211,7 +211,7 @@ class AS2MalformedCMSException(AS2Exception):
 # ################################################################################################################################
 
 def is_digest_equal(left:'str', right:'str') -> 'bool':
-    """ Compares two digests in their base64 wire form without leaking where they first differ.
+    """ Compares two digests in their base64 wire form without revealing where they first differ.
 
     One side of every such comparison is supplied by a remote party - the Received-Content-MIC of
     an incoming MDN against the value computed at send time, or the message-digest attribute of a

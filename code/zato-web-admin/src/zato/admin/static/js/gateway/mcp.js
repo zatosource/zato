@@ -27,6 +27,10 @@ $(document).ready(function() {
 $.fn.zato.gateway.mcp.config = {
     cluster_id: '1',
 
+    // The connection type the name and URL path have to be unique within -
+    // generic connection attributes are unique per type rather than across all of them
+    connection_type: 'gateway-mcp',
+
     // Where a row goes when it is edited where it stands, its id following it
     inline_edit_url: '/zato/gateway/mcp/inline-edit/',
 
@@ -34,7 +38,10 @@ $.fn.zato.gateway.mcp.config = {
     flag_labels: ['No', 'Yes'],
 
     // How long a confirmation takes to fade once it has been read
-    confirmation_fade_ms: 200
+    confirmation_fade_ms: 200,
+
+    // What a picker cell says when its list could not be brought over
+    load_error_label: 'Could not load the list'
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -269,6 +276,254 @@ $.fn.zato.wizard_kit.forms.setup($.fn.zato.gateway.mcp.size_caps, {
     doneLabel: 'Save',
     onDone: $.fn.zato.gateway.mcp.size_caps.save
 });
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// The Name and URL path columns - each is edited in the small form the scheduler
+// and the wizard's own name badge use, opened right above the value it changes.
+$.fn.zato.gateway.mcp.edit_text = function(id, link, name, label) {
+
+    var mcp = $.fn.zato.gateway.mcp;
+    var instance = $.fn.zato.data_table.data[id];
+
+    $.fn.zato.inline_edit.form_tippy({
+        link_elem: link,
+        title: label,
+        input_width: '18em',
+        rows: [
+            // The uniqueness check is scoped to MCP gateways because generic
+            // connection attributes are unique per connection type
+            {name: name, label: label, value: instance[name],
+                unique: {entity_type: 'generic_connection', attr_name: name,
+                    filter: {filter_name: 'type_', filter_value: mcp.config.connection_type}}}
+        ],
+        validate: function(values) {
+            if(!values[name]) {
+                return 'This field is required: ' + label;
+            }
+            return '';
+        },
+        on_submit: function(values) {
+
+            var data = {};
+            data[name] = values[name];
+
+            var on_saved = function(saved) {
+
+                // The row stands at what came back
+                instance[name] = saved[name];
+                link.textContent = saved[name];
+            };
+
+            mcp.inline.save(link, id, data, on_saved, $.fn.zato.inline_edit.config.saved_label);
+        }
+    });
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.gateway.mcp.edit_name = function(id, link) {
+    $.fn.zato.gateway.mcp.edit_text(id, link, 'name', 'Name');
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.gateway.mcp.edit_url_path = function(id, link) {
+    $.fn.zato.gateway.mcp.edit_text(id, link, 'url_path', 'URL path');
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// The Services and Security columns - each count opens a panel with the very badge
+// picker the wizard uses, and a panel closed with its picks changed saves the row.
+$.fn.zato.gateway.mcp.pickers = {
+
+    services: {
+
+        // What the picker's elements are named after - the loaders below fill
+        // the zones in under ids derived from it
+        element_action: 'row',
+
+        title: 'Services',
+        placeholder: 'Filter services...',
+
+        // Where the panel opens once it has been moved or resized
+        geometry_key: 'mcp-row-services-panel',
+
+        width: 640,
+        min_width: 420,
+
+        saved_message: 'OK, services saved',
+
+        // What the save travels under and what the count cell is named after
+        post_name: 'services',
+        cell_id_prefix: 'mcp-services-cell-',
+
+        // What the panel opened on - a panel closed with the same picks saves nothing
+        baseline: null,
+
+        fetch: function(gateway_id, on_items, on_error) {
+            $.fn.zato.gateway.mcp.badge_picker.fetch(gateway_id, on_items, on_error);
+        },
+
+        init: function(items) {
+            $.fn.zato.badge_picker.init('row', items, $.fn.zato.gateway.mcp.badge_picker_config);
+        },
+
+        read: function() {
+            var out = $.fn.zato.badge_picker.get_assigned_names('row');
+            out.sort();
+            return out;
+        }
+    },
+
+    security: {
+
+        // The loader adds the sec- prefix of its own accord, so it is called
+        // with the plain action while the elements carry the prefixed one
+        element_action: 'sec-row',
+
+        title: 'Security',
+        placeholder: 'Filter security...',
+
+        geometry_key: 'mcp-row-security-panel',
+
+        width: 640,
+        min_width: 420,
+
+        saved_message: 'OK, security saved',
+
+        post_name: 'security',
+        cell_id_prefix: 'mcp-security-cell-',
+
+        baseline: null,
+
+        fetch: function(gateway_id, on_items, on_error) {
+            $.fn.zato.gateway.mcp.security_badge_picker.fetch(gateway_id, on_items, on_error);
+        },
+
+        init: function(items) {
+            $.fn.zato.badge_picker.init('sec-row', items, $.fn.zato.gateway.mcp.security_badge_picker_config);
+        },
+
+        // The group members are keyed the way the groups page keys them,
+        // the definition's type in front of its id
+        read: function() {
+            var out = [];
+            $('#badge-zone-assigned-sec-row .badge-zone-body .security-badge').each(function() {
+                var badge = $(this);
+                out.push(badge.data('security-type') + '-' + badge.data('id'));
+            });
+            out.sort();
+            return out;
+        }
+    }
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// The filter and the two zones one panel holds, the same markup the wizard's
+// step 1 renders - the badge picker wires itself up to the ids derived from
+// the action, so the panel only has to put them on the page.
+$.fn.zato.gateway.mcp.pickers.build_body = function(content, spec) {
+
+    var action = spec.element_action;
+
+    content.innerHTML = '' +
+        '<div class="badge-picker-filter" id="badge-filter-' + action + '">' +
+            '<input type="text" id="badge-filter-text-' + action + '" placeholder="' + spec.placeholder + '" />' +
+            '<button type="button" class="badge-filter-clear" id="badge-filter-clear-' + action + '">Clear</button>' +
+        '</div>' +
+        '<div class="badge-picker" id="badge-picker-' + action + '">' +
+            '<div class="badge-zone" id="badge-zone-available-' + action + '">' +
+                '<div class="badge-zone-header">Available (<span class="badge-zone-count">0</span>)</div>' +
+                '<div class="badge-zone-body"></div>' +
+            '</div>' +
+            '<div class="badge-picker-resizer"></div>' +
+            '<div class="badge-zone" id="badge-zone-assigned-' + action + '">' +
+                '<div class="badge-zone-header">Assigned (<span class="badge-zone-count">0</span>)</div>' +
+                '<div class="badge-zone-body"></div>' +
+            '</div>' +
+        '</div>';
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Opens one of the two panels on the row the cell belongs to. The list is brought
+// over first and the panel comes on screen already populated, in one paint -
+// a panel filled in after it opened would flicker as its zones got replaced.
+$.fn.zato.gateway.mcp.pickers.open = function(link, spec) {
+
+    var pickers = $.fn.zato.gateway.mcp.pickers;
+
+    spec.fetch(link.dataset.id, function(items) {
+
+        // Only one panel is on screen at a time - a click elsewhere while
+        // the list was in flight may have opened another one by now
+        $.fn.zato.wizard_kit.lines.closePanel();
+
+        var panel_spec = {
+            title: spec.title,
+            width: spec.width,
+            minWidth: spec.min_width,
+            geometryKey: spec.geometry_key,
+
+            build: function(content) {
+
+                pickers.build_body(content, spec);
+                spec.init(items);
+
+                // What the panel opened on, compared against when it closes
+                spec.baseline = spec.read();
+
+                // What runs when the panel closes, however it was closed
+                return function() {
+                    pickers.on_close(link, spec);
+                };
+            }
+        };
+
+        $.fn.zato.wizard_kit.lines.openPanel(link, panel_spec);
+
+    }, function() {
+        $.fn.zato.gateway.mcp.inline.flash(link, $.fn.zato.gateway.mcp.config.load_error_label);
+    });
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.gateway.mcp.pickers.open_services = function(link) {
+    $.fn.zato.gateway.mcp.pickers.open(link, $.fn.zato.gateway.mcp.pickers.services);
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.gateway.mcp.pickers.open_security = function(link) {
+    $.fn.zato.gateway.mcp.pickers.open(link, $.fn.zato.gateway.mcp.pickers.security);
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Saves the row whose panel has just closed, a panel closed on what it opened with saving nothing
+$.fn.zato.gateway.mcp.pickers.on_close = function(link, spec) {
+
+    var picked = spec.read();
+
+    if(JSON.stringify(picked) === JSON.stringify(spec.baseline)) {
+        return;
+    }
+
+    var data = {};
+    data[spec.post_name] = JSON.stringify(picked);
+
+    var on_saved = function() {
+
+        // The cell now counts what was just sent
+        link.textContent = picked.length;
+    };
+
+    $.fn.zato.gateway.mcp.inline.save(link, link.dataset.id, data, on_saved, spec.saved_message);
+};
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

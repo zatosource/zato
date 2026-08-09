@@ -67,7 +67,7 @@ def _build_key_material(
     sorted_query = '&'.join(kept_parameters)
 
     # .. the caller's security definition name joins the key unless the channel explicitly
-    # shares responses across callers - no response can leak between consumers by omission ..
+    # shares responses across callers - no response can cross between consumers by omission ..
     if config.is_shared_across_callers:
         caller = ''
     else:

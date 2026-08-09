@@ -41,7 +41,7 @@ _Rough_Ending_Recv_Timeout = 3000
 
 # How many messages the pool-slot check sends after a connection has failed. One send failing tells
 # a test nothing about whether the slot went back, and a run of them through a pool of one tells it
-# everything - a leaked slot would leave the second send with nothing to take.
+# everything - an unreleased slot would leave the second send with nothing to take.
 _Pool_Slot_Send_Count = 4
 
 # How many connections a pool has for the test that a failure does not cost it one

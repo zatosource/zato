@@ -380,7 +380,7 @@ class TestSOAPOutconnEndToEnd:
 
         # .. and the wire carried no plaintext.
         raw_body = soap_test_server.last_request['raw_body']
-        assert facility_id.encode() not in raw_body, 'The plaintext leaked to the wire'
+        assert facility_id.encode() not in raw_body, 'The plaintext appeared on the wire'
 
         # Clean up.
         delete_soap_outconn(page, outconn_id)
@@ -445,7 +445,7 @@ class TestSOAPOutconnEndToEnd:
 
         # .. and the wire carried no plaintext.
         raw_body = soap_test_server.last_request['raw_body']
-        assert facility_id.encode() not in raw_body, 'The plaintext leaked to the wire'
+        assert facility_id.encode() not in raw_body, 'The plaintext appeared on the wire'
 
         # Clean up.
         delete_soap_outconn(page, outconn_id)

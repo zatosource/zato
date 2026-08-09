@@ -801,9 +801,9 @@ class TestSOAPChannelEndToEnd:
             expected_code = _Receiver_Code_By_Version[soap_version]
 
             assert fault.code == expected_code, f'Expected a {expected_code} fault, got: {fault.code} {fault.reason}'
-            assert 'internal detail' not in fault.reason, f'The exception leaked to the wire: {fault.reason}'
-            assert 'RuntimeError' not in fault.reason, f'The exception leaked to the wire: {fault.reason}'
-            assert 'Traceback' not in fault.reason, f'A traceback leaked to the wire: {fault.reason}'
+            assert 'internal detail' not in fault.reason, f'The exception reached the wire: {fault.reason}'
+            assert 'RuntimeError' not in fault.reason, f'The exception reached the wire: {fault.reason}'
+            assert 'Traceback' not in fault.reason, f'A traceback reached the wire: {fault.reason}'
 
         # Clean up.
         delete_soap_channel(page, registry_channel_id)

@@ -2497,7 +2497,7 @@ $.fn.zato.time_ago.update_cell = function(cell, iso_utc, duration_ms) {
                 arrow: true,
                 interactive: true,
 
-                // Keep the tooltip out of the table, otherwise the table's own th/td styles leak into it.
+                // Keep the tooltip out of the table, otherwise the table's own th/td styles spill into it.
                 appendTo: document.body,
 
                 // Let the Escape key close the tooltip while it is shown.
@@ -2864,6 +2864,10 @@ $.fn.zato.inline_edit.config = {
     'cancel_label': 'Cancel',
     'tippy_placement': 'top',
 
+    // The look every inline form shares with the micro-form popovers
+    'tippy_theme': 'wizard',
+    'tippy_max_width': 480,
+
     // The saved confirmation shows to the left of the edited link,
     // so it never covers the value that has just changed.
     'confirmation_placement': 'left',
@@ -3039,12 +3043,17 @@ $.fn.zato.inline_edit.toggle_active = function(id, link_elem, opts) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-// A small form inside a tippy shown above a link. Options:
+// A small form inside a popover shown above a link, wearing the shared popup
+// chrome - the dark draggable header with the grip, the sandy body, the styled
+// buttons - the very popup the micro-form popovers open. Options:
 //
-//   link_elem      - the link the tippy points at
-//   title          - a heading above the rows
-//   rows           - a list of {name, label, value} - one table row per entry,
-//                    each with a label and an input prefilled with value
+//   link_elem      - the link the popover points at
+//   title          - the header text, which is also the drag handle
+//   rows           - a list of {name, label, value} - one field per entry,
+//                    the label above an input prefilled with value. A row may
+//                    also carry unique: {entity_type, attr_name, filter} - its
+//                    input then validates live through the shared uniqueness
+//                    check, with the checkmark the full-page forms show
 //   input_type     - optional, the type of all the inputs, e.g. number, defaults to text
 //   input_min      - optional, the minimum value of all the inputs, for number inputs
 //   validate       - called with a map of trimmed input values, returns an error
@@ -3065,22 +3074,31 @@ $.fn.zato.inline_edit.form_tippy = function(opts) {
         link_elem._tippy.destroy();
     }
 
-    // Build the form ..
-    var container = $('<div class="zato-inline-form"></div>');
+    // Build the popover, starting with its header - the shared grip glyph plus
+    // the title, acting as the drag handle every popup shares ..
+    var container = $('<div class="wizard-tippy-form zato-popup"></div>');
 
-    if(opts.title) {
-        container.append($('<div class="zato-inline-form-title"></div>').text(opts.title));
-    }
+    var header = $('<div class="zato-popup-header"></div>');
+    header.append($.fn.zato.popup.build_grip());
+    header.append(document.createTextNode(opts.title));
+    container.append(header);
 
     var input_type = opts.input_type;
     if(input_type === undefined) {
         input_type = 'text';
     }
 
-    var table = $('<table></table>');
+    // .. the body holds one field per row, the label above its input,
+    // the same layout the micro-forms lay their pages out in ..
+    var body = $('<div class="wizard-tippy-body"></div>');
+    container.append(body);
+
+    // The rows validated for uniqueness, wired up once the popover is on the page
+    var unique_rows = [];
+
     $.each(opts.rows, function(ignored, row) {
-        var tr = $('<tr></tr>');
-        tr.append($('<th></th>').text(row.label));
+        var field = $('<div class="wizard-tippy-field"></div>');
+        field.append($('<label class="wizard-tippy-label"></label>').text(row.label));
 
         var input = $('<input />');
         input.attr('type', input_type);
@@ -3095,33 +3113,46 @@ $.fn.zato.inline_edit.form_tippy = function(opts) {
 
         input.attr('name', row.name);
         input.val(row.value);
-        tr.append($('<td></td>').append(input));
+        field.append(input);
 
-        table.append(tr);
+        // A row checked for uniqueness validates as the reader types, with
+        // the same checkmark the full-page forms show. The id carries the
+        // edit- marker the shared validator recognizes edit fields by, and
+        // the original value keeps the untouched field from reading as taken.
+        if(row.unique) {
+            var input_id = 'zato-inline-edit-' + row.name;
+            input.attr('id', input_id);
+            input.data('zato-original-value', row.value);
+            unique_rows.push({'input_id': input_id, 'unique': row.unique});
+        }
+
+        body.append(field);
     });
-    container.append(table);
 
-    // .. with its OK and Cancel buttons ..
-    var buttons = $('<div class="zato-inline-form-buttons"></div>');
-    var ok_button = $('<button type="button"></button>').text(config.ok_label);
-    var cancel_button = $('<button type="button"></button>').text(config.cancel_label);
-    buttons.append(ok_button);
+    // .. with its Cancel and OK buttons, the way out first and the answer last ..
+    var buttons = $('<div class="wizard-tippy-buttons"></div>');
+    var cancel_button = $('<button type="button" class="secondary-button"></button>').text(config.cancel_label);
+    var ok_button = $('<button type="button" class="action-button"></button>').text(config.ok_label);
     buttons.append(cancel_button);
-    container.append(buttons);
+    buttons.append(ok_button);
+    body.append(buttons);
 
-    // .. shown in an interactive tippy above the link ..
+    // .. shown in an interactive tippy above the link, in the theme
+    // all the micro-form popovers share ..
     var instance = tippy(link_elem, {
         content: container[0],
         allowHTML: true,
         placement: config.tippy_placement,
         trigger: 'manual',
-        arrow: true,
+        arrow: false,
         animation: 'fade',
-        duration: [50, 50],
+        duration: [150, 150],
         hideOnClick: false,
         interactive: true,
+        theme: config.tippy_theme,
+        maxWidth: config.tippy_max_width,
 
-        // Keep the form out of the table, otherwise the table's own th/td styles leak into it.
+        // Keep the form out of the table, otherwise the table's own styles spill into it.
         appendTo: document.body,
         zIndex: 100001,
 
@@ -3151,6 +3182,20 @@ $.fn.zato.inline_edit.form_tippy = function(opts) {
                 tippy_instance.badge_elem = $.fn.zato.highlight_badge.on(opts.highlight_elem);
             }
         },
+
+        // The header is the drag handle and the uniqueness checks find their
+        // inputs by id - the popover is attached to the document only once
+        // it shows, so both wirings wait until here.
+        onShown: function(tippy_instance) {
+            $.fn.zato.inline_edit._make_form_draggable(tippy_instance);
+
+            for(var row_idx = 0; row_idx < unique_rows.length; row_idx++) {
+                var unique_row = unique_rows[row_idx];
+                var unique = unique_row.unique;
+                $.fn.zato.validate_unique('#' + unique_row.input_id, unique.entity_type, unique.attr_name, unique.filter);
+            }
+        },
+
         onHide: function(tippy_instance) {
             document.removeEventListener('keydown', tippy_instance.handle_escape);
             document.removeEventListener('mousedown', tippy_instance.handle_outside_mousedown);
@@ -3167,7 +3212,7 @@ $.fn.zato.inline_edit.form_tippy = function(opts) {
     });
 
     // Enter anywhere in the inputs submits the form.
-    table.find('input').on('keydown', function(event) {
+    body.find('input').on('keydown', function(event) {
         if(event.key === 'Enter') {
             event.preventDefault();
             ok_button.trigger('click');
@@ -3177,7 +3222,7 @@ $.fn.zato.inline_edit.form_tippy = function(opts) {
     // .. OK collects the inputs and refuses to go on until they validate.
     ok_button.on('click', function() {
 
-        var inputs = table.find('input');
+        var inputs = body.find('input');
         var values = {};
 
         inputs.each(function() {
@@ -3194,6 +3239,14 @@ $.fn.zato.inline_edit.form_tippy = function(opts) {
             return;
         }
 
+        // A value that is already taken keeps the form open - the shared
+        // re-check blinks and focuses the field that has to change.
+        if(unique_rows.length) {
+            if(!$.fn.zato.validate_unique_on_submit(container)) {
+                return;
+            }
+        }
+
         inputs.each(function() {
             $.fn.zato.cleanup_elem_css_attention($(this));
         });
@@ -3206,7 +3259,7 @@ $.fn.zato.inline_edit.form_tippy = function(opts) {
 
     // Typing starts in the first field that already has a value - only when all
     // of them are empty does the focus land on the first one.
-    var all_inputs = table.find('input');
+    var all_inputs = body.find('input');
     var focus_target = all_inputs.filter(function() {
         return $(this).val() !== '';
     }).first();
@@ -3216,6 +3269,39 @@ $.fn.zato.inline_edit.form_tippy = function(opts) {
     }
 
     focus_target.trigger('focus');
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+// Lets an inline form be dragged around by its header, through the shared
+// popup drag machinery. The offset is applied to the tippy box itself,
+// so tippy's own positioning stays untouched.
+$.fn.zato.inline_edit._make_form_draggable = function(tippy_instance) {
+
+    var handle = tippy_instance.popper.querySelector('.zato-popup-header');
+    var box = tippy_instance.popper.querySelector('.tippy-box');
+    var offset_x = 0;
+    var offset_y = 0;
+
+    $.fn.zato.popup.install_drag(handle, {
+
+        dragging_elem: tippy_instance.popper.querySelector('.zato-popup'),
+
+        on_start: function() {
+
+            // The stock tippy CSS animates transform changes - the box must
+            // follow the pointer instantly instead
+            box.style.transitionProperty = 'visibility, opacity';
+
+            return {'x': offset_x, 'y': offset_y};
+        },
+
+        on_move: function(x, y) {
+            offset_x = x;
+            offset_y = y;
+            box.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
+        }
+    });
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

@@ -186,7 +186,7 @@ def count_messages_with_payload(msg_ids:'strlist') -> 'int':
 # ################################################################################################################################
 
 def delete_all_messages() -> 'None':
-    """ Removes every message and delivery row so no in-flight deliveries leak
+    """ Removes every message and delivery row so no in-flight deliveries carry over
     across tests, while the subscription state stays as the server knows it.
     """
     engine = get_pubsub_engine()

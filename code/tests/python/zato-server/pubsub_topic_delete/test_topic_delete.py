@@ -387,7 +387,7 @@ class TestTopicDelete:
 
 # ################################################################################################################################
 
-    def test_08_multi_topic_delete_does_not_leak_stale_sub_config(self, zato_server:'any_') -> 'None':
+    def test_08_multi_topic_delete_does_not_keep_stale_sub_config(self, zato_server:'any_') -> 'None':
         """ Deleting one topic from a multi-topic pull subscription must not leave
         a stale pubsub_subs entry that causes messages to route to the old sub_key
         when the topic is re-created.
@@ -399,12 +399,12 @@ class TestTopicDelete:
 
         # .. create two fresh topics for this test ..
         _ = admin.invoke('zato.pubsub.topic.create', {
-            'name': 'td.leak.pull.first',
+            'name': 'td.stale.pull.first',
             'is_active': True,
         })
 
         _ = admin.invoke('zato.pubsub.topic.create', {
-            'name': 'td.leak.pull.second',
+            'name': 'td.stale.pull.second',
             'is_active': True,
         })
 
@@ -413,29 +413,29 @@ class TestTopicDelete:
         # .. create a multi-topic pull subscription ..
         _ = admin.invoke('zato.pubsub.subscription.create', {
             'cluster_id': 1,
-            'topic_name_list': ['td.leak.pull.first', 'td.leak.pull.second'],
+            'topic_name_list': ['td.stale.pull.first', 'td.stale.pull.second'],
             'sec_base_id': TestConfig.subscriber_sec_base_id,
             'delivery_type': 'pull',
         })
 
         time.sleep(_settle_time)
 
-        # .. delete td.leak.pull.first (the subscription survives on td.leak.pull.second) ..
-        topic_id = _get_topic_id(admin, 'td.leak.pull.first')
+        # .. delete td.stale.pull.first (the subscription survives on td.stale.pull.second) ..
+        topic_id = _get_topic_id(admin, 'td.stale.pull.first')
         _ = admin.invoke('zato.pubsub.topic.delete', {'id': topic_id})
 
         time.sleep(_settle_time)
 
-        # .. re-create td.leak.pull.first with no subscription attached ..
+        # .. re-create td.stale.pull.first with no subscription attached ..
         _ = admin.invoke('zato.pubsub.topic.create', {
-            'name': 'td.leak.pull.first',
+            'name': 'td.stale.pull.first',
             'is_active': True,
         })
 
         time.sleep(_settle_time)
 
         # .. publish to the re-created topic ..
-        _ = publisher.publish('td.leak.pull.first', 'leak-test-message')
+        _ = publisher.publish('td.stale.pull.first', 'stale-sub-test-message')
 
         time.sleep(_settle_time)
 
@@ -445,20 +445,20 @@ class TestTopicDelete:
         message_count = result['message_count']
 
         assert message_count == 0, \
-            f'Expected 0 messages (stale pubsub_subs leak), got {message_count}'
+            f'Expected 0 messages (a stale pubsub_subs entry survived), got {message_count}'
 
         # .. clean up ..
-        topic_id = _get_topic_id(admin, 'td.leak.pull.first')
+        topic_id = _get_topic_id(admin, 'td.stale.pull.first')
         _ = admin.invoke('zato.pubsub.topic.delete', {'id': topic_id})
 
-        topic_id = _get_topic_id(admin, 'td.leak.pull.second')
+        topic_id = _get_topic_id(admin, 'td.stale.pull.second')
         _ = admin.invoke('zato.pubsub.topic.delete', {'id': topic_id})
 
         time.sleep(_settle_time)
 
 # ################################################################################################################################
 
-    def test_09_multi_topic_delete_does_not_leak_push_subs(self, zato_server:'any_') -> 'None':
+    def test_09_multi_topic_delete_does_not_keep_stale_push_subs(self, zato_server:'any_') -> 'None':
         """ Deleting one topic from a multi-topic push subscription must not leave
         a stale _push_subs entry that causes messages to deliver to the old webhook
         when the topic is re-created.
@@ -508,7 +508,7 @@ class TestTopicDelete:
         post_delete_count = receiver.delivered_count() # pyright: ignore[reportOptionalMemberAccess]
 
         assert post_delete_count == 0, \
-            f'Expected 0 push deliveries after topic delete (stale _push_subs leak), got {post_delete_count}'
+            f'Expected 0 push deliveries after topic delete (a stale _push_subs entry survived), got {post_delete_count}'
 
         # .. clean up ..
         topic_id = _get_topic_id(admin, 'td.push.multi.first')

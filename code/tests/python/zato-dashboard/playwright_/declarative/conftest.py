@@ -173,7 +173,7 @@ def zato_dashboard() -> 'any_':
 
     # All components that talk to the scheduler get these variables - a dedicated Redis
     # and a dedicated HTTP API port, so tests never cross paths with any other scheduler
-    # process on this machine, including stale ones leaked from aborted test sessions.
+    # process on this machine, including stale ones left behind by aborted test sessions.
     scheduler_env_config = {
         'Zato_Scheduler_Redis_Host': '127.0.0.1',
         'Zato_Scheduler_Redis_Port': str(redis_port),

@@ -75,12 +75,12 @@ class TestOpenAPIConsoleSecurityDefaultPosture:
         # .. an inactive channel is 404 and the response names no service and no channel ..
         response = invoke_until_status(server_port, Path_Untyped, NOT_FOUND, json_data={})
         assert response.status_code == NOT_FOUND, f'Expected 404 from an inactive channel, got {response.status_code}'
-        assert Service_Untyped not in response.text, f'The service name leaked into the 404 body: {response.text}'
+        assert Service_Untyped not in response.text, f'The service name appeared in the 404 body: {response.text}'
 
         # .. and an unknown path is 404 just the same.
         response = invoke_channel(server_port, _Unknown_Path, json_data={})
         assert response.status_code == NOT_FOUND, f'Expected 404 from an unknown path, got {response.status_code}'
-        assert Service_Untyped not in response.text, f'The service name leaked into the 404 body: {response.text}'
+        assert Service_Untyped not in response.text, f'The service name appeared in the 404 body: {response.text}'
 
         # Activate the channel with no security assigned ..
         _ = edit_channel_by_name(page, base_url, Service_Untyped, {

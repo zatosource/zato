@@ -32,6 +32,7 @@ from zato.common.py23_ import maxint
 from zato.common.ext.bunch import Bunch
 from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, NotGiven, PARAMS_PRIORITY, PubSub, \
      RESTAdapterResponse, zato_no_op_marker
+from zato.common.audit_log.scheduler import append_job_log_entry
 from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.facade import PubSubFacade, SecurityFacade
 from zato.common.json_internal import dumps
@@ -175,20 +176,17 @@ _utcnow = utcnow
 # ################################################################################################################################
 
 class SchedulerLogCapture(logging.Handler):
-    """ Captures service log entries and forwards them to the Rust scheduler log store.
+    """ Captures service log entries and writes them to the run's record in the audit log.
     """
 
-    def __init__(self, scheduler:'any_', job_id:'int', current_run:'int') -> 'None':
+    def __init__(self, audit_event_id:'int') -> 'None':
         super().__init__()
-        self._scheduler = scheduler
-        self._job_id = job_id
-        self._current_run = current_run
+        self._audit_event_id = audit_event_id
 
     def emit(self, record:'any_') -> 'None':
         try:
-            self._scheduler.append_log_entry(
-                self._job_id,
-                self._current_run,
+            append_job_log_entry(
+                self._audit_event_id,
                 datetime.fromtimestamp(record.created).isoformat(),
                 record.levelname,
                 self.format(record),
@@ -704,7 +702,7 @@ class Service:
         response = service.response.payload
 
         # A model that was vivified by a read but never given any field is the same
-        # as no response at all - it must not leak a half-built instance to the caller.
+        # as no response at all - the caller receives an empty response, never a half-built instance.
         if service.response._payload_vivified and isinstance(response, Model) and not response.__dict__:
             service.response.payload = ''
             return ''
@@ -712,7 +710,7 @@ class Service:
         if not isinstance(response, _response_raw_types):
 
             # A free-form message that was never given any content is the same
-            # as no response at all - it must not leak an empty dict to the caller.
+            # as no response at all - the caller receives an empty response, never an empty dict.
             if isinstance(response, Message):
                 if response:
                     response = response.getvalue()
@@ -892,15 +890,14 @@ class Service:
                 if service.call_hooks and service.before_handle: # type: ignore
                     call_hook_no_service(service.before_handle)
 
-                # .. attach scheduler log capture handler if this is a scheduler-initiated invocation ..
+                # .. attach scheduler log capture handler if this is a scheduler-initiated invocation
+                # .. whose run has a record in the audit log - with the audit log off there is none ..
                 _scheduler_log_handler = None
                 _scheduler_zato_ctx = wsgi_environ.get('zato.zato_ctx')
                 if _scheduler_zato_ctx is not None and 'scheduler_job_id' in _scheduler_zato_ctx:
-                    _scheduler_log_handler = SchedulerLogCapture(
-                        server._scheduler,
-                        _scheduler_zato_ctx['scheduler_job_id'],
-                        _scheduler_zato_ctx['scheduler_current_run'])
-                    service.logger.addHandler(_scheduler_log_handler)
+                    if _scheduler_audit_event_id := _scheduler_zato_ctx['scheduler_audit_event_id']:
+                        _scheduler_log_handler = SchedulerLogCapture(_scheduler_audit_event_id)
+                        service.logger.addHandler(_scheduler_log_handler)
 
                 try:
                     self._invoke(service, channel)
@@ -1188,7 +1185,7 @@ class Service:
                 extra_keys = set(kwargs) - _publish_meta_keys
 
                 # .. if extra keys were found, build a dict payload
-                # .. from them and pop each one so it does not leak
+                # .. from them and pop each one so it does not carry over
                 # .. into the downstream publish call ..
                 if extra_keys:
                     data = {}

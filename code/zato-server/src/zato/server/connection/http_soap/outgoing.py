@@ -922,7 +922,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
     def format_address(self, cid:'str', params:'stranydict') -> 'tuple[str, stranydict]':
         """ Formats a URL path to an external resource. Note that exceptions raised
         do not contain anything except for CID. This is in order to keep any potentially
-        sensitive data from leaking to clients.
+        sensitive data out of what clients receive.
         """
         if not params:
             msg = 'No parameters given for URL path template `{}`, missing parameters: {}'.format(

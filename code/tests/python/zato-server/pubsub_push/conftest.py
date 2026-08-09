@@ -163,7 +163,7 @@ def clear_all_outputs() -> 'any_':
     from zato.common.test.config_pubsub_push import TestConfig
     from zato.common.test.receiver import receiver_list, wait_until_receivers_quiet
 
-    # .. remove all message and delivery rows so no in-flight deliveries leak across tests ..
+    # .. remove all message and delivery rows so no in-flight deliveries carry over across tests ..
     pubsub_db.delete_all_messages()
 
     receivers:'receiver_list' = []

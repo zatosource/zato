@@ -351,7 +351,7 @@ class HandlerInitializeCreatesSession(TestCase):
         self.assertIsNotNone(mcp_response.session_id)
         self.assertEqual(session_manager.session_count, 1)
 
-        # The session ID must not leak into the JSON-RPC result
+        # The session ID must not appear in the JSON-RPC result
         result = mcp_response.body['result']
         self.assertNotIn('_mcp_session_id', result)
 

@@ -760,7 +760,7 @@ class MCPHandler:
 
         # .. check if the session exists and belongs to the caller.
         # For DELETE, an unknown or expired session is 404 (resource not found).
-        # An identity mismatch returns 400 to reject without leaking session existence ..
+        # An identity mismatch returns 400 to reject without confirming whether the session exists ..
         validation_result = self.session_manager.validate(session_id, sec_def_id)
 
         if validation_result == Session_Invalid_Identity:

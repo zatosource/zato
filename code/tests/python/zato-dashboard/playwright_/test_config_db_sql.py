@@ -161,7 +161,7 @@ class TestConfigDBSQL:
         name_value = page.input_value('#id_name')
         assert name_value.endswith('analytics.db'), f'Expected a path ending in analytics.db, got: {name_value}'
 
-        # .. and the display name saved for the audit log database does not leak into it.
+        # .. and the display name saved for the audit log database does not carry over into it.
         display_name_value = page.input_value('#id_display_name')
         assert display_name_value == '', f'Expected an empty name, got: "{display_name_value}"'
 

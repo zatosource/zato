@@ -43,7 +43,7 @@ _Fixture_Names = [
 
 class TestOpenAPIConsoleSecurityNoSession:
     """ Verifies that a caller with no session at all gets nothing from the console -
-    a redirect from the page, one fixed rejection from every data endpoint and no leaks.
+    a redirect from the page, one fixed rejection from every data endpoint and nothing else in the body.
     """
 
 # ################################################################################################################################
@@ -79,9 +79,9 @@ class TestOpenAPIConsoleSecurityNoSession:
                 assert response.status == UNAUTHORIZED, f'Expected 401 from {data_path}, got {response.status}: {body}'
                 assert body == _Unauthorized_Body, f'Expected the fixed rejection body from {data_path}, got: {body}'
 
-                # No fixture path or schema name may leak into the rejection
+                # No fixture path or schema name may appear in the rejection
                 for fixture_name in _Fixture_Names:
-                    assert fixture_name not in body, f'`{fixture_name}` leaked into the response from {data_path}: {body}'
+                    assert fixture_name not in body, f'`{fixture_name}` appeared in the response from {data_path}: {body}'
 
         finally:
             context.close()

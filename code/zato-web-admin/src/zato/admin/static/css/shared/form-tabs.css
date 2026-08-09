@@ -63,7 +63,7 @@
  * --form-tab-border-width    Bottom border thickness
  */
 
-/* Variables scoped to .data-popup so they never leak to the dashboard. */
+/* Variables scoped to .data-popup so they never spill to the dashboard. */
 .data-popup {
     --form-tab-bg: #052238;
     --form-tab-color: #ffffffb3;

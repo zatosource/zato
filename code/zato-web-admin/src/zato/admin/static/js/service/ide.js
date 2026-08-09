@@ -791,7 +791,7 @@ $.fn.zato.ide.on_invoke_mode_changed = function() {
     let mode = $("#invoke-mode-select").val();
 
     // Invoking through an MLLP channel implies the payload is HL7,
-    // so the format follows the mode instead of leaking a stale value.
+    // so the format follows the mode instead of keeping a stale value.
     if(mode.startsWith("hl7-mllp:")) {
         $("#payload-format-select").val("hl7-v2");
         $.fn.zato.ide.on_payload_format_changed();

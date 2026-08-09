@@ -95,7 +95,7 @@ class TestOpenAPIConsoleSecurityNoGrants:
 
         # .. and no fixture path or schema name appears anywhere in the body.
         for fixture_name in _Fixture_Names:
-            assert fixture_name not in body, f'`{fixture_name}` leaked into the empty document: {body}'
+            assert fixture_name not in body, f'`{fixture_name}` appeared in the empty document: {body}'
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -147,15 +147,15 @@ def _build_field_descriptions() -> 'dict':
             '<br><br>'
             'This check ' + _highlight('scans outgoing payloads for common PII patterns') + '.'
             '<br><br>'
-            'Catching PII in responses helps prevent data leaks before they reach external consumers.'
+            'Catching PII in responses keeps personal data out of what external consumers receive.'
         ),
 
-        'posture-toggle-connection-string-leaks': _make_description('Connection string leaks',
+        'posture-toggle-connection-string-leaks': _make_description('Connection string exposure',
             'Database and broker connection strings contain hostnames, ports, and sometimes credentials.'
             '<br><br>'
             'This check ' + _highlight('detects connection strings appearing in API responses') + '.'
             '<br><br>'
-            'Leaking a connection string gives attackers a direct path to your internal infrastructure.'
+            'Keeping connection details out of responses keeps your internal infrastructure internal.'
         ),
 
         'posture-toggle-cumulative-data': _make_description('Cumulative data exposure',
