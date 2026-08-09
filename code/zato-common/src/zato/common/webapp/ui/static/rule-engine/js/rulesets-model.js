@@ -15,6 +15,10 @@ var rulesetsModel = {
         // What a ruleset is called on the screen when its stored name is technical -
         // a map from the stored name to the label the browser shows and searches by
         rulesetLabels: {},
+
+        // Whether a typed query matches a ruleset by its own name - a host whose one
+        // ruleset is a fixture wants the query to reach the rules inside it only
+        matchRulesetNames: true,
     },
 
     rulesets: [],
@@ -135,9 +139,10 @@ var rulesetsModel = {
                 return;
             }
 
-            // Both the stored name and the label it shows under count as a match
+            // Both the stored name and the label it shows under count as a match,
+            // unless the host keeps the query away from ruleset names altogether
             var names = ruleset.name + ' ' + self.displayName(ruleset.name);
-            var nameHit = names.toLowerCase().indexOf(needle) > -1;
+            var nameHit = self.config.matchRulesetNames && names.toLowerCase().indexOf(needle) > -1;
             if (nameHit || hits.length > 0) {
                 out.push({ruleset: ruleset, hits: hits});
             }

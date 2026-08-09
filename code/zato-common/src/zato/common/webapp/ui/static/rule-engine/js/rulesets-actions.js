@@ -372,6 +372,7 @@ rulesetsView.bindListeners = function() {
     });
 
     this.container.addEventListener('dblclick', function(event) {
+        if (!self.config.openOnDoubleClick) { return; }
         var row = event.target.closest('[data-action="select-ruleset"]');
         if (row === null) { return; }
         self.open(parseInt(row.dataset.id));
@@ -405,6 +406,10 @@ rulesetsView.init = function(container, config) {
         }
         if (key === 'rulesetLabels') {
             rulesetsModel.config.rulesetLabels = config.rulesetLabels;
+            return;
+        }
+        if (key === 'matchRulesetNames') {
+            rulesetsModel.config.matchRulesetNames = config.matchRulesetNames;
             return;
         }
         if (key === 'csrfToken') {

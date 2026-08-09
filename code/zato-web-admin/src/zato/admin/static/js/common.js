@@ -3805,6 +3805,13 @@ $.fn.zato.pubsub.import_demo_config = function() {
 // It lets the submit handler re-check each such field synchronously when OK is clicked.
 $.fn.zato.data_table._unique_checks = {};
 
+// Where the checks go unless a caller names its own endpoint - entities stored in the server's
+// SQL tables all answer through this one, while a host with a store of its own points elsewhere.
+$.fn.zato.data_table.default_unique_check_url = '/zato/check-attr-exists/';
+
+// What the indicator says over a taken value unless a caller brings its own wording.
+$.fn.zato.unique_taken_msg = 'Already taken';
+
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Builds the POST payload for a uniqueness check of a single field.
@@ -3844,7 +3851,13 @@ $.fn.zato.build_unique_check_data = function(entity_type, attr_name, value, filt
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Renders the taken/available indicator next to a field, positioned right after its current text.
-$.fn.zato.render_unique_indicator = function(field, value, exists, attr_name) {
+// The two optional texts let a caller reuse the indicator for a verdict of its own, like a format
+// check - taken_text stands in the pill, taken_tooltip explains it on hover.
+$.fn.zato.render_unique_indicator = function(field, value, exists, attr_name, taken_text, taken_tooltip) {
+
+    if(taken_text === undefined) {
+        taken_text = $.fn.zato.unique_taken_msg;
+    }
 
     field.siblings('.zato-unique-indicator').remove();
 
@@ -3856,7 +3869,7 @@ $.fn.zato.render_unique_indicator = function(field, value, exists, attr_name) {
 
     var html;
     if(exists) {
-        html = '<span class="zato-unique-indicator zato-unique-taken">Already taken</span>';
+        html = '<span class="zato-unique-indicator zato-unique-taken">' + taken_text + '</span>';
     }
     else {
         html = '<span class="zato-unique-indicator zato-unique-ok">&#10003;</span>';
@@ -3870,7 +3883,7 @@ $.fn.zato.render_unique_indicator = function(field, value, exists, attr_name) {
         var word = (attr_name || 'value').replace(/_/g, ' ');
         var verdict;
         if(exists) {
-            verdict = 'This ' + word + ' is already taken';
+            verdict = taken_tooltip === undefined ? 'This ' + word + ' is already taken' : taken_tooltip;
         }
         else {
             verdict = word.charAt(0).toUpperCase() + word.slice(1) + ' is available';
@@ -3927,11 +3940,16 @@ $.fn.zato.get_unique_check_value = function(field, is_edit) {
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Attaches live uniqueness validation to a field. The optional on_result
-// callback is invoked with the outcome of each completed check.
-$.fn.zato.validate_unique = function(field_id, entity_type, attr_name, filter, on_result) {
+// callback is invoked with the outcome of each completed check. The optional
+// url points the check at an endpoint other than the shared default one.
+$.fn.zato.validate_unique = function(field_id, entity_type, attr_name, filter, on_result, url) {
     var field = $(field_id);
     if(!field.length) {
         return;
+    }
+
+    if(url === undefined) {
+        url = $.fn.zato.data_table.default_unique_check_url;
     }
 
     var timer = null;
@@ -3942,7 +3960,8 @@ $.fn.zato.validate_unique = function(field_id, entity_type, attr_name, filter, o
         'entity_type': entity_type,
         'attr_name': attr_name,
         'filter': filter,
-        'is_edit': is_edit
+        'is_edit': is_edit,
+        'url': url
     };
 
     field.on('input', function() {
@@ -3964,7 +3983,7 @@ $.fn.zato.validate_unique = function(field_id, entity_type, attr_name, filter, o
 
             $.ajax({
                 type: 'POST',
-                url: '/zato/check-attr-exists/',
+                url: url,
                 data: data,
                 headers: {'X-CSRFToken': $.cookie('csrftoken')},
                 dataType: 'json',
@@ -4018,7 +4037,7 @@ $.fn.zato.validate_unique_on_submit = function(form) {
         var exists = false;
         $.ajax({
             type: 'POST',
-            url: '/zato/check-attr-exists/',
+            url: check.url,
             data: data,
             headers: {'X-CSRFToken': $.cookie('csrftoken')},
             dataType: 'json',

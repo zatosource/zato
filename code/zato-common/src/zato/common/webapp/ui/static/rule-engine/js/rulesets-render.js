@@ -15,6 +15,7 @@ var rulesetsView = {
 
         loadingText: 'Loading',
         emptyRulesText: 'No rules yet',
+        noMatchesText: 'Nothing matches',
         saveViewLabel: 'Create view',
         countNoun: 'ruleset',
         countNounPlural: 'rulesets',
@@ -46,12 +47,23 @@ var rulesetsView = {
         showRowMenu: true,
         showProblems: true,
 
+        // Whether double-clicking a row opens the ruleset in the editor - a host whose
+        // one locked row is a fixture has nowhere for that double click to lead
+        openOnDoubleClick: true,
+
         // Whether the filter input opens the suggestion pane at all - a host with
         // no facets and no saved views has nothing to suggest
         showSuggestions: true,
 
         // Whether the count next to the filter input is shown
         showCount: true,
+
+        // Whether a matching line from inside a rule is quoted under the row - a host
+        // that narrows the expanded panel to the matching rules has no use for raw lines
+        showMatchLines: true,
+
+        // Whether a typed query narrows the expanded rules panel to the rules it touches
+        filterRulesInPanel: false,
 
         // Whether the side pane with the preview shows at all - a host where every
         // rule is always live has nothing to preview, so the list takes the width
@@ -93,8 +105,10 @@ var rulesetsView = {
         // collapse it, its name a plain link to the editor
         lockExpanded: false,
 
-        // Whether the expanded panel's head names the ruleset - "6 rules in alerts" -
-        // or counts alone, for a host whose one ruleset needs no naming
+        // Whether the expanded panel opens with a head line at all, and whether that
+        // head names the ruleset - "6 rules in alerts" - or counts alone, for a host
+        // whose one ruleset needs no naming
+        showRulesHead: true,
         showRulesetInRulesHead: true,
 
         eventPhrases: {
@@ -167,6 +181,14 @@ var rulesetsView = {
     },
 
 // ////////////////////////////////////////////////////////////////////////
+
+    // A ruleset's name is marked only when the query reaches names at all - a host
+    // whose query matches rules alone keeps the name out of the highlighting too
+    rulesetNameHtml: function(name) {
+        var text = this.displayName(name);
+        if (!rulesetsModel.config.matchRulesetNames) { return shared.escape(text); }
+        return this.markHtml(text);
+    },
 
     markHtml: function(text) {
         if (this.query.trim() === '') { return shared.escape(text); }
@@ -248,7 +270,7 @@ var rulesetsView = {
 
             if (isLocked) {
                 nameHtml = '<span class="rulesets-row-title">' +
-                    self.markHtml(self.displayName(ruleset.name)) + '</span>';
+                    self.rulesetNameHtml(ruleset.name) + '</span>';
             }
             else {
                 nameHtml = '<span class="rulesets-caret" ' +
@@ -257,7 +279,7 @@ var rulesetsView = {
                     '<a class="rulesets-open-link" href="' + self.config.openUrls.editor +
                     '?ruleset=' + ruleset.id + '" ' +
                     'data-action="toggle-rules" data-id="' + ruleset.id + '">' +
-                    '<span class="link">' + self.markHtml(self.displayName(ruleset.name)) + '</span></a>';
+                    '<span class="link">' + self.rulesetNameHtml(ruleset.name) + '</span></a>';
             }
 
             html += '<div class="rulesets-row' + selected + stripe + '" data-id="' + ruleset.id + '" ' +
@@ -275,7 +297,7 @@ var rulesetsView = {
         });
 
         if (html === '') {
-            html = '<div class="rulesets-empty">Nothing matches</div>';
+            html = '<div class="rulesets-empty">' + this.config.noMatchesText + '</div>';
         }
         if (entries.length > shown) {
             html += '<div class="rulesets-more">First ' + shown + ' of ' + entries.length + '</div>';
@@ -313,6 +335,20 @@ var rulesetsView = {
         return html;
     },
 
+    // The rules of one set narrowed to the query - a rule stays when the query is in its
+    // name or docs, or when the server found the query inside the rule's own text
+    matchingRules: function(ruleset, rules, needle) {
+        var hitKeys = {};
+        rulesetsModel.hitsFor(ruleset.id).forEach(function(hit) { hitKeys[hit.rule] = true; });
+
+        var out = rules.filter(function(rule) {
+            if (rule.name.toLowerCase().indexOf(needle) > -1) { return true; }
+            if (rule.docs.toLowerCase().indexOf(needle) > -1) { return true; }
+            return hitKeys[rule.key] === true;
+        });
+        return out;
+    },
+
     rulesPanelHtml: function(ruleset) {
         var self = this;
         var rules = rulesetsModel.cachedRules(ruleset.id);
@@ -324,25 +360,36 @@ var rulesetsView = {
                 '</div>';
         }
 
+        // A host that narrows the panel shows only the rules the query touches
+        var needle = this.query.trim().toLowerCase();
+        var isNarrowed = this.config.filterRulesInPanel && needle !== '';
+
+        if (isNarrowed) {
+            rules = this.matchingRules(ruleset, rules, needle);
+        }
+
         var html = '<div class="rulesets-rules">';
 
         if (rules.length === 0) {
-            html += '<div class="rulesets-rules-empty">' + this.config.emptyRulesText + '</div></div>';
+            var emptyText = isNarrowed ? this.config.noMatchesText : this.config.emptyRulesText;
+            html += '<div class="rulesets-rules-empty">' + emptyText + '</div></div>';
             return html;
         }
 
-        var head = rules.length + ' rule' + (rules.length === 1 ? '' : 's');
-        if (this.config.showRulesetInRulesHead) {
-            head += ' in ' + shared.escape(this.displayName(ruleset.name));
+        if (this.config.showRulesHead) {
+            var head = rules.length + ' rule' + (rules.length === 1 ? '' : 's');
+            if (this.config.showRulesetInRulesHead) {
+                head += ' in ' + shared.escape(this.displayName(ruleset.name));
+            }
+            html += '<div class="rulesets-rules-head">' + head + '</div>';
         }
-        html += '<div class="rulesets-rules-head">' + head + '</div>';
 
         rules.slice(0, this.config.maxRulesInPanel).forEach(function(rule, ruleIndex) {
             html += '<a class="rulesets-rule" href="' + self.config.openUrls.editor + '?ruleset=' + ruleset.id +
                 '&amp;rule=' + encodeURIComponent(rule.key) + '">' +
                 '<span class="rulesets-rule-number">' + (ruleIndex + 1) + '</span>' +
                 '<span class="rulesets-rule-name">' + self.markHtml(rule.name) + '</span>' +
-                '<span class="rulesets-rule-docs">' + shared.escape(rule.docs) + '</span>' +
+                '<span class="rulesets-rule-docs">' + self.markHtml(rule.docs) + '</span>' +
                 '<span class="rulesets-rule-shape">' + rule.conditionCount + ' condition' +
                     (rule.conditionCount === 1 ? '' : 's') + '</span>' +
                 '<span class="rulesets-rule-shape">' + rule.actionCount + ' action' +
@@ -374,6 +421,8 @@ var rulesetsView = {
     },
 
     hitsHtml: function(hits) {
+        if (!this.config.showMatchLines) { return ''; }
+
         var self = this;
         var out = '';
         hits.slice(0, this.config.maxRowMatches).forEach(function(hit) {

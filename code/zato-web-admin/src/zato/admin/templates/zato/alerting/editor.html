@@ -1,6 +1,6 @@
 {% extends "zato/dashboard_base.html" %}
 
-{% block html_title %}Alert rule editor{% endblock %}
+{% block html_title %}Monitoring rule editor{% endblock %}
 
 {% block dashboard_extra_css %}
 <link rel="stylesheet" type="text/css" href="/static/css/shared/component-pill.css">
@@ -10,11 +10,13 @@
 <link rel="stylesheet" type="text/css" href="/shared-ui/webapp/css/themes/zato-light.css">
 <link rel="stylesheet" type="text/css" href="/shared-ui/webapp/css/forms.css">
 <link rel="stylesheet" type="text/css" href="/shared-ui/webapp/css/kit.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/highlight.css">
 <link rel="stylesheet" type="text/css" href="/shared-ui/rule-engine/css/editor.css">
 <link rel="stylesheet" type="text/css" href="/static/css/alerting.css">
 {% endblock %}
 
 {% block dashboard_domain_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/highlight.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/webapp/js/shared.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/webapp/js/shell.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/data.js"></script>
@@ -51,6 +53,7 @@ $(document).ready(function() {
         newRuleName: '{{ new_rule_name|escapejs }}',
         showLivePanel: false,
         viewButtonActiveClass: 'dashboard-tab-active',
+        documentTextHtml: function(text) { return $.fn.zato.highlight.rules_to_html(text); },
         csrfToken: $.cookie('csrftoken'),
         navigateToRule: function(rulesetId, ruleKey) {
             window.location.href = '{% url "alert-rules-editor" %}?cluster={{ cluster_id }}&rule=' +
@@ -82,9 +85,8 @@ $(document).ready(function() {
                 <div class="main-column">
                     <div class="toolbar">
                         <div class="dashboard-tabs" role="tablist">
-                            <button type="button" class="dashboard-tab dashboard-tab-active" data-action="set-view" data-view="sentence" role="tab" aria-selected="true">Sentence</button>
+                            <button type="button" class="dashboard-tab dashboard-tab-active" data-action="set-view" data-view="sentence" role="tab" aria-selected="true">In English</button>
                             <button type="button" class="dashboard-tab" data-action="set-view" data-view="expression" role="tab" aria-selected="false">Expression</button>
-                            <button type="button" class="dashboard-tab" data-action="set-view" data-view="table" role="tab" aria-selected="false">Table</button>
                             <button type="button" class="dashboard-tab" data-action="set-view" data-view="document" role="tab" aria-selected="false">Document</button>
                         </div>
                         <button class="button-ghost" data-action="open-rule-menu">Rules</button>

@@ -11,6 +11,10 @@ var editorModel = {
         // the dashboard's yellow toggles use `toggled`, web-admin's tabs use `dashboard-tab-active`
         viewButtonActiveClass: 'toggled',
 
+        // Turns the document view's canonical text into highlighted HTML - a host passes
+        // its own tokenizer here, and without one the text stays plain
+        documentTextHtml: null,
+
         // The host application fills all of these in through editorView.init
         urls: {},
         ruleset: null,

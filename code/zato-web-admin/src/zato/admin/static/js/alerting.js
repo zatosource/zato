@@ -7,11 +7,14 @@ $.fn.zato.alerting = {};
 $.fn.zato.alerting.config = {
     actionUrl: '',
     editorUrl: '',
+    nameExistsUrl: '',
     clusterId: '',
     definitionId: 0,
     deletePrompt: 'Delete the rule {0}?',
-    newNamePattern: /^[A-Za-z_]\w*$/,
-    newNameHint: 'A rule name is letters, digits and underscores, starting with a letter'
+
+    // The rule engine's own name grammar - a name becomes a token of the stored document
+    newNamePattern: /^\w+$/,
+    newNameMessage: 'Letters, digits and underscores only'
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -101,20 +104,37 @@ $.fn.zato.alerting.deleteRule = function(ruleKey) {
 // ////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.alerting.openCreate = function() {
-    $('#alerting-create-div').dialog('open');
-    document.getElementById('alerting-create-name').focus();
+    $.fn.zato.data_table._create_edit('create', 'Create a new monitoring rule', null);
 };
 
 $.fn.zato.alerting.submitCreate = function() {
 
     var config = $.fn.zato.alerting.config;
-    var name = document.getElementById('alerting-create-name').value.trim();
+    var form = $('#create-form');
+    var field = $('#id_name');
+    var name = field.val().trim();
 
-    if(!config.newNamePattern.test(name)) {
-        jAlert(config.newNameHint, 'Invalid name');
+    // An empty name blinks the field with the required message ..
+    if(!$.fn.zato.is_form_valid(form)) {
         return;
     }
 
+    // .. a name outside the engine's grammar reads its verdict in place,
+    // the same way a taken one does ..
+    if(!config.newNamePattern.test(name)) {
+        $.fn.zato.render_unique_indicator(field, name, true, 'name', config.newNameMessage, config.newNameMessage);
+        $.fn.zato.blink_elem(field);
+        $.fn.zato.add_css_attention(field);
+        field.focus();
+        return;
+    }
+
+    // .. a taken name never leaves the popup ..
+    if(!$.fn.zato.validate_unique_on_submit(form)) {
+        return;
+    }
+
+    // .. and a good one opens the editor on a fresh rule of that name.
     window.location.href = config.editorUrl + '?cluster=' + config.clusterId + '&new=' + encodeURIComponent(name);
 };
 
@@ -124,27 +144,27 @@ $.fn.zato.alerting.init = function(config) {
 
     $.fn.zato.alerting.config.actionUrl = config.actionUrl;
     $.fn.zato.alerting.config.editorUrl = config.editorUrl;
+    $.fn.zato.alerting.config.nameExistsUrl = config.nameExistsUrl;
     $.fn.zato.alerting.config.clusterId = config.clusterId;
     $.fn.zato.alerting.config.definitionId = config.definitionId;
 
-    // The create popup - the same dialog every other listing creates through.
-    var createDiv = $('#alerting-create-div');
-
-    createDiv.dialog({
+    // The create popup - the same dialog every other listing creates through,
+    // narrower because the one name field is all it holds.
+    $('#create-div').dialog({
         autoOpen: false,
-        width: '40em',
-        title: 'Create a new alert rule',
+        width: '24em',
         close: function() {
-            document.getElementById('alerting-create-name').value = '';
+            $.fn.zato.data_table.reset_form('#create-form');
         }
     });
 
-    document.getElementById('alerting-create-form').addEventListener('submit', function(event) {
+    // The name is required and must be free - checked live while typing and again on OK,
+    // against this screen's own store rather than the shared SQL-backed endpoint.
+    $.fn.zato.data_table.set_field_required('#id_name');
+    $.fn.zato.validate_unique('#id_name', 'alert_rule', 'name', null, null, config.nameExistsUrl);
+
+    document.getElementById('create-form').addEventListener('submit', function(event) {
         event.preventDefault();
         $.fn.zato.alerting.submitCreate();
-    });
-
-    document.getElementById('alerting-create-cancel').addEventListener('click', function() {
-        createDiv.dialog('close');
     });
 };

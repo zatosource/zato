@@ -263,6 +263,33 @@ def api_search(req:'any_') -> 'JsonResponse':
 
 # ################################################################################################################################
 
+@method_allowed('POST')
+@_json_error
+def api_name_exists(req:'any_') -> 'JsonResponse':
+    """ Whether a rule of that name already exists in the alerts ruleset - what the create
+    popup's uniqueness checks ask before the editor is ever opened.
+    """
+    backend = get_backend()
+    definition = _find_definition(backend, Alerting.Ruleset_Name, Definition_Type_Ruleset)
+
+    name = req.POST['value'].strip()
+    exists = False
+
+    # A store without the ruleset holds no rules yet, so no name can be taken.
+    if definition:
+        document = deserialize_document(definition.document)
+        documents = document[Documents_Key]
+
+        for item in documents.values():
+            if item['name'] == name:
+                exists = True
+                break
+
+    out = JsonResponse({'exists': exists})
+    return out
+
+# ################################################################################################################################
+
 @method_allowed('GET')
 @_json_error
 def api_preview(req:'any_', definition_id:'int') -> 'JsonResponse':

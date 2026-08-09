@@ -62,6 +62,19 @@
     width: 24rem;
 }
 
+/* A matched fragment wears the same blue the listing badges wear, not the
+   shared theme's violet tint */
+.alerting-card .rulesets-mark {
+    background: #e0f0ff;
+    color: #012845;
+}
+
+/* With no head line above them the rules keep their own distance
+   from the ruleset row they stand under */
+.alerting-card .rulesets-rules {
+    padding-top: 10px;
+}
+
 /* With no side pane the rule rows take the full width of the card */
 .alerting-card .rulesets-rule {
     max-width: none;

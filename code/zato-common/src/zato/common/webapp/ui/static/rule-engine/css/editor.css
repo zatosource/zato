@@ -325,18 +325,21 @@
 /* Editor - document view                                     */
 /* ---------------------------------------------------------- */
 
+/* The one pane of the document view fills whatever the editor area gives it,
+   framed by a line dark enough to read as an edge and corners barely rounded */
 .rule-editor .editor-document {
     background: var(--input-background);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-3);
+    border: 1px solid var(--text4);
+    border-radius: var(--radius-1);
     padding: 16px 20px;
-    max-width: 640px;
+    min-height: 100%;
+    box-sizing: border-box;
     font-family: var(--mono);
     font-size: 12.5px;
     line-height: 1.7;
     color: var(--text2);
     overflow: auto;
-    margin: 0 0 16px;
+    margin: 0;
 }
 
 /* ---------------------------------------------------------- */

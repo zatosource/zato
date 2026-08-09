@@ -1,6 +1,6 @@
 {% extends "zato/dashboard_base.html" %}
 
-{% block html_title %}Alert rules{% endblock %}
+{% block html_title %}Monitoring rules{% endblock %}
 
 {% block dashboard_extra_css %}
 <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -35,6 +35,7 @@ $(document).ready(function() {
     alerting.init({
         actionUrl: '{% url "alert-rules-action" %}?cluster={{ cluster_id }}',
         editorUrl: '{% url "alert-rules-editor" %}',
+        nameExistsUrl: '{% url "alert-rules-api-name-exists" %}',
         clusterId: '{{ cluster_id }}',
         definitionId: definitionId
     });
@@ -61,15 +62,20 @@ $(document).ready(function() {
         showProblems: false,
         showSuggestions: false,
         showCount: false,
+        showMatchLines: false,
+        filterRulesInPanel: true,
+        matchRulesetNames: false,
+        openOnDoubleClick: false,
         showSidePane: false,
         showRuleState: true,
         rulesetLabels: {'{{ ruleset_name }}': 'Default monitoring rules'},
         facets: [],
         csrfToken: $.cookie('csrftoken'),
-        newLabel: 'Create a new alert rule',
+        newLabel: 'Create a new monitoring rule',
         onNew: function() { alerting.openCreate(); },
         autoExpandId: definitionId === 0 ? null : definitionId,
         lockExpanded: true,
+        showRulesHead: false,
         showRulesetInRulesHead: false,
         ruleActionClass: 'zato-link-face',
         ruleActions: [
@@ -99,8 +105,6 @@ $(document).ready(function() {
 
             <div class="rule-engine-ui ruleset-browser main-column" data-theme="zato-light" id="ruleset-browser">
                 <div class="command-bar">
-                    <button class="button-ghost" data-action="new">Create a new alert rule</button>
-                    <span class="command-bar-pipe">|</span>
                     <span class="search-clear-anchor" id="rulesets-field">
                         <input class="alerting-filter-input" id="rulesets-search" type="text" autocomplete="off"
                             spellcheck="false" placeholder="Filter rules">
@@ -108,6 +112,8 @@ $(document).ready(function() {
                         <button class="search-clear" id="rulesets-clear" data-action="clear-all"></button>
                         <div class="command-suggest" id="rulesets-suggest"></div>
                     </span>
+                    <span class="command-bar-pipe">|</span>
+                    <button class="button-ghost" data-action="new">Create a new monitoring rule</button>
                 </div>
 
                 <div class="rulesets-split">
@@ -116,22 +122,22 @@ $(document).ready(function() {
             </div>
         </div>
 
-        <div id="alerting-create-div" class='data-popup ignore'>
+        <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form novalidate id="alerting-create-form">
+                <form novalidate id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:18%">
-                                <label for="alerting-create-name">Name</label>
+                            <td style="vertical-align:middle; width:1%; white-space:nowrap">
+                                <label for="id_name">Name</label>
                             </td>
                             <td>
-                                <input type="text" id="alerting-create-name" style="width:100%" />
+                                <input type="text" id="id_name" name="name" style="width:100%" />
                             </td>
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
-                                <button type='button' id="alerting-create-cancel">Cancel</button>
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
                         </tr>
                     </table>

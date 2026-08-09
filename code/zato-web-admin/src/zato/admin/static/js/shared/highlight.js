@@ -28,7 +28,17 @@ $.fn.zato.highlight.config = {
     number_pattern: /^-?\d+(?:\.\d+)?$/,
 
     // What separates a key from its value
-    key_separator: '='
+    key_separator: '=',
+
+    // The block keywords of a rules file, each alone on an unindented line
+    rules_keyword_pattern: /^(rule|docs|defaults|when|then|else)$/,
+
+    // The values inside a rule's lines - a string or datetime literal, a number
+    // standing on its own, and the words the rules language reads as keywords
+    rules_token_pattern: /(d?'(?:\\.|[^'\\])*')|(?<![\w'.-])(-?\d+(?:\.\d+)?)(?![\w'])|\b(true|false|and|or)\b/g,
+
+    // What an assignment's target is set apart from its value by
+    rules_assignment_separator: ' = '
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -178,6 +188,99 @@ $.fn.zato.highlight.ini_value_to_html = function(value) {
     var trailing = value.slice(openingIdx + trimmed.length);
 
     var out = leading + highlight.wrap(className, trimmed) + trailing + comment;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+// The rules format
+// ////////////////////////////////////////////////////////////////////////
+
+// A whole rules file - the canonical text the rule engine renders. Each line is
+// a block keyword, the rule's name, a docs line, an assignment or a condition,
+// and which one it is follows from the block the line stands under.
+$.fn.zato.highlight.rules_to_html = function(text) {
+
+    var highlight = $.fn.zato.highlight;
+    var html_lines = [];
+    var block = '';
+
+    var lineList = text.split('\n');
+
+    for(var lineIdx = 0; lineIdx < lineList.length; lineIdx++) {
+
+        var line = lineList[lineIdx];
+
+        // A block keyword opens a new block and is a line of its own
+        if(highlight.config.rules_keyword_pattern.test(line)) {
+            block = line;
+            html_lines.push(highlight.wrap('highlight-keyword', line));
+            continue;
+        }
+
+        html_lines.push(highlight.rules_line_to_html(line, block));
+    }
+
+    var out = html_lines.join('\n');
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.highlight.rules_line_to_html = function(line, block) {
+
+    var highlight = $.fn.zato.highlight;
+
+    // The line under the rule keyword is the rule's own name
+    if(block === 'rule') {
+        return highlight.wrap('highlight-section', line);
+    }
+
+    // Docs are prose and read the way comments do
+    if(block === 'docs') {
+        return highlight.wrap('highlight-comment', line);
+    }
+
+    // An assignment names its target apart from the value it sets
+    var separator = highlight.config.rules_assignment_separator;
+    var separatorIdx = line.indexOf(separator);
+
+    if(block !== 'when' && separatorIdx !== -1) {
+
+        var key = line.slice(0, separatorIdx);
+        var value = line.slice(separatorIdx + separator.length);
+
+        var out = highlight.wrap('highlight-key', key) +
+            highlight.wrap('highlight-punctuation', separator) +
+            highlight.rules_value_to_html(value);
+
+        return out;
+    }
+
+    // A condition keeps its subject and comparator plain and colors only its values
+    return highlight.rules_value_to_html(line);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The literals of one line - strings, numbers and the words that read as keywords.
+$.fn.zato.highlight.rules_value_to_html = function(text) {
+
+    var highlight = $.fn.zato.highlight;
+
+    var wrap_match = function(match) {
+
+        if(match[1]) {
+            return highlight.wrap('highlight-string', match[1]);
+        }
+
+        if(match[2]) {
+            return highlight.wrap('highlight-number', match[2]);
+        }
+
+        return highlight.wrap('highlight-keyword', match[3]);
+    };
+
+    var out = highlight.replace_tokens(text, highlight.config.rules_token_pattern, wrap_match);
     return out;
 };
 

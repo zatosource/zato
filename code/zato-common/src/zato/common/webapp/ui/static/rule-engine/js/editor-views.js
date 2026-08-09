@@ -79,9 +79,8 @@ editorView.documentViewHtml = function() {
         return out;
     }
 
-    var html = '<pre class="editor-document editor-canonical-text"></pre>' +
-        '<pre class="editor-document">' +
-        shared.escape(JSON.stringify(editorModel.serverDocuments, null, 2)) + '</pre>';
+    // The text itself arrives from the server once the pane is on the screen
+    var html = '<pre class="editor-document editor-canonical-text"></pre>';
     return html;
 };
 
@@ -90,7 +89,14 @@ editorView.fillCanonicalText = function() {
     if (target === null) { return; }
 
     data.post(editorModel.config.urls.render, {documents: editorModel.serverDocuments}, function(payload) {
-        target.textContent = payload.text;
+
+        // A host with a tokenizer gets the text painted, one without keeps it plain
+        if (editorModel.config.documentTextHtml === null) {
+            target.textContent = payload.text;
+        }
+        else {
+            target.innerHTML = editorModel.config.documentTextHtml(payload.text);
+        }
     }, data.reportError);
 };
 

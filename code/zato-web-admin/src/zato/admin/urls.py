@@ -404,6 +404,8 @@ urlpatterns += [
         login_required(alerting.api_definitions), name='alert-rules-api-definitions'),
     url(r'^zato/alerting/api/search/$',
         login_required(alerting.api_search), name='alert-rules-api-search'),
+    url(r'^zato/alerting/api/name-exists/$',
+        login_required(alerting.api_name_exists), name='alert-rules-api-name-exists'),
     path('zato/alerting/api/preview/<int:definition_id>/',
         login_required(alerting.api_preview), name='alert-rules-api-preview'),
     path('zato/alerting/api/vocabulary/<int:definition_id>/',
