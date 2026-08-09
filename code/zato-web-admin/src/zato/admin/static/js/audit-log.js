@@ -61,9 +61,14 @@ $.fn.zato.audit_log.config = {
 
     // What the selects' picks are called in the address bar - distinct from the
     // per-source page's source and object_name, so the index view keeps serving
-    // the all-events layout
+    // the all-events layout. The excluded picks travel under keys of their own.
     sourcesURLKey: 'sources',
     objectsURLKey: 'objects',
+    sourcesExcludedURLKey: 'sources_excluded',
+    objectsExcludedURLKey: 'objects_excluded',
+
+    // What a trigger whose picks amount to everything-but starts its badge with
+    exceptLabel: 'All except',
 
     // What the resubmit outcome is reported with - the message itself comes
     // display-ready from the backend
@@ -365,7 +370,9 @@ $.fn.zato.audit_log.refreshStrip = function() {
 
     var body = {
         sources: filters.sources,
+        sources_excluded: filters.sources_excluded,
         object_names: filters.object_names,
+        object_names_excluded: filters.object_names_excluded,
         outcomes: filters.outcomes,
         query: filters.query,
         status: filters.status,
@@ -424,13 +431,16 @@ $.fn.zato.audit_log.filtersToURL = function(key, values) {
 
 // Where changed picks lead from a page rendered for one source - its columns were baked
 // for that source at render time, so a change of picks is a navigation, not a re-poll.
-// One source with at most one object gets that source's own page, any other mix gets
-// the all-events listing with the picks in the address.
-$.fn.zato.audit_log.filterPicksURL = function(sources, objects) {
+// One included source with at most one included object and nothing excluded anywhere
+// gets that source's own page, any other mix gets the all-events listing with all
+// the picks, the excluded ones included, in the address.
+$.fn.zato.audit_log.filterPicksURL = function(sources, objects, sourcesExcluded, objectsExcluded) {
     var config = $.fn.zato.audit_log.config;
     var params = new URLSearchParams();
 
-    if (sources.length === 1 && objects.length <= 1) {
+    var hasExcludes = sourcesExcluded.length > 0 || objectsExcluded.length > 0;
+
+    if (sources.length === 1 && objects.length <= 1 && !hasExcludes) {
         params.set('source', sources[0]);
 
         if (objects.length === 1) {
@@ -443,6 +453,14 @@ $.fn.zato.audit_log.filterPicksURL = function(sources, objects) {
 
         if (objects.length) {
             params.set(config.objectsURLKey, objects.join(','));
+        }
+
+        if (sourcesExcluded.length) {
+            params.set(config.sourcesExcludedURLKey, sourcesExcluded.join(','));
+        }
+
+        if (objectsExcluded.length) {
+            params.set(config.objectsExcludedURLKey, objectsExcluded.join(','));
         }
     }
 
@@ -488,6 +506,32 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
 
         sourceItems.push({value: option.source, label: option.label});
     }
+
+    // The sources a set of picks amounts to - the included ones when there are any,
+    // every source there is minus the excluded ones when only excludes are on, and
+    // the empty list, which stands for everything untouched, when nothing is picked
+    // at all. This is what the object groups on offer and the legend's outcomes follow.
+    var effectiveSources = function(included, excluded) {
+        if (included.length) {
+            return included;
+        }
+
+        if (excluded.length === 0) {
+            return [];
+        }
+
+        var out = [];
+
+        for (var sourceIndex = 0; sourceIndex < sourceItems.length; sourceIndex++) {
+            var sourceValue = sourceItems[sourceIndex].value;
+
+            if (excluded.indexOf(sourceValue) === -1) {
+                out.push(sourceValue);
+            }
+        }
+
+        return out;
+    };
 
     // The objects on offer, grouped by their source - all of them when no source is
     // picked, the picked sources' own when some are. Nothing picked means every one,
@@ -571,18 +615,26 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
 
     var pickedSources;
     var pickedObjects;
+    var pickedSourcesExcluded;
+    var pickedObjectsExcluded;
 
     if (isSourcePage) {
         pickedSources = [config.source];
         pickedObjects = config.objectName === '' ? [] : [config.objectName];
+
+        // A per-source page is its one source whole - nothing of it is excluded
+        pickedSourcesExcluded = [];
+        pickedObjectsExcluded = [];
     } else {
 
         // The picks the address bar carries, so a reloaded page starts where it was left
         pickedSources = $.fn.zato.audit_log.filtersFromURL(config.sourcesURLKey);
         pickedObjects = $.fn.zato.audit_log.filtersFromURL(config.objectsURLKey);
+        pickedSourcesExcluded = $.fn.zato.audit_log.filtersFromURL(config.sourcesExcludedURLKey);
+        pickedObjectsExcluded = $.fn.zato.audit_log.filtersFromURL(config.objectsExcludedURLKey);
     }
 
-    var initialObjectGroups = objectGroups(pickedSources);
+    var initialObjectGroups = objectGroups(effectiveSources(pickedSources, pickedSourcesExcluded));
 
     var objectSelect = kit.select.create({
         host: config.objectSelectHost,
@@ -590,22 +642,27 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
         label: config.objectSelectLabel,
         groups: initialObjectGroups,
         multi: true,
+        tri_state: true,
         values: pickedObjects,
+        excluded_values: pickedObjectsExcluded,
         empty_label: config.allObjectsLabel,
         many_label: config.manyObjectsLabel,
+        except_label: config.exceptLabel,
         disabled_label: config.noMatchesLabel,
-        on_change: function(values) {
+        on_change: function(values, excluded) {
 
             // A page baked for one source has no way to redraw itself around the new
             // picks, so they are taken to the page that owns them
             if (isSourcePage) {
-                window.location = $.fn.zato.audit_log.filterPicksURL(sourceSelect.get_values(), values);
+                window.location = $.fn.zato.audit_log.filterPicksURL(
+                    sourceSelect.get_values(), values, sourceSelect.get_excluded(), excluded);
                 return;
             }
 
             $.fn.zato.audit_log.filtersToURL(config.objectsURLKey, values);
+            $.fn.zato.audit_log.filtersToURL(config.objectsExcludedURLKey, excluded);
 
-            pagination.set_filters({object_names: values});
+            pagination.set_filters({object_names: values, object_names_excluded: excluded});
             pagination.fetch_page(1);
         }
     });
@@ -619,13 +676,17 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
         label: config.sourceSelectLabel,
         groups: [{group: '', items: sourceItems}],
         multi: true,
+        tri_state: true,
         values: pickedSources,
+        excluded_values: pickedSourcesExcluded,
         empty_label: config.allSourcesLabel,
         many_label: config.manySourcesLabel,
-        on_change: function(values) {
-            var newGroups = objectGroups(values);
+        except_label: config.exceptLabel,
+        on_change: function(values, excluded) {
+            var newGroups = objectGroups(effectiveSources(values, excluded));
 
-            // An object of some source no longer picked is no filter for these
+            // An object of some source no longer on offer is no filter for these,
+            // whether it was picked in or picked out
             var pickedObjects = objectSelect.get_values();
             var keptObjects = [];
 
@@ -635,28 +696,43 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
                 }
             }
 
+            var excludedObjects = objectSelect.get_excluded();
+            var keptObjectsExcluded = [];
+
+            for (var excludedIndex = 0; excludedIndex < excludedObjects.length; excludedIndex++) {
+                if (hasObject(newGroups, excludedObjects[excludedIndex])) {
+                    keptObjectsExcluded.push(excludedObjects[excludedIndex]);
+                }
+            }
+
             // A page baked for one source has no way to redraw itself around the new
             // picks, so they are taken to the page that owns them
             if (isSourcePage) {
-                window.location = $.fn.zato.audit_log.filterPicksURL(values, keptObjects);
+                window.location = $.fn.zato.audit_log.filterPicksURL(
+                    values, keptObjects, excluded, keptObjectsExcluded);
                 return;
             }
 
             objectSelect.set_groups(newGroups);
             objectSelect.set_values(keptObjects);
+            objectSelect.set_excluded(keptObjectsExcluded);
             objectSelect.set_enabled(newGroups.length > 0);
 
             $.fn.zato.audit_log.filtersToURL(config.sourcesURLKey, values);
+            $.fn.zato.audit_log.filtersToURL(config.sourcesExcludedURLKey, excluded);
             $.fn.zato.audit_log.filtersToURL(config.objectsURLKey, keptObjects);
+            $.fn.zato.audit_log.filtersToURL(config.objectsExcludedURLKey, keptObjectsExcluded);
 
-            // The legend's offer follows the sources, so what its badges mean as
-            // a filter is recomputed along with it
-            var newOutcomes = legendOutcomes(values);
+            // The legend's offer follows the sources the picks amount to, so what its
+            // badges mean as a filter is recomputed along with it
+            var newOutcomes = legendOutcomes(effectiveSources(values, excluded));
             listing.buildLegend(newOutcomes);
 
             pagination.set_filters({
                 sources: values,
+                sources_excluded: excluded,
                 object_names: keptObjects,
+                object_names_excluded: keptObjectsExcluded,
                 outcomes: listing.pickedOutcomes(newOutcomes)
             });
             pagination.fetch_page(1);
@@ -665,9 +741,9 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
 
     // A page rendered for one source built its legend from that source's own outcomes
     // already - only the all-events legend follows the picks, without Expired unless
-    // pub/sub is among them
+    // pub/sub is among the sources they amount to
     if (!isSourcePage) {
-        listing.buildLegend(legendOutcomes(pickedSources));
+        listing.buildLegend(legendOutcomes(effectiveSources(pickedSources, pickedSourcesExcluded)));
     }
 };
 
@@ -743,6 +819,8 @@ $.fn.zato.audit_log.init = function(initConfig) {
     // bar carries, so a reload keeps the filters ..
     var sources = [];
     var objectNames = [];
+    var sourcesExcluded = [];
+    var objectNamesExcluded = [];
 
     if (initConfig.source !== '') {
         sources.push(initConfig.source);
@@ -753,6 +831,8 @@ $.fn.zato.audit_log.init = function(initConfig) {
     } else {
         sources = $.fn.zato.audit_log.filtersFromURL(config.sourcesURLKey);
         objectNames = $.fn.zato.audit_log.filtersFromURL(config.objectsURLKey);
+        sourcesExcluded = $.fn.zato.audit_log.filtersFromURL(config.sourcesExcludedURLKey);
+        objectNamesExcluded = $.fn.zato.audit_log.filtersFromURL(config.objectsExcludedURLKey);
     }
 
     // A page deep-linked to events of one kind opens filtered down to them,
@@ -768,7 +848,9 @@ $.fn.zato.audit_log.init = function(initConfig) {
         page_size: config.pageSize,
         filters: {
             sources: sources,
+            sources_excluded: sourcesExcluded,
             object_names: objectNames,
+            object_names_excluded: objectNamesExcluded,
             outcomes: [],
             query: initConfig.query,
             status: initConfig.status,

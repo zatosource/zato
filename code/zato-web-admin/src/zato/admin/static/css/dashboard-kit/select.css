@@ -80,6 +80,14 @@
     background: rgba(26, 86, 168, 0.05);
 }
 
+/* A pick amounting to everything-but wears the badge in the exclusion's own red,
+   so the trigger says an exclusion is on without the menu being opened */
+
+.dashboard-select-value.dashboard-select-value-excluding {
+    color: rgba(224, 34, 110, 0.72);
+    background: rgba(224, 34, 110, 0.05);
+}
+
 /* The chevron is drawn on the baseline and stands turned over while the menu is up */
 
 .dashboard-select-chevron {

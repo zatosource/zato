@@ -6,6 +6,14 @@
 /* low alpha.                                                    */
 /* ------------------------------------------------------------ */
 
+/* The ink an excluded row is marked with - one red at two strengths, the mark
+   itself and the wash behind the row, in the family of the pages' error red */
+
+:root {
+    --zato-dropdown-excluded-ink: rgba(224, 34, 110, 0.8);
+    --zato-dropdown-excluded-tint: rgba(224, 34, 110, 0.06);
+}
+
 .zato-dropdown-menu {
     position: absolute;
     z-index: 10000;
@@ -93,6 +101,26 @@
     border-left: 1.5px solid #2e7d6a;
     border-bottom: 1.5px solid #2e7d6a;
     transform: rotate(-45deg);
+}
+
+/* An excluded row wears the no-entry mark - a minus in a circle - in the very slot
+   the checkmark stands in, so cycling a row's state never moves its text. The mark
+   is an SVG shape cut out as a mask and inked by the variable, so the one drawing
+   serves whatever red the page asks for. */
+
+.zato-dropdown-item-excluded {
+    background: var(--zato-dropdown-excluded-tint);
+}
+
+.zato-dropdown-item-excluded .zato-dropdown-item-check::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--zato-dropdown-excluded-ink);
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Ccircle cx='6' cy='6' r='5' fill='none' stroke='black' stroke-width='1.5'/%3E%3Cline x1='3.5' y1='6' x2='8.5' y2='6' stroke='black' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+    mask-repeat: no-repeat;
+    mask-size: 12px 12px;
+    mask-position: center;
 }
 
 .zato-dropdown-separator {

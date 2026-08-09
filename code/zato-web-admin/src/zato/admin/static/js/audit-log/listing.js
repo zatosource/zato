@@ -717,9 +717,13 @@ listing.paneHeadHTML = function(rowModel) {
     html += '<span class="audit-log-pane-title">' + listing.escapeHTML(rowModel.headline) + '</span>';
     html += listing.outcomeBadgeHTML(rowModel);
 
-    html += '<span class="audit-log-pane-actions">';
-    html += listing.actionHTML(rowModel);
-    html += '</span>';
+    // An event with nothing to act on gets no actions holder either - an empty one would
+    // still claim a flex gap of its own and hold the badge away from the head's right edge
+    var actionHTML = listing.actionHTML(rowModel);
+
+    if (actionHTML) {
+        html += '<span class="audit-log-pane-actions">' + actionHTML + '</span>';
+    }
 
     return html;
 };
@@ -908,6 +912,10 @@ listing.paneHTML = function(rowModel) {
         '">' + config.openFlowLabel + '</a>';
     html += '</div>';
 
+    // Only the panels scroll - the head and the tabs stand outside the scrolling body, so
+    // the scrollbar the panels bring never pushes the head's right edge away from the page's
+    html += '<div class="audit-log-pane-body">';
+
     html += '<div class="dashboard-tab-panel" role="tabpanel" id="' +
         config.tabPanelPrefix + config.dataTab + '">';
     html += '<div id="' + config.payloadHost.slice(1) + '"></div>';
@@ -916,6 +924,8 @@ listing.paneHTML = function(rowModel) {
     html += '<div class="dashboard-tab-panel" role="tabpanel" id="' +
         config.tabPanelPrefix + config.detailsTab + '">';
     html += '<div class="audit-log-pane-details">' + listing.paneDetailsHTML(rowModel) + '</div>';
+    html += '</div>';
+
     html += '</div>';
 
     return html;

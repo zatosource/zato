@@ -567,10 +567,23 @@
    two lines read as one column. Only a little room is kept on the left, for the handle. */
 
 .detail-page-audit-log .dashboard-list-detail-pane {
-    padding: 0 0 10px 10px;
+    display: flex;
+    flex-direction: column;
+    padding: 0 0 0 10px;
     border: none;
     background: transparent;
-    overflow-y: auto;
+    overflow: hidden;
+}
+
+/* It is the panels alone that scroll, in a body of their own below the head and the tabs -
+   so the scrollbar they bring stands inside the body and never holds the head or the tabs
+   short of the page's right edge */
+
+.audit-log-pane-body {
+    flex: 1;
+    min-height: 0;
+    padding-bottom: 10px;
+    overflow: auto;
 }
 
 .audit-log-pane-head {
@@ -612,16 +625,13 @@
     margin-left: auto;
 }
 
-/* The outcome badge stands at the right edge of the head, beside the actions -
-   when it is there, it is the one taking the leftover room, not the actions */
+/* The outcome badge stands right beside the headline it speaks for - pinned out at the
+   head's far edge it only looked stranded, a room's width away from its own sentence.
+   The leftover room now lies to the right of the two of them, where it crowds nothing,
+   and the actions alone keep to the far edge. */
 
 .audit-log-pane-head .audit-log-outcome-filter {
     flex: none;
-    margin-left: auto;
-}
-
-.audit-log-pane-head .audit-log-outcome-filter ~ .audit-log-pane-actions {
-    margin-left: 0;
 }
 
 .audit-log-resubmit-link {

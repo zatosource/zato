@@ -226,7 +226,9 @@ def poll(req:'any_') -> 'HttpResponse':
     body = json.loads(req.body)
 
     sources = body['sources']
+    sources_excluded = body['sources_excluded']
     object_names = body['object_names']
+    object_names_excluded = body['object_names_excluded']
     outcomes = body['outcomes']
     query = body['query']
     status = body['status']
@@ -240,7 +242,9 @@ def poll(req:'any_') -> 'HttpResponse':
     if page < _default_page:
         page = _default_page
 
-    where_conditions = _build_where(sources, object_names, outcomes, query, status, time_from, time_to, event_types)
+    where_conditions = _build_where(
+        sources, object_names, outcomes, query, status, time_from, time_to, event_types,
+        sources_excluded=sources_excluded, object_names_excluded=object_names_excluded)
 
     rows:'anylist' = []
 
@@ -345,7 +349,9 @@ def strip(req:'any_') -> 'HttpResponse':
     body = json.loads(req.body)
 
     sources = body['sources']
+    sources_excluded = body['sources_excluded']
     object_names = body['object_names']
+    object_names_excluded = body['object_names_excluded']
     outcomes = body['outcomes']
     query = body['query']
     status = body['status']
@@ -362,7 +368,9 @@ def strip(req:'any_') -> 'HttpResponse':
     if bucket_count < _strip_min_buckets:
         bucket_count = _strip_min_buckets
 
-    where_conditions = _build_where(sources, object_names, outcomes, query, status, time_from, time_to, event_types)
+    where_conditions = _build_where(
+        sources, object_names, outcomes, query, status, time_from, time_to, event_types,
+        sources_excluded=sources_excluded, object_names_excluded=object_names_excluded)
 
     events_query = select(event_table.c.event_time_iso, event_table.c.outcome)
     events_query = events_query.where(*where_conditions)

@@ -615,6 +615,12 @@ $.fn.zato.http_soap.inline._open_security_menu = function(link, items) {
                 }
             };
 
+            // On the page before anything is filled in - the badge picker finds
+            // its zones by their ids, so a pane built while detached stays empty
+            body.appendChild(list);
+            body.appendChild(panes);
+            content.appendChild(body);
+
             var add_pane = function(label, build) {
 
                 var entry = document.createElement('div');
@@ -625,26 +631,23 @@ $.fn.zato.http_soap.inline._open_security_menu = function(link, items) {
                 entry_label.textContent = label;
                 entry.appendChild(entry_label);
 
-                var pane = document.createElement('div');
-                build(pane);
-
                 var pane_idx = entries.length;
                 entry.addEventListener('mouseenter', function() {
                     show_pane(pane_idx);
                 });
 
                 entries.push(entry);
-                pane_elems.push(pane);
                 list.appendChild(entry);
+
+                var pane = document.createElement('div');
+                pane_elems.push(pane);
                 panes.appendChild(pane);
+
+                build(pane);
             };
 
             add_pane(inline.config.definition_pane_label, build_definition_pane);
             add_pane(inline.config.groups_pane_label, build_groups_pane);
-
-            body.appendChild(list);
-            body.appendChild(panes);
-            content.appendChild(body);
 
             show_pane(0);
 

@@ -80,7 +80,20 @@
             row.appendChild(label_span);
         }
         else {
-            if (config.is_picked(item.value)) {
+
+            // A tri-state row wears its state - the included look is the picked one,
+            // the excluded look is its own - and a two-state row only knows picked
+            if (config.get_state) {
+                var state = config.get_state(item.value);
+
+                if (state === 'included') {
+                    row.className = 'zato-dropdown-item zato-dropdown-item-selected';
+                }
+                else if (state === 'excluded') {
+                    row.className = 'zato-dropdown-item zato-dropdown-item-excluded';
+                }
+            }
+            else if (config.is_picked(item.value)) {
                 row.className = 'zato-dropdown-item zato-dropdown-item-selected';
             }
 
@@ -198,6 +211,8 @@
          toggle_pick: a pick flips its own mark and leaves the menu up
          item_style:  'value_label' or 'text'
          is_picked:   function(value) saying which rows are marked (item_style 'text')
+         get_state:   optional function(value) answering 'included', 'excluded' or 'unset' -
+                      the tri-state flavour, taking precedence over is_picked for the rows
          with_filter: put a filter box at the top of the menu
          on_close:    optional callback(), fired once when the menu goes away */
     ns.select.show_menu = function(config) {
@@ -298,14 +313,28 @@
        at the top, named by `empty_label` - picking it lets every other pick go.
        An optional `on_close` is fired once when the menu goes away, which is where
        a page that reloads on its filters applies what was toggled in one visit.
-       Returns {set_groups} plus {get_value, set_value} or {get_values, set_values}. */
+       With tri_state: true on top of multi, every item carries one of three states and
+       a click cycles it - unset to included to excluded and back to unset. The excluded
+       picks start out as `excluded_values`, on_change receives (included, excluded),
+       and a trigger whose picks amount to everything-but reads `except_label` and the
+       count or the one excluded item's own label.
+       Returns {set_groups} plus {get_value, set_value} or {get_values, set_values},
+       and a tri-state select adds {get_excluded, set_excluded}. */
     ns.select.create = function(config) {
         var host = $(config.host)[0];
         var groups = config.groups;
         var multi = config.multi === true;
+        var tri_state = config.tri_state === true;
 
         var current_value = config.value;
         var current_values = config.values;
+
+        // Only a tri-state select holds excluded picks of its own
+        var current_excluded = [];
+
+        if (tri_state) {
+            current_excluded = config.excluded_values;
+        }
 
         // The trigger has no look of the kit's own - dashboard-select-trigger is
         // layout alone and everything visible about it comes from the caller
@@ -359,7 +388,7 @@
                 // The All row stands for no picks at all, so it is the one
                 // marked while the list is empty
                 if (value === all_value) {
-                    return current_values.length === 0;
+                    return current_values.length === 0 && current_excluded.length === 0;
                 }
 
                 return current_values.indexOf(value) !== -1;
@@ -368,13 +397,52 @@
             return value === current_value;
         };
 
+        /* Which of the three states one row is in - the All row reads as included
+           while there are no picks of either kind, standing for everything */
+        var get_state = function(value) {
+            if (value === all_value) {
+                if (current_values.length === 0 && current_excluded.length === 0) {
+                    return 'included';
+                }
+
+                return 'unset';
+            }
+
+            if (current_values.indexOf(value) !== -1) {
+                return 'included';
+            }
+
+            if (current_excluded.indexOf(value) !== -1) {
+                return 'excluded';
+            }
+
+            return 'unset';
+        };
+
         var apply = function() {
             if (!multi) {
                 value_span.textContent = label_of(current_value);
                 return;
             }
 
-            // Nothing picked is everything on offer, one pick is named, more are counted
+            // A trigger whose picks amount to everything-but wears the excluding face
+            var is_excluding = tri_state && current_values.length === 0 && current_excluded.length > 0;
+
+            value_span.classList.toggle('dashboard-select-value-excluding', is_excluding);
+
+            // Everything-but names the one value cut out or counts several of them ..
+            if (is_excluding) {
+                if (current_excluded.length === 1) {
+                    value_span.textContent = config.except_label + ' ' + label_of(current_excluded[0]);
+                }
+                else {
+                    value_span.textContent = config.except_label + ' ' + current_excluded.length;
+                }
+
+                return;
+            }
+
+            // .. nothing picked is everything on offer, one pick is named, more are counted.
             if (current_values.length === 0) {
                 value_span.textContent = config.empty_label;
             }
@@ -389,9 +457,28 @@
         var pick = function(value) {
             if (multi) {
 
-                // Picking All is picking nothing - every other pick is let go
+                // Picking All is picking nothing - every other pick of either kind is let go
                 if (value === all_value) {
                     current_values = [];
+                    current_excluded = [];
+                }
+                else if (tri_state) {
+
+                    // The cycle - an unset pick is included, an included one turns
+                    // excluded and an excluded one is let go back to unset
+                    var included_idx = current_values.indexOf(value);
+                    var excluded_idx = current_excluded.indexOf(value);
+
+                    if (included_idx !== -1) {
+                        current_values.splice(included_idx, 1);
+                        current_excluded.push(value);
+                    }
+                    else if (excluded_idx !== -1) {
+                        current_excluded.splice(excluded_idx, 1);
+                    }
+                    else {
+                        current_values.push(value);
+                    }
                 }
                 else {
                     var value_idx = current_values.indexOf(value);
@@ -406,8 +493,14 @@
 
                 apply();
 
-                // The caller gets a copy - what it does with the list is its own affair
-                config.on_change(current_values.slice());
+                // The caller gets copies - what it does with the lists is its own affair
+                if (tri_state) {
+                    config.on_change(current_values.slice(), current_excluded.slice());
+                }
+                else {
+                    config.on_change(current_values.slice());
+                }
+
                 return;
             }
 
@@ -448,6 +541,7 @@
                 toggle_pick: multi,
                 item_style: 'text',
                 is_picked: is_picked,
+                get_state: tri_state ? get_state : null,
                 with_filter: item_count() > filter_threshold,
                 on_close: config.on_close
             });
@@ -490,6 +584,17 @@
             };
             out.set_values = function(values) {
                 current_values = values.slice();
+                apply();
+            };
+        }
+
+        // Only a tri-state select has excluded picks to hand out and take in
+        if (tri_state) {
+            out.get_excluded = function() {
+                return current_excluded.slice();
+            };
+            out.set_excluded = function(values) {
+                current_excluded = values.slice();
                 apply();
             };
         }

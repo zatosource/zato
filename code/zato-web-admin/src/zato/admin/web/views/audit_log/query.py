@@ -51,10 +51,14 @@ def _build_where(
     time_from:'str' = '',
     time_to:'str' = '',
     event_types:'anylist' = [],
+    sources_excluded:'anylist' = [],
+    object_names_excluded:'anylist' = [],
     ) -> 'anylist':
     """ Builds the WHERE conditions for the poll query. A per-source page names its one
     source, the all-events page names whichever ones its reader picked - none at all
     reads everything. The same goes for the objects - any number can be picked at once.
+    A source or an object can also be picked out rather than in, which is how the page
+    reads everything except the picked-out ones.
     """
 
     # Our response to produce
@@ -67,6 +71,14 @@ def _build_where(
 
     if object_names:
         out.append(event_table.c.object_name.in_(object_names))
+
+    # The excluded picks cut into whatever the included ones cover - all of it
+    # when nothing is included - which is how "all except these" reads
+    if sources_excluded:
+        out.append(event_table.c.source.notin_(sources_excluded))
+
+    if object_names_excluded:
+        out.append(event_table.c.object_name.notin_(object_names_excluded))
 
     # The outcome legend switches outcomes off - naming some means show these alone,
     # naming none means the legend stands whole and filters nothing
