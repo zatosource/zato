@@ -471,11 +471,12 @@ $.fn.zato.http_soap.inline.write_channel_security_cell = function(link, saved) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// The one panel a channel's security cell opens - the definition picker and the groups
-// badge picker inside it, one to a tab, only one of them on screen at a time. The groups
-// list is brought over first and the panel comes on screen already populated, in one
-// paint - a panel filled in after it opened would flicker as its zones got replaced.
-$.fn.zato.http_soap.inline.open_security_tabs = function(link) {
+// The one popup a channel's security cell opens - the IDE's own action-menu layout,
+// the list on the left and the live pane on the right, hovering over an entry being
+// what switches the pane. Both panes are built before the popup shows, so switching
+// is immediate. The groups list is brought over first and the popup comes on screen
+// already populated, in one paint.
+$.fn.zato.http_soap.inline.open_security_menu = function(link) {
 
     var inline = $.fn.zato.http_soap.inline;
     var lines = $.fn.zato.wizard_kit.lines;
@@ -494,7 +495,7 @@ $.fn.zato.http_soap.inline.open_security_tabs = function(link) {
         // the list was in flight may have opened another one by now
         lines.closePanel();
 
-        inline._open_security_tabs_panel(link, items);
+        inline._open_security_menu(link, items);
     };
 
     $.fn.zato.post(url, on_response, '', '', true);
@@ -502,7 +503,7 @@ $.fn.zato.http_soap.inline.open_security_tabs = function(link) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.http_soap.inline._open_security_tabs_panel = function(link, items) {
+$.fn.zato.http_soap.inline._open_security_menu = function(link, items) {
 
     var inline = $.fn.zato.http_soap.inline;
     var lines = $.fn.zato.wizard_kit.lines;
@@ -510,27 +511,31 @@ $.fn.zato.http_soap.inline._open_security_tabs_panel = function(link, items) {
     var instance = $.fn.zato.data_table.data[id];
     var security_attr = inline.config.security_attr;
 
-    // What the groups stood at when the panel opened, compared against when it closes
-    var baseline = [];
+    // What the groups stood at when the popup opened, compared against when it closes
+    var groups_baseline = [];
 
     for(var item_idx = 0; item_idx < items.length; item_idx++) {
         if(items[item_idx].is_assigned) {
-            baseline.push(items[item_idx].id);
+            groups_baseline.push(items[item_idx].id);
         }
     }
-    baseline.sort();
+    groups_baseline.sort();
 
-    var picked = baseline.slice();
+    // What the definition stood at - a pick is only remembered here, both panes
+    // save together in one go when the popup closes
+    var security_baseline = instance[security_attr];
+    var picked_security = security_baseline;
+    var picked_security_label = '';
 
-    // The badge picker only exists while its tab is on screen, so its answer is
-    // read each time the tab goes away and once more when the panel closes
-    var read_groups_if_live = function() {
-        if(document.getElementById('badge-picker-' + inline.config.groups_element_action)) {
-            picked = inline._read_groups();
-        }
+    // A pane with nothing to pick from says so instead of showing its empty chrome
+    var build_empty_note = function(message) {
+        var note = document.createElement('div');
+        note.className = 'form_hint';
+        note.textContent = message;
+        return note;
     };
 
-    var show_definition = function(content) {
+    var build_definition_pane = function(holder) {
 
         var options = [];
 
@@ -540,40 +545,36 @@ $.fn.zato.http_soap.inline._open_security_tabs_panel = function(link, items) {
             }
         });
 
+        if(!options.length) {
+            holder.appendChild(build_empty_note(inline.config.definitions_empty_message));
+            return;
+        }
+
         var on_pick = function(option) {
 
-            // Closing the panel is what saves the groups tab, if it was changed
-            lines.closePanel();
+            // The pick is only remembered - the popup stays open so the groups
+            // can be changed in the same visit, everything saves on close
+            picked_security = option.value;
+            picked_security_label = option.label;
 
-            // Picking the definition the row already uses changes nothing
-            if(option.value === instance[security_attr]) {
-                return;
-            }
-
-            var data = {
-                'security': option.value
-            };
-
-            var on_saved = function(saved) {
-
-                // The row stands at what came back - the composite id feeds the edit form,
-                // the label feeds the rebuilt rows
-                instance[security_attr] = saved.security_id;
-                instance[security_attr + '_select'] = option.label;
-
-                inline.write_channel_security_cell(link, saved);
-            };
-
-            inline.save(link, id, data, on_saved, $.fn.zato.inline_edit.config.saved_label);
+            // The dot moves to the picked row
+            holder.textContent = '';
+            inline._build_pick_body(
+                holder, options, picked_security, inline.config.security_filter_placeholder, on_pick);
         };
 
         inline._build_pick_body(
-            content, options, instance[security_attr], inline.config.security_filter_placeholder, on_pick);
+            holder, options, picked_security, inline.config.security_filter_placeholder, on_pick);
     };
 
-    var show_groups = function(content) {
+    var build_groups_pane = function(holder) {
 
-        inline._build_groups_body(content);
+        if(!items.length) {
+            holder.appendChild(build_empty_note(inline.config.groups_empty_message));
+            return;
+        }
+
+        inline._build_groups_body(holder);
 
         // The list already says which of the groups the channel holds
         $.fn.zato.badge_picker.init(inline.config.groups_element_action, items, {
@@ -583,73 +584,134 @@ $.fn.zato.http_soap.inline._open_security_tabs_panel = function(link, items) {
         });
     };
 
-    var current_tab = '';
-
-    var render = function(tab_name) {
-
-        // A visit to the groups tab may have changed the picks, so leaving it writes
-        // them back into the list the next visit rebuilds the tab from
-        if(current_tab === inline.config.tab_groups_name) {
-            read_groups_if_live();
-            for(var idx = 0; idx < items.length; idx++) {
-                items[idx].is_assigned = picked.indexOf(items[idx].id) > -1;
-            }
-        }
-        current_tab = tab_name;
-
-        lines.setSegments('http-soap-security-segments', [
-            {name: inline.config.tab_definition_name, label: inline.config.tab_definition_label, is_active: true},
-            {name: inline.config.tab_groups_name, label: inline.config.tab_groups_label, is_active: true}
-        ], tab_name, render);
-
-        var tab_content = document.getElementById('http-soap-security-tab-content');
-        tab_content.textContent = '';
-
-        if(tab_name === inline.config.tab_definition_name) {
-            show_definition(tab_content);
-        }
-        else {
-            show_groups(tab_content);
-        }
-    };
-
     lines.openPanel(link, {
-        title: inline.config.security_tabs_title,
+        title: inline.config.security_menu_title,
         width: inline.config.groups_panel_width,
         minWidth: inline.config.groups_panel_min_width,
-        geometryKey: inline.config.security_tabs_key,
+        geometryKey: inline.config.security_menu_key,
 
         build: function(content) {
 
-            var segments = document.createElement('div');
-            segments.id = 'http-soap-security-segments';
-            content.appendChild(segments);
+            var body = document.createElement('div');
+            body.className = 'grid-panel-body';
 
-            var tab_content = document.createElement('div');
-            tab_content.id = 'http-soap-security-tab-content';
-            content.appendChild(tab_content);
+            var list = document.createElement('div');
+            list.className = 'grid-panel-list';
 
-            render(inline.config.tab_definition_name);
+            // The panes take the room the list leaves - the pickers are wider
+            // than the IDE's own information pane
+            var panes = document.createElement('div');
+            panes.style.flex = '1';
+            panes.style.minWidth = '0';
 
-            // What runs when the panel closes, however it was closed - a panel
-            // closed on the groups it opened with saves nothing
+            var entries = [];
+            var pane_elems = [];
+
+            // The hovered entry wears the highlight, its pane alone is on screen
+            var show_pane = function(pane_idx) {
+                for(var idx = 0; idx < entries.length; idx++) {
+                    entries[idx].classList.toggle('current', idx === pane_idx);
+                    pane_elems[idx].hidden = idx !== pane_idx;
+                }
+            };
+
+            var add_pane = function(label, build) {
+
+                var entry = document.createElement('div');
+                entry.className = 'grid-panel-item';
+
+                var entry_label = document.createElement('span');
+                entry_label.className = 'grid-panel-item-label';
+                entry_label.textContent = label;
+                entry.appendChild(entry_label);
+
+                var pane = document.createElement('div');
+                build(pane);
+
+                var pane_idx = entries.length;
+                entry.addEventListener('mouseenter', function() {
+                    show_pane(pane_idx);
+                });
+
+                entries.push(entry);
+                pane_elems.push(pane);
+                list.appendChild(entry);
+                panes.appendChild(pane);
+            };
+
+            add_pane(inline.config.definition_pane_label, build_definition_pane);
+            add_pane(inline.config.groups_pane_label, build_groups_pane);
+
+            body.appendChild(list);
+            body.appendChild(panes);
+            content.appendChild(body);
+
+            show_pane(0);
+
+            // The taller pane decides the popup's height once and for all, so switching
+            // between the two never resizes it. The panel is only on the page after this
+            // build, hence the wait for the frame that can measure the panes.
+            window.requestAnimationFrame(function() {
+
+                var max_height = 0;
+
+                for(var idx = 0; idx < pane_elems.length; idx++) {
+
+                    var pane = pane_elems[idx];
+                    var was_hidden = pane.hidden;
+
+                    // A hidden pane has no height, so it is measured while
+                    // on the page yet invisible
+                    if(was_hidden) {
+                        pane.style.visibility = 'hidden';
+                        pane.hidden = false;
+                    }
+
+                    max_height = Math.max(max_height, pane.offsetHeight);
+
+                    if(was_hidden) {
+                        pane.hidden = true;
+                        pane.style.visibility = '';
+                    }
+                }
+
+                panes.style.minHeight = max_height + 'px';
+            });
+
+            // What runs when the popup closes, however it was closed - only what
+            // changed travels, a popup closed on what it opened with saves nothing
             return function() {
 
-                read_groups_if_live();
+                var data = {};
 
-                if(JSON.stringify(picked) === JSON.stringify(baseline)) {
+                var picked_groups = inline._read_groups();
+
+                if(JSON.stringify(picked_groups) !== JSON.stringify(groups_baseline)) {
+                    data['security_groups'] = JSON.stringify(picked_groups);
+                }
+
+                if(picked_security !== security_baseline) {
+                    data['security'] = picked_security;
+                }
+
+                if(!Object.keys(data).length) {
                     return;
                 }
 
-                var data = {
-                    'security_groups': JSON.stringify(picked)
-                };
-
                 var on_saved = function(saved) {
+
+                    // The row stands at what came back - the composite id feeds the edit form,
+                    // the label feeds the rebuilt rows
+                    instance[security_attr] = saved.security_id;
+
+                    if(picked_security_label) {
+                        instance[security_attr + '_select'] = picked_security_label;
+                    }
+
                     inline.write_channel_security_cell(link, saved);
                 };
 
-                inline.save(link, id, data, on_saved, inline.config.groups_saved_message);
+                inline.save(link, id, data, on_saved, $.fn.zato.inline_edit.config.saved_label);
             };
         }
     });

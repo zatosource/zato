@@ -24,6 +24,7 @@
     <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
     <link rel="stylesheet" type="text/css" href="/static/css/zato_highlight_pane.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/panel-menu.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/tippy-buttons.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-lines.css">
@@ -475,7 +476,7 @@
                         {% endif %}
 
                         <!-- 9 -->
-                        <td>{% if item.security_name == "Delegated to RBAC" %}<span class="form_hint">Delegated to RBAC</span>{% elif connection == 'channel' %}<a href="javascript:void(0)" class="http-soap-security-tabs-cell" data-id="{{ item.id }}" onclick="$.fn.zato.http_soap.inline.open_security_tabs(this)">{% if item.security_name %}{{ item.security_name }}{% if item.security_group_count %}<br/>{% endif %}{% endif %}{% if item.security_group_count %}{{ item.security_groups_info }}{% endif %}{% if not item.security_name and not item.security_group_count %}Click to add{% endif %}</a>{% else %}<a href="javascript:void(0)" class="http-soap-security-cell" data-id="{{ item.id }}" data-href="{{ item.security_href }}">{% if item.security_name %}{{ item.security_name }}{% else %}Click to add{% endif %}</a>{% endif %}</td>
+                        <td>{% if item.security_name == "Delegated to RBAC" %}<span class="form_hint">Delegated to RBAC</span>{% elif connection == 'channel' %}<a href="javascript:void(0)" class="http-soap-security-tabs-cell" data-id="{{ item.id }}" onclick="$.fn.zato.http_soap.inline.open_security_menu(this)">{% if item.security_name %}{{ item.security_name }}{% if item.security_group_count %}<br/>{% endif %}{% endif %}{% if item.security_group_count %}{{ item.security_groups_info }}{% endif %}{% if not item.security_name and not item.security_group_count %}Click to add{% endif %}</a>{% else %}<a href="javascript:void(0)" class="http-soap-security-cell" data-id="{{ item.id }}" data-href="{{ item.security_href }}">{% if item.security_name %}{{ item.security_name }}{% else %}Click to add{% endif %}</a>{% endif %}</td>
 
                         <!-- 10, 11, 11a -->
                         {% if transport == 'soap' %}

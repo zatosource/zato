@@ -51,24 +51,26 @@ $.fn.zato.http_soap.inline.config = {
     service_panel_key: 'http-soap-row-service-panel',
     security_panel_key: 'http-soap-row-security-panel',
 
-    // The one panel a channel's security cell opens, the definition picker and
-    // the groups badge picker inside it, one to a tab
-    security_tabs_title: 'Security',
-    security_tabs_key: 'http-soap-row-security-tabs-panel',
-    tab_definition_name: 'definition',
-    tab_groups_name: 'groups',
-    tab_definition_label: 'Definition',
-    tab_groups_label: 'Groups',
+    // The one popup a channel's security cell opens - the definition picker and
+    // the groups badge picker inside it, the IDE's own action-menu layout with
+    // the list on the left and the live pane on the right
+    security_menu_title: 'Security',
+    security_menu_key: 'http-soap-row-security-menu',
+    definition_pane_label: 'Definition',
+    groups_pane_label: 'Groups',
 
-    // The groups tab and the badge picker inside it
+    // The groups pane and the badge picker inside it
     groups_filter_placeholder: 'Filter groups...',
     groups_panel_width: 640,
     groups_panel_min_width: 420,
     groups_element_action: 'http-soap-groups',
-    groups_saved_message: 'OK, security groups saved',
 
     // What a picker cell says when its list could not be brought over
     load_error_label: 'Could not load the list',
+
+    // What a pane says when there is nothing to pick from
+    definitions_empty_message: 'No security definitions are available',
+    groups_empty_message: 'No security groups are available',
 
     // What a cell with no security definition says - clicking it opens the picker
     empty_security_label: 'Click to add',

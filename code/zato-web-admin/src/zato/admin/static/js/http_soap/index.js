@@ -689,7 +689,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         }
 
         security_cell = String.format(
-            '<a href="javascript:void(0)" class="http-soap-security-tabs-cell" data-id="{0}" onclick="$.fn.zato.http_soap.inline.open_security_tabs(this)">{1}</a>',
+            '<a href="javascript:void(0)" class="http-soap-security-tabs-cell" data-id="{0}" onclick="$.fn.zato.http_soap.inline.open_security_menu(this)">{1}</a>',
             item.id, cell_text);
     }
     else {
