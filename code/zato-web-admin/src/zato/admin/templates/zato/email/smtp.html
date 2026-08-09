@@ -70,7 +70,7 @@
 
     {% if cluster_id %}
         <div id="markup">
-<h2 class="zato">SMTP</h2>
+<h2 class="zato">{% include "zato/include/header-brand.html" with badge="E-mail" %}SMTP</h2>
 
 {% include "zato/search-form.html" with page_prompt="Show connections"%}
 

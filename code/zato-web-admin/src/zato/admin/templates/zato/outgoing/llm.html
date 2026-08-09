@@ -69,7 +69,7 @@
 
     {% if cluster_id %}
         <div id="markup">
-            <h2 class="zato">Outgoing LLM connections</h2>
+            <h2 class="zato">{% include "zato/include/header-brand.html" with badge="AI" %}Outgoing LLM connections</h2>
 
 {% include "zato/search-form.html" with page_prompt="Show connections"%}
 

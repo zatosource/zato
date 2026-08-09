@@ -64,7 +64,7 @@
 
     {% if cluster_id %}
         <div id="markup">
-            <h2 class="zato">Outgoing Odoo connections</h2>
+            <h2 class="zato">{% include "zato/include/header-brand.html" with logo="odoo" %}Outgoing Odoo connections</h2>
 
 {% include "zato/search-form.html" with page_prompt="Show Odoo connections"%}
 

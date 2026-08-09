@@ -49,7 +49,7 @@
     {% if cluster_id %}
 
         <div id="markup">
-<h2 class="zato">Kerberos (SPNEGO)</h2>
+<h2 class="zato">{% include "zato/include/header-brand.html" with badge="Security" %}Kerberos (SPNEGO)</h2>
 
 {% include "zato/search-form.html" with page_prompt="Search"%}
 

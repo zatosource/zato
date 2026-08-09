@@ -61,7 +61,7 @@
     {% if cluster_id %}
 
         <div id="markup">
-<h2 class="zato">HL7 REST channels</h2>
+<h2 class="zato">{% include "zato/include/header-brand.html" with badge="HL7" %}HL7 REST channels</h2>
 
 {% include "zato/search-form.html" with page_prompt="Show channels"%}
 

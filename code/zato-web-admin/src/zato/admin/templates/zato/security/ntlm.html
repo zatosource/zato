@@ -47,7 +47,7 @@
     {% if cluster_id %}
 
         <div id="markup">
-<h2 class="zato">NTLM</h2>
+<h2 class="zato">{% include "zato/include/header-brand.html" with badge="Security" %}NTLM</h2>
 
 {% include "zato/search-form.html" with page_prompt="Search"%}
 

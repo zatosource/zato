@@ -448,7 +448,7 @@
     {% if cluster_id %}
 
         <div id="markup">
-<h2 class="zato">Pub/sub subscriptions</h2>
+<h2 class="zato">{% include "zato/include/header-brand.html" with badge="Pub/sub" %}Subscriptions</h2>
 
 {% include "zato/search-form.html" with page_prompt="Search"%}
 

@@ -104,7 +104,7 @@
 
     {% if cluster_id %}
         <div id="markup">
-            <h2 class="zato">Outgoing LDAP connections</h2>
+            <h2 class="zato">{% include "zato/include/header-brand.html" with badge="LDAP" %}Outgoing LDAP connections</h2>
 
 {% with has_generic="1" generic_type="outconn-ldap" %}
     {% include "zato/search-form.html" with page_prompt="Show outgoing connections" %}

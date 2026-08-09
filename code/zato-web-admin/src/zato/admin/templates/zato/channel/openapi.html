@@ -62,7 +62,7 @@
     {% if cluster_id %}
 
         <div id="markup">
-<h2 class="zato">OpenAPI channels</h2>
+<h2 class="zato">{% include "zato/include/header-brand.html" with logo="openapi" %}OpenAPI channels</h2>
 
 {% with has_generic="1" generic_type="channel-openapi" %}
     {% include "zato/search-form.html" with page_prompt="Show channels"%}

@@ -58,7 +58,7 @@
 
     {% if cluster_id %}
         <div id="markup">
-            <h2 class="zato">Kafka channels</h2>
+            <h2 class="zato">{% include "zato/include/header-brand.html" with logo="kafka" %}Kafka channels</h2>
 
 {% with has_generic="1" generic_type="channel-kafka" %}
     {% include "zato/search-form.html" with page_prompt="Show channels" %}

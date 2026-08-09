@@ -66,7 +66,7 @@
 
     {% if cluster_id %}
         <div id="markup">
-<h2 class="zato">Microsoft Power Automate connections</h2>
+<h2 class="zato">{% include "zato/include/header-brand.html" with logo="microsoft-power-automate" %}Microsoft Power Automate connections</h2>
 
 {% with has_generic="1" generic_type="cloud-microsoft-power-automate" %}
     {% include "zato/search-form.html" with page_prompt="Show connections"%}

@@ -1,0 +1,4 @@
+{% comment %}
+Renders the brand element used inside a listing page's <h2 class="zato"> header,
+either a product logo (use with logo="mongodb") or a text pill badge (use with badge="REST").
+{% endcomment %}{% if logo %}<img class="header-logo" src="/static/gfx/logos/{{ logo }}.svg" alt="{{ logo }} logo">{% else %}<span class="detail-component-pill">{{ badge }}</span>{% endif %}

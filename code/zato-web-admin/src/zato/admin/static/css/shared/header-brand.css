@@ -1,0 +1,23 @@
+/* Shared - the brand logo shown next to a listing page header, e.g. the MongoDB
+   logo on the outgoing MongoDB connections page. Loaded globally from index.html. */
+
+.header-logo {
+    height: 22px;
+    width: auto;
+    vertical-align: middle;
+    margin-right: 8px;
+}
+
+/* Headers that carry a logo or a pill center their text against it */
+h2.zato:has(.header-logo),
+h2.zato:has(.detail-component-pill) {
+    display: flex;
+    align-items: center;
+}
+
+/* Headers that carry a logo or a badge center their text against it */
+h2.zato:has(> .header-logo),
+h2.zato:has(> .detail-component-pill) {
+    display: flex;
+    align-items: center;
+}

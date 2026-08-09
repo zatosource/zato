@@ -28,7 +28,7 @@ $(document).ready(function() {
 <div id="user-message-div" style="display:none"><pre id="user-message" class="user-message"></pre></div>
 
 <div id="markup">
-    <h2 class="zato">X12 control numbers</h2>
+    <h2 class="zato">{% include "zato/include/header-brand.html" with badge="EDI" %}X12 control numbers</h2>
 
     {% if rows %}
     <table class="zato-table" id="data-table">

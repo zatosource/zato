@@ -69,7 +69,7 @@
 
     {% if cluster_id %}
         <div id="markup">
-            <h2 class="zato">gRPC connections</h2>
+            <h2 class="zato">{% include "zato/include/header-brand.html" with logo="grpc" %}gRPC connections</h2>
 
 {% with has_generic="1" generic_type="outconn-grpc" %}
     {% include "zato/search-form.html" with page_prompt="Show connections"%}

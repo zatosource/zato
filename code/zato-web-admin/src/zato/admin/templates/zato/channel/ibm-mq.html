@@ -67,7 +67,7 @@
 
     {% if cluster_id %}
         <div id="markup">
-            <h2 class="zato">IBM MQ channels</h2>
+            <h2 class="zato">{% include "zato/include/header-brand.html" with badge="MQ" %}IBM MQ channels</h2>
 
 {% with has_generic="1" generic_type="channel-ibm-mq" %}
     {% include "zato/search-form.html" with page_prompt="Show channels" %}

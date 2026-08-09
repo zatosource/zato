@@ -88,7 +88,7 @@
 
     {% if cluster_id %}
         <div id="markup">
-            <h2 class="zato">MCP gateways</h2>
+            <h2 class="zato">{% include "zato/include/header-brand.html" with badge="AI" %}MCP gateways</h2>
 
 {% with has_generic="1" generic_type="gateway-mcp" %}
     {% include "zato/search-form.html" with page_prompt="Show gateways" %}

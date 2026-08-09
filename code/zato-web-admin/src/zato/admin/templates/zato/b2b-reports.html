@@ -18,7 +18,7 @@ $(document).ready(function() {
 {% block "content" %}
 
 <div id="markup">
-    <h2 class="zato">B2B reports</h2>
+    <h2 class="zato">{% include "zato/include/header-brand.html" with badge="EDI" %}B2B reports</h2>
 
     <form method="get" action="{% url "b2b-reports" %}" class="b2b-report-filters">
         <input type="hidden" name="cluster" value="{{ cluster_id }}">

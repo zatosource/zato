@@ -36,7 +36,7 @@ recurring pickup task created through the schedule wizard. The view provides:
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
     <div id="markup">
-        <h2 class="zato">File transfer schedules of {{ transfer_label }} connection `{{ conn_name }}`</h2>
+        <h2 class="zato">{% include "zato/include/header-brand.html" with badge="File transfer" %}Schedules of {{ transfer_label }} connection `{{ conn_name }}`</h2>
 
         <div class='page_prompt'>
             <a href="{% url "out-file-transfer-schedule-wizard-create" transfer_type conn_id cluster_id name_slug %}?name={{ conn_name|urlencode:"" }}">Create a new schedule</a>

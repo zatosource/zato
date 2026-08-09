@@ -86,7 +86,7 @@
     {% if cluster_id %}
 
         <div id="markup">
-            <h2 class="zato">Outgoing AS4 connections</h2>
+            <h2 class="zato">{% include "zato/include/header-brand.html" with badge="AS4" %}Outgoing AS4 connections</h2>
 
 {% include "zato/search-form.html" with page_prompt="Show connections"%}
 

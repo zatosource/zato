@@ -121,7 +121,7 @@
     {% if cluster_id %}
 
         <div id="markup">
-            <h2 class="zato">Outgoing SOAP connections</h2>
+            <h2 class="zato">{% include "zato/include/header-brand.html" with badge="SOAP" %}Outgoing SOAP connections</h2>
 
 {% include "zato/search-form.html" with page_prompt="Show connections"%}
 

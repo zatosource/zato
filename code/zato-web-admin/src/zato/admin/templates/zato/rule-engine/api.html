@@ -54,7 +54,7 @@
 
     {% if cluster_id %}
         <div id="markup">
-            <h2 class="zato">Rule engine API</h2>
+            <h2 class="zato">{% include "zato/include/header-brand.html" with badge="Rule engine" %}API</h2>
 
 {% with has_generic="1" generic_type="gateway-rule-engine" %}
     {% include "zato/search-form.html" with page_prompt="Show objects" %}

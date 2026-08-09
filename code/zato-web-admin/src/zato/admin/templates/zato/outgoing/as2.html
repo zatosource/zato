@@ -143,7 +143,7 @@
     {% if cluster_id %}
 
         <div id="markup">
-            <h2 class="zato">Outgoing AS2 connections</h2>
+            <h2 class="zato">{% include "zato/include/header-brand.html" with badge="AS2" %}Outgoing AS2 connections</h2>
 
 {% with has_generic="1" generic_type="outconn-as2" %}
     {% include "zato/search-form.html" with page_prompt="Show connections"%}

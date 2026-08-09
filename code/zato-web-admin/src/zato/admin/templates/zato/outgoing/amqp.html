@@ -77,7 +77,7 @@
 
     {% if cluster_id %}
         <div id="markup">
-            <h2 class="zato">Outgoing {{ subtype.label }} connections</h2>
+            <h2 class="zato">{% if subtype.label == "Azure Service Bus" %}{% include "zato/include/header-brand.html" with logo="azure" %}{% else %}{% include "zato/include/header-brand.html" with badge="AMQP" %}{% endif %}Outgoing {{ subtype.label }} connections</h2>
 
 {% include "zato/search-form.html" with page_prompt="Show connections"%}
 

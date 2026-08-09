@@ -84,7 +84,7 @@
 
     {% if cluster_id %}
         <div id="markup">
-            <h2 class="zato">Outgoing {{ subtype.label }} connections</h2>
+            <h2 class="zato">{% if subtype.label == "SAP" %}{% include "zato/include/header-brand.html" with logo="sap" %}{% else %}{% include "zato/include/header-brand.html" with badge="OData" %}{% endif %}Outgoing {{ subtype.label }} connections</h2>
 
 {% with has_generic="1" generic_type=subtype.type_ %}
     {% include "zato/search-form.html" with page_prompt="Show outgoing connections" %}
