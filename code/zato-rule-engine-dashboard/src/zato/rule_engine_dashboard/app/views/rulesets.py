@@ -81,10 +81,10 @@ def ruleset_search(req:'any_') -> 'any_':
     else:
         raise BadRequestError('Missing required parameter -> q')
 
-    backend = get_backend()
-    hits = backend.search.search(query)
+    result, note = webapi.search_definitions(get_backend(), query)
+    note_answer(req, note)
 
-    out = json_items(req, hits, 'match', 'matches')
+    out = JsonResponse(result)
     return out
 
 # ################################################################################################################################

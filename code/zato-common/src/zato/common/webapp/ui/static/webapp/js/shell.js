@@ -165,7 +165,7 @@ shared.makeGhost = function(cellTexts, isColumn) {
         ghost.appendChild(cell);
     });
 
-    document.body.appendChild(ghost);
+    shared.floatingRoot().appendChild(ghost);
     shared.ghostElement = ghost;
 
     return ghost;
@@ -186,7 +186,7 @@ shared.showDropPlaceholder = function(left, top, width, height) {
     if (shared.dropPlaceholderElement === null) {
         var element = document.createElement('div');
         element.className = 'drop-placeholder';
-        document.body.appendChild(element);
+        shared.floatingRoot().appendChild(element);
         shared.dropPlaceholderElement = element;
     }
 

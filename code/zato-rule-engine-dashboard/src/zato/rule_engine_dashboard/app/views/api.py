@@ -22,20 +22,21 @@ from zato.common.rule_engine.sql import ApprovalContentMismatchError, ApprovalRe
     InvalidStoreInputError, RecordNotFoundError, SelfApprovalNotAllowedError, VersionConflictError
 from zato.common.rule_engine.sql.constants import Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
-from zato.common.rule_engine.webapi import BadRequestError, definition_row, required
+from zato.common.rule_engine.webapi import BadRequestError, definition_row, event_row, required
 from zato.common.util.logging_ import count_text
 from zato.rule_engine_dashboard.app.views.common import signed_in_required
 
 # The names every view module here imports from this module - they live in the shared webapi now.
 BadRequestError = BadRequestError
 definition_row = definition_row
+event_row = event_row
 required = required
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.rule_engine.sql import RuleDecisionRecord, RuleEventRecord, RuleFollowRecord, \
+    from zato.common.rule_engine.sql import RuleDecisionRecord, RuleFollowRecord, \
         RuleReferenceRecord, RuleSQLBackend, RuleVersionRecord, RuleViewRecord
     from zato.common.typing_ import any_, anydict, dictlist, stranydict
 
@@ -253,30 +254,6 @@ def version_row(record:'RuleVersionRecord') -> 'stranydict':
         'comment':       record.comment,
         'created_at':    record.created_at.isoformat(),
         'document':      document,
-    }
-
-    return out
-
-# ################################################################################################################################
-
-def event_row(record:'RuleEventRecord') -> 'stranydict':
-    """ One history event with its parsed payload.
-    """
-    # Not every event carries a payload, hence the boundary check.
-    payload = record.payload
-    if payload is None:
-        parsed = None
-    else:
-        parsed = json.loads(payload)
-
-    out = {
-        'id':            record.id,
-        'definition_id': record.definition_id,
-        'version':       record.version,
-        'event_type':    record.event_type,
-        'actor':         record.actor,
-        'created_at':    record.created_at.isoformat(),
-        'payload':       parsed,
     }
 
     return out

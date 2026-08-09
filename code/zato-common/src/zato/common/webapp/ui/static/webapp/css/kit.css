@@ -1,8 +1,18 @@
 /* ---------------------------------------------------------- */
+/* Shared - the UI kit                                        */
+/*                                                            */
+/* Every selector is scoped under .rule-engine-ui, the one    */
+/* root class of the shared UI - the rule engine dashboard    */
+/* carries it on its body, a host page that embeds a shared   */
+/* component puts it on the component's container and on the  */
+/* floating root its surfaces attach to.                      */
+/* ---------------------------------------------------------- */
+
+/* ---------------------------------------------------------- */
 /* Shared - navigation pane                                   */
 /* ---------------------------------------------------------- */
 
-.navigation {
+.rule-engine-ui .navigation {
     width: 210px;
     flex-shrink: 0;
     display: flex;
@@ -10,14 +20,14 @@
     background: var(--chrome);
     transition: width 0.15s ease;
 }
-.navigation-top {
+.rule-engine-ui .navigation-top {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
     padding: 10px 14px;
 }
-.navigation-logo {
+.rule-engine-ui .navigation-logo {
     width: 74px;
     height: 35px;
     display: block;
@@ -27,7 +37,7 @@
     background-size: contain;
     background-position: left center;
 }
-.navigation-collapse {
+.rule-engine-ui .navigation-collapse {
     display: flex;
     align-items: center;
     background: transparent;
@@ -38,21 +48,21 @@
     padding: 3px 5px;
     font-family: var(--font);
 }
-.navigation-collapse:hover {
+.rule-engine-ui .navigation-collapse:hover {
     color: var(--text);
 }
-.navigation.collapsed {
+.rule-engine-ui .navigation.collapsed {
     width: 46px;
 }
-.navigation.collapsed .navigation-logo,
-.navigation.collapsed .navigation-item {
+.rule-engine-ui .navigation.collapsed .navigation-logo,
+.rule-engine-ui .navigation.collapsed .navigation-item {
     display: none;
 }
-.navigation.collapsed .navigation-top {
+.rule-engine-ui .navigation.collapsed .navigation-top {
     justify-content: center;
     padding: 10px 6px;
 }
-.navigation-item {
+.rule-engine-ui .navigation-item {
     display: block;
     width: 100%;
     text-align: left;
@@ -64,10 +74,10 @@
     cursor: pointer;
     font-family: var(--font);
 }
-.navigation-item:hover {
+.rule-engine-ui .navigation-item:hover {
     color: var(--text2);
 }
-.navigation-item.active {
+.rule-engine-ui .navigation-item.active {
     background: var(--panel);
     color: var(--text);
     font-weight: 600;
@@ -77,7 +87,7 @@
 /* Shared - main column and topbar                            */
 /* ---------------------------------------------------------- */
 
-.main-column {
+.rule-engine-ui .main-column {
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -87,7 +97,7 @@
 /* Shared - toolbar                                           */
 /* ---------------------------------------------------------- */
 
-.toolbar {
+.rule-engine-ui .toolbar {
     display: flex;
     gap: 8px;
     align-items: center;
@@ -95,13 +105,13 @@
     padding: 12px 24px;
     background: var(--sentence-bar-background);
 }
-.toolbar-separator {
+.rule-engine-ui .toolbar-separator {
     width: 1px;
     height: 22px;
     background: var(--border);
     margin: 0 4px;
 }
-.toolbar input[type="text"] {
+.rule-engine-ui .toolbar input[type="text"] {
     background: var(--input-background);
     border: 1px solid var(--border);
     border-radius: var(--radius-2);
@@ -112,10 +122,10 @@
     font-family: var(--font);
     width: 130px;
 }
-.toolbar input[type="text"]:focus {
+.rule-engine-ui .toolbar input[type="text"]:focus {
     border-color: var(--focus-edge);
 }
-.toolbar select {
+.rule-engine-ui .toolbar select {
     background: var(--input-background);
     border: 1px solid var(--border);
     border-radius: var(--radius-2);
@@ -126,7 +136,7 @@
     outline: none;
     cursor: pointer;
 }
-.toolbar select:focus {
+.rule-engine-ui .toolbar select:focus {
     border-color: var(--focus-edge);
 }
 
@@ -134,19 +144,19 @@
 /* Shared - command bar                                       */
 /* ---------------------------------------------------------- */
 
-.command-bar {
+.rule-engine-ui .command-bar {
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 12px 24px;
     background: var(--sentence-bar-background);
 }
-.command-bar-pipe {
+.rule-engine-ui .command-bar-pipe {
     color: var(--border);
     font-size: 13px;
     user-select: none;
 }
-.command-field {
+.rule-engine-ui .command-field {
     position: relative;
     display: flex;
     align-items: center;
@@ -159,7 +169,7 @@
     border-radius: var(--radius-2);
     cursor: text;
 }
-.command-field:focus-within {
+.rule-engine-ui .command-field:focus-within {
     border-color: var(--focus-edge);
 }
 
@@ -170,12 +180,12 @@
 /* The caret of a field stands where the text of it begins, which is where the browser's own
    placeholder would be as well, so the hint is written beside the caret instead - it carries the
    text a field is wrapped with and it goes as soon as the field holds anything. */
-.field {
+.rule-engine-ui .field {
     position: relative;
     display: flex;
     min-width: 0;
 }
-.field::after {
+.rule-engine-ui .field::after {
     content: attr(data-hint);
     position: absolute;
     left: calc(var(--field-indent) + var(--hint-gap));
@@ -187,15 +197,15 @@
     font-size: 12px;
     white-space: nowrap;
 }
-.field:has(input:not(:placeholder-shown))::after {
+.rule-engine-ui .field:has(input:not(:placeholder-shown))::after {
     content: none;
 }
 
 /* A field waiting for a value it must have - the ask is written where the value goes */
-.field-missing::after {
+.rule-engine-ui .field-missing::after {
     color: var(--red);
 }
-.command-input {
+.rule-engine-ui .command-input {
     flex: 1;
     min-width: 40px;
     padding: 0 0 0 var(--field-indent);
@@ -206,10 +216,10 @@
     font-family: var(--font);
     font-size: 12px;
 }
-.command-input::placeholder {
+.rule-engine-ui .command-input::placeholder {
     color: var(--text5);
 }
-.command-count {
+.rule-engine-ui .command-count {
     flex-shrink: 0;
     color: color-mix(in srgb, var(--text5) 75%, var(--input-background));
     font-family: var(--mono);
@@ -217,7 +227,7 @@
     font-variant-numeric: tabular-nums lining-nums;
     white-space: nowrap;
 }
-.command-clear {
+.rule-engine-ui .command-clear {
     display: flex;
     align-items: center;
     padding: 2px;
@@ -227,12 +237,12 @@
     color: var(--text5);
     cursor: pointer;
 }
-.command-clear:hover {
+.rule-engine-ui .command-clear:hover {
     color: var(--text);
     background-image: var(--hover-veil);
 }
 
-.command-suggest {
+.rule-engine-ui .command-suggest {
     display: none;
     position: absolute;
     top: calc(100% + 6px);
@@ -247,23 +257,23 @@
     box-shadow: 0 12px 28px var(--shadow-strong);
     z-index: 1200;
 }
-.command-suggest-open {
+.rule-engine-ui .command-suggest-open {
     display: block;
 }
-.command-suggest-dragging {
+.rule-engine-ui .command-suggest-dragging {
     user-select: none;
 }
-.command-suggest-drag {
+.rule-engine-ui .command-suggest-drag {
     display: flex;
     justify-content: center;
     padding: 0 0 2px;
     color: color-mix(in srgb, var(--text5) 60%, var(--panel-raised));
     cursor: grab;
 }
-.command-suggest-dragging .command-suggest-drag {
+.rule-engine-ui .command-suggest-dragging .command-suggest-drag {
     cursor: grabbing;
 }
-.command-suggest-title {
+.rule-engine-ui .command-suggest-title {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -277,14 +287,14 @@
 }
 /* The accent of the acting buttons in the proportions of a pill - a 6% wash of it on the
    surface it sits on, a trace of it stirred into the ink - with the border kept. */
-.button-mini.command-suggest-new,
-.button-mini.button-primary {
+.rule-engine-ui .button-mini.command-suggest-new,
+.rule-engine-ui .button-mini.button-primary {
     border-color: var(--focus-edge);
     background: color-mix(in srgb, var(--action-edge) 6%, var(--panel-raised));
     color: color-mix(in srgb, var(--action-edge) 30%, var(--text3));
 }
-.button-mini.command-suggest-new:hover,
-.button-mini.button-primary:hover {
+.rule-engine-ui .button-mini.command-suggest-new:hover,
+.rule-engine-ui .button-mini.button-primary:hover {
     border-color: color-mix(in srgb, var(--action-edge) 70%, var(--border));
     background: color-mix(in srgb, var(--action-edge) 12%, var(--panel-raised));
     color: color-mix(in srgb, var(--action-edge) 40%, var(--text2));
@@ -292,37 +302,37 @@
 
 /* The deeper padding underneath lifts the label to the optical middle, the glyphs of a
    mixed-case word without descenders end on the baseline and read as sitting low. */
-.button-mini.command-suggest-new,
-.button-mini.button-primary {
+.rule-engine-ui .button-mini.command-suggest-new,
+.rule-engine-ui .button-mini.button-primary {
     padding: 1px 7px 2px;
 }
-.button-mini.command-suggest-new {
+.rule-engine-ui .button-mini.command-suggest-new {
     margin-left: 0;
 }
-.command-suggest-row {
+.rule-engine-ui .command-suggest-row {
     display: flex;
     align-items: center;
     gap: 10px;
     padding: 4px 12px;
     cursor: pointer;
 }
-.command-suggest-row-active {
+.rule-engine-ui .command-suggest-row-active {
     background: var(--column-hover);
 }
-.command-suggest-check {
+.rule-engine-ui .command-suggest-check {
     display: inline-flex;
     justify-content: center;
     width: 12px;
     flex-shrink: 0;
     color: var(--blue);
 }
-.command-suggest-facet {
+.rule-engine-ui .command-suggest-facet {
     min-width: 54px;
     color: var(--text5);
     font-family: var(--mono);
     font-size: 10.5px;
 }
-.command-suggest-value {
+.rule-engine-ui .command-suggest-value {
     flex: 1;
     min-width: 0;
     overflow: hidden;
@@ -331,13 +341,13 @@
     color: var(--text);
     font-size: 12px;
 }
-.command-suggest-count {
+.rule-engine-ui .command-suggest-count {
     color: var(--text5);
     font-family: var(--mono);
     font-size: 10.5px;
     font-variant-numeric: tabular-nums lining-nums;
 }
-.command-suggest-drop {
+.rule-engine-ui .command-suggest-drop {
     display: inline-flex;
     padding: 2px;
     border: none;
@@ -346,12 +356,12 @@
     color: var(--text5);
     cursor: pointer;
 }
-.command-suggest-drop:hover {
+.rule-engine-ui .command-suggest-drop:hover {
     color: var(--text);
     background-image: var(--hover-veil);
 }
 
-.button-mini {
+.rule-engine-ui .button-mini {
     background: transparent;
     border: 1px solid var(--border);
     border-radius: var(--radius-1);
@@ -366,29 +376,29 @@
     margin-left: 10px;
     vertical-align: 1px;
 }
-.button-mini:hover {
+.rule-engine-ui .button-mini:hover {
     color: var(--text);
     border-color: var(--blue);
 }
-.button-mini:disabled {
+.rule-engine-ui .button-mini:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
-.button-mini-danger:hover {
+.rule-engine-ui .button-mini-danger:hover {
     color: var(--red);
     border-color: var(--red);
 }
 
 /* The confirming button of a floating panel, the same face as the acting button of a pane */
-.button-mini.button-primary {
+.rule-engine-ui .button-mini.button-primary {
     font-weight: 600;
 }
 
 /* One surface for every button that acts - the toolbars, the settings button, publish -
    so a button looks the same wherever it sits and is recognized at a glance. */
-.button-action,
-.button-ghost,
-.settings-button {
+.rule-engine-ui .button-action,
+.rule-engine-ui .button-ghost,
+.rule-engine-ui .settings-button {
     display: inline-block;
     padding: 3px 10px;
     border: 1px solid var(--action-edge);
@@ -405,15 +415,15 @@
     vertical-align: 1px;
     box-shadow: inset 0 1px 0 var(--action-sheen);
 }
-.button-action:disabled,
-.button-ghost:disabled,
-.settings-button:disabled {
+.rule-engine-ui .button-action:disabled,
+.rule-engine-ui .button-ghost:disabled,
+.rule-engine-ui .settings-button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
 
 /* A chip that is switched on reads as a key held down */
-.button-ghost.toggled {
+.rule-engine-ui .button-ghost.toggled {
     font-weight: 600;
     box-shadow: inset 0 1px 3px var(--shadow-strong);
 }
@@ -425,7 +435,7 @@
 /* A short state label on a thin wash of its own accent, monospaced with lining figures so
    version numbers line up under each other. Every state takes the same wash and the same
    accent as its ink, so one reads against its background exactly as strongly as the next. */
-.pill {
+.rule-engine-ui .pill {
     display: inline-flex;
     align-items: center;
     padding: 1px 7px;
@@ -438,19 +448,19 @@
 }
 /* A pill sits on the page's own surface, barely tinted, and is written in its faintest ink
    with a trace of accent stirred in - bright enough to stay light, faint enough to recede. */
-.pill-good {
+.rule-engine-ui .pill-good {
     background: color-mix(in srgb, var(--green) 6%, var(--background));
     color: color-mix(in srgb, var(--green) 25%, var(--text5));
 }
-.pill-progress {
+.rule-engine-ui .pill-progress {
     background: color-mix(in srgb, var(--blue) 6%, var(--background));
     color: color-mix(in srgb, var(--blue) 25%, var(--text5));
 }
-.pill-warning {
+.rule-engine-ui .pill-warning {
     background: color-mix(in srgb, var(--amber) 6%, var(--background));
     color: color-mix(in srgb, var(--amber) 25%, var(--text5));
 }
-.pill-info {
+.rule-engine-ui .pill-info {
     background: color-mix(in srgb, var(--indigo) 6%, var(--background));
     color: color-mix(in srgb, var(--indigo) 25%, var(--text5));
 }
@@ -461,7 +471,7 @@
 
 /* The standard link face - the page's own ink with a dashed rule under it, the accent on
    hover. On an anchor that also carries an icon, put it on the span holding the text. */
-.link {
+.rule-engine-ui .link {
     color: var(--text);
     text-decoration: none;
     padding-bottom: 2px;
@@ -476,8 +486,8 @@
     background-position: 0 100%;
     background-repeat: no-repeat;
 }
-a:hover .link,
-a.link:hover {
+.rule-engine-ui a:hover .link,
+.rule-engine-ui a.link:hover {
     color: var(--link-hover);
 }
 
@@ -485,7 +495,7 @@ a.link:hover {
 /* Shared - problems panel                                    */
 /* ---------------------------------------------------------- */
 
-.problems-panel {
+.rule-engine-ui .problems-panel {
     background: var(--problems-background);
     border-top: 1px solid var(--problems-border);
     margin-top: 10px;
@@ -493,7 +503,7 @@ a.link:hover {
     display: flex;
     flex-direction: column;
 }
-.problems-head {
+.rule-engine-ui .problems-head {
     padding: 7px 24px;
     font-size: 11px;
     font-weight: 700;
@@ -503,20 +513,20 @@ a.link:hover {
     flex-shrink: 0;
     cursor: pointer;
 }
-.problems-collapse-indicator {
+.rule-engine-ui .problems-collapse-indicator {
     margin-left: 8px;
 }
-.problems-collapsed .problems-list {
+.rule-engine-ui .problems-collapsed .problems-list {
     display: none;
 }
-.problems-collapsed .pane-resizer {
+.rule-engine-ui .problems-collapsed .pane-resizer {
     display: none;
 }
-.problems-list {
+.rule-engine-ui .problems-list {
     overflow: auto;
     padding: 2px 0;
 }
-.problem-item {
+.rule-engine-ui .problem-item {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -525,17 +535,17 @@ a.link:hover {
     color: var(--text2);
     cursor: pointer;
 }
-.problem-item:hover {
+.rule-engine-ui .problem-item:hover {
     background-image: var(--hover-veil);
 }
-.problem-where {
+.rule-engine-ui .problem-where {
     margin-left: auto;
     color: var(--text5);
     font-size: 11px;
     font-family: var(--mono);
     flex-shrink: 0;
 }
-.problem-fix {
+.rule-engine-ui .problem-fix {
     flex-shrink: 0;
     font-size: 11px;
     color: var(--blue);
@@ -544,32 +554,32 @@ a.link:hover {
     padding: 1px 7px;
     cursor: pointer;
 }
-.problem-fix:hover {
+.rule-engine-ui .problem-fix:hover {
     color: var(--text);
     border-color: var(--blue);
 }
-.problem-none {
+.rule-engine-ui .problem-none {
     color: var(--text5);
     cursor: default;
     font-style: italic;
 }
-.problem-none:hover {
+.rule-engine-ui .problem-none:hover {
     background-image: none;
 }
-.status-dot {
+.rule-engine-ui .status-dot {
     display: inline-block;
     width: 7px;
     height: 7px;
     border-radius: 50%;
     flex-shrink: 0;
 }
-.status-dot-error {
+.rule-engine-ui .status-dot-error {
     background: var(--red);
 }
-.status-dot-warning {
+.rule-engine-ui .status-dot-warning {
     background: var(--amber);
 }
-.status-dot-information {
+.rule-engine-ui .status-dot-information {
     background: var(--text5);
 }
 
@@ -577,7 +587,7 @@ a.link:hover {
 /* Shared - vocabulary pane                                   */
 /* ---------------------------------------------------------- */
 
-.vocabulary-pane {
+.rule-engine-ui .vocabulary-pane {
     width: 225px;
     flex-shrink: 0;
     display: flex;
@@ -585,7 +595,7 @@ a.link:hover {
     background: var(--chrome);
     transition: width 0.15s ease;
 }
-.vocabulary-head {
+.rule-engine-ui .vocabulary-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -596,7 +606,7 @@ a.link:hover {
     text-transform: uppercase;
     letter-spacing: 0.08em;
 }
-.vocabulary-collapse {
+.rule-engine-ui .vocabulary-collapse {
     display: flex;
     align-items: center;
     background: transparent;
@@ -607,27 +617,27 @@ a.link:hover {
     padding: 3px 5px;
     font-family: var(--font);
 }
-.vocabulary-collapse:hover {
+.rule-engine-ui .vocabulary-collapse:hover {
     color: var(--text);
 }
-.vocabulary-pane.collapsed {
+.rule-engine-ui .vocabulary-pane.collapsed {
     width: 42px;
 }
-.vocabulary-pane.collapsed .vocabulary-head {
+.rule-engine-ui .vocabulary-pane.collapsed .vocabulary-head {
     justify-content: center;
     padding: 12px 6px 8px;
 }
-.vocabulary-pane.collapsed .vocabulary-head-label,
-.vocabulary-pane.collapsed .vocabulary-list {
+.rule-engine-ui .vocabulary-pane.collapsed .vocabulary-head-label,
+.rule-engine-ui .vocabulary-pane.collapsed .vocabulary-list {
     display: none;
 }
-.vocabulary-entity {
+.rule-engine-ui .vocabulary-entity {
     padding: 7px 16px 3px;
     font-size: 12px;
     font-weight: 700;
     color: var(--text2);
 }
-.vocabulary-item {
+.rule-engine-ui .vocabulary-item {
     display: flex;
     align-items: center;
     gap: 7px;
@@ -637,11 +647,11 @@ a.link:hover {
     cursor: grab;
     font-family: var(--mono);
 }
-.vocabulary-item:hover {
+.rule-engine-ui .vocabulary-item:hover {
     background-image: var(--hover-veil);
     color: var(--text);
 }
-.vocabulary-item-type {
+.rule-engine-ui .vocabulary-item-type {
     margin-left: auto;
     font-size: 9.5px;
     color: var(--text5);
@@ -649,14 +659,14 @@ a.link:hover {
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
-.vocabulary-item-used {
+.rule-engine-ui .vocabulary-item-used {
     opacity: 0.35;
     cursor: default;
 }
-.vocabulary-item-clickable {
+.rule-engine-ui .vocabulary-item-clickable {
     cursor: pointer;
 }
-.vocabulary-pane.vocabulary-locked {
+.rule-engine-ui .vocabulary-pane.vocabulary-locked {
     opacity: 0.35;
     pointer-events: none;
 }
@@ -665,7 +675,7 @@ a.link:hover {
 /* Shared - right-click context menu                          */
 /* ---------------------------------------------------------- */
 
-.context-menu {
+.rule-engine-ui .context-menu {
     position: fixed;
     z-index: 1350;
     background: var(--panel-raised);
@@ -676,7 +686,7 @@ a.link:hover {
     max-width: 330px;
     padding: 0 0 2px;
 }
-.context-menu-head {
+.rule-engine-ui .context-menu-head {
     padding: 8px 12px 4px;
     font-size: 10px;
     font-weight: 700;
@@ -684,7 +694,7 @@ a.link:hover {
     text-transform: uppercase;
     letter-spacing: 0.08em;
 }
-.context-menu-item {
+.rule-engine-ui .context-menu-item {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -693,17 +703,17 @@ a.link:hover {
     color: var(--text2);
     cursor: pointer;
 }
-.context-menu-item:hover {
+.rule-engine-ui .context-menu-item:hover {
     background-image: var(--hover-veil);
     color: var(--text);
 }
-.context-menu-item-destructive {
+.rule-engine-ui .context-menu-item-destructive {
     color: var(--red);
 }
-.context-menu-item-destructive:hover {
+.rule-engine-ui .context-menu-item-destructive:hover {
     color: var(--red);
 }
-.context-menu-key {
+.rule-engine-ui .context-menu-key {
     flex-shrink: 0;
     width: 16px;
     text-align: center;
@@ -714,7 +724,7 @@ a.link:hover {
     border-radius: var(--radius-1);
     line-height: 1.5;
 }
-.context-menu-separator {
+.rule-engine-ui .context-menu-separator {
     border-top: 1px dashed var(--border);
     margin: 5px 12px;
 }
@@ -723,27 +733,27 @@ a.link:hover {
 /* Shared - pane and column resize handles                    */
 /* ---------------------------------------------------------- */
 
-.pane-resizer {
+.rule-engine-ui .pane-resizer {
     flex-shrink: 0;
     background: transparent;
     transition: background 0.12s;
     z-index: 5;
 }
-.pane-resizer:hover,
-.pane-resizer-active {
+.rule-engine-ui .pane-resizer:hover,
+.rule-engine-ui .pane-resizer-active {
     background: var(--blue);
 }
-.pane-resizer-horizontal {
+.rule-engine-ui .pane-resizer-horizontal {
     height: 4px;
     width: 100%;
     cursor: row-resize;
 }
-.pane-resizer-vertical {
+.rule-engine-ui .pane-resizer-vertical {
     width: 4px;
     cursor: col-resize;
 }
 
-.column-resize-grip {
+.rule-engine-ui .column-resize-grip {
     position: absolute;
     top: 0;
     bottom: 0;
@@ -752,7 +762,7 @@ a.link:hover {
     cursor: col-resize;
     z-index: 6;
 }
-.column-resize-grip:hover {
+.rule-engine-ui .column-resize-grip:hover {
     background: var(--blue-tint-35);
 }
 
@@ -760,7 +770,7 @@ a.link:hover {
 /* Shared - drag ghosts                                       */
 /* ---------------------------------------------------------- */
 
-.drag-ghost {
+.rule-engine-ui .drag-ghost {
     position: fixed;
     top: -1000px;
     left: -1000px;
@@ -768,10 +778,10 @@ a.link:hover {
     z-index: 1400;
     pointer-events: none;
 }
-.drag-ghost-column {
+.rule-engine-ui .drag-ghost-column {
     flex-direction: column;
 }
-.drag-ghost-cell {
+.rule-engine-ui .drag-ghost-cell {
     padding: 4px 10px;
     border: 1px solid var(--blue);
     background: var(--panel);
@@ -785,7 +795,7 @@ a.link:hover {
 /* Shared - tippy theme and popover color variants            */
 /* ---------------------------------------------------------- */
 
-.tippy-box[data-theme~="dt"] {
+.rule-engine-ui .tippy-box[data-theme~="dt"] {
     background-color: var(--panel) !important;
     border: 1px solid var(--blue) !important;
     border-radius: var(--radius-3) !important;
@@ -793,17 +803,17 @@ a.link:hover {
     box-shadow: 0 4px 20px var(--shadow-soft) !important;
     font-size: 12px !important;
 }
-.tippy-box[data-theme~="dt"] .tippy-content {
+.rule-engine-ui .tippy-box[data-theme~="dt"] .tippy-content {
     padding: 9px 12px;
     line-height: 1.45;
 }
-.tippy-box[data-theme~="dt"] .tippy-arrow {
+.rule-engine-ui .tippy-box[data-theme~="dt"] .tippy-arrow {
     color: var(--panel);
 }
-.tippy-box[data-theme~="dt"].popover-green {
+.rule-engine-ui .tippy-box[data-theme~="dt"].popover-green {
     border-color: var(--green) !important;
 }
-.tippy-box[data-theme~="dt"].popover-red {
+.rule-engine-ui .tippy-box[data-theme~="dt"].popover-red {
     border-color: var(--red) !important;
 }
 
@@ -811,7 +821,7 @@ a.link:hover {
 /* Shared - floating drop placeholder                         */
 /* ---------------------------------------------------------- */
 
-.drop-placeholder {
+.rule-engine-ui .drop-placeholder {
     position: fixed;
     pointer-events: none;
     z-index: 1400;
@@ -824,7 +834,7 @@ a.link:hover {
 /* Shared - drop glow                                         */
 /* ---------------------------------------------------------- */
 
-.term-highlight {
+.rule-engine-ui .term-highlight {
     background: var(--blue-tint-28) !important;
     transition: background 1.5s ease;
 }
@@ -833,7 +843,7 @@ a.link:hover {
 /* Shared - floating panel                                    */
 /* ---------------------------------------------------------- */
 
-.floating-panel {
+.rule-engine-ui .floating-panel {
     position: fixed;
     z-index: 1300;
     background: var(--panel-raised);
@@ -844,15 +854,15 @@ a.link:hover {
     max-width: 480px;
     padding: 8px 0;
 }
-.floating-panel-line {
+.rule-engine-ui .floating-panel-line {
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 4px 14px;
     flex-wrap: wrap;
 }
-.floating-panel-line input,
-.floating-panel-line select {
+.rule-engine-ui .floating-panel-line input,
+.rule-engine-ui .floating-panel-line select {
     background: var(--input-background);
     border: none;
     box-shadow: inset 0 0 0 1px var(--border);
@@ -864,15 +874,15 @@ a.link:hover {
     outline: none;
     min-width: 0;
 }
-.floating-panel-line .field,
-.floating-panel-line input {
+.rule-engine-ui .floating-panel-line .field,
+.rule-engine-ui .floating-panel-line input {
     flex: 1;
 }
-.floating-panel-line input:focus,
-.floating-panel-line select:focus {
+.rule-engine-ui .floating-panel-line input:focus,
+.rule-engine-ui .floating-panel-line select:focus {
     box-shadow: inset 0 0 0 1px var(--focus-edge);
 }
-.floating-panel textarea {
+.rule-engine-ui .floating-panel textarea {
     display: block;
     width: calc(100% - 28px);
     margin: 0 14px;
@@ -888,28 +898,99 @@ a.link:hover {
     outline: none;
     resize: vertical;
 }
-.floating-panel textarea:focus {
+.rule-engine-ui .floating-panel textarea:focus {
     box-shadow: inset 0 0 0 1px var(--focus-edge);
 }
-.floating-panel-actions {
+.rule-engine-ui .floating-panel-actions {
     padding: 8px 14px 4px;
+}
+
+/* ---------------------------------------------------------- */
+/* Shared - label and value grids                             */
+/* ---------------------------------------------------------- */
+
+/* One grid for every pane that lays labels against values - the test screens
+   fill theirs in, the previews only read, marking their cells read-only. */
+.rule-engine-ui .test-grid-title {
+    margin: 16px 0 6px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text5);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+.rule-engine-ui .test-grid {
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 12.5px;
+    min-width: 440px;
+}
+.rule-engine-ui .test-grid td,
+.rule-engine-ui .test-grid th {
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+.rule-engine-ui .test-grid tr > td:first-child,
+.rule-engine-ui .test-grid tr > th:first-child {
+    border-left: 1px solid var(--border);
+}
+.rule-engine-ui .test-grid thead th,
+.rule-engine-ui .test-grid tr:first-child td {
+    border-top: 1px solid var(--border);
+}
+.rule-engine-ui .test-grid th {
+    background: var(--panel);
+    padding: 5px 10px;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    text-align: left;
+    position: relative;
+}
+.rule-engine-ui .test-label-cell {
+    background: var(--panel);
+    padding: 6px 10px;
+    color: var(--text2);
+    min-width: 220px;
+}
+.rule-engine-ui .test-value-cell {
+    background: var(--input-background);
+    padding: 6px 10px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+    cursor: pointer;
+    min-width: 130px;
+    position: relative;
+}
+.rule-engine-ui .test-value-cell:hover {
+    background-image: var(--hover-veil);
+}
+.rule-engine-ui .log-value-readonly {
+    cursor: default;
+}
+.rule-engine-ui .log-value-readonly:hover {
+    background-image: none;
 }
 
 /* ---------------------------------------------------------- */
 /* Shared - settings                                          */
 /* ---------------------------------------------------------- */
 
-.settings-button {
+.rule-engine-ui .settings-button {
     margin-left: auto;
     align-self: center;
 }
-.settings-panel-title {
+.rule-engine-ui .settings-panel-title {
     padding: 4px 14px 2px;
     font-size: 12.5px;
     font-weight: 700;
     color: var(--text2);
 }
-.settings-section-title {
+.rule-engine-ui .settings-section-title {
     padding: 6px 14px 4px;
     font-size: 10.5px;
     font-weight: 700;
@@ -917,7 +998,7 @@ a.link:hover {
     letter-spacing: 0.05em;
     color: var(--text4);
 }
-.settings-theme-entry {
+.rule-engine-ui .settings-theme-entry {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
@@ -932,15 +1013,15 @@ a.link:hover {
     padding: 6px 14px;
     cursor: pointer;
 }
-.settings-theme-entry:hover {
+.rule-engine-ui .settings-theme-entry:hover {
     background-image: var(--hover-veil);
     color: var(--text);
 }
-.settings-theme-active {
+.rule-engine-ui .settings-theme-active {
     color: var(--text);
     background: var(--column-selected);
 }
-.settings-theme-kind {
+.rule-engine-ui .settings-theme-kind {
     font-size: 10.5px;
     color: var(--text5);
 }

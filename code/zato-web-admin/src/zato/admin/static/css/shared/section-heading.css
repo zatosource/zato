@@ -1,0 +1,14 @@
+/* Shared - the heading a screen opens with, e.g. "Scheduler demo.pubsub" on the job
+   detail page or "Rules My_Rule" on the alert rule editor. Settings and detail pages
+   get it through settings.css, other pages load this file directly and put the
+   .section-page-heading class on their heading. */
+
+.settings-main h3,
+.settings-sidebar h3,
+.section-page-heading {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--primary-dark);
+    letter-spacing: 0.5px;
+    padding-bottom: 0.7rem;
+}

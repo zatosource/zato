@@ -1,8 +1,12 @@
 /* ---------------------------------------------------------- */
 /* Shared - buttons, messages and form cards                  */
+/*                                                            */
+/* Scoped under .rule-engine-ui like the rest of the design   */
+/* system - the pages carry the class on their body, embedded */
+/* components on their containers.                            */
 /* ---------------------------------------------------------- */
 
-.button-primary {
+.rule-engine-ui .button-primary {
     background: var(--blue-strong);
     color: var(--button-text);
     border: none;
@@ -13,34 +17,34 @@
     cursor: pointer;
     font-family: var(--font);
 }
-.button-primary:hover {
+.rule-engine-ui .button-primary:hover {
     background: var(--blue-strong-hover);
 }
-.messages {
+.rule-engine-ui .messages {
     margin: 0 0 18px 0;
     padding: 0;
     list-style: none;
 }
-.messages li {
+.rule-engine-ui .messages li {
     padding: 10px 14px;
     border-radius: var(--radius-3);
     margin-bottom: 8px;
     font-size: 13px;
 }
-.messages li.success {
+.rule-engine-ui .messages li.success {
     color: var(--green);
     background: var(--green-tint-14);
 }
-.messages li.error {
+.rule-engine-ui .messages li.error {
     color: var(--red);
     background: var(--red-tint-16);
 }
-.messages li.info {
+.rule-engine-ui .messages li.info {
     color: var(--blue);
     background: var(--blue-tint-12);
 }
 
-.form-card {
+.rule-engine-ui .form-card {
     max-width: 460px;
     padding: 20px 24px;
     margin-bottom: 18px;
@@ -50,18 +54,18 @@
     color: var(--text2);
     background: var(--panel-raised);
 }
-.form-row {
+.rule-engine-ui .form-row {
     margin-bottom: 14px;
 }
-.form-row label {
+.rule-engine-ui .form-row label {
     display: block;
     margin-bottom: 5px;
     font-size: 12px;
     font-weight: 600;
     color: var(--text4);
 }
-.form-row input[type="text"],
-.form-row input[type="password"] {
+.rule-engine-ui .form-row input[type="text"],
+.rule-engine-ui .form-row input[type="password"] {
     width: 100%;
     padding: 8px 10px;
     border: 1px solid var(--border);
@@ -72,20 +76,20 @@
     background: var(--input-background);
     outline: none;
 }
-.form-row input[type="text"]:focus,
-.form-row input[type="password"]:focus {
+.rule-engine-ui .form-row input[type="text"]:focus,
+.rule-engine-ui .form-row input[type="password"]:focus {
     border-color: var(--blue);
 }
-.form-row input:disabled {
+.rule-engine-ui .form-row input:disabled {
     color: var(--text5);
 }
-.form-row-checkbox {
+.rule-engine-ui .form-row-checkbox {
     display: flex;
     align-items: center;
     gap: 8px;
     margin-bottom: 14px;
 }
-.form-row-checkbox label {
+.rule-engine-ui .form-row-checkbox label {
     font-size: 13px;
     color: var(--text2);
 }

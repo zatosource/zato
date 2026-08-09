@@ -7,6 +7,10 @@ var editorModel = {
     config: {
         checkDelayMilliseconds: 300,
 
+        // The class the active view button carries - the host's markup decides the look,
+        // the dashboard's yellow toggles use `toggled`, web-admin's tabs use `dashboard-tab-active`
+        viewButtonActiveClass: 'toggled',
+
         // The host application fills all of these in through editorView.init
         urls: {},
         ruleset: null,

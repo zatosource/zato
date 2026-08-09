@@ -5,21 +5,19 @@
 
 {% block styles %}
 {{ block.super }}
-<link rel="stylesheet" href="{% static 'rule-engine/css/test.css' %}">
-<link rel="stylesheet" href="{% static 'rule-engine/css/log.css' %}">
 <link rel="stylesheet" href="{% static 'rule-engine/css/rulesets.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="main-column">
+<div class="main-column ruleset-browser" id="ruleset-browser">
   <div class="command-bar">
-    <button class="button-ghost" onclick="rulesetsView.newRuleset()">New ruleset</button>
+    <button class="button-ghost" data-action="new">New ruleset</button>
     <span class="command-bar-pipe">|</span>
     <div class="command-field field" id="rulesets-field" data-hint="Filter rulesets">
       <input class="command-input" id="rulesets-search" type="text" autocomplete="off" spellcheck="false"
         placeholder=" ">
       <span class="command-count" id="rulesets-count"></span>
-      <button class="command-clear" id="rulesets-clear" onclick="rulesetsView.clearAll()"></button>
+      <button class="command-clear" id="rulesets-clear" data-action="clear-all"></button>
       <div class="command-suggest" id="rulesets-suggest"></div>
     </div>
   </div>
@@ -44,4 +42,42 @@
 <script src="{% static 'rule-engine/js/rulesets-actions.js' %}"></script>
 <script src="{% static 'rule-engine/js/rulesets-menu.js' %}"></script>
 <script src="{% static 'rule-engine/js/rulesets-filter.js' %}"></script>
+<script>
+(function() {
+    rulesetsView.init(document.getElementById('ruleset-browser'), {
+        urls: {
+            rulesets: '/rules/rulesets/?object_type=ruleset&limit=',
+            follows: '/rules/follows/',
+            feed: '/rules/feed/',
+            views: '/rules/views/',
+            viewSave: '/rules/views/save/',
+            viewDelete: '/rules/views/delete/',
+            search: '/rules/search/?q=',
+            preview: function(id) { return '/rules/rulesets/' + id + '/preview/'; },
+            publish: function(id) { return '/rules/rulesets/' + id + '/publish/'; },
+            rename: function(id) { return '/rules/rulesets/' + id + '/rename/'; },
+            follow: function(id) { return '/rules/rulesets/' + id + '/follow/'; },
+            unfollow: function(id) { return '/rules/rulesets/' + id + '/unfollow/'; },
+            seen: function(id) { return '/rules/rulesets/' + id + '/seen/'; },
+        },
+        openUrls: {
+            tables: '/tables/',
+            editor: '/editor/',
+            tests: '/tests/',
+            versions: '/versions/',
+            log: '/decision-log/',
+            vocabulary: '/vocabulary/',
+        },
+        showFollows: true,
+        showFeed: true,
+        showViews: true,
+        showPublish: true,
+        showRename: true,
+        showRowMenu: true,
+        showProblems: true,
+        newLabel: 'New ruleset',
+        onNew: function() { window.location.href = '/vocabulary/'; },
+    });
+})();
+</script>
 {% endblock %}

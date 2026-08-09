@@ -3,8 +3,13 @@
 {% block html_title %}Alert rule editor{% endblock %}
 
 {% block dashboard_extra_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/shared/component-pill.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/section-heading.css">
 <link rel="stylesheet" type="text/css" href="/shared-ui/webapp/fonts.css">
-<link rel="stylesheet" type="text/css" href="/shared-ui/rule-engine/css/editor-embed.css">
+<link rel="stylesheet" type="text/css" href="/shared-ui/webapp/css/tokens.css">
+<link rel="stylesheet" type="text/css" href="/shared-ui/webapp/css/themes/zato-light.css">
+<link rel="stylesheet" type="text/css" href="/shared-ui/webapp/css/forms.css">
+<link rel="stylesheet" type="text/css" href="/shared-ui/webapp/css/kit.css">
 <link rel="stylesheet" type="text/css" href="/shared-ui/rule-engine/css/editor.css">
 <link rel="stylesheet" type="text/css" href="/static/css/alerting.css">
 {% endblock %}
@@ -26,6 +31,10 @@ $(document).ready(function() {
 
     shared.initShell();
 
+    // Floating surfaces attach here rather than to the body, so they sit inside
+    // the shared UI's scope and theme even outside the editor's own container
+    shared.config.floatingRoot = document.getElementById('rule-engine-floating-root');
+
     editorView.init(document.getElementById('rule-editor'), {
         urls: {
             rulesets: '{% url "alert-rules-api-definitions" %}?object_type=ruleset',
@@ -41,6 +50,7 @@ $(document).ready(function() {
         rule: {% if rule_key %}'{{ rule_key|escapejs }}'{% else %}null{% endif %},
         newRuleName: '{{ new_rule_name|escapejs }}',
         showLivePanel: false,
+        viewButtonActiveClass: 'dashboard-tab-active',
         csrfToken: $.cookie('csrftoken'),
         navigateToRule: function(rulesetId, ruleKey) {
             window.location.href = '{% url "alert-rules-editor" %}?cluster={{ cluster_id }}&rule=' +
@@ -61,30 +71,22 @@ $(document).ready(function() {
 
 {% block dashboard_grid %}
 
+        <div class="alerting-editor-column">
+        <h3 class="section-page-heading">
+            <a href="{% url "alert-rules" %}?cluster={{ cluster_id }}" class="detail-component-pill menu-link">Rules</a>
+            {% if new_rule_name %}{{ new_rule_name }}{% else %}{{ rule_name }}{% endif %}
+        </h3>
         <div class="dashboard-card alerting-editor-card">
-            <div class="dashboard-card-header">
-                <h3>
-                {% if new_rule_name %}
-                    New alert rule - {{ new_rule_name }}
-                {% elif rule_name %}
-                    Alert rule - {{ rule_name }}
-                {% else %}
-                    Alert rules
-                {% endif %}
-                </h3>
-                <a class="dashboard-pill dashboard-pill-clickable alerting-editor-back"
-                   href="{% url "alert-rules" %}?cluster={{ cluster_id }}">Back to alert rules</a>
-            </div>
 
-            <div class="rule-editor" id="rule-editor">
+            <div class="rule-engine-ui rule-editor" data-theme="zato-light" id="rule-editor">
                 <div class="main-column">
                     <div class="toolbar">
-                        <span class="view-switcher">
-                            <button class="button-ghost toggled" data-action="set-view" data-view="sentence">Sentence</button>
-                            <button class="button-ghost" data-action="set-view" data-view="expression">Expression</button>
-                            <button class="button-ghost" data-action="set-view" data-view="table">Table</button>
-                            <button class="button-ghost" data-action="set-view" data-view="document">Document</button>
-                        </span>
+                        <div class="dashboard-tabs" role="tablist">
+                            <button type="button" class="dashboard-tab dashboard-tab-active" data-action="set-view" data-view="sentence" role="tab" aria-selected="true">Sentence</button>
+                            <button type="button" class="dashboard-tab" data-action="set-view" data-view="expression" role="tab" aria-selected="false">Expression</button>
+                            <button type="button" class="dashboard-tab" data-action="set-view" data-view="table" role="tab" aria-selected="false">Table</button>
+                            <button type="button" class="dashboard-tab" data-action="set-view" data-view="document" role="tab" aria-selected="false">Document</button>
+                        </div>
                         <button class="button-ghost" data-action="open-rule-menu">Rules</button>
                         <span class="toolbar-separator"></span>
                         <button class="button-primary" data-action="save">Save</button>
@@ -107,5 +109,8 @@ $(document).ready(function() {
                 </div>
             </div>
         </div>
+        </div>
+
+        <div class="rule-engine-ui rule-engine-floating-root" data-theme="zato-light" id="rule-engine-floating-root"></div>
 
 {% endblock %}

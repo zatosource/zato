@@ -7,21 +7,14 @@ var rulesetsModel = {
     config: {
         listLimit: 200,
 
-        urls: {
-            rulesets: '/rules/rulesets/?object_type=ruleset&limit=',
-            follows: '/rules/follows/',
-            feed: '/rules/feed/',
-            views: '/rules/views/',
-            viewSave: '/rules/views/save/',
-            viewDelete: '/rules/views/delete/',
-            search: '/rules/search/?q=',
-            preview: function(id) { return '/rules/rulesets/' + id + '/preview/'; },
-            publish: function(id) { return '/rules/rulesets/' + id + '/publish/'; },
-            rename: function(id) { return '/rules/rulesets/' + id + '/rename/'; },
-            follow: function(id) { return '/rules/rulesets/' + id + '/follow/'; },
-            unfollow: function(id) { return '/rules/rulesets/' + id + '/unfollow/'; },
-            seen: function(id) { return '/rules/rulesets/' + id + '/seen/'; },
-        },
+        // The host application passes every URL through rulesetsView.init - only the list
+        // and the preview are required, the rest are the collaboration endpoints the rule
+        // engine dashboard has and an embedding host may not
+        urls: {},
+
+        // What a ruleset is called on the screen when its stored name is technical -
+        // a map from the stored name to the label the browser shows and searches by
+        rulesetLabels: {},
     },
 
     rulesets: [],
@@ -33,23 +26,39 @@ var rulesetsModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
+    // The name a ruleset goes by on the screen - its own unless the host relabels it
+    displayName: function(name) {
+        var label = this.config.rulesetLabels[name];
+        if (label === undefined) { label = name; }
+        return label;
+    },
+
+// ////////////////////////////////////////////////////////////////////////
+
     load: function(onDone) {
         var self = this;
-        var remaining = 4;
+        var urls = this.config.urls;
 
+        // Only the endpoints the host actually has take part in the load
+        var steps = 1;
+        if (urls.follows !== undefined) { steps += 1; }
+        if (urls.feed !== undefined) { steps += 1; }
+        if (urls.views !== undefined) { steps += 1; }
+
+        var remaining = steps;
         var step = function() {
             remaining -= 1;
             if (remaining === 0) { onDone(); }
         };
 
-        data.get(this.config.urls.rulesets + this.config.listLimit, function(payload) {
+        data.get(urls.rulesets + this.config.listLimit, function(payload) {
             self.rulesets = payload.items;
             step();
         }, data.reportError);
 
-        this.loadFollows(step);
-        this.loadFeed(step);
-        this.loadViews(step);
+        if (urls.follows !== undefined) { this.loadFollows(step); }
+        if (urls.feed !== undefined) { this.loadFeed(step); }
+        if (urls.views !== undefined) { this.loadViews(step); }
     },
 
     loadFollows: function(onDone) {
@@ -126,7 +135,9 @@ var rulesetsModel = {
                 return;
             }
 
-            var nameHit = ruleset.name.toLowerCase().indexOf(needle) > -1;
+            // Both the stored name and the label it shows under count as a match
+            var names = ruleset.name + ' ' + self.displayName(ruleset.name);
+            var nameHit = names.toLowerCase().indexOf(needle) > -1;
             if (nameHit || hits.length > 0) {
                 out.push({ruleset: ruleset, hits: hits});
             }
@@ -167,6 +178,11 @@ var rulesetsModel = {
         return this.rulesCache[id];
     },
 
+    // A host that changed a rule behind the panel drops the cache, so the next opening refetches
+    dropCachedRules: function(id) {
+        delete this.rulesCache[id];
+    },
+
     rules: function(id, onDone) {
         var self = this;
         var cached = this.cachedRules(id);
@@ -185,10 +201,15 @@ var rulesetsModel = {
             var out = [];
             Object.keys(documents).forEach(function(key) {
                 var entry = documents[key];
+
+                // Documents stored before rules could be deactivated carry no flag at all
+                var isActive = entry.is_active !== false;
+
                 out.push({
                     key: key,
                     name: entry.name,
                     docs: entry.docs,
+                    isActive: isActive,
                     conditionCount: entry.conditions.length,
                     actionCount: entry.then.length,
                 });

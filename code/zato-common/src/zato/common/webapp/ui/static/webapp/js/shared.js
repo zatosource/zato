@@ -7,6 +7,13 @@ var shared = {
     config: {
         popoverMilliseconds: 4800,
 
+        // Where floating surfaces attach - panels, context menus, popovers, drag ghosts.
+        // The dashboard leaves this alone and they land on the body, which carries the
+        // .rule-engine-ui scope class itself. A host page that embeds a component sets
+        // this to an element carrying the scope class and its theme, so the surfaces
+        // keep their styling outside the component's own container.
+        floatingRoot: null,
+
         // How far a floating surface keeps from the window's edges, and from its own anchor
         viewportMarginPixels: 8,
         floatingGapPixels: 6,
@@ -59,6 +66,13 @@ var shared = {
 
 // ////////////////////////////////////////////////////////////////////////
 
+    floatingRoot: function() {
+        var out = shared.config.floatingRoot === null ? document.body : shared.config.floatingRoot;
+        return out;
+    },
+
+// ////////////////////////////////////////////////////////////////////////
+
     escape: function(text) {
         return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     },
@@ -73,6 +87,7 @@ var shared = {
                 animation: 'shift-away',
                 delay: [shared.config.tippyShowDelayMilliseconds, 0],
                 allowHTML: false,
+                appendTo: function() { return shared.floatingRoot(); },
             });
         });
     },
@@ -91,7 +106,7 @@ var shared = {
             animation: 'shift-away',
             placement: 'bottom',
             maxWidth: 340,
-            appendTo: document.body,
+            appendTo: shared.floatingRoot(),
             zIndex: 1200,
             onCreate: function(created) {
                 if (color === 'green') { created.popper.querySelector('.tippy-box').classList.add('popover-green'); }

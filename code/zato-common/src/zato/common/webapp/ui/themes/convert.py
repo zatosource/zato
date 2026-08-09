@@ -16,7 +16,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # kind of source for everything.
 #
 # For every theme the converter emits static/webapp/css/themes/<slug>.css
-# with the full token set scoped by html[data-theme="<slug>"], plus
+# with the full token set scoped by [data-theme="<slug>"] - the dashboard
+# carries the attribute on its html element, a host page that embeds one
+# of the shared components carries it on the component's container - plus
 # static/webapp/js/themes-index.js (the list the settings panel shows) and
 # templates/webapp/themes.html (the link tags webapp/base.html includes).
 #
@@ -106,7 +108,7 @@ def _render_css(slug:'str', theme_name:'str', meta:'anydict', tokens:'strdict') 
         f'   Source: themes-in/{slug}.json',
         f'   Origin: {meta["origin"]}',
         f'   License: {meta["license"]} */',
-        f'html[data-theme="{slug}"] {{',
+        f'[data-theme="{slug}"] {{',
     ]
     for token in token_order:
         lines.append(f'    {token}: {tokens[token]};')

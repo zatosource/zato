@@ -35,14 +35,51 @@ var rulesetsView = {
             text: 'Search',
         },
 
-        openUrls: {
-            tables: '/tables/',
-            editor: '/editor/',
-            tests: '/tests/',
-            versions: '/versions/',
-            log: '/decision-log/',
-            vocabulary: '/vocabulary/',
-        },
+        // What of the browser the host application shows - the rule engine dashboard
+        // turns everything on, an embedding host turns the collaboration features off
+        showFollows: true,
+        showFeed: true,
+        showViews: true,
+        showPublish: true,
+        showRename: true,
+        showRowMenu: true,
+        showProblems: true,
+
+        // Whether the side pane with the preview shows at all - a host where every
+        // rule is always live has nothing to preview, so the list takes the width
+        showSidePane: true,
+
+        // Whether the expanded rules panel says which rules are active, and what actions
+        // it offers on each rule - each action is {key, label, onRun(ruleKey, target)}
+        // with an optional isShown(rule)
+        showRuleState: false,
+        ruleActions: [],
+
+        // Which screens the host can open - only the URLs it passes render as links
+        openUrls: {},
+
+        // The screens of the preview pane's open-in strip, each rendered only when
+        // its URL is among openUrls - the tables screen takes no ruleset of its own
+        previewScreens: [
+            {screen: 'editor', label: 'Rules', plain: false},
+            {screen: 'tables', label: 'Decision tables', plain: true},
+            {screen: 'tests', label: 'Tests and A/B', plain: false},
+            {screen: 'versions', label: 'Versions', plain: false},
+            {screen: 'log', label: 'Decision log', plain: false},
+            {screen: 'vocabulary', label: 'Vocabulary', plain: false},
+        ],
+
+        // What the command bar's button says and what it runs
+        newLabel: 'New ruleset',
+        onNew: null,
+
+        // A ruleset expanded and selected as soon as the screen loads, so an embedding
+        // host opens straight onto the rules of the one set it cares about
+        autoExpandId: null,
+
+        // Whether the auto-expanded ruleset stays open for good - no caret, no way to
+        // collapse it, its name a plain link to the editor
+        lockExpanded: false,
 
         eventPhrases: {
             'definition.created': 'created this ruleset',
@@ -67,6 +104,8 @@ var rulesetsView = {
         },
     },
 
+    container: null,
+
     query: '',
     chosen: [],
     suggestions: [],
@@ -78,12 +117,31 @@ var rulesetsView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
+    element: function(selector) {
+        var out = this.container.querySelector(selector);
+        return out;
+    },
+
+    elements: function(selector) {
+        var out = this.container.querySelectorAll(selector);
+        return out;
+    },
+
+// ////////////////////////////////////////////////////////////////////////
+
     render: function() {
         this.renderSuggestions();
         this.renderList();
         this.renderSide();
         this.renderProblems();
         shared.initTips();
+    },
+
+// ////////////////////////////////////////////////////////////////////////
+
+    // The name a ruleset goes by on the screen, from the labels the model holds
+    displayName: function(name) {
+        return rulesetsModel.displayName(name);
     },
 
 // ////////////////////////////////////////////////////////////////////////
@@ -116,6 +174,8 @@ var rulesetsView = {
 // ////////////////////////////////////////////////////////////////////////
 
     statusHtml: function(ruleset) {
+        if (!this.config.showPublish) { return ''; }
+
         var draft = rulesetsModel.draftVersion(ruleset);
         var out = '';
 
@@ -125,17 +185,19 @@ var rulesetsView = {
         if (draft !== null) {
             out += '<span class="pill pill-progress">draft v' + draft + '</span>';
             out += '<button class="button-action rulesets-publish" ' +
-                'onclick="event.stopPropagation(); rulesetsView.openPublishPanel(' + ruleset.id + ', this)">Publish</button>';
+                'data-action="open-publish" data-id="' + ruleset.id + '">Publish</button>';
         }
         return out;
     },
 
     starHtml: function(ruleset) {
+        if (!this.config.showFollows) { return ''; }
+
         var followed = rulesetsModel.isFollowed(ruleset.id);
         var stateClass = followed ? ' rulesets-star-on' : '';
 
         var out = '<span class="rulesets-star' + stateClass + '" ' +
-            'onclick="event.stopPropagation(); rulesetsView.toggleFollow(' + ruleset.id + ')">' +
+            'data-action="toggle-follow" data-id="' + ruleset.id + '">' +
             shared.icon('star', 13) + '</span>';
         return out;
     },
@@ -160,18 +222,32 @@ var rulesetsView = {
             var stripe = shown % 2 === 1 ? ' rulesets-row-stripe' : '';
             shown += 1;
 
-            var isExpanded = self.expanded[ruleset.id] === true;
-            var caret = '<span class="rulesets-caret">' +
-                shared.icon(isExpanded ? 'chevron-down' : 'chevron-right', 12) + '</span>';
+            // A locked row stays expanded for good - no caret, nothing toggles it
+            var isLocked = self.config.lockExpanded && ruleset.id === self.config.autoExpandId;
+            var isExpanded = isLocked || self.expanded[ruleset.id] === true;
+
+            // A locked row's name is a plain title, an unlocked one is the toggle link
+            // with the caret sitting next to it, not inside it
+            var nameHtml;
+
+            if (isLocked) {
+                nameHtml = '<span class="rulesets-row-title">' +
+                    self.markHtml(self.displayName(ruleset.name)) + '</span>';
+            }
+            else {
+                nameHtml = '<span class="rulesets-caret" ' +
+                    'data-action="toggle-rules" data-id="' + ruleset.id + '">' +
+                    shared.icon(isExpanded ? 'chevron-down' : 'chevron-right', 12) + '</span>' +
+                    '<a class="rulesets-open-link" href="' + self.config.openUrls.editor +
+                    '?ruleset=' + ruleset.id + '" ' +
+                    'data-action="toggle-rules" data-id="' + ruleset.id + '">' +
+                    '<span class="link">' + self.markHtml(self.displayName(ruleset.name)) + '</span></a>';
+            }
 
             html += '<div class="rulesets-row' + selected + stripe + '" data-id="' + ruleset.id + '" ' +
-                'onclick="rulesetsView.select(' + ruleset.id + ')" ' +
-                'ondblclick="rulesetsView.open(' + ruleset.id + ')">' +
+                'data-action="select-ruleset">' +
                 '<div class="rulesets-row-main">' +
-                '<div class="rulesets-row-name">' + self.starHtml(ruleset) +
-                '<a class="rulesets-open-link" href="' + self.config.openUrls.editor + '?ruleset=' + ruleset.id + '" ' +
-                    'onclick="return rulesetsView.toggleRules(event, ' + ruleset.id + ')">' +
-                    caret + '<span class="link">' + self.markHtml(ruleset.name) + '</span></a>' +
+                '<div class="rulesets-row-name">' + self.starHtml(ruleset) + nameHtml +
                 self.statusHtml(ruleset) + '</div>' +
                 self.hitsHtml(entry.hits) +
                 '</div>' +
@@ -190,10 +266,33 @@ var rulesetsView = {
         }
 
         this.renderCount(entries.length, rulesetsModel.rulesets.length);
-        document.getElementById('rulesets-list').innerHTML = html;
+        this.element('#rulesets-list').innerHTML = html;
     },
 
 // ////////////////////////////////////////////////////////////////////////
+
+    ruleStateHtml: function(rule) {
+        if (!this.config.showRuleState) { return ''; }
+
+        var out = rule.isActive
+            ? '<span class="pill pill-good rulesets-rule-state">Active</span>'
+            : '<span class="pill pill-warning rulesets-rule-state">Inactive</span>';
+        return out;
+    },
+
+    ruleActionsHtml: function(rule) {
+        var html = '';
+
+        this.config.ruleActions.forEach(function(action, actionIndex) {
+            if (action.isShown !== undefined && !action.isShown(rule)) { return; }
+
+            html += '<span class="link rulesets-rule-action" data-action="rule-action" ' +
+                'data-index="' + actionIndex + '" data-rule="' + shared.escape(rule.key) + '">' +
+                action.label + '</span>';
+        });
+
+        return html;
+    },
 
     rulesPanelHtml: function(ruleset) {
         var self = this;
@@ -214,17 +313,19 @@ var rulesetsView = {
         }
 
         html += '<div class="rulesets-rules-head">' + rules.length + ' rule' + (rules.length === 1 ? '' : 's') +
-            ' in ' + shared.escape(ruleset.name) + '</div>';
+            ' in ' + shared.escape(this.displayName(ruleset.name)) + '</div>';
 
         rules.slice(0, this.config.maxRulesInPanel).forEach(function(rule) {
             html += '<a class="rulesets-rule" href="' + self.config.openUrls.editor + '?ruleset=' + ruleset.id +
-                '&amp;rule=' + encodeURIComponent(rule.key) + '" ' +
-                'onclick="event.stopPropagation()">' +
+                '&amp;rule=' + encodeURIComponent(rule.key) + '">' +
                 '<span class="rulesets-rule-name">' + self.markHtml(rule.name) + '</span>' +
                 '<span class="rulesets-rule-docs">' + shared.escape(rule.docs) + '</span>' +
                 '<span class="rulesets-rule-shape">' + rule.conditionCount + ' condition' +
-                    (rule.conditionCount === 1 ? '' : 's') + ', ' + rule.actionCount + ' action' +
+                    (rule.conditionCount === 1 ? '' : 's') + '</span>' +
+                '<span class="rulesets-rule-shape">' + rule.actionCount + ' action' +
                     (rule.actionCount === 1 ? '' : 's') + '</span>' +
+                self.ruleStateHtml(rule) +
+                self.ruleActionsHtml(rule) +
                 '</a>';
         });
 
@@ -266,10 +367,14 @@ var rulesetsView = {
 
     renderSide: function() {
         var self = this;
-        var pane = document.getElementById('rulesets-side');
+
+        // A host without the pane has no preview to paint - nothing to do here
+        if (!this.config.showSidePane) { return; }
+
+        var pane = this.element('#rulesets-side');
 
         if (this.selectedId === null) {
-            pane.innerHTML = this.feedHtml();
+            pane.innerHTML = this.config.showFeed ? this.feedHtml() : '';
             shared.initTips();
             return;
         }
@@ -297,7 +402,7 @@ var rulesetsView = {
 
         rulesetsModel.feed.forEach(function(entry) {
             var ruleset = rulesetsModel.byId(entry.definition_id);
-            var name = ruleset === undefined ? 'ruleset ' + entry.definition_id : ruleset.name;
+            var name = ruleset === undefined ? 'ruleset ' + entry.definition_id : self.displayName(ruleset.name);
 
             html += '<div class="rulesets-feed-entry">' +
                 '<div class="rulesets-feed-head">' + shared.escape(entry.actor) + ', ' + self.whenText(entry.created_at) +
@@ -315,18 +420,21 @@ var rulesetsView = {
         var ruleset = preview.definition;
         var draft = rulesetsModel.draftVersion(ruleset);
 
-        var html = '<div class="test-grid-title">' + shared.escape(ruleset.name) +
-            '<button class="button-mini rulesets-rename" ' +
-            'onclick="rulesetsView.openRenamePanel(' + ruleset.id + ', this)">rename</button></div>';
-
-        var statusValue = (ruleset.live_version === null ? 'never published' : 'live v' + ruleset.live_version) +
-            (draft === null ? '' : ', draft v' + draft + ' in progress');
-        if (draft !== null) {
-            statusValue += ' <button class="button-action rulesets-publish" ' +
-                'onclick="rulesetsView.openPublishPanel(' + ruleset.id + ', this)">Publish</button>';
+        var html = '<div class="test-grid-title">' + shared.escape(this.displayName(ruleset.name));
+        if (this.config.showRename) {
+            html += '<button class="button-mini rulesets-rename" ' +
+                'data-action="open-rename" data-id="' + ruleset.id + '">rename</button>';
         }
+        html += '</div>';
 
-        var followValue = preview.is_following ? 'yes' : 'no';
+        var statusValue = ruleset.live_version === null ? 'never published' : 'live v' + ruleset.live_version;
+        if (this.config.showPublish) {
+            statusValue += draft === null ? '' : ', draft v' + draft + ' in progress';
+            if (draft !== null) {
+                statusValue += ' <button class="button-action rulesets-publish" ' +
+                    'data-action="open-publish" data-id="' + ruleset.id + '">Publish</button>';
+            }
+        }
 
         html += '<table class="test-grid"><tbody>';
         html += '<tr><td class="test-label-cell">status</td><td class="test-value-cell log-value-readonly">' +
@@ -335,19 +443,13 @@ var rulesetsView = {
             this.whenText(ruleset.created_at) + '</td></tr>';
         html += '<tr><td class="test-label-cell">last change</td><td class="test-value-cell log-value-readonly">' +
             this.whenText(ruleset.updated_at) + '</td></tr>';
-        html += '<tr><td class="test-label-cell">followed</td><td class="test-value-cell log-value-readonly">' +
-            followValue + '</td></tr>';
+        if (this.config.showFollows) {
+            html += '<tr><td class="test-label-cell">followed</td><td class="test-value-cell log-value-readonly">' +
+                (preview.is_following ? 'yes' : 'no') + '</td></tr>';
+        }
         html += '</tbody></table>';
 
-        html += '<div class="test-grid-title">Open in</div>' +
-            '<div class="rulesets-preview-links">' +
-            this.previewLinkHtml(ruleset.id, 'editor', 'Rules') +
-            '<a class="rulesets-preview-link" href="' + this.config.openUrls.tables + '">Decision tables</a>' +
-            this.previewLinkHtml(ruleset.id, 'tests', 'Tests and A/B') +
-            this.previewLinkHtml(ruleset.id, 'versions', 'Versions') +
-            this.previewLinkHtml(ruleset.id, 'log', 'Decision log') +
-            this.previewLinkHtml(ruleset.id, 'vocabulary', 'Vocabulary') +
-            '</div>';
+        html += this.previewLinksHtml(ruleset.id);
 
         var documents = preview.document.documents;
 
@@ -387,17 +489,31 @@ var rulesetsView = {
         return html;
     },
 
-    previewLinkHtml: function(id, screen, label) {
-        var out = '<a class="rulesets-preview-link" href="' + this.config.openUrls[screen] + '?ruleset=' + id + '">' +
-            label + '</a>';
+    // The open-in strip shows only the screens the host has - one link for web-admin,
+    // the whole dashboard for the rule engine's own pages
+    previewLinksHtml: function(id) {
+        var self = this;
+        var links = '';
+
+        this.config.previewScreens.forEach(function(entry) {
+            if (self.config.openUrls[entry.screen] === undefined) { return; }
+
+            var href = self.config.openUrls[entry.screen] + (entry.plain ? '' : '?ruleset=' + id);
+            links += '<a class="rulesets-preview-link" href="' + href + '">' + entry.label + '</a>';
+        });
+
+        if (links === '') { return ''; }
+
+        var out = '<div class="test-grid-title">Open in</div>' +
+            '<div class="rulesets-preview-links">' + links + '</div>';
         return out;
     },
 
 // ////////////////////////////////////////////////////////////////////////
 
     renderCount: function(matching, total) {
-        var count = document.getElementById('rulesets-count');
-        var clear = document.getElementById('rulesets-clear');
+        var count = this.element('#rulesets-count');
+        var clear = this.element('#rulesets-clear');
         var narrowed = this.narrowed();
         var reading = narrowed ? matching + ' of ' + total : String(total);
         var noun = total === 1 ? this.config.countNoun : this.config.countNounPlural;
@@ -407,7 +523,7 @@ var rulesetsView = {
     },
 
     renderSuggestions: function() {
-        var pane = document.getElementById('rulesets-suggest');
+        var pane = this.element('#rulesets-suggest');
         var groups = this.config.groups;
         var self = this;
         var html = '<div class="command-suggest-drag">' + shared.icon('grip-horizontal', 12) + '</div>';
@@ -420,8 +536,9 @@ var rulesetsView = {
                 rows += self.suggestRowHtml(entry, index);
             });
 
-            // The saved views group holds the button that makes one, so its title is always there
-            if (rows === '' && group !== groups.views) { return; }
+            // The saved views group holds the button that makes one, so its title
+            // is always there when the host has saved views at all
+            if (rows === '' && (group !== groups.views || !self.config.showViews)) { return; }
 
             html += self.suggestTitleHtml(group) + rows;
         });
@@ -433,10 +550,9 @@ var rulesetsView = {
     suggestTitleHtml: function(group) {
         var button = '';
 
-        if (group === this.config.groups.views) {
+        if (group === this.config.groups.views && this.config.showViews) {
             button = '<button class="button-mini command-suggest-new" id="rulesets-save-view" ' +
-                'onmousedown="event.preventDefault(); event.stopPropagation(); ' +
-                'rulesetsView.openSaveViewPanel(this)">' + this.config.saveViewLabel + '</button>';
+                'data-mouse-action="open-save-view">' + this.config.saveViewLabel + '</button>';
         }
 
         return '<div class="command-suggest-title">' + group + button + '</div>';
@@ -452,12 +568,11 @@ var rulesetsView = {
         // A saved view carries its own way out, so a view is dropped where it is offered
         if (entry.view !== null) {
             tail = '<button class="command-suggest-drop" ' +
-                'onmousedown="event.preventDefault(); event.stopPropagation(); ' +
-                'rulesetsView.dropSavedView(' + index + ')">' + shared.icon('x', 10) + '</button>';
+                'data-mouse-action="drop-view" data-index="' + index + '">' + shared.icon('x', 10) + '</button>';
         }
 
         html += '<div class="command-suggest-row' + active + '" ' +
-            'onmousedown="event.preventDefault(); rulesetsView.pick(' + index + ')">' +
+            'data-mouse-action="pick" data-index="' + index + '">' +
             '<span class="command-suggest-check">' + check + '</span>' +
             '<span class="command-suggest-facet">' + entry.facet + '</span>' +
             '<span class="command-suggest-value">' + shared.escape(entry.value) + '</span>' +
@@ -469,7 +584,9 @@ var rulesetsView = {
 // ////////////////////////////////////////////////////////////////////////
 
     renderProblems: function() {
-        var list = document.getElementById('problems-list');
+        if (!this.config.showProblems) { return; }
+
+        var list = this.element('#problems-list');
         list.innerHTML = '<div class="problem-item problem-none">No problems.</div>';
     },
 };

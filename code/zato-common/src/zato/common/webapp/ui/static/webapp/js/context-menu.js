@@ -63,7 +63,7 @@ shared.openContextMenu = function(title, items, x, y) {
 
     menu.appendChild(head);
     menu.appendChild(list);
-    document.body.appendChild(menu);
+    shared.floatingRoot().appendChild(menu);
 
     var left = Math.min(x, window.innerWidth - menu.offsetWidth - 8);
     var top = Math.min(y, window.innerHeight - menu.offsetHeight - 8);

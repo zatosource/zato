@@ -87,9 +87,9 @@ class TestDemoConfig:
         assert scheduler_pill_href is not None
         assert '/zato/scheduler/' in scheduler_pill_href, f'Unexpected pill link: {scheduler_pill_href}'
 
-        # .. the HL7 set's card is called MLLP ..
+        # .. the HL7 set's card is called HL7 MLLP and FHIR ..
         hl7_title = page.inner_text('#demo-config-card-hl7 .demo-config-set-title')
-        assert hl7_title.strip() == 'MLLP', f'Expected "MLLP", got: {hl7_title}'
+        assert hl7_title.strip() == 'HL7 MLLP and FHIR', f'Expected "HL7 MLLP and FHIR", got: {hl7_title}'
 
         # .. and the page-wide help badge is present.
         help_badge = page.query_selector('#demo-config-how-it-works')

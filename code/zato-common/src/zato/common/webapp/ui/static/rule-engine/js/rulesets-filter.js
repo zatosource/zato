@@ -53,18 +53,20 @@ rulesetsView.buildSuggestions = function() {
         });
     });
 
-    rulesetsModel.savedViews().forEach(function(view) {
-        if (typed !== '' && view.name.toLowerCase().indexOf(typed) === -1) { return; }
+    if (this.config.showViews) {
+        rulesetsModel.savedViews().forEach(function(view) {
+            if (typed !== '' && view.name.toLowerCase().indexOf(typed) === -1) { return; }
 
-        out.push({
-            group: groups.views,
-            facet: 'view',
-            value: view.name,
-            count: null,
-            token: null,
-            view: view,
+            out.push({
+                group: groups.views,
+                facet: 'view',
+                value: view.name,
+                count: null,
+                token: null,
+                view: view,
+            });
         });
-    });
+    }
 
     // The typed text itself is an entry, so a search always has a row to land on
     if (typed !== '') {
@@ -96,8 +98,8 @@ rulesetsView.openSuggestions = function() {
 // The pane is laid out against the field once per opening, so it is never off the screen and
 // a pane pulled aside by its header stays where it was put while the list is filtered
 rulesetsView.placePane = function() {
-    var pane = document.getElementById('rulesets-suggest');
-    var field = document.getElementById('rulesets-field');
+    var pane = this.element('#rulesets-suggest');
+    var field = this.element('#rulesets-field');
 
     shared.placeFloating(pane, field.getBoundingClientRect());
 };
@@ -152,7 +154,7 @@ rulesetsView.toggleFacet = function(facet) {
 rulesetsView.clearAll = function() {
     this.chosen = [];
     this.query = '';
-    document.getElementById('rulesets-search').value = '';
+    this.element('#rulesets-search').value = '';
     this.applyFilters();
 };
 
@@ -210,7 +212,7 @@ rulesetsView.onFieldKeys = function(event) {
 
 // The pane is moved by its header, so a long list can be pulled off whatever it covers
 rulesetsView.startPaneDrag = function(event) {
-    var pane = document.getElementById('rulesets-suggest');
+    var pane = this.element('#rulesets-suggest');
     var paneBox = pane.getBoundingClientRect();
     var margin = shared.config.viewportMarginPixels;
 
@@ -256,19 +258,25 @@ rulesetsView.startPaneDrag = function(event) {
 // ////////////////////////////////////////////////////////////////////////
 
 rulesetsView.openSaveViewPanel = function(anchor) {
+    var self = this;
+
     if (rulesetsModel.savedViews().length >= this.config.maxSavedViews) {
         shared.popover(anchor, this.config.maxSavedViews + ' views is the cap', 'red');
         return;
     }
 
-    shared.openPanel(anchor,
+    this.openActionPanel(anchor,
         '<div class="floating-panel-line">' +
         '<span class="field" data-hint="View name">' +
-        '<input id="rulesets-view-name" type="text" placeholder=" " ' +
-            'onkeydown="rulesetsView.saveViewKeys(event)">' +
+        '<input id="rulesets-view-name" type="text" placeholder=" ">' +
         '</span>' +
-        '<button class="button-primary button-mini" onclick="rulesetsView.confirmSaveView(this)">Create</button>' +
+        '<button class="button-primary button-mini" data-action="confirm-save-view">' + this.config.saveViewLabel +
+        '</button>' +
         '</div>');
+
+    document.getElementById('rulesets-view-name').addEventListener('keydown', function(event) {
+        self.saveViewKeys(event);
+    });
 };
 
 rulesetsView.saveViewKeys = function(event) {
@@ -316,7 +324,7 @@ rulesetsView.applySavedView = function(name) {
     });
 
     this.query = stored.query;
-    document.getElementById('rulesets-search').value = stored.query;
+    this.element('#rulesets-search').value = stored.query;
 
     this.closeSuggestions();
     this.applyFilters();
@@ -334,69 +342,73 @@ rulesetsView.deleteSavedView = function(name) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-var field = document.getElementById('rulesets-field');
-var input = document.getElementById('rulesets-search');
-var pane = document.getElementById('rulesets-suggest');
+// Bound from rulesetsView.init, after the host handed over its container and config
+rulesetsView.initFilter = function() {
+    var self = this;
 
-document.getElementById('rulesets-clear').innerHTML = shared.icon('x', 11);
+    var field = this.element('#rulesets-field');
+    var input = this.element('#rulesets-search');
+    var pane = this.element('#rulesets-suggest');
 
-// A press anywhere in the field belongs to the input, the way a search field behaves, while the
-// pane runs its own presses. The input can already hold the focus with the pane closed, when
-// Escape shut it, and then no focus event follows, so the pane is opened here as well.
-field.addEventListener('mousedown', function(event) {
-    if (event.target.closest('.command-suggest') !== null) { return; }
-    if (event.target.closest('button') !== null) { return; }
+    this.element('#rulesets-clear').innerHTML = shared.icon('x', 11);
 
-    if (event.target !== input) {
+    // A press anywhere in the field belongs to the input, the way a search field behaves, while the
+    // pane runs its own presses. The input can already hold the focus with the pane closed, when
+    // Escape shut it, and then no focus event follows, so the pane is opened here as well.
+    field.addEventListener('mousedown', function(event) {
+        if (event.target.closest('.command-suggest') !== null) { return; }
+        if (event.target.closest('button') !== null) { return; }
+
+        if (event.target !== input) {
+            event.preventDefault();
+            input.focus();
+        }
+
+        if (!self.suggestOpen) { self.openSuggestions(); }
+    });
+
+    pane.addEventListener('mousedown', function(event) {
+        if (event.target.closest('.command-suggest-drag') === null) { return; }
+
         event.preventDefault();
-        input.focus();
-    }
+        self.startPaneDrag(event);
+    });
 
-    if (!rulesetsView.suggestOpen) { rulesetsView.openSuggestions(); }
-});
+    input.addEventListener('focus', function() { self.openSuggestions(); });
 
-pane.addEventListener('mousedown', function(event) {
-    if (event.target.closest('.command-suggest-drag') === null) { return; }
+    input.addEventListener('blur', function(event) {
+        // A panel opened from the pane takes the focus, and the pane stays as it was
+        if (event.relatedTarget !== null && event.relatedTarget.closest('.floating-panel') !== null) { return; }
 
-    event.preventDefault();
-    rulesetsView.startPaneDrag(event);
-});
+        self.closeSuggestions();
+    });
+    input.addEventListener('input', function(event) { self.setQuery(event.target.value); });
+    input.addEventListener('keydown', function(event) { self.onFieldKeys(event); });
 
-input.addEventListener('focus', function() { rulesetsView.openSuggestions(); });
+    // The pane closes from anywhere, whether or not the field still holds the focus - a panel
+    // opened from the pane counts as part of it, everything else is elsewhere
+    document.addEventListener('mousedown', function(event) {
+        if (!self.suggestOpen) { return; }
+        if (event.target.closest('#rulesets-field') !== null) { return; }
+        if (event.target.closest('.floating-panel') !== null) { return; }
 
-input.addEventListener('blur', function(event) {
-    // A panel opened from the pane takes the focus, and the pane stays as it was
-    if (event.relatedTarget !== null && event.relatedTarget.closest('.floating-panel') !== null) { return; }
+        self.closeSuggestions();
+    });
 
-    rulesetsView.closeSuggestions();
-});
-input.addEventListener('input', function(event) { rulesetsView.setQuery(event.target.value); });
-input.addEventListener('keydown', function(event) { rulesetsView.onFieldKeys(event); });
+    document.addEventListener('keydown', function(event) {
+        if (event.key !== 'Escape') { return; }
+        if (!self.suggestOpen) { return; }
 
-// The pane closes from anywhere, whether or not the field still holds the focus - a panel
-// opened from the pane counts as part of it, everything else is elsewhere
-document.addEventListener('mousedown', function(event) {
-    if (!rulesetsView.suggestOpen) { return; }
-    if (event.target.closest('#rulesets-field') !== null) { return; }
-    if (event.target.closest('.floating-panel') !== null) { return; }
+        self.closeSuggestions();
+    });
 
-    rulesetsView.closeSuggestions();
-});
+    window.addEventListener('resize', function() {
+        if (!self.suggestOpen) { return; }
 
-document.addEventListener('keydown', function(event) {
-    if (event.key !== 'Escape') { return; }
-    if (!rulesetsView.suggestOpen) { return; }
+        self.placePane();
+    });
+};
 
-    rulesetsView.closeSuggestions();
-});
-
-window.addEventListener('resize', function() {
-    if (!rulesetsView.suggestOpen) { return; }
-
-    rulesetsView.placePane();
-});
-
-// The screen boots from here, the last of its scripts, so every view method is in place
-rulesetsModel.load(function() { rulesetsView.render(); });
+// ////////////////////////////////////////////////////////////////////////
 
 })();

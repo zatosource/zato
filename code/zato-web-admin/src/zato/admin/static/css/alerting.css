@@ -3,7 +3,6 @@
 /* ------------------------------------------------------------ */
 
 :root {
-    --alerting-text-muted: #71717a;
     --alerting-border-light: rgba(0, 0, 0, 0.06);
 
     /* The viewport minus the top menu and the section's own margins */
@@ -19,6 +18,15 @@
     display: none;
 }
 
+/* Where the shared UI's floating surfaces attach - pinned to the viewport's origin
+   so the absolute coordinates the surfaces compute are viewport coordinates */
+.rule-engine-floating-root {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+}
+
 .dashboard-grid-section {
     grid-template-columns: 1fr;
     margin-top: 20px;
@@ -30,69 +38,62 @@
 }
 
 /* ------------------------------------------------------------ */
-/* Alert rules - the listing card and its controls                */
+/* Alert rules - the listing card holds the ruleset browser       */
 /* ------------------------------------------------------------ */
 
+/* The card is the column the shared browser stretches in - the browser brings
+   its own command bar, list and side pane, so the card only frames it */
 .alerting-card {
-    display: flex;
-    flex-direction: column;
-}
-
-.alerting-card .dashboard-card-header {
-    flex-wrap: wrap;
-}
-
-.alerting-controls {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    margin-left: auto;
-    padding: 6px 0;
-    font-size: 13px;
-    white-space: nowrap;
-}
-
-.alerting-publish-prompt {
-    color: var(--alerting-text-muted);
-}
-
-/* The table carries its own frame, so the panel steps back and lets it sit inset */
-.alerting-card .dashboard-tab-panel {
-    padding: 4px 4px 8px 4px;
-}
-
-.alerting-empty {
-    margin: 0;
-    padding: 16px 8px;
-    color: var(--alerting-text-muted);
-    font-size: 13px;
-}
-
-/* ------------------------------------------------------------ */
-/* Alert rules - the editor screen                                */
-/* ------------------------------------------------------------ */
-
-/* One full-height card holds the editor, framed like every other
-   monitoring screen - the card is the column the editor stretches in */
-.alerting-editor-card {
     display: flex;
     flex-direction: column;
     padding: 0;
     overflow: hidden;
 }
 
-.alerting-editor-card .dashboard-card-header {
-    justify-content: space-between;
-    padding: 1.1rem 1.4rem;
-    border-bottom: 1px solid var(--alerting-border-light);
+.alerting-card .ruleset-browser {
+    flex: 1;
+    min-height: 0;
 }
 
-.alerting-editor-back {
-    text-decoration: none;
+/* With no side pane the rule rows take the full width of the card */
+.alerting-card .rulesets-rule {
+    max-width: none;
+}
+
+/* The one locked row neither selects nor toggles anything - no pointer on it */
+.alerting-card .rulesets-row {
+    cursor: default;
+}
+
+/* ------------------------------------------------------------ */
+/* Alert rules - the editor screen                                */
+/* ------------------------------------------------------------ */
+
+/* The page heading sits above the card and the card takes the rest of the height */
+.alerting-editor-column {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* One full-height card holds the editor, framed like every other
+   monitoring screen - the card is the column the editor stretches in */
+.alerting-editor-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
 }
 
 /* The shared editor is a flex item and fills whatever the card leaves it */
 .alerting-editor-card .rule-editor {
     flex: 1;
     min-height: 0;
+}
+
+/* The scoped design system's own reset loads after dashboard.css and zeroes the
+   tab strip's padding inside the editor container, so it is asserted again here */
+.alerting-editor-card .rule-editor .dashboard-tabs {
+    padding: 3px;
 }

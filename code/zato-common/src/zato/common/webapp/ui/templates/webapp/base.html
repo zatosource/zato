@@ -34,7 +34,8 @@
 {% endif %}
 {% block styles %}{% endblock %}
 </head>
-<body>
+{# The one root class of the shared UI - every scoped rule of tokens.css and kit.css reads from here #}
+<body class="rule-engine-ui">
 
 {% block navigation %}{% endblock %}
 

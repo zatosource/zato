@@ -1,3 +1,5 @@
+@import url("shared/section-heading.css");
+
 .settings-container {
     background: linear-gradient(135deg, var(--white) 0%, var(--background-light) 50%, var(--border-light) 100%);
     min-height: 100vh;
@@ -33,13 +35,7 @@
     padding-top: 15px;
 }
 
-.settings-main h3, .settings-sidebar h3 {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--primary-dark);
-    letter-spacing: 0.5px;
-    padding-bottom: 0.7rem;
-}
+/* The heading style lives in shared/section-heading.css, imported above */
 
 .progress-panel {
     background: var(--white);

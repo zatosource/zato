@@ -48,13 +48,6 @@ if 0:
 
 logger = logging.getLogger(__name__)
 
-# The listing's tabs, in the order they show.
-_listing_tabs = (
-    ('active', 'Active'),
-    ('inactive', 'Inactive'),
-    ('all', 'All'),
-)
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -72,79 +65,22 @@ def _find_definition(backend:'RuleSQLBackend', name:'str', object_type:'str') ->
     return out
 
 # ################################################################################################################################
-
-def _rule_rows(documents:'anydict') -> 'dictlist':
-    """ The listing rows - one per rule of the alerts ruleset, in rule order.
-    """
-
-    # Our response to produce
-    out = []
-
-    for key, document in documents.items():
-
-        # The flag is genuinely optional in a rule document - its absence means the rule is active
-        is_active = document.get('is_active') is not False
-
-        out.append({
-            'key': key,
-            'name': document['name'],
-            'docs': document['docs'],
-            'is_active': is_active,
-        })
-
-    return out
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('GET')
 def index(req:'any_') -> 'TemplateResponse':
-    """ The alert rules listing - the rules of the alerts ruleset with their state,
-    and the publish control when there are unpublished changes.
+    """ The alert rules listing - the shared ruleset browser, opened straight
+    onto the rules of the alerts ruleset.
     """
     backend = get_backend()
     definition = _find_definition(backend, Alerting.Ruleset_Name, Definition_Type_Ruleset)
 
-    rows = []
-    current_version = 0
-    live_version = None
-
-    if definition:
-        current_version = definition.current_version
-        live_version = definition.live_version
-
-        document = deserialize_document(definition.document)
-        rows = _rule_rows(document[Documents_Key])
-
-    # One tab per state, with everything in the last one.
-    tabs = []
-
-    for value, label in _listing_tabs:
-
-        if value == 'all':
-            tab_items = rows
-        elif value == 'active':
-            tab_items = [row for row in rows if row['is_active']]
-        else:
-            tab_items = [row for row in rows if not row['is_active']]
-
-        tabs.append({
-            'name': value,
-            'label': label,
-            'items': tab_items,
-            'count': len(tab_items),
-        })
-
-    # The publish control shows when the newest version is not the live one.
-    has_draft = bool(definition) and current_version != live_version
+    definition_id = definition.id if definition else 0
 
     return TemplateResponse(req, 'zato/alerting/index.html', {
         'cluster_id': default_cluster_id,
-        'tabs': tabs,
-        'default_tab': 'active',
-        'current_version': current_version,
-        'live_version': live_version,
-        'has_draft': has_draft,
+        'definition_id': definition_id,
+        'ruleset_name': Alerting.Ruleset_Name,
         'zato_clusters': True,
         'zato_template_name': 'zato/alerting/index.html',
     })
@@ -187,8 +123,9 @@ def editor(req:'any_') -> 'TemplateResponse':
 
 @method_allowed('POST')
 def action(req:'any_') -> 'HttpResponse':
-    """ Runs one listing action - publish, activate, deactivate or delete -
-    against the alerts ruleset, with the Dashboard user as the actor.
+    """ Runs one listing action - activate, deactivate or delete - against
+    the alerts ruleset, with the Dashboard user as the actor. Every change
+    goes live right away, like every other object the Dashboard edits.
     """
     backend = get_backend()
     definition = _find_definition(backend, Alerting.Ruleset_Name, Definition_Type_Ruleset)
@@ -202,14 +139,6 @@ def action(req:'any_') -> 'HttpResponse':
 
     try:
 
-        # Publishing moves the live pointer to the newest version ..
-        if action_name == 'publish':
-            _ = backend.versions.publish(
-                definition_id=definition.id, version=definition.current_version, actor=actor)
-            out = JsonResponse({'is_ok': True})
-            return out
-
-        # .. everything else rewrites the rule documents into a new draft version.
         document = deserialize_document(definition.document)
         documents = document[Documents_Key]
         rule_key = req.POST['rule']
@@ -244,7 +173,10 @@ def action(req:'any_') -> 'HttpResponse':
             'document': {Documents_Key: documents},
             'comment': comment,
         }
-        _ = webapi.save_document(backend, body, actor)
+        result, _ = webapi.save_document(backend, body, actor)
+
+        # The change goes live in the same call, so the sweep already runs with it.
+        _ = backend.versions.publish(definition_id=definition.id, version=result['version'], actor=actor)
 
         out = JsonResponse({'is_ok': True})
         return out
@@ -315,6 +247,24 @@ def api_definitions(req:'any_') -> 'JsonResponse':
 
 @method_allowed('GET')
 @_json_error
+def api_search(req:'any_') -> 'JsonResponse':
+    """ Full-text search over rendered rule sentences - what the listing's
+    command bar highlights its hits with.
+    """
+    query = req.GET.get('q', '').strip()
+
+    if not query:
+        raise BadRequestError('Missing required parameter -> q')
+
+    result, _ = webapi.search_definitions(get_backend(), query)
+
+    out = JsonResponse(result)
+    return out
+
+# ################################################################################################################################
+
+@method_allowed('GET')
+@_json_error
 def api_preview(req:'any_', definition_id:'int') -> 'JsonResponse':
     """ One definition with its stored document - what the editor loads a ruleset through.
     """
@@ -379,17 +329,22 @@ def api_render(req:'any_') -> 'JsonResponse':
 @method_allowed('POST')
 @_json_error
 def api_save(req:'any_') -> 'JsonResponse':
-    """ Saves one document as a new draft version of the alerts ruleset - the live
-    pointer only moves when the listing's publish control says so.
+    """ Saves one document as a new version of the alerts ruleset and publishes it
+    in the same call - a rule the editor saved is a rule the sweep runs with.
     """
+    backend = get_backend()
     body = _read_json(req)
+    actor = req.user.username
 
     # A document that fails its type's validation answers with the findings, nothing is stored.
     try:
-        result, _ = webapi.save_document(get_backend(), body, req.user.username)
+        result, _ = webapi.save_document(backend, body, actor)
     except DocumentInvalidError as e:
         out = JsonResponse({'errors': e.errors}, status=BAD_REQUEST)
         return out
+
+    # The change goes live right away, like every other object the Dashboard edits.
+    _ = backend.versions.publish(definition_id=result['definition_id'], version=result['version'], actor=actor)
 
     out = JsonResponse(result)
     return out

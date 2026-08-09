@@ -1,19 +1,28 @@
 /* ---------------------------------------------------------- */
+/* Ruleset browser - the shared rulesets screen               */
+/*                                                            */
+/* Every selector is scoped under .ruleset-browser, the       */
+/* component's own root class, the way editor.css is scoped   */
+/* under .rule-editor - the rule engine dashboard and any     */
+/* host that embeds the browser load this very same file.     */
+/* ---------------------------------------------------------- */
+
+/* ---------------------------------------------------------- */
 /* Rulesets home - toolbar and the split layout               */
 /* ---------------------------------------------------------- */
 
-.rulesets-split {
+.ruleset-browser .rulesets-split {
     flex: 1;
     display: flex;
     overflow: hidden;
 }
-.rulesets-list {
+.ruleset-browser .rulesets-list {
     flex: 1;
     min-width: 0;
     overflow: auto;
     padding: 10px 0 16px;
 }
-.rulesets-side {
+.ruleset-browser .rulesets-side {
     width: 380px;
     min-width: 0;
     flex-shrink: 0;
@@ -23,7 +32,7 @@
 }
 
 /* Wide enough to grab without hunting for it. */
-#rulesets-side-resizer {
+.ruleset-browser #rulesets-side-resizer {
     width: 6px;
 }
 
@@ -31,26 +40,26 @@
 /* Rulesets home - rows                                       */
 /* ---------------------------------------------------------- */
 
-.rulesets-row {
+.ruleset-browser .rulesets-row {
     display: flex;
     align-items: flex-start;
     gap: 18px;
     padding: 10px 24px;
     cursor: pointer;
 }
-.rulesets-row-stripe {
+.ruleset-browser .rulesets-row-stripe {
     background: var(--panel-raised);
 }
-.rulesets-row-selected,
-.rulesets-row-selected.rulesets-row-stripe {
+.ruleset-browser .rulesets-row-selected,
+.ruleset-browser .rulesets-row-selected.rulesets-row-stripe {
     background: var(--column-hover);
 }
 
-.rulesets-row-main {
+.ruleset-browser .rulesets-row-main {
     flex: 1;
     min-width: 0;
 }
-.rulesets-row-name {
+.ruleset-browser .rulesets-row-name {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -59,55 +68,61 @@
 }
 
 /* The row spaces everything in it by its own gap, so the button brings no margin of its own */
-.rulesets-row-name .button-action {
+.ruleset-browser .rulesets-row-name .button-action {
     margin-left: 0;
 }
-.rulesets-open-link {
+.ruleset-browser .rulesets-open-link {
     display: inline-flex;
     align-items: center;
     gap: 5px;
     text-decoration: none;
 }
-.rulesets-caret {
+/* The always-expanded ruleset's name - a plain title, not a link */
+.ruleset-browser .rulesets-row-title {
+    cursor: default;
+}
+
+.ruleset-browser .rulesets-caret {
     display: inline-flex;
     color: var(--text5);
+    cursor: pointer;
 }
-.rulesets-open-link:hover .rulesets-caret {
+.ruleset-browser .rulesets-caret:hover {
     color: var(--link-hover);
 }
-.rulesets-row-description {
+.ruleset-browser .rulesets-row-description {
     margin-top: 2px;
     font-size: 12px;
     color: var(--text4);
 }
 
-.rulesets-star {
+.ruleset-browser .rulesets-star {
     display: inline-flex;
     color: var(--text5);
     cursor: pointer;
 }
-.rulesets-star-on {
+.ruleset-browser .rulesets-star-on {
     color: var(--amber);
 }
-.rulesets-star-on svg {
+.ruleset-browser .rulesets-star-on svg {
     fill: currentColor;
 }
 
-.rulesets-publish-line {
+.ruleset-browser .rulesets-publish-line {
     padding: 5px 14px;
     font-size: 12.5px;
     color: var(--text3);
     line-height: 1.45;
     max-width: 440px;
 }
-.rulesets-publish-warning {
+.ruleset-browser .rulesets-publish-warning {
     color: var(--amber);
 }
 
-.rulesets-rename {
+.ruleset-browser .rulesets-rename {
     margin-left: 9px;
 }
-.rulesets-rename-line {
+.ruleset-browser .rulesets-rename-line {
     padding: 5px 14px;
     font-size: 12.5px;
     color: var(--text3);
@@ -115,13 +130,13 @@
     max-width: 440px;
 }
 
-.rulesets-empty {
+.ruleset-browser .rulesets-empty {
     padding: 18px 24px;
     font-size: 12.5px;
     color: var(--text5);
     font-style: italic;
 }
-.rulesets-more {
+.ruleset-browser .rulesets-more {
     padding: 10px 24px;
     font-size: 11.5px;
     color: var(--text5);
@@ -134,12 +149,12 @@
 
 /* The dashed spine sits under the caret of the row it belongs to - 24px of row padding,
    13px of star, 8px of gap, half of the 12px caret. */
-.rulesets-rules {
+.ruleset-browser .rulesets-rules {
     margin: 0 24px 12px 51px;
     padding-left: 20px;
     border-left: 1px dashed var(--border);
 }
-.rulesets-rules-head {
+.ruleset-browser .rulesets-rules-head {
     padding: 7px 0 5px;
     font-size: 10.5px;
     font-weight: 700;
@@ -147,17 +162,23 @@
     text-transform: uppercase;
     letter-spacing: 0.08em;
 }
-.rulesets-rules-empty {
+.ruleset-browser .rulesets-rules-empty {
     padding: 8px 0;
     font-size: 12px;
     color: var(--text5);
     font-style: italic;
 }
 
-.rulesets-rule {
+/* A grid with named columns keeps every rule's parts vertically aligned - the
+   state pill and the host's action links flow into implicit columns after the
+   explicit ones, one fixed track each, so they line up between rows too */
+.ruleset-browser .rulesets-rule {
     position: relative;
-    display: flex;
-    align-items: baseline;
+    display: grid;
+    grid-template-columns: minmax(180px, 230px) minmax(0, 1fr) 100px 80px;
+    grid-auto-flow: column;
+    grid-auto-columns: 90px;
+    align-items: center;
     gap: 14px;
     margin-bottom: 4px;
     padding: 5px 11px;
@@ -166,12 +187,12 @@
     border-radius: var(--radius-2);
     text-decoration: none;
 }
-.rulesets-rule:hover {
+.ruleset-browser .rulesets-rule:hover {
     background-image: var(--hover-veil);
 }
 
 /* A node on the spine and a dashed run from it to the rule. */
-.rulesets-rule::after {
+.ruleset-browser .rulesets-rule::after {
     content: "";
     position: absolute;
     left: -23px;
@@ -182,7 +203,7 @@
     background: var(--border);
     border-radius: 50%;
 }
-.rulesets-rule::before {
+.ruleset-browser .rulesets-rule::before {
     content: "";
     position: absolute;
     left: -18px;
@@ -193,8 +214,8 @@
 
 /* The ink and the gold are mixed against the theme's own text and surface, so the chip lands
    dark on white in the light themes and light on dark in the dark ones, of its own accord. */
-.rulesets-rule-name {
-    flex-shrink: 0;
+.ruleset-browser .rulesets-rule-name {
+    justify-self: start;
     font-family: var(--mono);
     font-size: 11px;
     padding: 2px 8px;
@@ -203,13 +224,16 @@
     color: color-mix(in srgb, var(--text) 74%, var(--input-background));
     background: var(--input-background);
     letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }
-.rulesets-rule:hover .rulesets-rule-name {
+.ruleset-browser .rulesets-rule:hover .rulesets-rule-name {
     background-color: var(--action-face);
     color: var(--action-ink);
 }
-.rulesets-rule-docs {
-    flex: 1;
+.ruleset-browser .rulesets-rule-docs {
     min-width: 0;
     font-size: 12px;
     color: var(--text4);
@@ -217,15 +241,41 @@
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.rulesets-rule-shape {
-    flex-shrink: 0;
+
+/* The condition and action counts, one grid column each */
+.ruleset-browser .rulesets-rule-shape {
     font-size: 10px;
-    color: var(--text5);
+    color: var(--text3);
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    white-space: nowrap;
 }
 
-.rulesets-rules-loading {
+/* The rule's active state, shown when the host asks for it - one fixed-width pill
+   in the state's own full colour so it reads at a glance */
+.ruleset-browser .rulesets-rule-state {
+    justify-self: start;
+    width: 62px;
+    justify-content: center;
+}
+.ruleset-browser .rulesets-rule-state.pill-good {
+    color: var(--green);
+    background: color-mix(in srgb, var(--green) 12%, var(--background));
+}
+.ruleset-browser .rulesets-rule-state.pill-warning {
+    color: var(--amber);
+    background: color-mix(in srgb, var(--amber) 12%, var(--background));
+}
+
+/* The host's own per-rule actions at the end of the row - each in its own grid
+   column, looking like every other link through the kit's own link class */
+.ruleset-browser .rulesets-rule-action {
+    justify-self: start;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.ruleset-browser .rulesets-rules-loading {
     display: flex;
     align-items: center;
     gap: 9px;
@@ -233,7 +283,7 @@
     font-size: 12px;
     color: var(--text5);
 }
-.rulesets-spinner {
+.ruleset-browser .rulesets-spinner {
     width: 13px;
     height: 13px;
     flex-shrink: 0;
@@ -253,7 +303,7 @@
 /* Rulesets home - full-text matches                          */
 /* ---------------------------------------------------------- */
 
-.rulesets-match {
+.ruleset-browser .rulesets-match {
     margin-top: 5px;
     padding: 4px 10px;
     background: var(--panel-raised);
@@ -262,20 +312,20 @@
     color: var(--text3);
     max-width: 640px;
 }
-.rulesets-match-where {
+.ruleset-browser .rulesets-match-where {
     margin-left: 9px;
     font-size: 10px;
     color: var(--text5);
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
-.rulesets-match-overflow {
+.ruleset-browser .rulesets-match-overflow {
     margin-top: 4px;
     font-size: 11.5px;
     color: var(--text5);
     font-style: italic;
 }
-.rulesets-mark {
+.ruleset-browser .rulesets-mark {
     background: var(--blue-tint-28);
     color: var(--text);
     border-radius: var(--radius-1);
@@ -286,7 +336,7 @@
 /* Rulesets home - term cross-references                      */
 /* ---------------------------------------------------------- */
 
-.rulesets-term-strip {
+.ruleset-browser .rulesets-term-strip {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
@@ -296,13 +346,13 @@
     background: var(--panel-raised);
     border-radius: var(--radius-3);
 }
-.rulesets-term-strip-label {
+.ruleset-browser .rulesets-term-strip-label {
     font-size: 11px;
     color: var(--text5);
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
-.rulesets-term-link {
+.ruleset-browser .rulesets-term-link {
     display: inline-flex;
     align-items: baseline;
     gap: 7px;
@@ -314,16 +364,16 @@
     border-radius: var(--radius-2);
     padding: 3px 10px;
 }
-.rulesets-term-link:hover {
+.ruleset-browser .rulesets-term-link:hover {
     background-image: var(--hover-veil);
     color: var(--text);
 }
-.rulesets-term-count {
+.ruleset-browser .rulesets-term-count {
     font-size: 10px;
     font-family: var(--font);
     color: var(--text5);
 }
-.rulesets-term-deprecated {
+.ruleset-browser .rulesets-term-deprecated {
     font-size: 9.5px;
     font-family: var(--font);
     font-weight: 700;
@@ -331,12 +381,12 @@
     letter-spacing: 0.05em;
     color: var(--amber);
 }
-.rulesets-term-overflow {
+.ruleset-browser .rulesets-term-overflow {
     font-size: 11.5px;
     color: var(--text5);
     font-style: italic;
 }
-.rulesets-preview-terms {
+.ruleset-browser .rulesets-preview-terms {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
@@ -346,34 +396,34 @@
 /* Rulesets home - side pane                                  */
 /* ---------------------------------------------------------- */
 
-.rulesets-feed-entry {
+.ruleset-browser .rulesets-feed-entry {
     margin-bottom: 12px;
 }
-.rulesets-feed-head {
+.ruleset-browser .rulesets-feed-head {
     font-size: 11.5px;
     color: var(--text4);
 }
-.rulesets-feed-ruleset {
+.ruleset-browser .rulesets-feed-ruleset {
     color: var(--blue);
     font-weight: 600;
 }
-.rulesets-feed-what {
+.ruleset-browser .rulesets-feed-what {
     margin-top: 2px;
     font-size: 12.5px;
     color: var(--text3);
 }
 
-.rulesets-preview-description {
+.ruleset-browser .rulesets-preview-description {
     margin-bottom: 8px;
     font-size: 12.5px;
     color: var(--text3);
 }
-.rulesets-preview-links {
+.ruleset-browser .rulesets-preview-links {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
 }
-.rulesets-preview-link {
+.ruleset-browser .rulesets-preview-link {
     font-size: 12px;
     color: var(--text2);
     text-decoration: none;
@@ -381,12 +431,12 @@
     border-radius: var(--radius-2);
     padding: 4px 11px;
 }
-.rulesets-preview-link:hover {
+.ruleset-browser .rulesets-preview-link:hover {
     background-image: var(--hover-veil);
     color: var(--text);
 }
 
-.rulesets-preview-rule {
+.ruleset-browser .rulesets-preview-rule {
     display: block;
     margin-top: 4px;
     padding: 4px 10px;
@@ -397,11 +447,11 @@
     color: var(--text2);
     text-decoration: none;
 }
-.rulesets-preview-rule:hover {
+.ruleset-browser .rulesets-preview-rule:hover {
     background-image: var(--hover-veil);
     color: var(--text);
 }
-.rulesets-preview-note {
+.ruleset-browser .rulesets-preview-note {
     font-size: 11.5px;
     color: var(--text5);
     font-style: italic;

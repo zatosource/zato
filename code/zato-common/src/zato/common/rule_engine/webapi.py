@@ -6,6 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+import json
+
 # Zato
 from zato.common.rule_engine.document_checks import validate_definition_document
 from zato.common.rule_engine.parser import parse_data_details
@@ -87,6 +90,30 @@ def definition_row(record:'any_') -> 'stranydict':
         'is_active':       record.is_active,
         'created_at':      record.created_at.isoformat(),
         'updated_at':      record.updated_at.isoformat(),
+    }
+
+    return out
+
+# ################################################################################################################################
+
+def event_row(record:'any_') -> 'stranydict':
+    """ One history event with its parsed payload.
+    """
+    # Not every event carries a payload, hence the boundary check.
+    payload = record.payload
+    if payload is None:
+        parsed = None
+    else:
+        parsed = json.loads(payload)
+
+    out = {
+        'id':            record.id,
+        'definition_id': record.definition_id,
+        'version':       record.version,
+        'event_type':    record.event_type,
+        'actor':         record.actor,
+        'created_at':    record.created_at.isoformat(),
+        'payload':       parsed,
     }
 
     return out
@@ -284,6 +311,18 @@ def list_definitions(
     note = count_text(len(items), 'definition', 'definitions')
 
     out = {'items': items}
+    return out, note
+
+# ################################################################################################################################
+
+def search_definitions(backend:'RuleSQLBackend', query:'str') -> 'tuple[stranydict, str]':
+    """ Full-text search over rendered rule sentences, each hit carrying its match position.
+    """
+    hits = backend.search.search(query)
+
+    note = count_text(len(hits), 'match', 'matches')
+
+    out = {'items': hits}
     return out, note
 
 # ################################################################################################################################

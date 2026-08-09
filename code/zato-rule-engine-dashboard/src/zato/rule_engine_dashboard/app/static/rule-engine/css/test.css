@@ -122,70 +122,15 @@
     color: var(--text4);
     font-style: italic;
 }
-.test-grid-title {
-    margin: 16px 0 6px;
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--text5);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-}
 
 /* ---------------------------------------------------------- */
 /* Test - input and outcome grids                             */
+/*                                                            */
+/* The grid itself - test-grid, its title, the label and the  */
+/* value cells - is the shared one from kit.css, this file    */
+/* only adds what the editing screens layer on top of it.     */
 /* ---------------------------------------------------------- */
 
-.test-grid {
-    border-collapse: separate;
-    border-spacing: 0;
-    font-size: 12.5px;
-    min-width: 440px;
-}
-.test-grid td,
-.test-grid th {
-    border-right: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-    vertical-align: middle;
-}
-.test-grid tr > td:first-child,
-.test-grid tr > th:first-child {
-    border-left: 1px solid var(--border);
-}
-.test-grid thead th,
-.test-grid tr:first-child td {
-    border-top: 1px solid var(--border);
-}
-.test-grid th {
-    background: var(--panel);
-    padding: 5px 10px;
-    font-size: 10.5px;
-    font-weight: 700;
-    color: var(--text3);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    text-align: left;
-    position: relative;
-}
-
-.test-label-cell {
-    background: var(--panel);
-    padding: 6px 10px;
-    color: var(--text2);
-    min-width: 220px;
-}
-.test-value-cell {
-    background: var(--input-background);
-    padding: 6px 10px;
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--text);
-    cursor: pointer;
-    min-width: 130px;
-    position: relative;
-}
-.test-value-cell:hover {
-    background-image: var(--hover-veil);
-}
 .test-value-cell.cell-editing {
     padding: 0;
 }

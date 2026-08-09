@@ -238,13 +238,6 @@
     text-decoration: underline;
 }
 
-.log-value-readonly {
-    cursor: default;
-}
-.log-value-readonly:hover {
-    background-image: none;
-}
-
 .log-rules-snapshot {
     font-family: var(--mono);
     font-size: 12px;

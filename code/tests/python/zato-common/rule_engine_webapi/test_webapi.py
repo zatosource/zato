@@ -230,3 +230,37 @@ class TestListingAndPreview:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class TestSearch:
+
+    def test_hits_carry_the_rendered_line_and_the_match_position(self, backend:'RuleSQLBackend') -> 'None':
+        ensure_alerting_definitions(backend)
+        ruleset = _find(backend, Alerting.Ruleset_Name, Definition_Type_Ruleset)
+
+        result, note = webapi.search_definitions(backend, 'error_rate')
+
+        # Every hit points back at the alerts ruleset and the rule the line came from ..
+        assert result['items']
+        hit = result['items'][0]
+        assert hit['definition_id'] == ruleset.id
+        assert hit['definition_name'] == Alerting.Ruleset_Name
+        assert hit['rule'].startswith(Alerting.Ruleset_Name)
+
+        # .. and the match position marks the very text asked for.
+        line = hit['line']
+        assert line[hit['match_start']:hit['match_end']].lower() == 'error_rate'
+
+        assert 'match' in note
+
+# ################################################################################################################################
+
+    def test_text_nowhere_in_the_rules_finds_nothing(self, backend:'RuleSQLBackend') -> 'None':
+        ensure_alerting_definitions(backend)
+
+        result, note = webapi.search_definitions(backend, 'no_such_text_anywhere')
+
+        assert result['items'] == []
+        assert note == '0 matches'
+
+# ################################################################################################################################
+# ################################################################################################################################

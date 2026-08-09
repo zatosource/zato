@@ -21,7 +21,7 @@ editorView.openMenu = function(anchor, title, items, isMulti) {
 
     var menu = document.createElement('div');
 
-    // The menu hangs off document.body, outside the container, so it carries the scope class itself
+    // The menu hangs off the floating root, outside the container, so it carries the scope class itself
     menu.className = 'rule-editor editor-completion-menu';
 
     var titleElement = document.createElement('div');
@@ -60,7 +60,7 @@ editorView.openMenu = function(anchor, title, items, isMulti) {
         editorView.menuChoices.push({element: itemElement, onPick: item.onPick});
     });
 
-    document.body.appendChild(menu);
+    shared.floatingRoot().appendChild(menu);
 
     var left = Math.min(rectangle.left, window.innerWidth - menu.offsetWidth - 12);
     var top = rectangle.bottom + 4;
@@ -336,8 +336,12 @@ editorView.setView = function(mode) {
     this.viewMode = mode;
     this.expressionMode = mode === 'expression';
 
+    var activeClass = editorModel.config.viewButtonActiveClass;
+
     this.elements('[data-action="set-view"]').forEach(function(button) {
-        button.classList.toggle('toggled', button.getAttribute('data-view') === mode);
+        var isActive = button.getAttribute('data-view') === mode;
+        button.classList.toggle(activeClass, isActive);
+        button.setAttribute('aria-selected', isActive ? 'true' : 'false');
     });
     this.render();
 };

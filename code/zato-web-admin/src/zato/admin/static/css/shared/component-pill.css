@@ -1,0 +1,27 @@
+/* Shared - the component pill that opens a page header, e.g. "Scheduler" on the job
+   detail screen or "Rules" on the alert rule editor. Detail pages get it through
+   detail-kit/detail.css, other pages load this file directly. */
+
+.detail-component-pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
+    margin-right: 6px;
+    background: #e0f0ff;
+    color: #012845;
+}
+
+a.detail-component-pill,
+a.detail-component-pill:link,
+a.detail-component-pill:hover,
+a.detail-component-pill:focus,
+a.detail-component-pill:active,
+a.detail-component-pill:visited {
+    text-decoration: none !important;
+    background-image: none !important;
+}

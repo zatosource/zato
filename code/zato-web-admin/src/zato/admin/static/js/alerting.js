@@ -1,6 +1,6 @@
-// The alert rules listing - toggling a rule's active flag happens where it is read,
-// deletion and publishing confirm first, and creating a rule asks for its name
-// in a prompt before the editor opens on it.
+// The alert rules listing - the glue around the shared ruleset browser. The per-rule
+// actions post to the action endpoint and repaint the browser's panel in place, and
+// creation opens a classic form popup asking for the rule's name before the editor opens.
 
 $.fn.zato.alerting = {};
 
@@ -8,17 +8,15 @@ $.fn.zato.alerting.config = {
     actionUrl: '',
     editorUrl: '',
     clusterId: '',
-    prompts: {
-        'delete': 'Delete the rule {0}?',
-        publish: 'Publish the current draft so it goes live?'
-    },
+    definitionId: 0,
+    deletePrompt: 'Delete the rule {0}?',
     newNamePattern: /^[A-Za-z_]\w*$/,
     newNameHint: 'A rule name is letters, digits and underscores, starting with a letter'
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.alerting.post = function(data) {
+$.fn.zato.alerting.post = function(data, onDone) {
 
     var config = $.fn.zato.alerting.config;
 
@@ -39,8 +37,7 @@ $.fn.zato.alerting.post = function(data) {
                 return;
             }
 
-            // The listing reflects the new state once it reloads.
-            window.location.reload();
+            onDone();
         },
         error: function(request) {
 
@@ -62,56 +59,63 @@ $.fn.zato.alerting.post = function(data) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.alerting.run = function(action, ruleKey, ruleName) {
+// The browser's cached rules carry each rule's name - the confirmation reads it from there.
+$.fn.zato.alerting.ruleName = function(ruleKey) {
 
     var config = $.fn.zato.alerting.config;
+    var rules = rulesetsModel.cachedRules(config.definitionId);
 
-    var data = {
-        action: action
-    };
+    var match = rules.filter(function(rule) { return rule.key === ruleKey; })[0];
+    var out = match.name;
+    return out;
+};
 
-    // Publishing acts on the whole ruleset, everything else on one rule.
-    if(action !== 'publish') {
-        data.rule = ruleKey;
-    }
+// After a change went through, the browser refetches the set and repaints in place.
+$.fn.zato.alerting.refresh = function() {
+    rulesetsView.refreshRules($.fn.zato.alerting.config.definitionId);
+};
 
-    // Toggling the active flag happens right away, the rest confirms first.
-    if(action === 'activate' || action === 'deactivate') {
-        $.fn.zato.alerting.post(data);
-        return;
-    }
+// ////////////////////////////////////////////////////////////////////////
 
-    var question = config.prompts[action].replace('{0}', ruleName);
+$.fn.zato.alerting.runAction = function(action, ruleKey) {
+    $.fn.zato.alerting.post({action: action, rule: ruleKey}, $.fn.zato.alerting.refresh);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.alerting.deleteRule = function(ruleKey) {
+
+    var config = $.fn.zato.alerting.config;
+    var question = config.deletePrompt.replace('{0}', $.fn.zato.alerting.ruleName(ruleKey));
 
     jConfirm(question, 'Please confirm', function(confirmed) {
-        if(confirmed) {
-            $.fn.zato.alerting.post(data);
+
+        if(!confirmed) {
+            return;
         }
+
+        $.fn.zato.alerting.post({action: 'delete', rule: ruleKey}, $.fn.zato.alerting.refresh);
     });
 };
 
 // ////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.alerting.createRule = function() {
+$.fn.zato.alerting.openCreate = function() {
+    $('#alerting-create-div').dialog('open');
+    document.getElementById('alerting-create-name').focus();
+};
+
+$.fn.zato.alerting.submitCreate = function() {
 
     var config = $.fn.zato.alerting.config;
+    var name = document.getElementById('alerting-create-name').value.trim();
 
-    jPrompt('Name of the new rule', '', 'Create a new alert rule', function(name) {
+    if(!config.newNamePattern.test(name)) {
+        jAlert(config.newNameHint, 'Invalid name');
+        return;
+    }
 
-        // A dismissed prompt means nothing to create.
-        if(name === null) {
-            return;
-        }
-
-        name = name.trim();
-
-        if(!config.newNamePattern.test(name)) {
-            jAlert(config.newNameHint, 'Invalid name');
-            return;
-        }
-
-        window.location.href = config.editorUrl + '?cluster=' + config.clusterId + '&new=' + encodeURIComponent(name);
-    });
+    window.location.href = config.editorUrl + '?cluster=' + config.clusterId + '&new=' + encodeURIComponent(name);
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -121,36 +125,26 @@ $.fn.zato.alerting.init = function(config) {
     $.fn.zato.alerting.config.actionUrl = config.actionUrl;
     $.fn.zato.alerting.config.editorUrl = config.editorUrl;
     $.fn.zato.alerting.config.clusterId = config.clusterId;
+    $.fn.zato.alerting.config.definitionId = config.definitionId;
 
-    // One delegated listener covers every action link in every tab's table.
-    var card = document.querySelector('.alerting-card');
+    // The create popup - the same dialog every other listing creates through.
+    var createDiv = $('#alerting-create-div');
 
-    card.addEventListener('click', function(event) {
-
-        var target = event.target.closest('[data-rule-action]');
-
-        if(!target) {
-            return;
+    createDiv.dialog({
+        autoOpen: false,
+        width: '40em',
+        title: 'Create a new alert rule',
+        close: function() {
+            document.getElementById('alerting-create-name').value = '';
         }
-
-        event.preventDefault();
-
-        $.fn.zato.alerting.run(
-            target.getAttribute('data-rule-action'),
-            target.getAttribute('data-rule'),
-            target.getAttribute('data-rule-name')
-        );
     });
 
-    var newLink = document.getElementById('alerting-new-link');
-    newLink.addEventListener('click', $.fn.zato.alerting.createRule);
+    document.getElementById('alerting-create-form').addEventListener('submit', function(event) {
+        event.preventDefault();
+        $.fn.zato.alerting.submitCreate();
+    });
 
-    // The publish link is only on the page when there is a draft to publish.
-    var publishLink = document.getElementById('alerting-publish-link');
-
-    if(publishLink) {
-        publishLink.addEventListener('click', function() {
-            $.fn.zato.alerting.run('publish', null, null);
-        });
-    }
+    document.getElementById('alerting-create-cancel').addEventListener('click', function() {
+        createDiv.dialog('close');
+    });
 };

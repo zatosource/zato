@@ -25,7 +25,7 @@ shared.openPanel = function(anchor, html) {
     var panel = document.createElement('div');
     panel.className = 'floating-panel';
     panel.innerHTML = html;
-    document.body.appendChild(panel);
+    shared.floatingRoot().appendChild(panel);
 
     shared.placeFloating(panel, anchor.getBoundingClientRect());
     shared.panelElement = panel;

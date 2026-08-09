@@ -1,13 +1,20 @@
 /* ---------------------------------------------------------- */
 /* Shared - theme tokens                                      */
+/*                                                            */
+/* Everything is scoped under .rule-engine-ui, the one root   */
+/* class of the shared UI - the rule engine dashboard carries */
+/* it on its body, a host page that embeds a component puts   */
+/* it on the component's container, so the same file serves   */
+/* both without touching anything else on the host's page.    */
 /* ---------------------------------------------------------- */
 
-* {
+.rule-engine-ui,
+.rule-engine-ui * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
-:root {
+.rule-engine-ui {
     --font: "IBM Plex Sans", sans-serif;
     --mono: "IBM Plex Mono", monospace;
 
@@ -25,35 +32,40 @@
     --field-indent: 9px;
     --hint-gap: 4px;
 }
-body {
+.rule-engine-ui {
     font-family: var(--font);
-    background: var(--background);
     color: var(--text);
+}
+
+/* The app shell layout - only when the root class sits on the page's own body */
+body.rule-engine-ui {
+    background: var(--background);
     display: flex;
     height: 100vh;
     overflow: hidden;
 }
-svg {
+.rule-engine-ui svg {
     vertical-align: -2px;
 }
 
-* {
+.rule-engine-ui,
+.rule-engine-ui * {
     scrollbar-color: var(--scrollbar-thumb) transparent;
 }
-::-webkit-scrollbar {
+.rule-engine-ui ::-webkit-scrollbar {
     width: 12px;
     height: 12px;
 }
-::-webkit-scrollbar-track {
+.rule-engine-ui ::-webkit-scrollbar-track {
     background: transparent;
 }
-::-webkit-scrollbar-thumb {
+.rule-engine-ui ::-webkit-scrollbar-thumb {
     background: var(--scrollbar-thumb);
     border-radius: var(--radius-3);
 }
-::-webkit-scrollbar-thumb:hover {
+.rule-engine-ui ::-webkit-scrollbar-thumb:hover {
     background: var(--scrollbar-thumb-hover);
 }
-::-webkit-scrollbar-corner {
+.rule-engine-ui ::-webkit-scrollbar-corner {
     background: transparent;
 }

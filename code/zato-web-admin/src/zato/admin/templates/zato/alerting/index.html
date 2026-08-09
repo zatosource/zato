@@ -4,30 +4,79 @@
 
 {% block dashboard_extra_css %}
 <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+<link rel="stylesheet" type="text/css" href="/shared-ui/webapp/fonts.css">
+<link rel="stylesheet" type="text/css" href="/shared-ui/webapp/css/tokens.css">
+<link rel="stylesheet" type="text/css" href="/shared-ui/webapp/css/themes/zato-light.css">
+<link rel="stylesheet" type="text/css" href="/shared-ui/webapp/css/kit.css">
+<link rel="stylesheet" type="text/css" href="/shared-ui/rule-engine/css/rulesets.css">
 <link rel="stylesheet" type="text/css" href="/static/css/alerting.css">
 {% endblock %}
 
 {% block dashboard_domain_js %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/webapp/js/shared.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/webapp/js/panel.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/webapp/js/shell.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/data.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/rulesets-model.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/rulesets-render.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/rulesets-actions.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/rulesets-menu.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/rulesets-filter.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/alerting.js"></script>
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
-    var kit = $.fn.zato.dashboard_kit;
 
-    kit.tabs.init({
-        tab_selector: '.alerting-card .dashboard-tab',
-        panel_prefix: 'alerting-tab-panel-',
-        default_tab: '{{ default_tab }}',
-        storage_key: 'alerting-listing-tab'
-    });
+    var definitionId = {{ definition_id }};
+    var alerting = $.fn.zato.alerting;
 
-    $.fn.zato.alerting.init({
+    alerting.init({
         actionUrl: '{% url "alert-rules-action" %}?cluster={{ cluster_id }}',
         editorUrl: '{% url "alert-rules-editor" %}',
-        clusterId: '{{ cluster_id }}'
+        clusterId: '{{ cluster_id }}',
+        definitionId: definitionId
     });
 
-    kit.reveal();
+    // Floating surfaces attach here rather than to the body, so they sit inside
+    // the shared UI's scope and theme even outside the browser's own container
+    shared.config.floatingRoot = document.getElementById('rule-engine-floating-root');
+
+    rulesetsView.init(document.getElementById('ruleset-browser'), {
+        urls: {
+            rulesets: '{% url "alert-rules-api-definitions" %}?object_type=ruleset&limit=',
+            search: '{% url "alert-rules-api-search" %}?q=',
+            preview: function(id) { return '/zato/alerting/api/preview/' + id + '/'; },
+        },
+        openUrls: {
+            editor: '{% url "alert-rules-editor" %}',
+        },
+        showFollows: false,
+        showFeed: false,
+        showViews: false,
+        showPublish: false,
+        showRename: false,
+        showRowMenu: false,
+        showProblems: false,
+        showSidePane: false,
+        showRuleState: true,
+        rulesetLabels: {'{{ ruleset_name }}': 'Default monitoring rules'},
+        facets: [],
+        csrfToken: $.cookie('csrftoken'),
+        newLabel: 'Create a new alert rule',
+        onNew: function() { alerting.openCreate(); },
+        autoExpandId: definitionId === 0 ? null : definitionId,
+        lockExpanded: true,
+        ruleActions: [
+            {label: 'Activate', isShown: function(rule) { return !rule.isActive; },
+                onRun: function(key) { alerting.runAction('activate', key); }},
+            {label: 'Deactivate', isShown: function(rule) { return rule.isActive; },
+                onRun: function(key) { alerting.runAction('deactivate', key); }},
+            {label: 'Delete',
+                onRun: function(key) { alerting.deleteRule(key); }},
+        ],
+    });
+
+    $.fn.zato.dashboard_kit.reveal();
 });
 </script>
 {% endblock %}
@@ -41,75 +90,49 @@ $(document).ready(function() {
 {% block dashboard_grid %}
 
         <div class="dashboard-card alerting-card">
-            <div class="dashboard-card-header dashboard-card-header-tabs">
-                <div class="dashboard-tabs" role="tablist" aria-label="Alert rule states">
 
-                {% for tab in tabs %}
-                    <button type="button"
-                            class="dashboard-tab"
-                            data-tab="{{ tab.name }}"
-                            role="tab"
-                            aria-selected="false">
-                        <span class="dashboard-tab-label">{{ tab.label }} ({{ tab.count }})</span>
-                    </button>
-                {% endfor %}
-
+            <div class="rule-engine-ui ruleset-browser main-column" data-theme="zato-light" id="ruleset-browser">
+                <div class="command-bar">
+                    <button class="button-ghost" data-action="new">Create a new alert rule</button>
+                    <span class="command-bar-pipe">|</span>
+                    <div class="command-field field" id="rulesets-field" data-hint="Filter rules">
+                        <input class="command-input" id="rulesets-search" type="text" autocomplete="off"
+                            spellcheck="false" placeholder=" ">
+                        <span class="command-count" id="rulesets-count"></span>
+                        <button class="command-clear" id="rulesets-clear" data-action="clear-all"></button>
+                        <div class="command-suggest" id="rulesets-suggest"></div>
+                    </div>
                 </div>
 
-                <div class="alerting-controls">
-                    <a href="javascript:void(0)" id="alerting-new-link">Create a new alert rule</a>
-                    {% if has_draft %}
-                    <span class="alerting-publish-prompt">
-                        Draft version {{ current_version }}, live version {{ live_version|default:"none" }}
-                        &middot;
-                        <a href="javascript:void(0)" id="alerting-publish-link">Publish</a>
-                    </span>
-                    {% endif %}
+                <div class="rulesets-split">
+                    <div class="rulesets-list" id="rulesets-list"></div>
                 </div>
             </div>
-
-            {% for tab in tabs %}
-            <div class="dashboard-tab-panel"
-                 id="alerting-tab-panel-{{ tab.name }}"
-                 role="tabpanel"
-                 hidden>
-
-            {% if tab.items %}
-            <table class="zato-table">
-                <thead>
-                    <tr class='ignore'>
-                        <th>&nbsp;</th>
-                        <th>Name</th>
-                        <th style="text-align:center">Active</th>
-                        <th>Docs</th>
-                        <th>&nbsp;</th>
-                    </tr>
-                </thead>
-                <tbody>
-                {% for item in tab.items %}
-                    <tr>
-                        <td class='numbering'>{{ forloop.counter }}</td>
-                        <td><a href="{% url "alert-rules-editor" %}?cluster={{ cluster_id }}&amp;rule={{ item.key|urlencode }}">{{ item.name }}</a></td>
-                        <td class="text-center"><a href="javascript:void(0)"
-                            data-rule-action="{% if item.is_active %}deactivate{% else %}activate{% endif %}"
-                            data-rule="{{ item.key }}"
-                            data-rule-name="{{ item.name }}">{{ item.is_active|yesno:'Yes,No' }}</a></td>
-                        <td>{{ item.docs }}</td>
-                        <td><a href="javascript:void(0)"
-                            data-rule-action="delete"
-                            data-rule="{{ item.key }}"
-                            data-rule-name="{{ item.name }}">Delete</a></td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <p class="alerting-empty">No alert rules here</p>
-            {% endif %}
-
-            </div>
-            {% endfor %}
-
         </div>
+
+        <div id="alerting-create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate id="alerting-create-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle; width:18%">
+                                <label for="alerting-create-name">Name</label>
+                            </td>
+                            <td>
+                                <input type="text" id="alerting-create-name" style="width:100%" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' id="alerting-create-cancel">Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+        </div>
+
+        <div class="rule-engine-ui rule-engine-floating-root" data-theme="zato-light" id="rule-engine-floating-root"></div>
 
 {% endblock %}
