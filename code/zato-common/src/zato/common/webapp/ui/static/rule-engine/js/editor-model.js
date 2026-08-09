@@ -15,11 +15,19 @@ var editorModel = {
         // its own tokenizer here, and without one the text stays plain
         documentTextHtml: null,
 
+        // The address bar parameter the open view is kept under, so a tab can be
+        // bookmarked - null keeps the address bar untouched
+        viewURLKey: null,
+
         // The host application fills all of these in through editorView.init
         urls: {},
         ruleset: null,
         rule: null,
         newRuleName: '',
+
+        // The description a fresh rule starts with - the create popup asks for it
+        // before the editor ever opens, so the editor carries it into the document
+        newRuleDocs: '',
         showLivePanel: false,
         navigateToRule: null,
         rulesetsUrl: '',
@@ -72,7 +80,7 @@ var editorModel = {
     newRule: function(name) {
         var out = {
             name: name,
-            docs: '',
+            docs: this.config.newRuleDocs,
             conditions: [],
             joiners: [],
             thenActions: [],

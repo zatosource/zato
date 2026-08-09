@@ -184,6 +184,14 @@ _endpoint_page_url = {
     AuditSource.Scheduler: f'/zato/service/?cluster={default_cluster_id}&query={{name}}',
 }
 
+# Where one run of a scheduled job has its own page - the scheduler dashboard's run detail
+# screen, keyed by the job's numeric id and the run's number. `{job_id}` and `{run}` are
+# filled in on the frontend out of the event's own attrs.
+_run_page_url = {
+    AuditSource.Scheduler:
+        f'/zato/scheduler/dashboard/job/{{job_id}}/run/{{run}}/?cluster={default_cluster_id}&range=0&outcomes=all',
+}
+
 # What each source writes into an event's endpoint, called by what it is - the service
 # a channel hands its messages to, the folder a mailbox was read from, the database
 # a query ran against. A source the map does not know keeps the plain Endpoint word.
@@ -478,7 +486,7 @@ _source_attr_columns = {
     'mllp-channel': ('msg_type', 'mrn', 'facility', 'ack_status'),
     'mllp-outgoing': ('msg_type', 'mrn', 'facility', 'ack_status'),
     'fhir': ('resource_type', 'method'),
-    'scheduler': ('current_run', 'delay_ms'),
+    'scheduler': ('current_run', 'delay_ms', 'job_id'),
 
     # Who viewed what - a view record is named by these two rather than by an event id
     'config': ('actor', 'viewed_object_name'),

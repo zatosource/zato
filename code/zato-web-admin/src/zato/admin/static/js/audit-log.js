@@ -102,6 +102,7 @@ $.fn.zato.audit_log.config = {
     sourceLinks: {},
     endpointLinks: {},
     endpointLabels: {},
+    runLinks: {},
     eventLabels: {},
 
     // What the object row is labelled with for a source the catalog does not know
@@ -804,6 +805,7 @@ $.fn.zato.audit_log.init = function(initConfig) {
     config.sourceLinks = initConfig.source_links;
     config.endpointLinks = initConfig.endpoint_links;
     config.endpointLabels = initConfig.endpoint_labels;
+    config.runLinks = initConfig.run_links;
     config.eventLabels = initConfig.event_labels;
 
     // .. the listing puts its chrome and its two panes in place before the first page arrives ..

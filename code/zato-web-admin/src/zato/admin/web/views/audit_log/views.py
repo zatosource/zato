@@ -27,7 +27,7 @@ from zato.admin.web.views import action_json_response, invoke_action_handler, me
     Action_Message_Max_Length, _traceback_marker
 from zato.admin.web.views.audit_log.columns import _all_sources_columns, _all_sources_section_title, _all_sources_title, \
     _data_preview_len, _default_page, _endpoint_page_url, _event_type_label, _flow_columns, _get_outcomes, _object_page_url, \
-    _poll_url, _preview_len, _row_columns, _source_columns, _source_endpoint_label, _source_event_label, \
+    _poll_url, _preview_len, _row_columns, _run_page_url, _source_columns, _source_endpoint_label, _source_event_label, \
     _source_except_label, _source_label, _source_object_label, _source_page_url, _source_title, _status_outstanding
 from zato.admin.web.views.audit_log.query import _build_where, _hydrate_rows, _normalize_row
 from zato.admin.web.views.audit_log.sources import _get_resubmit_labels, _source_outstanding, _source_parse, \
@@ -209,6 +209,7 @@ def object_index(req:'any_') -> 'TemplateResponse':
         'source_links_json': json.dumps(_source_page_url),
         'endpoint_links_json': json.dumps(_endpoint_page_url),
         'endpoint_labels_json': json.dumps(_source_endpoint_label),
+        'run_links_json': json.dumps(_run_page_url),
         'event_labels_json': json.dumps(_event_type_label),
         'zato_clusters': True,
         'zato_template_name': 'zato/audit-log.html',

@@ -51,6 +51,10 @@ var rulesetsView = {
         // one locked row is a fixture has nowhere for that double click to lead
         openOnDoubleClick: true,
 
+        // The address bar parameter the typed query is kept under, so a filtered
+        // listing can be bookmarked - null keeps the address bar untouched
+        queryURLKey: null,
+
         // Whether the filter input opens the suggestion pane at all - a host with
         // no facets and no saved views has nothing to suggest
         showSuggestions: true,
@@ -74,6 +78,9 @@ var rulesetsView = {
         // with an optional isShown(rule)
         showRuleState: false,
         ruleActions: [],
+
+        // Whether each rule's row counts its conditions and actions
+        showRuleShape: true,
 
         // The class the action links carry - the host's own link face, so they look
         // like every other link on its screens
@@ -309,14 +316,20 @@ var rulesetsView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    ruleStateHtml: function(rule) {
+    // The rule's active state is worn by the row itself - a green wash on the name,
+    // the ordinal and its node on the spine in the deeper green - not said in a pill
+    ruleStateClass: function(rule) {
         if (!this.config.showRuleState) { return ''; }
+        return rule.isActive ? ' rulesets-rule-on' : ' rulesets-rule-off';
+    },
 
-        // The colours come from the host's shared status badge classes - green for
-        // active, gray for not - the same pair its other screens use
-        var out = rule.isActive
-            ? '<span class="pill rulesets-rule-state status-badge-on">Active</span>'
-            : '<span class="pill rulesets-rule-state status-badge-off">Inactive</span>';
+    ruleShapeHtml: function(rule) {
+        if (!this.config.showRuleShape) { return ''; }
+
+        var out = '<span class="rulesets-rule-shape">' + rule.conditionCount + ' condition' +
+                (rule.conditionCount === 1 ? '' : 's') + '</span>' +
+            '<span class="rulesets-rule-shape">' + rule.actionCount + ' action' +
+                (rule.actionCount === 1 ? '' : 's') + '</span>';
         return out;
     },
 
@@ -360,6 +373,11 @@ var rulesetsView = {
                 '</div>';
         }
 
+        // Each rule keeps the ordinal it has in the full set, so the numbers
+        // do not shift while a filter narrows the panel down
+        var ordinals = {};
+        rules.forEach(function(rule, ruleIndex) { ordinals[rule.key] = ruleIndex + 1; });
+
         // A host that narrows the panel shows only the rules the query touches
         var needle = this.query.trim().toLowerCase();
         var isNarrowed = this.config.filterRulesInPanel && needle !== '';
@@ -384,17 +402,14 @@ var rulesetsView = {
             html += '<div class="rulesets-rules-head">' + head + '</div>';
         }
 
-        rules.slice(0, this.config.maxRulesInPanel).forEach(function(rule, ruleIndex) {
-            html += '<a class="rulesets-rule" href="' + self.config.openUrls.editor + '?ruleset=' + ruleset.id +
+        rules.slice(0, this.config.maxRulesInPanel).forEach(function(rule) {
+            html += '<a class="rulesets-rule' + self.ruleStateClass(rule) + '" href="' +
+                self.config.openUrls.editor + '?ruleset=' + ruleset.id +
                 '&amp;rule=' + encodeURIComponent(rule.key) + '">' +
-                '<span class="rulesets-rule-number">' + (ruleIndex + 1) + '</span>' +
+                '<span class="rulesets-rule-number">' + ordinals[rule.key] + '</span>' +
                 '<span class="rulesets-rule-name">' + self.markHtml(rule.name) + '</span>' +
                 '<span class="rulesets-rule-docs">' + self.markHtml(rule.docs) + '</span>' +
-                '<span class="rulesets-rule-shape">' + rule.conditionCount + ' condition' +
-                    (rule.conditionCount === 1 ? '' : 's') + '</span>' +
-                '<span class="rulesets-rule-shape">' + rule.actionCount + ' action' +
-                    (rule.actionCount === 1 ? '' : 's') + '</span>' +
-                self.ruleStateHtml(rule) +
+                self.ruleShapeHtml(rule) +
                 self.ruleActionsHtml(rule) +
                 '</a>';
         });

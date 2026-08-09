@@ -332,7 +332,9 @@ editorView.applyFix = function(problemIndex) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-editorView.setView = function(mode) {
+// What the tab click and the address-bar restore share - the mode itself and
+// the toolbar buttons, with no repaint of its own
+editorView.applyView = function(mode) {
     this.viewMode = mode;
     this.expressionMode = mode === 'expression';
 
@@ -343,6 +345,22 @@ editorView.setView = function(mode) {
         button.classList.toggle(activeClass, isActive);
         button.setAttribute('aria-selected', isActive ? 'true' : 'false');
     });
+};
+
+// The open view's place in the address bar, so a tab can be bookmarked -
+// only for a host that named the parameter to keep it under
+editorView.writeViewToURL = function() {
+    var key = editorModel.config.viewURLKey;
+    if (key === null) { return; }
+
+    var params = new URLSearchParams(window.location.search);
+    params.set(key, this.viewMode);
+    history.replaceState(null, '', '?' + params.toString());
+};
+
+editorView.setView = function(mode) {
+    this.applyView(mode);
+    this.writeViewToURL();
     this.render();
 };
 
@@ -493,6 +511,17 @@ editorView.init = function(container, config) {
     if (config.csrfToken !== undefined) { data.config.csrfToken = config.csrfToken; }
 
     this.bindListeners();
+
+    // The view the address names opens first, so a bookmarked tab comes back -
+    // only a view the host's toolbar actually has can open
+    if (editorModel.config.viewURLKey !== null) {
+        var urlParams = new URLSearchParams(window.location.search);
+        var urlView = urlParams.get(editorModel.config.viewURLKey);
+
+        if (urlView !== null && this.element('[data-view="' + urlView + '"]') !== null) {
+            this.applyView(urlView);
+        }
+    }
 
     editorModel.load(function() {
         editorView.render();

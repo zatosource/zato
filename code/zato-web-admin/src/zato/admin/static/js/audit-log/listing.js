@@ -815,6 +815,21 @@ listing.paneAttrValueHTML = function(rowModel, attr) {
         return listing.linkHTML(url, attr.value);
     }
 
+    // A run of a scheduled job leads to its own page on the scheduler dashboard,
+    // keyed by the job's id and the run's number, both carried by the event itself
+    if (attr.key === 'current_run') {
+        var runTemplate = config.runLinks[rowModel.raw.source];
+
+        if (runTemplate === undefined) {
+            return listing.escapeHTML(attr.value);
+        }
+
+        var runURL = runTemplate.replace('{job_id}', encodeURIComponent(rowModel.raw.job_id))
+            .replace('{run}', encodeURIComponent(attr.value));
+
+        return listing.linkHTML(runURL, attr.value);
+    }
+
     return listing.escapeHTML(attr.value);
 };
 

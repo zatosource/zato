@@ -425,6 +425,18 @@ rulesetsView.init = function(container, config) {
     this.initFilter();
     if (this.config.showRowMenu) { this.initMenu(); }
 
+    // A query the address bar carries comes back into the box before the first
+    // paint, so a bookmarked filter opens already filtered
+    if (this.config.queryURLKey !== null) {
+        var urlParams = new URLSearchParams(window.location.search);
+        var urlQuery = urlParams.get(this.config.queryURLKey);
+
+        if (urlQuery !== null && urlQuery !== '') {
+            this.query = urlQuery;
+            this.element('#rulesets-search').value = urlQuery;
+        }
+    }
+
     shared.panelToggles.push('.rulesets-publish', '#rulesets-save-view', '.command-suggest-drag');
 
     if (this.config.showSidePane) {
@@ -446,6 +458,10 @@ rulesetsView.init = function(container, config) {
         }
 
         self.render();
+
+        // A query restored from the address needs its server hits before the
+        // list can mark and narrow by it
+        if (self.query !== '') { self.applyFilters(); }
     });
 };
 

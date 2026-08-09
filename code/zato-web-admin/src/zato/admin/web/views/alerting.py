@@ -114,6 +114,7 @@ def editor(req:'any_') -> 'TemplateResponse':
         'rule_key': rule_key,
         'rule_name': rule_name,
         'new_rule_name': req.GET.get('new', ''),
+        'new_rule_docs': req.GET.get('docs', ''),
         'zato_clusters': True,
         'zato_template_name': 'zato/alerting/editor.html',
     })
@@ -162,6 +163,29 @@ def action(req:'any_') -> 'HttpResponse':
         elif action_name in ('activate', 'deactivate'):
             documents[rule_key]['is_active'] = action_name == 'activate'
             comment = f'{action_name.capitalize()}d rule {rule_name}'
+
+        elif action_name == 'update':
+
+            new_name = req.POST['name'].strip()
+            documents[rule_key]['docs'] = req.POST['docs'].strip()
+            comment = f'Updated rule {rule_name}'
+
+            # A changed name moves the document under a new key, since a key
+            # is the ruleset's name joined with the rule's own.
+            if new_name != rule_name:
+
+                new_key = f'{Alerting.Ruleset_Name}_{new_name}'
+
+                if new_key in documents:
+                    out = JsonResponse({'error': f'A rule of that name already exists -> {new_name}'}, status=BAD_REQUEST)
+                    return out
+
+                item = documents.pop(rule_key)
+                item['name'] = new_name
+                item['full_name'] = new_key
+                documents[new_key] = item
+
+                comment = f'Renamed rule {rule_name} to {new_name}'
 
         else:
             out = JsonResponse({'error': f'No such action -> {action_name}'}, status=BAD_REQUEST)

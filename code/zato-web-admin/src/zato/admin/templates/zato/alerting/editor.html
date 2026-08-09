@@ -51,8 +51,10 @@ $(document).ready(function() {
         ruleset: '{{ definition_id }}',
         rule: {% if rule_key %}'{{ rule_key|escapejs }}'{% else %}null{% endif %},
         newRuleName: '{{ new_rule_name|escapejs }}',
+        newRuleDocs: '{{ new_rule_docs|escapejs }}',
         showLivePanel: false,
         viewButtonActiveClass: 'dashboard-tab-active',
+        viewURLKey: 'view',
         documentTextHtml: function(text) { return $.fn.zato.highlight.rules_to_html(text); },
         csrfToken: $.cookie('csrftoken'),
         navigateToRule: function(rulesetId, ruleKey) {

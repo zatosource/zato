@@ -5,6 +5,7 @@
 {% block dashboard_extra_css %}
 <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/status-badge.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
 <link rel="stylesheet" type="text/css" href="/shared-ui/webapp/fonts.css">
 <link rel="stylesheet" type="text/css" href="/shared-ui/webapp/css/tokens.css">
 <link rel="stylesheet" type="text/css" href="/shared-ui/webapp/css/themes/zato-light.css">
@@ -16,6 +17,7 @@
 
 {% block dashboard_domain_js %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/webapp/js/shared.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/webapp/js/panel.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/webapp/js/shell.js"></script>
@@ -66,8 +68,10 @@ $(document).ready(function() {
         filterRulesInPanel: true,
         matchRulesetNames: false,
         openOnDoubleClick: false,
+        queryURLKey: 'q',
         showSidePane: false,
         showRuleState: true,
+        showRuleShape: false,
         rulesetLabels: {'{{ ruleset_name }}': 'Default monitoring rules'},
         facets: [],
         csrfToken: $.cookie('csrftoken'),
@@ -79,6 +83,8 @@ $(document).ready(function() {
         showRulesetInRulesHead: false,
         ruleActionClass: 'zato-link-face',
         ruleActions: [
+            {label: 'Edit',
+                onRun: function(key) { alerting.openEdit(key); }},
             {label: 'Activate', isShown: function(rule) { return !rule.isActive; },
                 onRun: function(key) { alerting.runAction('activate', key); }},
             {label: 'Deactivate', isShown: function(rule) { return rule.isActive; },
@@ -135,7 +141,52 @@ $(document).ready(function() {
                             </td>
                         </tr>
                         <tr>
-                            <td colspan="2" style="text-align:right">
+                            <td style="vertical-align:middle; width:1%; white-space:nowrap">
+                                <label for="id_docs">Description</label>
+                            </td>
+                            <td>
+                                <input type="text" id="id_docs" name="docs" style="width:100%" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="create-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate id="edit-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle; width:1%; white-space:nowrap">
+                                <label for="id_edit-name">Name</label>
+                            </td>
+                            <td>
+                                <input type="text" id="id_edit-name" name="edit-name" style="width:100%" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle; width:1%; white-space:nowrap">
+                                <label for="id_edit-docs">Description</label>
+                            </td>
+                            <td>
+                                <input type="text" id="id_edit-docs" name="edit-docs" style="width:100%" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="text-align:left;vertical-align:middle">
+                                <span class="how-it-works-badge" id="edit-how-it-works">How does it work?</span>
+                            </td>
+                            <td style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>

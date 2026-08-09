@@ -266,12 +266,18 @@
     white-space: nowrap;
 }
 
-/* The rule's active state, shown when the host asks for it - one fixed-width pill,
-   its colours from the host's shared status badge classes */
-.ruleset-browser .rulesets-rule-state {
-    justify-self: start;
-    width: 62px;
-    justify-content: center;
+/* The rule's active state, shown when the host asks for it, is worn by the row
+   itself - a green wash on an active rule's name, its ordinal and its node on the
+   spine in the deeper green - while an inactive rule keeps the neutral look */
+.ruleset-browser .rulesets-rule-on .rulesets-rule-name {
+    background: var(--green-tint-13);
+}
+.ruleset-browser .rulesets-rule-on .rulesets-rule-number {
+    color: var(--green);
+    font-weight: 700;
+}
+.ruleset-browser .rulesets-rule-on::after {
+    background: var(--green);
 }
 
 /* The host's own per-rule actions at the end of the row - each in its own grid

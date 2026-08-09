@@ -75,9 +75,12 @@
     padding-top: 10px;
 }
 
-/* With no side pane the rule rows take the full width of the card */
+/* With no side pane the rule rows take the full width of the card, and without
+   the condition and action counts they keep just the name and description tracks -
+   the action links flow into the implicit columns after them */
 .alerting-card .rulesets-rule {
     max-width: none;
+    grid-template-columns: minmax(180px, 230px) minmax(0, 1fr);
 }
 
 /* The one locked row neither selects nor toggles anything - no pointer on it */
