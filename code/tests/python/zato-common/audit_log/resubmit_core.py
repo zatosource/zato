@@ -254,6 +254,28 @@ def _run_hop_resend_checks(audit_log:'AuditLog') -> 'None':
         'method': 'PUT',
     }
 
+    # .. a request that went out with no body stores the empty string as its payload,
+    # and it resends all the same, the empty payload going out again ..
+    bodyless_id = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Request_Sent, _hop_connection_name,
+        cid='cid-core-hop-bodyless', outcome=AuditOutcome.Error, status='Connection timeout',
+        data=dumps({'payload': '', 'method': 'GET'}))
+
+    bodyless_sent:'anylist' = []
+
+    def bodyless_send(payload:'str') -> 'str':
+        bodyless_sent.append(payload)
+        return 'hop-bodyless-response'
+
+    bodyless_result = resend_hop(load_event(bodyless_id), bodyless_send, audit_log, 'cid-core-hop-bodyless-new')
+
+    assert bodyless_sent == ['']
+    assert bodyless_result.response == 'hop-bodyless-response'
+
+    bodyless_row = _get_event_row(bodyless_result.event_id)
+
+    assert bodyless_row['outcome'] == AuditOutcome.OK
+    assert loads(bodyless_row['data']) == {'payload': '', 'method': 'GET'}
+
     # .. only outgoing events can be resent per hop ..
     inbound_id = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Message_Received, _hop_connection_name,
         cid='cid-core-hop-inbound', data=dumps({'payload': 'inbound-payload'}))

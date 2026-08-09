@@ -374,9 +374,12 @@ class BaseHTTPSOAPWrapper:
         outcome:'str',
         data:'any_',
         status:'str' = '',
+        method:'str' = '',
     ) -> 'None':
         """ Writes one audit event describing a request sent to or a response received
-        from an outgoing REST or SOAP connection.
+        from an outgoing REST or SOAP connection. A request-sent event names the method
+        it went out with and is stored as the resubmit convention document,
+        which is what makes it repeatable per hop later.
         """
 
         # Payloads reach here in whatever shape their caller had them in - bytes as they went on the
@@ -387,6 +390,14 @@ class BaseHTTPSOAPWrapper:
         # .. or an object such as a dict or a multipart encoder, which is described rather than decoded.
         elif not isinstance(data, str):
             data = str(data)
+
+        # .. the size recorded is always the wire size of the payload itself ..
+        size = len(data)
+
+        # .. a request-sent event stores the resubmit convention document - the payload plus
+        # .. the method a per-hop resend needs to repeat the exact same call ..
+        if method:
+            data = dumps({'payload': data, 'method': method})
 
         # .. the source depends on the connection's transport ..
         if self.config['transport'] == URL_TYPE.PLAIN_HTTP:
@@ -401,7 +412,7 @@ class BaseHTTPSOAPWrapper:
             self.config['name'],
             cid=cid,
             endpoint=endpoint,
-            size=len(data),
+            size=size,
             outcome=outcome,
             status=status,
             data=data,
@@ -773,7 +784,8 @@ class BaseHTTPSOAPWrapper:
         # .. a ping is traffic like any other to the audit log, so it writes the same
         # .. request/response pair a regular invocation does, sharing one CID ..
         if self.needs_audit:
-            self._insert_audit_event(cid, AuditEvent.Request_Sent, f'{ping_method} {address}', AuditOutcome.OK, '')
+            self._insert_audit_event(cid, AuditEvent.Request_Sent, f'{ping_method} {address}', AuditOutcome.OK, '',
+                method=ping_method)
 
         # .. invoke the other end ..
         try:
@@ -1215,7 +1227,8 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         # .. record the outgoing request in the audit log ..
         if needs_audit:
-            self._insert_audit_event(cid, AuditEvent.Request_Sent, f'{method} {address}', AuditOutcome.OK, data)
+            self._insert_audit_event(cid, AuditEvent.Request_Sent, f'{method} {address}', AuditOutcome.OK, data,
+                method=method)
 
         # .. do invoke the connection ..
         try:

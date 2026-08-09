@@ -147,10 +147,11 @@ def load_event(event_id:'int') -> 'StoredEvent':
 
 def get_stored_payload(event:'StoredEvent') -> 'str':
     """ Returns the payload stored with an event - an event recorded without one,
-    e.g. a reconciliation-only entry, cannot be resubmitted.
+    e.g. a reconciliation-only entry, cannot be resubmitted. An empty payload is
+    a payload too - a GET request goes out with no body and resends the same way.
     """
-    if payload := event.details.get('payload'):
-        out = payload
+    if 'payload' in event.details:
+        out = event.details['payload']
     else:
         raise ResubmitException(f'Audit event `{event.id}` does not carry a payload to resubmit')
 

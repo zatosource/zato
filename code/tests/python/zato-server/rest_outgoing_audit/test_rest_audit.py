@@ -18,6 +18,7 @@ from sqlalchemy import select
 
 # Zato
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditOutcome, AuditSource
+from zato.common.json_internal import loads
 
 # Test support
 from rest_stub import new_rest_wrapper, rest_audit_env, Address_Host, Address_Path, Connection_Name, ResponseStub
@@ -113,6 +114,12 @@ def test_a_response_carries_its_http_status(tmp_path:'os.PathLike') -> 'None':
         # The request went out before any response existed, so it carries no status
         assert request_sent['status'] == ''
 
+        # The stored document is the resubmit convention - the payload plus the method
+        # a per-hop resend needs to repeat the exact same call - while the size recorded
+        # is the wire size of the payload itself.
+        assert loads(request_sent['data']) == {'payload': 'The request body', 'method': 'POST'}
+        assert request_sent['size'] == len('The request body')
+
         response_received = events[1]
 
         assert response_received['event_type'] == AuditEvent.Response_Received
@@ -166,6 +173,11 @@ def test_a_ping_writes_a_request_response_pair(tmp_path:'os.PathLike') -> 'None'
         assert request_sent['outcome'] == AuditOutcome.OK
         assert request_sent['cid'] == _cid
         assert request_sent['endpoint'] == f'HEAD {_address}'
+
+        # A ping goes out with no body, and its stored document says so - the empty payload
+        # plus the method, which is what makes even a ping row repeatable per hop.
+        assert loads(request_sent['data']) == {'payload': '', 'method': 'HEAD'}
+        assert request_sent['size'] == 0
 
         response_received = events[1]
 
