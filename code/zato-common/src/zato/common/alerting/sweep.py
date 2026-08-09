@@ -6,25 +6,28 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# One alerting sweep - the scheduler-driven run that loads the configured rules,
-# gives each one to the collector its kind selects and routes the findings through
-# the engine. Rules live as generic objects, the same rows enmasse imports and exports,
-# so a sweep always runs over the configuration as it currently stands.
+# One alerting sweep - the scheduler-driven run that measures the audit database
+# and live channel metrics into per-object facts and routes each fact through the
+# `alerts` ruleset the rule engine keeps. A rule that fires names its action in its
+# `then` outcomes - `outcome.action = 'incident'` invokes the diagnosis service the
+# way the invoke-service action always did, with the remaining outcome keys travelling
+# as the action config. The dedup store, the audit trace and the dispatch transports
+# stay as they were - only the rule representation and the matching changed.
 
 from __future__ import annotations
 
 # stdlib
+import logging
 from dataclasses import dataclass
 from datetime import datetime
 
 # Zato
-from zato.common.alerting.collectors import collect_error_rate, collect_feed_silent, collect_missing_followups, \
-    collect_outstanding_threshold
+from zato.common.alerting.collectors import collect_facts
 from zato.common.alerting.engine import process_findings
-from zato.common.alerting.model import new_rule, Default_Dedup_Window_Seconds, AlertAction, FindingKind
-from zato.common.api import Audit_Config
-from zato.common.audit_log.api import AuditEvent, AuditSource
-from zato.common.odb.query.generic import GenericObjectWrapper
+from zato.common.alerting.model import new_finding, new_rule, AlertAction, AlertSeverity, Default_Dedup_Window_Seconds
+from zato.common.api import Alerting, Incidents
+from zato.common.rule_engine.loading import documents_from_version, load_documents
+from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset
 from zato.common.typing_ import list_field
 
 # ################################################################################################################################
@@ -32,10 +35,11 @@ from zato.common.typing_ import list_field
 
 if 0:
     from sqlalchemy.engine import Engine
-    from sqlalchemy.orm.session import Session as SASession
     from zato.common.alerting.engine import AlertTransports
-    from zato.common.alerting.model import finding_list, rule_list, AlertRule
+    from zato.common.alerting.model import AlertRule, Finding
     from zato.common.audit_log.api import AuditLog
+    from zato.common.rule_engine.models import Rule
+    from zato.common.rule_engine.sql import RuleSQLBackend
     from zato.common.typing_ import anylist, stranydict, strlist
 
     AlertRule = AlertRule
@@ -43,36 +47,42 @@ if 0:
     anylist = anylist
     AuditLog = AuditLog
     Engine = Engine
-    finding_list = finding_list
-    rule_list = rule_list
-    SASession = SASession
+    Finding = Finding
+    Rule = Rule
+    RuleSQLBackend = RuleSQLBackend
     stranydict = stranydict
     strlist = strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The audit source a rule runs over when it does not set one - the MLLP channels were
-# the first consumers of the sweep, so their source is the default.
-Default_Source = AuditSource.MLLP_Channel
+logger = logging.getLogger('zato')
 
-# The event types the follow-up collectors pair up when a rule does not name its own -
-# sent-not-acked is the canonical absence check.
-Default_Begin_Event_Type = AuditEvent.Message_Sent
-Default_End_Event_Type   = AuditEvent.Ack_Received
+# ################################################################################################################################
+# ################################################################################################################################
 
-# How long a sent message may wait for its acknowledgment before it counts as missing.
-Default_Deadline_Seconds = 300
+#  Type aliases
+rule_engine_rule_list = list['Rule']
 
-# How many unacknowledged messages one object may accumulate before the backlog alerts.
-Default_Outstanding_Threshold = 100
+# The entity every fact travels under - rules read `alert.error_rate` and friends.
+Fact_Entity = 'alert'
 
-# The window and share of error outcomes at which an object counts as degraded.
-Default_Error_Rate_Window_Seconds = 300
-Default_Error_Rate_Threshold = 0.25
+# The prefix a rule's then targets carry - `outcome.action`, `outcome.severity` and so on.
+Outcome_Prefix = 'outcome.'
 
-# How long a feed may stay silent before it counts as dead.
-Default_Silent_After_Seconds = 300
+# What each outcome.action value means in engine terms - `incident` is invoke-service
+# pointed at the diagnosis service, everything else maps one to one.
+_action_by_outcome = {
+    'incident':         AlertAction.Invoke_Service,
+    'email':            AlertAction.Email_Digest,
+    'invoke-service':   AlertAction.Invoke_Service,
+    'publish-to-topic': AlertAction.Publish_To_Topic,
+    'slack':            AlertAction.Slack,
+    'teams':            AlertAction.Teams,
+}
+
+# The severities an outcome may carry.
+_severities = (AlertSeverity.Info, AlertSeverity.Warning, AlertSeverity.Critical)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -82,6 +92,7 @@ class SweepResult:
     """ The outcome of one alerting sweep.
     """
     rule_count: int = 0
+    fact_count: int = 0
     finding_count: int = 0
     raised_count: int = 0
     deduplicated_count: int = 0
@@ -92,41 +103,34 @@ class SweepResult:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def parse_rule(name:'str', rule_data:'stranydict') -> 'AlertRule':
-    """ Builds one rule from its stored form - the dict a generic-object row carries.
-    Every field beyond the kind is optional, mirroring the YAML definition.
-    """
-    out = new_rule(
-        name,
-        rule_data['kind'],
-        source=rule_data.get('source', ''),
-        object_name=rule_data.get('object_name', ''),
-        action=rule_data.get('action', AlertAction.Email_Digest),
-        action_config=rule_data.get('action_config', {}),
-        config=rule_data.get('config', {}),
-        dedup_window_seconds=rule_data.get('dedup_window_seconds', Default_Dedup_Window_Seconds),
-        is_active=rule_data.get('is_active', True),
-    )
-
-    return out
-
-# ################################################################################################################################
-
-def load_rules(session:'SASession', cluster_id:'int') -> 'rule_list':
-    """ Loads all the alert rules from their generic-object rows - the same rows
-    the enmasse importer writes and the exporter reads.
+def load_alert_rules(backend:'RuleSQLBackend') -> 'rule_engine_rule_list':
+    """ Loads the live version of the `alerts` ruleset from the rule engine store,
+    returning its rules in rule order. No such ruleset or no live version yet
+    means there is nothing to sweep with - an empty list, not an error.
     """
 
     # Our response to produce
-    out:'rule_list' = []
+    out:'rule_engine_rule_list' = []
 
-    wrapper = GenericObjectWrapper(session, cluster_id)
-    wrapper.type_ = Audit_Config.Type.Alert_Rule
+    matches = backend.definitions.find_by_name(name=Alerting.Ruleset_Name, object_type=Definition_Type_Ruleset)
 
-    rows = wrapper.get_list()
+    # The ruleset comes into being at environment creation - none means nothing is configured yet
+    if not matches:
+        return out
 
-    for row in rows:
-        rule = parse_rule(row['name'], row)
+    definition = matches[0]
+
+    # A ruleset whose live pointer was never set has nothing published to run
+    if not definition.live_version:
+        return out
+
+    record = backend.versions.get(definition.id, definition.live_version)
+    documents = documents_from_version(record)
+
+    loaded = load_documents(documents)
+
+    for full_name in loaded.rule_names:
+        rule = loaded.manager[full_name]
         out.append(rule)
 
     return out
@@ -134,73 +138,93 @@ def load_rules(session:'SASession', cluster_id:'int') -> 'rule_list':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def collect_for_rule(
-    engine:'Engine',
-    rule:'AlertRule',
-    metrics_by_name:'stranydict',
-    now:'datetime',
-    ) -> 'finding_list':
-    """ Runs the collector the rule's kind selects, parameterized by the rule's
-    own config - unset parameters fall back to the module-level defaults.
+def build_fact_message(rule_name:'str', fact:'stranydict') -> 'str':
+    """ One readable line saying which rule fired on which object and what
+    the measures were at that moment - only the measures that are non-zero speak.
     """
-    config = rule.config
+    parts = []
 
-    # An unset source means the default collector pack's source
-    source = rule.source
-    if not source:
-        source = Default_Source
+    if fact['total_count']:
+        percent = round(fact['error_rate'] * 100)
+        error_part = f'error rate {percent}% ({fact["error_count"]} of {fact["total_count"]}'
+        error_part += f' over {fact["window_seconds"]}s)'
+        parts.append(error_part)
 
-    if rule.kind == FindingKind.Missing_Followup:
+    if fact['outstanding']:
+        parts.append(f'{fact["outstanding"]} outstanding (oldest waiting {fact["oldest_waiting_seconds"]}s)')
 
-        out = collect_missing_followups(
-            engine,
-            source,
-            config.get('begin_event_type', Default_Begin_Event_Type),
-            config.get('end_event_type', Default_End_Event_Type),
-            config.get('deadline_seconds', Default_Deadline_Seconds),
-            now,
-            object_name=rule.object_name,
-            link=config.get('link', ''),
-        )
+    if fact['silent_seconds']:
+        parts.append(f'silent for {fact["silent_seconds"]}s')
 
-    elif rule.kind == FindingKind.Outstanding:
+    measures = ', '.join(parts)
 
-        out = collect_outstanding_threshold(
-            engine,
-            source,
-            config.get('begin_event_type', Default_Begin_Event_Type),
-            config.get('end_event_type', Default_End_Event_Type),
-            config.get('threshold', Default_Outstanding_Threshold),
-            object_name=rule.object_name,
-            link=config.get('link', ''),
-        )
+    out = f'Rule `{rule_name}` matched `{fact["object_name"]}` ({fact["source"]}) - {measures}'
+    return out
 
-    elif rule.kind == FindingKind.Error_Rate:
+# ################################################################################################################################
 
-        out = collect_error_rate(
-            engine,
-            source,
-            config.get('window_seconds', Default_Error_Rate_Window_Seconds),
-            config.get('threshold', Default_Error_Rate_Threshold),
-            now,
-            object_name=rule.object_name,
-            link=config.get('link', ''),
-        )
+def read_outcome(then:'stranydict') -> 'stranydict':
+    """ Returns a match's outcome keys with the entity prefix stripped -
+    `outcome.action` becomes `action`.
+    """
 
-    elif rule.kind == FindingKind.Feed_Silent:
+    # Our response to produce
+    out:'stranydict' = {}
 
-        out = collect_feed_silent(
-            metrics_by_name,
-            source,
-            config.get('silent_after_seconds', Default_Silent_After_Seconds),
-            link=config.get('link', ''),
-        )
+    for target, value in then.items():
+        if target.startswith(Outcome_Prefix):
+            name = target[len(Outcome_Prefix):]
+            out[name] = value
 
-    else:
-        # A kind with no generic collector produces nothing here - domain packs
-        # feed their own findings straight into process_findings instead.
-        out = []
+    return out
 
+# ################################################################################################################################
+
+def build_dispatch(rule:'Rule', fact:'stranydict', outcome:'stranydict') -> 'tuple[AlertRule, Finding] | None':
+    """ Turns one rule match into the pair the engine dispatches - a transient engine rule
+    carrying the outcome's action and config, and a finding carrying the fact's measures.
+    An outcome without an action names nothing to do, which is an authoring error, not a dispatch.
+    """
+    action_name = outcome.pop('action', None)
+
+    if action_name not in _action_by_outcome:
+        logger.warning('Alert rule `%s` fired with no usable outcome.action (%r) - nothing to dispatch',
+            rule.name, action_name)
+        return None
+
+    action = _action_by_outcome[action_name]
+
+    # The engine-level knobs travel as outcome keys too - what remains after
+    # they are taken out is the action's own config.
+    dedup_window_seconds = outcome.pop('dedup_window_seconds', Default_Dedup_Window_Seconds)
+
+    severity = outcome.pop('severity', AlertSeverity.Warning)
+    if severity not in _severities:
+        severity = AlertSeverity.Warning
+
+    link = outcome.pop('link', '')
+
+    # The incident action is invoke-service pointed at the diagnosis service ..
+    if action_name == 'incident':
+        outcome['service'] = Incidents.Service_Diagnose
+
+    # .. and an email outcome's addresses arrive as one comma-separated string.
+    if addresses := outcome.pop('addresses', None):
+        outcome['addresses'] = [item.strip() for item in addresses.split(',')]
+
+    alert_rule = new_rule(
+        rule.name,
+        rule.name,
+        action=action,
+        action_config=outcome,
+        dedup_window_seconds=dedup_window_seconds,
+    )
+
+    message = build_fact_message(rule.name, fact)
+
+    finding = new_finding(rule.name, fact['source'], fact['object_name'], message, link=link, severity=severity)
+
+    out = alert_rule, finding
     return out
 
 # ################################################################################################################################
@@ -208,8 +232,9 @@ def collect_for_rule(
 
 def run_sweep(
     engine:'Engine',
-    rules:'rule_list',
+    rules:'rule_engine_rule_list',
     metrics_by_name:'stranydict',
+    metrics_source:'str',
     transports:'AlertTransports',
     audit_log:'AuditLog',
     cid:'str',
@@ -218,9 +243,9 @@ def run_sweep(
     default_email:'strlist | None' = None,
     dashboard_url:'str' = '',
     ) -> 'SweepResult':
-    """ Runs one full sweep - each active rule's collector runs with the rule's
-    own parameters and the findings go through the engine one rule at a time,
-    so two rules of the same kind never double-dispatch each other's findings.
+    """ Runs one full sweep - the fact producers measure everything once, each fact runs
+    through each rule of the alerts ruleset, and every match is dispatched through
+    the engine one at a time, so dedup and the audit trace work exactly as before.
     """
 
     # Our response to produce - the fields are assigned here because init=False
@@ -228,29 +253,40 @@ def run_sweep(
     out = SweepResult()
     out.dispatched = []
 
+    facts = collect_facts(engine, metrics_by_name, metrics_source, now)
+    out.fact_count = len(facts)
+
     for rule in rules:
 
-        # An inactive rule's collector does not even run
-        if not rule.is_active:
+        # A rule the listing screen deactivated matches nothing while remaining stored
+        if rule.document.get('is_active') is False:
             continue
 
         out.rule_count += 1
 
-        findings = collect_for_rule(engine, rule, metrics_by_name, now)
+        for fact in facts:
 
-        if not findings:
-            continue
+            match_result = rule.match({Fact_Entity: fact})
 
-        out.finding_count += len(findings)
+            if not match_result:
+                continue
 
-        # The findings were collected for this one rule, so only this one rule
-        # processes them - the per-rule narrowing already happened in the collector.
-        result = process_findings([rule], findings, transports, audit_log, cid, now,
-            default_email=default_email, dashboard_url=dashboard_url)
+            outcome = read_outcome(match_result.then)
+            dispatch = build_dispatch(rule, fact, outcome)
 
-        out.raised_count += result.raised_count
-        out.deduplicated_count += result.deduplicated_count
-        out.dispatched.extend(result.dispatched)
+            if dispatch is None:
+                continue
+
+            alert_rule, finding = dispatch
+            out.finding_count += 1
+
+            # The finding was built for this one rule, so only this one rule processes it
+            result = process_findings([alert_rule], [finding], transports, audit_log, cid, now,
+                default_email=default_email, dashboard_url=dashboard_url)
+
+            out.raised_count += result.raised_count
+            out.deduplicated_count += result.deduplicated_count
+            out.dispatched.extend(result.dispatched)
 
     return out
 

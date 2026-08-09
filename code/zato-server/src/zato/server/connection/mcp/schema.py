@@ -146,6 +146,36 @@ def io_definition_to_schema(definition:'any_') -> 'stranydict':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def output_definition_to_schema(definition:'any_') -> 'stranydict':
+    """ Converts the output side of an I/O definition into a JSON Schema dict.
+    The output declaration only exposes element names, so each one is turned into
+    a typed Elem through the same name-based inference bare input names go through.
+    """
+
+    # Our response to produce
+    out:'stranydict' = {'type': 'object'}
+
+    # Check if there is any output declared at all ..
+    if not definition.has_output_declared:
+        return out
+
+    properties:'stranydict' = {}
+
+    # .. map each output element to its JSON Schema type ..
+    for elem_name in definition.all_output_elem_names:
+        elem = definition.convert_to_elem_instance(elem_name, True)
+        properties[elem_name] = _get_elem_json_schema(elem)
+
+    # .. only include properties if we have any. Whether an output element is
+    # required is not part of the declaration, so there is no required list here.
+    if properties:
+        out['properties'] = properties
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _python_annotation_to_schema(annotation:'any_') -> 'stranydict':
     """ Converts a Python type annotation to a JSON Schema dict.
     Handles basic types, Optional, List[T], and nested dataclasses.
@@ -290,6 +320,36 @@ def io_to_json_schema(service_class:'any_') -> 'stranydict':
 
     if isinstance(io, IOProcessor):
         out = io_definition_to_schema(io)
+        return out
+
+    out:'stranydict' = {'type': 'object'}
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def io_to_output_json_schema(service_class:'any_') -> 'stranydict':
+    """ Top-level dispatcher for the output side. Takes a service class and returns
+    a JSON Schema dict for its output, suitable for use as an MCP tool's outputSchema.
+    """
+    io = getattr(service_class, '_io', None)
+
+    if io is None:
+        out:'stranydict' = {'type': 'object'}
+        return out
+
+    if isinstance(io, DataClassIO):
+
+        # The output model is genuinely optional - input-only services are commonplace
+        if io.has_output_declared:
+            out = dataclass_model_to_schema(io.output_model_class)
+            return out
+
+        out:'stranydict' = {'type': 'object'}
+        return out
+
+    if isinstance(io, IOProcessor):
+        out = output_definition_to_schema(io)
         return out
 
     out:'stranydict' = {'type': 'object'}

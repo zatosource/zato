@@ -118,6 +118,11 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 # Example: '/home/media/media.lawrence.com/'
 MEDIA_ROOT = os.path.join(os.path.dirname(__file__), 'static')
 
+# Where the shared UI assets from zato-common live - the rule editor component among them -
+# served under /shared-ui/ so web-admin and the rule engine dashboard load one codebase
+import zato.common.webapp.ui as _webapp_ui
+SHARED_UI_ROOT = os.path.join(os.path.dirname(_webapp_ui.__file__), 'static')
+
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash if there is a path component (optional in other cases).
 # Examples: 'https://media.lawrence.com', 'https://example.com/media/'

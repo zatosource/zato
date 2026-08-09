@@ -78,10 +78,14 @@ var editorLive = {
 
     update: function() {
         var self = this;
-        var panel = document.getElementById('live-panel');
+        var panel = editorView.element('.live-panel');
+
+        // The host may not show the live outcomes panel at all
+        if (panel === null) { return; }
 
         if (editorModel.testSet === null) {
-            panel.innerHTML = this.headHtml('no test set, see <a href="/tests/">tests</a>');
+            panel.innerHTML = this.headHtml('no test set, see <a href="' +
+                editorModel.config.testsUrl + '">tests</a>');
             return;
         }
 

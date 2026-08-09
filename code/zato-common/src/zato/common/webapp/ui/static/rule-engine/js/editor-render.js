@@ -4,6 +4,7 @@
 
 var editorView = {
 
+    container: null,
     viewMode: 'sentence',
     expressionMode: false,
     autoOpen: null,
@@ -17,20 +18,33 @@ var editorView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
+    // Every element lookup is scoped to the container the host application passed to init
+    element: function(selector) {
+        var out = this.container.querySelector(selector);
+        return out;
+    },
+
+    elements: function(selector) {
+        var out = this.container.querySelectorAll(selector);
+        return out;
+    },
+
+// ////////////////////////////////////////////////////////////////////////
+
     keywordHtml: function(text) {
         var out = '<span class="editor-keyword">' + text + '</span>';
         return out;
     },
 
-    tokenHtml: function(kindClass, chipName, text, onClick, isInvalid) {
+    tokenHtml: function(kindClass, chipName, text, actionAttributes, isInvalid) {
         var classes = 'editor-token ' + kindClass + (isInvalid ? ' editor-token-invalid' : '');
-        var out = '<span class="' + classes + '" data-chip="' + chipName + '" onclick="' + onClick + '">' +
+        var out = '<span class="' + classes + '" data-chip="' + chipName + '" ' + actionAttributes + '>' +
             shared.escape(text) + '</span>';
         return out;
     },
 
-    placeholderHtml: function(chipName, text, onClick) {
-        var out = '<span class="editor-token editor-token-placeholder" data-chip="' + chipName + '" onclick="' + onClick + '">' +
+    placeholderHtml: function(chipName, text, actionAttributes) {
+        var out = '<span class="editor-token editor-token-placeholder" data-chip="' + chipName + '" ' + actionAttributes + '>' +
             shared.escape(text) + '</span>';
         return out;
     },
@@ -39,15 +53,16 @@ var editorView = {
 
     valueChipHtml: function(listKey, itemIndex, valueIndex, value, attribute) {
         var chipName = 'value-' + listKey + '-' + itemIndex + '-' + valueIndex;
-        var onClick = 'editorView.editValue(event, \'' + listKey + '\', ' + itemIndex + ', ' + valueIndex + ')';
+        var action = 'data-action="edit-value" data-list="' + listKey + '" data-item="' + itemIndex + '"' +
+            ' data-value="' + valueIndex + '"';
 
         if (value === '') {
-            var out = this.placeholderHtml(chipName, editorModel.valuePlaceholder(attribute), onClick);
+            var out = this.placeholderHtml(chipName, editorModel.valuePlaceholder(attribute), action);
             return out;
         }
 
         var isInvalid = this.invalidKeys[listKey + '-' + itemIndex + '-' + valueIndex] === true;
-        var html = this.tokenHtml('editor-token-value', chipName, value, onClick, isInvalid);
+        var html = this.tokenHtml('editor-token-value', chipName, value, action, isInvalid);
         return html;
     },
 
@@ -57,14 +72,15 @@ var editorView = {
         var parts = [];
 
         if (condition.subject !== null) {
-            var comparatorClick = 'editorView.openComparatorMenu(event, ' + conditionIndex + ')';
+            var comparatorAction = 'data-action="open-comparator-menu" data-item="' + conditionIndex + '"';
             if (condition.comparator === null) {
-                parts.push(this.placeholderHtml('comparator-' + conditionIndex, editorModel.placeholders.comparator, comparatorClick));
+                parts.push(this.placeholderHtml('comparator-' + conditionIndex, editorModel.placeholders.comparator,
+                    comparatorAction));
             } else {
                 var comparatorText = this.expressionMode
                     ? editorModel.comparatorSymbols[condition.comparator] : condition.comparator;
                 parts.push(this.tokenHtml('editor-token-comparator', 'comparator-' + conditionIndex,
-                    comparatorText, comparatorClick, false));
+                    comparatorText, comparatorAction, false));
             }
         }
 
@@ -73,14 +89,14 @@ var editorView = {
             var slots = editorModel.valueSlots(condition.comparator);
 
             if (slots === -1) {
-                var setClick = 'editorView.openSetMenu(event, ' + conditionIndex + ')';
+                var setAction = 'data-action="open-set-menu" data-item="' + conditionIndex + '"';
                 var setChipName = 'value-condition-' + conditionIndex + '-0';
                 if (condition.values.length === 0) {
-                    parts.push(this.placeholderHtml(setChipName, editorModel.placeholders.set, setClick));
+                    parts.push(this.placeholderHtml(setChipName, editorModel.placeholders.set, setAction));
                 } else {
                     var setText = this.expressionMode
                         ? '[' + condition.values.join(', ') + ']' : condition.values.join(', ');
-                    parts.push(this.tokenHtml('editor-token-value', setChipName, setText, setClick, false));
+                    parts.push(this.tokenHtml('editor-token-value', setChipName, setText, setAction, false));
                 }
             }
 
@@ -101,20 +117,21 @@ var editorView = {
     },
 
     removeConditionHtml: function(conditionIndex) {
-        var out = '<span class="editor-group-remove" onclick="editorView.removeCondition(event, ' + conditionIndex + ')">' + shared.icon('x', 11) + '</span>';
+        var out = '<span class="editor-group-remove" data-action="remove-condition" data-item="' + conditionIndex + '">' +
+            shared.icon('x', 11) + '</span>';
         return out;
     },
 
     conditionHtml: function(condition, conditionIndex) {
         var parts = [];
 
-        var subjectClick = 'editorView.openSubjectMenu(event, ' + conditionIndex + ')';
+        var subjectAction = 'data-action="open-subject-menu" data-item="' + conditionIndex + '"';
         if (condition.subject === null) {
-            parts.push(this.placeholderHtml('subject-' + conditionIndex, editorModel.placeholders.subject, subjectClick));
+            parts.push(this.placeholderHtml('subject-' + conditionIndex, editorModel.placeholders.subject, subjectAction));
         } else {
             var attribute = vocabulary.attribute(condition.subject);
             var subjectText = this.expressionMode ? condition.subject : attribute.phrase;
-            parts.push(this.tokenHtml('editor-token-subject', 'subject-' + conditionIndex, subjectText, subjectClick, false));
+            parts.push(this.tokenHtml('editor-token-subject', 'subject-' + conditionIndex, subjectText, subjectAction, false));
         }
 
         parts.push(this.conditionBodyHtml(condition, conditionIndex));
@@ -128,11 +145,11 @@ var editorView = {
 
     actionHtml: function(action, listName, actionIndex) {
         var parts = [];
-        var actionClick = 'editorView.openActionMenu(event, \'' + listName + '\', ' + actionIndex + ')';
+        var actionAttributes = 'data-action="open-action-menu" data-list="' + listName + '" data-item="' + actionIndex + '"';
         var chipName = 'action-' + listName + '-' + actionIndex;
 
         if (action.target === null) {
-            parts.push(this.placeholderHtml(chipName, editorModel.placeholders.action, actionClick));
+            parts.push(this.placeholderHtml(chipName, editorModel.placeholders.action, actionAttributes));
         } else {
             var attribute = vocabulary.attribute(action.target);
 
@@ -140,15 +157,16 @@ var editorView = {
                 var yesNoText = this.expressionMode
                     ? action.target + ' = ' + action.values[0]
                     : 'set ' + attribute.phrase + ' to ' + action.values[0];
-                parts.push(this.tokenHtml('editor-token-action', chipName, yesNoText, actionClick, false));
+                parts.push(this.tokenHtml('editor-token-action', chipName, yesNoText, actionAttributes, false));
             } else {
                 var verbText = this.expressionMode ? action.target + ' =' : 'set ' + attribute.phrase + ' to';
-                parts.push(this.tokenHtml('editor-token-action', chipName, verbText, actionClick, false));
+                parts.push(this.tokenHtml('editor-token-action', chipName, verbText, actionAttributes, false));
                 parts.push(this.valueChipHtml(listName, actionIndex, 0, action.values[0], attribute));
             }
         }
 
-        var removeControl = '<span class="editor-group-remove" onclick="editorView.removeAction(event, \'' + listName + '\', ' + actionIndex + ')">' + shared.icon('x', 11) + '</span>';
+        var removeControl = '<span class="editor-group-remove" data-action="remove-action" data-list="' + listName + '"' +
+            ' data-item="' + actionIndex + '">' + shared.icon('x', 11) + '</span>';
 
         var out = '<span class="editor-group" data-group="' + listName + '-' + actionIndex + '">' +
             parts.join('') + removeControl + '</span>';
@@ -157,8 +175,8 @@ var editorView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
-    addChipHtml: function(label, onClick) {
-        var out = '<span class="editor-add-chip" onclick="' + onClick + '">' + shared.icon('plus', 10) + label + '</span>';
+    addChipHtml: function(label, actionAttributes) {
+        var out = '<span class="editor-add-chip" ' + actionAttributes + '>' + shared.icon('plus', 10) + label + '</span>';
         return out;
     },
 
@@ -167,7 +185,7 @@ var editorView = {
     joinerHtml: function(joinerIndex) {
         var text = editorModel.rule.joiners[joinerIndex];
         var out = '<span class="editor-token editor-token-joiner" data-chip="joiner-' + joinerIndex + '" ' +
-            'onclick="editorView.toggleJoiner(' + joinerIndex + ')">' + text + '</span>';
+            'data-action="toggle-joiner" data-item="' + joinerIndex + '">' + text + '</span>';
         return out;
     },
 
@@ -208,11 +226,19 @@ var editorView = {
 
     emptyHtml: function() {
         if (editorModel.definitionId === null) {
-            return '<div class="editor-view-note">No ruleset yet, see <a href="/rulesets/">rulesets</a>.</div>';
+            if (editorModel.config.rulesetsUrl !== '') {
+                return '<div class="editor-view-note">No ruleset yet, see <a href="' +
+                    editorModel.config.rulesetsUrl + '">rulesets</a>.</div>';
+            }
+            return '<div class="editor-view-note">No ruleset yet.</div>';
         }
 
-        var out = '<div class="editor-view-note">No rules yet, see ' +
-            '<a href="/tables/">the decision tables</a>.</div>';
+        if (editorModel.config.tablesUrl !== '') {
+            return '<div class="editor-view-note">No rules yet, see ' +
+                '<a href="' + editorModel.config.tablesUrl + '">the decision tables</a>.</div>';
+        }
+
+        var out = '<div class="editor-view-note">No rules yet.</div>';
         return out;
     },
 
@@ -222,7 +248,7 @@ var editorView = {
         var self = this;
 
         if (editorModel.rule === null) {
-            document.getElementById('editor-area').innerHTML = this.emptyHtml();
+            this.element('.editor-area').innerHTML = this.emptyHtml();
             return;
         }
 
@@ -233,7 +259,7 @@ var editorView = {
         this.invalidKeys = built.invalidKeys;
 
         if (this.viewMode === 'table' || this.viewMode === 'document') {
-            document.getElementById('editor-area').innerHTML =
+            this.element('.editor-area').innerHTML =
                 this.viewMode === 'table' ? this.tableViewHtml() : this.documentViewHtml();
 
             if (this.viewMode === 'document') { this.fillCanonicalText(); }
@@ -245,7 +271,7 @@ var editorView = {
         var ifParts = [];
         ifParts.push(this.keywordHtml('if'));
         ifParts.push(this.conditionsHtml());
-        ifParts.push(this.addChipHtml(rule.conditions.length === 0 ? 'condition' : 'and', 'editorView.addCondition()'));
+        ifParts.push(this.addChipHtml(rule.conditions.length === 0 ? 'condition' : 'and', 'data-action="add-condition"'));
         var ifLine = '<div class="editor-line" data-drop="conditions">' + ifParts.join(' ') + '</div>';
 
         var thenParts = [this.keywordHtml('then')];
@@ -254,12 +280,13 @@ var editorView = {
             thenActions.push(self.actionHtml(action, 'thenActions', actionIndex));
         });
         thenParts.push(thenActions.join(' ' + this.keywordHtml('and') + ' '));
-        thenParts.push(this.addChipHtml(rule.thenActions.length === 0 ? 'action' : 'and', 'editorView.addAction(\'thenActions\')'));
+        thenParts.push(this.addChipHtml(rule.thenActions.length === 0 ? 'action' : 'and',
+            'data-action="add-action" data-list="thenActions"'));
         var thenLine = '<div class="editor-line" data-drop="thenActions">' + thenParts.join(' ') + '</div>';
 
         var elseParts = [];
         if (rule.elseActions.length === 0) {
-            elseParts.push(this.addChipHtml('else', 'editorView.addAction(\'elseActions\')'));
+            elseParts.push(this.addChipHtml('else', 'data-action="add-action" data-list="elseActions"'));
         } else {
             elseParts.push(this.keywordHtml('else'));
             var elseActions = [];
@@ -267,12 +294,12 @@ var editorView = {
                 elseActions.push(self.actionHtml(action, 'elseActions', actionIndex));
             });
             elseParts.push(elseActions.join(' ' + this.keywordHtml('and') + ' '));
-            elseParts.push(this.addChipHtml('and', 'editorView.addAction(\'elseActions\')'));
+            elseParts.push(this.addChipHtml('and', 'data-action="add-action" data-list="elseActions"'));
         }
         var elseLine = '<div class="editor-line" data-drop="elseActions">' + elseParts.join(' ') + '</div>';
 
         var sentenceClass = 'editor-rule-sentence' + (this.expressionMode ? ' editor-expression-mode' : '');
-        document.getElementById('editor-area').innerHTML =
+        this.element('.editor-area').innerHTML =
             '<div class="' + sentenceClass + '">' + ifLine + thenLine + elseLine + '</div>';
 
         this.finishRender();
@@ -310,7 +337,7 @@ var editorView = {
         var pending = this.autoOpen;
         this.autoOpen = null;
         if (pending !== null) {
-            var chip = document.querySelector('[data-chip="' + pending + '"]');
+            var chip = this.element('[data-chip="' + pending + '"]');
             if (chip !== null) { chip.click(); }
         }
     },
@@ -318,8 +345,8 @@ var editorView = {
 // ////////////////////////////////////////////////////////////////////////
 
     renderProblems: function() {
-        var head = document.getElementById('problems-head');
-        var list = document.getElementById('problems-list');
+        var head = this.element('.problems-head');
+        var list = this.element('.problems-list');
         head.textContent = 'Problems (' + this.problems.length + ')';
 
         if (this.problems.length === 0) {
@@ -331,7 +358,7 @@ var editorView = {
             var dot = problem.severity === 'error' ? 'status-dot-error' : 'status-dot-information';
             var fixButton = '';
             if (problem.fix !== undefined) {
-                fixButton = '<span class="problem-fix" onclick="editorView.applyFix(' + problemIndex + ')">Change to ' +
+                fixButton = '<span class="problem-fix" data-action="apply-fix" data-item="' + problemIndex + '">Change to ' +
                     shared.escape(problem.fix.value) + '</span>';
             }
             return '<div class="problem-item"><span class="status-dot ' + dot + '"></span>' +
@@ -342,6 +369,11 @@ var editorView = {
 // ////////////////////////////////////////////////////////////////////////
 
     renderVocabulary: function() {
+        var list = this.element('.vocabulary-list');
+
+        // The host may not show the vocabulary pane at all
+        if (list === null) { return; }
+
         var html = '';
 
         vocabulary.entities.forEach(function(entity) {
@@ -349,12 +381,12 @@ var editorView = {
             vocabulary.pickerAttributes(entity).forEach(function(attribute) {
                 var path = entity.name + '.' + attribute.name;
                 html += '<div class="vocabulary-item vocabulary-item-clickable" draggable="true" data-path="' + path + '" ' +
-                    'onclick="editorView.pickVocabulary(\'' + path + '\')">' + shared.escape(attribute.name) +
+                    'data-action="pick-vocabulary">' + shared.escape(attribute.name) +
                     '<span class="vocabulary-item-type">' + shared.escape(attribute.type) + '</span></div>';
             });
         });
 
-        document.getElementById('vocabulary-list').innerHTML = html;
+        list.innerHTML = html;
     },
 
 // ////////////////////////////////////////////////////////////////////////
@@ -362,14 +394,14 @@ var editorView = {
     activeToken: -1,
 
     markActiveToken: function() {
-        var tokens = document.querySelectorAll('.editor-token');
+        var tokens = this.elements('.editor-token');
         tokens.forEach(function(token, tokenIndex) {
             token.classList.toggle('editor-token-active', tokenIndex === editorView.activeToken);
         });
     },
 
     moveToken: function(step) {
-        var tokens = document.querySelectorAll('.editor-token');
+        var tokens = this.elements('.editor-token');
         if (tokens.length === 0) { return; }
 
         this.activeToken = (this.activeToken + step + tokens.length) % tokens.length;
@@ -378,7 +410,7 @@ var editorView = {
     },
 
     openActiveToken: function() {
-        var tokens = document.querySelectorAll('.editor-token');
+        var tokens = this.elements('.editor-token');
         if (this.activeToken < 0 || this.activeToken >= tokens.length) { return; }
         tokens[this.activeToken].click();
     },

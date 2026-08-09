@@ -177,21 +177,49 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from contextlib import closing
-
 # Zato
-from zato.common.api import Audit_Config
+from zato.common.api import Alerting
+from zato.common.alerting.seed import alerts_ruleset
 from zato.common.json_internal import dumps, loads
-from zato.common.odb.query.generic import GenericObjectWrapper
+from zato.common.rule_engine.parser import parse_data_details
+from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Documents_Key
+from zato.server.rule_engine_api import get_backend
 from zato.server.service import Service
 
 # ################################################################################################################################
 # ################################################################################################################################
 
+# Who the versions these services store are attributed to.
+_actor = 'test.alerting'
+
+# ################################################################################################################################
+
+def _publish_documents(documents, comment):
+    """ Stores the given rule documents as a new version of the alerts ruleset
+    and makes that version live, returning the version number.
+    """
+    backend = get_backend()
+
+    matches = backend.definitions.find_by_name(name=Alerting.Ruleset_Name, object_type=Definition_Type_Ruleset)
+    definition = matches[0]
+
+    record = backend.versions.create(
+        definition_id=definition.id,
+        expected_current_version=definition.current_version,
+        document={Documents_Key: documents},
+        author=_actor,
+        comment=comment,
+    )
+    _ = backend.versions.publish(definition_id=definition.id, version=record.version, actor=_actor)
+
+    return record.version
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class TestAlertingRuleSave(Service):
-    """ Writes one alert rule as a generic object - the same row the enmasse importer
-    would create, so the alerting sweep test can configure rules without the CLI.
+    """ Replaces the alerts ruleset's live rules with the ones given as rules text,
+    so the alerting sweep test runs against exactly the rules it configures.
     """
     name = 'test.alerting.rule.save'
 
@@ -201,53 +229,31 @@ class TestAlertingRuleSave(Service):
         if isinstance(request, (str, bytes)):
             request = loads(request)
 
-        name = request.pop('name')
-        opaque = dumps(request)
+        text = request['text']
 
-        with closing(self.odb.session()) as session:
+        documents, errors = parse_data_details(text, Alerting.Ruleset_Name)
+        if errors:
+            raise Exception('The test alert rules do not parse -> {}'.format(errors))
 
-            wrapper = GenericObjectWrapper(session, self.server.cluster_id)
-            wrapper.type_ = Audit_Config.Type.Alert_Rule
+        version = _publish_documents(documents, 'Test alert rules')
 
-            existing = wrapper.get(name)
-
-            if existing:
-                statement = wrapper.update(name, opaque, id=existing['id'])
-            else:
-                statement = wrapper.create(name, opaque)
-
-            _ = session.execute(statement)
-            session.commit()
-
-        self.response.payload = dumps({'is_ok': True, 'name': name})
+        self.response.payload = dumps({'is_ok': True, 'version': version})
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class TestAlertingRuleDelete(Service):
-    """ Removes one alert rule's generic-object row, so the alerting test
-    leaves no configuration behind for the other test modules.
+    """ Restores the seeded default alert rules, so the alerting test leaves
+    no configuration behind for the other test modules.
     """
     name = 'test.alerting.rule.delete'
 
     def handle(self):
 
-        request = self.request.raw_request
-        if isinstance(request, (str, bytes)):
-            request = loads(request)
+        document = alerts_ruleset()
+        version = _publish_documents(document[Documents_Key], 'Restored default alert rules')
 
-        name = request['name']
-
-        with closing(self.odb.session()) as session:
-
-            wrapper = GenericObjectWrapper(session, self.server.cluster_id)
-            wrapper.type_ = Audit_Config.Type.Alert_Rule
-
-            statement = wrapper.delete_by_name(name)
-            _ = session.execute(statement)
-            session.commit()
-
-        self.response.payload = dumps({'is_ok': True, 'name': name})
+        self.response.payload = dumps({'is_ok': True, 'version': version})
 
 # ################################################################################################################################
 # ################################################################################################################################

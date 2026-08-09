@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import os
 import re
-from json import dumps
+from json import dumps, loads
 from urllib.parse import urlsplit
 
 # Django
@@ -55,11 +55,15 @@ _row_edit_prefix = 'mcp-row'
 # The two flags a row of the gateway list turns over where it stands.
 _inline_flag_names = ['is_active', 'allow_client_filters']
 
+# The two lines a row edits in a small form of their own.
+_inline_text_names = ['name', 'url_path']
+
 # Everything the size caps popover holds, edited on the list without the wizard being opened.
 _inline_size_cap_names = ['max_response_size', 'min_size_threshold', 'characters_per_token', 'size_cap_mode']
 
-# Everything a row of the gateway list may change without the wizard being opened.
-_inline_field_names = _inline_flag_names + _inline_size_cap_names
+# Everything a row of the gateway list may change without the wizard being opened -
+# the services and the security members travel separately, each as one JSON list.
+_inline_field_names = _inline_flag_names + _inline_text_names + _inline_size_cap_names
 
 # What the list's size caps cell says of a gateway that caps nothing.
 _no_size_cap_label = 'No cap'
@@ -180,6 +184,47 @@ def get_size_cap_label(max_response_size:'any_', size_cap_mode:'str') -> 'str':
     amount = int(max_response_size)
 
     out = f'{amount:,} tokens, {size_cap_mode}'
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def save_security_group(req:'any_', gateway_name:'str', member_id_list:'list') -> 'int':
+    """ Wraps the security definitions picked for a gateway in one group of the gateway's
+    own, named after it, creating or updating the group, and returns the group's id.
+    """
+    group_name = _mcp_group_name_prefix + gateway_name
+
+    # A gateway saved before already has a group of that name, so the picks carried
+    # now replace the ones the group was left with the last time around ..
+    existing_groups = req.zato.client.invoke('zato.groups.get-list', {
+        'group_type': Groups.Type.API_Clients,
+    })
+
+    group_id = None
+    for group in existing_groups.data:
+        if group['name'] == group_name:
+            group_id = group['id']
+            break
+
+    if group_id:
+        # .. update the existing group with the new member list ..
+        req.zato.client.invoke('zato.groups.edit', {
+            'id': group_id,
+            'group_type': Groups.Type.API_Clients,
+            'name': group_name,
+            'member_id_list': member_id_list,
+        })
+    else:
+        # .. or create a new group if one does not exist yet.
+        response = req.zato.client.invoke('zato.groups.create', {
+            'group_type': Groups.Type.API_Clients,
+            'name': group_name,
+            'member_id_list': member_id_list,
+        })
+        group_id = response.data['id']
+
+    out = group_id
     return out
 
 # ################################################################################################################################
@@ -307,39 +352,9 @@ class _CreateEdit(CreateEdit):
         security_keys = [key for key in self.req.POST if key.startswith(_security_input_prefix)]
         member_id_list = [self.req.POST[key] for key in security_keys]
 
-        # .. the group name is derived from the gateway name ..
-        gateway_name = input_dict['name']
-        group_name = _mcp_group_name_prefix + gateway_name
-
-        # .. auto-create or update the security group with the picked members ..
-        existing_groups = self.req.zato.client.invoke('zato.groups.get-list', {
-            'group_type': Groups.Type.API_Clients,
-        })
-
-        group_id = None
-        for group in existing_groups.data:
-            if group['name'] == group_name:
-                group_id = group['id']
-                break
-
-        if group_id:
-            # .. update the existing group with the new member list ..
-            self.req.zato.client.invoke('zato.groups.edit', {
-                'id': group_id,
-                'group_type': Groups.Type.API_Clients,
-                'name': group_name,
-                'member_id_list': member_id_list,
-            })
-        else:
-            # .. or create a new group if one does not exist yet ..
-            response = self.req.zato.client.invoke('zato.groups.create', {
-                'group_type': Groups.Type.API_Clients,
-                'name': group_name,
-                'member_id_list': member_id_list,
-            })
-            group_id = response.data['id']
-
-        # .. store the group ID so the hook can assign it to the HTTPSOAP channel.
+        # .. auto-create or update the gateway's own security group with the picked members
+        # and store the group ID so the hook can assign it to the HTTPSOAP channel.
+        group_id = save_security_group(self.req, input_dict['name'], member_id_list)
         input_dict['security_groups'] = [group_id]
 
     def post_process_return_data(self, return_data:'strdict') -> 'strdict':
@@ -586,9 +601,11 @@ def export(req:'any_', id:'str') -> 'HttpResponse':
     slug = gateway_name.lower()
     slug = _slug_invalid_characters.sub('-', slug)
 
-    # .. collect authentication headers from the gateway's security group members ..
+    # .. collect authentication headers from the gateway's security group members,
+    # along with the names and types of the definitions themselves - never any secrets ..
     headers = []
     header_names = set()
+    security_list = []
 
     if security_groups := gateway.get('security_groups'):
         group_id = security_groups[0]
@@ -604,6 +621,17 @@ def export(req:'any_', id:'str') -> 'HttpResponse':
                 header_names.add(header['name'])
                 headers.append(header)
 
+            security_list.append({
+                'name': member['name'],
+                'type': member['sec_type'],
+            })
+
+    # .. the tools the gateway exposes, each with its description and both schemas,
+    # built server-side the same way the runtime tools/list builds them ..
+    services = gateway.get('services') or []
+    tool_response = req.zato.client.invoke('zato.gateway.mcp.get-tool-list', {'services': services})
+    tools = tool_response.data
+
     # .. build the remote endpoint description ..
     remote = {
         'type': 'streamable-http',
@@ -613,13 +641,20 @@ def export(req:'any_', id:'str') -> 'HttpResponse':
     if headers:
         remote['headers'] = headers
 
-    # .. assemble the full document ..
+    # .. assemble the full document - server.json has no top-level place for tools
+    # or security definitions, so the full details live under _meta, its extension point ..
     document = {
         '$schema': _export_schema_url,
         'name': f'{namespace}/{slug}',
         'description': f'MCP gateway {gateway_name}',
         'version': _export_version,
         'remotes': [remote],
+        '_meta': {
+            'zato': {
+                'tools': tools,
+                'security': security_list,
+            },
+        },
     }
 
     # .. and return it as a file download.
@@ -709,7 +744,7 @@ def inline_edit(req:'any_', id:'str') -> 'JsonResponse':
         if name in req.POST:
             value = req.POST[name]
 
-            # A flag travels as the word it is written with ..
+            # A flag travels as the word it is written with, a text line as itself ..
             if name in _inline_flag_names:
                 value = asbool(value)
 
@@ -729,6 +764,17 @@ def inline_edit(req:'any_', id:'str') -> 'JsonResponse':
 
             item_dict[name] = value
 
+    # The services the gateway exposes arrive as one JSON list of their names
+    if 'services' in req.POST:
+        item_dict['services'] = loads(req.POST['services'])
+
+    # The security definitions arrive as one JSON list of member ids, and the group
+    # of the gateway's own is brought in line with them before the gateway is saved
+    if 'security' in req.POST:
+        member_id_list = loads(req.POST['security'])
+        group_id = save_security_group(req, item_dict['name'], member_id_list)
+        item_dict['security_groups'] = [group_id]
+
     response = req.zato.client.invoke('zato.generic.connection.edit', item_dict)
 
     if not response.ok:
@@ -743,6 +789,8 @@ def inline_edit(req:'any_', id:'str') -> 'JsonResponse':
 
     # What the row now says of itself
     out = JsonResponse({
+        'name': item_dict['name'],
+        'url_path': item_dict['url_path'],
         'is_active': asbool(item_dict['is_active']),
         'allow_client_filters': asbool(item_dict['allow_client_filters']),
         'max_response_size': max_response_size if max_response_size else '',

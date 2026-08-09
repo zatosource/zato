@@ -20,11 +20,12 @@ from gevent import sleep, spawn
 from redis import Redis
 
 # Zato
+from zato.common.alerting.seed import ensure_alerting_definitions
 from zato.common.rule_engine.changes import ModuleCtx as ChangesCtx
 from zato.common.rule_engine.invocation import RulesetInvoker
 from zato.common.rule_engine.sql import RuleSQLBackend
 from zato.common.rule_engine.sql.constants import Default_DB_URL, Env_DB_URL, Env_Success_Capture_Percent
-from zato.common.rule_engine.sql.database import create_database_engine
+from zato.common.rule_engine.sql.database import create_database_engine, create_schema
 from zato.common.rule_engine.sql.decisions import CapturePolicy
 from zato.common.rule_engine.sql.errors import InvalidStoreInputError
 from zato.common.typing_ import cast_
@@ -76,7 +77,15 @@ def _build_backend() -> 'RuleSQLBackend':
     else:
         engine = create_database_engine(database_url)
 
+    # .. the tables come into being on first run and every later call is a no-op ..
+    create_schema(engine)
+
     out = RuleSQLBackend.from_engine(engine)
+
+    # .. and a new environment gains the alerting vocabulary and the default
+    # alert rules - a store that already holds them keeps what it has.
+    ensure_alerting_definitions(out)
+
     return out
 
 # ################################################################################################################################

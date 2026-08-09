@@ -1,0 +1,111 @@
+{% extends "zato/dashboard_base.html" %}
+
+{% block html_title %}Alert rule editor{% endblock %}
+
+{% block dashboard_extra_css %}
+<link rel="stylesheet" type="text/css" href="/shared-ui/webapp/fonts.css">
+<link rel="stylesheet" type="text/css" href="/shared-ui/rule-engine/css/editor-embed.css">
+<link rel="stylesheet" type="text/css" href="/shared-ui/rule-engine/css/editor.css">
+<link rel="stylesheet" type="text/css" href="/static/css/alerting.css">
+{% endblock %}
+
+{% block dashboard_domain_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/webapp/js/shared.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/webapp/js/shell.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/data.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/vocabulary.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/editor-model.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/editor-checks.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/editor-render.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/editor-views.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/editor-live.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/editor-drag.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/editor-actions.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+
+    shared.initShell();
+
+    editorView.init(document.getElementById('rule-editor'), {
+        urls: {
+            rulesets: '{% url "alert-rules-api-definitions" %}?object_type=ruleset',
+            vocabularies: '{% url "alert-rules-api-definitions" %}?object_type=vocabulary',
+            validate: '{% url "alert-rules-api-validate" %}',
+            render: '{% url "alert-rules-api-render" %}',
+            save: '{% url "alert-rules-api-save" %}',
+            preview: function(id) { return '/zato/alerting/api/preview/' + id + '/'; },
+            vocabularyGet: function(id) { return '/zato/alerting/api/vocabulary/' + id + '/'; },
+            completion: function(id) { return '/zato/alerting/api/completion/' + id + '/'; },
+        },
+        ruleset: '{{ definition_id }}',
+        rule: {% if rule_key %}'{{ rule_key|escapejs }}'{% else %}null{% endif %},
+        newRuleName: '{{ new_rule_name|escapejs }}',
+        showLivePanel: false,
+        csrfToken: $.cookie('csrftoken'),
+        navigateToRule: function(rulesetId, ruleKey) {
+            window.location.href = '{% url "alert-rules-editor" %}?cluster={{ cluster_id }}&rule=' +
+                encodeURIComponent(ruleKey);
+        },
+    });
+
+    $.fn.zato.dashboard_kit.reveal();
+});
+</script>
+{% endblock %}
+
+{% block dashboard_tiles %}{% endblock %}
+{% block dashboard_header_pill %}{% endblock %}
+{% block dashboard_chart_header_content %}{% endblock %}
+{% block dashboard_time_range_options %}{% endblock %}
+{% block dashboard_refresh_options %}{% endblock %}
+
+{% block dashboard_grid %}
+
+        <div class="dashboard-card alerting-editor-card">
+            <div class="dashboard-card-header">
+                <h3>
+                {% if new_rule_name %}
+                    New alert rule - {{ new_rule_name }}
+                {% elif rule_name %}
+                    Alert rule - {{ rule_name }}
+                {% else %}
+                    Alert rules
+                {% endif %}
+                </h3>
+                <a class="dashboard-pill dashboard-pill-clickable alerting-editor-back"
+                   href="{% url "alert-rules" %}?cluster={{ cluster_id }}">Back to alert rules</a>
+            </div>
+
+            <div class="rule-editor" id="rule-editor">
+                <div class="main-column">
+                    <div class="toolbar">
+                        <span class="view-switcher">
+                            <button class="button-ghost toggled" data-action="set-view" data-view="sentence">Sentence</button>
+                            <button class="button-ghost" data-action="set-view" data-view="expression">Expression</button>
+                            <button class="button-ghost" data-action="set-view" data-view="table">Table</button>
+                            <button class="button-ghost" data-action="set-view" data-view="document">Document</button>
+                        </span>
+                        <button class="button-ghost" data-action="open-rule-menu">Rules</button>
+                        <span class="toolbar-separator"></span>
+                        <button class="button-primary" data-action="save">Save</button>
+                    </div>
+
+                    <div class="editor-area" id="editor-area"></div>
+
+                    <div class="problems-panel">
+                        <div class="problems-head" id="problems-head">Problems</div>
+                        <div class="problems-list" id="problems-list"></div>
+                    </div>
+                </div>
+
+                <div class="vocabulary-pane" id="vocabulary-pane">
+                    <div class="vocabulary-head">
+                        <span class="vocabulary-head-label">Vocabulary</span>
+                        <button class="vocabulary-collapse" id="vocabulary-collapse-button" data-action="toggle-vocabulary"></button>
+                    </div>
+                    <div class="vocabulary-list" id="vocabulary-list"></div>
+                </div>
+            </div>
+        </div>
+
+{% endblock %}

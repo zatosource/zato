@@ -6,12 +6,12 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The generic collectors - pure functions over the audit database and live channel
-# metrics, each returning findings for the engine to route through the rules.
-# The absence collector is the general form of "something expected did not happen":
-# an event of one type arrived and the expected following event on the same cid
-# did not, within the deadline - sent-not-acked for HL7, started-not-terminated
-# for a workflow run, always the same anti-join.
+# The fact producers - pure functions over the audit database and live channel metrics.
+# Each one measures without judging: error rates with their windows and counts, outstanding
+# backlogs with the age of the oldest waiting item, feed silence. The thresholds that used
+# to live here are in the alert rules now - the rule engine decides what the measures mean,
+# the collectors only report them. One fact per (source, object) pair carries every measure,
+# with zero as the resting value, so a rule can reference any measure without erroring out.
 
 from __future__ import annotations
 
@@ -22,218 +22,183 @@ from datetime import datetime, timedelta
 from sqlalchemy import and_, case, func, select
 
 # Zato
-from zato.common.alerting.model import finding_list, new_finding, FindingKind
-from zato.common.audit_log.api import event_table, AuditOutcome
+from zato.common.audit_log.api import event_table, AuditEvent, AuditOutcome
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from sqlalchemy.engine import Engine
-    from zato.common.monitoring.health import EndpointMetrics
-    from zato.common.typing_ import stranydict
-    EndpointMetrics = EndpointMetrics
+    from zato.common.typing_ import dictlist, stranydict
     Engine = Engine
+    dictlist = dictlist
     stranydict = stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def collect_missing_followups(
-    engine:'Engine',
-    source:'str',
-    begin_event_type:'str',
-    end_event_type:'str',
-    deadline_seconds:'int',
-    now:'datetime',
-    *,
-    object_name:'str' = '',
-    link:'str' = '',
-    ) -> 'finding_list':
-    """ The clock-driven absence collector - every event of the begin type older
-    than the deadline whose cid received no event of the end type becomes a finding.
-    Sent-not-acked is this collector parameterized with message-sent and ack-received.
+# The window the error-rate measures cover.
+Default_Window_Seconds = 300
+
+# The event types the outstanding measures pair up - sent-not-acked is the canonical absence check.
+Default_Begin_Event_Type = AuditEvent.Message_Sent
+Default_End_Event_Type   = AuditEvent.Ack_Received
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def new_fact(source:'str', object_name:'str') -> 'stranydict':
+    """ One per-object fact in its resting state - every measure present, every measure zero,
+    so a rule referencing any of them always finds a value.
     """
-
-    # Our response to produce
-    out:'finding_list' = []
-
-    # Only events that had enough time to receive their follow-up count
-    deadline_cutoff = now - timedelta(seconds=deadline_seconds)
-    deadline_cutoff_iso = deadline_cutoff.isoformat()
-
-    # The cids the expected follow-up did arrive on
-    followed_up = select(event_table.c.cid).where(and_(
-        event_table.c.source == source,
-        event_table.c.event_type == end_event_type,
-    ))
-
-    conditions = [
-        event_table.c.source == source,
-        event_table.c.event_type == begin_event_type,
-        event_table.c.event_time_iso <= deadline_cutoff_iso,
-        event_table.c.cid.not_in(followed_up),
-    ]
-
-    # The optional criterion narrows the match only when set
-    if object_name:
-        conditions.append(event_table.c.object_name == object_name)
-
-    statement = select(
-        event_table.c.cid,
-        event_table.c.object_name,
-        event_table.c.msg_id,
-        event_table.c.event_time_iso,
-    ).where(and_(*conditions)).order_by(event_table.c.id)
-
-    with engine.connect() as connection:
-        rows = connection.execute(statement).fetchall()
-
-    for cid, row_object_name, msg_id, event_time_iso in rows:
-
-        message = f'No `{end_event_type}` followed `{begin_event_type}` of `{msg_id or cid}`'
-        message += f' on `{row_object_name}` within {deadline_seconds}s, recorded {event_time_iso}'
-
-        finding = new_finding(FindingKind.Missing_Followup, source, row_object_name, message, link=link)
-        out.append(finding)
+    out = {
+        'source': source,
+        'object_name': object_name,
+        'error_rate': 0.0,
+        'error_count': 0,
+        'total_count': 0,
+        'window_seconds': 0,
+        'outstanding': 0,
+        'oldest_waiting_seconds': 0,
+        'silent_seconds': 0,
+    }
 
     return out
 
 # ################################################################################################################################
-
-def collect_outstanding_threshold(
-    engine:'Engine',
-    source:'str',
-    begin_event_type:'str',
-    end_event_type:'str',
-    threshold:'int',
-    *,
-    object_name:'str' = '',
-    link:'str' = '',
-    ) -> 'finding_list':
-    """ Returns one finding per object whose count of begin events without
-    the expected follow-up reached the threshold - detects a growing backlog
-    regardless of how long each item has been waiting.
-    """
-
-    # Our response to produce
-    out:'finding_list' = []
-
-    # The cids the expected follow-up did arrive on
-    followed_up = select(event_table.c.cid).where(and_(
-        event_table.c.source == source,
-        event_table.c.event_type == end_event_type,
-    ))
-
-    conditions = [
-        event_table.c.source == source,
-        event_table.c.event_type == begin_event_type,
-        event_table.c.cid.not_in(followed_up),
-    ]
-
-    # The optional criterion narrows the match only when set
-    if object_name:
-        conditions.append(event_table.c.object_name == object_name)
-
-    statement = select(
-        event_table.c.object_name,
-        func.count(),
-    ).where(and_(*conditions)).group_by(event_table.c.object_name)
-
-    with engine.connect() as connection:
-        rows = connection.execute(statement).fetchall()
-
-    for row_object_name, outstanding_count in rows:
-
-        # Objects below the threshold raise nothing
-        if outstanding_count < threshold:
-            continue
-
-        message = f'{outstanding_count} outstanding `{begin_event_type}` events on `{row_object_name}`'
-        message += f' await `{end_event_type}` (threshold: {threshold})'
-
-        finding = new_finding(FindingKind.Outstanding, source, row_object_name, message, link=link)
-        out.append(finding)
-
-    return out
-
 # ################################################################################################################################
 
-def collect_error_rate(
+def collect_error_rate_facts(
     engine:'Engine',
-    source:'str',
     window_seconds:'int',
-    threshold:'float',
     now:'datetime',
     *,
+    source:'str' = '',
     object_name:'str' = '',
-    link:'str' = '',
-    ) -> 'finding_list':
-    """ Returns one finding per object whose share of error outcomes within the window
-    reached the threshold - detects degradation while the channel remains operational.
+    ) -> 'dictlist':
+    """ Measures the share of error outcomes within the window, one row of measures
+    per (source, object) pair that had any traffic at all.
     """
 
     # Our response to produce
-    out:'finding_list' = []
+    out:'dictlist' = []
 
     window_start = now - timedelta(seconds=window_seconds)
     window_start_iso = window_start.isoformat()
 
     conditions = [
-        event_table.c.source == source,
         event_table.c.event_time_iso >= window_start_iso,
     ]
 
-    # The optional criterion narrows the match only when set
+    # The optional criteria narrow the measures only when set
+    if source:
+        conditions.append(event_table.c.source == source)
+
     if object_name:
         conditions.append(event_table.c.object_name == object_name)
 
-    # Errors and totals per object, in one pass
+    # Errors and totals per source and object, in one pass
     error_case = case((event_table.c.outcome == AuditOutcome.Error, 1), else_=0)
 
     statement = select(
+        event_table.c.source,
         event_table.c.object_name,
         func.count(),
         func.sum(error_case),
-    ).where(and_(*conditions)).group_by(event_table.c.object_name)
+    ).where(and_(*conditions)).group_by(event_table.c.source, event_table.c.object_name)
 
     with engine.connect() as connection:
         rows = connection.execute(statement).fetchall()
 
-    for row_object_name, total, errors in rows:
+    for row_source, row_object_name, total, errors in rows:
 
         # Each backend returns its own numeric type for a sum, hence the conversion
-        error_rate = float(errors) / total
+        error_count = int(errors)
 
-        # Objects below the threshold raise nothing
-        if error_rate < threshold:
-            continue
+        fact = new_fact(row_source, row_object_name)
+        fact['error_rate'] = error_count / total
+        fact['error_count'] = error_count
+        fact['total_count'] = total
+        fact['window_seconds'] = window_seconds
 
-        percent = round(error_rate * 100)
-        message = f'Error rate on `{row_object_name}` is {percent}% over the last {window_seconds}s'
-        message += f' ({errors} of {total}, threshold: {round(threshold * 100)}%)'
-
-        finding = new_finding(FindingKind.Error_Rate, source, row_object_name, message, link=link)
-        out.append(finding)
+        out.append(fact)
 
     return out
 
 # ################################################################################################################################
 
-def collect_feed_silent(
-    metrics_by_name:'stranydict',
-    source:'str',
-    silent_after_seconds:'float',
+def collect_outstanding_facts(
+    engine:'Engine',
+    begin_event_type:'str',
+    end_event_type:'str',
+    now:'datetime',
     *,
-    link:'str' = '',
-    ) -> 'finding_list':
-    """ Returns one finding per channel whose feed has been silent past the threshold -
-    runs over the live endpoint metrics the channel state produces, not over
-    the audit database, because silence leaves no rows to query.
+    source:'str' = '',
+    object_name:'str' = '',
+    ) -> 'dictlist':
+    """ Measures the backlog of begin events without the expected follow-up, one row
+    of measures per (source, object) pair - the count of waiting items and the age
+    of the oldest one, so rules can watch both a growing backlog and a stalled item.
     """
 
     # Our response to produce
-    out:'finding_list' = []
+    out:'dictlist' = []
+
+    # The cids the expected follow-up did arrive on
+    followed_up = select(event_table.c.cid).where(
+        event_table.c.event_type == end_event_type,
+    )
+
+    conditions = [
+        event_table.c.event_type == begin_event_type,
+        event_table.c.cid.not_in(followed_up),
+    ]
+
+    # The optional criteria narrow the measures only when set
+    if source:
+        conditions.append(event_table.c.source == source)
+
+    if object_name:
+        conditions.append(event_table.c.object_name == object_name)
+
+    statement = select(
+        event_table.c.source,
+        event_table.c.object_name,
+        func.count(),
+        func.min(event_table.c.event_time_iso),
+    ).where(and_(*conditions)).group_by(event_table.c.source, event_table.c.object_name)
+
+    with engine.connect() as connection:
+        rows = connection.execute(statement).fetchall()
+
+    for row_source, row_object_name, outstanding_count, oldest_iso in rows:
+
+        # How long the oldest waiting item has been waiting
+        oldest_time = datetime.fromisoformat(oldest_iso)
+        waiting = now - oldest_time
+        waiting_seconds = round(waiting.total_seconds())
+
+        fact = new_fact(row_source, row_object_name)
+        fact['outstanding'] = outstanding_count
+        fact['oldest_waiting_seconds'] = waiting_seconds
+
+        out.append(fact)
+
+    return out
+
+# ################################################################################################################################
+
+def collect_feed_silent_facts(
+    metrics_by_name:'stranydict',
+    source:'str',
+    ) -> 'dictlist':
+    """ Measures how long each channel's feed has been silent - runs over the live
+    endpoint metrics the channel state produces, not over the audit database,
+    because silence leaves no rows to query.
+    """
+
+    # Our response to produce
+    out:'dictlist' = []
 
     for name, metrics in metrics_by_name.items():
 
@@ -241,16 +206,52 @@ def collect_feed_silent(
         if not metrics.silence_seconds:
             continue
 
-        # Channels still inside the window raise nothing
-        if metrics.silence_seconds < silent_after_seconds:
-            continue
+        fact = new_fact(source, name)
+        fact['silent_seconds'] = round(metrics.silence_seconds)
 
-        silence = round(metrics.silence_seconds)
-        message = f'Feed on `{name}` silent for {silence}s (threshold: {round(silent_after_seconds)}s)'
+        out.append(fact)
 
-        finding = new_finding(FindingKind.Feed_Silent, source, name, message, link=link)
-        out.append(finding)
+    return out
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+def collect_facts(
+    engine:'Engine',
+    metrics_by_name:'stranydict',
+    source:'str',
+    now:'datetime',
+    *,
+    window_seconds:'int' = Default_Window_Seconds,
+    begin_event_type:'str' = Default_Begin_Event_Type,
+    end_event_type:'str' = Default_End_Event_Type,
+    ) -> 'dictlist':
+    """ Runs every fact producer and merges their measures into one fact
+    per (source, object) pair - the input the alert rules match over.
+    """
+    error_rate_facts = collect_error_rate_facts(engine, window_seconds, now)
+    outstanding_facts = collect_outstanding_facts(engine, begin_event_type, end_event_type, now)
+    silent_facts = collect_feed_silent_facts(metrics_by_name, source)
+
+    # One merged fact per (source, object) pair - later measures land in the same fact
+    by_object:'dict[tuple[str, str], stranydict]' = {}
+
+    for fact_list in (error_rate_facts, outstanding_facts, silent_facts):
+        for fact in fact_list:
+
+            key = (fact['source'], fact['object_name'])
+
+            if key in by_object:
+                merged = by_object[key]
+
+                # Only the measures this producer actually took overwrite the resting zeroes
+                for name, value in fact.items():
+                    if value:
+                        merged[name] = value
+            else:
+                by_object[key] = fact
+
+    out = list(by_object.values())
     return out
 
 # ################################################################################################################################

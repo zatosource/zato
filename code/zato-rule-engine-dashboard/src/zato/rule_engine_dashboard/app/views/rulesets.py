@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django.http import JsonResponse
 
 # Zato
+from zato.common.rule_engine import webapi
 from zato.common.rule_engine.loading import publish_and_reload
 from zato.common.rule_engine.references import apply_ruleset_rename, preview_ruleset_rename
 from zato.common.rule_engine.render import render_documents
@@ -56,17 +57,17 @@ def ruleset_list(req:'any_') -> 'any_':
     limit = read_int(req, 'limit', _default_limit)
     offset = read_int(req, 'offset', _default_offset)
 
-    backend = get_backend()
-    records = backend.definitions.list(
+    result, note = webapi.list_definitions(
+        get_backend(),
         object_type=object_type,
         search_text=search_text,
         include_inactive=include_inactive,
         limit=limit,
         offset=offset,
     )
-    items = serialize_all(records, definition_row)
+    note_answer(req, note)
 
-    out = json_items(req, items, 'definition', 'definitions')
+    out = JsonResponse(result)
     return out
 
 # ################################################################################################################################
@@ -108,31 +109,20 @@ def ruleset_preview(req:'any_', definition_id:'int') -> 'any_':
     backend = get_backend()
     actor = req.user.username
 
-    record = backend.definitions.get(definition_id)
-    document = deserialize_document(record.document)
+    result, note = webapi.preview_definition(backend, definition_id)
+
+    # The shared preview stops at the definition and its document - the history
+    # and the follow state are this screen's own additions.
     events = backend.events.list(definition_id=definition_id, limit=_preview_event_limit)
     is_following = backend.follows.is_following(actor=actor, definition_id=definition_id)
 
-    # Only documents that carry rule documents have a readable rendered form.
-    if Documents_Key in document:
-        documents = document[Documents_Key]
-        rendered = render_documents(documents)
-        rules_text = count_text(len(documents), 'rule', 'rules')
-        note = f'{record.object_type} `{record.name}` version {record.current_version}, {rules_text}'
-    else:
-        rendered = None
-        note = f'{record.object_type} `{record.name}` version {record.current_version}'
+    result['events'] = serialize_all(events, event_row)
+    result['is_following'] = is_following
 
     events_text = count_text(len(events), 'history event', 'history events')
     note_answer(req, f'{note}, {events_text}')
 
-    out = JsonResponse({
-        'definition': definition_row(record),
-        'document': document,
-        'rendered': rendered,
-        'events': serialize_all(events, event_row),
-        'is_following': is_following,
-    })
+    out = JsonResponse(result)
     return out
 
 # ################################################################################################################################

@@ -1,0 +1,256 @@
+/* ------------------------------------------------------------ */
+/* Incidents - shared tokens                                     */
+/* ------------------------------------------------------------ */
+
+:root {
+    --incidents-status-awaiting: #b96b00;
+    --incidents-status-approved: #037ac7;
+    --incidents-status-rejected: #8a8a8a;
+    --incidents-status-resolved: #2e7d32;
+    --incidents-status-new: #063c65;
+    --incidents-modal-backdrop: rgba(0, 0, 0, 0.45);
+    --incidents-text: #1a1a2e;
+    --incidents-text-muted: #71717a;
+    --incidents-border-light: rgba(0, 0, 0, 0.06);
+    --incidents-link: #037ac7;
+
+    /* The viewport minus the top menu and the section's own margins */
+    --incidents-listing-min-height: calc(100vh - 130px);
+}
+
+/* ------------------------------------------------------------ */
+/* Incidents - listing layout, one card like security posture   */
+/* ------------------------------------------------------------ */
+
+.dashboard-hero,
+.dashboard-chart-section {
+    display: none;
+}
+
+.dashboard-grid-section {
+    grid-template-columns: 1fr;
+    margin-top: 20px;
+    min-height: var(--incidents-listing-min-height);
+}
+
+.dashboard-grid-section .dashboard-card {
+    max-height: none;
+}
+
+.incidents-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.incidents-card .dashboard-card-header {
+    flex-wrap: wrap;
+}
+
+.incidents-card .dashboard-tabs {
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+/* ------------------------------------------------------------ */
+/* Incidents - listing table                                     */
+/* ------------------------------------------------------------ */
+
+.incidents-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.incidents-table th {
+    padding: 12px 24px 8px 24px;
+    border-bottom: 1px solid var(--incidents-border-light);
+    color: var(--incidents-text);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-align: left;
+    text-transform: uppercase;
+}
+
+.incidents-table td {
+    padding: 10px 24px;
+    border-bottom: 1px solid var(--incidents-border-light);
+    color: var(--incidents-text);
+    vertical-align: middle;
+}
+
+.incidents-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.incidents-table a {
+    color: var(--incidents-link);
+    text-decoration: none;
+}
+
+/* ------------------------------------------------------------ */
+/* Incidents - shared bits of the listing and the detail        */
+/* ------------------------------------------------------------ */
+
+.incidents-page {
+    padding-top: 0.5rem;
+}
+
+.incidents-message {
+    max-width: 32rem;
+}
+
+.incidents-empty {
+    margin: 0;
+    padding: 16px 24px;
+    color: var(--incidents-text-muted);
+    font-size: 13px;
+}
+
+/* The detail screen flows its own headings, so its empty notes align with them */
+.incidents-page .incidents-empty {
+    padding: 0.6rem 0;
+}
+
+.incidents-status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.incidents-status-awaiting-approval {
+    background: var(--incidents-status-awaiting);
+}
+
+.incidents-status-approved {
+    background: var(--incidents-status-approved);
+}
+
+.incidents-status-rejected {
+    background: var(--incidents-status-rejected);
+}
+
+.incidents-status-resolved {
+    background: var(--incidents-status-resolved);
+}
+
+.incidents-status-new {
+    background: var(--incidents-status-new);
+}
+
+.incidents-heading {
+    margin: 1.4rem 0 0.4rem 0;
+    color: var(--primary-dark);
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.incidents-facts {
+    max-width: 46rem;
+}
+
+.incidents-fact-key {
+    width: 11rem;
+    font-weight: 600;
+    color: var(--primary-dark);
+}
+
+.incidents-diagnosis,
+.incidents-remediation {
+    max-width: 46rem;
+    font-size: 13px;
+    white-space: pre-wrap;
+}
+
+.incidents-event-data {
+    max-width: 24rem;
+    font-family: monospace;
+    font-size: 12px;
+    word-break: break-all;
+}
+
+/* ------------------------------------------------------------ */
+/* Incidents - actions and the confirmation popup                */
+/* ------------------------------------------------------------ */
+
+.incidents-actions {
+    margin: 1.2rem 0;
+}
+
+.incidents-button {
+    padding: 6px 16px;
+    margin-right: 0.6rem;
+    border: 1px solid var(--primary-dark);
+    border-radius: 3px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary-dark);
+    background: #fff;
+    cursor: pointer;
+}
+
+.incidents-button-approve,
+.incidents-button-confirm {
+    border-color: var(--incidents-status-resolved);
+    color: #fff;
+    background: var(--incidents-status-resolved);
+}
+
+.incidents-button-resubmit {
+    border-color: var(--incidents-status-approved);
+    color: #fff;
+    background: var(--incidents-status-approved);
+}
+
+.incidents-modal-overlay {
+    display: flex;
+    position: fixed;
+    align-items: center;
+    justify-content: center;
+    inset: 0;
+    background: var(--incidents-modal-backdrop);
+    z-index: 1000;
+}
+
+.incidents-modal-overlay.detail-hidden {
+    display: none;
+}
+
+.incidents-modal {
+    width: 26rem;
+    padding: 1.2rem 1.4rem;
+    border-radius: 4px;
+    background: #fff;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+}
+
+.incidents-modal-text {
+    margin: 0 0 0.8rem 0;
+    font-size: 14px;
+}
+
+.incidents-modal-reason {
+    width: 100%;
+    margin-bottom: 0.8rem;
+    padding: 6px;
+    border: 1px solid var(--border-light);
+    border-radius: 3px;
+    font-size: 13px;
+}
+
+.incidents-modal-error {
+    margin: 0 0 0.8rem 0;
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--incidents-status-awaiting);
+    word-break: break-all;
+}
+
+.incidents-modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+}

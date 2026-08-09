@@ -13,9 +13,8 @@ from datetime import timedelta
 from sqlalchemy import update
 
 # Zato
-from zato.common.alerting.collectors import collect_error_rate, collect_feed_silent, collect_missing_followups, \
-    collect_outstanding_threshold
-from zato.common.alerting.model import FindingKind
+from zato.common.alerting.collectors import collect_error_rate_facts, collect_facts, collect_feed_silent_facts, \
+    collect_outstanding_facts, new_fact
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.monitoring.health import EndpointMetrics
 from zato.common.util.api import utcnow
@@ -37,8 +36,8 @@ _server_name = 'test-alerting-server'
 _channel_name = 'hl7.test.channel'
 _other_channel_name = 'hl7.other.channel'
 
-# The deadline the absence checks give a follow-up, in seconds
-_deadline_seconds = 300
+# The window the error-rate measures cover in these tests, in seconds
+_window_seconds = 3600
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -58,196 +57,204 @@ def _backdate(event_id:'int', event_time:'datetime') -> 'None':
 
 # ################################################################################################################################
 
-def _seed_sent(audit_log:'AuditLog', cid:'str', event_time:'datetime', *, object_name:'str'=_channel_name) -> 'int':
-    """ Stores one outbound message the way the live pipeline would have recorded it.
+def _seed_outcome(audit_log:'AuditLog', cid:'str', outcome:'str', *, object_name:'str'=_channel_name) -> 'None':
+    """ Stores one inbound acknowledgment event with the given outcome.
     """
-    event_id = audit_log.insert(AuditSource.MLLP_Outgoing, AuditEvent.Message_Sent, object_name,
-        cid=cid, msg_id=f'MSG-{cid}', outcome=AuditOutcome.OK)
-
-    _backdate(event_id, event_time)
-
-    return event_id
-
-# ################################################################################################################################
-
-def _seed_ack(audit_log:'AuditLog', cid:'str', event_time:'datetime') -> 'None':
-    """ Stores the acknowledgment that answers one outbound message.
-    """
-    event_id = audit_log.insert(AuditSource.MLLP_Outgoing, AuditEvent.Ack_Received, _channel_name,
-        cid=cid, outcome=AuditOutcome.OK)
-
-    _backdate(event_id, event_time)
+    _ = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Ack_Sent, object_name, cid=cid, outcome=outcome)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestMissingFollowups:
+class TestNewFact:
 
-    def test_a_message_without_its_ack_past_the_deadline_is_a_finding(self) -> 'None':
+    def test_a_resting_fact_carries_every_measure_at_zero(self) -> 'None':
+        fact = new_fact(AuditSource.MLLP_Channel, _channel_name)
+
+        assert fact['source'] == AuditSource.MLLP_Channel
+        assert fact['object_name'] == _channel_name
+        assert fact['error_rate'] == 0.0
+        assert fact['error_count'] == 0
+        assert fact['total_count'] == 0
+        assert fact['window_seconds'] == 0
+        assert fact['outstanding'] == 0
+        assert fact['oldest_waiting_seconds'] == 0
+        assert fact['silent_seconds'] == 0
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestErrorRateFacts:
+
+    def test_the_measures_say_what_happened_without_judging(self) -> 'None':
         audit_log = AuditLog(_server_name)
         engine = get_audit_engine()
         now = utcnow()
 
-        # Sent long ago, never acknowledged ..
-        _ = _seed_sent(audit_log, 'cid-overdue', now - timedelta(seconds=600))
+        # Three of four outcomes are errors - a 75% error rate
+        _seed_outcome(audit_log, 'facts-er-1', AuditOutcome.Error)
+        _seed_outcome(audit_log, 'facts-er-2', AuditOutcome.Error)
+        _seed_outcome(audit_log, 'facts-er-3', AuditOutcome.Error)
+        _seed_outcome(audit_log, 'facts-er-4', AuditOutcome.OK)
 
-        # .. sent long ago and acknowledged ..
-        _ = _seed_sent(audit_log, 'cid-answered', now - timedelta(seconds=600))
-        _seed_ack(audit_log, 'cid-answered', now - timedelta(seconds=550))
+        facts = collect_error_rate_facts(engine, _window_seconds, now)
 
-        # .. sent a moment ago - still inside its deadline.
-        _ = _seed_sent(audit_log, 'cid-recent', now - timedelta(seconds=10))
+        assert len(facts) == 1
 
-        findings = collect_missing_followups(engine, AuditSource.MLLP_Outgoing,
-            AuditEvent.Message_Sent, AuditEvent.Ack_Received, _deadline_seconds, now)
-
-        # Only the overdue unanswered one raises a finding
-        assert len(findings) == 1
-        assert findings[0].kind == FindingKind.Missing_Followup
-        assert findings[0].source == AuditSource.MLLP_Outgoing
-        assert findings[0].object_name == _channel_name
-        assert 'MSG-cid-overdue' in findings[0].message
+        fact = facts[0]
+        assert fact['source'] == AuditSource.MLLP_Channel
+        assert fact['object_name'] == _channel_name
+        assert fact['error_rate'] == 0.75
+        assert fact['error_count'] == 3
+        assert fact['total_count'] == 4
+        assert fact['window_seconds'] == _window_seconds
 
 # ################################################################################################################################
 
-    def test_the_object_filter_narrows_the_sweep(self) -> 'None':
+    def test_each_object_gets_its_own_fact(self) -> 'None':
         audit_log = AuditLog(_server_name)
         engine = get_audit_engine()
         now = utcnow()
 
-        _ = _seed_sent(audit_log, 'cid-ours', now - timedelta(seconds=600))
-        _ = _seed_sent(audit_log, 'cid-other', now - timedelta(seconds=600), object_name=_other_channel_name)
+        _seed_outcome(audit_log, 'facts-two-1', AuditOutcome.Error)
+        _seed_outcome(audit_log, 'facts-two-2', AuditOutcome.OK, object_name=_other_channel_name)
 
-        findings = collect_missing_followups(engine, AuditSource.MLLP_Outgoing,
-            AuditEvent.Message_Sent, AuditEvent.Ack_Received, _deadline_seconds, now,
-            object_name=_other_channel_name)
+        facts = collect_error_rate_facts(engine, _window_seconds, now)
+        by_name = {fact['object_name']: fact for fact in facts}
 
-        assert len(findings) == 1
-        assert findings[0].object_name == _other_channel_name
+        assert len(facts) == 2
+        assert by_name[_channel_name]['error_rate'] == 1.0
+        assert by_name[_other_channel_name]['error_rate'] == 0.0
 
 # ################################################################################################################################
-# ################################################################################################################################
 
-class TestOutstandingThreshold:
-
-    def test_a_backlog_at_the_threshold_is_a_finding_per_object(self) -> 'None':
+    def test_traffic_outside_the_window_never_counts(self) -> 'None':
         audit_log = AuditLog(_server_name)
         engine = get_audit_engine()
         now = utcnow()
 
-        # Three outstanding on one channel, one on the other
-        for index in range(3):
-            _ = _seed_sent(audit_log, f'cid-backlog-{index}', now)
+        # One error, moved outside the window
+        event_id = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Ack_Sent, _channel_name,
+            cid='facts-old-1', outcome=AuditOutcome.Error)
+        _backdate(event_id, now - timedelta(seconds=_window_seconds + 60))
 
-        _ = _seed_sent(audit_log, 'cid-single', now, object_name=_other_channel_name)
+        facts = collect_error_rate_facts(engine, _window_seconds, now)
 
-        findings = collect_outstanding_threshold(engine, AuditSource.MLLP_Outgoing,
-            AuditEvent.Message_Sent, AuditEvent.Ack_Received, 3)
-
-        # Only the channel that reached the threshold raises a finding
-        assert len(findings) == 1
-        assert findings[0].kind == FindingKind.Outstanding
-        assert findings[0].object_name == _channel_name
-        assert '3 outstanding' in findings[0].message
+        assert facts == []
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-    def test_answered_messages_never_count_toward_the_backlog(self) -> 'None':
+class TestOutstandingFacts:
+
+    def test_a_message_without_its_followup_counts_with_its_age(self) -> 'None':
         audit_log = AuditLog(_server_name)
         engine = get_audit_engine()
         now = utcnow()
 
-        _ = _seed_sent(audit_log, 'cid-answered', now)
-        _seed_ack(audit_log, 'cid-answered', now)
-
-        _ = _seed_sent(audit_log, 'cid-waiting', now)
-
-        findings = collect_outstanding_threshold(engine, AuditSource.MLLP_Outgoing,
-            AuditEvent.Message_Sent, AuditEvent.Ack_Received, 2)
-
-        assert findings == []
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class TestErrorRate:
-
-    def test_a_channel_erroring_at_the_threshold_is_a_finding(self) -> 'None':
-        audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
-        now = utcnow()
-
-        # Half of the recent messages on one channel failed ..
-        for index in range(2):
-            _ = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Message_Received, _channel_name,
-                cid=f'cid-rate-ok-{index}', outcome=AuditOutcome.OK)
-
-        for index in range(2):
-            _ = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Message_Received, _channel_name,
-                cid=f'cid-rate-error-{index}', outcome=AuditOutcome.Error)
-
-        # .. while the other channel stays clean.
-        _ = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Message_Received, _other_channel_name,
-            cid='cid-rate-clean', outcome=AuditOutcome.OK)
-
-        findings = collect_error_rate(engine, AuditSource.MLLP_Channel, 300, 0.5, now)
-
-        assert len(findings) == 1
-        assert findings[0].kind == FindingKind.Error_Rate
-        assert findings[0].object_name == _channel_name
-        assert '50%' in findings[0].message
-
-# ################################################################################################################################
-
-    def test_old_errors_fall_out_of_the_window(self) -> 'None':
-        audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
-        now = utcnow()
-
-        event_id = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Message_Received, _channel_name,
-            cid='cid-rate-old', outcome=AuditOutcome.Error)
+        # One message sent ten minutes ago, never acknowledged
+        event_id = audit_log.insert(AuditSource.MLLP_Outgoing, AuditEvent.Message_Sent, _channel_name,
+            cid='facts-mf-1', msg_id='MSG-facts-mf-1', outcome=AuditOutcome.OK)
         _backdate(event_id, now - timedelta(seconds=600))
 
-        findings = collect_error_rate(engine, AuditSource.MLLP_Channel, 300, 0.5, now)
+        facts = collect_outstanding_facts(engine, AuditEvent.Message_Sent, AuditEvent.Ack_Received, now)
 
-        assert findings == []
+        assert len(facts) == 1
+
+        fact = facts[0]
+        assert fact['source'] == AuditSource.MLLP_Outgoing
+        assert fact['object_name'] == _channel_name
+        assert fact['outstanding'] == 1
+        assert fact['oldest_waiting_seconds'] >= 599
+
+# ################################################################################################################################
+
+    def test_an_answered_message_never_counts(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # A message and its acknowledgment, on the same correlation id
+        _ = audit_log.insert(AuditSource.MLLP_Outgoing, AuditEvent.Message_Sent, _channel_name,
+            cid='facts-ok-1', outcome=AuditOutcome.OK)
+        _ = audit_log.insert(AuditSource.MLLP_Outgoing, AuditEvent.Ack_Received, _channel_name,
+            cid='facts-ok-1', outcome=AuditOutcome.OK)
+
+        facts = collect_outstanding_facts(engine, AuditEvent.Message_Sent, AuditEvent.Ack_Received, now)
+
+        assert facts == []
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestFeedSilent:
+class TestFeedSilentFacts:
 
-    def test_a_quiet_feed_is_a_finding(self) -> 'None':
+    def test_silence_is_measured_and_no_traffic_is_skipped(self) -> 'None':
+        silent_metrics = EndpointMetrics()
+        silent_metrics.silence_seconds = 900.0
 
-        silent = EndpointMetrics()
-        silent.silence_seconds = 400.0
-
-        active = EndpointMetrics()
-        active.silence_seconds = 5.0
+        # A channel that never received anything is a configuration matter, not a dead feed
+        never_active_metrics = EndpointMetrics()
+        never_active_metrics.silence_seconds = 0.0
 
         metrics_by_name = {
-            _channel_name: silent,
-            _other_channel_name: active,
+            _channel_name: silent_metrics,
+            _other_channel_name: never_active_metrics,
         }
 
-        findings = collect_feed_silent(metrics_by_name, AuditSource.MLLP_Channel, 300.0)
+        facts = collect_feed_silent_facts(metrics_by_name, AuditSource.MLLP_Channel)
 
-        assert len(findings) == 1
-        assert findings[0].kind == FindingKind.Feed_Silent
-        assert findings[0].object_name == _channel_name
-        assert 'silent for 400s' in findings[0].message
+        assert len(facts) == 1
+        assert facts[0]['object_name'] == _channel_name
+        assert facts[0]['silent_seconds'] == 900
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestCollectFacts:
+
+    def test_the_measures_of_one_object_merge_into_one_fact(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
+
+        # The same channel errors and sits silent at the same time
+        _seed_outcome(audit_log, 'facts-merge-1', AuditOutcome.Error)
+
+        metrics = EndpointMetrics()
+        metrics.silence_seconds = 1200.0
+        metrics_by_name = {_channel_name: metrics}
+
+        facts = collect_facts(engine, metrics_by_name, AuditSource.MLLP_Channel, now)
+
+        assert len(facts) == 1
+
+        fact = facts[0]
+        assert fact['error_rate'] == 1.0
+        assert fact['total_count'] == 1
+        assert fact['silent_seconds'] == 1200
+        assert fact['outstanding'] == 0
 
 # ################################################################################################################################
 
-    def test_a_feed_that_never_started_is_not_silent(self) -> 'None':
+    def test_different_objects_stay_apart(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        now = utcnow()
 
-        # Zero silence means nothing arrived yet - a configuration matter, not a dead feed
-        never_started = EndpointMetrics()
-        never_started.silence_seconds = 0.0
+        _seed_outcome(audit_log, 'facts-apart-1', AuditOutcome.Error)
 
-        findings = collect_feed_silent({_channel_name: never_started}, AuditSource.MLLP_Channel, 300.0)
+        metrics = EndpointMetrics()
+        metrics.silence_seconds = 700.0
+        metrics_by_name = {_other_channel_name: metrics}
 
-        assert findings == []
+        facts = collect_facts(engine, metrics_by_name, AuditSource.MLLP_Channel, now)
+        by_name = {fact['object_name']: fact for fact in facts}
+
+        assert len(facts) == 2
+        assert by_name[_channel_name]['error_rate'] == 1.0
+        assert by_name[_channel_name]['silent_seconds'] == 0
+        assert by_name[_other_channel_name]['silent_seconds'] == 700
+        assert by_name[_other_channel_name]['error_rate'] == 0.0
 
 # ################################################################################################################################
 # ################################################################################################################################

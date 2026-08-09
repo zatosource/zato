@@ -9,39 +9,39 @@
 {% endblock %}
 
 {% block content %}
-<div class="main-column">
-  <div class="toolbar">
-    <span class="view-switcher">
-      <button class="button-ghost toggled" id="view-sentence" onclick="editorView.setView('sentence')">Sentence</button>
-      <button class="button-ghost" id="view-expression" onclick="editorView.setView('expression')">Expression</button>
-      <button class="button-ghost" id="view-table" onclick="editorView.setView('table')">Table</button>
-      <button class="button-ghost" id="view-document" onclick="editorView.setView('document')">Document</button>
-    </span>
-    <button class="button-ghost" onclick="editorView.openRuleMenu(event)">Rules</button>
-    <span class="toolbar-separator"></span>
-    <button class="button-ghost" onclick="editorView.openTests()"
-      >Test</button>
-    <button class="button-primary" onclick="editorView.save(this)"
-      >Save</button>
+<div class="rule-editor" id="rule-editor">
+  <div class="main-column">
+    <div class="toolbar">
+      <span class="view-switcher">
+        <button class="button-ghost toggled" data-action="set-view" data-view="sentence">Sentence</button>
+        <button class="button-ghost" data-action="set-view" data-view="expression">Expression</button>
+        <button class="button-ghost" data-action="set-view" data-view="table">Table</button>
+        <button class="button-ghost" data-action="set-view" data-view="document">Document</button>
+      </span>
+      <button class="button-ghost" data-action="open-rule-menu">Rules</button>
+      <span class="toolbar-separator"></span>
+      <button class="button-ghost" data-action="open-tests">Test</button>
+      <button class="button-primary" data-action="save">Save</button>
+    </div>
+
+    <div class="editor-area" id="editor-area"></div>
+
+    <div class="live-panel" id="live-panel"></div>
+
+    <div class="problems-panel">
+      <div class="problems-head" id="problems-head">Problems</div>
+      <div class="problems-list" id="problems-list"></div>
+    </div>
   </div>
 
-  <div class="editor-area" id="editor-area"></div>
-
-  <div class="live-panel" id="live-panel"></div>
-
-  <div class="problems-panel">
-    <div class="problems-head" id="problems-head">Problems</div>
-    <div class="problems-list" id="problems-list"></div>
+  <!-- Vocabulary pane -->
+  <div class="vocabulary-pane" id="vocabulary-pane">
+    <div class="vocabulary-head">
+      <span class="vocabulary-head-label">Vocabulary</span>
+      <button class="vocabulary-collapse" id="vocabulary-collapse-button" data-action="toggle-vocabulary"></button>
+    </div>
+    <div class="vocabulary-list" id="vocabulary-list"></div>
   </div>
-</div>
-
-<!-- Vocabulary pane -->
-<div class="vocabulary-pane" id="vocabulary-pane">
-  <div class="vocabulary-head">
-    <span class="vocabulary-head-label">Vocabulary</span>
-    <button class="vocabulary-collapse" id="vocabulary-collapse-button" onclick="shared.toggleVocabulary()"></button>
-  </div>
-  <div class="vocabulary-list" id="vocabulary-list"></div>
 </div>
 {% endblock %}
 
@@ -55,4 +55,33 @@
 <script src="{% static 'rule-engine/js/editor-live.js' %}"></script>
 <script src="{% static 'rule-engine/js/editor-drag.js' %}"></script>
 <script src="{% static 'rule-engine/js/editor-actions.js' %}"></script>
+<script>
+(function() {
+    var search = new URLSearchParams(window.location.search);
+
+    editorView.init(document.getElementById('rule-editor'), {
+        urls: {
+            rulesets: '/rules/rulesets/?object_type=ruleset',
+            vocabularies: '/rules/rulesets/?object_type=vocabulary',
+            testSets: '/rules/test-sets/',
+            validate: '/rules/editor/validate/',
+            render: '/rules/editor/render/',
+            save: '/rules/editor/save/',
+            outcomes: '/rules/editor/outcomes/',
+            preview: function(id) { return '/rules/rulesets/' + id + '/preview/'; },
+            vocabularyGet: function(id) { return '/rules/vocabulary/' + id + '/'; },
+            completion: function(id) { return '/rules/editor/completion/' + id + '/'; },
+        },
+        ruleset: search.get('ruleset'),
+        rule: search.get('rule'),
+        showLivePanel: true,
+        rulesetsUrl: '/rulesets/',
+        tablesUrl: '/tables/',
+        testsUrl: '/tests/',
+        navigateToRule: function(rulesetId, ruleKey) {
+            window.location.href = '/editor/?ruleset=' + rulesetId + '&rule=' + encodeURIComponent(ruleKey);
+        },
+    });
+})();
+</script>
 {% endblock %}

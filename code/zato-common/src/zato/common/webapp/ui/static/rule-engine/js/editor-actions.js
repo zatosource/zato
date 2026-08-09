@@ -20,7 +20,9 @@ editorView.openMenu = function(anchor, title, items, isMulti) {
     this.menuIsMulti = isMulti;
 
     var menu = document.createElement('div');
-    menu.className = 'editor-completion-menu';
+
+    // The menu hangs off document.body, outside the container, so it carries the scope class itself
+    menu.className = 'rule-editor editor-completion-menu';
 
     var titleElement = document.createElement('div');
     titleElement.className = 'editor-completion-title';
@@ -169,7 +171,7 @@ editorView.openSetMenu = function(event, conditionIndex) {
             if (position > -1) { condition.values.splice(position, 1); } else { condition.values.push(value); }
 
             editorView.render();
-            var freshAnchor = document.querySelector('[data-chip="' + chipName + '"]');
+            var freshAnchor = editorView.element('[data-chip="' + chipName + '"]');
             editorView.openSetMenu({stopPropagation: function() {}, currentTarget: freshAnchor}, conditionIndex);
         }});
     });
@@ -334,8 +336,8 @@ editorView.setView = function(mode) {
     this.viewMode = mode;
     this.expressionMode = mode === 'expression';
 
-    ['sentence', 'expression', 'table', 'document'].forEach(function(name) {
-        document.getElementById('view-' + name).classList.toggle('toggled', name === mode);
+    this.elements('[data-action="set-view"]').forEach(function(button) {
+        button.classList.toggle('toggled', button.getAttribute('data-view') === mode);
     });
     this.render();
 };
@@ -347,7 +349,7 @@ editorView.openRuleMenu = function(event) {
 
     Object.keys(editorModel.documents).forEach(function(key) {
         items.push({label: editorModel.documents[key].name, checked: key === editorModel.ruleKey, onPick: function() {
-            window.location.href = '/editor/?ruleset=' + editorModel.definitionId + '&rule=' + encodeURIComponent(key);
+            editorModel.config.navigateToRule(editorModel.definitionId, key);
         }});
     });
 
@@ -355,7 +357,7 @@ editorView.openRuleMenu = function(event) {
 };
 
 editorView.openTests = function() {
-    window.location.href = '/tests/?ruleset=' + editorModel.definitionId;
+    window.location.href = editorModel.config.testsUrl + '?ruleset=' + editorModel.definitionId;
 };
 
 // ////////////////////////////////////////////////////////////////////////
@@ -363,6 +365,7 @@ editorView.openTests = function() {
 editorView.save = function(button) {
     var handlers = shared.inFlight(button, function(payload) {
         shared.popover(button, 'Saved as version ' + payload.version + '.', 'green');
+        if (editorModel.config.onSaved !== undefined) { editorModel.config.onSaved(payload); }
     }, function(message) {
         shared.popover(button, message, 'red');
     });
@@ -375,58 +378,124 @@ editorView.save = function(button) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-document.addEventListener('keydown', function(event) {
-    var tagName = event.target.tagName;
-    if (tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT') { return; }
+// What each data-action attribute in the editor's markup runs when clicked - the markup itself
+// carries no inline handlers, so the editor works under a CSP that bans inline scripts
+editorView.dispatch = function(event, target) {
+    var action = target.getAttribute('data-action');
+    var listName = target.getAttribute('data-list');
+    var itemIndex = parseInt(target.getAttribute('data-item'));
+    var valueIndex = parseInt(target.getAttribute('data-value'));
 
-    if (editorView.menuElement !== null) {
-        if (event.key === 'ArrowDown') { event.preventDefault(); editorView.moveMenuChoice(1); }
-        if (event.key === 'ArrowUp') { event.preventDefault(); editorView.moveMenuChoice(-1); }
-        if (event.key === 'Enter') { event.preventDefault(); editorView.pickMenuChoice(); }
-        if (event.key === 'Escape') { editorView.closeMenu(); }
-        return;
-    }
+    // The existing handlers expect the event-like shape of an inline handler's event
+    var synthetic = {
+        stopPropagation: function() { event.stopPropagation(); },
+        currentTarget: target,
+    };
 
-    if (editorModel.rule === null) { return; }
-
-    if (event.key === 'ArrowRight') { event.preventDefault(); editorView.moveToken(1); }
-    if (event.key === 'ArrowLeft') { event.preventDefault(); editorView.moveToken(-1); }
-    if (event.key === 'Enter' || event.key === 'ArrowDown') { event.preventDefault(); editorView.openActiveToken(); }
-});
-
-document.addEventListener('mousedown', function(event) {
-    if (editorView.menuElement !== null && !editorView.menuElement.contains(event.target)) {
-        editorView.closeMenu();
-    }
-});
+    if (action === 'edit-value') { this.editValue(synthetic, listName, itemIndex, valueIndex); }
+    if (action === 'open-subject-menu') { this.openSubjectMenu(synthetic, itemIndex); }
+    if (action === 'open-comparator-menu') { this.openComparatorMenu(synthetic, itemIndex); }
+    if (action === 'open-set-menu') { this.openSetMenu(synthetic, itemIndex); }
+    if (action === 'open-action-menu') { this.openActionMenu(synthetic, listName, itemIndex); }
+    if (action === 'remove-condition') { this.removeCondition(synthetic, itemIndex); }
+    if (action === 'remove-action') { this.removeAction(synthetic, listName, itemIndex); }
+    if (action === 'add-condition') { this.addCondition(); }
+    if (action === 'add-action') { this.addAction(listName); }
+    if (action === 'toggle-joiner') { this.toggleJoiner(itemIndex); }
+    if (action === 'pick-vocabulary') { this.pickVocabulary(target.getAttribute('data-path')); }
+    if (action === 'apply-fix') { this.applyFix(itemIndex); }
+    if (action === 'set-view') { this.setView(target.getAttribute('data-view')); }
+    if (action === 'open-rule-menu') { this.openRuleMenu(synthetic); }
+    if (action === 'open-tests') { this.openTests(); }
+    if (action === 'save') { this.save(target); }
+    if (action === 'toggle-vocabulary') { shared.toggleVocabulary(); }
+};
 
 // ////////////////////////////////////////////////////////////////////////
 
-editorModel.load(function() {
-    editorView.render();
+editorView.bindListeners = function() {
+    var self = this;
 
-    var termToHighlight = shared.termFromHash();
-    if (termToHighlight !== null && editorModel.rule !== null) {
-        var termElements = [];
+    this.container.addEventListener('click', function(event) {
+        var target = event.target.closest('[data-action]');
+        if (target === null || !self.container.contains(target)) { return; }
+        self.dispatch(event, target);
+    });
 
-        var conditionsUseTerm = editorModel.rule.conditions.some(function(condition) {
-            return condition.subject === termToHighlight;
-        });
-        var actionsUseTerm = editorModel.rule.thenActions.concat(editorModel.rule.elseActions).some(function(action) {
-            return action.target === termToHighlight;
-        });
-        if (conditionsUseTerm || actionsUseTerm) {
-            document.querySelectorAll('.editor-rule-sentence').forEach(function(sentence) {
-                termElements.push(sentence);
-            });
+    document.addEventListener('keydown', function(event) {
+        var tagName = event.target.tagName;
+        if (tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT') { return; }
+
+        if (editorView.menuElement !== null) {
+            if (event.key === 'ArrowDown') { event.preventDefault(); editorView.moveMenuChoice(1); }
+            if (event.key === 'ArrowUp') { event.preventDefault(); editorView.moveMenuChoice(-1); }
+            if (event.key === 'Enter') { event.preventDefault(); editorView.pickMenuChoice(); }
+            if (event.key === 'Escape') { editorView.closeMenu(); }
+            return;
         }
 
-        document.querySelectorAll('.vocabulary-item[data-path="' + termToHighlight + '"]').forEach(function(item) {
-            termElements.push(item);
-        });
+        if (editorModel.rule === null) { return; }
 
-        shared.applyTermHighlight(termElements);
+        if (event.key === 'ArrowRight') { event.preventDefault(); editorView.moveToken(1); }
+        if (event.key === 'ArrowLeft') { event.preventDefault(); editorView.moveToken(-1); }
+        if (event.key === 'Enter' || event.key === 'ArrowDown') { event.preventDefault(); editorView.openActiveToken(); }
+    });
+
+    document.addEventListener('mousedown', function(event) {
+        if (editorView.menuElement !== null && !editorView.menuElement.contains(event.target)) {
+            editorView.closeMenu();
+        }
+    });
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+editorView.highlightTermFromHash = function() {
+    var termToHighlight = shared.termFromHash();
+    if (termToHighlight === null || editorModel.rule === null) { return; }
+
+    var termElements = [];
+
+    var conditionsUseTerm = editorModel.rule.conditions.some(function(condition) {
+        return condition.subject === termToHighlight;
+    });
+    var actionsUseTerm = editorModel.rule.thenActions.concat(editorModel.rule.elseActions).some(function(action) {
+        return action.target === termToHighlight;
+    });
+    if (conditionsUseTerm || actionsUseTerm) {
+        editorView.elements('.editor-rule-sentence').forEach(function(sentence) {
+            termElements.push(sentence);
+        });
     }
-});
+
+    editorView.elements('.vocabulary-item[data-path="' + termToHighlight + '"]').forEach(function(item) {
+        termElements.push(item);
+    });
+
+    shared.applyTermHighlight(termElements);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// The one entry point - the host application says where the editor lives and how to reach
+// its endpoints, nothing boots as a side effect of loading the scripts
+editorView.init = function(container, config) {
+    this.container = container;
+
+    Object.keys(config).forEach(function(key) {
+        editorModel.config[key] = config[key];
+    });
+
+    if (config.csrfToken !== undefined) { data.config.csrfToken = config.csrfToken; }
+
+    this.bindListeners();
+
+    editorModel.load(function() {
+        editorView.render();
+        editorView.highlightTermFromHash();
+    });
+};
+
+// ////////////////////////////////////////////////////////////////////////
 
 })();

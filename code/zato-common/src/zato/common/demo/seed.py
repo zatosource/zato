@@ -29,9 +29,8 @@ from random import Random
 from sqlalchemy import delete, func, select
 
 # Zato
-from zato.common.alerting.model import new_finding, AlertAction, AlertSeverity, AlertState, FindingKind
+from zato.common.alerting.model import new_finding, new_rule, AlertAction, AlertSeverity, AlertState, FindingKind
 from zato.common.alerting.engine import record_alert_event
-from zato.common.alerting.sweep import parse_rule
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, \
     AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.common import alert_table, event_dedup_table
@@ -387,8 +386,8 @@ class _BulkAuditLog(AuditLog):
 # ################################################################################################################################
 
 def get_demo_rule_defs() -> 'dictlist':
-    """ Returns the demo alert rules in the dict shape they are stored in -
-    the same defs parse into AlertRule objects for the seeded alert history.
+    """ Returns the demo alert rules - the defs the seeded alert history
+    is composed under, one rule name per alert lifecycle state shown.
     """
     out = [
         {
@@ -995,7 +994,16 @@ def _write_alerts(audit_log:'_BulkAuditLog', now:'datetime', rng:'Random') -> 'd
     rules = {}
 
     for rule_def in get_demo_rule_defs():
-        rules[rule_def['name']] = parse_rule(rule_def['name'], rule_def)
+        rules[rule_def['name']] = new_rule(
+            rule_def['name'],
+            rule_def['kind'],
+            source=rule_def['source'],
+            object_name=rule_def['object_name'],
+            action=rule_def['action'],
+            action_config=rule_def['action_config'],
+            config=rule_def['config'],
+            dedup_window_seconds=rule_def['dedup_window_seconds'],
+        )
 
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 

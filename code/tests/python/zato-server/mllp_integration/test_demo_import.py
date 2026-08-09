@@ -8,8 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The demo-data import over a live server - the same import_demo_data function
 # a dashboard view invokes, exercised end to end. The import creates the demo
-# connections, stores the alert rules, seeds the backdated history into the
-# server's audit database and sends the live burst through the main demo channel.
+# connections, seeds the backdated history into the server's audit database
+# and sends the live burst through the main demo channel.
 
 # stdlib
 import json
@@ -47,7 +47,8 @@ _main_channel_name = 'demo.hl7.adt.main'
 # a fixed size of its own, separate from the seeded error burst
 _live_burst_count = 20
 
-# How many connections and rules the import manages
+# How many connections the import manages and how many rule names
+# the seeded alert history is composed under
 _connection_count = 5
 _rule_count = 3
 
@@ -155,13 +156,12 @@ class TestDemoImport:
 # ################################################################################################################################
 
     def test_04_removal_undoes_the_import(self, zato_client:'any_', zato_server:'anydict') -> 'None':
-        """ The removal path deletes the connections, the rules and every demo
-        audit row, so the other test modules start from a clean slate.
+        """ The removal path deletes the connections and every demo audit row,
+        so the other test modules start from a clean slate.
         """
         result = zato_client.invoke('test.demo.purge', {})
 
         assert len(result['deleted_connections']) == _connection_count, result
-        assert len(result['deleted_rules']) == _rule_count, result
 
         # No demo rows are left in the audit database
         audit_db_path = zato_server['audit_db_path']

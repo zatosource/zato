@@ -1,0 +1,115 @@
+{% extends "zato/dashboard_base.html" %}
+
+{% block html_title %}Alert rules{% endblock %}
+
+{% block dashboard_extra_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+<link rel="stylesheet" type="text/css" href="/static/css/alerting.css">
+{% endblock %}
+
+{% block dashboard_domain_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/alerting.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    var kit = $.fn.zato.dashboard_kit;
+
+    kit.tabs.init({
+        tab_selector: '.alerting-card .dashboard-tab',
+        panel_prefix: 'alerting-tab-panel-',
+        default_tab: '{{ default_tab }}',
+        storage_key: 'alerting-listing-tab'
+    });
+
+    $.fn.zato.alerting.init({
+        actionUrl: '{% url "alert-rules-action" %}?cluster={{ cluster_id }}',
+        editorUrl: '{% url "alert-rules-editor" %}',
+        clusterId: '{{ cluster_id }}'
+    });
+
+    kit.reveal();
+});
+</script>
+{% endblock %}
+
+{% block dashboard_tiles %}{% endblock %}
+{% block dashboard_header_pill %}{% endblock %}
+{% block dashboard_chart_header_content %}{% endblock %}
+{% block dashboard_time_range_options %}{% endblock %}
+{% block dashboard_refresh_options %}{% endblock %}
+
+{% block dashboard_grid %}
+
+        <div class="dashboard-card alerting-card">
+            <div class="dashboard-card-header dashboard-card-header-tabs">
+                <div class="dashboard-tabs" role="tablist" aria-label="Alert rule states">
+
+                {% for tab in tabs %}
+                    <button type="button"
+                            class="dashboard-tab"
+                            data-tab="{{ tab.name }}"
+                            role="tab"
+                            aria-selected="false">
+                        <span class="dashboard-tab-label">{{ tab.label }} ({{ tab.count }})</span>
+                    </button>
+                {% endfor %}
+
+                </div>
+
+                <div class="alerting-controls">
+                    <a href="javascript:void(0)" id="alerting-new-link">Create a new alert rule</a>
+                    {% if has_draft %}
+                    <span class="alerting-publish-prompt">
+                        Draft version {{ current_version }}, live version {{ live_version|default:"none" }}
+                        &middot;
+                        <a href="javascript:void(0)" id="alerting-publish-link">Publish</a>
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% for tab in tabs %}
+            <div class="dashboard-tab-panel"
+                 id="alerting-tab-panel-{{ tab.name }}"
+                 role="tabpanel"
+                 hidden>
+
+            {% if tab.items %}
+            <table class="zato-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>Name</th>
+                        <th style="text-align:center">Active</th>
+                        <th>Docs</th>
+                        <th>&nbsp;</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for item in tab.items %}
+                    <tr>
+                        <td class='numbering'>{{ forloop.counter }}</td>
+                        <td><a href="{% url "alert-rules-editor" %}?cluster={{ cluster_id }}&amp;rule={{ item.key|urlencode }}">{{ item.name }}</a></td>
+                        <td class="text-center"><a href="javascript:void(0)"
+                            data-rule-action="{% if item.is_active %}deactivate{% else %}activate{% endif %}"
+                            data-rule="{{ item.key }}"
+                            data-rule-name="{{ item.name }}">{{ item.is_active|yesno:'Yes,No' }}</a></td>
+                        <td>{{ item.docs }}</td>
+                        <td><a href="javascript:void(0)"
+                            data-rule-action="delete"
+                            data-rule="{{ item.key }}"
+                            data-rule-name="{{ item.name }}">Delete</a></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="alerting-empty">No alert rules here</p>
+            {% endif %}
+
+            </div>
+            {% endfor %}
+
+        </div>
+
+{% endblock %}

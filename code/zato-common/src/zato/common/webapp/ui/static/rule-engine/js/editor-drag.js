@@ -7,20 +7,20 @@ editorView.dragState = null;
 // ////////////////////////////////////////////////////////////////////////
 
 editorView.clearDropMarks = function() {
-    document.querySelectorAll('.editor-line-drop, .editor-group-drop').forEach(function(element) {
+    this.elements('.editor-line-drop, .editor-group-drop').forEach(function(element) {
         element.classList.remove('editor-line-drop');
         element.classList.remove('editor-group-drop');
     });
 };
 
 editorView.markPossibleDrops = function() {
-    document.querySelectorAll('.editor-line, .editor-group').forEach(function(element) {
+    this.elements('.editor-line, .editor-group').forEach(function(element) {
         element.classList.add('editor-drop-possible');
     });
 };
 
 editorView.clearPossibleDrops = function() {
-    document.querySelectorAll('.editor-drop-possible').forEach(function(element) {
+    this.elements('.editor-drop-possible').forEach(function(element) {
         element.classList.remove('editor-drop-possible');
     });
 };
@@ -30,7 +30,7 @@ editorView.clearPossibleDrops = function() {
 editorView.attachVocabularyDrag = function() {
     var self = this;
 
-    document.querySelectorAll('.vocabulary-item[draggable="true"]').forEach(function(element) {
+    this.elements('.vocabulary-item[draggable="true"]').forEach(function(element) {
         element.addEventListener('dragstart', function(event) {
             var path = element.getAttribute('data-path');
             self.dragState = {path: path};
@@ -56,7 +56,7 @@ editorView.attachVocabularyDrag = function() {
 editorView.attachDropLines = function() {
     var self = this;
 
-    document.querySelectorAll('.editor-line').forEach(function(line) {
+    this.elements('.editor-line').forEach(function(line) {
         var dropName = line.getAttribute('data-drop');
 
         line.addEventListener('dragover', function(event) {
@@ -80,7 +80,7 @@ editorView.attachDropLines = function() {
         });
     });
 
-    document.querySelectorAll('.editor-group').forEach(function(group) {
+    this.elements('.editor-group').forEach(function(group) {
         var groupName = group.getAttribute('data-group');
         var separator = groupName.lastIndexOf('-');
         var dropName = groupName.slice(0, separator);

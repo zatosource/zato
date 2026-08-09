@@ -8,9 +8,13 @@ var data = {
         unreachableMessage: 'The application is unreachable, the request never completed',
         notJsonMessage: 'The application answered with something other than JSON, ' +
             'the session may have expired - reloading the page signs you back in',
+
+        // The host application sets this through editorView.init
+        csrfToken: '',
     },
 
     csrfToken: function() {
+        if (data.config.csrfToken !== '') { return data.config.csrfToken; }
         return document.querySelector('[name=csrfmiddlewaretoken]').value;
     },
 

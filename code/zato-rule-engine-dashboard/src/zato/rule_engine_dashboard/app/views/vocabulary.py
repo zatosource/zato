@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django.http import JsonResponse
 
 # Zato
+from zato.common.rule_engine import webapi
 from zato.common.rule_engine.bootstrap import infer_from_document, vocabulary_from_payload
 from zato.common.rule_engine.parser import parse_data_details
 from zato.common.rule_engine.references import apply_rename, preview_rename
@@ -59,12 +60,10 @@ def _vocabulary_note(vocabulary:'anydict') -> 'str':
 def vocabulary_get(req:'any_', definition_id:'int') -> 'any_':
     """ The vocabulary screen's tree - one stored vocabulary document.
     """
-    backend = get_backend()
-    document = backend.definitions.get_document(definition_id)
+    result, note = webapi.get_vocabulary(get_backend(), definition_id)
+    note_answer(req, note)
 
-    note_answer(req, _vocabulary_note(document))
-
-    out = JsonResponse({'vocabulary': document})
+    out = JsonResponse(result)
     return out
 
 # ################################################################################################################################

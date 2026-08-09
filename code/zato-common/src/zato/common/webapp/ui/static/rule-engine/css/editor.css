@@ -1,48 +1,65 @@
 /* ---------------------------------------------------------- */
+/* Editor - the root class scopes everything so the editor     */
+/* can sit inside a page that has its own global CSS           */
+/* ---------------------------------------------------------- */
+
+.rule-editor {
+    flex: 1;
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    font-family: var(--font);
+    font-size: 13px;
+    color: var(--text);
+    background: var(--background);
+}
+
+/* ---------------------------------------------------------- */
 /* Editor - sentence area                                     */
 /* ---------------------------------------------------------- */
 
-.editor-area {
+.rule-editor .editor-area {
     flex: 1;
     overflow: auto;
     padding: 26px 30px;
 }
 
-.editor-rule-sentence {
+.rule-editor .editor-rule-sentence {
     max-width: 860px;
     font-size: 15px;
     line-height: 2.3;
     color: var(--text2);
 }
-.editor-rule-sentence.editor-expression-mode {
+.rule-editor .editor-rule-sentence.editor-expression-mode {
     font-family: var(--mono);
     font-size: 13.5px;
 }
 
-.editor-line {
+.rule-editor .editor-line {
     border: 1px dashed transparent;
     border-radius: var(--radius-3);
     padding: 2px 6px;
 }
-.editor-line-drop {
+.rule-editor .editor-line-drop {
     border-color: var(--blue);
     background: var(--blue-tint-07);
 }
 
-.editor-drop-possible {
+.rule-editor .editor-drop-possible {
     outline: 1px dashed var(--text5);
     outline-offset: 2px;
     border-radius: var(--radius-3);
 }
 
-.editor-group-drop {
+.rule-editor .editor-group-drop {
     outline: 1px dashed var(--blue);
     outline-offset: 2px;
     border-radius: var(--radius-3);
     background: var(--blue-tint-14);
 }
 
-.editor-keyword {
+.rule-editor .editor-keyword {
     color: var(--blue);
     font-weight: 600;
     margin: 0 2px;
@@ -52,7 +69,7 @@
 /* Editor - token chips                                       */
 /* ---------------------------------------------------------- */
 
-.editor-token {
+.rule-editor .editor-token {
     display: inline-block;
     padding: 1px 7px;
     border-radius: var(--radius-2);
@@ -60,34 +77,34 @@
     margin: 0 2px;
     border: 1px solid transparent;
 }
-.editor-token:hover {
+.rule-editor .editor-token:hover {
     background-image: var(--hover-veil);
     border-color: var(--border);
 }
-.editor-token-subject {
+.rule-editor .editor-token-subject {
     color: var(--text);
 }
-.editor-token-comparator {
+.rule-editor .editor-token-comparator {
     color: var(--amber);
 }
-.editor-token-value {
+.rule-editor .editor-token-value {
     color: var(--green);
     font-family: var(--mono);
     font-size: 0.92em;
 }
-.editor-token-action {
+.rule-editor .editor-token-action {
     color: var(--text);
 }
-.editor-token-joiner {
+.rule-editor .editor-token-joiner {
     color: var(--blue);
     font-weight: 600;
 }
 
-.editor-token-active {
+.rule-editor .editor-token-active {
     box-shadow: 0 0 0 2px var(--blue);
 }
 
-.editor-and-group {
+.rule-editor .editor-and-group {
     display: inline-block;
     border: 1px solid var(--border);
     border-radius: var(--radius-3);
@@ -95,23 +112,23 @@
     background: var(--blue-tint-05);
 }
 
-.editor-token-placeholder {
+.rule-editor .editor-token-placeholder {
     color: var(--indigo);
     font-family: var(--mono);
     font-size: 0.88em;
     border: 1px dashed var(--indigo);
     opacity: 0.85;
 }
-.editor-token-placeholder:hover {
+.rule-editor .editor-token-placeholder:hover {
     background-image: var(--hover-veil);
 }
 
-.editor-token-invalid {
+.rule-editor .editor-token-invalid {
     border-bottom: 2px solid var(--red);
     border-radius: var(--radius-2) var(--radius-2) 0 0;
 }
 
-.editor-token-input {
+.rule-editor .editor-token-input {
     background: var(--panel);
     border: 1px solid var(--blue);
     border-radius: var(--radius-2);
@@ -128,11 +145,11 @@
 /* Editor - condition and action groups                       */
 /* ---------------------------------------------------------- */
 
-.editor-group {
+.rule-editor .editor-group {
     white-space: nowrap;
     display: inline-block;
 }
-.editor-group-remove {
+.rule-editor .editor-group-remove {
     color: var(--text5);
     cursor: pointer;
     padding: 0 3px;
@@ -141,15 +158,15 @@
     transition: opacity 0.12s;
     vertical-align: 1px;
 }
-.editor-group:hover .editor-group-remove {
+.rule-editor .editor-group:hover .editor-group-remove {
     opacity: 1;
 }
-.editor-group-remove:hover {
+.rule-editor .editor-group-remove:hover {
     color: var(--red);
     background-image: var(--hover-veil);
 }
 
-.editor-add-chip {
+.rule-editor .editor-add-chip {
     display: inline-flex;
     align-items: center;
     gap: 3px;
@@ -163,7 +180,7 @@
     line-height: 1.9;
     vertical-align: 1px;
 }
-.editor-add-chip:hover {
+.rule-editor .editor-add-chip:hover {
     color: var(--text);
     border-color: var(--blue);
 }
@@ -172,7 +189,7 @@
 /* Editor - completion menu                                   */
 /* ---------------------------------------------------------- */
 
-.editor-completion-menu {
+.rule-editor.editor-completion-menu {
     position: fixed;
     z-index: 1300;
     background: var(--panel);
@@ -184,7 +201,7 @@
     overflow: auto;
     padding: 4px 0;
 }
-.editor-completion-title {
+.rule-editor .editor-completion-title {
     padding: 5px 12px 3px;
     font-size: 10px;
     font-weight: 700;
@@ -192,7 +209,7 @@
     text-transform: uppercase;
     letter-spacing: 0.08em;
 }
-.editor-completion-item {
+.rule-editor .editor-completion-item {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -201,19 +218,19 @@
     color: var(--text2);
     cursor: pointer;
 }
-.editor-completion-item:hover,
-.editor-completion-item-active {
+.rule-editor .editor-completion-item:hover,
+.rule-editor .editor-completion-item-active {
     background-image: var(--hover-veil);
     color: var(--text);
 }
-.editor-completion-hint {
+.rule-editor .editor-completion-hint {
     margin-left: auto;
     font-size: 10px;
     color: var(--text5);
     font-family: var(--mono);
     padding-left: 14px;
 }
-.editor-completion-check {
+.rule-editor .editor-completion-check {
     width: 13px;
     flex-shrink: 0;
     color: var(--blue);
@@ -224,33 +241,33 @@
 /* Editor - view switcher                                     */
 /* ---------------------------------------------------------- */
 
-.view-switcher {
+.rule-editor .view-switcher {
     display: inline-flex;
 }
-.view-switcher .button-ghost {
+.rule-editor .view-switcher .button-ghost {
     border-radius: 0;
     margin-left: -1px;
 }
-.view-switcher .button-ghost:first-child {
+.rule-editor .view-switcher .button-ghost:first-child {
     border-radius: var(--radius-2) 0 0 var(--radius-2);
     margin-left: 0;
 }
-.view-switcher .button-ghost:last-child {
+.rule-editor .view-switcher .button-ghost:last-child {
     border-radius: 0 var(--radius-2) var(--radius-2) 0;
 }
-.view-switcher .button-ghost.toggled {
+.rule-editor .view-switcher .button-ghost.toggled {
     position: relative;
     z-index: 1;
 }
 
-.editor-view-note {
+.rule-editor .editor-view-note {
     max-width: 760px;
     font-size: 12px;
     color: var(--text4);
     line-height: 1.6;
     margin-bottom: 16px;
 }
-.editor-view-note a {
+.rule-editor .editor-view-note a {
     color: var(--blue);
 }
 
@@ -258,11 +275,11 @@
 /* Editor - table view                                        */
 /* ---------------------------------------------------------- */
 
-.editor-table {
+.rule-editor .editor-table {
     border-collapse: collapse;
     font-size: 13px;
 }
-.editor-table th {
+.rule-editor .editor-table th {
     background: var(--panel);
     color: var(--text3);
     font-weight: 600;
@@ -272,7 +289,7 @@
     text-align: center;
     min-width: 120px;
 }
-.editor-table th.editor-table-corner {
+.rule-editor .editor-table th.editor-table-corner {
     text-align: left;
     text-transform: uppercase;
     letter-spacing: 0.07em;
@@ -280,25 +297,25 @@
     color: var(--text4);
     min-width: 200px;
 }
-.editor-table td {
+.rule-editor .editor-table td {
     border: 1px solid var(--border);
     padding: 7px 12px;
     color: var(--text2);
     vertical-align: top;
 }
-.editor-table td.editor-table-label {
+.rule-editor .editor-table td.editor-table-label {
     color: var(--text);
     background: var(--panel-raised);
     white-space: nowrap;
 }
-.editor-table td.editor-table-empty {
+.rule-editor .editor-table td.editor-table-empty {
     text-align: center;
     color: var(--text5);
 }
-.editor-table tr.editor-table-actions td {
+.rule-editor .editor-table tr.editor-table-actions td {
     background: var(--filter-span-background);
 }
-.editor-table tr.editor-table-actions td.editor-table-label {
+.rule-editor .editor-table tr.editor-table-actions td.editor-table-label {
     color: var(--blue);
     font-weight: 600;
     background: var(--panel-raised);
@@ -308,7 +325,7 @@
 /* Editor - document view                                     */
 /* ---------------------------------------------------------- */
 
-.editor-document {
+.rule-editor .editor-document {
     background: var(--input-background);
     border: 1px solid var(--border);
     border-radius: var(--radius-3);
@@ -326,13 +343,13 @@
 /* Editor - live outcomes                                     */
 /* ---------------------------------------------------------- */
 
-.live-panel {
+.rule-editor .live-panel {
     border-top: 1px solid var(--border);
     background: var(--sentence-bar-background);
     padding: 10px 24px 12px;
 }
 
-.live-head {
+.rule-editor .live-head {
     font-size: 11px;
     font-weight: 700;
     color: var(--text3);
@@ -340,7 +357,7 @@
     letter-spacing: 0.07em;
     margin-bottom: 8px;
 }
-.live-head-hint {
+.rule-editor .live-head-hint {
     margin-left: 10px;
     font-weight: 400;
     text-transform: none;
@@ -348,11 +365,11 @@
     color: var(--text5);
     font-size: 11px;
 }
-.live-head-hint a {
+.rule-editor .live-head-hint a {
     color: var(--blue);
 }
 
-.live-bar {
+.rule-editor .live-bar {
     display: flex;
     height: 8px;
     border-radius: var(--radius-2);
@@ -361,55 +378,55 @@
     max-width: 560px;
     margin-bottom: 7px;
 }
-.live-bar-segment {
+.rule-editor .live-bar-segment {
     display: block;
     height: 100%;
 }
-.live-bar-passed {
+.rule-editor .live-bar-passed {
     background: var(--green);
 }
-.live-bar-explored {
+.rule-editor .live-bar-explored {
     background: var(--text5);
 }
-.live-bar-failed {
+.rule-editor .live-bar-failed {
     background: var(--red);
 }
 
-.live-counts {
+.rule-editor .live-counts {
     font-size: 12px;
     color: var(--text3);
     margin-bottom: 4px;
 }
-.live-count {
+.rule-editor .live-count {
     font-weight: 600;
 }
-.live-count-passed {
+.rule-editor .live-count-passed {
     color: var(--green);
 }
-.live-count-explored {
+.rule-editor .live-count-explored {
     color: var(--text3);
 }
-.live-count-failed {
+.rule-editor .live-count-failed {
     color: var(--red);
 }
-.live-count-separator {
+.rule-editor .live-count-separator {
     margin: 0 8px;
     color: var(--text5);
 }
 
-.live-error {
+.rule-editor .live-error {
     font-size: 12px;
     color: var(--red);
     margin: 3px 0;
 }
 
-.live-scenarios {
+.rule-editor .live-scenarios {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
     margin-top: 8px;
 }
-.live-scenario {
+.rule-editor .live-scenario {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -420,20 +437,20 @@
     padding: 2px 8px;
     background: var(--panel);
 }
-.live-scenario-badge {
+.rule-editor .live-scenario-badge {
     font-family: var(--mono);
     font-size: 10px;
     font-weight: 600;
 }
-.live-scenario-passed .live-scenario-badge {
+.rule-editor .live-scenario-passed .live-scenario-badge {
     color: var(--green);
 }
-.live-scenario-explored .live-scenario-badge {
+.rule-editor .live-scenario-explored .live-scenario-badge {
     color: var(--text4);
 }
-.live-scenario-failed {
+.rule-editor .live-scenario-failed {
     border-color: var(--red);
 }
-.live-scenario-failed .live-scenario-badge {
+.rule-editor .live-scenario-failed .live-scenario-badge {
     color: var(--red);
 }

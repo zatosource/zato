@@ -6,28 +6,26 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from datetime import timedelta
-
-# SQLAlchemy
-from sqlalchemy import update
-
 # Zato
 from zato.common.alerting.engine import AlertTransports
-from zato.common.alerting.model import AlertAction, Default_Dedup_Window_Seconds, FindingKind
-from zato.common.alerting.sweep import collect_for_rule, parse_rule, run_sweep, Default_Error_Rate_Threshold
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.alerting.model import AlertAction
+from zato.common.alerting.sweep import build_fact_message, read_outcome, run_sweep
+from zato.common.api import Alerting, Incidents
+from zato.common.audit_log.api import get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.monitoring.health import EndpointMetrics
+from zato.common.rule_engine.loading import load_documents
+from zato.common.rule_engine.parser import parse_data_details
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from datetime import datetime
+    from zato.common.alerting.sweep import rule_engine_rule_list
     from zato.common.typing_ import anylist, stranydict
     anylist = anylist
-    datetime = datetime
+    rule_engine_rule_list = rule_engine_rule_list
+    stranydict = stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,6 +39,34 @@ _other_channel_name = 'hl7.sweep.other'
 
 # The addresses the email rules send to
 _addresses = ['ops@example.com']
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The ruleset the sweep tests match through - one incident rule with its config in the
+# outcome keys and one email rule, both written the way the builder writes them.
+_rules_text = """
+rule
+    test_incident_on_errors
+docs
+    A channel erroring on at least half its traffic is diagnosed as an incident.
+when
+    alert.source is 'mllp-channel' and
+    alert.error_rate is at least 0.5
+then
+    outcome.action = 'incident'
+    outcome.llm_conn = 'default.llm'
+
+rule
+    test_email_on_silence
+docs
+    A feed silent for ten minutes raises an email alert.
+when
+    alert.silent_seconds is at least 600
+then
+    outcome.action = 'email'
+    outcome.severity = 'critical'
+""".strip()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -78,18 +104,19 @@ class _TransportRecorder:
 
 # ################################################################################################################################
 
-def _backdate(event_id:'int', event_time:'datetime') -> 'None':
-    """ Moves one stored event back in time - the collectors compare event times,
-    and the tests need events older than their deadlines.
+def _load_rules(text:'str') -> 'rule_engine_rule_list':
+    """ Builds runtime rules out of zrules text, the same way a stored version loads.
     """
-    engine = get_audit_engine()
+    documents, errors = parse_data_details(text, Alerting.Ruleset_Name)
+    assert errors == []
 
-    statement = update(event_table)
-    statement = statement.where(event_table.c.id == event_id)
-    statement = statement.values(event_time_iso=event_time.isoformat())
+    loaded = load_documents(documents)
 
-    with engine.begin() as connection:
-        _ = connection.execute(statement)
+    out = []
+    for full_name in loaded.rule_names:
+        out.append(loaded.manager[full_name])
+
+    return out
 
 # ################################################################################################################################
 
@@ -101,227 +128,134 @@ def _seed_outcome(audit_log:'AuditLog', cid:'str', outcome:'str', *, object_name
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestParseRule:
+class TestReadOutcome:
 
-    def test_a_full_definition_round_trips(self) -> 'None':
-        rule_data = {
-            'kind': FindingKind.Error_Rate,
+    def test_only_prefixed_targets_come_through_stripped(self) -> 'None':
+        then = {
+            'outcome.action': 'incident',
+            'outcome.llm_conn': 'default.llm',
+            'something.else': 'ignored',
+        }
+
+        outcome = read_outcome(then)
+
+        assert outcome == {'action': 'incident', 'llm_conn': 'default.llm'}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestBuildFactMessage:
+
+    def test_only_the_measures_that_were_taken_speak(self) -> 'None':
+        fact = {
             'source': AuditSource.MLLP_Channel,
             'object_name': _channel_name,
-            'action': AlertAction.Slack,
-            'action_config': {'webhook_url': 'https://hooks.example.com/services/T000/B000/XXX'},
-            'config': {'window_seconds': 120, 'threshold': 0.5},
-            'dedup_window_seconds': 1800,
-            'is_active': True,
+            'error_rate': 0.75,
+            'error_count': 3,
+            'total_count': 4,
+            'window_seconds': 300,
+            'outstanding': 0,
+            'oldest_waiting_seconds': 0,
+            'silent_seconds': 0,
         }
 
-        rule = parse_rule('degraded-channels', rule_data)
+        message = build_fact_message('test_incident_on_errors', fact)
 
-        assert rule.name == 'degraded-channels'
-        assert rule.kind == FindingKind.Error_Rate
-        assert rule.source == AuditSource.MLLP_Channel
-        assert rule.object_name == _channel_name
-        assert rule.action == AlertAction.Slack
-        assert rule.action_config['webhook_url'] == 'https://hooks.example.com/services/T000/B000/XXX'
-        assert rule.config == {'window_seconds': 120, 'threshold': 0.5}
-        assert rule.dedup_window_seconds == 1800
-        assert rule.is_active is True
-
-# ################################################################################################################################
-
-    def test_a_minimal_definition_receives_the_defaults(self) -> 'None':
-        rule_data = {
-            'kind': FindingKind.Feed_Silent,
-        }
-
-        rule = parse_rule('silent-feeds', rule_data)
-
-        assert rule.source == ''
-        assert rule.object_name == ''
-        assert rule.action == AlertAction.Email_Digest
-        assert rule.action_config == {}
-        assert rule.config == {}
-        assert rule.dedup_window_seconds == Default_Dedup_Window_Seconds
-        assert rule.is_active is True
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class TestCollectForRule:
-
-    def test_an_error_rate_rule_runs_its_collector_with_its_own_config(self) -> 'None':
-        audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
-        now = utcnow()
-
-        # Three of four outcomes are errors - a 75% error rate
-        _seed_outcome(audit_log, 'sweep-er-1', AuditOutcome.Error)
-        _seed_outcome(audit_log, 'sweep-er-2', AuditOutcome.Error)
-        _seed_outcome(audit_log, 'sweep-er-3', AuditOutcome.Error)
-        _seed_outcome(audit_log, 'sweep-er-4', AuditOutcome.OK)
-
-        rule = parse_rule('degraded', {
-            'kind': FindingKind.Error_Rate,
-            'config': {'window_seconds': 3600, 'threshold': 0.5},
-        })
-
-        findings = collect_for_rule(engine, rule, {}, now)
-
-        assert len(findings) == 1
-        assert findings[0].kind == FindingKind.Error_Rate
-        assert findings[0].object_name == _channel_name
-
-# ################################################################################################################################
-
-    def test_a_rule_below_its_threshold_collects_nothing(self) -> 'None':
-        audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
-        now = utcnow()
-
-        # One of four outcomes is an error - a 25% error rate
-        _seed_outcome(audit_log, 'sweep-low-1', AuditOutcome.Error)
-        _seed_outcome(audit_log, 'sweep-low-2', AuditOutcome.OK)
-        _seed_outcome(audit_log, 'sweep-low-3', AuditOutcome.OK)
-        _seed_outcome(audit_log, 'sweep-low-4', AuditOutcome.OK)
-
-        rule = parse_rule('degraded', {
-            'kind': FindingKind.Error_Rate,
-            'config': {'window_seconds': 3600, 'threshold': 0.5},
-        })
-
-        findings = collect_for_rule(engine, rule, {}, now)
-
-        assert findings == []
-
-# ################################################################################################################################
-
-    def test_a_missing_followup_rule_finds_the_unanswered_message(self) -> 'None':
-        audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
-        now = utcnow()
-
-        # One message sent past the deadline, never acknowledged
-        event_id = audit_log.insert(AuditSource.MLLP_Outgoing, AuditEvent.Message_Sent, _channel_name,
-            cid='sweep-mf-1', msg_id='MSG-sweep-mf-1', outcome=AuditOutcome.OK)
-        _backdate(event_id, now - timedelta(seconds=600))
-
-        rule = parse_rule('sent-not-acked', {
-            'kind': FindingKind.Missing_Followup,
-            'source': AuditSource.MLLP_Outgoing,
-            'config': {'deadline_seconds': 300},
-        })
-
-        findings = collect_for_rule(engine, rule, {}, now)
-
-        assert len(findings) == 1
-        assert findings[0].kind == FindingKind.Missing_Followup
-        assert 'MSG-sweep-mf-1' in findings[0].message
-
-# ################################################################################################################################
-
-    def test_a_feed_silent_rule_runs_over_the_live_metrics(self) -> 'None':
-        engine = get_audit_engine()
-        now = utcnow()
-
-        silent_metrics = EndpointMetrics()
-        silent_metrics.silence_seconds = 900.0
-
-        active_metrics = EndpointMetrics()
-        active_metrics.silence_seconds = 5.0
-
-        metrics_by_name = {
-            _channel_name: silent_metrics,
-            _other_channel_name: active_metrics,
-        }
-
-        rule = parse_rule('silent-feeds', {
-            'kind': FindingKind.Feed_Silent,
-            'config': {'silent_after_seconds': 600},
-        })
-
-        findings = collect_for_rule(engine, rule, metrics_by_name, now)
-
-        assert len(findings) == 1
-        assert findings[0].object_name == _channel_name
-
-# ################################################################################################################################
-
-    def test_an_unknown_kind_collects_nothing(self) -> 'None':
-        engine = get_audit_engine()
-        now = utcnow()
-
-        rule = parse_rule('domain-pack-rule', {
-            'kind': 'certificate-expiring',
-        })
-
-        findings = collect_for_rule(engine, rule, {}, now)
-
-        assert findings == []
-
-# ################################################################################################################################
-
-    def test_the_defaults_apply_when_the_rule_has_no_config(self) -> 'None':
-        audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
-        now = utcnow()
-
-        # Half the outcomes are errors - above the default 25% threshold
-        _seed_outcome(audit_log, 'sweep-def-1', AuditOutcome.Error)
-        _seed_outcome(audit_log, 'sweep-def-2', AuditOutcome.OK)
-
-        rule = parse_rule('degraded', {
-            'kind': FindingKind.Error_Rate,
-        })
-
-        findings = collect_for_rule(engine, rule, {}, now)
-
-        assert len(findings) == 1
-        assert str(round(Default_Error_Rate_Threshold * 100)) in findings[0].message
+        assert 'error rate 75% (3 of 4 over 300s)' in message
+        assert _channel_name in message
+        assert 'outstanding' not in message
+        assert 'silent' not in message
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class TestRunSweep:
 
-    def test_a_sweep_collects_dispatches_and_deduplicates(self) -> 'None':
+    def test_a_matching_fact_dispatches_the_incident_with_the_outcome_config(self) -> 'None':
         audit_log = AuditLog(_server_name)
         engine = get_audit_engine()
         recorder = _TransportRecorder()
         now = utcnow()
 
-        # A degraded channel the error-rate rule will notice
+        # Both outcomes are errors - a 100% error rate
         _seed_outcome(audit_log, 'sweep-run-1', AuditOutcome.Error)
         _seed_outcome(audit_log, 'sweep-run-2', AuditOutcome.Error)
 
-        rules = [
-            parse_rule('degraded', {
-                'kind': FindingKind.Error_Rate,
-                'action': AlertAction.Email_Digest,
-                'action_config': {'addresses': _addresses},
-                'config': {'window_seconds': 3600, 'threshold': 0.5},
-            }),
-        ]
+        rules = _load_rules(_rules_text)
 
-        # The first sweep raises and dispatches ..
-        result = run_sweep(engine, rules, {}, recorder.make(), audit_log, 'cid-sweep-1', now)
+        result = run_sweep(engine, rules, {}, AuditSource.MLLP_Channel, recorder.make(), audit_log, 'cid-sweep-1', now)
 
-        assert result.rule_count == 1
+        assert result.rule_count == 2
+        assert result.fact_count == 1
         assert result.finding_count == 1
         assert result.raised_count == 1
         assert result.deduplicated_count == 0
-        assert result.dispatched == [('degraded', AlertAction.Email_Digest)]
-        assert len(recorder.emails) == 1
+        assert result.dispatched == [('test_incident_on_errors', AlertAction.Invoke_Service)]
+
+        # The incident outcome invokes the diagnosis service with the remaining
+        # outcome keys travelling as the action config
+        assert len(recorder.invocations) == 1
+
+        service, payload = recorder.invocations[0]
+        assert service == Incidents.Service_Diagnose
+        assert payload['object_name'] == _channel_name
+        assert payload['source'] == AuditSource.MLLP_Channel
+        assert payload['action_config']['llm_conn'] == 'default.llm'
+        assert 'error rate 100% (2 of 2' in payload['message']
+
+# ################################################################################################################################
+
+    def test_a_repeated_match_deduplicates_instead_of_raising_anew(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        recorder = _TransportRecorder()
+        now = utcnow()
+
+        _seed_outcome(audit_log, 'sweep-dedup-1', AuditOutcome.Error)
+
+        rules = _load_rules(_rules_text)
+
+        # The first sweep raises and dispatches ..
+        result = run_sweep(engine, rules, {}, AuditSource.MLLP_Channel, recorder.make(), audit_log, 'cid-dedup-1', now)
+
+        assert result.raised_count == 1
+        assert len(recorder.invocations) == 1
 
         # .. and the second one, still inside the dedup window, only counts.
-        result_2 = run_sweep(engine, rules, {}, recorder.make(), audit_log, 'cid-sweep-2', now)
+        result_2 = run_sweep(engine, rules, {}, AuditSource.MLLP_Channel, recorder.make(), audit_log, 'cid-dedup-2', now)
 
         assert result_2.raised_count == 0
         assert result_2.deduplicated_count == 1
         assert result_2.dispatched == []
+        assert len(recorder.invocations) == 1
 
 # ################################################################################################################################
 
-    def test_an_inactive_rule_never_runs_its_collector(self) -> 'None':
+    def test_a_fact_below_the_threshold_matches_nothing(self) -> 'None':
+        audit_log = AuditLog(_server_name)
+        engine = get_audit_engine()
+        recorder = _TransportRecorder()
+        now = utcnow()
+
+        # One of four outcomes is an error - a 25% error rate, below the rule's half
+        _seed_outcome(audit_log, 'sweep-low-1', AuditOutcome.Error)
+        _seed_outcome(audit_log, 'sweep-low-2', AuditOutcome.OK)
+        _seed_outcome(audit_log, 'sweep-low-3', AuditOutcome.OK)
+        _seed_outcome(audit_log, 'sweep-low-4', AuditOutcome.OK)
+
+        rules = _load_rules(_rules_text)
+
+        result = run_sweep(engine, rules, {}, AuditSource.MLLP_Channel, recorder.make(), audit_log, 'cid-low-1', now)
+
+        assert result.fact_count == 1
+        assert result.finding_count == 0
+        assert result.dispatched == []
+        assert recorder.invocations == []
+        assert recorder.emails == []
+
+# ################################################################################################################################
+
+    def test_a_deactivated_rule_matches_nothing_while_remaining_stored(self) -> 'None':
         audit_log = AuditLog(_server_name)
         engine = get_audit_engine()
         recorder = _TransportRecorder()
@@ -329,64 +263,54 @@ class TestRunSweep:
 
         _seed_outcome(audit_log, 'sweep-off-1', AuditOutcome.Error)
 
-        rules = [
-            parse_rule('degraded', {
-                'kind': FindingKind.Error_Rate,
-                'action_config': {'addresses': _addresses},
-                'config': {'window_seconds': 3600, 'threshold': 0.5},
-                'is_active': False,
-            }),
-        ]
+        rules = _load_rules(_rules_text)
 
-        result = run_sweep(engine, rules, {}, recorder.make(), audit_log, 'cid-sweep-off', now)
+        # The listing screen writes the flag into the rule's own document
+        for rule in rules:
+            if rule.name == 'test_incident_on_errors':
+                rule.document['is_active'] = False
 
-        assert result.rule_count == 0
+        result = run_sweep(engine, rules, {}, AuditSource.MLLP_Channel, recorder.make(), audit_log, 'cid-off-1', now)
+
+        assert result.rule_count == 1
         assert result.finding_count == 0
-        assert result.dispatched == []
+        assert recorder.invocations == []
 
 # ################################################################################################################################
 
-    def test_two_rules_of_the_same_kind_never_cross_dispatch(self) -> 'None':
+    def test_each_fact_runs_through_each_rule(self) -> 'None':
         audit_log = AuditLog(_server_name)
         engine = get_audit_engine()
         recorder = _TransportRecorder()
         now = utcnow()
 
-        # Both channels are erroring, each rule watches only its own one
-        _seed_outcome(audit_log, 'sweep-two-1', AuditOutcome.Error)
-        _seed_outcome(audit_log, 'sweep-two-2', AuditOutcome.Error, object_name=_other_channel_name)
+        # One channel errors while another sits silent - two facts, two different rules fire
+        _seed_outcome(audit_log, 'sweep-both-1', AuditOutcome.Error)
 
-        rules = [
-            parse_rule('degraded-main', {
-                'kind': FindingKind.Error_Rate,
-                'object_name': _channel_name,
-                'action': AlertAction.Invoke_Service,
-                'action_config': {'service': 'hl7.channel.restart'},
-                'config': {'window_seconds': 3600, 'threshold': 0.5},
-            }),
-            parse_rule('degraded-other', {
-                'kind': FindingKind.Error_Rate,
-                'object_name': _other_channel_name,
-                'action': AlertAction.Publish_To_Topic,
-                'action_config': {'topic': 'zato.alerts'},
-                'config': {'window_seconds': 3600, 'threshold': 0.5},
-            }),
-        ]
+        metrics = EndpointMetrics()
+        metrics.silence_seconds = 1200.0
+        metrics_by_name = {_other_channel_name: metrics}
 
-        result = run_sweep(engine, rules, {}, recorder.make(), audit_log, 'cid-sweep-two', now)
+        rules = _load_rules(_rules_text)
 
-        # Each rule dispatched exactly once, through its own action
+        result = run_sweep(
+            engine, rules, metrics_by_name, AuditSource.MLLP_Channel, recorder.make(), audit_log, 'cid-both-1', now,
+            default_email=_addresses)
+
+        assert result.fact_count == 2
         assert result.raised_count == 2
         assert sorted(result.dispatched) == [
-            ('degraded-main', AlertAction.Invoke_Service),
-            ('degraded-other', AlertAction.Publish_To_Topic),
+            ('test_email_on_silence', AlertAction.Email_Digest),
+            ('test_incident_on_errors', AlertAction.Invoke_Service),
         ]
 
-        assert len(recorder.invocations) == 1
-        assert len(recorder.publications) == 1
+        # The email rule went out through the email transport with the default addresses
+        assert len(recorder.emails) == 1
+        assert recorder.emails[0][0] == _addresses
 
+        # The incident rule went out through the service transport
+        assert len(recorder.invocations) == 1
         assert recorder.invocations[0][1]['object_name'] == _channel_name
-        assert recorder.publications[0][1]['object_name'] == _other_channel_name
 
 # ################################################################################################################################
 # ################################################################################################################################

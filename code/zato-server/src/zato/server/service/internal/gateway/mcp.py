@@ -15,6 +15,7 @@ from time import monotonic
 # Zato
 from zato.common.json_internal import dumps
 from zato.server.connection.mcp.audit import build_audit_event, Method_Session_Delete
+from zato.server.connection.mcp.schema import io_to_json_schema, io_to_output_json_schema
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -61,6 +62,74 @@ _default_allowed_origins:'tuple' = ()
 
 # How many milliseconds one second has, for request duration measurements
 _ms_per_second = 1000
+
+# What the tool list says about a service that is on a gateway's list but not deployed
+_not_deployed_note = 'Not deployed'
+
+# Internal service namespace - never exposed as MCP tools, the same rule the tool registry follows
+_internal_prefix = 'zato.'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GetToolList(AdminService):
+    """ Returns MCP tool definitions - name, description, input and output schemas -
+    for the given list of services, the way each gateway's tool registry builds them.
+    """
+
+    name = 'zato.gateway.mcp.get-tool-list'
+
+# ################################################################################################################################
+
+    def handle(self) -> 'None':
+
+        service_name_list = self.request.payload['services']
+        service_store = self.server.service_store
+
+        tools = []
+
+        for service_name in service_name_list:
+
+            # Internal services are never exposed as tools, so they do not
+            # belong in the document either - the same rule the registry follows.
+            if service_name.startswith(_internal_prefix):
+                continue
+
+            # A service that is on the list but not deployed is still reported,
+            # with a note in place of its schemas - one gone service must not
+            # break the whole document.
+            impl_name = service_store.name_to_impl_name.get(service_name)
+
+            if impl_name is None:
+                tools.append({
+                    'name': service_name,
+                    'description': _not_deployed_note,
+                    'inputSchema': None,
+                    'outputSchema': None,
+                })
+                continue
+
+            service_info = service_store.services[impl_name]
+            service_class = service_info['service_class']
+
+            # The docstring is the tool's description, the same way
+            # the runtime tools/list reads it ..
+            description = service_class.__doc__
+
+            if description is None:
+                description = ''
+
+            description = description.strip()
+
+            # .. and both schemas come from the service's own I/O declaration.
+            tools.append({
+                'name': service_name,
+                'description': description,
+                'inputSchema': io_to_json_schema(service_class),
+                'outputSchema': io_to_output_json_schema(service_class),
+            })
+
+        self.response.payload = dumps(tools)
 
 # ################################################################################################################################
 # ################################################################################################################################

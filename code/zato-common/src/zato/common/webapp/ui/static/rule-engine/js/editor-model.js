@@ -7,18 +7,16 @@ var editorModel = {
     config: {
         checkDelayMilliseconds: 300,
 
-        urls: {
-            rulesets: '/rules/rulesets/?object_type=ruleset',
-            vocabularies: '/rules/rulesets/?object_type=vocabulary',
-            testSets: '/rules/test-sets/',
-            validate: '/rules/editor/validate/',
-            render: '/rules/editor/render/',
-            save: '/rules/editor/save/',
-            outcomes: '/rules/editor/outcomes/',
-            preview: function(id) { return '/rules/rulesets/' + id + '/preview/'; },
-            vocabularyGet: function(id) { return '/rules/vocabulary/' + id + '/'; },
-            completion: function(id) { return '/rules/editor/completion/' + id + '/'; },
-        },
+        // The host application fills all of these in through editorView.init
+        urls: {},
+        ruleset: null,
+        rule: null,
+        newRuleName: '',
+        showLivePanel: false,
+        navigateToRule: null,
+        rulesetsUrl: '',
+        tablesUrl: '',
+        testsUrl: '',
     },
 
     definitionId: null,
@@ -63,11 +61,22 @@ var editorModel = {
 
 // ////////////////////////////////////////////////////////////////////////
 
+    newRule: function(name) {
+        var out = {
+            name: name,
+            docs: '',
+            conditions: [],
+            joiners: [],
+            thenActions: [],
+            elseActions: [],
+        };
+        return out;
+    },
+
     load: function(onDone) {
         var self = this;
-        var search = new URLSearchParams(window.location.search);
-        var wantedRuleset = search.get('ruleset');
-        var wantedRule = search.get('rule');
+        var wantedRuleset = this.config.ruleset;
+        var wantedRule = this.config.rule;
 
         data.get(this.config.urls.rulesets, function(payload) {
             var records = payload.items;
@@ -91,11 +100,14 @@ var editorModel = {
                 var keys = Object.keys(self.documents);
                 if (wantedRule !== null && keys.indexOf(wantedRule) > -1) {
                     self.ruleKey = wantedRule;
-                } else if (keys.length > 0) {
+                } else if (self.config.newRuleName === '' && keys.length > 0) {
                     self.ruleKey = keys[0];
                 }
+
                 if (self.ruleKey !== null) {
                     self.rule = self.fromDocument(self.documents[self.ruleKey]);
+                } else if (self.config.newRuleName !== '') {
+                    self.rule = self.newRule(self.config.newRuleName);
                 }
 
                 self.loadVocabulary(onDone);
@@ -132,6 +144,12 @@ var editorModel = {
 
     loadTestSet: function(onDone) {
         var self = this;
+
+        // Test sets only feed the live outcomes panel, which the host may not show at all
+        if (!this.config.showLivePanel) {
+            onDone();
+            return;
+        }
 
         data.get(this.config.urls.testSets, function(payload) {
             if (payload.items.length === 0) {
@@ -323,6 +341,12 @@ var editorModel = {
         });
         Object.keys(this.serverDocuments).forEach(function(key) {
             out[key] = self.serverDocuments[key];
+
+            // A freshly parsed document knows nothing of the stored one's active state,
+            // so an editor save never silently reactivates a deactivated rule
+            if (self.documents[key] !== undefined && self.documents[key].is_active !== undefined) {
+                out[key].is_active = self.documents[key].is_active;
+            }
         });
         return out;
     },

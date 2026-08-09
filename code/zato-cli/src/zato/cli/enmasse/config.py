@@ -31,7 +31,6 @@ class _object_type:
     Groups = 'groups'                             #
     Quota_Tier = 'quota_tier'                     #
 
-    Alert_Rule = 'alert_rule'                     #
     Audit_Retention = 'audit_retention'           #
     Audit_Extraction = 'audit_extraction'         #
 

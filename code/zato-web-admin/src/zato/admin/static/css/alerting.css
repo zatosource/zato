@@ -1,0 +1,98 @@
+/* ------------------------------------------------------------ */
+/* Alert rules - shared tokens                                    */
+/* ------------------------------------------------------------ */
+
+:root {
+    --alerting-text-muted: #71717a;
+    --alerting-border-light: rgba(0, 0, 0, 0.06);
+
+    /* The viewport minus the top menu and the section's own margins */
+    --alerting-min-height: calc(100vh - 130px);
+}
+
+/* ------------------------------------------------------------ */
+/* Alert rules - both screens are one full-height card            */
+/* ------------------------------------------------------------ */
+
+.dashboard-hero,
+.dashboard-chart-section {
+    display: none;
+}
+
+.dashboard-grid-section {
+    grid-template-columns: 1fr;
+    margin-top: 20px;
+    min-height: var(--alerting-min-height);
+}
+
+.dashboard-grid-section .dashboard-card {
+    max-height: none;
+}
+
+/* ------------------------------------------------------------ */
+/* Alert rules - the listing card and its controls                */
+/* ------------------------------------------------------------ */
+
+.alerting-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.alerting-card .dashboard-card-header {
+    flex-wrap: wrap;
+}
+
+.alerting-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-left: auto;
+    padding: 6px 0;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.alerting-publish-prompt {
+    color: var(--alerting-text-muted);
+}
+
+/* The table carries its own frame, so the panel steps back and lets it sit inset */
+.alerting-card .dashboard-tab-panel {
+    padding: 4px 4px 8px 4px;
+}
+
+.alerting-empty {
+    margin: 0;
+    padding: 16px 8px;
+    color: var(--alerting-text-muted);
+    font-size: 13px;
+}
+
+/* ------------------------------------------------------------ */
+/* Alert rules - the editor screen                                */
+/* ------------------------------------------------------------ */
+
+/* One full-height card holds the editor, framed like every other
+   monitoring screen - the card is the column the editor stretches in */
+.alerting-editor-card {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+}
+
+.alerting-editor-card .dashboard-card-header {
+    justify-content: space-between;
+    padding: 1.1rem 1.4rem;
+    border-bottom: 1px solid var(--alerting-border-light);
+}
+
+.alerting-editor-back {
+    text-decoration: none;
+}
+
+/* The shared editor is a flex item and fills whatever the card leaves it */
+.alerting-editor-card .rule-editor {
+    flex: 1;
+    min-height: 0;
+}

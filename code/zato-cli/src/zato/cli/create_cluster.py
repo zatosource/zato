@@ -124,6 +124,7 @@ class Create(ZatoCommand):
             self.add_streaming_channels(session, cluster, ping_service, streaming_sec)
             create_openapi_channel(session, cluster, openapi_handler_service)
             self.add_pubsub_rest_channels(session, cluster)
+            self.add_incident_notification_connections(session, cluster)
 
             # Run ODB post-processing tasks
             odb_post_process.run()
@@ -286,6 +287,52 @@ class Create(ZatoCommand):
             'plain_http', None, '/api/log/streaming/status', None, '', None, DATA_FORMAT.JSON,
             service=service, cluster=cluster, security=security)
         session.add(status_channel)
+
+# ################################################################################################################################
+
+    def add_incident_notification_connections(self, session, cluster):
+        """ Adds the default incident notification connections - one Slack, one Microsoft Teams
+        and one SMTP, all inactive with placeholder details for people to fill in.
+        """
+
+        # Zato
+        from zato.common.api import EMAIL, GENERIC, Incidents
+        from zato.common.odb.model import GenericConn, SMTP
+
+        conn_name = Incidents.Notification_Conn_Name
+
+        # Slack and Microsoft Teams are generic connections and differ only by their type
+        for type_ in (GENERIC.CONNECTION.TYPE.CHAT_SLACK, GENERIC.CONNECTION.TYPE.CHAT_MICROSOFT_TEAMS):
+
+            connection = GenericConn()
+            connection.name = conn_name
+            connection.type_ = type_
+            connection.is_active = False
+            connection.is_internal = False
+            connection.is_channel = False
+            connection.is_outconn = False
+            connection.pool_size = 20
+            connection.timeout = 250
+            connection.secret = uuid4().hex
+            connection.cluster = cluster
+
+            session.add(connection)
+
+        # SMTP has a table of its own
+        smtp_conn = SMTP()
+        smtp_conn.name = conn_name
+        smtp_conn.is_active = False
+        smtp_conn.host = ''
+        smtp_conn.port = EMAIL.SMTP.ModePort[EMAIL.SMTP.MODE.STARTTLS]
+        smtp_conn.timeout = 300
+        smtp_conn.is_debug = False
+        smtp_conn.username = ''
+        smtp_conn.password = uuid4().hex
+        smtp_conn.mode = EMAIL.SMTP.MODE.STARTTLS
+        smtp_conn.ping_address = ''
+        smtp_conn.cluster = cluster
+
+        session.add(smtp_conn)
 
 # ################################################################################################################################
 

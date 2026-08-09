@@ -18,7 +18,7 @@ from sqlalchemy import create_engine, select
 from zato.common.api import Alerting
 from zato.common.audit_log.api import AuditEvent
 from zato.common.audit_log.common import alert_table
-from zato.common.alerting.model import AlertAction, AlertState, FindingKind
+from zato.common.alerting.model import AlertState
 
 # Zato - test helpers
 from conftest import wait_for_port_open
@@ -44,7 +44,7 @@ _smtp_service_name       = 'zato.email.smtp'
 _channel_name      = 'test-alerting-accept'
 _error_channel_name = 'test-alerting-error'
 _smtp_conn_name    = 'test-alerting-smtp'
-_rule_name         = 'test-alerting-error-rate'
+_rule_name         = 'test_alerting_error_rate'
 
 # The MSH-3 value routing messages to the error channel
 _error_sender_application = 'ALERTING_ERROR_SYSTEM'
@@ -52,6 +52,22 @@ _error_sender_application = 'ALERTING_ERROR_SYSTEM'
 # Who the alert emails go to and who they come from
 _alert_addresses = ['ops@example.com']
 _alert_from      = 'alerts@example.com'
+
+# The one rule the test publishes into the alerts ruleset - it watches the error
+# channel and replaces the seeded defaults for the duration of the test, so no
+# default rule fires alongside it about the very same traffic.
+_rule_text = f"""
+rule
+    {_rule_name}
+docs
+    Watches the error channel for the live alerting test.
+when
+    alert.object_name is '{_error_channel_name}' and
+    alert.error_rate is at least 0.4
+then
+    outcome.action = 'email'
+    outcome.addresses = '{_alert_addresses[0]}'
+"""
 
 # How long to wait for routes and connection pools to settle after a create call
 _settle_seconds = 1
@@ -168,8 +184,9 @@ def _wait_for_messages(messages:'strlist', expected_count:'int') -> 'None':
 
 class TestAlertingLive:
     """ Live tests for scheduler-driven alerting - the sweep job exists by default,
-    a rule stored as a generic object drives the collectors over real seeded traffic,
-    and the dispatched email is captured by a local SMTP server.
+    a rule published into the rule engine's alerts ruleset matches the facts the
+    collectors measure over real seeded traffic, and the dispatched email
+    is captured by a local SMTP server.
     """
 
     channel_id:'int' = 0
@@ -298,16 +315,9 @@ class TestAlertingLive:
             assert 'id' in response
             self.__class__.smtp_conn_id = response['id']
 
-            # The rule watching the error channel, stored as a generic object -
-            # the same row the enmasse importer would create
-            response = zato_client.invoke('test.alerting.rule.save', {
-                'name': _rule_name,
-                'kind': FindingKind.Error_Rate,
-                'object_name': _error_channel_name,
-                'action': AlertAction.Email_Digest,
-                'action_config': {'addresses': _alert_addresses},
-                'config': {'window_seconds': 3600, 'threshold': 0.4},
-            })
+            # The rule watching the error channel, published into the rule engine's
+            # alerts ruleset - it replaces the seeded defaults for the test's duration
+            response = zato_client.invoke('test.alerting.rule.save', {'text': _rule_text})
 
             assert response['is_ok'], response
 
@@ -327,10 +337,10 @@ class TestAlertingLive:
             alert = alerts[0]
 
             assert alert['object_name'] == _error_channel_name, alert
-            assert alert['kind'] == FindingKind.Error_Rate, alert
+            assert alert['kind'] == _rule_name, alert
             assert alert['state'] == AlertState.Unobserved, alert
             assert alert['count'] == 1, alert
-            assert 'Error rate on' in alert['message'], alert
+            assert 'error rate' in alert['message'], alert
 
             # .. every occurrence is an alert-raised audit event ..
             raised_events = _wait_for_events(audit_db_path, _error_channel_name, 1, AuditEvent.Alert_Raised)
@@ -342,7 +352,7 @@ class TestAlertingLive:
 
             # Long headers arrive folded - unfolding makes the content assertable
             email_text = messages[0].replace('\n ', ' ')
-            assert 'Error rate on' in email_text, email_text
+            assert 'error rate' in email_text, email_text
             assert _error_channel_name in email_text, email_text
             assert _alert_addresses[0] in email_text, email_text
 
@@ -376,7 +386,7 @@ class TestAlertingLive:
         start from the same clean slate as before.
         """
 
-        response = zato_client.invoke('test.alerting.rule.delete', {'name': _rule_name})
+        response = zato_client.invoke('test.alerting.rule.delete', {})
         assert response['is_ok'], response
 
         if self.__class__.smtp_conn_id:

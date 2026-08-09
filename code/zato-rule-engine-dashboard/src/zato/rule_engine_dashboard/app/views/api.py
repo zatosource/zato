@@ -22,14 +22,20 @@ from zato.common.rule_engine.sql import ApprovalContentMismatchError, ApprovalRe
     InvalidStoreInputError, RecordNotFoundError, SelfApprovalNotAllowedError, VersionConflictError
 from zato.common.rule_engine.sql.constants import Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
+from zato.common.rule_engine.webapi import BadRequestError, definition_row, required
 from zato.common.util.logging_ import count_text
 from zato.rule_engine_dashboard.app.views.common import signed_in_required
+
+# The names every view module here imports from this module - they live in the shared webapi now.
+BadRequestError = BadRequestError
+definition_row = definition_row
+required = required
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.rule_engine.sql import RuleDecisionRecord, RuleDefinitionRecord, RuleEventRecord, RuleFollowRecord, \
+    from zato.common.rule_engine.sql import RuleDecisionRecord, RuleEventRecord, RuleFollowRecord, \
         RuleReferenceRecord, RuleSQLBackend, RuleVersionRecord, RuleViewRecord
     from zato.common.typing_ import any_, anydict, dictlist, stranydict
 
@@ -39,13 +45,6 @@ if 0:
 logger = getLogger(__name__)
 
 Admins_Only_Message = 'This action is reserved for admins'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class BadRequestError(Exception):
-    """ A request whose parameters cannot be used - always reported with a readable message.
-    """
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -153,26 +152,6 @@ def read_json(req:'any_') -> 'anydict':
 
 # ################################################################################################################################
 
-def required(body:'anydict', name:'str') -> 'any_':
-    """ Returns a field every request of a given kind must carry. A text field arrives stripped,
-    so what is stored is what is read back, and it must carry something.
-    """
-    if name not in body:
-        message = f'Missing required field -> {name}'
-        raise BadRequestError(message)
-
-    out = body[name]
-
-    if isinstance(out, str):
-        out = out.strip()
-        if not out:
-            message = f'Empty required field -> {name}'
-            raise BadRequestError(message)
-
-    return out
-
-# ################################################################################################################################
-
 def read_int(req:'any_', name:'str', default:'int') -> 'int':
     """ Returns an integer query parameter or the caller's configured default.
     """
@@ -260,25 +239,6 @@ def serialize_all(records:'any_', serializer:'any_') -> 'dictlist':
     return out
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def definition_row(record:'RuleDefinitionRecord') -> 'stranydict':
-    """ One definition as a list or preview row.
-    """
-    out = {
-        'id':              record.id,
-        'name':            record.name,
-        'object_type':     record.object_type,
-        'parent_id':       record.parent_id,
-        'current_version': record.current_version,
-        'live_version':    record.live_version,
-        'is_active':       record.is_active,
-        'created_at':      record.created_at.isoformat(),
-        'updated_at':      record.updated_at.isoformat(),
-    }
-
-    return out
-
 # ################################################################################################################################
 
 def version_row(record:'RuleVersionRecord') -> 'stranydict':

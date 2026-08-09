@@ -140,7 +140,8 @@ def build_teams_payload(message:'str', link:'str', severity:'str') -> 'stranydic
 
 def build_alert_payload(rule:'AlertRule', finding:'Finding', alert_id:'int', count:'int') -> 'stranydict':
     """ Builds the structured payload the invoke-service and publish-to-topic actions
-    carry - everything an automated remediation needs to act on the alert.
+    carry - everything an automated remediation needs to act on the alert, the rule's
+    own action configuration included, so the target can read its settings from the rule.
     """
     out = {
         'alert_id': alert_id,
@@ -152,6 +153,7 @@ def build_alert_payload(rule:'AlertRule', finding:'Finding', alert_id:'int', cou
         'link': finding.link,
         'severity': finding.severity,
         'count': count,
+        'action_config': rule.action_config,
     }
 
     return out
@@ -180,8 +182,9 @@ def dispatch_action(
 
         # With no addresses configured anywhere there is nowhere to send the email
         if not addresses:
-            logger.warning('Alert rule `%s` has no addresses and no default email is configured - ' \
-                'skipping an email about `%s`', rule.name, finding.object_name)
+            logger.warning(
+                'Alert rule `%s` has no addresses and no default email is configured - skipping an email about `%s`',
+                rule.name, finding.object_name)
             return
 
         transports.send_email(addresses, message, f'{message}\n{finding.link}')

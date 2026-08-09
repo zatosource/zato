@@ -8,9 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The server side of the demo-data import - plain functions the server calls,
 # no service of their own. The data itself comes from zato.common.demo.seed,
-# this module adds what needs a live server - the demo connections, the alert
-# rules stored as generic objects and a burst of live MLLP traffic that fills
-# the in-process channel counters.
+# this module adds what needs a live server - the demo connections and a burst
+# of live MLLP traffic that fills the in-process channel counters.
 
 # stdlib
 import os
@@ -19,7 +18,7 @@ from logging import getLogger
 from time import monotonic, sleep
 
 # Zato
-from zato.common.api import Audit_Config, HL7
+from zato.common.api import HL7
 from zato.common.audit_log.api import get_audit_engine
 from zato.common.defaults import default_cluster_id
 from zato.common.demo.seed import get_demo_rule_defs, purge_demo_data, seed_demo_data, Channel_Clinic, Channel_Lab, \
@@ -32,7 +31,6 @@ from zato.common.hl7.mllp.fields import Channel_Defaults as MLLP_Channel_Default
     Outconn_Defaults as MLLP_Outconn_Defaults
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import GenericConn, HTTPSOAP
-from zato.common.odb.query.generic import GenericObjectWrapper
 from zato.common.util.api import hex_sequence_to_bytes
 from zato.common.util.open_ import open_w
 from zato.server.generic.api.channel_hl7_mllp import get_internal_port, is_channel_routed
@@ -459,42 +457,6 @@ def ensure_demo_rest_objects(server:'ParallelServer') -> 'strlist':
 
 # ################################################################################################################################
 
-def store_demo_rules(server:'ParallelServer') -> 'strlist':
-    """ Writes the demo alert rules as generic objects - the same rows the enmasse
-    importer would create, so the sweep and the rules screen see them. Returns
-    the rule names.
-    """
-
-    # Our response to produce
-    out:'strlist' = []
-
-    with closing(server.odb.session()) as session:
-
-        wrapper = GenericObjectWrapper(session, server.cluster_id)
-        wrapper.type_ = Audit_Config.Type.Alert_Rule
-
-        for rule_def in get_demo_rule_defs():
-
-            rule_def = dict(rule_def)
-            name = rule_def.pop('name')
-            opaque = dumps(rule_def)
-
-            existing = wrapper.get(name)
-
-            if existing:
-                statement = wrapper.update(name, opaque, id=existing['id'])
-            else:
-                statement = wrapper.create(name, opaque)
-
-            _ = session.execute(statement)
-            out.append(name)
-
-        session.commit()
-
-    return out
-
-# ################################################################################################################################
-
 def _wait_for_main_channel() -> 'int':
     """ Waits for the listener the burst sends through and for the main demo channel's own
     route in it, returning the port to send to - zero when neither came up in time. A message
@@ -554,9 +516,9 @@ def send_demo_burst() -> 'int':
 # ################################################################################################################################
 
 def import_demo_data(server:'ParallelServer', *, config:'SeedConfig | None'=None) -> 'stranydict':
-    """ Runs the whole demo import on a live server - the connections, the alert
-    rules, the seeded week of history and the live burst. Rerunning replaces
-    the previous demo data instead of stacking on it.
+    """ Runs the whole demo import on a live server - the connections, the seeded
+    week of history and the live burst. Rerunning replaces the previous demo data
+    instead of stacking on it.
     """
     if config is None:
         config = SeedConfig()
@@ -581,11 +543,9 @@ def import_demo_data(server:'ParallelServer', *, config:'SeedConfig | None'=None
     connections_seconds = monotonic() - phase_start
     logger.info('Demo import: connections ready in %.2fs', connections_seconds)
 
-    phase_start = monotonic()
-    rule_names = store_demo_rules(server)
-
-    rules_seconds = monotonic() - phase_start
-    logger.info('Demo import: rules stored in %.2fs', rules_seconds)
+    # The rule names the seeded alert history is composed under - the alert rules
+    # themselves live in the rule engine's alerts ruleset, not in the ODB
+    rule_names = [rule_def['name'] for rule_def in get_demo_rule_defs()]
 
     # The seeded history goes into the same audit database the server writes to,
     # collected in memory first and landing in one bulk transaction
@@ -627,8 +587,8 @@ def import_demo_data(server:'ParallelServer', *, config:'SeedConfig | None'=None
 # ################################################################################################################################
 
 def remove_demo_data(server:'ParallelServer') -> 'stranydict':
-    """ Undoes the demo import - the connections, the alert rules and every
-    demo row in the audit database. Returns the names of what was deleted.
+    """ Undoes the demo import - the connections and every demo row
+    in the audit database. Returns the names of what was deleted.
     """
     demo_names = [connection_def['name'] for connection_def in _connection_defs]
 
@@ -651,25 +611,6 @@ def remove_demo_data(server:'ParallelServer') -> 'stranydict':
         _ = server.invoke('zato.http-soap.delete', {'id': rest_id, 'cluster_id': default_cluster_id})
         deleted_connections.append(rest_name)
 
-    # The alert rules follow
-    deleted_rules:'strlist' = []
-
-    with closing(server.odb.session()) as session:
-
-        wrapper = GenericObjectWrapper(session, server.cluster_id)
-        wrapper.type_ = Audit_Config.Type.Alert_Rule
-
-        for rule_def in get_demo_rule_defs():
-
-            name = rule_def['name']
-
-            if wrapper.get(name):
-                statement = wrapper.delete_by_name(name)
-                _ = session.execute(statement)
-                deleted_rules.append(name)
-
-        session.commit()
-
     # The audit rows go last
     engine = get_audit_engine()
     purge_demo_data(engine)
@@ -677,7 +618,6 @@ def remove_demo_data(server:'ParallelServer') -> 'stranydict':
     # Our response to produce
     out = {
         'deleted_connections': deleted_connections,
-        'deleted_rules': deleted_rules,
     }
 
     return out

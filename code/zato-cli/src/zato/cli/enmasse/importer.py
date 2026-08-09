@@ -23,7 +23,6 @@ from zato.cli.enmasse.importers.channel_as4 import ChannelAS4Importer
 from zato.cli.enmasse.importers.channel_soap import ChannelSOAPImporter
 from zato.cli.enmasse.importers.group import GroupImporter
 from zato.cli.enmasse.importers.quota_tier import QuotaTierImporter
-from zato.cli.enmasse.importers.alert_rule import AlertRuleImporter
 from zato.cli.enmasse.importers.audit_retention import AuditRetentionImporter
 from zato.cli.enmasse.importers.audit_extraction import AuditExtractionImporter
 from zato.cli.enmasse.importers.email_smtp import SMTPImporter
@@ -135,7 +134,6 @@ class EnmasseYAMLImporter:
         self.sec_defs = {}
         self.group_defs = {}
         self.quota_tier_defs = {}
-        self.alert_rule_defs = {}
         self.audit_retention_defs = {}
         self.audit_extraction_defs = {}
         self.odoo_defs = {}
@@ -191,7 +189,6 @@ class EnmasseYAMLImporter:
         self.channel_as4_importer = ChannelAS4Importer(self)
         self.group_importer = GroupImporter(self)
         self.quota_tier_importer = QuotaTierImporter(self)
-        self.alert_rule_importer = AlertRuleImporter(self)
         self.audit_retention_importer = AuditRetentionImporter(self)
         self.audit_extraction_importer = AuditExtractionImporter(self)
         self.odoo_importer = OdooImporter(self)
@@ -411,29 +408,6 @@ class EnmasseYAMLImporter:
         logger.info(f'Processed quota tiers: created={created_count} updated={updated_count}')
 
         return tiers_created, tiers_updated
-
-# ################################################################################################################################
-
-    def sync_alert_rules(self, rule_list:'list', session:'SASession') -> 'tuple':
-        """ Synchronizes alert rules from a YAML configuration with the database.
-        """
-        if not rule_list:
-            return [], []
-
-        count = len(rule_list)
-        noun = 'rule' if count == 1 else 'rules'
-        logger.info(f'Processing {count} alert {noun}')
-
-        rules_created, rules_updated = self.alert_rule_importer.sync_alert_rules(rule_list, session)
-
-        # Get rule definitions from the rule importer and store them in our instance
-        self.alert_rule_defs = self.alert_rule_importer.rule_defs
-
-        created_count = len(rules_created)
-        updated_count = len(rules_updated)
-        logger.info(f'Processed alert rules: created={created_count} updated={updated_count}')
-
-        return rules_created, rules_updated
 
 # ################################################################################################################################
 
@@ -1546,13 +1520,6 @@ class EnmasseYAMLImporter:
             self.created_objects['quota_tier'] = tiers_created
         if tiers_updated:
             self.updated_objects['quota_tier'] = tiers_updated
-
-        # Process alert rules - they reference nothing else, nothing else references them
-        alert_rules_created, alert_rules_updated = self.sync_alert_rules(yaml_config.get('alert_rule', []), session)
-        if alert_rules_created:
-            self.created_objects['alert_rule'] = alert_rules_created
-        if alert_rules_updated:
-            self.updated_objects['alert_rule'] = alert_rules_updated
 
         # Process audit retention policies
         retention_created, retention_updated = self.sync_audit_retention(yaml_config.get('audit_retention', []), session)

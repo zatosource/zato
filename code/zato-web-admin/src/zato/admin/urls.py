@@ -81,6 +81,7 @@ from zato.admin.web.views.analytics import screens as analytics_screens
 from zato.admin.web.views import b2b
 from zato.admin.web.views import channel_usage
 from zato.admin.web.views import detail_poll
+from zato.admin.web.views import alerting
 from zato.admin.web.views import incidents
 from zato.admin.web.views import mapping
 from zato.admin.web.views import message_flow
@@ -390,6 +391,29 @@ urlpatterns += [
         login_required(incidents.detail), name='incidents-detail'),
     url(r'^zato/incidents/action/$',
         login_required(incidents.action), name='incidents-action'),
+
+    # Alert rules
+
+    url(r'^zato/alerting/rules/$',
+        login_required(alerting.index), name='alert-rules'),
+    url(r'^zato/alerting/rules/editor/$',
+        login_required(alerting.editor), name='alert-rules-editor'),
+    url(r'^zato/alerting/rules/action/$',
+        login_required(alerting.action), name='alert-rules-action'),
+    url(r'^zato/alerting/api/definitions/$',
+        login_required(alerting.api_definitions), name='alert-rules-api-definitions'),
+    path('zato/alerting/api/preview/<int:definition_id>/',
+        login_required(alerting.api_preview), name='alert-rules-api-preview'),
+    path('zato/alerting/api/vocabulary/<int:definition_id>/',
+        login_required(alerting.api_vocabulary), name='alert-rules-api-vocabulary'),
+    path('zato/alerting/api/completion/<int:definition_id>/',
+        login_required(alerting.api_completion), name='alert-rules-api-completion'),
+    url(r'^zato/alerting/api/validate/$',
+        login_required(alerting.api_validate), name='alert-rules-api-validate'),
+    url(r'^zato/alerting/api/render/$',
+        login_required(alerting.api_render), name='alert-rules-api-render'),
+    url(r'^zato/alerting/api/save/$',
+        login_required(alerting.api_save), name='alert-rules-api-save'),
 
     # Mappings
 
@@ -1781,6 +1805,10 @@ urlpatterns += [
 
 urlpatterns += [
     url(r'^static/(?P<path>.*)$', static_serve, {'document_root': settings.MEDIA_ROOT}),
+
+    # The shared UI assets from zato-common - the rule editor component among them - served
+    # from the same tree the rule engine dashboard serves them from, so there is one copy
+    url(r'^shared-ui/(?P<path>.*)$', static_serve, {'document_root': settings.SHARED_UI_ROOT}),
 
     # The icon browsers ask for at the root path on their own
     url(r'^favicon\.ico$', static_serve,

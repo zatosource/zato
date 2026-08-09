@@ -17,7 +17,7 @@ editorView.tableViewHtml = function() {
         rowKeys.push(key);
         rowLabels[key] = condition.subject === null
             ? self.placeholderHtml('subject-' + conditionIndex, editorModel.placeholders.subject,
-                'editorView.openSubjectMenu(event, ' + conditionIndex + ')')
+                'data-action="open-subject-menu" data-item="' + conditionIndex + '"')
             : shared.escape(vocabulary.attribute(condition.subject).phrase);
     });
 
@@ -79,14 +79,14 @@ editorView.documentViewHtml = function() {
         return out;
     }
 
-    var html = '<pre class="editor-document" id="editor-canonical-text"></pre>' +
+    var html = '<pre class="editor-document editor-canonical-text"></pre>' +
         '<pre class="editor-document">' +
         shared.escape(JSON.stringify(editorModel.serverDocuments, null, 2)) + '</pre>';
     return html;
 };
 
 editorView.fillCanonicalText = function() {
-    var target = document.getElementById('editor-canonical-text');
+    var target = this.element('.editor-canonical-text');
     if (target === null) { return; }
 
     data.post(editorModel.config.urls.render, {documents: editorModel.serverDocuments}, function(payload) {

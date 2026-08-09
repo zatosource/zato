@@ -116,14 +116,14 @@ $.fn.zato.gateway.mcp.security_badge_picker = {};
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.gateway.mcp.badge_picker.load = function(action, gateway_id) {
+// Brings the service list over and hands it to whoever asked - the wizard fills
+// its in-page zones with it, the gateway list builds a whole panel around it
+// first, so the panel comes on screen already populated.
+$.fn.zato.gateway.mcp.badge_picker.fetch = function(gateway_id, on_items, on_error) {
     var url = '/zato/gateway/mcp/get-service-list/';
     if (gateway_id) {
         url += '?gateway_id=' + gateway_id;
     }
-
-    var available_body = $('#badge-zone-available-' + action + ' .badge-zone-body');
-    available_body.html('<span class="badge-zone-empty">Loading...</span>');
 
     $.ajax({
         url: url,
@@ -131,11 +131,43 @@ $.fn.zato.gateway.mcp.badge_picker.load = function(action, gateway_id) {
         headers: { 'X-CSRFToken': $.cookie('csrftoken') },
         success: function(data) {
             var items = (typeof data === 'string') ? $.parseJSON(data) : data;
-            $.fn.zato.badge_picker.init(action, items, $.fn.zato.gateway.mcp.badge_picker_config);
+            on_items(items);
         },
-        error: function(xhr, status, err) {
-            available_body.html('<span class="badge-zone-empty">Failed to load</span>');
-        }
+        error: on_error
+    });
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.gateway.mcp.badge_picker.load = function(action, gateway_id) {
+
+    var available_body = $('#badge-zone-available-' + action + ' .badge-zone-body');
+    available_body.html('<span class="badge-zone-empty">Loading...</span>');
+
+    $.fn.zato.gateway.mcp.badge_picker.fetch(gateway_id, function(items) {
+        $.fn.zato.badge_picker.init(action, items, $.fn.zato.gateway.mcp.badge_picker_config);
+    }, function() {
+        available_body.html('<span class="badge-zone-empty">Failed to load</span>');
+    });
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.gateway.mcp.security_badge_picker.fetch = function(gateway_id, on_items, on_error) {
+    var url = '/zato/gateway/mcp/get-security-list/';
+    if (gateway_id) {
+        url += '?gateway_id=' + gateway_id;
+    }
+
+    $.ajax({
+        url: url,
+        method: 'POST',
+        headers: { 'X-CSRFToken': $.cookie('csrftoken') },
+        success: function(data) {
+            var items = (typeof data === 'string') ? $.parseJSON(data) : data;
+            on_items(items);
+        },
+        error: on_error
     });
 };
 
@@ -143,25 +175,14 @@ $.fn.zato.gateway.mcp.badge_picker.load = function(action, gateway_id) {
 
 $.fn.zato.gateway.mcp.security_badge_picker.load = function(action, gateway_id) {
     var sec_action = 'sec-' + action;
-    var url = '/zato/gateway/mcp/get-security-list/';
-    if (gateway_id) {
-        url += '?gateway_id=' + gateway_id;
-    }
 
     var available_body = $('#badge-zone-available-' + sec_action + ' .badge-zone-body');
     available_body.html('<span class="badge-zone-empty">Loading...</span>');
 
-    $.ajax({
-        url: url,
-        method: 'POST',
-        headers: { 'X-CSRFToken': $.cookie('csrftoken') },
-        success: function(data) {
-            var items = (typeof data === 'string') ? $.parseJSON(data) : data;
-            $.fn.zato.badge_picker.init(sec_action, items, $.fn.zato.gateway.mcp.security_badge_picker_config);
-        },
-        error: function(xhr, status, err) {
-            available_body.html('<span class="badge-zone-empty">Failed to load</span>');
-        }
+    $.fn.zato.gateway.mcp.security_badge_picker.fetch(gateway_id, function(items) {
+        $.fn.zato.badge_picker.init(sec_action, items, $.fn.zato.gateway.mcp.security_badge_picker_config);
+    }, function() {
+        available_body.html('<span class="badge-zone-empty">Failed to load</span>');
     });
 };
 

@@ -13,6 +13,11 @@
     <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
+
+    {% comment %} The Services and Security columns edit in panels holding the
+    wizard's own badge pickers {% endcomment %}
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-lines.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -40,6 +45,12 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/forms.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-descriptions.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-size-caps.js"></script>
+
+    {% comment %} What the Services and Security panels are built from - the wizard
+    kit's panels plus the badge pickers and their loaders the wizard shares {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/lines.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/badge-picker.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-controls.js"></script>
 
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp.js"></script>
 
@@ -118,16 +129,20 @@
                         data-size-cap-mode="{{ item.size_cap_mode }}">
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
-                        <td>{{ item.name }}</td>
+                        {# Both lines are edited in a small form opened right above them #}
+                        <td><a href="javascript:void(0)" onclick="$.fn.zato.gateway.mcp.edit_name('{{ item.id }}', this)">{{ item.name }}</a></td>
                         {# Both flags are turned over where they are read #}
                         <td class="text-center"><a href="javascript:void(0)" onclick="$.fn.zato.gateway.mcp.toggle_active('{{ item.id }}', this)">{{ item.is_active|yesno:'Yes,No' }}</a></td>
-                        <td>{{ item.url_path }}</td>
+                        <td><a href="javascript:void(0)" onclick="$.fn.zato.gateway.mcp.edit_url_path('{{ item.id }}', this)">{{ item.url_path }}</a></td>
                         <td class="text-center"><a href="javascript:void(0)" onclick="$.fn.zato.gateway.mcp.toggle_client_filters('{{ item.id }}', this)">{{ item.allow_client_filters|yesno:'Yes,No' }}</a></td>
                         {# What the gateway caps responses at, the line opening the very editor the wizard uses #}
                         <td><a href="javascript:void(0)" class="zato-table-note" data-id="{{ item.id }}"
                             onclick="$.fn.zato.gateway.mcp.size_caps.open(this)">{{ item.size_cap_label }}</a></td>
-                        <td class="text-center" id="service_count_{{ item.id }}">{{ item.services|length }}</td>
-                        <td class="text-center" id="security_count_{{ item.id }}">{{ item.security_member_count }}</td>
+                        {# Each count opens a panel with the wizard's own badge picker for the row #}
+                        <td class="text-center"><a href="javascript:void(0)" id="mcp-services-cell-{{ item.id }}" data-id="{{ item.id }}"
+                            onclick="$.fn.zato.gateway.mcp.pickers.open_services(this)">{{ item.services|length }}</a></td>
+                        <td class="text-center"><a href="javascript:void(0)" id="mcp-security-cell-{{ item.id }}" data-id="{{ item.id }}"
+                            onclick="$.fn.zato.gateway.mcp.pickers.open_security(this)">{{ item.security_member_count }}</a></td>
                         <td><a href="/zato/audit-log/?source=mcp&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a></td>
                         <td><a href="{% url "gateway-mcp-export" item.id %}">Export</a></td>
                         <td><a href="{% url "gateway-mcp-wizard-edit" item.id %}?cluster={{ cluster_id }}">Edit</a></td>

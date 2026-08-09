@@ -1,0 +1,388 @@
+/* ---------------------------------------------------------- */
+/* Editor embed - everything the shared rule editor needs when */
+/* it sits inside a host page that does not load the design    */
+/* system globally. The tokens and the kit pieces the editor   */
+/* uses are scoped under the editor's own root class, plus the */
+/* body-attached surfaces the editor creates - the completion  */
+/* menu carries the root class itself, the drag ghost and the  */
+/* tippy popovers are namespaced by their own classes.         */
+/*                                                             */
+/* The rule engine dashboard does not load this file - it has  */
+/* tokens.css, kit.css and its theme on the page already.      */
+/* ---------------------------------------------------------- */
+
+.rule-editor,
+.drag-ghost,
+.drop-placeholder,
+.tippy-box[data-theme~="dt"] {
+    --font: "IBM Plex Sans", sans-serif;
+    --mono: "IBM Plex Mono", monospace;
+
+    --radius-1: 2px;
+    --radius-2: 3px;
+    --radius-3: 4px;
+
+    --focus-edge: color-mix(in srgb, var(--action-edge) 45%, var(--border));
+    --field-indent: 9px;
+    --hint-gap: 4px;
+
+    /* The zato-light palette - the one theme the editor takes inside web-admin */
+    --background: #ffffff;
+    --chrome: #efefef;
+    --panel: #dddddd;
+    --border: #bbbbbb;
+    --text: #000000;
+    --text2: #333333;
+    --text3: #5e5e5e;
+    --text4: #777777;
+    --text5: #999999;
+    --blue: #000099;
+    --blue-strong: #000099;
+    --blue-strong-hover: #000066;
+    --button-text: #ffffff;
+    --green: #007f00;
+    --red: #b21104;
+    --amber: #b26a00;
+    --indigo: #652d90;
+    --input-background: #ffffff;
+    --scrollbar-thumb: #aaaaaa;
+    --scrollbar-thumb-hover: #999999;
+    --panel-raised: #eaeaea;
+    --filter-span-background: #f5f5f5;
+    --sentence-bar-background: #f1f1f1;
+    --problems-background: #ececec;
+    --problems-border: #bfbfbf;
+    --blue-tint-05: rgba(0, 0, 153, 0.05);
+    --blue-tint-07: rgba(0, 0, 153, 0.07);
+    --blue-tint-10: rgba(0, 0, 153, 0.1);
+    --blue-tint-14: rgba(0, 0, 153, 0.14);
+    --blue-tint-28: rgba(0, 0, 153, 0.28);
+    --blue-tint-35: rgba(0, 0, 153, 0.35);
+    --shadow-strong: rgba(0, 0, 0, 0.25);
+    --shadow-soft: rgba(0, 0, 0, 0.2);
+    --hover-veil: linear-gradient(rgba(0, 0, 0, 0.07), rgba(0, 0, 0, 0.07));
+    --action-face: #ffd84a;
+    --action-face-deep: #ffc311;
+    --action-edge: #d4a00a;
+    --action-sheen: rgba(255, 255, 255, 0.25);
+    --action-ink: #000000;
+}
+
+.rule-editor * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.rule-editor * {
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+/* ---------------------------------------------------------- */
+/* Embed - main column and toolbar, from kit.css              */
+/* ---------------------------------------------------------- */
+
+.rule-editor .main-column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.rule-editor .toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 12px 24px;
+    background: var(--sentence-bar-background);
+}
+.rule-editor .toolbar-separator {
+    width: 1px;
+    height: 22px;
+    background: var(--border);
+    margin: 0 4px;
+}
+
+/* ---------------------------------------------------------- */
+/* Embed - buttons, from kit.css                              */
+/* ---------------------------------------------------------- */
+
+.rule-editor .button-ghost,
+.rule-editor .button-primary {
+    display: inline-block;
+    padding: 3px 10px;
+    border: 1px solid var(--action-edge);
+    border-radius: var(--radius-2);
+    background: linear-gradient(to bottom, var(--action-face), var(--action-face-deep));
+    color: var(--action-ink);
+    font-family: var(--font);
+    font-size: 10.5px;
+    font-weight: 400;
+    letter-spacing: 0.5px;
+    text-align: center;
+    white-space: nowrap;
+    cursor: pointer;
+    vertical-align: 1px;
+    box-shadow: inset 0 1px 0 var(--action-sheen);
+}
+.rule-editor .button-primary {
+    font-weight: 600;
+}
+.rule-editor .button-ghost:disabled,
+.rule-editor .button-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.rule-editor .button-ghost.toggled {
+    font-weight: 600;
+    box-shadow: inset 0 1px 3px var(--shadow-strong);
+}
+
+/* ---------------------------------------------------------- */
+/* Embed - problems panel, from kit.css                       */
+/* ---------------------------------------------------------- */
+
+.rule-editor .problems-panel {
+    background: var(--problems-background);
+    border-top: 1px solid var(--problems-border);
+    margin-top: 10px;
+    max-height: 150px;
+    display: flex;
+    flex-direction: column;
+}
+.rule-editor .problems-head {
+    padding: 7px 24px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text4);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+.rule-editor .problems-collapse-indicator {
+    margin-left: 8px;
+}
+.rule-editor .problems-collapsed .problems-list {
+    display: none;
+}
+.rule-editor .problems-collapsed .pane-resizer {
+    display: none;
+}
+.rule-editor .problems-list {
+    overflow: auto;
+    padding: 2px 0;
+}
+.rule-editor .problem-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 24px;
+    font-size: 12.5px;
+    color: var(--text2);
+    cursor: pointer;
+}
+.rule-editor .problem-item:hover {
+    background-image: var(--hover-veil);
+}
+.rule-editor .problem-fix {
+    flex-shrink: 0;
+    font-size: 11px;
+    color: var(--blue);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-1);
+    padding: 1px 7px;
+    cursor: pointer;
+}
+.rule-editor .problem-fix:hover {
+    color: var(--text);
+    border-color: var(--blue);
+}
+.rule-editor .problem-none {
+    color: var(--text5);
+    cursor: default;
+    font-style: italic;
+}
+.rule-editor .problem-none:hover {
+    background-image: none;
+}
+.rule-editor .status-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.rule-editor .status-dot-error {
+    background: var(--red);
+}
+.rule-editor .status-dot-information {
+    background: var(--text5);
+}
+
+/* ---------------------------------------------------------- */
+/* Embed - pane resize handles, from kit.css                  */
+/* ---------------------------------------------------------- */
+
+.rule-editor .pane-resizer {
+    flex-shrink: 0;
+    background: transparent;
+    transition: background 0.12s;
+    z-index: 5;
+}
+.rule-editor .pane-resizer:hover,
+.rule-editor .pane-resizer-active {
+    background: var(--blue);
+}
+.rule-editor .pane-resizer-horizontal {
+    height: 4px;
+    width: 100%;
+    cursor: row-resize;
+}
+
+/* ---------------------------------------------------------- */
+/* Embed - vocabulary pane, from kit.css                      */
+/* ---------------------------------------------------------- */
+
+.rule-editor .vocabulary-pane {
+    width: 225px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--chrome);
+    transition: width 0.15s ease;
+}
+.rule-editor .vocabulary-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 12px 8px 16px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text4);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+.rule-editor .vocabulary-collapse {
+    display: flex;
+    align-items: center;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-2);
+    color: var(--text4);
+    cursor: pointer;
+    padding: 3px 5px;
+    font-family: var(--font);
+}
+.rule-editor .vocabulary-collapse:hover {
+    color: var(--text);
+}
+.rule-editor .vocabulary-pane.collapsed {
+    width: 42px;
+}
+.rule-editor .vocabulary-pane.collapsed .vocabulary-head {
+    justify-content: center;
+    padding: 12px 6px 8px;
+}
+.rule-editor .vocabulary-pane.collapsed .vocabulary-head-label,
+.rule-editor .vocabulary-pane.collapsed .vocabulary-list {
+    display: none;
+}
+.rule-editor .vocabulary-list {
+    overflow: auto;
+}
+.rule-editor .vocabulary-entity {
+    padding: 7px 16px 3px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text2);
+}
+.rule-editor .vocabulary-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 16px 5px 26px;
+    font-size: 12px;
+    color: var(--text3);
+    cursor: grab;
+    font-family: var(--mono);
+}
+.rule-editor .vocabulary-item:hover {
+    background-image: var(--hover-veil);
+    color: var(--text);
+}
+.rule-editor .vocabulary-item-type {
+    margin-left: auto;
+    font-size: 9.5px;
+    color: var(--text5);
+    font-family: var(--font);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.rule-editor .vocabulary-item-clickable {
+    cursor: pointer;
+}
+
+/* ---------------------------------------------------------- */
+/* Embed - term highlight, from kit.css                       */
+/* ---------------------------------------------------------- */
+
+.rule-editor .term-highlight {
+    background: var(--blue-tint-28) !important;
+    transition: background 1.5s ease;
+}
+
+/* ---------------------------------------------------------- */
+/* Embed - body-attached surfaces, from kit.css               */
+/* ---------------------------------------------------------- */
+
+.drag-ghost {
+    position: fixed;
+    top: -1000px;
+    left: -1000px;
+    display: flex;
+    z-index: 1400;
+    pointer-events: none;
+}
+.drag-ghost-cell {
+    padding: 4px 10px;
+    border: 1px solid var(--blue);
+    background: var(--panel);
+    color: var(--text2);
+    font-family: var(--mono);
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.drop-placeholder {
+    position: fixed;
+    pointer-events: none;
+    z-index: 1400;
+    border: 2px dashed var(--blue);
+    border-radius: var(--radius-2);
+    background: var(--blue-tint-10);
+}
+
+.tippy-box[data-theme~="dt"] {
+    background-color: var(--panel) !important;
+    border: 1px solid var(--blue) !important;
+    border-radius: var(--radius-3) !important;
+    color: var(--text) !important;
+    box-shadow: 0 4px 20px var(--shadow-soft) !important;
+    font-size: 12px !important;
+    font-family: var(--font);
+}
+.tippy-box[data-theme~="dt"] .tippy-content {
+    padding: 9px 12px;
+    line-height: 1.45;
+}
+.tippy-box[data-theme~="dt"] .tippy-arrow {
+    color: var(--panel);
+}
+.tippy-box[data-theme~="dt"].popover-green {
+    border-color: var(--green) !important;
+}
+.tippy-box[data-theme~="dt"].popover-red {
+    border-color: var(--red) !important;
+}
