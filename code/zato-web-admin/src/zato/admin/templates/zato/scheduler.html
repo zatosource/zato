@@ -9,6 +9,11 @@
     <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
     <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+
+    {% comment %} The inline edit forms wear the shared popup chrome {% endcomment %}
+    <link rel="stylesheet" type="text/css" href="/static/css/settings.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -28,6 +33,9 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
+
+    {% comment %} The grip and drag machinery of the inline edit forms {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
     $.fn.zato.data_table.get_columns = function() {

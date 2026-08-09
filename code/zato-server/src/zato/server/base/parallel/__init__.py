@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import os
 from copy import deepcopy
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from logging import INFO, WARN
 from pathlib import Path
 from platform import system as platform_system
@@ -28,6 +28,8 @@ from zato.common.config_dispatcher import ConfigDispatchReceiver, ConfigDispatch
 from zato.common.ext.bunch import Bunch, bunchify
 from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable, GENERIC, Groups, HotDeploy, SERVER_STARTUP, \
     SEC_DEF_TYPE, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
+from zato.common.audit_log.api import AuditLog
+from zato.common.audit_log.scheduler import record_job_complete, record_job_start, record_job_timeout
 from zato.common.bearer_token import BearerTokenManager
 from zato.common.broker_message import HOT_DEPLOY, PUBSUB
 from zato.common.const import SECRETS
@@ -1093,6 +1095,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             scheduler_adapter = SchedulerODBAdapter(self.odb, self.cluster_id)
 
+            # Job runs are recorded in the audit log the same way any other source's events are
+            self._scheduler_audit_log = AuditLog(self.name)
+
             self._scheduler = SchedulerClient()
             self._scheduler.reload(odb_adapter=scheduler_adapter)
             self._scheduler_started = True
@@ -1247,6 +1252,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         job_id = ctx['job_id']
         job_name = ctx['name']
         current_run = ctx['current_run']
+        planned_fire_time_iso = ctx['planned_fire_time_iso']
 
         on_success_service = ctx.get('on_success_service')
         on_success_job = ctx.get('on_success_job')
@@ -1265,16 +1271,40 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                 except Exception:
                     pass
 
+        # The run's record opens now, with the actual fire time being the moment this server
+        # picked the message up and the delay measured against the planned fire time ..
+        planned_fire_dt = datetime.fromisoformat(planned_fire_time_iso)
+        delay_ms = int((datetime.now(timezone.utc) - planned_fire_dt).total_seconds() * 1000)
+
+        if delay_ms < 0:
+            delay_ms = 0
+
+        # .. the cid the record carries is the very cid the service runs under, so everything
+        # the service touches downstream shares it and the run seeds the message flow.
+        cid = new_cid_server()
+
+        audit_event_id = record_job_start(
+            self._scheduler_audit_log,
+            job_name,
+            cid=cid,
+            job_id=job_id,
+            current_run=current_run,
+            planned_fire_time_iso=planned_fire_time_iso,
+            delay_ms=delay_ms,
+            service=ctx['service'],
+        )
+
         msg = Bunch({
             'action': SCHEDULER_MSG.JOB_EXECUTED.value,
             'name': ctx['name'],
             'service': ctx['service'],
             'payload': extra,
-            'cid': new_cid_server(),
+            'cid': cid,
             'job_type': ctx['job_type'],
             'zato_ctx': {
                 'scheduler_job_id': job_id,
                 'scheduler_current_run': current_run,
+                'scheduler_audit_event_id': audit_event_id,
             },
         })
 
@@ -1295,7 +1325,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         logger.info('Fire event: before mark_complete job_id=%s name=%s outcome=%s duration_ms=%s run=%s error_tb_len=%s',
             job_id, job_name, outcome, duration_ms, current_run, len(error_traceback))
 
-        # .. report the outcome to the Rust scheduler ..
+        # .. the run's record closes with its outcome, duration and error ..
+        if audit_event_id:
+            record_job_complete(audit_event_id, outcome=outcome, duration_ms=duration_ms, error=error_traceback)
+
+        # .. report the completion to the Rust scheduler so its in-flight state clears ..
         try:
             self._scheduler.mark_complete(job_id, outcome, duration_ms, current_run, error_traceback)
             logger.info('Fire event: mark_complete sent job_id=%s run=%s outcome=%s', job_id, current_run, outcome)
@@ -1310,6 +1344,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             'duration_ms': duration_ms,
             'error_traceback': error_traceback,
             'current_run': current_run,
+            'audit_event_id': audit_event_id,
         }
 
         if outcome == SCHEDULER.OUTCOME.OK:
@@ -1351,6 +1386,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             'zato_ctx': {
                 'scheduler_job_id': job_id,
                 'scheduler_current_run': callback_context['current_run'],
+                'scheduler_audit_event_id': callback_context['audit_event_id'],
                 'is_scheduler_callback': True,
             },
         })
@@ -1394,13 +1430,19 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                 'Callback job=%s failed for source job_id=%s; traceback=%s', target_job_name, source_job_id, format_exc())
 
     def _handle_timeout_event(self, fields:'dict') -> 'None':
-        """ Processes a timeout event from the scheduler.
+        """ Processes a timeout event from the scheduler - marks the run as timed out
+        in the audit log.
         """
-        job_id = fields['job_id']
-        current_run = fields['current_run']
-        elapsed_ms = fields['elapsed_ms']
+
+        # Redis stream fields arrive as strings
+        job_id = int(fields['job_id'])
+        current_run = int(fields['current_run'])
+        elapsed_ms = int(fields['elapsed_ms'])
         error = fields['error']
+
         logger.warning('Scheduler timeout: job_id=%s run=%s elapsed_ms=%s error=%s', job_id, current_run, elapsed_ms, error)
+
+        record_job_timeout(job_id, current_run, elapsed_ms=elapsed_ms, error=error)
 
 # ################################################################################################################################
 
