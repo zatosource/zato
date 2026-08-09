@@ -1,0 +1,44 @@
+<div class="rate-limiting-tabs-wrapper">
+    <div class="dashboard-tabs" role="tablist">
+        <button type="button"
+                class="dashboard-tab{% if quota_tier %} dashboard-tab-active{% endif %}"
+                data-mode="tier"
+                role="tab"
+                aria-selected="{% if quota_tier %}true{% else %}false{% endif %}">
+            <span class="dashboard-tab-label">Quota tier</span>
+        </button>
+        <button type="button"
+                class="dashboard-tab{% if not quota_tier %} dashboard-tab-active{% endif %}"
+                data-mode="custom"
+                role="tab"
+                aria-selected="{% if not quota_tier %}true{% else %}false{% endif %}">
+            <span class="dashboard-tab-label">Custom rules</span>
+        </button>
+    </div>
+</div>
+
+<div class="dashboard-tab-panel rate-limiting-tier-panel" id="rate-limiting-tier-panel" role="tabpanel"{% if not quota_tier %} hidden{% endif %}>
+    {% if tier_list %}
+    <select id="quota-tier-select" class="noChosen">
+        {% for tier in tier_list %}
+        <option value="{{ tier.id }}"{% if tier.id == quota_tier %} selected{% endif %}>{{ tier.name }}</option>
+        {% endfor %}
+    </select>
+    {% else %}
+    <div class="rate-limiting-tier-empty">
+        <span>No quota tiers defined</span>
+        <button type="button" onclick="window.location.href='/zato/security/tier/?cluster={{ cluster_id }}&amp;create=1'">Create one</button>
+    </div>
+    {% endif %}
+</div>
+
+<div class="rate-limiting-container" id="rate-limiting-container">
+</div>
+
+<div class="rate-limiting-actions">
+    <span class="rate-limiting-button-add" onclick="$.fn.zato.rate_limiting.add_rule('rate-limiting-container')">+ Add row</span>
+    <span class="rate-limiting-save-group">
+        <span class="status-message" id="rate-limiting-status"></span>
+        <input type="submit" value="Save" onclick="$.fn.zato.rate_limiting.save('rate-limiting-container')" />
+    </span>
+</div>

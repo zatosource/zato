@@ -3896,6 +3896,11 @@ $.fn.zato.render_unique_indicator = function(field, value, exists, attr_name) {
     var field_left = field.position().left;
     var input_padding_left = parseInt(field.css('padding-left'), 10) || 2;
     indicator.css('left', (field_left + input_padding_left + text_width + 7) + 'px');
+
+    // The middle of the input itself, not of the wrapper - a wrapper that also
+    // holds the field's label, like the inline forms' rows, is taller than the
+    // input and its own middle sits below it
+    indicator.css('top', (field.position().top + field.outerHeight() / 2) + 'px');
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

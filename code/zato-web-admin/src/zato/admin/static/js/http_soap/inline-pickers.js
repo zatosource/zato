@@ -58,11 +58,48 @@ $.fn.zato.http_soap.inline._build_pick_body = function(content, options, current
             }
         }
 
+        // A filter that leaves nothing behind says so rather than showing an empty list
+        if(!list.childNodes.length) {
+            var note = document.createElement('div');
+            note.textContent = inline.config.no_matches_label;
+            note.style.padding = '4px 8px';
+            list.appendChild(note);
+        }
+
         return picked;
     };
 
-    var filter = lines.buildFilter(inline.config.filter_label, filter_placeholder, fill);
-    content.appendChild(filter.field);
+    // The same filter row the groups picker wears - the input and its Clear button.
+    // The input keeps the wizard's own class and id, so an opening panel still
+    // puts the typing here from the start.
+    var filter_row = document.createElement('div');
+    filter_row.className = 'badge-picker-filter';
+
+    var filter_input = document.createElement('input');
+    filter_input.type = 'text';
+    filter_input.className = 'wizard-panel-filter';
+    filter_input.id = 'wizard-panel-filter';
+    filter_input.autocomplete = 'off';
+    filter_input.placeholder = filter_placeholder;
+
+    var clear_button = document.createElement('button');
+    clear_button.type = 'button';
+    clear_button.className = 'badge-filter-clear';
+    clear_button.textContent = inline.config.clear_filter_label;
+
+    filter_input.addEventListener('input', function() {
+        fill(filter_input.value.trim().toLowerCase());
+    });
+
+    clear_button.addEventListener('click', function() {
+        filter_input.value = '';
+        fill('');
+        filter_input.focus();
+    });
+
+    filter_row.appendChild(filter_input);
+    filter_row.appendChild(clear_button);
+    content.appendChild(filter_row);
 
     var picked = fill('');
     content.appendChild(list);
@@ -550,6 +587,12 @@ $.fn.zato.http_soap.inline._open_security_menu = function(link, items) {
             return;
         }
 
+        // The filter keeps its height inside the pane, so the list under it is
+        // the only thing that grows with the popup
+        var pin_filter = function() {
+            holder.querySelector('.badge-picker-filter').style.flex = '0 0 auto';
+        };
+
         var on_pick = function(option) {
 
             // The pick is only remembered - the popup stays open so the groups
@@ -561,10 +604,12 @@ $.fn.zato.http_soap.inline._open_security_menu = function(link, items) {
             holder.textContent = '';
             inline._build_pick_body(
                 holder, options, picked_security, inline.config.security_filter_placeholder, on_pick);
+            pin_filter();
         };
 
         inline._build_pick_body(
             holder, options, picked_security, inline.config.security_filter_placeholder, on_pick);
+        pin_filter();
     };
 
     var build_groups_pane = function(holder) {
@@ -582,6 +627,61 @@ $.fn.zato.http_soap.inline._open_security_menu = function(link, items) {
                 return item.is_assigned;
             }
         });
+
+        // A filter that leaves nothing on the available side says so - the picker
+        // itself only hides the badges, one by one
+        var action = inline.config.groups_element_action;
+        var available_body = holder.querySelector('#badge-zone-available-' + action + ' .badge-zone-body');
+        var filter_input = holder.querySelector('#badge-filter-text-' + action);
+
+        var no_matches_note = document.createElement('div');
+        no_matches_note.textContent = inline.config.no_matches_label;
+        no_matches_note.style.padding = '6px 8px';
+        no_matches_note.style.display = 'none';
+        available_body.appendChild(no_matches_note);
+
+        var update_no_matches = function() {
+
+            var badges = available_body.querySelectorAll('.security-badge');
+            var visible_count = 0;
+
+            for(var badge_idx = 0; badge_idx < badges.length; badge_idx++) {
+                if(badges[badge_idx].style.display !== 'none') {
+                    visible_count += 1;
+                }
+            }
+
+            // An empty zone with no filter is just an empty zone - only a filter
+            // that hid everything has something to say
+            var is_filtered_out = Boolean(filter_input.value.trim()) && !visible_count;
+            no_matches_note.style.display = is_filtered_out ? '' : 'none';
+        };
+
+        // The picker's own filter is debounced, so the check waits a touch longer
+        var note_timer = null;
+
+        filter_input.addEventListener('input', function() {
+            clearTimeout(note_timer);
+            note_timer = setTimeout(update_no_matches, 200);
+        });
+
+        holder.querySelector('#badge-filter-clear-' + action).addEventListener('click', update_no_matches);
+
+        // The filter keeps its height while the zones fill the rest of the pane -
+        // their own stylesheet caps them at a fixed height for the edit form,
+        // here the popup's height is what they follow. Their minimum stays, it is
+        // what gives the popup its opening height.
+        holder.querySelector('.badge-picker-filter').style.flex = '0 0 auto';
+
+        var picker = holder.querySelector('.badge-picker');
+        picker.style.flex = '1';
+        picker.style.minHeight = '0';
+
+        var zone_bodies = holder.querySelectorAll('.badge-zone-body');
+
+        for(var zone_idx = 0; zone_idx < zone_bodies.length; zone_idx++) {
+            zone_bodies[zone_idx].style.maxHeight = 'none';
+        }
     };
 
     lines.openPanel(link, {
@@ -592,26 +692,35 @@ $.fn.zato.http_soap.inline._open_security_menu = function(link, items) {
 
         build: function(content) {
 
+            // The flex chain of the wizard panel runs on through these divs, so the
+            // lists inside fill the popup's height and follow it when it is resized
             var body = document.createElement('div');
             body.className = 'grid-panel-body';
+            body.style.flex = '1';
+            body.style.minHeight = '0';
 
             var list = document.createElement('div');
             list.className = 'grid-panel-list';
 
-            // The panes take the room the list leaves - the pickers are wider
-            // than the IDE's own information pane
+            // The panes take the room the list leaves - the pickers are wider than the
+            // IDE's own information pane. Both panes share the one grid cell, so the
+            // popup is naturally as tall as the taller of the two and switching between
+            // them can never change its size.
             var panes = document.createElement('div');
+            panes.style.display = 'grid';
             panes.style.flex = '1';
             panes.style.minWidth = '0';
+            panes.style.minHeight = '0';
 
             var entries = [];
             var pane_elems = [];
 
-            // The hovered entry wears the highlight, its pane alone is on screen
+            // The hovered entry wears the highlight, its pane alone is in view - the
+            // other stays in the layout, invisible, which is what keeps the size steady
             var show_pane = function(pane_idx) {
                 for(var idx = 0; idx < entries.length; idx++) {
                     entries[idx].classList.toggle('current', idx === pane_idx);
-                    pane_elems[idx].hidden = idx !== pane_idx;
+                    pane_elems[idx].style.visibility = idx === pane_idx ? '' : 'hidden';
                 }
             };
 
@@ -640,6 +749,12 @@ $.fn.zato.http_soap.inline._open_security_menu = function(link, items) {
                 list.appendChild(entry);
 
                 var pane = document.createElement('div');
+                pane.style.display = 'flex';
+                pane.style.flexDirection = 'column';
+                pane.style.gridArea = '1 / 1';
+                pane.style.minHeight = '0';
+                pane.style.minWidth = '0';
+
                 pane_elems.push(pane);
                 panes.appendChild(pane);
 
@@ -650,36 +765,6 @@ $.fn.zato.http_soap.inline._open_security_menu = function(link, items) {
             add_pane(inline.config.groups_pane_label, build_groups_pane);
 
             show_pane(0);
-
-            // The taller pane decides the popup's height once and for all, so switching
-            // between the two never resizes it. The panel is only on the page after this
-            // build, hence the wait for the frame that can measure the panes.
-            window.requestAnimationFrame(function() {
-
-                var max_height = 0;
-
-                for(var idx = 0; idx < pane_elems.length; idx++) {
-
-                    var pane = pane_elems[idx];
-                    var was_hidden = pane.hidden;
-
-                    // A hidden pane has no height, so it is measured while
-                    // on the page yet invisible
-                    if(was_hidden) {
-                        pane.style.visibility = 'hidden';
-                        pane.hidden = false;
-                    }
-
-                    max_height = Math.max(max_height, pane.offsetHeight);
-
-                    if(was_hidden) {
-                        pane.hidden = true;
-                        pane.style.visibility = '';
-                    }
-                }
-
-                panes.style.minHeight = max_height + 'px';
-            });
 
             // What runs when the popup closes, however it was closed - only what
             // changed travels, a popup closed on what it opened with saves nothing

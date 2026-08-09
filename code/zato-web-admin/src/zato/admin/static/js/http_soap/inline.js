@@ -41,7 +41,7 @@ $.fn.zato.http_soap.inline.config = {
     show_sec_type_in_cell: false,
 
     // The single-pick panels and how their filters speak
-    filter_label: 'Filter',
+    clear_filter_label: 'Clear',
     service_panel_title: 'Service',
     service_filter_placeholder: 'Type to filter the services',
     security_panel_title: 'Security definition',
@@ -71,6 +71,12 @@ $.fn.zato.http_soap.inline.config = {
     // What a pane says when there is nothing to pick from
     definitions_empty_message: 'No security definitions are available',
     groups_empty_message: 'No security groups are available',
+
+    // What a list says when a filter leaves nothing behind
+    no_matches_label: 'No matches',
+
+    // How wide the name and URL path inputs of the small forms are
+    text_input_width: '27em',
 
     // What a cell with no security definition says - clicking it opens the picker
     empty_security_label: 'Click to add',
@@ -216,7 +222,7 @@ $.fn.zato.http_soap.inline._edit_text = function(id, link, name, label, unique, 
     $.fn.zato.inline_edit.form_tippy({
         link_elem: link,
         title: label,
-        input_width: '18em',
+        input_width: inline.config.text_input_width,
         rows: [
             {name: name, label: label, value: instance[name], unique: unique}
         ],
