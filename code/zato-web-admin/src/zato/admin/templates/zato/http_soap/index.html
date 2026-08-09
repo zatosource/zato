@@ -456,9 +456,7 @@
                         <td class="impexp"><input type="checkbox" /></td>
 
                         <!-- 3 -->
-                        <td>
-                            {% if connection == 'channel' and transport == 'plain_http' and item.service_name == gateway_trigger_service %}<span class="gateway-badge">GW</span>{% endif %}{% if connection == 'channel' and transport == 'plain_http' and item.is_deprecated %}<span class="deprecated-badge">Deprecated</span>{% endif %}<a href="javascript:void(0)" data-id="{{ item.id }}" onclick="$.fn.zato.http_soap.inline.edit_name('{{ item.id }}', this)"><span class="name-value">{{ item.name }}</span></a>
-                        </td>
+                        <td>{% if connection == 'channel' and transport == 'plain_http' and item.service_name == gateway_trigger_service %}<span class="gateway-badge">GW</span>{% endif %}{% if connection == 'channel' and transport == 'plain_http' and item.is_deprecated %}<span class="deprecated-badge">Deprecated</span>{% endif %}<a href="javascript:void(0)" data-id="{{ item.id }}" onclick="$.fn.zato.http_soap.inline.edit_name('{{ item.id }}', this)"><span class="name-value">{{ item.name }}</span></a></td>
 
                         <!-- 4 -->
                         <td><a href="javascript:void(0)" data-id="{{ item.id }}" onclick="$.fn.zato.http_soap.inline.toggle_active('{{ item.id }}', this)">{{ item.is_active|yesno:'Yes,No' }}</a></td>

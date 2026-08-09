@@ -502,8 +502,7 @@
         // A rebuilt cell keeps the select's own label and an empty href - the canonical
         // name and href come back with the first inline save the cell goes through.
         var securityCell = String.format(
-            '<a href="javascript:void(0)" class="http-soap-security-cell form_hint" data-id="{0}" data-href="">---</a>',
-            item.id);
+            '<span class="form_hint">{0}</span>', $.fn.zato.http_soap.inline.config.empty_security_label);
 
         if(item.security_id && item.security_id !== 'ZATO_NONE') {
             securityCell = String.format(

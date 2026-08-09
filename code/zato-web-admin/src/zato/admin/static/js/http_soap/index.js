@@ -660,15 +660,29 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += service_tr;
     }
 
-    /* 9 - the cell shows the security definition and, for channels, the groups beneath it */
-    var security_cell = String.format(
-        '<a href="javascript:void(0)" class="http-soap-security-cell{0}" data-id="{1}" data-href="{2}">{3}</a>',
-        has_security ? '' : ' form_hint', item.id, data.security_href, has_security ? data.security_name : '---');
+    /* 9 - the cell shows the security definition and, for channels with groups, the groups beneath it */
+    var security_cell = '';
 
-    if(is_channel) {
+    if(has_security) {
         security_cell += String.format(
-            '<br/><a href="javascript:void(0)" class="http-soap-groups-cell" data-id="{0}" onclick="$.fn.zato.http_soap.inline.open_groups(this)">{1}</a>',
+            '<a href="javascript:void(0)" class="http-soap-security-cell" data-id="{0}" data-href="{1}">{2}</a>',
+            item.id, data.security_href, data.security_name);
+    }
+
+    // Rows without any group say "0 groups, ..." and the old listing showed nothing for them
+    var has_groups = is_channel && data.security_groups_info && data.security_groups_info.charAt(0) != '0';
+
+    if(has_groups) {
+        if(has_security) {
+            security_cell += '<br/>';
+        }
+        security_cell += String.format(
+            '<a href="javascript:void(0)" class="http-soap-groups-cell" data-id="{0}" onclick="$.fn.zato.http_soap.inline.open_groups(this)">{1}</a>',
             item.id, data.security_groups_info);
+    }
+
+    if(!security_cell) {
+        security_cell = '<span class="form_hint">---</span>';
     }
     row += String.format('<td>{0}</td>', security_cell);
 

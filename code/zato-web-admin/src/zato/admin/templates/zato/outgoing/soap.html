@@ -224,13 +224,7 @@
                         {% comment %} 3 {% endcomment %}
                         <td>{{ item.soap_action|default:'' }}</td>
                         <td>{{ item.soap_version }}</td>
-                        <td>
-                            {% if item.security_name %}
-                                <a href="javascript:void(0)" class="http-soap-security-cell" data-id="{{ item.id }}" data-href="{{ item.security_href }}">{{ item.sec_type_name }}<br/>{{ item.security_name }}</a>
-                            {% else %}
-                                <a href="javascript:void(0)" class="http-soap-security-cell form_hint" data-id="{{ item.id }}" data-href="">---</a>
-                            {% endif %}
-                        </td>
+                        <td>{% if item.security_name %}<a href="javascript:void(0)" class="http-soap-security-cell" data-id="{{ item.id }}" data-href="{{ item.security_href }}">{{ item.sec_type_name }}<br/>{{ item.security_name }}</a>{% else %}<span class="form_hint">---</span>{% endif %}</td>
 
                         <td>{% if item.is_internal %}<span class="form_hint">Audit log</span>{% else %}<a href="/zato/audit-log/?source=soap-outgoing&amp;object_name={{ item.name|urlencode }}&amp;cluster={{ cluster_id }}">Audit log</a>{% endif %}</td>
                         <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)" class="ping-link">Ping</a></td>

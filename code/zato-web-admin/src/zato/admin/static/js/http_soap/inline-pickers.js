@@ -158,8 +158,7 @@ $.fn.zato.http_soap.inline.open_service_panel = function(link) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// The two things a service can be done with, one to a button - internal services
-// are not offered in the IDE, so their menu carries the change button alone
+// The two things a service can be done with, one to a button
 $.fn.zato.http_soap.inline.build_service_menu = function(menu, name) {
 
     var inline = $.fn.zato.http_soap.inline;
@@ -168,19 +167,14 @@ $.fn.zato.http_soap.inline.build_service_menu = function(menu, name) {
     var out = document.createElement('div');
     out.className = 'zato-tippy-buttons';
 
-    if(!$.fn.zato.data_table.internal_services[name]) {
+    // The IDE is reached with a plain page load, so the browser's own Back button comes
+    // back to this list rather than to wherever the list was opened from
+    var ide_url = config.service_ide_url.replace('{name}', encodeURIComponent(name));
+    var open_ide = inline.build_menu_button(config.open_ide_label);
 
-        // The IDE is reached with a plain page load, so the browser's own Back button comes
-        // back to this list rather than to wherever the list was opened from
-        var ide_url = config.service_ide_url.replace('{name}', encodeURIComponent(name));
-        var open_ide = inline.build_menu_button(config.open_ide_label);
-
-        open_ide.addEventListener('click', function() {
-            window.location.href = ide_url;
-        });
-
-        out.appendChild(open_ide);
-    }
+    open_ide.addEventListener('click', function() {
+        window.location.href = ide_url;
+    });
 
     var change_service = inline.build_menu_button(config.change_service_label);
 
@@ -189,6 +183,7 @@ $.fn.zato.http_soap.inline.build_service_menu = function(menu, name) {
         inline.open_service_panel(menu.reference);
     });
 
+    out.appendChild(open_ide);
     out.appendChild(change_service);
 
     return out;
