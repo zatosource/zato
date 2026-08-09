@@ -20,6 +20,29 @@ $.fn.zato.how_it_works._inlineHideTimer = null;
 
 // ////////////////////////////////////////////////////////////////////////
 
+// How a field tooltip adapts when its anchor sits close to the window edge -
+// with less room on the tooltip's side than the full-size text wants, the
+// text steps down one size and the tooltip keeps to the room there is,
+// wrapping instead of covering the fields it describes.
+$.fn.zato.how_it_works.compactConfig = {
+
+    // The room a full-size tooltip needs beside its anchor - tippy's
+    // default maxWidth of 350px plus the arrow and the offset
+    minFullSizeSpace: 370,
+
+    // What a compact tooltip leaves free between itself and the anchor
+    anchorGap: 20,
+
+    // The narrowest a compact tooltip goes - below that it would render
+    // as a one-word column
+    minCompactWidth: 160,
+
+    // The class the compact font size hangs off, styled in how-it-works.css
+    compactClass: 'how-it-works-compact'
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.how_it_works.init = function(config) {
 
     var badge = document.getElementById(config.badgeId);
@@ -731,10 +754,25 @@ $.fn.zato.how_it_works._showFieldTooltip = function(state, index) {
         '<div style="text-align:right;font-size:9px;font-family:monospace;opacity:0.7;margin-top:6px">' +
         'Esc, left arrow, right arrow</div>';
 
-    var result = tippy(target, {
+    // .. a tooltip to the left or right of an anchor near the window edge
+    // .. has less room than its full size wants - it goes compact instead,
+    // .. taking the room there is and stepping the text down one size ..
+    var compactConfig = $.fn.zato.how_it_works.compactConfig;
+    var placement = field.placement || state.config.placement || 'left';
+    var placementSide = placement.split('-')[0];
+    var isCompact = false;
+    var sideSpace = 0;
+
+    if (placementSide === 'left' || placementSide === 'right') {
+        var targetRect = target.getBoundingClientRect();
+        sideSpace = placementSide === 'left' ? targetRect.left : window.innerWidth - targetRect.right;
+        isCompact = sideSpace < compactConfig.minFullSizeSpace;
+    }
+
+    var tippyProps = {
         content: tooltipContent,
         allowHTML: true,
-        placement: field.placement || state.config.placement || 'left',
+        placement: placement,
         theme: 'dark',
         arrow: true,
         interactive: true,
@@ -742,9 +780,20 @@ $.fn.zato.how_it_works._showFieldTooltip = function(state, index) {
         trigger: 'manual',
         hideOnClick: false,
         appendTo: function() { return state.dialog || document.body; },
-    });
+    };
+
+    if (isCompact) {
+        tippyProps.maxWidth = Math.max(sideSpace - compactConfig.anchorGap, compactConfig.minCompactWidth);
+    }
+
+    var result = tippy(target, tippyProps);
 
     state.fieldTippy = Array.isArray(result) ? result[0] : result;
+
+    if (isCompact) {
+        state.fieldTippy.popper.classList.add(compactConfig.compactClass);
+    }
+
     state.fieldTippy.show();
 
     // .. bind the inline toggle to sync changes back to the real checkbox ..

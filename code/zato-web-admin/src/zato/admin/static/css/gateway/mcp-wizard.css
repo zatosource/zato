@@ -13,10 +13,11 @@
 /* MCP wizard - decision lines                                   */
 /* ------------------------------------------------------------ */
 
-/* The questions of step 2 are short - the shared 14.5em default would
-   push their answers far off to the right */
+/* The step 2 label column is just wide enough for the longest question,
+   "Allow client filters" - the shared 14.5em default would push the
+   answers far off to the right */
 #mcp-wizard {
-    --wizard-line-label-width: 7em;
+    --wizard-line-label-width: 9.5em;
 
     /* One width for the Name and URL path labels, so both inputs start
        in the same column - nowrap below keeps URL path on one line.
@@ -38,11 +39,18 @@
     white-space: nowrap;
 }
 
-/* Step 2 has three lines split over two sections, so there is no value
-   column to line up - each answer follows its own question at the line's
-   12px gap, rather than hanging in the air after a shared label width */
+/* The shared width lines the values up in a column - nowrap keeps the
+   longest label on one line inside it */
 #mcp-wizard .wizard-line-label {
-    width: auto;
+    white-space: nowrap;
+}
+
+/* The three lines of step 2 read as one evenly spaced list, though the
+   More options line lives in a section of its own - the kit's rhythm
+   tokens are set to one value for this step body */
+#mcp-wizard-step-body-1 {
+    --wizard-lines-gap: 16px;
+    --wizard-section-space: 16px;
 }
 
 #mcp-wizard .wizard-name-field input,

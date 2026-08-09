@@ -58,6 +58,13 @@
        questions are longer sets it higher on its own card. */
     --wizard-line-label-width: 14.5em;
 
+    /* The step's vertical rhythm - how far apart the lines of one group
+       sit and how much wider the break before a new section is. A step
+       whose lines read as one list rather than as groups sets the two
+       to one value on its own card or step body. */
+    --wizard-lines-gap: 12px;
+    --wizard-section-space: 22px;
+
     --wizard-accent: var(--zato-seablue-light2);
     /* What a picked option wears - the lighter of the two dashboard blues,
        so a choice made reads as a choice made and not as an alarm */
@@ -297,7 +304,7 @@
 /* ------------------------------------------------------------ */
 
 .wizard-section {
-    margin-bottom: 22px;
+    margin-bottom: var(--wizard-section-space);
 }
 
 .wizard-section-title {

@@ -67,3 +67,15 @@ td.how-it-works-group-label.how-it-works-group-expanded {
 .how-it-works-badge-inline.how-it-works-badge-visible {
     display: inline-block;
 }
+
+/* ------------------------------------------------------------ */
+/* How it works - compact tooltips                               */
+/* ------------------------------------------------------------ */
+
+/* A tooltip whose anchor sits close to the window edge has less room than
+   the full-size text wants - it steps the text down one size and wraps
+   within the room there is, instead of covering the fields it describes */
+.how-it-works-compact .tippy-box {
+    font-size: 12px;
+    line-height: 1.6;
+}
