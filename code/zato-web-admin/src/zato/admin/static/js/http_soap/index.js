@@ -601,7 +601,14 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     }
 
     if(is_channel) {
-        service_tr += String.format('<td><a href="javascript:void(0)" class="http-soap-service-cell" data-id="{0}">{1}</a></td>', item.id, item.service);
+
+        // Internal services stay where they are - the channels running them are not to be repointed
+        if($.fn.zato.data_table.internal_services[item.service]) {
+            service_tr += String.format('<td>{0}</td>', item.service);
+        }
+        else {
+            service_tr += String.format('<td><a href="javascript:void(0)" class="http-soap-service-cell" data-id="{0}">{1}</a></td>', item.id, item.service);
+        }
         merge_url_params_req_tr += String.format('<td class="ignore">{0}</td>', merge_url_params_req);
         url_params_pri_tr += String.format('<td class="ignore">{0}</td>', item.url_params_pri);
         params_pri_tr += String.format('<td class="ignore">{0}</td>', item.params_pri);
@@ -660,30 +667,38 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += service_tr;
     }
 
-    /* 9 - the cell shows the security definition and, for channels with groups, the groups beneath it */
+    /* 9 - one link for the whole cell. A channel's opens the tabbed security panel and says
+       what the row holds - the definition, the groups beneath it, or the invitation when
+       it holds neither. An outgoing connection's opens the definition menu. */
     var security_cell = '';
 
-    if(has_security) {
-        security_cell += String.format(
-            '<a href="javascript:void(0)" class="http-soap-security-cell" data-id="{0}" data-href="{1}">{2}</a>',
-            item.id, data.security_href, data.security_name);
-    }
+    if(is_channel) {
 
-    // Rows without any group say "0 groups, ..." and the old listing showed nothing for them
-    var has_groups = is_channel && data.security_groups_info && data.security_groups_info.charAt(0) != '0';
+        // Rows without any group say "0 groups, ..." and the cell shows nothing for them
+        var has_groups = data.security_groups_info && data.security_groups_info.charAt(0) != '0';
+        var cell_text = '';
 
-    if(has_groups) {
         if(has_security) {
-            security_cell += '<br/>';
+            cell_text += data.security_name;
         }
-        security_cell += String.format(
-            '<a href="javascript:void(0)" class="http-soap-groups-cell" data-id="{0}" onclick="$.fn.zato.http_soap.inline.open_groups(this)">{1}</a>',
-            item.id, data.security_groups_info);
+        if(has_groups) {
+            cell_text += (has_security ? '<br/>' : '') + data.security_groups_info;
+        }
+        if(!cell_text) {
+            cell_text = $.fn.zato.http_soap.inline.config.empty_security_label;
+        }
+
+        security_cell = String.format(
+            '<a href="javascript:void(0)" class="http-soap-security-tabs-cell" data-id="{0}" onclick="$.fn.zato.http_soap.inline.open_security_tabs(this)">{1}</a>',
+            item.id, cell_text);
+    }
+    else {
+        security_cell = String.format(
+            '<a href="javascript:void(0)" class="http-soap-security-cell" data-id="{0}" data-href="{1}">{2}</a>',
+            item.id, data.security_href,
+            has_security ? data.security_name : $.fn.zato.http_soap.inline.config.empty_security_label);
     }
 
-    if(!security_cell) {
-        security_cell = '<span class="form_hint">---</span>';
-    }
     row += String.format('<td>{0}</td>', security_cell);
 
     /* 10, 11, 11a */

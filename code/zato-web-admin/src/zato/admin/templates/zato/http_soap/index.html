@@ -471,11 +471,11 @@
 
                         <!-- 7, 8 -->
                         {% if connection == 'channel' %}
-                            <td><a href="javascript:void(0)" class="http-soap-service-cell" data-id="{{ item.id }}">{{ item.service_name }}</a></td>
+                            <td>{% if item.service_name in internal_services %}{{ item.service_name }}{% else %}<a href="javascript:void(0)" class="http-soap-service-cell" data-id="{{ item.id }}">{{ item.service_name }}</a>{% endif %}</td>
                         {% endif %}
 
                         <!-- 9 -->
-                        <td>{% if item.security_name == "Delegated to RBAC" %}<span class="form_hint">Delegated to RBAC</span>{% else %}{% if item.security_name %}<a href="javascript:void(0)" class="http-soap-security-cell" data-id="{{ item.id }}" data-href="{{ item.security_href }}">{{ item.security_name }}</a>{% endif %}{% if connection == 'channel' and item.security_group_count %}{% if item.security_name %}<br/>{% endif %}<a href="javascript:void(0)" class="http-soap-groups-cell" data-id="{{ item.id }}" onclick="$.fn.zato.http_soap.inline.open_groups(this)">{{ item.security_groups_info }}</a>{% endif %}{% if not item.security_name %}{% if connection != 'channel' or not item.security_group_count %}<span class="form_hint">---</span>{% endif %}{% endif %}{% endif %}</td>
+                        <td>{% if item.security_name == "Delegated to RBAC" %}<span class="form_hint">Delegated to RBAC</span>{% elif connection == 'channel' %}<a href="javascript:void(0)" class="http-soap-security-tabs-cell" data-id="{{ item.id }}" onclick="$.fn.zato.http_soap.inline.open_security_tabs(this)">{% if item.security_name %}{{ item.security_name }}{% if item.security_group_count %}<br/>{% endif %}{% endif %}{% if item.security_group_count %}{{ item.security_groups_info }}{% endif %}{% if not item.security_name and not item.security_group_count %}Click to add{% endif %}</a>{% else %}<a href="javascript:void(0)" class="http-soap-security-cell" data-id="{{ item.id }}" data-href="{{ item.security_href }}">{% if item.security_name %}{{ item.security_name }}{% else %}Click to add{% endif %}</a>{% endif %}</td>
 
                         <!-- 10, 11, 11a -->
                         {% if transport == 'soap' %}

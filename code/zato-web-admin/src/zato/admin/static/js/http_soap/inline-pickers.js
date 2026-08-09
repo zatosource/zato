@@ -309,11 +309,9 @@ $.fn.zato.http_soap.inline.write_security_cell = function(link, saved) {
         }
 
         link.appendChild(document.createTextNode(saved.security_name));
-        link.classList.remove('form_hint');
     }
     else {
         link.textContent = inline.config.empty_security_label;
-        link.classList.add('form_hint');
     }
 
     link.setAttribute('data-href', saved.security_href);
@@ -403,12 +401,6 @@ $.fn.zato.http_soap.inline.init_security_menus = function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// The security groups part of the Security column - what the groups panel opened on,
-// compared against when it closes
-$.fn.zato.http_soap.inline.groups_baseline = null;
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // The filter and the two zones the groups panel holds, the same markup the channel's
 // own edit form renders - the badge picker wires itself up to the ids derived from
 // the action, so the panel only has to put them on the page.
@@ -450,35 +442,40 @@ $.fn.zato.http_soap.inline._read_groups = function() {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Saves the row whose groups panel has just closed, a panel closed on what it opened with saving nothing
-$.fn.zato.http_soap.inline._on_groups_close = function(link) {
+// What the whole security cell of a channel now says of itself - the definition's
+// name, the groups beneath it, or the invitation when the row holds neither
+$.fn.zato.http_soap.inline.write_channel_security_cell = function(link, saved) {
 
     var inline = $.fn.zato.http_soap.inline;
-    var picked = inline._read_groups();
 
-    if(JSON.stringify(picked) === JSON.stringify(inline.groups_baseline)) {
-        return;
+    var has_name = Boolean(saved.security_name);
+    var has_groups = Boolean(saved.security_groups_info) && saved.security_groups_info.charAt(0) != '0';
+
+    link.textContent = '';
+
+    if(has_name) {
+        link.appendChild(document.createTextNode(saved.security_name));
     }
 
-    var data = {
-        'security_groups': JSON.stringify(picked)
-    };
+    if(has_groups) {
+        if(has_name) {
+            link.appendChild(document.createElement('br'));
+        }
+        link.appendChild(document.createTextNode(saved.security_groups_info));
+    }
 
-    var on_saved = function(saved) {
-
-        // The cell now counts what was just sent
-        link.textContent = saved.security_groups_info;
-    };
-
-    inline.save(link, link.getAttribute('data-id'), data, on_saved, inline.config.groups_saved_message);
+    if(!has_name && !has_groups) {
+        link.textContent = inline.config.empty_security_label;
+    }
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Opens the groups panel on the row the cell belongs to. The list is brought over first
-// and the panel comes on screen already populated, in one paint - a panel filled in after
-// it opened would flicker as its zones got replaced.
-$.fn.zato.http_soap.inline.open_groups = function(link) {
+// The one panel a channel's security cell opens - the definition picker and the groups
+// badge picker inside it, one to a tab, only one of them on screen at a time. The groups
+// list is brought over first and the panel comes on screen already populated, in one
+// paint - a panel filled in after it opened would flicker as its zones got replaced.
+$.fn.zato.http_soap.inline.open_security_tabs = function(link) {
 
     var inline = $.fn.zato.http_soap.inline;
     var lines = $.fn.zato.wizard_kit.lines;
@@ -497,34 +494,165 @@ $.fn.zato.http_soap.inline.open_groups = function(link) {
         // the list was in flight may have opened another one by now
         lines.closePanel();
 
-        lines.openPanel(link, {
-            title: inline.config.groups_panel_title,
-            width: inline.config.groups_panel_width,
-            minWidth: inline.config.groups_panel_min_width,
-            geometryKey: inline.config.groups_panel_key,
+        inline._open_security_tabs_panel(link, items);
+    };
 
-            build: function(content) {
+    $.fn.zato.post(url, on_response, '', '', true);
+};
 
-                inline._build_groups_body(content);
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-                // The groups list already says which of them the channel holds
-                $.fn.zato.badge_picker.init(inline.config.groups_element_action, items, {
-                    is_assigned: function(item) {
-                        return item.is_assigned;
-                    }
-                });
+$.fn.zato.http_soap.inline._open_security_tabs_panel = function(link, items) {
 
-                inline.groups_baseline = inline._read_groups();
+    var inline = $.fn.zato.http_soap.inline;
+    var lines = $.fn.zato.wizard_kit.lines;
+    var id = link.getAttribute('data-id');
+    var instance = $.fn.zato.data_table.data[id];
+    var security_attr = inline.config.security_attr;
 
-                // What runs when the panel closes, however it was closed
-                return function() {
-                    inline._on_groups_close(link);
-                };
+    // What the groups stood at when the panel opened, compared against when it closes
+    var baseline = [];
+
+    for(var item_idx = 0; item_idx < items.length; item_idx++) {
+        if(items[item_idx].is_assigned) {
+            baseline.push(items[item_idx].id);
+        }
+    }
+    baseline.sort();
+
+    var picked = baseline.slice();
+
+    // The badge picker only exists while its tab is on screen, so its answer is
+    // read each time the tab goes away and once more when the panel closes
+    var read_groups_if_live = function() {
+        if(document.getElementById('badge-picker-' + inline.config.groups_element_action)) {
+            picked = inline._read_groups();
+        }
+    };
+
+    var show_definition = function(content) {
+
+        var options = [];
+
+        $(inline.config.security_select + ' option').each(function() {
+            if(this.value) {
+                options.push({value: this.value, label: this.text});
+            }
+        });
+
+        var on_pick = function(option) {
+
+            // Closing the panel is what saves the groups tab, if it was changed
+            lines.closePanel();
+
+            // Picking the definition the row already uses changes nothing
+            if(option.value === instance[security_attr]) {
+                return;
+            }
+
+            var data = {
+                'security': option.value
+            };
+
+            var on_saved = function(saved) {
+
+                // The row stands at what came back - the composite id feeds the edit form,
+                // the label feeds the rebuilt rows
+                instance[security_attr] = saved.security_id;
+                instance[security_attr + '_select'] = option.label;
+
+                inline.write_channel_security_cell(link, saved);
+            };
+
+            inline.save(link, id, data, on_saved, $.fn.zato.inline_edit.config.saved_label);
+        };
+
+        inline._build_pick_body(
+            content, options, instance[security_attr], inline.config.security_filter_placeholder, on_pick);
+    };
+
+    var show_groups = function(content) {
+
+        inline._build_groups_body(content);
+
+        // The list already says which of the groups the channel holds
+        $.fn.zato.badge_picker.init(inline.config.groups_element_action, items, {
+            is_assigned: function(item) {
+                return item.is_assigned;
             }
         });
     };
 
-    $.fn.zato.post(url, on_response, '', '', true);
+    var current_tab = '';
+
+    var render = function(tab_name) {
+
+        // A visit to the groups tab may have changed the picks, so leaving it writes
+        // them back into the list the next visit rebuilds the tab from
+        if(current_tab === inline.config.tab_groups_name) {
+            read_groups_if_live();
+            for(var idx = 0; idx < items.length; idx++) {
+                items[idx].is_assigned = picked.indexOf(items[idx].id) > -1;
+            }
+        }
+        current_tab = tab_name;
+
+        lines.setSegments('http-soap-security-segments', [
+            {name: inline.config.tab_definition_name, label: inline.config.tab_definition_label, is_active: true},
+            {name: inline.config.tab_groups_name, label: inline.config.tab_groups_label, is_active: true}
+        ], tab_name, render);
+
+        var tab_content = document.getElementById('http-soap-security-tab-content');
+        tab_content.textContent = '';
+
+        if(tab_name === inline.config.tab_definition_name) {
+            show_definition(tab_content);
+        }
+        else {
+            show_groups(tab_content);
+        }
+    };
+
+    lines.openPanel(link, {
+        title: inline.config.security_tabs_title,
+        width: inline.config.groups_panel_width,
+        minWidth: inline.config.groups_panel_min_width,
+        geometryKey: inline.config.security_tabs_key,
+
+        build: function(content) {
+
+            var segments = document.createElement('div');
+            segments.id = 'http-soap-security-segments';
+            content.appendChild(segments);
+
+            var tab_content = document.createElement('div');
+            tab_content.id = 'http-soap-security-tab-content';
+            content.appendChild(tab_content);
+
+            render(inline.config.tab_definition_name);
+
+            // What runs when the panel closes, however it was closed - a panel
+            // closed on the groups it opened with saves nothing
+            return function() {
+
+                read_groups_if_live();
+
+                if(JSON.stringify(picked) === JSON.stringify(baseline)) {
+                    return;
+                }
+
+                var data = {
+                    'security_groups': JSON.stringify(picked)
+                };
+
+                var on_saved = function(saved) {
+                    inline.write_channel_security_cell(link, saved);
+                };
+
+                inline.save(link, id, data, on_saved, inline.config.groups_saved_message);
+            };
+        }
+    });
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

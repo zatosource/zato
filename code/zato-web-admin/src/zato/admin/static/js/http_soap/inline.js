@@ -51,10 +51,17 @@ $.fn.zato.http_soap.inline.config = {
     service_panel_key: 'http-soap-row-service-panel',
     security_panel_key: 'http-soap-row-security-panel',
 
-    // The security groups panel and the badge picker inside it
-    groups_panel_title: 'Security groups',
+    // The one panel a channel's security cell opens, the definition picker and
+    // the groups badge picker inside it, one to a tab
+    security_tabs_title: 'Security',
+    security_tabs_key: 'http-soap-row-security-tabs-panel',
+    tab_definition_name: 'definition',
+    tab_groups_name: 'groups',
+    tab_definition_label: 'Definition',
+    tab_groups_label: 'Groups',
+
+    // The groups tab and the badge picker inside it
     groups_filter_placeholder: 'Filter groups...',
-    groups_panel_key: 'http-soap-row-groups-panel',
     groups_panel_width: 640,
     groups_panel_min_width: 420,
     groups_element_action: 'http-soap-groups',
@@ -63,8 +70,8 @@ $.fn.zato.http_soap.inline.config = {
     // What a picker cell says when its list could not be brought over
     load_error_label: 'Could not load the list',
 
-    // What a cell with no security definition says
-    empty_security_label: '---',
+    // What a cell with no security definition says - clicking it opens the picker
+    empty_security_label: 'Click to add',
 
     // How long a confirmation takes to fade once it has been read
     confirmation_fade_ms: 200,
