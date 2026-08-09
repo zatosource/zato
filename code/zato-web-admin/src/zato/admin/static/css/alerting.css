@@ -65,6 +65,14 @@
     cursor: default;
 }
 
+/* The per-rule action links wear the app's own link face in the listing tables'
+   gray - the scoped reset ate the face's own underline padding, so it is
+   asserted again */
+.alerting-card .rulesets-rule-action {
+    color: var(--zato-table-text);
+    padding-bottom: 2px;
+}
+
 /* ------------------------------------------------------------ */
 /* Alert rules - the editor screen                                */
 /* ------------------------------------------------------------ */

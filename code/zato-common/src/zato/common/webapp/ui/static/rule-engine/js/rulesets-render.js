@@ -55,6 +55,10 @@ var rulesetsView = {
         showRuleState: false,
         ruleActions: [],
 
+        // The class the action links carry - the host's own link face, so they look
+        // like every other link on its screens
+        ruleActionClass: 'link',
+
         // Which screens the host can open - only the URLs it passes render as links
         openUrls: {},
 
@@ -80,6 +84,10 @@ var rulesetsView = {
         // Whether the auto-expanded ruleset stays open for good - no caret, no way to
         // collapse it, its name a plain link to the editor
         lockExpanded: false,
+
+        // Whether the expanded panel's head names the ruleset - "6 rules in alerts" -
+        // or counts alone, for a host whose one ruleset needs no naming
+        showRulesetInRulesHead: true,
 
         eventPhrases: {
             'definition.created': 'created this ruleset',
@@ -274,19 +282,22 @@ var rulesetsView = {
     ruleStateHtml: function(rule) {
         if (!this.config.showRuleState) { return ''; }
 
+        // The colours come from the host's shared status badge classes - green for
+        // active, gray for not - the same pair its other screens use
         var out = rule.isActive
-            ? '<span class="pill pill-good rulesets-rule-state">Active</span>'
-            : '<span class="pill pill-warning rulesets-rule-state">Inactive</span>';
+            ? '<span class="pill rulesets-rule-state status-badge-on">Active</span>'
+            : '<span class="pill rulesets-rule-state status-badge-off">Inactive</span>';
         return out;
     },
 
     ruleActionsHtml: function(rule) {
         var html = '';
+        var actionClass = this.config.ruleActionClass;
 
         this.config.ruleActions.forEach(function(action, actionIndex) {
             if (action.isShown !== undefined && !action.isShown(rule)) { return; }
 
-            html += '<span class="link rulesets-rule-action" data-action="rule-action" ' +
+            html += '<span class="' + actionClass + ' rulesets-rule-action" data-action="rule-action" ' +
                 'data-index="' + actionIndex + '" data-rule="' + shared.escape(rule.key) + '">' +
                 action.label + '</span>';
         });
@@ -312,12 +323,16 @@ var rulesetsView = {
             return html;
         }
 
-        html += '<div class="rulesets-rules-head">' + rules.length + ' rule' + (rules.length === 1 ? '' : 's') +
-            ' in ' + shared.escape(this.displayName(ruleset.name)) + '</div>';
+        var head = rules.length + ' rule' + (rules.length === 1 ? '' : 's');
+        if (this.config.showRulesetInRulesHead) {
+            head += ' in ' + shared.escape(this.displayName(ruleset.name));
+        }
+        html += '<div class="rulesets-rules-head">' + head + '</div>';
 
-        rules.slice(0, this.config.maxRulesInPanel).forEach(function(rule) {
+        rules.slice(0, this.config.maxRulesInPanel).forEach(function(rule, ruleIndex) {
             html += '<a class="rulesets-rule" href="' + self.config.openUrls.editor + '?ruleset=' + ruleset.id +
                 '&amp;rule=' + encodeURIComponent(rule.key) + '">' +
+                '<span class="rulesets-rule-number">' + (ruleIndex + 1) + '</span>' +
                 '<span class="rulesets-rule-name">' + self.markHtml(rule.name) + '</span>' +
                 '<span class="rulesets-rule-docs">' + shared.escape(rule.docs) + '</span>' +
                 '<span class="rulesets-rule-shape">' + rule.conditionCount + ' condition' +

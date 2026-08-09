@@ -4,6 +4,7 @@
 
 {% block dashboard_extra_css %}
 <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/status-badge.css">
 <link rel="stylesheet" type="text/css" href="/shared-ui/webapp/fonts.css">
 <link rel="stylesheet" type="text/css" href="/shared-ui/webapp/css/tokens.css">
 <link rel="stylesheet" type="text/css" href="/shared-ui/webapp/css/themes/zato-light.css">
@@ -66,6 +67,8 @@ $(document).ready(function() {
         onNew: function() { alerting.openCreate(); },
         autoExpandId: definitionId === 0 ? null : definitionId,
         lockExpanded: true,
+        showRulesetInRulesHead: false,
+        ruleActionClass: 'zato-link-face',
         ruleActions: [
             {label: 'Activate', isShown: function(rule) { return !rule.isActive; },
                 onRun: function(key) { alerting.runAction('activate', key); }},

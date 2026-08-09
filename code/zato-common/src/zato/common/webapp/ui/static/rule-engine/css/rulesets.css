@@ -233,10 +233,24 @@
     background-color: var(--action-face);
     color: var(--action-ink);
 }
+/* The rule's ordinal, to the left of its node on the spine - absolute, so it
+   takes no grid track of its own */
+.ruleset-browser .rulesets-rule-number {
+    position: absolute;
+    left: -48px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+}
+
 .ruleset-browser .rulesets-rule-docs {
     min-width: 0;
     font-size: 12px;
-    color: var(--text4);
+    color: var(--text2);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -245,32 +259,25 @@
 /* The condition and action counts, one grid column each */
 .ruleset-browser .rulesets-rule-shape {
     font-size: 10px;
-    color: var(--text3);
+    color: var(--text2);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     white-space: nowrap;
 }
 
-/* The rule's active state, shown when the host asks for it - one fixed-width pill
-   in the state's own full colour so it reads at a glance */
+/* The rule's active state, shown when the host asks for it - one fixed-width pill,
+   its colours from the host's shared status badge classes */
 .ruleset-browser .rulesets-rule-state {
     justify-self: start;
     width: 62px;
     justify-content: center;
 }
-.ruleset-browser .rulesets-rule-state.pill-good {
-    color: var(--green);
-    background: color-mix(in srgb, var(--green) 12%, var(--background));
-}
-.ruleset-browser .rulesets-rule-state.pill-warning {
-    color: var(--amber);
-    background: color-mix(in srgb, var(--amber) 12%, var(--background));
-}
 
 /* The host's own per-rule actions at the end of the row - each in its own grid
-   column, looking like every other link through the kit's own link class */
+   column, looking like every other link through the host's link face class */
 .ruleset-browser .rulesets-rule-action {
     justify-self: start;
+    font-size: 12px;
     cursor: pointer;
     white-space: nowrap;
 }
