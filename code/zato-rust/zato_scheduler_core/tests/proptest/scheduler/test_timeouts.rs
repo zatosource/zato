@@ -2,7 +2,7 @@ use chrono::Utc;
 use proptest::prelude::*;
 use std::time::Instant;
 use zato_scheduler_core::DeferredLog;
-use zato_scheduler_core::job::{ExecutionRecord, RunningJob};
+use zato_scheduler_core::job::RunningJob;
 use zato_scheduler_core::model::SchedulerJob;
 use zato_scheduler_core::scheduler::{SchedulerState, check_in_flight_timeouts};
 
@@ -41,10 +41,10 @@ proptest! {
         let mut state = SchedulerState::new();
         state.jobs.insert(1, running_job);
         let mut deferred = DeferredLog::new();
-        check_in_flight_timeouts(&mut state, &mut deferred);
+        let timeout_events = check_in_flight_timeouts(&mut state, &mut deferred);
         let running_job = state.jobs.get(&1).unwrap();
         prop_assert!(!running_job.in_flight);
-        prop_assert!(running_job.history.is_empty());
+        prop_assert!(timeout_events.is_empty());
     }
 
     #[test]
@@ -54,12 +54,13 @@ proptest! {
         let mut running_job = RunningJob::from_scheduler_job(&scheduler_job);
         running_job.in_flight = true;
         running_job.in_flight_since = Some(Instant::now());
-        running_job.record_execution(ExecutionRecord::new("p", "a", "executed", 1));
+        running_job.in_flight_run = Some(1);
         let mut state = SchedulerState::new();
         state.jobs.insert(1, running_job);
         let mut deferred = DeferredLog::new();
-        check_in_flight_timeouts(&mut state, &mut deferred);
+        let timeout_events = check_in_flight_timeouts(&mut state, &mut deferred);
         let running_job = state.jobs.get(&1).unwrap();
         prop_assert!(running_job.in_flight);
+        prop_assert!(timeout_events.is_empty());
     }
 }

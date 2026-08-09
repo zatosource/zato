@@ -5,10 +5,10 @@
 
 //! Standalone Zato scheduler binary.
 //!
-//! Communicates with the Zato server via Redis Streams for commands and
-//! fire events, and serves an HTTP query API on 127.0.0.1 (port from
-//! `Zato_Scheduler_HTTP_Port`, 35100 by default) for the server to read
-//! scheduler state (job summaries, history, log entries).
+//! Communicates with the Zato server via Redis Streams for commands, fire
+//! events and timeout events, and serves an HTTP query API on 127.0.0.1
+//! (port from `Zato_Scheduler_HTTP_Port`, 35100 by default) for the server
+//! to read scheduler state (job summaries and metrics).
 
 use std::sync::Arc;
 
@@ -208,8 +208,15 @@ async fn main() -> std::io::Result<()> {
     let fire_thread = std::thread::Builder::new()
         .name("zato-fire-pub".into())
         .spawn(move || {
-            for batch in fire_receiver {
-                redis_streams::publish_fire_event(&mut fire_conn, &keys_for_fire, &batch);
+            for event in fire_receiver {
+                match event {
+                    zato_scheduler_core::types::OutgoingEvent::Fire(batch) => {
+                        redis_streams::publish_fire_event(&mut fire_conn, &keys_for_fire, &batch);
+                    }
+                    zato_scheduler_core::types::OutgoingEvent::Timeout(timeout_event) => {
+                        redis_streams::publish_timeout_event(&mut fire_conn, &keys_for_fire, &timeout_event);
+                    }
+                }
             }
             tracing::info!("Fire publisher thread exiting");
         })

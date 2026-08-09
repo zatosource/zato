@@ -135,13 +135,22 @@ def _build_where(
         one_source = sources[0]
 
         if outstanding := _source_outstanding.get(one_source):
-            conditions = outstanding_conditions(
-                one_source,
-                outstanding.open_event,
-                outstanding.close_event,
-                outstanding.needs_object_name_match,
-            )
-            out.extend(conditions)
+
+            # A source whose events are single rows updated in place has no exchange
+            # to pair - open there means the row still carries its in-progress outcome ..
+            if outstanding.open_outcome:
+                out.append(event_table.c.outcome == outstanding.open_outcome)
+
+            # .. everywhere else an open exchange is a sent message whose acknowledgment
+            # has not arrived.
+            else:
+                conditions = outstanding_conditions(
+                    one_source,
+                    outstanding.open_event,
+                    outstanding.close_event,
+                    outstanding.needs_object_name_match,
+                )
+                out.extend(conditions)
 
     return out
 

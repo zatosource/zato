@@ -1,6 +1,5 @@
 //! Runtime job representation and schedule computation.
 
-use std::collections::VecDeque;
 use std::time::Instant;
 
 use chrono::{DateTime, LocalResult, TimeZone, Utc};
@@ -17,21 +16,16 @@ use crate::types::{JobId, JobType, ServiceName};
 /// Default maximum execution time for a job (1 hour in ms).
 pub const DEFAULT_MAX_EXECUTION_TIME_MS: u64 = 3_600_000;
 
-/// Default maximum number of history records kept per job.
-pub const DEFAULT_MAX_HISTORY: usize = 10_000;
-
 /// Minimum allowed `max_execution_time_ms` (1 second).
 pub const MIN_MAX_EXECUTION_TIME_MS: u64 = 1_000;
 
 /// Maximum allowed `max_execution_time_ms` (24 hours).
 pub const MAX_MAX_EXECUTION_TIME_MS: u64 = 86_400_000;
 
-/// Number of distinct outcome labels tracked per job.
-pub const OUTCOME_COUNT: usize = crate::types::outcome::COUNTABLE.len();
-
-/// Computed summary of a scheduler job for the dashboard API.
+/// Scheduling-state summary of a scheduler job for the dashboard API.
 ///
-/// Contains both static job metadata and derived stats from execution history.
+/// Execution history lives in the server's audit log - this summary carries
+/// only what the scheduler itself owns: the schedule and the in-flight state.
 /// Built by `RunningJob::summary()` under the state mutex, then serialized
 /// to JSON for the HTTP query API.
 #[derive(Serialize)]
@@ -54,110 +48,6 @@ pub struct JobSummary {
     pub interval_ms: u64,
     /// Next scheduled fire time as an ISO string, if any.
     pub next_fire_utc: Option<String>,
-    /// Outcome label of the most recent execution, if any.
-    pub last_outcome: Option<String>,
-    /// Duration of the most recent completed execution (ms), if any.
-    pub last_duration_ms: Option<u64>,
-    /// Actual fire time of the most recent execution as an ISO string, if any.
-    pub last_run_utc: Option<String>,
-    /// Outcome labels of the last 10 executions (most recent last).
-    pub recent_outcomes: Vec<String>,
-    /// Per-outcome execution counts, indexed by `COUNTABLE` position.
-    pub outcome_counts: [usize; OUTCOME_COUNT],
-}
-
-/// A single timeline event combining job metadata with an execution record.
-///
-/// Built under the state mutex by cloning job fields and the record,
-/// then serialized to JSON for the HTTP query API.
-#[derive(Serialize)]
-pub struct TimelineEvent {
-    /// Unique job identifier.
-    pub job_id: i64,
-    /// Human-readable job name.
-    pub job_name: String,
-    /// Cloned execution record.
-    pub record: ExecutionRecord,
-}
-
-/// A single log entry captured from a service during scheduler-initiated execution.
-#[derive(Debug, Clone, Serialize)]
-pub struct LogEntry {
-    /// ISO timestamp of when the log record was created.
-    pub timestamp_iso: String,
-    /// Log level name (INFO, WARNING, ERROR, etc.).
-    pub level: String,
-    /// Formatted log message text.
-    pub message: String,
-}
-
-/// A single execution history record for a job firing.
-#[derive(Debug, Clone, Serialize)]
-pub struct ExecutionRecord {
-    /// ISO timestamp of the planned fire time.
-    pub planned_fire_time_iso: String,
-    /// ISO timestamp of the actual fire time.
-    pub actual_fire_time_iso: String,
-    /// Delay between planned and actual fire times (ms).
-    pub delay_ms: u64,
-    /// Outcome label for this execution.
-    pub outcome: String,
-    /// Run counter at the time of this execution.
-    pub current_run: u32,
-    /// Wall-clock duration of the execution (ms), if completed.
-    pub duration_ms: Option<u64>,
-    /// Error message, if the execution failed.
-    pub error: Option<String>,
-    /// Additional context for the outcome.
-    pub outcome_ctx: Option<String>,
-    /// Log entries captured from the service during this execution.
-    pub log_entries: Vec<LogEntry>,
-}
-
-impl ExecutionRecord {
-    /// Creates a new record with the given planned/actual times, outcome and run number.
-    #[must_use]
-    pub fn new(planned: &str, actual: &str, outcome: &str, current_run: u32) -> Self {
-        Self {
-            planned_fire_time_iso: planned.to_string(),
-            actual_fire_time_iso: actual.to_string(),
-            delay_ms: 0,
-            outcome: outcome.to_string(),
-            current_run,
-            duration_ms: None,
-            error: None,
-            outcome_ctx: None,
-            log_entries: Vec::new(),
-        }
-    }
-
-    /// Sets the delay and returns `self` for chaining.
-    #[must_use]
-    pub const fn with_delay(mut self, delay_ms: u64) -> Self {
-        self.delay_ms = delay_ms;
-        self
-    }
-
-    /// Sets the outcome context and returns `self` for chaining.
-    #[must_use]
-    pub fn with_outcome_ctx(mut self, ctx: String) -> Self {
-        self.outcome_ctx = Some(ctx);
-        self
-    }
-
-    /// Sets the duration and returns `self` for chaining.
-    #[must_use]
-    pub const fn with_duration(mut self, duration_ms: u64) -> Self {
-        self.duration_ms = Some(duration_ms);
-        self
-    }
-
-    /// Sets the error message and returns `self` for chaining.
-    #[must_use]
-    pub fn with_error(mut self, error: String) -> Self {
-        self.error = Some(error);
-        self
-    }
 }
 
 /// A job that is actively managed by the scheduler runtime.
@@ -210,11 +100,6 @@ pub struct RunningJob {
     pub in_flight_run: Option<u32>,
     /// Number of times this job has fired.
     pub current_run: u32,
-
-    /// Circular buffer of execution history records.
-    pub history: VecDeque<ExecutionRecord>,
-    /// Maximum number of history records to retain.
-    pub max_history: usize,
 
     /// PRNG used to compute per-firing jitter.
     jitter_rng: SmallRng,
@@ -295,8 +180,6 @@ impl RunningJob {
             in_flight_since: None,
             in_flight_run: None,
             current_run: 0,
-            history: VecDeque::with_capacity(DEFAULT_MAX_HISTORY),
-            max_history: DEFAULT_MAX_HISTORY,
             jitter_rng,
         };
         if running_job.is_active {
@@ -411,32 +294,12 @@ impl RunningJob {
         self.compute_next_fire(reference);
     }
 
-    /// Computes a `JobSummary` snapshot from the current job state and history.
+    /// Computes a `JobSummary` snapshot from the current job's scheduling state.
     ///
     /// Intended to be called under the state mutex. The returned value is fully
     /// owned and can be used after the mutex is released.
     #[must_use]
     pub fn summary(&self) -> JobSummary {
-        let countable = crate::types::outcome::COUNTABLE;
-        let mut outcome_counts = [0usize; OUTCOME_COUNT];
-
-        for rec in &self.history {
-            if let Some(pos) = countable.iter().position(|label| *label == rec.outcome)
-                && let Some(slot) = outcome_counts.get_mut(pos)
-            {
-                *slot += 1;
-            }
-        }
-
-        let last_outcome = self.history.back().map(|rec| rec.outcome.clone());
-        let last_duration_ms = self.history.iter().rev().find_map(|rec| rec.duration_ms);
-
-        // The newest record sits at the back of the ring buffer, so its actual fire time is the last run time.
-        let last_run_utc = self.history.back().map(|rec| rec.actual_fire_time_iso.clone());
-
-        let recent_start = self.history.len().saturating_sub(10);
-        let recent_outcomes: Vec<String> = self.history.range(recent_start..).map(|rec| rec.outcome.clone()).collect();
-
         JobSummary {
             id: self.id.0,
             name: self.name.clone(),
@@ -447,20 +310,7 @@ impl RunningJob {
             current_run: self.current_run,
             interval_ms: self.interval_ms,
             next_fire_utc: self.next_fire_utc.map(|fire_dt| fire_dt.to_rfc3339()),
-            last_outcome,
-            last_duration_ms,
-            last_run_utc,
-            recent_outcomes,
-            outcome_counts,
         }
-    }
-
-    /// Appends a record to the execution history, evicting the oldest if at capacity.
-    pub fn record_execution(&mut self, record: ExecutionRecord) {
-        if self.history.len() >= self.max_history {
-            self.history.pop_front();
-        }
-        self.history.push_back(record);
     }
 
     /// Public wrapper around `sync_instant_from_utc`.

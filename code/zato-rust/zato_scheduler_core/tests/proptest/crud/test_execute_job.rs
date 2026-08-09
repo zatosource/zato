@@ -4,7 +4,7 @@ use zato_scheduler_core::job::RunningJob;
 use zato_scheduler_core::model::SchedulerJob;
 use zato_scheduler_core::redis_streams::handle_execute_job;
 use zato_scheduler_core::scheduler::SchedulerShared;
-use zato_scheduler_core::types::FireBatch;
+use zato_scheduler_core::types::{FireBatch, OutgoingEvent};
 
 fn make_job(is_active: bool) -> SchedulerJob {
     let start = (Utc::now() - Duration::hours(1)).format("%Y-%m-%dT%H:%M:%S").to_string();
@@ -32,9 +32,9 @@ fn make_job(is_active: bool) -> SchedulerJob {
     }
 }
 
-fn setup_shared(is_active: bool) -> (std::sync::Arc<SchedulerShared>, std::sync::mpsc::Receiver<FireBatch>) {
+fn setup_shared(is_active: bool) -> (std::sync::Arc<SchedulerShared>, std::sync::mpsc::Receiver<OutgoingEvent>) {
     let shared = std::sync::Arc::new(SchedulerShared::new());
-    let (sender, receiver) = std::sync::mpsc::channel::<FireBatch>();
+    let (sender, receiver) = std::sync::mpsc::channel::<OutgoingEvent>();
     *shared.fire_sender.lock() = Some(sender);
 
     let scheduler_job = make_job(is_active);
@@ -42,6 +42,14 @@ fn setup_shared(is_active: bool) -> (std::sync::Arc<SchedulerShared>, std::sync:
     shared.state.lock().jobs.insert(1, running_job);
 
     (shared, receiver)
+}
+
+/// Unpacks the fire batch out of the outgoing event a forced execution sends.
+fn expect_fire(event: OutgoingEvent) -> FireBatch {
+    match event {
+        OutgoingEvent::Fire(batch) => batch,
+        OutgoingEvent::Timeout(_) => panic!("expected a fire event, got a timeout event"),
+    }
 }
 
 proptest! {
@@ -53,7 +61,7 @@ proptest! {
 
         handle_execute_job(&shared, r#"{"job_id": 1}"#);
 
-        let batch = receiver.try_recv().unwrap();
+        let batch = expect_fire(receiver.try_recv().unwrap());
         prop_assert_eq!(batch.job_id.0, 1);
         prop_assert_eq!(batch.service.0, "svc");
 
@@ -73,7 +81,7 @@ proptest! {
 
         handle_execute_job(&shared, r#"{"job_id": 1}"#);
 
-        let batch = receiver.try_recv().unwrap();
+        let batch = expect_fire(receiver.try_recv().unwrap());
         prop_assert_eq!(batch.job_id.0, 1);
 
         let state = shared.state.lock();
@@ -114,7 +122,7 @@ proptest! {
         // must still find it through the name.
         handle_execute_job(&shared, r#"{"job_id": 999, "name": "test"}"#);
 
-        let batch = receiver.try_recv().unwrap();
+        let batch = expect_fire(receiver.try_recv().unwrap());
         prop_assert_eq!(batch.job_id.0, 1);
         prop_assert_eq!(batch.service.0, "svc");
 
@@ -125,24 +133,5 @@ proptest! {
 
         prop_assert!(in_flight);
         prop_assert_eq!(current_run, 1);
-    }
-
-    #[test]
-    fn execute_records_history(_n in 0u32..10) {
-        let (shared, _receiver) = setup_shared(true);
-
-        handle_execute_job(&shared, r#"{"job_id": 1}"#);
-
-        let state = shared.state.lock();
-        let job = state.jobs.get(&1).unwrap();
-        let history_len = job.history.len();
-        let record = job.history.front().unwrap().clone();
-        drop(state);
-
-        prop_assert_eq!(history_len, 1);
-        prop_assert_eq!(&record.outcome, "running");
-        prop_assert_eq!(record.current_run, 1);
-        prop_assert_eq!(record.log_entries.len(), 1);
-        prop_assert!(record.log_entries.first().unwrap().message.contains("forced execute"));
     }
 }

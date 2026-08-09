@@ -76,6 +76,8 @@ _inventory_services = [
     (AuditSource.PubSub, 'zato.pubsub.topic.get-list', {}),
 
     (AuditSource.SQL_Outgoing, 'zato.outgoing.sql.get-list', {}),
+
+    (AuditSource.Scheduler, 'zato.scheduler.job.get-list', {'paginate': False}),
 ]
 
 # ################################################################################################################################

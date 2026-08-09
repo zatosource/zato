@@ -18,8 +18,11 @@ from sqlalchemy import select
 
 # Zato
 from zato.admin.web.views.audit_log.columns import _source_event_label
+from zato.common.api import SCHEDULER
 from zato.common.as2.mdn import describe_disposition
 from zato.common.audit_log.api import event_table, AuditEvent
+from zato.common.audit_log.common import event_attr_table, event_body_table
+from zato.common.audit_log.scheduler import format_duration_ms, Attr_Current_Run, Attr_Delay_Ms, Log_Kinds
 from zato.common.hl7.display import parse_and_render
 
 # ################################################################################################################################
@@ -41,10 +44,13 @@ class OutstandingFilter:
     """ The outstanding filter of one source - the event that opens an exchange, the acknowledgment
     that closes it, and whether the close matches on the partner pair too. AS2 MDNs answer
     the Message-ID alone while X12 acknowledgments echo both the pair and the control number.
+    A source whose events are single rows updated in place has no exchange to pair - what is
+    open there is an event still carrying its in-progress outcome, which open_outcome names.
     """
     open_event: str = ''
     close_event: str = ''
     needs_object_name_match: bool = False
+    open_outcome: str = ''
 
 # ################################################################################################################################
 
@@ -58,12 +64,23 @@ def _new_outstanding_filter(open_event:'str', close_event:'str', needs_object_na
 
 # ################################################################################################################################
 
+def _new_outcome_filter(open_outcome:'str') -> 'OutstandingFilter':
+    out = OutstandingFilter()
+    out.open_outcome = open_outcome
+
+    return out
+
+# ################################################################################################################################
+
 # The sources whose pages carry the outstanding filter pill
 _source_outstanding = {
     'as2': _new_outstanding_filter(AuditEvent.Message_Sent, AuditEvent.MDN_Received, False),
     'as4': _new_outstanding_filter(AuditEvent.Message_Sent, AuditEvent.Receipt_Received, True),
     'x12': _new_outstanding_filter(AuditEvent.Interchange_Sent, AuditEvent.Ack_Received, True),
     'mllp-outgoing': _new_outstanding_filter(AuditEvent.Message_Sent, AuditEvent.Ack_Received, True),
+
+    # A scheduler run is one row updated in place - outstanding means it is still running
+    'scheduler': _new_outcome_filter(SCHEDULER.OUTCOME.RUNNING),
 }
 
 # ################################################################################################################################
@@ -296,6 +313,90 @@ def render_view_record(engine:'any_', data:'str', event_time_iso:'str') -> 'str'
     # microseconds and offset, and last, the way time reads everywhere on the page
     when = event_time_iso.replace('T', ' ').split('.')[0]
     lines.append(f'When:       {when} UTC')
+
+    out = '\n'.join(lines)
+    return out
+
+# ################################################################################################################################
+
+def render_scheduler_record(engine:'any_', event_id:'int') -> 'str':
+    """ Renders a scheduler run as the story it tells - which job ran what service, how it went
+    and what the run said while it was going. The run's own row carries the outcome, duration
+    and error, its attrs the run number and delay, and the log lines captured during the run
+    are its event body rows, so everything renders here, where the engine is at hand.
+    """
+
+    # The run's own row - what ran, when, and how it ended
+    run_query = select(
+        event_table.c.object_name, event_table.c.endpoint, event_table.c.outcome,
+        event_table.c.duration_ms, event_table.c.event_time_iso, event_table.c.data).where(
+        event_table.c.id == event_id)
+
+    # The run number and delay ride in the attrs
+    attr_query = select(event_attr_table.c.name, event_attr_table.c.value).where(
+        event_attr_table.c.event_id == event_id).where(
+        event_attr_table.c.name.in_([Attr_Current_Run, Attr_Delay_Ms]))
+
+    # The log lines the run emitted, in the order they were written
+    log_query = select(event_body_table.c.data).where(
+        event_body_table.c.event_id == event_id).where(
+        event_body_table.c.kind.in_(Log_Kinds)).order_by(
+        event_body_table.c.id)
+
+    with engine.connect() as connection:
+        run_row = connection.execute(run_query).fetchone()
+        attr_rows = connection.execute(attr_query).fetchall()
+        log_rows = connection.execute(log_query).fetchall()
+
+    if run_row is None:
+        return ''
+
+    object_name, endpoint, outcome, duration_ms, event_time_iso, error = run_row
+
+    attrs = {}
+
+    for name, value in attr_rows:
+        attrs[name] = value
+
+    lines = []
+
+    lines.append(f'Job:        {object_name}')
+    lines.append(f'Service:    {endpoint}')
+    lines.append(f'Outcome:    {outcome}')
+
+    if Attr_Current_Run in attrs:
+        lines.append(f'Run:        {attrs[Attr_Current_Run]}')
+
+    # A run still going has no duration yet, so the line only shows once there is one
+    if duration_ms is not None:
+        duration_human = format_duration_ms(duration_ms)
+        lines.append(f'Duration:   {duration_human}')
+
+    if Attr_Delay_Ms in attrs:
+        delay_ms = int(attrs[Attr_Delay_Ms])
+        delay_human = format_duration_ms(delay_ms)
+        lines.append(f'Delay:      {delay_human}')
+
+    # When the run started is the event's own moment - trimmed of its microseconds
+    # and offset, the way time reads everywhere on the page
+    started = event_time_iso.replace('T', ' ').split('.')[0]
+    lines.append(f'Started:    {started} UTC')
+
+    # An error the run ended with reads in full, traceback and all
+    if error:
+        lines.append('')
+        lines.append('Error:')
+        lines.append(error)
+
+    # The captured log lines follow, one per line, each with its level and moment
+    if log_rows:
+        lines.append('')
+        lines.append('Log:')
+
+        for (log_data,) in log_rows:
+            entry = json.loads(log_data)
+            when = entry['timestamp_iso'].replace('T', ' ').split('.')[0]
+            lines.append(f'{when} {entry["level"]:8} {entry["message"]}')
 
     out = '\n'.join(lines)
     return out

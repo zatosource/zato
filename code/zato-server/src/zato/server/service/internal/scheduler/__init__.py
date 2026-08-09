@@ -23,6 +23,8 @@ except ImportError:
 
 # Zato
 from zato.common.api import EMAIL, FileTransfer, SCHEDULER, SchedulerLink, ZATO_NONE
+from zato.common.audit_log.scheduler_query import get_chart_data, get_history_page, get_history_since, get_job_aggregates, \
+    get_log_entries, get_run_detail, get_timeline_events_since
 from zato.common.defaults import default_cluster_id
 from zato.common.exception import ServiceMissingException, ZatoException
 from zato.common.odb.model import Cluster, IntervalBasedJob, Job, Service as ServiceModel
@@ -123,15 +125,38 @@ def _keep_unsent_job_fields(self:'any_', input:'any_') -> 'None':
 # ################################################################################################################################
 
 def _get_job_summaries(server:'any_') -> 'anylist':
-    """ Returns runtime job summaries from the scheduler daemon. Environments that run without a scheduler,
-    e.g. quickstart ones created with --no-scheduler, get an empty list so that job listings can still
-    be served from the ODB, only without any last-run details.
+    """ Returns runtime job summaries from the scheduler daemon, merged with each job's
+    history aggregates from the audit log. Environments that run without a scheduler,
+    e.g. quickstart ones created with --no-scheduler, get an empty list so that job listings
+    can still be served from the ODB, only without any last-run details.
     """
     try:
         out = server._scheduler.get_job_summaries()
     except RequestsConnectionError:
         logger.info('Scheduler unreachable, returning no job summaries')
-        out = []
+        return []
+
+    # The scheduler knows only scheduling state - what each job has done comes from the audit log
+    aggregates = get_job_aggregates()
+
+    for summary in out:
+
+        if aggregate := aggregates.get(summary['name']):
+            summary.update(aggregate)
+
+        # A job that never ran has no history at all
+        else:
+            summary['last_outcome'] = None
+            summary['last_duration_ms'] = None
+            summary['last_run_utc'] = None
+            summary['recent_outcomes'] = []
+            summary['outcome_counts'] = {
+                SCHEDULER.OUTCOME.OK: 0,
+                SCHEDULER.OUTCOME.ERROR: 0,
+                SCHEDULER.OUTCOME.TIMEOUT: 0,
+                SCHEDULER.OUTCOME.RUNNING: 0,
+                SCHEDULER.OUTCOME.SKIPPED_ALREADY_IN_FLIGHT: 0,
+            }
 
     return out
 
@@ -179,6 +204,22 @@ class _SchedulerAdmin(AdminService):
         """ Returns True if the service is deployed on this server.
         """
         return service_name in self.server.service_store.name_to_impl_name
+
+    def _job_name_by_id(self, job_id:'int') -> 'str':
+        """ Returns a job's name by its ODB ID, an empty string when there is no such job -
+        the history readers key on the name and return nothing for an empty one.
+        """
+        from contextlib import closing
+
+        with closing(self.odb.session()) as session:
+            job_row = session.query(Job).filter_by(id=job_id).first()
+
+        if job_row:
+            out = job_row.name
+        else:
+            out = ''
+
+        return out
 
     def _enrich_job(self, item):
         """ Adds resolved service_name and service_id to a job dict.
@@ -572,7 +613,7 @@ class GetByID(_Get):
             self.response.payload = {}
             return
 
-        result = self.server._scheduler.get_history_page(job_id, 0, 10, SCHEDULER.OUTCOME.All)
+        result = get_history_page(job_id, item['name'], 0, 10, SCHEDULER.OUTCOME.All)
         records = result['records']
 
         last_outcome = None
@@ -747,11 +788,16 @@ class GetHistory(_SchedulerAdmin):
             if not outcomes:
                 outcomes = SCHEDULER.OUTCOME.All
 
-            scheduler = self.server._scheduler
+            job_name = self._job_name_by_id(job_id)
 
             if since_timestamp:
-                running_runs = self.request.input.get('running_runs') or []
-                result = scheduler.get_history_since(job_id, since_timestamp, outcomes, running_runs, since_iso)
+
+                # The run numbers arrive as strings from the network, hence the conversion
+                running_runs = []
+                for run in self.request.input.get('running_runs') or []:
+                    running_runs.append(int(run))
+
+                result = get_history_since(job_id, job_name, since_timestamp, outcomes, running_runs, since_iso)
                 self.response.payload = {'rows': result['rows'], 'total': result['total']}
             else:
                 page = self.request.input.get('page')
@@ -764,7 +810,7 @@ class GetHistory(_SchedulerAdmin):
 
                 offset = (page - 1) * page_size
 
-                result = scheduler.get_history_page(job_id, offset, page_size, outcomes, since_iso)
+                result = get_history_page(job_id, job_name, offset, page_size, outcomes, since_iso)
 
                 self.response.payload = {
                     'rows': result['records'],
@@ -788,10 +834,10 @@ class GetRunDetail(_SchedulerAdmin):
     input = Int('job_id'), Int('current_run')
 
     def handle(self) -> 'None':
-        result = self.server._scheduler.get_run_detail(
-            self.request.input.job_id,
-            self.request.input.current_run,
-        )
+        job_id = self.request.input.job_id
+        job_name = self._job_name_by_id(job_id)
+
+        result = get_run_detail(job_id, job_name, self.request.input.current_run)
         self.response.payload = result
 
 # ################################################################################################################################
@@ -862,7 +908,9 @@ class GetLogEntries(_SchedulerAdmin):
             current_run = self.request.input.current_run
             since_idx = self.request.input.since_idx
 
-            entries = self.server._scheduler.get_log_entries(job_id, current_run, since_idx)
+            job_name = self._job_name_by_id(job_id)
+
+            entries = get_log_entries(job_name, current_run, since_idx)
             self.response.payload = {'entries': entries}
         except Exception:
             self.logger.error('Could not get log entries, e:`%s`', format_exc())
@@ -881,8 +929,6 @@ class GetCurrentState(_SchedulerAdmin):
     def handle(self) -> 'None':
         try:
             from contextlib import closing
-
-            scheduler = self.server._scheduler
 
             chart_since_iso = self.request.input.chart_since_iso or ''
             chart_until_iso = self.request.input.chart_until_iso or ''
@@ -974,11 +1020,11 @@ class GetCurrentState(_SchedulerAdmin):
                 for outcome_key in execution_outcomes:
                     total_executions += per_job[outcome_key]
 
-            # .. get chart_buckets from Rust (pre-aggregated) ..
-            chart_buckets = scheduler.get_chart_data(chart_since_iso, chart_until_iso)
+            # .. get chart_buckets from the audit log (pre-aggregated) ..
+            chart_buckets = get_chart_data(chart_since_iso, chart_until_iso)
 
             # .. get recent events for the table ..
-            recent_events = scheduler.get_timeline_events_since(recent_since_iso, recent_limit)
+            recent_events = get_timeline_events_since(recent_since_iso, recent_limit)
 
             # .. compute header tile stats from a fixed 1-hour window,
             # .. independent of whatever chart range the user picked ..
@@ -986,7 +1032,7 @@ class GetCurrentState(_SchedulerAdmin):
             hour_ago = now - timedelta(hours=1)
             hour_since_iso = hour_ago.strftime('%Y-%m-%dT%H:%M:%S.000Z')
             hour_until_iso = now.strftime('%Y-%m-%dT%H:%M:%S.000Z')
-            hour_buckets = scheduler.get_chart_data(hour_since_iso, hour_until_iso)
+            hour_buckets = get_chart_data(hour_since_iso, hour_until_iso)
 
             runs_last_hour = 0
             recent_last_hour = 0

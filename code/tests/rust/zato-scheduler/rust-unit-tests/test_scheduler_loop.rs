@@ -190,19 +190,19 @@ fn test_collect_due_marks_in_flight() {
 }
 
 #[test]
-fn test_collect_due_records_executed_history() {
+fn test_collect_due_carries_planned_fire_time() {
     let mut state = SchedulerState::new();
     let job = make_interval_job(15, "cd6", 5);
     let mut rj = RunningJob::from_scheduler_job(&job);
-    rj.next_fire_utc = Some(Utc::now() - Duration::seconds(1));
+    let fire_time = Utc::now() - Duration::seconds(1);
+    rj.next_fire_utc = Some(fire_time);
     state.jobs.insert(15, rj);
 
     let mut deferred = DeferredLog::default();
-    let _batch = collect_due_jobs(&mut state, Utc::now(), 0, &mut deferred);
+    let batch = collect_due_jobs(&mut state, Utc::now(), 0, &mut deferred);
 
-    let rj = state.jobs.get(&15).unwrap();
-    let last = rj.history.back().unwrap();
-    assert_eq!(last.outcome, "running");
+    // The server records the run's delay from this planned fire time.
+    assert_eq!(batch[0].planned_fire_time_iso, fire_time.to_rfc3339());
 }
 
 #[test]
@@ -255,10 +255,11 @@ fn test_timeout_not_triggered_within_limit() {
     state.jobs.insert(20, rj);
 
     let mut deferred = DeferredLog::default();
-    check_in_flight_timeouts(&mut state, &mut deferred);
+    let timeout_events = check_in_flight_timeouts(&mut state, &mut deferred);
 
     let rj = state.jobs.get(&20).unwrap();
     assert!(rj.in_flight);
+    assert!(timeout_events.is_empty());
 }
 
 #[test]
@@ -269,16 +270,19 @@ fn test_timeout_triggered_past_limit() {
     let mut rj = RunningJob::from_scheduler_job(&job);
     rj.in_flight = true;
     rj.in_flight_since = Some(Instant::now() - std::time::Duration::from_millis(2_000));
+    rj.in_flight_run = Some(1);
     state.jobs.insert(21, rj);
 
     let mut deferred = DeferredLog::default();
-    check_in_flight_timeouts(&mut state, &mut deferred);
+    let timeout_events = check_in_flight_timeouts(&mut state, &mut deferred);
 
     let rj = state.jobs.get(&21).unwrap();
     assert!(!rj.in_flight);
     assert!(rj.in_flight_since.is_none());
-    let last = rj.history.back().unwrap();
-    assert_eq!(last.outcome, "timeout");
+    // The timed-out run travels to the server as an event for the audit log.
+    assert_eq!(timeout_events.len(), 1);
+    assert_eq!(timeout_events[0].job_id, 21);
+    assert_eq!(timeout_events[0].current_run, 1);
 }
 
 #[test]
@@ -289,11 +293,11 @@ fn test_timeout_ignores_not_in_flight() {
     state.jobs.insert(22, rj);
 
     let mut deferred = DeferredLog::default();
-    check_in_flight_timeouts(&mut state, &mut deferred);
+    let timeout_events = check_in_flight_timeouts(&mut state, &mut deferred);
 
     let rj = state.jobs.get(&22).unwrap();
     assert!(!rj.in_flight);
-    assert!(rj.history.is_empty());
+    assert!(timeout_events.is_empty());
 }
 
 // ################################################################

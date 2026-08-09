@@ -1,6 +1,6 @@
 use chrono::Utc;
 
-use zato_scheduler_core::job::{RunningJob, DEFAULT_MAX_EXECUTION_TIME_MS, DEFAULT_MAX_HISTORY};
+use zato_scheduler_core::job::{RunningJob, DEFAULT_MAX_EXECUTION_TIME_MS};
 use zato_scheduler_core::model::SchedulerJob;
 
 fn make_interval_job(id: i64, name: &str, minutes: u32) -> SchedulerJob {
@@ -291,13 +291,6 @@ fn test_default_max_execution_time() {
 }
 
 #[test]
-fn test_default_history_capacity() {
-    let job = make_interval_job(71, "def3", 10);
-    let rj = RunningJob::from_scheduler_job(&job);
-    assert_eq!(rj.max_history, DEFAULT_MAX_HISTORY);
-}
-
-#[test]
 fn test_custom_max_execution_time() {
     let mut job = make_interval_job(72, "def5", 10);
     job.max_execution_time_ms = Some(120_000);
@@ -348,79 +341,6 @@ fn test_update_deactivates_job() {
 
     assert!(!rj.is_active);
     assert!(rj.next_fire_utc.is_none());
-}
-
-#[test]
-fn test_update_preserves_history() {
-    let job = make_interval_job(83, "upd4", 10);
-    let mut rj = RunningJob::from_scheduler_job(&job);
-
-    rj.record_execution(zato_scheduler_core::job::ExecutionRecord {
-        planned_fire_time_iso: "2026-01-01T00:00:00+00:00".into(),
-        actual_fire_time_iso: "2026-01-01T00:00:00+00:00".into(),
-        delay_ms: 0,
-        outcome: "executed".into(),
-        current_run: 1,
-        duration_ms: Some(100),
-        error: None,
-        outcome_ctx: None,
-        log_entries: vec![],
-    });
-
-    let mut updated = make_interval_job(83, "upd4-renamed", 20);
-    updated.id = job.id;
-    rj.update_from_job(&updated);
-
-    assert_eq!(rj.history.len(), 1);
-    assert_eq!(rj.name, "upd4-renamed");
-}
-
-// ################################################################
-// Execution history
-// ################################################################
-
-#[test]
-fn test_record_execution() {
-    let job = make_interval_job(90, "hist1", 10);
-    let mut rj = RunningJob::from_scheduler_job(&job);
-
-    rj.record_execution(zato_scheduler_core::job::ExecutionRecord {
-        planned_fire_time_iso: "2026-01-01T00:00:00+00:00".into(),
-        actual_fire_time_iso: "2026-01-01T00:00:01+00:00".into(),
-        delay_ms: 1000,
-        outcome: "executed".into(),
-        current_run: 1,
-        duration_ms: Some(50),
-        error: None,
-        outcome_ctx: None,
-        log_entries: vec![],
-    });
-
-    assert_eq!(rj.history.len(), 1);
-    assert_eq!(rj.history[0].outcome, "executed");
-    assert_eq!(rj.history[0].delay_ms, 1000);
-}
-
-#[test]
-fn test_history_capped_at_max() {
-    let job = make_interval_job(91, "hist2", 10);
-    let mut rj = RunningJob::from_scheduler_job(&job);
-
-    for i in 0..DEFAULT_MAX_HISTORY + 50 {
-        rj.record_execution(zato_scheduler_core::job::ExecutionRecord {
-            planned_fire_time_iso: format!("2026-01-01T00:{:02}:00+00:00", i % 60),
-            actual_fire_time_iso: format!("2026-01-01T00:{:02}:00+00:00", i % 60),
-            delay_ms: 0,
-            outcome: "executed".into(),
-            current_run: i as u32,
-            duration_ms: None,
-            error: None,
-            outcome_ctx: None,
-            log_entries: vec![],
-        });
-    }
-
-    assert_eq!(rj.history.len(), DEFAULT_MAX_HISTORY);
 }
 
 // ################################################################

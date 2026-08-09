@@ -31,7 +31,7 @@ from zato.admin.web.views.audit_log.columns import _all_sources_columns, _all_so
     _source_object_label, _source_page_url, _source_title, _status_outstanding
 from zato.admin.web.views.audit_log.query import _build_where, _hydrate_rows, _normalize_row
 from zato.admin.web.views.audit_log.sources import _get_resubmit_labels, _source_outstanding, _source_parse, \
-    _source_resubmit, render_view_record
+    _source_resubmit, render_scheduler_record, render_view_record
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditLog, AuditSource
 from zato.common.audit_log.attachment import get_attachment, list_attachments
 from zato.common.audit_log.body import resolve_body
@@ -645,9 +645,13 @@ def details(req:'any_') -> 'HttpResponse':
     # with the EDI renderer as the shared default - an empty result means no parsed tab at all.
     # A view record of the access log resolves against the database - who viewed what and when -
     # so it renders here, where the engine is at hand, rather than through _source_parse.
+    # A scheduler run resolves against the database the same way - its outcome, attrs and
+    # captured log lines all live in rows of their own.
     else:
         if source == AuditSource.Config:
             parsed = render_view_record(engine, data, event_time_iso)
+        elif source == AuditSource.Scheduler:
+            parsed = render_scheduler_record(engine, event_id)
         elif renderer := _source_parse.get(source):
             parsed = renderer(data)
         else:

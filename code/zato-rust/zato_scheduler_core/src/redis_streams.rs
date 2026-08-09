@@ -16,11 +16,11 @@ use std::sync::Arc;
 use chrono::Utc;
 use serde::Deserialize;
 
-use crate::job::{ExecutionRecord, LogEntry, RunningJob};
+use crate::job::RunningJob;
 use crate::model::SchedulerJob;
+use crate::reload_jobs;
 use crate::scheduler::SchedulerShared;
-use crate::types::{FireBatch, JobId};
-use crate::{humanize_ms, reload_jobs};
+use crate::types::{FireBatch, JobId, OutgoingEvent, TimeoutEvent};
 
 /// Environment variable holding the per-environment stream key prefix.
 pub const STREAM_PREFIX_ENV_VAR: &str = "Zato_Scheduler_Stream_Prefix";
@@ -152,6 +152,8 @@ pub fn publish_fire_event(conn: &mut redis::Connection, keys: &StreamKeys, batch
         .arg(batch.service.as_ref())
         .arg("current_run")
         .arg(batch.current_run)
+        .arg("planned_fire_time_iso")
+        .arg(&batch.planned_fire_time_iso)
         .arg("payload")
         .arg(&payload)
         .query(conn);
@@ -161,23 +163,8 @@ pub fn publish_fire_event(conn: &mut redis::Connection, keys: &StreamKeys, batch
     }
 }
 
-/// A run that overran its `max_execution_time_ms` and was given up on.
-pub struct TimeoutEvent<'run> {
-    /// Identifier of the job whose run timed out.
-    pub job_id: i64,
-
-    /// Run counter of the attempt that timed out.
-    pub current_run: u32,
-
-    /// How long the run had been in flight when it was abandoned.
-    pub elapsed_ms: u64,
-
-    /// Message describing the timeout, as shown to the user.
-    pub error_msg: &'run str,
-}
-
 /// Publishes a timeout event to the timeout stream via XADD.
-pub fn publish_timeout_event(conn: &mut redis::Connection, keys: &StreamKeys, event: &TimeoutEvent<'_>) {
+pub fn publish_timeout_event(conn: &mut redis::Connection, keys: &StreamKeys, event: &TimeoutEvent) {
     let job_id = event.job_id;
 
     let result: Result<String, redis::RedisError> = redis::cmd("XADD")
@@ -193,7 +180,7 @@ pub fn publish_timeout_event(conn: &mut redis::Connection, keys: &StreamKeys, ev
         .arg("elapsed_ms")
         .arg(event.elapsed_ms)
         .arg("error")
-        .arg(event.error_msg)
+        .arg(event.error_msg.as_str())
         .query(conn);
 
     if let Err(err) = result {
@@ -319,7 +306,6 @@ fn process_command(conn: &mut redis::Connection, keys: &StreamKeys, shared: &Sch
         "delete_job" => handle_delete_job(shared, payload),
         "execute_job" => handle_execute_job(shared, payload),
         "mark_complete" => handle_mark_complete(shared, payload),
-        "append_log_entry" => handle_append_log_entry(shared, payload),
         "reload" => {
             handle_reload(shared, payload);
             publish_reply(conn, keys, correlation_id, "ok");
@@ -373,23 +359,6 @@ struct MarkCompletePayload {
     duration_ms: u64,
     /// Run number being completed.
     current_run: u32,
-    /// Error details (traceback), empty when the run succeeded.
-    error: String,
-}
-
-/// Payload for `append_log_entry` command.
-#[derive(Deserialize)]
-struct AppendLogPayload {
-    /// The ODB job identifier.
-    job_id: i64,
-    /// Run number to append to.
-    current_run: u32,
-    /// ISO timestamp of the log entry.
-    timestamp_iso: String,
-    /// Log level name.
-    level: String,
-    /// Log message text.
-    message: String,
 }
 
 /// Payload for reload command.
@@ -511,8 +480,7 @@ pub fn handle_execute_job(shared: &SchedulerShared, payload: &str) {
         return;
     };
 
-    let now = Utc::now();
-    let now_iso = now.to_rfc3339();
+    let now_iso = Utc::now().to_rfc3339();
 
     running_job.current_run += 1;
 
@@ -523,6 +491,8 @@ pub fn handle_execute_job(shared: &SchedulerShared, payload: &str) {
         extra: running_job.extra.clone(),
         job_type: running_job.job_type.clone(),
         current_run: running_job.current_run,
+        // A forced execution is due the moment it is requested
+        planned_fire_time_iso: now_iso,
         on_success_service: running_job.on_success_service.clone(),
         on_success_job: running_job.on_success_job.clone(),
         on_error_service: running_job.on_error_service.clone(),
@@ -533,19 +503,11 @@ pub fn handle_execute_job(shared: &SchedulerShared, payload: &str) {
     running_job.in_flight_since = Some(std::time::Instant::now());
     running_job.in_flight_run = Some(running_job.current_run);
 
-    let mut rec = ExecutionRecord::new(&now_iso, &now_iso, crate::types::outcome::RUNNING, running_job.current_run);
-    rec.log_entries.push(LogEntry {
-        timestamp_iso: now_iso,
-        level: "SYSTEM".into(),
-        message: "Job started (forced execute)".into(),
-    });
-    running_job.record_execution(rec);
-
     let job_name = running_job.name.clone();
     let current_run = running_job.current_run;
     drop(state);
 
-    if let Err(err) = sender.send(batch) {
+    if let Err(err) = sender.send(OutgoingEvent::Fire(batch)) {
         tracing::error!("Failed to send forced fire event for job `{job_name}`: {err}");
     } else {
         tracing::info!(
@@ -555,10 +517,11 @@ pub fn handle_execute_job(shared: &SchedulerShared, payload: &str) {
     }
 }
 
-/// Records the outcome and duration of a run the server has finished invoking.
+/// Clears the in-flight state of a run the server has finished invoking.
 ///
-/// The history entry created when the job fired is patched in place, so a run keeps one
-/// record from start to finish rather than gaining a second one on completion.
+/// The run's historical record lives in the server's audit log - here only the
+/// runtime scheduling state is updated: metrics, in-flight flags and catching up
+/// on fires the run outlasted.
 fn handle_mark_complete(shared: &SchedulerShared, payload: &str) {
     let parsed: MarkCompletePayload = match crate::wire::parse_payload(payload) {
         Ok(parsed) => parsed,
@@ -590,37 +553,6 @@ fn handle_mark_complete(shared: &SchedulerShared, payload: &str) {
         running_job.in_flight_since = None;
         running_job.in_flight_run = None;
 
-        let mut found_rec = false;
-        for rec in running_job.history.iter_mut().rev() {
-            if rec.current_run == parsed.current_run {
-                rec.duration_ms = Some(parsed.duration_ms);
-                rec.outcome.clone_from(&parsed.outcome);
-                // The server sends an empty string on success - only a failed run carries a traceback.
-                if !parsed.error.is_empty() {
-                    rec.error = Some(parsed.error.clone());
-                }
-                rec.log_entries.push(LogEntry {
-                    timestamp_iso: Utc::now().to_rfc3339(),
-                    level: "SYSTEM".into(),
-                    message: format!(
-                        "Job completed, outcome: {}, duration: {}",
-                        parsed.outcome,
-                        humanize_ms(parsed.duration_ms)
-                    ),
-                });
-                found_rec = true;
-                break;
-            }
-        }
-        if !found_rec {
-            tracing::warn!(
-                "No history for name={} run={} job_id={}",
-                running_job.name,
-                parsed.current_run,
-                parsed.job_id,
-            );
-        }
-
         if running_job.interval_ms > 0 && parsed.duration_ms >= running_job.interval_ms {
             let now = Utc::now();
             while let Some(fire) = running_job.next_fire_utc {
@@ -634,32 +566,6 @@ fn handle_mark_complete(shared: &SchedulerShared, payload: &str) {
     state.dirty = true;
     drop(state);
     shared.condvar.notify_one();
-}
-
-/// Appends one log line emitted by a running service to the matching history record.
-fn handle_append_log_entry(shared: &SchedulerShared, payload: &str) {
-    let parsed: AppendLogPayload = match crate::wire::parse_payload(payload) {
-        Ok(parsed) => parsed,
-        Err(err) => {
-            tracing::error!("Failed to parse append_log_entry payload: {err}");
-            return;
-        }
-    };
-    let entry = LogEntry {
-        timestamp_iso: parsed.timestamp_iso,
-        level: parsed.level,
-        message: parsed.message,
-    };
-    let mut state = shared.state.lock();
-    if let Some(running_job) = state.jobs.get_mut(&parsed.job_id) {
-        for rec in running_job.history.iter_mut().rev() {
-            if rec.current_run == parsed.current_run {
-                rec.log_entries.push(entry);
-                break;
-            }
-        }
-    }
-    drop(state);
 }
 
 /// Replaces the whole job set with a freshly loaded list from the ODB.

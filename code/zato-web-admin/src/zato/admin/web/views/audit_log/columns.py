@@ -11,6 +11,7 @@ is bounded by.
 """
 
 # Zato
+from zato.common.api import SCHEDULER
 from zato.common.audit_log.common import AuditEvent, AuditOutcome, AuditSource
 from zato.common.defaults import default_cluster_id
 
@@ -83,6 +84,7 @@ _source_label = {
     AuditSource.PubSub: 'Pub/sub',
     AuditSource.REST_Channel: 'REST channels',
     AuditSource.REST_Outgoing: 'REST outgoing',
+    AuditSource.Scheduler: 'Scheduler',
     AuditSource.SOAP_Channel: 'SOAP channels',
     AuditSource.SOAP_Outgoing: 'SOAP outgoing',
     AuditSource.SQL_Outgoing: 'SQL',
@@ -105,6 +107,7 @@ _source_event_label = {
     AuditSource.PubSub: 'Pub/sub',
     AuditSource.REST_Channel: 'REST channel',
     AuditSource.REST_Outgoing: 'REST outgoing',
+    AuditSource.Scheduler: 'Scheduler',
     AuditSource.SOAP_Channel: 'SOAP channel',
     AuditSource.SOAP_Outgoing: 'SOAP outgoing',
     AuditSource.SQL_Outgoing: 'SQL',
@@ -127,6 +130,7 @@ _source_object_label = {
     AuditSource.PubSub: 'Topic',
     AuditSource.REST_Channel: 'Channel',
     AuditSource.REST_Outgoing: 'Connection',
+    AuditSource.Scheduler: 'Job',
     AuditSource.SOAP_Channel: 'Channel',
     AuditSource.SOAP_Outgoing: 'Connection',
     AuditSource.SQL_Outgoing: 'Connection',
@@ -136,6 +140,7 @@ _source_object_label = {
 # Where each source's own main page is - what the source's name in the detail pane
 # leads to. A source with no page of its own is not here and its name stays text.
 _source_page_url = {
+    AuditSource.Scheduler: f'/zato/scheduler/dashboard/?cluster={default_cluster_id}&range=0',
     AuditSource.REST_Channel: f'/zato/http-soap/?cluster={default_cluster_id}&connection=channel&transport=plain_http',
     AuditSource.SOAP_Channel: f'/zato/http-soap/?cluster={default_cluster_id}&connection=channel&transport=soap',
     AuditSource.REST_Outgoing: f'/zato/http-soap/?cluster={default_cluster_id}&connection=outgoing&transport=plain_http',
@@ -155,12 +160,18 @@ _source_page_url = {
 # base map above so the two can never drift apart.
 _object_page_url = {source: f'{url}&query={{name}}' for source, url in _source_page_url.items()}
 
+# A scheduler job's own page is the classic scheduler listing filtered down to it -
+# the dashboard's job detail page is keyed by a numeric id no event name carries.
+_object_page_url[AuditSource.Scheduler] = f'/zato/scheduler/?cluster={default_cluster_id}&query={{name}}'
+
 # Where what a source writes into an event's endpoint leads. REST and SOAP channels
-# record the service the message was handed to, and a service has a page - an outgoing
-# URL, a folder or a host address does not, so no other source is here.
+# and the scheduler record the service the message or run was handed to, and a service
+# has a page - an outgoing URL, a folder or a host address does not, so no other
+# source is here.
 _endpoint_page_url = {
     AuditSource.REST_Channel: f'/zato/service/?cluster={default_cluster_id}&query={{name}}',
     AuditSource.SOAP_Channel: f'/zato/service/?cluster={default_cluster_id}&query={{name}}',
+    AuditSource.Scheduler: f'/zato/service/?cluster={default_cluster_id}&query={{name}}',
 }
 
 # What each source writes into an event's endpoint, called by what it is - the service
@@ -169,6 +180,7 @@ _endpoint_page_url = {
 _source_endpoint_label = {
     AuditSource.REST_Channel: 'Service',
     AuditSource.SOAP_Channel: 'Service',
+    AuditSource.Scheduler: 'Service',
     AuditSource.REST_Outgoing: 'Address',
     AuditSource.SOAP_Outgoing: 'Address',
     AuditSource.Email_IMAP: 'Folder',
@@ -216,6 +228,7 @@ _event_type_label = {
     AuditEvent.Config_Edited: 'Config edited',
     AuditEvent.Config_Deleted: 'Config deleted',
     AuditEvent.Content_Viewed: 'Content viewed',
+    AuditEvent.Job_Executed: 'Job executed',
 }
 
 # Per-source page titles - more sources will follow, e.g. REST outgoing connections
@@ -235,6 +248,7 @@ _source_title = {
     'mllp-channel': 'MLLP channel audit log',
     'mllp-outgoing': 'Outgoing MLLP audit log',
     'fhir': 'FHIR audit log',
+    'scheduler': 'Scheduler audit log',
 }
 
 # Each column tells the frontend which row key to read, what header label to show
@@ -388,6 +402,17 @@ _mllp_columns = [
     {'key': 'action', 'label': 'Actions', 'type': 'action'},
 ]
 
+_scheduler_columns = [
+    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
+    {'key': 'object_name', 'label': 'Job', 'type': 'text'},
+    {'key': 'endpoint', 'label': 'Service', 'type': 'text'},
+    {'key': 'current_run', 'label': 'Run', 'type': 'text'},
+    {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
+    {'key': 'duration_ms', 'label': 'Duration', 'type': 'text'},
+    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
+]
+
 _fhir_columns = [
     {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
     {'key': 'cid', 'label': 'CID', 'type': 'cid'},
@@ -431,6 +456,7 @@ _source_columns = {
     'mllp-channel': _mllp_columns,
     'mllp-outgoing': _mllp_columns,
     'fhir': _fhir_columns,
+    'scheduler': _scheduler_columns,
 }
 
 # ################################################################################################################################
@@ -442,6 +468,7 @@ _source_attr_columns = {
     'mllp-channel': ('msg_type', 'mrn', 'facility', 'ack_status'),
     'mllp-outgoing': ('msg_type', 'mrn', 'facility', 'ack_status'),
     'fhir': ('resource_type', 'method'),
+    'scheduler': ('current_run', 'delay_ms'),
 
     # Who viewed what - a view record is named by these two rather than by an event id
     'config': ('actor', 'viewed_object_name'),
@@ -461,6 +488,10 @@ _default_outcomes = (AuditOutcome.OK, AuditOutcome.Error)
 # an outcome of its own and one no other source can report.
 _source_outcomes = {
     'pubsub': (AuditOutcome.OK, AuditOutcome.Error, AuditOutcome.Expired),
+
+    # A scheduler run is running until it completes, and it may also overrun its execution
+    # time limit, which no message-carrying source can.
+    'scheduler': (SCHEDULER.OUTCOME.RUNNING, SCHEDULER.OUTCOME.OK, SCHEDULER.OUTCOME.ERROR, SCHEDULER.OUTCOME.TIMEOUT),
 }
 
 # The all-events page can show anything any source reports, so it offers every outcome there is

@@ -9,9 +9,6 @@ pub mod convert;
 /// Typed encoding and parsing of the JSON payloads carried in Redis stream fields.
 pub mod wire;
 
-/// Execution-history serialization helpers.
-pub mod history;
-
 /// Running-job state machine.
 pub mod job;
 

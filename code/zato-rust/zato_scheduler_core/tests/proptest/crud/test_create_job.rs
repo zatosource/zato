@@ -46,7 +46,6 @@ proptest! {
         prop_assert!(running_job.next_fire_utc.is_some());
         prop_assert!(!running_job.in_flight);
         prop_assert_eq!(running_job.current_run, 0);
-        prop_assert!(running_job.history.is_empty());
     }
 
     #[test]
@@ -77,6 +76,5 @@ proptest! {
         prop_assert!(!running_job.in_flight);
         prop_assert!(running_job.in_flight_since.is_none());
         prop_assert_eq!(running_job.current_run, 0);
-        prop_assert!(running_job.history.is_empty());
     }
 }

@@ -76,21 +76,8 @@ impl fmt::Display for JobType {
 
 /// String constants for job execution outcome labels.
 pub mod outcome {
-    /// Matches all outcomes (used in filters).
-    pub const ALL: &str = "all";
-    /// The job is currently running.
-    pub const RUNNING: &str = "running";
-    /// The job executed successfully.
-    pub const EXECUTED: &str = "ok";
-    /// The job failed with an error.
-    pub const ERROR: &str = "error";
-    /// The job was skipped because a previous invocation is still in flight.
-    pub const SKIPPED_ALREADY_IN_FLIGHT: &str = "skipped_already_in_flight";
     /// The job timed out.
     pub const TIMEOUT: &str = "timeout";
-
-    /// All countable outcome labels, in the order used for summary dicts.
-    pub const COUNTABLE: &[&str] = &[EXECUTED, ERROR, TIMEOUT, RUNNING, SKIPPED_ALREADY_IN_FLIGHT];
 }
 
 /// A batch of fire information for a single job invocation.
@@ -108,6 +95,8 @@ pub struct FireBatch {
     pub job_type: JobType,
     /// The current run number.
     pub current_run: u32,
+    /// ISO timestamp of the planned fire time, so the server can record the run's delay.
+    pub planned_fire_time_iso: String,
     /// Service to invoke on success.
     pub on_success_service: Option<String>,
     /// Scheduler job to execute on success.
@@ -116,4 +105,28 @@ pub struct FireBatch {
     pub on_error_service: Option<String>,
     /// Scheduler job to execute on error.
     pub on_error_job: Option<String>,
+}
+
+/// A run that overran its `max_execution_time_ms` and was given up on.
+pub struct TimeoutEvent {
+    /// Identifier of the job whose run timed out.
+    pub job_id: i64,
+
+    /// Run counter of the attempt that timed out.
+    pub current_run: u32,
+
+    /// How long the run had been in flight when it was abandoned.
+    pub elapsed_ms: u64,
+
+    /// Message describing the timeout, as shown to the user.
+    pub error_msg: String,
+}
+
+/// One event on its way from the scheduler loop to the Redis publisher thread.
+pub enum OutgoingEvent {
+    /// A job is due and the server is to execute it.
+    Fire(FireBatch),
+
+    /// An in-flight run exceeded its execution-time limit.
+    Timeout(TimeoutEvent),
 }

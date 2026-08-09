@@ -10,8 +10,8 @@ use parking_lot::{Condvar, Mutex};
 
 use crate::DeferredLog;
 use crate::deferred_log;
-use crate::job::{ExecutionRecord, LogEntry, RunningJob};
-use crate::types::{FireBatch, outcome};
+use crate::job::RunningJob;
+use crate::types::{FireBatch, OutgoingEvent, TimeoutEvent, outcome};
 
 /// Default threshold (ms) for detecting wall-clock jumps relative to monotonic time.
 const DEFAULT_CLOCK_JUMP_THRESHOLD_MS: i64 = 5_000;
@@ -57,8 +57,8 @@ pub struct SchedulerShared {
     pub clock_jump_threshold_ms: i64,
     /// Window (ms) for coalescing nearly-due jobs into one tick.
     pub coalesce_window_ms: i64,
-    /// Channel for publishing fire events directly (used by forced execute).
-    pub fire_sender: Mutex<Option<std::sync::mpsc::Sender<FireBatch>>>,
+    /// Channel for publishing outgoing events directly (used by forced execute).
+    pub fire_sender: Mutex<Option<std::sync::mpsc::Sender<OutgoingEvent>>>,
 }
 
 impl Default for SchedulerShared {
@@ -84,11 +84,11 @@ impl SchedulerShared {
 
 /// Main scheduler loop, meant to run on a dedicated thread.
 ///
-/// Fires due jobs by sending `FireBatch` items through the provided sender.
-/// The receiver end publishes them to Redis.
+/// Fires due jobs and reports timed-out runs by sending `OutgoingEvent` items
+/// through the provided sender. The receiver end publishes them to Redis.
 pub fn scheduler_loop(
     shared: &Arc<SchedulerShared>,
-    fire_sender: &std::sync::mpsc::Sender<FireBatch>,
+    fire_sender: &std::sync::mpsc::Sender<OutgoingEvent>,
     initial_sleep_time: f64,
     heartbeat: Option<&crate::watchdog::HeartbeatHandle>,
 ) {
@@ -164,11 +164,11 @@ pub fn scheduler_loop(
             drop(state);
         }
 
-        let fire_batch = {
+        let (fire_batch, timeout_events) = {
             let mut deferred = DeferredLog::new();
-            let batch = {
+            let batch_and_timeouts = {
                 let mut state = shared.state.lock();
-                check_in_flight_timeouts(&mut state, &mut deferred);
+                let timeouts = check_in_flight_timeouts(&mut state, &mut deferred);
                 let batch = collect_due_jobs(&mut state, now_wall, shared.coalesce_window_ms, &mut deferred);
 
                 let mut total: i64 = 0;
@@ -190,18 +190,26 @@ pub fn scheduler_loop(
                 // The counts are taken, so the state lock goes back before the deferred log
                 // is flushed, which does its own I/O.
                 drop(state);
-                batch
+                (batch, timeouts)
             };
             deferred.flush();
-            batch
+            batch_and_timeouts
         };
+
+        // Timed-out runs go out first so the server marks them before any new fire arrives
+        for timeout_event in timeout_events {
+            if fire_sender.send(OutgoingEvent::Timeout(timeout_event)).is_err() {
+                tracing::error!("Fire event channel closed, exiting scheduler loop");
+                return;
+            }
+        }
 
         for item in &fire_batch {
             crate::metrics::EXECUTIONS_TOTAL.with_label_values(&[&item.name, "fired"]).inc();
         }
 
         for item in fire_batch {
-            if fire_sender.send(item).is_err() {
+            if fire_sender.send(OutgoingEvent::Fire(item)).is_err() {
                 tracing::error!("Fire event channel closed, exiting scheduler loop");
                 return;
             }
@@ -279,11 +287,9 @@ pub fn collect_due_jobs(
         }
 
         let planned = fire_utc.to_rfc3339();
-        let actual = now.to_rfc3339();
 
         running_job.current_run += 1;
         let delay_ms = (now - fire_utc).num_milliseconds().max(0);
-        let delay_ms_unsigned = u64::try_from(delay_ms).unwrap_or(0);
 
         deferred_log!(
             deferred,
@@ -305,30 +311,24 @@ pub fn collect_due_jobs(
             extra: running_job.extra.clone(),
             job_type: running_job.job_type.clone(),
             current_run: running_job.current_run,
+            planned_fire_time_iso: planned,
             on_success_service: running_job.on_success_service.clone(),
             on_success_job: running_job.on_success_job.clone(),
             on_error_service: running_job.on_error_service.clone(),
             on_error_job: running_job.on_error_job.clone(),
         });
 
-        let mut rec = ExecutionRecord::new(&planned, &actual, outcome::RUNNING, running_job.current_run).with_delay(delay_ms_unsigned);
-
-        rec.log_entries.push(LogEntry {
-            timestamp_iso: actual.clone(),
-            level: "SYSTEM".into(),
-            message: format!("Job started, delay: {}", crate::humanize_ms(delay_ms_unsigned)),
-        });
-
-        running_job.record_execution(rec);
         running_job.advance_to_next(now);
     }
 
     batch
 }
 
-/// Checks all in-flight jobs for execution-time timeouts and marks them accordingly.
-pub fn check_in_flight_timeouts(state: &mut SchedulerState, deferred: &mut DeferredLog) {
+/// Checks all in-flight jobs for execution-time timeouts, clears their in-flight
+/// state and returns the timeout events the server records in the audit log.
+pub fn check_in_flight_timeouts(state: &mut SchedulerState, deferred: &mut DeferredLog) -> Vec<TimeoutEvent> {
     let now_instant = Instant::now();
+    let mut timeout_events = Vec::new();
 
     for (&job_id, running_job) in &mut state.jobs {
         if !running_job.in_flight {
@@ -360,13 +360,17 @@ pub fn check_in_flight_timeouts(state: &mut SchedulerState, deferred: &mut Defer
             running_job.in_flight = false;
             running_job.in_flight_since = None;
             running_job.in_flight_run = None;
-            running_job.record_execution(
-                ExecutionRecord::new("", &Utc::now().to_rfc3339(), outcome::TIMEOUT, timed_out_run)
-                    .with_duration(elapsed_ms)
-                    .with_error(format!("exceeded max_execution_time_ms={}", running_job.max_execution_time_ms)),
-            );
+
+            timeout_events.push(TimeoutEvent {
+                job_id,
+                current_run: timed_out_run,
+                elapsed_ms,
+                error_msg: format!("exceeded max_execution_time_ms={}", running_job.max_execution_time_ms),
+            });
         }
     }
+
+    timeout_events
 }
 
 /// Recomputes `next_fire_utc` for every active job after a clock jump.

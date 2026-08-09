@@ -64,6 +64,7 @@ class AuditSource:
     MLLP_Outgoing = 'mllp-outgoing'
     FHIR          = 'fhir'
     Config        = 'config'
+    Scheduler     = 'scheduler'
 
 # ################################################################################################################################
 
@@ -149,6 +150,7 @@ class AuditEvent:
     Config_Edited        = 'config-edited'
     Config_Deleted       = 'config-deleted'
     Content_Viewed       = 'content-viewed'
+    Job_Executed         = 'job-executed'
 
 # ################################################################################################################################
 
