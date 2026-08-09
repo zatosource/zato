@@ -1,0 +1,326 @@
+{% extends "zato/dashboard_base.html" %}
+
+{% comment %}
+Multi-step wizard for an MCP gateway - three steps with progressive
+disclosure. Basic answers live directly on the steps while everything
+advanced opens in small popover micro-forms or folds away behind the
+More options line. The generic machinery and look come from the wizard
+kit. The view provides:
+
+* cluster_id - the current cluster
+* form       - CreateForm, its fields carrying all the defaults
+* is_edit    - whether the wizard opened on an existing gateway
+* item_id    - the id of the gateway being edited, empty on create
+{% endcomment %}
+
+{% block html_title %}MCP gateway - {% if is_edit %}Edit a gateway{% else %}Create a new gateway{% endif %}{% endblock %}
+
+{% block dashboard_extra_css %}
+{% comment %} What a save says beside the button it was asked for through, and what
+a failed one opens when its details are asked for {% endcomment %}
+<link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
+<link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
+
+<link rel="stylesheet" type="text/css" href="/static/css/settings.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/tabs.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-lines.css">
+<link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
+<link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp.css">
+<link rel="stylesheet" type="text/css" href="/static/css/gateway/mcp-wizard.css">
+{% endblock %}
+
+{% block dashboard_domain_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/badge-picker.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/core.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/collapse.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/forms.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/review.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-descriptions.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-controls.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/core.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/forms.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-wizard/review.js"></script>
+
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.gateway.mcp.wizard.init({
+        list_url: '{% url "gateway-mcp" %}?cluster={{ cluster_id }}',
+        is_edit: {% if is_edit %}true{% else %}false{% endif %}
+    });
+});
+</script>
+{% endblock %}
+
+{% block dashboard_tiles %}{% endblock %}
+{% block dashboard_header_pill %}{% endblock %}
+{% block dashboard_chart_header_content %}{% endblock %}
+{% block dashboard_time_range_options %}{% endblock %}
+{% block dashboard_refresh_options %}{% endblock %}
+
+{% block dashboard_grid %}
+
+        <div class="dashboard-card wizard-card" id="mcp-wizard">
+
+            <div class="dashboard-card-header">
+                <!-- The label makes the title a regular "How does it work?"
+                     stop - clicking it shows the wizard-wide overview -->
+                <h3 id="mcp-wizard-title"><label for="mcp-wizard-title">{% if is_edit %}Edit MCP gateway{% else %}New MCP gateway{% endif %}</label></h3>
+                <span class="wizard-badge wizard-name-badge" id="mcp-wizard-name-badge" hidden></span>
+            </div>
+
+            <form novalidate action="{% if is_edit %}{% url "gateway-mcp-edit" %}{% else %}{% url "gateway-mcp-create" %}{% endif %}" method="post" id="create-form">
+
+                <!-- The step strip wears the shared dashboard tabs chrome - the tabs show
+                     progress, the walking itself happens through Next and Back -->
+                <div class="dashboard-tabs wizard-steps" id="mcp-wizard-steps" role="tablist" aria-label="Wizard steps">
+                    <button type="button" class="dashboard-tab wizard-step wizard-step-active dashboard-tab-active" data-step="0" role="tab" aria-selected="true">
+                        <span class="wizard-step-num">01</span>
+                        <span class="dashboard-tab-label">How do agents connect?</span>
+                    </button>
+                    <button type="button" class="dashboard-tab wizard-step" data-step="1" role="tab" aria-selected="false">
+                        <span class="wizard-step-num">02</span>
+                        <span class="dashboard-tab-label">What do they receive?</span>
+                    </button>
+                    <button type="button" class="dashboard-tab wizard-step" data-step="2" role="tab" aria-selected="false">
+                        <span class="wizard-step-num">03</span>
+                        <span class="dashboard-tab-label">Review and go</span>
+                    </button>
+                </div>
+
+                <!-- Step 1 - name, URL path, services and security -->
+                <div class="wizard-step-body" id="mcp-wizard-step-body-0">
+
+                    <div class="wizard-name-row">
+                        <div class="wizard-name-field">
+                            <label for="{{ form.name.id_for_label }}">Name</label>
+                            {{ form.name }}
+                        </div>
+                        <label class="wizard-active-field" for="{{ form.is_active.id_for_label }}" data-help-placement="top">
+                            Active
+                            {{ form.is_active }}
+                        </label>
+                    </div>
+
+                    <div class="wizard-field-row" id="mcp-wizard-row-url-path">
+                        <label for="{{ form.url_path.id_for_label }}">URL path</label>
+                        {{ form.url_path }}
+                    </div>
+
+                    <div class="wizard-section mcp-wizard-picker" id="mcp-wizard-picker-services">
+                        <div class="wizard-section-title"><label for="badge-filter-text-wizard">Services</label></div>
+                        <div class="badge-picker-filter" id="badge-filter-wizard">
+                            <input type="text" id="badge-filter-text-wizard" placeholder="Filter services..." />
+                            <button type="button" class="badge-filter-clear" id="badge-filter-clear-wizard">Clear</button>
+                        </div>
+                        <div class="badge-picker" id="badge-picker-wizard">
+                            <div class="badge-zone" id="badge-zone-available-wizard">
+                                <div class="badge-zone-header">Available (<span class="badge-zone-count">0</span>)</div>
+                                <div class="badge-zone-body"></div>
+                            </div>
+                            <div class="badge-picker-resizer"></div>
+                            <div class="badge-zone" id="badge-zone-assigned-wizard">
+                                <div class="badge-zone-header">Assigned (<span class="badge-zone-count">0</span>)</div>
+                                <div class="badge-zone-body"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="wizard-section mcp-wizard-picker" id="mcp-wizard-picker-security">
+                        <div class="wizard-section-title"><label for="badge-filter-text-sec-wizard">Security</label></div>
+                        <div class="badge-picker-filter" id="badge-filter-sec-wizard">
+                            <input type="text" id="badge-filter-text-sec-wizard" placeholder="Filter security..." />
+                            <button type="button" class="badge-filter-clear" id="badge-filter-clear-sec-wizard">Clear</button>
+                        </div>
+                        <div class="badge-picker" id="badge-picker-sec-wizard">
+                            <div class="badge-zone" id="badge-zone-available-sec-wizard">
+                                <div class="badge-zone-header">Available (<span class="badge-zone-count">0</span>)</div>
+                                <div class="badge-zone-body"></div>
+                            </div>
+                            <div class="badge-picker-resizer"></div>
+                            <div class="badge-zone" id="badge-zone-assigned-sec-wizard">
+                                <div class="badge-zone-header">Assigned (<span class="badge-zone-count">0</span>)</div>
+                                <div class="badge-zone-body"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Step 2 - response shaping and the folded options -->
+                <div class="wizard-step-body" id="mcp-wizard-step-body-1" hidden>
+
+                    <div class="wizard-section">
+                        <div class="wizard-lines">
+
+                            <div class="wizard-line" id="mcp-wizard-line-client-filters">
+                                <label class="wizard-line-label" for="{{ form.allow_client_filters.id_for_label }}">Allow client filters</label>
+                                <span class="wizard-line-slot">{{ form.allow_client_filters }}</span>
+                            </div>
+
+                            <div class="wizard-line" id="mcp-wizard-line-size-caps">
+                                <label class="wizard-line-label" for="mcp-wizard-edit-size-caps">Size caps</label>
+                                <span class="wizard-line-slot"><a href="javascript:void(0)" class="wizard-toggle-edit" id="mcp-wizard-edit-size-caps"><span class="zato-link-face wizard-toggle-summary" id="mcp-wizard-summary-size-caps"></span><span class="zato-soft-hint">Click to edit</span></a></span>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="wizard-section">
+
+                        <div class="wizard-line" id="mcp-wizard-row-options">
+                            <label class="wizard-line-label" for="mcp-wizard-edit-options">More options</label>
+                            <span class="wizard-line-slot"><a href="javascript:void(0)" class="wizard-toggle-edit" id="mcp-wizard-edit-options"><span class="zato-link-face wizard-toggle-summary" id="mcp-wizard-summary-options"></span><span class="zato-soft-hint" id="mcp-wizard-hint-options"></span></a></span>
+                        </div>
+
+                        <div class="wizard-collapse-body" id="mcp-wizard-options-body" hidden>
+
+                        <div class="wizard-option-card wizard-option-card-clickable" id="mcp-wizard-card-gateway-options">
+                            <div class="wizard-option-header">
+                                <span class="wizard-option-label">Gateway options</span>
+                                <span class="wizard-option-summary" id="mcp-wizard-summary-gateway-options"></span>
+                            </div>
+                        </div>
+
+                        <div class="wizard-option-card wizard-option-card-clickable" id="mcp-wizard-card-compaction">
+                            <div class="wizard-option-header">
+                                <span class="wizard-option-label">Compaction</span>
+                                <span class="wizard-option-summary" id="mcp-wizard-summary-compaction"></span>
+                            </div>
+                        </div>
+
+                        <div class="wizard-option-card" id="mcp-wizard-card-pii">
+                            <div class="wizard-option-header" id="mcp-wizard-pii-header">
+                                <svg class="wizard-chevron" id="mcp-wizard-pii-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                <span class="wizard-option-label">PII removal</span>
+                                <span class="wizard-option-summary" id="mcp-wizard-summary-pii"></span>
+                            </div>
+                            <div class="wizard-option-body" id="mcp-wizard-pii-body">
+
+                                <div class="mcp-wizard-field-grid">
+                                    <label for="{{ form.safeguards_pii_enabled.id_for_label }}">Remove PII from responses {{ form.safeguards_pii_enabled }}</label>
+                                </div>
+
+                                <div class="mcp-wizard-pii-selects">
+                                    <label for="{{ form.safeguards_pii_lands.id_for_label }}">Lands</label>
+                                    {{ form.safeguards_pii_lands }}
+                                    <label for="{{ form.safeguards_pii_detectors.id_for_label }}">Detectors</label>
+                                    {{ form.safeguards_pii_detectors }}
+                                    <label for="{{ form.safeguards_pii_exclude.id_for_label }}">Exclude</label>
+                                    {{ form.safeguards_pii_exclude }}
+                                </div>
+
+                                <div class="mcp-wizard-field-grid">
+                                    <label for="{{ form.safeguards_pii_validate.id_for_label }}">Validate matches with checksums {{ form.safeguards_pii_validate }}</label>
+                                    <label for="{{ form.safeguards_pii_stable_tokens.id_for_label }}">Stable tokens across one response {{ form.safeguards_pii_stable_tokens }}</label>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <div class="wizard-option-card" id="mcp-wizard-card-safety">
+                            <div class="wizard-option-header" id="mcp-wizard-safety-header">
+                                <svg class="wizard-chevron" id="mcp-wizard-safety-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                <span class="wizard-option-label">Content safety</span>
+                                <span class="wizard-option-summary" id="mcp-wizard-summary-safety"></span>
+                            </div>
+                            <div class="wizard-option-body" id="mcp-wizard-safety-body">
+
+                                <div class="wizard-collapse-group">
+                                    <div class="wizard-collapse-group-title">
+                                        <svg class="wizard-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                        Unicode
+                                    </div>
+                                    <div class="wizard-collapse-group-body mcp-wizard-field-grid" hidden>
+                                        <label for="{{ form.safeguards_normalize_unicode.id_for_label }}">Remove hidden control characters {{ form.safeguards_normalize_unicode }}</label>
+                                        <label for="{{ form.safeguards_unicode_mode.id_for_label }}">When found {{ form.safeguards_unicode_mode }}</label>
+                                    </div>
+                                </div>
+
+                                <div class="wizard-collapse-group">
+                                    <div class="wizard-collapse-group-title">
+                                        <svg class="wizard-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                        Markup
+                                    </div>
+                                    <div class="wizard-collapse-group-body mcp-wizard-field-grid" hidden>
+                                        <label for="{{ form.safeguards_sanitize_markup.id_for_label }}">Remove active HTML and Markdown {{ form.safeguards_sanitize_markup }}</label>
+                                        <label for="{{ form.safeguards_markup_mode.id_for_label }}">When found {{ form.safeguards_markup_mode }}</label>
+                                    </div>
+                                </div>
+
+                                <div class="wizard-collapse-group">
+                                    <div class="wizard-collapse-group-title">
+                                        <svg class="wizard-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                        URL policy
+                                    </div>
+                                    <div class="wizard-collapse-group-body mcp-wizard-field-grid" hidden>
+                                        <label for="{{ form.safeguards_url_policy_enabled.id_for_label }}">Check URLs in responses {{ form.safeguards_url_policy_enabled }}</label>
+                                        <label class="mcp-wizard-wide-field" for="{{ form.safeguards_url_allow_list.id_for_label }}">Allowed hosts {{ form.safeguards_url_allow_list }}</label>
+                                        <label for="{{ form.safeguards_url_mode.id_for_label }}">When found {{ form.safeguards_url_mode }}</label>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Step 3 - review -->
+                <div class="wizard-step-body" id="mcp-wizard-step-body-2" hidden>
+                    <div class="wizard-review" id="mcp-wizard-review"></div>
+                </div>
+
+                <!-- Help on the left, Back and Next in the middle, the link closing the
+                     form on the right. An edit takes the walk out of the middle and puts
+                     Save there. How a save went is said in a tooltip beside the button
+                     it was asked for through. -->
+                <div class="wizard-footer">
+                    <span class="how-it-works-badge" id="mcp-wizard-how-it-works">How does it work?</span>
+                    <div class="wizard-footer-center">
+                        <!-- The page opens on the first step, where there is nothing
+                             to go back to, so Back starts out disabled -->
+                        <button type="button" class="secondary-button" id="mcp-wizard-back" disabled>Back</button>
+                        <button type="button" class="action-button" id="mcp-wizard-next">Next</button>
+                    </div>
+                    <div class="wizard-footer-right">
+                        <a href="javascript:void(0)" class="wizard-cancel" id="mcp-wizard-cancel">Close form</a>
+                        <button type="button" class="action-button" id="mcp-wizard-save" hidden>Save</button>
+                    </div>
+                </div>
+
+                <!-- Fields edited through the popover micro-forms - never shown directly -->
+                <div class="wizard-hidden-fields" hidden>
+
+                    {{ form.max_response_size }}
+                    {{ form.min_size_threshold }}
+                    {{ form.characters_per_token }}
+                    {{ form.size_cap_mode }}
+
+                    {{ form.validate_input }}
+                    {{ form.is_audit_log_active }}
+
+                    {{ form.safeguards_strip_nulls }}
+                    {{ form.safeguards_collapse_whitespace }}
+                    {{ form.safeguards_strip_base64 }}
+
+                </div>
+
+                {% if is_edit %}
+                <input type="hidden" id="id_edit-id" name="id" value="{{ item_id }}" />
+                {% endif %}
+
+                <input type="hidden" id="id_cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+            </form>
+
+        </div>
+
+{% endblock %}

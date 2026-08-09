@@ -1,0 +1,189 @@
+/*
+ * MCP gateway wizard - the multi-step create page.
+ *
+ * Everything the wizard shares with other wizards - the card, the step
+ * strip, the decision lines, the review, the footer and the popover
+ * micro-forms - comes from shared/wizard-kit.css and
+ * shared/wizard-lines.css. This file holds only what is MCP's own:
+ * the badge picker sections of step 1 and the field grids inside the
+ * PII and content safety cards.
+ */
+
+/* ------------------------------------------------------------ */
+/* MCP wizard - decision lines                                   */
+/* ------------------------------------------------------------ */
+
+/* The questions of step 2 are short - the shared 14.5em default would
+   push their answers far off to the right */
+#mcp-wizard {
+    --wizard-line-label-width: 7em;
+
+    /* One width for the Name and URL path labels, so both inputs start
+       in the same column - nowrap below keeps URL path on one line.
+       Both widths are in px so the name field's width below, the sum of
+       the two plus the gap, is exact */
+    --mcp-wizard-row-label-width: 65px;
+
+    /* One width for the Name and URL path inputs themselves - a fixed
+       flex basis, so nothing around them can stretch either one */
+    --mcp-wizard-row-input-width: 390px;
+
+    /* The kit's gap between a row's label and its input */
+    --mcp-wizard-row-gap: 10px;
+}
+
+#mcp-wizard .wizard-name-field label,
+#mcp-wizard .wizard-field-row > label {
+    width: var(--mcp-wizard-row-label-width);
+    white-space: nowrap;
+}
+
+/* Step 2 has three lines split over two sections, so there is no value
+   column to line up - each answer follows its own question at the line's
+   12px gap, rather than hanging in the air after a shared label width */
+#mcp-wizard .wizard-line-label {
+    width: auto;
+}
+
+#mcp-wizard .wizard-name-field input,
+#mcp-wizard-row-url-path input[type="text"] {
+    flex: 0 0 var(--mcp-wizard-row-input-width);
+}
+
+/* The name field holds only its label and input rather than stretching
+   across the row, so the Active switch sits right after the input instead
+   of at the row's far edge. Its width is said outright - sized to content,
+   the field would not count the input's fixed flex basis and would come
+   out narrower than the input inside it, which then slid under the switch */
+#mcp-wizard .wizard-name-field {
+    flex: 0 0 calc(var(--mcp-wizard-row-label-width) + var(--mcp-wizard-row-gap) + var(--mcp-wizard-row-input-width));
+}
+
+/* ------------------------------------------------------------ */
+/* MCP wizard - the size caps popover                            */
+/* ------------------------------------------------------------ */
+
+/* Both answers of the popover's second row are a word or a short number -
+   the controls take the width their content needs, the labels above them
+   keep the two columns where the first row put them */
+#mcp-wizard-popup select#mcp-wizard-tippy-size_cap_mode {
+    width: auto;
+}
+
+#mcp-wizard-popup input#mcp-wizard-tippy-characters_per_token {
+    width: 5.5em;
+}
+
+/* ------------------------------------------------------------ */
+/* MCP wizard - badge picker sections                            */
+/* ------------------------------------------------------------ */
+
+/* The URL path row is the last thing above the pickers, so it carries
+   the room down to the first of them */
+#mcp-wizard-row-url-path {
+    margin-bottom: 18px;
+}
+
+/* One column - the filter above the two zones, the way the gateway
+   list's own popups lay it out */
+.mcp-wizard-picker .badge-picker-filter {
+    margin-bottom: 6px;
+}
+
+/* ------------------------------------------------------------ */
+/* MCP wizard - field grids inside the folded cards              */
+/* ------------------------------------------------------------ */
+
+/* One width for every row, held here rather than left to each group's own
+   longest label, so that the switches and selects line up down the column
+   and across the groups */
+:root {
+    --mcp-wizard-field-width: 25em;
+}
+
+.mcp-wizard-field-grid {
+    display: grid;
+    grid-template-columns: max-content;
+    gap: 6px 0;
+}
+
+/* The control is held against the right edge of the row, so the controls
+   line up however long or short the labels next to them are */
+.mcp-wizard-field-grid label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: var(--mcp-wizard-field-width);
+    gap: 12px;
+    font-size: 12px;
+    color: var(--wizard-text);
+    cursor: pointer;
+    transition: var(--wizard-text-off-transition);
+}
+
+/* A row whose switch is off reads a notch back, the way every other label
+   naming a switch does */
+.mcp-wizard-field-grid label:has(input[type="checkbox"]:not(:checked)) {
+    color: var(--wizard-text-off);
+}
+
+/* A step body brings none of the popover's field styling with it, so the
+   selects and inputs of a row wear the same box the popover fields wear */
+.mcp-wizard-field-grid select,
+.mcp-wizard-field-grid input[type="text"] {
+    box-sizing: border-box;
+    height: 24px;
+    padding: 0 6px;
+    font-size: 12px;
+    color: var(--wizard-text);
+    background: #fff;
+    border: 1px solid var(--wizard-border-strong);
+    border-radius: 3px;
+}
+
+.mcp-wizard-field-grid select:focus,
+.mcp-wizard-field-grid input[type="text"]:focus {
+    border-color: var(--wizard-accent);
+}
+
+/* The allow list holds a comma-separated list of hosts - the label sits
+   above and the input takes the row's whole width, the same label-above-
+   input shape the popover micro-forms use for their text fields */
+.mcp-wizard-field-grid label.mcp-wizard-wide-field {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+}
+
+.mcp-wizard-field-grid label.mcp-wizard-wide-field input[type="text"] {
+    width: 100%;
+}
+
+/* ------------------------------------------------------------ */
+/* MCP wizard - PII multi-selects                                */
+/* ------------------------------------------------------------ */
+
+.mcp-wizard-pii-selects {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 8px 14px;
+    align-items: center;
+    max-width: var(--mcp-wizard-field-width);
+    margin: 10px 0;
+}
+
+.mcp-wizard-pii-selects > label {
+    font-size: 12px;
+    color: var(--wizard-text);
+}
+
+/* ------------------------------------------------------------ */
+/* MCP wizard - fields behind a master toggle that is off        */
+/* ------------------------------------------------------------ */
+
+/* The gateway list styles these inside its popups only - the wizard page
+   says the same thing on its own card */
+#mcp-wizard input.routing-disabled,
+#mcp-wizard select.routing-disabled {
+    opacity: 0.5;
+}

@@ -15,6 +15,7 @@ from urllib.parse import urlsplit
 
 # Django
 from django.http import HttpResponse
+from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.forms.gateway.mcp import CreateForm, EditForm
@@ -42,6 +43,9 @@ logger = logging.getLogger(__name__)
 _service_input_prefix = 'mcp_service_'
 _security_input_prefix = 'mcp_security_'
 _mcp_group_name_prefix = 'mcp.'
+
+# The multi-step wizard template - the create page today, the edit page in a later stage.
+_wizard_template = 'zato/gateway/mcp-wizard.html'
 
 # Checkboxes persisted in the gateway's opaque configuration - absent from POST means unchecked, i.e. False.
 _shaping_checkbox_fields = (
@@ -589,6 +593,23 @@ def export(req:'any_', id:'str') -> 'HttpResponse':
     http_response['Content-Disposition'] = f'attachment; filename="{file_name}"'
 
     return http_response
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('GET')
+def wizard_create(req:'any_') -> 'TemplateResponse':
+    """ A multi-step wizard for a new MCP gateway.
+    """
+    return_data = {
+        'cluster_id': req.zato.cluster_id,
+        'form': CreateForm(),
+        'is_edit': False,
+        'item_id': '',
+    }
+
+    out = TemplateResponse(req, _wizard_template, return_data)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

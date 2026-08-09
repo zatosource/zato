@@ -35,6 +35,8 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/form-tabs.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/badge-picker.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-descriptions.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp-controls.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/gateway/mcp.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
@@ -98,7 +100,7 @@
 {% endwith %}
 
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.gateway.mcp.create()">Create a new MCP gateway</a>
+            <a href="{% url "gateway-mcp-wizard-create" %}?cluster={{ cluster_id }}">Create a new MCP gateway</a>
         </div>
 
             <table class="zato-table" id="data-table">
