@@ -28,15 +28,15 @@
     // keyed by the ids of the form fields.
     $.fn.zato.response_caching.field_descriptions = {
         'response-caching-is-enabled': 'Whether responses of this channel are cached at all.',
-        'response-caching-ttl': 'How long a stored response is served from the cache<br>before it expires.',
-        'response-caching-cache-on-second-request': 'The first request stores only a small marker.<br>The full response is stored once the same request repeats,<br>which keeps one-off requests out of the cache.',
-        'response-caching-is-shared-across-callers': 'When on, one cached response serves all callers.<br>When off, each security definition has its own copy<br>and responses never cross between callers.',
-        'response-caching-include-body-in-key': 'Adds a hash of the request body to the cache key,<br>which lets POST requests be cached.<br>Otherwise only GET and HEAD are.<br>Always on for SOAP channels.',
-        'response-caching-vary-by-headers': 'Values of these headers become part of the cache key,<br>e.g. requests differing in Accept-Language<br>get separate cache entries.',
-        'response-caching-ignored-query-parameters': 'These query parameters are left out of the cache key,<br>e.g. tracking parameters that never change the response.',
-        'response-caching-max-body-size': 'Requests and responses larger than this<br>bypass the cache entirely.',
-        'response-caching-needs-etag': 'Each cached response gets an ETag<br>and a request whose If-None-Match matches it<br>receives 304 Not Modified without the body.',
-        'response-caching-coalesce-timeout': 'On a cache miss, concurrent identical requests<br>wait up to this long for one of them to fill the cache,<br>instead of all of them invoking the service.'
+        'response-caching-ttl': 'How long a stored response is served from the cache before it expires.',
+        'response-caching-cache-on-second-request': 'The first request stores only a small marker. The full response is stored once the same request repeats, which keeps one-off requests out of the cache.',
+        'response-caching-is-shared-across-callers': 'When on, one cached response serves all callers. When off, each security definition has its own copy and responses never cross between callers.',
+        'response-caching-include-body-in-key': 'Adds a hash of the request body to the cache key, which lets POST requests be cached. Otherwise only GET and HEAD are. Always on for SOAP channels.',
+        'response-caching-vary-by-headers': 'Values of these headers become part of the cache key, e.g. requests differing in Accept-Language get separate cache entries.',
+        'response-caching-ignored-query-parameters': 'These query parameters are left out of the cache key, e.g. tracking parameters that never change the response.',
+        'response-caching-max-body-size': 'Requests and responses larger than this bypass the cache entirely.',
+        'response-caching-needs-etag': 'Each cached response gets an ETag and a request whose If-None-Match matches it receives 304 Not Modified without the body.',
+        'response-caching-coalesce-timeout': 'On a cache miss, concurrent identical requests wait up to this long for one of them to fill the cache, instead of all of them invoking the service.'
     };
 
     // ////////////////////////////////////////////////////////////////////////
@@ -52,6 +52,7 @@
             divId: '#response-caching',
             fieldSelector: '.response-caching-row',
             containerSelector: '#markup',
+            placement: 'left',
             descriptions: $.fn.zato.response_caching.field_descriptions
         });
     };
