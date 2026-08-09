@@ -353,6 +353,12 @@
 
     $.fn.zato.outgoing.soap.before_submit_hook = function(form) {
 
+        // A saved popup rebuilds its row, so the row's security menu is given anew
+        // once the new markup is in the table.
+        $.fn.zato.data_table.on_submit_complete_callback = function() {
+            $.fn.zato.http_soap.inline.init_security_menus();
+        };
+
         var action = 'create';
 
         if($(form).attr('id') === 'edit-form') {
@@ -493,29 +499,39 @@
             isActiveLabel = 'Yes';
         }
 
-        // A connection with no security definition shows the same placeholder the server-rendered
-        // rows use rather than the ZATO_NONE marker the field carries.
-        var securityName = '<span class="form_hint">---</span>';
+        // A rebuilt cell keeps the select's own label and an empty href - the canonical
+        // name and href come back with the first inline save the cell goes through.
+        var securityCell = String.format(
+            '<a href="javascript:void(0)" class="http-soap-security-cell form_hint" data-id="{0}" data-href="">---</a>',
+            item.id);
 
         if(item.security_id && item.security_id !== 'ZATO_NONE') {
-            securityName = item.security_id_select;
+            securityCell = String.format(
+                '<a href="javascript:void(0)" class="http-soap-security-cell" data-id="{0}" data-href="">{1}</a>',
+                item.id, item.security_id_select);
         }
 
         row += '<td class="numbering">&nbsp;</td>';
         row += '<td class="impexp"><input type="checkbox" /></td>';
 
         // 1
-        row += String.format('<td>{0}</td>', item.name);
-        row += String.format('<td>{0}</td>', isActiveLabel);
+        row += String.format(
+            '<td><a href="javascript:void(0)" data-id="{0}" onclick="$.fn.zato.http_soap.inline.edit_name(\'{0}\', this)"><span class="name-value">{1}</span></a></td>',
+            item.id, item.name);
+        row += String.format(
+            '<td><a href="javascript:void(0)" data-id="{0}" onclick="$.fn.zato.http_soap.inline.toggle_active(\'{0}\', this)">{1}</a></td>',
+            item.id, isActiveLabel);
 
         // 2
         row += String.format('<td>{0}</td>', item.host);
-        row += String.format('<td>{0}</td>', item.url_path);
+        row += String.format(
+            '<td><a href="javascript:void(0)" data-id="{0}" onclick="$.fn.zato.http_soap.inline.edit_url_path(\'{0}\', this)">{1}</a></td>',
+            item.id, item.url_path);
 
         // 3
         row += String.format('<td>{0}</td>', valueOr(item.soap_action, config.emptyCellValue));
         row += String.format('<td>{0}</td>', item.soap_version);
-        row += String.format('<td>{0}</td>', securityName);
+        row += String.format('<td>{0}</td>', securityCell);
 
         row += String.format(
             '<td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping(\'{0}\', this)" class="ping-link">Ping</a></td>',

@@ -12,6 +12,11 @@
     <link rel="stylesheet" type="text/css" href="/static/css/http_soap/invocation.css">
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.ui.timepicker.addon.css">
     <link rel="stylesheet" type="text/css" href="/static/css/outgoing/soap.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/tippy-buttons.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-lines.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -20,6 +25,9 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
 
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/action-runner.js"></script>
@@ -30,7 +38,19 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/health-check.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/outgoing/soap.js"></script>
 
+    {% comment %} What the inline editors are built from - the shared popup chrome, the wizard
+    kit's panels and the inline machinery the HTTP/SOAP listings share {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/lines.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/inline.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/inline-pickers.js"></script>
+
     <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.http_soap.inline.config.connection = 'outgoing';
+    $.fn.zato.http_soap.inline.config.transport = 'soap';
+    $.fn.zato.http_soap.inline.config.security_select = '#id_edit-security_id';
+    $.fn.zato.http_soap.inline.config.security_attr = 'security_id';
+    $.fn.zato.http_soap.inline.config.show_sec_type_in_cell = true;
     $.fn.zato.data_table.get_columns = function() {
         return [
             '_numbering',
@@ -194,23 +214,21 @@
                         <td class="impexp"><input type="checkbox" /></td>
 
                         {% comment %} 1 {% endcomment %}
-                        <td>{{ item.name }}</td>
-                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td><a href="javascript:void(0)" data-id="{{ item.id }}" onclick="$.fn.zato.http_soap.inline.edit_name('{{ item.id }}', this)"><span class="name-value">{{ item.name }}</span></a></td>
+                        <td><a href="javascript:void(0)" data-id="{{ item.id }}" onclick="$.fn.zato.http_soap.inline.toggle_active('{{ item.id }}', this)">{{ item.is_active|yesno:'Yes,No' }}</a></td>
 
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.host }}</td>
-                        <td>{{ item.url_path }}</td>
+                        <td><a href="javascript:void(0)" data-id="{{ item.id }}" onclick="$.fn.zato.http_soap.inline.edit_url_path('{{ item.id }}', this)">{{ item.url_path }}</a></td>
 
                         {% comment %} 3 {% endcomment %}
                         <td>{{ item.soap_action|default:'' }}</td>
                         <td>{{ item.soap_version }}</td>
                         <td>
                             {% if item.security_name %}
-                                {{ item.sec_type_name }}
-                                <br/>
-                                {{ item.security_name }}
+                                <a href="javascript:void(0)" class="http-soap-security-cell" data-id="{{ item.id }}" data-href="{{ item.security_href }}">{{ item.sec_type_name }}<br/>{{ item.security_name }}</a>
                             {% else %}
-                                <span class="form_hint">---</span>
+                                <a href="javascript:void(0)" class="http-soap-security-cell form_hint" data-id="{{ item.id }}" data-href="">---</a>
                             {% endif %}
                         </td>
 

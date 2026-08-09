@@ -31,6 +31,13 @@
     background: rgba(110, 110, 115, 0.1);
 }
 
+/* A scheduler job's run - work done at its appointed time */
+
+.dashboard-role-job {
+    color: #a1670f;
+    background: rgba(161, 103, 15, 0.1);
+}
+
 /* ------------------------------------------------------------ */
 /* Inside a dark frame                                           */
 /* ------------------------------------------------------------ */
@@ -51,4 +58,9 @@
 .dashboard-role-dark.dashboard-role-none {
     color: #a8aebc;
     background: rgba(255, 255, 255, 0.12);
+}
+
+.dashboard-role-dark.dashboard-role-job {
+    color: #e8c46f;
+    background: rgba(232, 196, 111, 0.18);
 }

@@ -1155,6 +1155,8 @@ urlpatterns += [
         login_required(http_soap.create), name='http-soap-create'),
     url(r'^zato/http-soap/edit/$',
         login_required(http_soap.edit), name='http-soap-edit'),
+    url(r'^zato/http-soap/inline-edit/(?P<id>.*)/$',
+        login_required(http_soap.inline_edit), name='http-soap-inline-edit'),
     url(r'^zato/http-soap/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(http_soap.delete), name='http-soap-delete'),
     url(r'^zato/http-soap/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',

@@ -23,6 +23,10 @@
     <link rel="stylesheet" type="text/css" href="/static/css/invoker.css">
     <link rel="stylesheet" type="text/css" href="/static/css/action-runner.css">
     <link rel="stylesheet" type="text/css" href="/static/css/zato_highlight_pane.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/popup.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/tippy-buttons.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-kit.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/wizard-lines.css">
     {% if transport == 'soap' %}
     <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
     {% endif %}
@@ -58,6 +62,12 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_ui_helpers.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato_highlight_pane.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/invoker.js"></script>
+
+    {% comment %} What the inline editors are built from - the shared popup chrome, the wizard
+    kit's panels, the badge picker and the page's own inline machinery {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/popup.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/wizard-kit/lines.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/badge-picker.js"></script>
     {% if transport == 'soap' %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     {% endif %}
@@ -71,6 +81,8 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common/health-check.js"></script>
     {% endif %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/index.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/inline.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/inline-pickers.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/data-table-widget.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/openapi.js"></script>
 
@@ -79,6 +91,8 @@
     $.fn.zato.data_table.internal_services = {
         {% for svc in internal_services %}"{{ svc }}": true{% if not forloop.last %}, {% endif %}{% endfor %}
     };
+    $.fn.zato.http_soap.inline.config.connection = '{{ connection }}';
+    $.fn.zato.http_soap.inline.config.transport = '{{ transport }}';
     $.fn.zato.data_table.get_columns = function() {
         return [
 
@@ -443,11 +457,11 @@
 
                         <!-- 3 -->
                         <td>
-                            {% if connection == 'channel' and transport == 'plain_http' and item.service_name == gateway_trigger_service %}<span class="gateway-badge">GW</span>{% endif %}{% if connection == 'channel' and transport == 'plain_http' and item.is_deprecated %}<span class="deprecated-badge">Deprecated</span>{% endif %}<span class="name-value">{{ item.name }}</span>
+                            {% if connection == 'channel' and transport == 'plain_http' and item.service_name == gateway_trigger_service %}<span class="gateway-badge">GW</span>{% endif %}{% if connection == 'channel' and transport == 'plain_http' and item.is_deprecated %}<span class="deprecated-badge">Deprecated</span>{% endif %}<a href="javascript:void(0)" data-id="{{ item.id }}" onclick="$.fn.zato.http_soap.inline.edit_name('{{ item.id }}', this)"><span class="name-value">{{ item.name }}</span></a>
                         </td>
 
                         <!-- 4 -->
-                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td><a href="javascript:void(0)" data-id="{{ item.id }}" onclick="$.fn.zato.http_soap.inline.toggle_active('{{ item.id }}', this)">{{ item.is_active|yesno:'Yes,No' }}</a></td>
 
                         <!-- 5 -->
                         {% if connection == 'outgoing' %}
@@ -455,23 +469,15 @@
                         {% endif %}
 
                         <!-- 6 -->
-                        <td>{{ item.url_path }}</td>
+                        <td><a href="javascript:void(0)" data-id="{{ item.id }}" onclick="$.fn.zato.http_soap.inline.edit_url_path('{{ item.id }}', this)">{{ item.url_path }}</a></td>
 
                         <!-- 7, 8 -->
                         {% if connection == 'channel' %}
-                            <td>{% if item.service_name in internal_services %}{{ item.service_name }}{% else %}<a href="{% url "service-ide" "service" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a>{% endif %}</td>
+                            <td><a href="javascript:void(0)" class="http-soap-service-cell" data-id="{{ item.id }}">{{ item.service_name }}</a></td>
                         {% endif %}
 
                         <!-- 9 -->
-                        <td>
-                            {% if item.security_name == "Delegated to RBAC" %}
-                                <span class="form_hint">Delegated to RBAC</span>
-                            {% elif connection == 'channel' and item.security_group_count %}
-                                {% if item.security_id != 'ZATO_NONE' %}{{ item.security_name|safe }}<br/>{% endif %}{{ item.security_group_count }} group{% if item.security_group_count > 1 %}s{% endif %}, {{ item.security_group_member_count }} client{% if item.security_group_member_count == 0 or item.security_group_member_count > 1 %}s{% endif %}
-                            {% else %}
-                                {{ item.security_name|safe }}
-                            {% endif %}
-                        </td>
+                        <td>{% if item.security_name == "Delegated to RBAC" %}<span class="form_hint">Delegated to RBAC</span>{% else %}{% if item.security_name %}<a href="javascript:void(0)" class="http-soap-security-cell" data-id="{{ item.id }}" data-href="{{ item.security_href }}">{{ item.security_name }}</a>{% endif %}{% if connection == 'channel' and item.security_group_count %}{% if item.security_name %}<br/>{% endif %}<a href="javascript:void(0)" class="http-soap-groups-cell" data-id="{{ item.id }}" onclick="$.fn.zato.http_soap.inline.open_groups(this)">{{ item.security_groups_info }}</a>{% endif %}{% if not item.security_name %}{% if connection != 'channel' or not item.security_group_count %}<span class="form_hint">---</span>{% endif %}{% endif %}{% endif %}</td>
 
                         <!-- 10, 11, 11a -->
                         {% if transport == 'soap' %}

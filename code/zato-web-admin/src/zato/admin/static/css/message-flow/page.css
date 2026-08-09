@@ -40,6 +40,7 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
     --message-flow-response: #74cf92;
     --message-flow-sys: #b9b9d4;
     --message-flow-view: #cfa9ea;
+    --message-flow-job: #e8c46f;
     --message-flow-good: #74cf92;
     --message-flow-bad: #ff8a94;
 
@@ -413,6 +414,16 @@ body:has(.message-flow-page) .pure-css-nav > nav ul ul {
 
 .message-flow-chip-text-view {
     fill: var(--message-flow-view);
+}
+
+/* A scheduler job's run - work done at its appointed time */
+
+.message-flow-chip-job {
+    fill: rgba(232, 196, 111, 0.18);
+}
+
+.message-flow-chip-text-job {
+    fill: var(--message-flow-job);
 }
 
 .message-flow-chip-good {
@@ -819,6 +830,10 @@ svg.message-flow-focus .message-flow-connector-chip:not(.message-flow-lit) {
 
 .message-flow-detail-tab-role-view {
     color: var(--message-flow-view);
+}
+
+.message-flow-detail-tab-role-job {
+    color: var(--message-flow-job);
 }
 
 .message-flow-detail-tab-id {

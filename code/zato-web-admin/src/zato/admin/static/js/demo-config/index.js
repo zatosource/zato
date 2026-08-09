@@ -91,11 +91,11 @@ var renderCard = function(setName, setInfo) {
     var statusBadge = document.createElement('span');
 
     if(setInfo.is_present) {
-        statusBadge.className = 'dashboard-outcome-badge demo-config-status-on';
+        statusBadge.className = 'dashboard-outcome-badge status-badge-on';
         statusBadge.textContent = config.statusOnLabel;
     }
     else {
-        statusBadge.className = 'dashboard-outcome-badge demo-config-status-off';
+        statusBadge.className = 'dashboard-outcome-badge status-badge-off';
         statusBadge.textContent = config.statusOffLabel;
     }
 

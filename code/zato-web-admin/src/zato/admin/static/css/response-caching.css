@@ -35,6 +35,15 @@
     background: #fdfefe;
     font-size: 12px;
     transition: border-color 0.15s;
+
+    /* The same small toggle look that dialog forms get from .data-popup */
+    --toggle-width: 32px;
+    --toggle-height: 16px;
+    --toggle-knob-size: 12px;
+    --toggle-knob-offset: 2px;
+    --toggle-travel: 16px;
+    --toggle-off-background: #999;
+    --toggle-on-background: #2d6392;
 }
 
 .response-caching-card:hover {
@@ -56,6 +65,7 @@
     width: 200px;
     flex-shrink: 0;
     color: #333333;
+    font-weight: bold;
 }
 
 .response-caching-hint {

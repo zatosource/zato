@@ -15,6 +15,7 @@ from zato.admin.web.forms import add_http_soap_select, add_select_from_service
 from zato.admin.web.forms.outgoing.soap import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, extract_security_id, get_js_dt_format, id_only_service, \
     Index as _Index, method_allowed, ping_json_response
+from zato.admin.web.views.http_soap import _get_security_href
 from zato.common.api import CONNECTION, HTTP_SOAP, SEC_DEF_TYPE_NAME, URL_TYPE, ZATO_NONE
 
 # ################################################################################################################################
@@ -112,6 +113,9 @@ class Index(_Index):
 
         if security_id and security_id != ZATO_NONE:
             item.sec_type_name = SEC_DEF_TYPE_NAME[item.sec_type]
+
+            # Where the definition's own page is, for the row's security menu
+            item.security_href = _get_security_href(self.req.zato.cluster_id, item.sec_type, item.security_name)
 
         # The retry fields are opaque attributes - connections that predate them
         # carry no values, in which case the shared defaults are displayed.

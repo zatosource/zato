@@ -14,6 +14,12 @@
     --zato-pill-radius: 3px;
     --zato-link-hover: #006fbf;
     --zato-link-dash: rgba(0, 0, 0, 0.35);
+
+    /* The blue an in-text action link is drawn in - detail pagination */
+    --detail-link-color: #037ac7;
+
+    /* The gray the listing tables write in - their cells and the links inside them */
+    --zato-table-text: rgb(64, 64, 64);
     --zato-row-hover: rgba(210, 195, 120, 0.15);
     --primary-dark: var(--zato-seablue);
     --background-light: #f8f9fa;

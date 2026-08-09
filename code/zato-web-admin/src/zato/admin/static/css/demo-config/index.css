@@ -1,3 +1,5 @@
+@import url("../shared/status-badge.css");
+
 /*
  * Demo config - the cards screen.
  *
@@ -120,16 +122,8 @@
     padding-bottom: 6px;
 }
 
-/* Green for what is there, grey for what is not */
-.demo-config-status-on {
-    color: var(--wizard-done);
-    background: rgba(40, 167, 69, 0.12);
-}
-
-.demo-config-status-off {
-    color: #888;
-    background: rgba(136, 136, 136, 0.12);
-}
+/* Green for what is there, grey for what is not - the colours come from the
+   shared status badge classes imported above */
 
 /* ------------------------------------------------------------ */
 /* Demo config - a card's object pills                           */

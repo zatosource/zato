@@ -53,7 +53,7 @@ drawing.config = {
     chipHeight: 16,
     chipPadX: 6,
     chipCharWidth: 6.4,
-    roleChipWidth: 52,
+    roleChipWidth: 70,
 
     // The word each kind of line wears - the part the event played in its exchange,
     // and a pair of eyes reading a message after the fact
@@ -61,7 +61,8 @@ drawing.config = {
         'request': 'REQ',
         'response': 'REPLY',
         'none': 'SYS',
-        'view': 'VIEW'
+        'view': 'VIEW',
+        'job': 'SCHEDULER'
     },
 
     // The one event type that is a person reading rather than a message moving

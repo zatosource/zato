@@ -4,11 +4,13 @@
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/status-message.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/shared/how-it-works.css">
     <link rel="stylesheet" type="text/css" href="/static/css/response-caching.css">
 {% endblock %}
 
 {% block "extra_js" %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/how-it-works.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/response-caching.js"></script>
 
     <script nonce="{{ CSP_NONCE }}">
@@ -27,16 +29,16 @@
 <div id="markup">
 <h2 class="zato">Response caching | <a href="{% url 'http-soap' %}?cluster={{ cluster_id }}&connection=channel&transport={{ transport }}">{% if transport == 'soap' %}SOAP channels{% else %}REST channels{% endif %}</a> | <a href="{% url 'http-soap' %}?cluster={{ cluster_id }}&query={{ channel_name }}&connection=channel&transport={{ transport }}">{{ channel_name }}</a> | {{ channel_url_path }}</h2>
 
-<div class="response-caching-container">
+<div class="response-caching-container" id="response-caching">
     <div class="response-caching-card">
 
         <div class="response-caching-row">
-            <span class="response-caching-label">Enabled</span>
+            <label class="response-caching-label" for="response-caching-is-enabled">Enabled</label>
             <input type="checkbox" id="response-caching-is-enabled" {% if config.is_enabled %}checked{% endif %} />
         </div>
 
         <div class="response-caching-row">
-            <span class="response-caching-label">Cache responses for</span>
+            <label class="response-caching-label" for="response-caching-ttl">Cache responses for</label>
             <input type="number" id="response-caching-ttl" min="1" />
             <select id="response-caching-ttl-unit">
                 <option value="seconds">seconds</option>
@@ -46,46 +48,46 @@
         </div>
 
         <div class="response-caching-row">
-            <span class="response-caching-label">Cache on second request</span>
+            <label class="response-caching-label" for="response-caching-cache-on-second-request">Cache on second request</label>
             <input type="checkbox" id="response-caching-cache-on-second-request" {% if config.cache_on_second_request %}checked{% endif %} />
             <span class="response-caching-hint">Store a response only once its request repeats</span>
         </div>
 
         <div class="response-caching-row">
-            <span class="response-caching-label">Shared across callers</span>
+            <label class="response-caching-label" for="response-caching-is-shared-across-callers">Shared across callers</label>
             <input type="checkbox" id="response-caching-is-shared-across-callers" {% if config.is_shared_across_callers %}checked{% endif %} />
             <span class="response-caching-hint">All callers share one cached response per request</span>
         </div>
 
         <div class="response-caching-row">
-            <span class="response-caching-label">Include body in key</span>
+            <label class="response-caching-label" for="response-caching-include-body-in-key">Include body in key</label>
             <input type="checkbox" id="response-caching-include-body-in-key" {% if transport == 'soap' or config.include_body_in_key %}checked{% endif %}{% if transport == 'soap' %} disabled{% endif %} />
             <span class="response-caching-hint">Lets POST requests be cached</span>
         </div>
 
         <div class="response-caching-row">
-            <span class="response-caching-label">Vary by headers</span>
+            <label class="response-caching-label" for="response-caching-vary-by-headers">Vary by headers</label>
             <input type="text" id="response-caching-vary-by-headers" placeholder="e.g. Accept-Language, X-Tenant" />
         </div>
 
         <div class="response-caching-row">
-            <span class="response-caching-label">Ignored query parameters</span>
+            <label class="response-caching-label" for="response-caching-ignored-query-parameters">Ignored query parameters</label>
             <input type="text" id="response-caching-ignored-query-parameters" placeholder="e.g. utm_source, utm_medium" />
         </div>
 
         <div class="response-caching-row">
-            <span class="response-caching-label">Max body size (bytes)</span>
+            <label class="response-caching-label" for="response-caching-max-body-size">Max body size (bytes)</label>
             <input type="number" id="response-caching-max-body-size" min="1" />
         </div>
 
         <div class="response-caching-row">
-            <span class="response-caching-label">ETag support</span>
+            <label class="response-caching-label" for="response-caching-needs-etag">ETag support</label>
             <input type="checkbox" id="response-caching-needs-etag" {% if config.needs_etag %}checked{% endif %} />
             <span class="response-caching-hint">Return 304 Not Modified when If-None-Match matches</span>
         </div>
 
         <div class="response-caching-row">
-            <span class="response-caching-label">Coalesce timeout (seconds)</span>
+            <label class="response-caching-label" for="response-caching-coalesce-timeout">Coalesce timeout (seconds)</label>
             <input type="number" id="response-caching-coalesce-timeout" min="1" />
         </div>
 
@@ -93,6 +95,7 @@
 </div>
 
 <div class="response-caching-actions">
+    <span class="how-it-works-badge" id="response-caching-how-it-works">How does it work?</span>
     <span class="response-caching-save-group">
         <span class="status-message" id="response-caching-status"></span>
         <a href="javascript:void(0)" class="response-caching-clear-link" onclick="$.fn.zato.response_caching.confirm_clear_cache(this)">Clear cache</a>

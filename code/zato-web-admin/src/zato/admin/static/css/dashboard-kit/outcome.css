@@ -87,6 +87,10 @@
     font-weight: 700;
     font-size: 11px;
     letter-spacing: 0.3px;
+
+    /* The badge is one word with, at times, a spinner before it - it never breaks in two,
+       however narrow the space holding it gets */
+    white-space: nowrap;
 }
 
 /* Outcome column in dashboard tables */

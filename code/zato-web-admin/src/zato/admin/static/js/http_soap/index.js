@@ -289,6 +289,13 @@ $.fn.zato.http_soap.serialize_param_rows = function(action) {
 
 $.fn.zato.http_soap.data_table.before_submit_hook = function(form) {
 
+    // A saved popup rebuilds its row, so the row's menus are given anew
+    // once the new markup is in the table.
+    $.fn.zato.data_table.on_submit_complete_callback = function() {
+        $.fn.zato.http_soap.inline.init_service_menus();
+        $.fn.zato.http_soap.inline.init_security_menus();
+    };
+
     // Only outgoing REST connections use row-based parameters
     if(!$.fn.zato.http_soap.is_rest_outgoing()) {
         return true;
@@ -581,8 +588,8 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
 
     var data_encoding = '';
 
-    var has_security = item.security && item.security != 'ZATO_NONE';
-    var security_name = has_security ? item.security_select : '<span class="form_hint">---</span>';
+    // The reply carries the canonical security name and href, the same values the listing renders
+    var has_security = Boolean(data.security_name);
 
     if(is_soap) {
         soap_action_tr += String.format('<td>{0}</td>', item.soap_action);
@@ -594,7 +601,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     }
 
     if(is_channel) {
-        service_tr += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(item.service, cluster_id));
+        service_tr += String.format('<td><a href="javascript:void(0)" class="http-soap-service-cell" data-id="{0}">{1}</a></td>', item.id, item.service);
         merge_url_params_req_tr += String.format('<td class="ignore">{0}</td>', merge_url_params_req);
         url_params_pri_tr += String.format('<td class="ignore">{0}</td>', item.url_params_pri);
         params_pri_tr += String.format('<td class="ignore">{0}</td>', item.params_pri);
@@ -629,10 +636,14 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     }
 
     // .. and the name cell combines them with the name itself.
-    row += String.format('<td>{0}<span class="name-value">{1}</span></td>', name_badges, item.name);
+    row += String.format(
+        '<td>{0}<a href="javascript:void(0)" data-id="{1}" onclick="$.fn.zato.http_soap.inline.edit_name(\'{1}\', this)"><span class="name-value">{2}</span></a></td>',
+        name_badges, item.id, item.name);
 
     /* 4 */
-    row += String.format('<td style="text-align:center">{0}</td>', is_active ? 'Yes' : 'No');
+    row += String.format(
+        '<td style="text-align:center"><a href="javascript:void(0)" data-id="{0}" onclick="$.fn.zato.http_soap.inline.toggle_active(\'{0}\', this)">{1}</a></td>',
+        item.id, is_active ? 'Yes' : 'No');
 
     /* 5 */
     if(is_outgoing) {
@@ -640,23 +651,24 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     }
 
     /* 6 */
-    row += String.format('<td>{0}</td>', item.url_path);
+    row += String.format(
+        '<td><a href="javascript:void(0)" data-id="{0}" onclick="$.fn.zato.http_soap.inline.edit_url_path(\'{0}\', this)">{1}</a></td>',
+        item.id, item.url_path);
 
     /* 7 */
     if(is_channel) {
         row += service_tr;
     }
 
-    /* 9 - the cell shows the security definition, the security groups info, or both */
-    var security_cell = security_name;
+    /* 9 - the cell shows the security definition and, for channels, the groups beneath it */
+    var security_cell = String.format(
+        '<a href="javascript:void(0)" class="http-soap-security-cell{0}" data-id="{1}" data-href="{2}">{3}</a>',
+        has_security ? '' : ' form_hint', item.id, data.security_href, has_security ? data.security_name : '---');
 
-    if(is_channel && !data.security_groups_info.startsWith('0 ')) {
-        if(has_security) {
-            security_cell += '<br/>' + data.security_groups_info;
-        }
-        else {
-            security_cell = data.security_groups_info;
-        }
+    if(is_channel) {
+        security_cell += String.format(
+            '<br/><a href="javascript:void(0)" class="http-soap-groups-cell" data-id="{0}" onclick="$.fn.zato.http_soap.inline.open_groups(this)">{1}</a>',
+            item.id, data.security_groups_info);
     }
     row += String.format('<td>{0}</td>', security_cell);
 

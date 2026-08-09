@@ -11,7 +11,7 @@
     font-size: 13px;
     font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;
     line-height: 20px;
-    color: rgb(64, 64, 64);
+    color: var(--zato-table-text);
     background-color: #fff;
     box-shadow:
         0 0 0 1px rgba(0, 0, 0, 0.04),
@@ -48,7 +48,7 @@
     padding: 8px;
     border: none;
     border-bottom: 1px solid rgb(219, 222, 212);
-    color: rgb(64, 64, 64);
+    color: var(--zato-table-text);
     vertical-align: middle;
     line-height: 20px;
     word-break: break-word;

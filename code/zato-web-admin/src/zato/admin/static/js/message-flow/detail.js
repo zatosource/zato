@@ -60,7 +60,8 @@ detail.config = {
         'request': 'REQ',
         'response': 'REPLY',
         'none': 'SYS',
-        'view': 'VIEW'
+        'view': 'VIEW',
+        'job': 'SCHEDULER'
     },
 
     // The one event type that is a person reading rather than a message moving

@@ -25,11 +25,12 @@ from zato.admin.web.views import get_group_list as common_get_group_list, get_ht
         method_allowed, ping_json_response, SecurityList
 from zato.admin.web.views.security.tier import get_tier_list
 from zato.common.api import generic_attrs, Groups, HTTP_SOAP, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
-     SOAP_CHANNEL_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE
+     SEC_DEF_TYPE_NAME, SOAP_CHANNEL_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
 from zato.common.content_type import format_content, get_content_type
 from zato.common.exception import ZatoException
-from zato.common.json_internal import dumps
+from zato.common.json_internal import dumps, loads
 from zato.common.typing_ import any_
+from zato.common.util.api import asbool
 # Bunch
 from zato.common.ext.bunch import Bunch
 from zato.common.util import openapi_ as openapi_module
@@ -124,6 +125,13 @@ _health_check_callback_widget_names = {
     'rest': 'health_check_callback_rest',
 }
 
+# The flag a row of the listing turns over where it stands.
+_inline_flag_names = ['is_active']
+
+# Everything a row of the listing may change without the edit form being opened -
+# the security definition and the security groups travel separately.
+_inline_field_names = ['is_active', 'name', 'url_path', 'service']
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -209,18 +217,9 @@ def _get_edit_create_message(params, prefix='', user_profile=None): # type: igno
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _edit_create_response(req, id, verb, transport, connection, name): # type: ignore
-
-    groups = common_get_group_list(req, Groups.Type.API_Clients, http_soap_channel_id=id)
-
-    group_count = 0
-    group_member_count = 0
-
-    for item in groups:
-        if item.is_assigned:
-            group_count += 1
-            group_member_count += item.member_count
-
+def _format_security_groups_info(group_count:'int', group_member_count:'int') -> 'str':
+    """ The counts of a channel's security groups and their members, worded the way the listing shows them.
+    """
     if (group_count == 0) or (group_count > 1):
         group_count_suffix = 's'
     else:
@@ -231,11 +230,71 @@ def _edit_create_response(req, id, verb, transport, connection, name): # type: i
     else:
         group_member_count_suffix = ''
 
+    out = f'{group_count} group{group_count_suffix}, {group_member_count} client{group_member_count_suffix}'
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _get_security_href(cluster_id:'int', sec_type:'str', security_name:'str') -> 'str':
+    """ Where the page of the security definition a row uses is found.
+    """
+    sec_type_as_link = sec_type.replace('_', '-')
+
+    if sec_type == SEC_DEF_TYPE.OAUTH:
+        direction = 'outconn/client-credentials/'
+    else:
+        direction = ''
+
+    out = f'/zato/security/{sec_type_as_link}/{direction}?cluster={cluster_id}&query={security_name}'
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _get_security_groups_info(req:'any_', id:'str') -> 'str':
+    """ Counts the security groups assigned to a channel and their members, worded the way the listing shows them.
+    """
+    groups = common_get_group_list(req, Groups.Type.API_Clients, http_soap_channel_id=id)
+
+    group_count = 0
+    group_member_count = 0
+
+    for item in groups:
+        if item.is_assigned:
+            group_count += 1
+            group_member_count += item.member_count
+
+    out = _format_security_groups_info(group_count, group_member_count)
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _edit_create_response(req, id, verb, transport, connection, name): # type: ignore
+
+    # The security cell of the row rebuilt by the listing renders the canonical name and href,
+    # so the object is read anew and both are computed the way the listing computes them.
+    response = req.zato.client.invoke('zato.http-soap.get', {
+        'cluster_id': req.zato.cluster_id,
+        'id': id,
+    })
+    updated = response.data
+
+    # Connections without security carry no name at all here.
+    if security_name := updated.get('security_name'):
+        security_href = _get_security_href(req.zato.cluster_id, updated['sec_type'], security_name)
+    else:
+        security_name = ''
+        security_href = ''
+
     return_data = {
         'id': id,
         'transport': transport,
         'message': 'Successfully {} {} {} `{}`'.format(verb, TRANSPORT[transport], CONNECTION[connection], name),
-        'security_groups_info': f'{group_count} group{group_count_suffix}, {group_member_count} client{group_member_count_suffix}'
+        'security_name': security_name,
+        'security_href': security_href,
+        'security_groups_info': _get_security_groups_info(req, id),
     }
 
     return HttpResponse(dumps(return_data), content_type='application/javascript')
@@ -316,17 +375,10 @@ def index(req): # type: ignore
 
             _security_name = item.security_name
             if _security_name:
-                sec_type_as_link = item.sec_type.replace('_', '-')
-                if item.sec_type == SEC_DEF_TYPE.OAUTH:
-                    direction = 'outconn/client-credentials/'
-                else:
-                    direction = ''
-                security_href   = f'/zato/security/{sec_type_as_link}/{direction}'
-                security_href  += f'?cluster={req.zato.cluster_id}&amp;query={_security_name}'
-                security_link = f'<a href="{security_href}">{_security_name}</a>'
-                security_name = security_link
+                security_href = _get_security_href(req.zato.cluster_id, item.sec_type, _security_name)
             else:
-                security_name = '<span class="form_hint">---</span>'
+                _security_name = ''
+                security_href = ''
 
             security_id = get_http_channel_security_id(item)
 
@@ -351,7 +403,8 @@ def index(req): # type: ignore
                 http_soap.use_mtom = use_mtom
             http_soap.data_format = item.data_format
             http_soap.security_id = security_id
-            http_soap.security_name = security_name
+            http_soap.security_name = _security_name
+            http_soap.security_href = security_href
             http_soap.content_type = item.content_type
             http_soap.timeout = item.timeout
 
@@ -361,6 +414,19 @@ def index(req): # type: ignore
                 http_soap.merge_url_params_req = item.merge_url_params_req
                 http_soap.url_params_pri = item.url_params_pri
                 http_soap.params_pri = item.params_pri
+
+                # Channels that never had groups assigned carry no counts at all
+                group_count = item.get('security_group_count')
+                group_member_count = item.get('security_group_member_count')
+
+                if not group_count:
+                    group_count = 0
+
+                if not group_member_count:
+                    group_member_count = 0
+
+                http_soap.security_group_count = group_count
+                http_soap.security_groups_info = _format_security_groups_info(group_count, group_member_count)
 
                 match_slash = item.get('match_slash')
                 if match_slash == '':
@@ -496,6 +562,109 @@ def edit(req): # type: ignore
         msg = 'Update error: {}'.format(e.args[0])
         logger.error(msg)
         return HttpResponseServerError(msg)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def inline_edit(req:'any_', id:'str') -> 'JsonResponse':
+    """ Stores what the listing edited without leaving the page - only the fields posted change.
+    """
+    connection = req.POST['connection']
+    transport = req.POST['transport']
+
+    # Read the object as it currently stands - the edit service needs the full picture,
+    # so the stored values travel along with the ones that changed ..
+    response = req.zato.client.invoke('zato.http-soap.get', {
+        'cluster_id': req.zato.cluster_id,
+        'id': id,
+    })
+
+    if not response.ok:
+        raise Exception(f'Object with id `{id}` could not be read')
+
+    item_dict = response.data
+
+    # .. the edit service reads these from its own input rather than from what the read returned ..
+    item_dict['id'] = id
+    item_dict['cluster_id'] = req.zato.cluster_id
+    item_dict['connection'] = connection
+    item_dict['transport'] = transport
+
+    # .. the edit service knows a channel's service under this name ..
+    if service_name := item_dict.get('service_name'):
+        item_dict['service'] = service_name
+
+    # .. a flag travels as the word it is written with, a text line as itself ..
+    for name in _inline_field_names:
+        if name in req.POST:
+            value = req.POST[name]
+
+            if name in _inline_flag_names:
+                value = asbool(value)
+
+            item_dict[name] = value
+
+    # .. the security definition arrives as the composite value the security select uses ..
+    if 'security' in req.POST:
+        item_dict['security_id'] = get_security_id_from_select(req.POST, '')
+
+    # .. the security groups arrive as one JSON list of their ids ..
+    if 'security_groups' in req.POST:
+        item_dict['security_groups'] = loads(req.POST['security_groups'])
+
+    # .. and the object is saved with the merged values.
+    response = req.zato.client.invoke('zato.http-soap.edit', item_dict)
+
+    if not response.ok:
+        raise Exception(f'Object with id `{id}` could not be saved -> {response.details}')
+
+    # Read the object anew so the reply carries the canonical values the row renders.
+    response = req.zato.client.invoke('zato.http-soap.get', {
+        'cluster_id': req.zato.cluster_id,
+        'id': id,
+    })
+    updated = response.data
+
+    # Connections without security carry no name at all here.
+    if security_name := updated.get('security_name'):
+        security_href = _get_security_href(req.zato.cluster_id, updated['sec_type'], security_name)
+        sec_type_name = SEC_DEF_TYPE_NAME[updated['sec_type']]
+    else:
+        security_name = ''
+        security_href = ''
+        sec_type_name = ''
+
+    # The composite value the security select and the hidden security cell use.
+    if security_id := updated.get('security_id'):
+        security_id = f'{updated["sec_type"]}/{security_id}'
+    else:
+        security_id = ZATO_NONE
+
+    # Only channels have security groups.
+    if connection == 'channel':
+        security_groups_info = _get_security_groups_info(req, id)
+    else:
+        security_groups_info = ''
+
+    # Only channels have a service.
+    if not (service_name := updated.get('service_name')):
+        service_name = ''
+
+    # What the row now says of itself.
+    out = JsonResponse({
+        'name': updated['name'],
+        'url_path': updated['url_path'],
+        'is_active': asbool(updated['is_active']),
+        'service_name': service_name,
+        'security_id': security_id,
+        'security_name': security_name,
+        'security_href': security_href,
+        'sec_type_name': sec_type_name,
+        'security_groups_info': security_groups_info,
+    })
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

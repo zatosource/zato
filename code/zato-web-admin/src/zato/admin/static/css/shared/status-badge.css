@@ -1,0 +1,20 @@
+/* Shared - the one green-or-gray status colour pair, green for what is on,
+   imported or active, gray for what is not. Demo config's status line and the
+   alert rules' state pills read it from here. */
+
+:root {
+    --status-badge-on-color: #28a745;
+    --status-badge-on-background: rgba(40, 167, 69, 0.12);
+    --status-badge-off-color: #888;
+    --status-badge-off-background: rgba(136, 136, 136, 0.12);
+}
+
+.status-badge-on {
+    color: var(--status-badge-on-color);
+    background: var(--status-badge-on-background);
+}
+
+.status-badge-off {
+    color: var(--status-badge-off-color);
+    background: var(--status-badge-off-background);
+}
