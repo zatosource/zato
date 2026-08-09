@@ -213,7 +213,8 @@ listing.roles = {
     'mdn-received': 'response',
     'mdn-sent': 'response',
     'receipt-received': 'response',
-    'receipt-sent': 'response'
+    'receipt-sent': 'response',
+    'job-executed': 'job'
 };
 
 // /////////////////////////////////////////////////////////////////////////////

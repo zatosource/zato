@@ -560,6 +560,19 @@
 /* The detail pane                                               */
 /* ------------------------------------------------------------ */
 
+/* On this page the pane is not a box of its own - the kit's frame, its padding and the
+   scrollbar it keeps room for would hold everything in the pane short of the page's right
+   edge, and the head would end under nothing. Without them the head, the tabs and the
+   panels below all run out to the very edge the pagination above them ends at, and the
+   two lines read as one column. Only a little room is kept on the left, for the handle. */
+
+.detail-page-audit-log .dashboard-list-detail-pane {
+    padding: 0 0 10px 10px;
+    border: none;
+    background: transparent;
+    overflow-y: auto;
+}
+
 .audit-log-pane-head {
     display: flex;
     align-items: center;
@@ -597,6 +610,18 @@
     align-items: center;
     gap: 8px;
     margin-left: auto;
+}
+
+/* The outcome badge stands at the right edge of the head, beside the actions -
+   when it is there, it is the one taking the leftover room, not the actions */
+
+.audit-log-pane-head .audit-log-outcome-filter {
+    flex: none;
+    margin-left: auto;
+}
+
+.audit-log-pane-head .audit-log-outcome-filter ~ .audit-log-pane-actions {
+    margin-left: 0;
 }
 
 .audit-log-resubmit-link {
