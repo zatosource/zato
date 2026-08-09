@@ -107,4 +107,22 @@ class TestExcludedPicks:
         assert conditions == []
 
 # ################################################################################################################################
+
+    def test_source_picks_match_case_insensitively(self):
+
+        # The log is written to by more components than this application, each casing
+        # its source names its own way - the picks match whatever casing is stored.
+        included = _build(sources=['Sys'])
+        excluded = _build(sources_excluded=['SYS'])
+
+        included_text = _compile(included[0])
+        excluded_text = _compile(excluded[0])
+
+        assert 'lower(event.source)' in included_text
+        assert "'sys'" in included_text
+
+        assert 'lower(event.source)' in excluded_text
+        assert "'sys'" in excluded_text
+
+# ################################################################################################################################
 # ################################################################################################################################

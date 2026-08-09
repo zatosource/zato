@@ -27,8 +27,8 @@ from zato.admin.web.views import action_json_response, invoke_action_handler, me
     Action_Message_Max_Length, _traceback_marker
 from zato.admin.web.views.audit_log.columns import _all_sources_columns, _all_sources_section_title, _all_sources_title, \
     _data_preview_len, _default_page, _endpoint_page_url, _event_type_label, _flow_columns, _get_outcomes, _object_page_url, \
-    _poll_url, _preview_len, _row_columns, _source_columns, _source_endpoint_label, _source_event_label, _source_label, \
-    _source_object_label, _source_page_url, _source_title, _status_outstanding
+    _poll_url, _preview_len, _row_columns, _source_columns, _source_endpoint_label, _source_event_label, \
+    _source_except_label, _source_label, _source_object_label, _source_page_url, _source_title, _status_outstanding
 from zato.admin.web.views.audit_log.query import _build_where, _hydrate_rows, _normalize_row
 from zato.admin.web.views.audit_log.sources import _get_resubmit_labels, _source_outstanding, _source_parse, \
     _source_resubmit, render_scheduler_record, render_view_record
@@ -117,6 +117,11 @@ def _get_filter_options() -> 'anylist':
 
         for source, object_name in result:
 
+            # Sources match by their lowercase form, the same way the poll queries match
+            # them - the log is written to by more components than this application
+            # and each cases its source names its own way.
+            source = source.lower()
+
             # A source the log holds that the catalog does not know is still shown,
             # under its raw name - the log may be ahead of this application.
             if source not in by_source:
@@ -125,8 +130,9 @@ def _get_filter_options() -> 'anylist':
                 by_source[source] = entry
                 out.append(entry)
 
-            # An event written down with no object at all adds nothing to filter by
-            if object_name:
+            # An event written down with no object at all adds nothing to filter by -
+            # and two casings of one source name may both name the same object.
+            if object_name and object_name not in by_source[source]['objects']:
                 by_source[source]['objects'].append(object_name)
 
     return out
@@ -203,6 +209,7 @@ def object_index(req:'any_') -> 'TemplateResponse':
         'exchange_json': json.dumps(exchange),
         'filter_options_json': json.dumps(filter_options),
         'source_labels_json': json.dumps(_source_event_label),
+        'source_except_labels_json': json.dumps(_source_except_label),
         'object_links_json': json.dumps(_object_page_url),
         'object_labels_json': json.dumps(_source_object_label),
         'source_links_json': json.dumps(_source_page_url),

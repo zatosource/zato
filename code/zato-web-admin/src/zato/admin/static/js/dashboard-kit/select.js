@@ -317,7 +317,11 @@
        a click cycles it - unset to included to excluded and back to unset. The excluded
        picks start out as `excluded_values`, on_change receives (included, excluded),
        and a trigger whose picks amount to everything-but reads `except_label` and the
-       count or the one excluded item's own label.
+       count or the one excluded item's own label. `except_value_labels` maps a value
+       to how its label reads inside that phrase - a label whose casing changes
+       mid-sentence names its own form there and every other value keeps its label.
+       Picks of both kinds at once read by the includes with the excluded ones
+       counted after them, `excluded_label` being the word after that count.
        Returns {set_groups} plus {get_value, set_value} or {get_values, set_values},
        and a tri-state select adds {get_excluded, set_excluded}. */
     ns.select.create = function(config) {
@@ -370,6 +374,16 @@
             }
 
             return value;
+        };
+
+        /* How one value's label reads inside the "All except .." phrase - its own
+           mid-sentence form when the caller named one, its regular label otherwise */
+        var except_label_of = function(value) {
+            if (value in config.except_value_labels) {
+                return config.except_value_labels[value];
+            }
+
+            return label_of(value);
         };
 
         var item_count = function() {
@@ -433,7 +447,7 @@
             // Everything-but names the one value cut out or counts several of them ..
             if (is_excluding) {
                 if (current_excluded.length === 1) {
-                    value_span.textContent = config.except_label + ' ' + label_of(current_excluded[0]);
+                    value_span.textContent = config.except_label + ' ' + except_label_of(current_excluded[0]);
                 }
                 else {
                     value_span.textContent = config.except_label + ' ' + current_excluded.length;
@@ -451,6 +465,12 @@
             }
             else {
                 value_span.textContent = current_values.length + ' ' + config.many_label;
+            }
+
+            // Picks of both kinds at once read by the includes with the excluded
+            // ones counted after them, so neither kind goes unsaid
+            if (tri_state && current_excluded.length > 0) {
+                value_span.textContent += ', ' + current_excluded.length + ' ' + config.excluded_label;
             }
         };
 

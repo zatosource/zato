@@ -88,7 +88,18 @@ _source_label = {
     AuditSource.SOAP_Channel: 'SOAP channels',
     AuditSource.SOAP_Outgoing: 'SOAP outgoing',
     AuditSource.SQL_Outgoing: 'SQL',
+    AuditSource.Sys: 'Sys',
     AuditSource.X12: 'X12',
+}
+
+# How each source's name reads in the middle of a sentence - the "All except .." badge
+# of the source filter. Only the sources whose label changes its casing there are here -
+# a label led by an acronym, AS2 or REST, reads the same wherever it stands.
+_source_except_label = {
+    AuditSource.Config: 'access log',
+    AuditSource.File_Outgoing: 'file transfer',
+    AuditSource.PubSub: 'pub/sub',
+    AuditSource.Scheduler: 'scheduler',
 }
 
 # What one event's source is called on a row and in the detail pane - singular where
@@ -111,6 +122,7 @@ _source_event_label = {
     AuditSource.SOAP_Channel: 'SOAP channel',
     AuditSource.SOAP_Outgoing: 'SOAP outgoing',
     AuditSource.SQL_Outgoing: 'SQL',
+    AuditSource.Sys: 'Sys',
     AuditSource.X12: 'X12',
 }
 
@@ -134,6 +146,7 @@ _source_object_label = {
     AuditSource.SOAP_Channel: 'Channel',
     AuditSource.SOAP_Outgoing: 'Connection',
     AuditSource.SQL_Outgoing: 'Connection',
+    AuditSource.Sys: 'Component',
     AuditSource.X12: 'Partner',
 }
 
@@ -249,6 +262,7 @@ _source_title = {
     'mllp-outgoing': 'Outgoing MLLP audit log',
     'fhir': 'FHIR audit log',
     'scheduler': 'Scheduler audit log',
+    'sys': 'Sys audit log',
 }
 
 # Each column tells the frontend which row key to read, what header label to show
@@ -425,6 +439,17 @@ _fhir_columns = [
     {'key': 'action', 'label': 'Actions', 'type': 'action'},
 ]
 
+_sys_columns = [
+    {'key': 'event_time_iso', 'label': 'Time', 'type': 'time'},
+    {'key': 'cid', 'label': 'CID', 'type': 'cid'},
+    {'key': 'event_type', 'label': 'Event', 'type': 'text'},
+    {'key': 'object_name', 'label': 'Component', 'type': 'text'},
+    {'key': 'endpoint', 'label': 'Endpoint', 'type': 'text'},
+    {'key': 'outcome', 'label': 'Outcome', 'type': 'text'},
+    {'key': 'size', 'label': 'Size', 'type': 'size'},
+    {'key': 'data', 'label': 'Data preview', 'type': 'data'},
+]
+
 # The all-events page - every source in one listing - reads each row by the columns
 # every source shares, plus the source itself, which a single-source page never says
 _all_sources_columns = [
@@ -457,6 +482,7 @@ _source_columns = {
     'mllp-outgoing': _mllp_columns,
     'fhir': _fhir_columns,
     'scheduler': _scheduler_columns,
+    'sys': _sys_columns,
 }
 
 # ################################################################################################################################

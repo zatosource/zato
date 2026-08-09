@@ -67,8 +67,12 @@ $.fn.zato.audit_log.config = {
     sourcesExcludedURLKey: 'sources_excluded',
     objectsExcludedURLKey: 'objects_excluded',
 
-    // What a trigger whose picks amount to everything-but starts its badge with
+    // What a trigger whose picks amount to everything-but starts its badge with,
+    // and how each source's name reads inside that phrase when its casing changes
+    // mid-sentence - assigned in init, from the same catalog the labels come from
     exceptLabel: 'All except',
+    excludedLabel: 'excluded',
+    sourceExceptLabels: {},
 
     // What the resubmit outcome is reported with - the message itself comes
     // display-ready from the backend
@@ -648,6 +652,10 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
         empty_label: config.allObjectsLabel,
         many_label: config.manyObjectsLabel,
         except_label: config.exceptLabel,
+        excluded_label: config.excludedLabel,
+
+        // An object's name is its own technical name, the same wherever it stands
+        except_value_labels: {},
         disabled_label: config.noMatchesLabel,
         on_change: function(values, excluded) {
 
@@ -682,6 +690,8 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
         empty_label: config.allSourcesLabel,
         many_label: config.manySourcesLabel,
         except_label: config.exceptLabel,
+        excluded_label: config.excludedLabel,
+        except_value_labels: config.sourceExceptLabels,
         on_change: function(values, excluded) {
             var newGroups = objectGroups(effectiveSources(values, excluded));
 
@@ -795,6 +805,7 @@ $.fn.zato.audit_log.init = function(initConfig) {
     config.objectName = initConfig.object_name;
     config.clusterId = initConfig.cluster_id;
     config.sourceLabels = initConfig.source_labels;
+    config.sourceExceptLabels = initConfig.source_except_labels;
     config.objectLinks = initConfig.object_links;
     config.objectLabels = initConfig.object_labels;
     config.sourceLinks = initConfig.source_links;
