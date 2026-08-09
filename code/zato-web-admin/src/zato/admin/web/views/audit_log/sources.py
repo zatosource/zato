@@ -256,7 +256,7 @@ def _view_source_label(source:'str') -> 'str':
 # ################################################################################################################################
 
 def render_view_record(engine:'any_', data:'str', event_time_iso:'str') -> 'str':
-    """ Renders a view record of the access log as the answer it exists to give - who viewed
+    """ Renders a log access view record as the answer it exists to give - who viewed
     what and when, in business terms. The viewed event is resolved against the event table
     at render time, so the record reads by the message's own coordinates rather than by
     a bare database id. Any other config payload simply has no parsed view.

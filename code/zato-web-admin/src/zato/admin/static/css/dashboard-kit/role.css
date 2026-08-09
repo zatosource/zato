@@ -38,6 +38,13 @@
     background: rgba(161, 103, 15, 0.1);
 }
 
+/* A log access record - a config change or someone reading a message body */
+
+.dashboard-role-access {
+    color: #7d8794;
+    background: rgba(110, 110, 115, 0.1);
+}
+
 /* ------------------------------------------------------------ */
 /* Inside a dark frame                                           */
 /* ------------------------------------------------------------ */
@@ -63,4 +70,9 @@
 .dashboard-role-dark.dashboard-role-job {
     color: #e8c46f;
     background: rgba(232, 196, 111, 0.18);
+}
+
+.dashboard-role-dark.dashboard-role-access {
+    color: #a8aebc;
+    background: rgba(255, 255, 255, 0.12);
 }

@@ -127,7 +127,9 @@ def _get_buckets(tmp_path:'any_', **overrides:'any_') -> 'anylist':
     """
     body = {
         'sources': [],
+        'sources_excluded': [],
         'object_names': [_channel_name],
+        'object_names_excluded': [],
         'outcomes': [],
         'query': '',
         'status': '',

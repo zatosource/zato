@@ -2,7 +2,7 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// What a row of the access log shows - a view record is named by who looked at
+// What a row of the log access listing shows - a view record is named by who looked at
 // what, so a reader recognizes the line without decoding any event id. Every
 // other config event reads the way the default presenter reads it.
 
@@ -19,9 +19,21 @@ var presenterConfig = {
 
 $.fn.zato.audit_log.sources['config'] = {
 
-    // The access log declares no chips beyond what its columns already say
+    // The log access rows declare no chips beyond what their columns already say - except
+    // the source chip, which the row's own tag already reads, so it is left out
     chips: function(row) {
-        return $.fn.zato.audit_log.sources['default'].chips(row);
+        var out = [];
+        var defaultChips = $.fn.zato.audit_log.sources['default'].chips(row);
+
+        for (var chipIndex = 0; chipIndex < defaultChips.length; chipIndex++) {
+            if (defaultChips[chipIndex].key === 'source') {
+                continue;
+            }
+
+            out.push(defaultChips[chipIndex]);
+        }
+
+        return out;
     },
 
     // ////////////////////////////////////////////////////////////////////////
@@ -41,7 +53,7 @@ $.fn.zato.audit_log.sources['config'] = {
 
     // ////////////////////////////////////////////////////////////////////////
 
-    // The access log names its records the way the default presenter does
+    // The log access rows name their records the way the default presenter does
     identityLabel: $.fn.zato.audit_log.sources['default'].identityLabel,
 
     identity: function(row) {

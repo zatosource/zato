@@ -46,7 +46,7 @@ $.fn.zato.audit_log.config = {
 
     // The source whose events record who viewed other sources' objects - the names
     // it carries are borrowed, so the object filter lists them under their owners
-    accessLogSource: 'config',
+    logAccessSource: 'config',
 
     // The one source whose messages can run out of time, and the outcome only it
     // reports - the legend offers Expired only while this source is picked
@@ -540,8 +540,8 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
     // The objects on offer, grouped by their source - all of them when no source is
     // picked, the picked sources' own when some are. Nothing picked means every one,
     // so there is no All entry of its own. The filter matches events by name alone,
-    // so each name is listed once - the access log borrows the names of the objects
-    // whose viewings it records, and a borrowed name stands under its owner alone.
+    // so each name is listed once - the log access source borrows the names of the
+    // objects whose viewings it records, and a borrowed name stands under its owner alone.
     var objectGroups = function(pickedSources) {
         var out = [];
 
@@ -569,16 +569,16 @@ $.fn.zato.audit_log.initFilterSelects = function(filterOptions) {
             itemsBySource[option.source] = items;
         };
 
-        // The owners claim their names first and the access log keeps only what
-        // no other source answered for ..
+        // The owners claim their names first and the log access source keeps only
+        // what no other source answered for ..
         for (var ownerIndex = 0; ownerIndex < filterOptions.length; ownerIndex++) {
-            if (filterOptions[ownerIndex].source !== config.accessLogSource) {
+            if (filterOptions[ownerIndex].source !== config.logAccessSource) {
                 claim(filterOptions[ownerIndex]);
             }
         }
 
         for (var configIndex = 0; configIndex < filterOptions.length; configIndex++) {
-            if (filterOptions[configIndex].source === config.accessLogSource) {
+            if (filterOptions[configIndex].source === config.logAccessSource) {
                 claim(filterOptions[configIndex]);
             }
         }

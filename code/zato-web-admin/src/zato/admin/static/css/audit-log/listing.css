@@ -356,10 +356,10 @@
 /* The event's own number, which is how one event is pointed at - it is the first thing
    read on a row and the first thing read in the pane, so it is not kept quiet */
 
-/* Wide enough for a six-digit event number and its hash sign */
+/* Wide enough for a six-digit event number */
 
 .audit-log-cell-number {
-    width: 7ch;
+    width: 6ch;
     padding-right: 8px;
     font-family: var(--dashboard-mono);
     font-size: 12px;
@@ -384,18 +384,9 @@
 
 /* The day is read before the time and not instead of it - it is set apart by its colour alone,
    a column of names in bold being a column shouting the one thing every row has in common.
-
-   It is a box of one width whatever it says - sized to the widest word it can carry,
-   "2 weeks ago" - because in a table laid out by content the widest cell of the set on view
-   decides the column, and a day word longer than its neighbours' would move everything
-   right of it every time a filter changes the set. */
+   The word hugs its separator, so a short day like Today leaves no gap before the time. */
 
 .audit-log-cell-day {
-    display: inline-block;
-    width: 11ch;
-    overflow: hidden;
-    white-space: nowrap;
-    vertical-align: bottom;
     color: var(--dashboard-line-strong);
 }
 

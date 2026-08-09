@@ -167,7 +167,7 @@ listing.config = {
     // What the moment the event happened at is called, on the pane's own last line
     timeLabel: 'Time',
 
-    // The access log's view record - the one event whose row says nothing about its kind,
+    // The log access view record - the one event whose row says nothing about its kind,
     // because its chips already name the viewer and the viewed thing
     viewEventType: 'content-viewed',
 
@@ -214,7 +214,14 @@ listing.roles = {
     'mdn-sent': 'response',
     'receipt-received': 'response',
     'receipt-sent': 'response',
-    'job-executed': 'job'
+    'job-executed': 'job',
+
+    // The log access records - config changes and someone reading a message body -
+    // read by the log they belong to rather than by a part they play in no exchange
+    'config-created': 'access',
+    'config-edited': 'access',
+    'config-deleted': 'access',
+    'content-viewed': 'access'
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -460,7 +467,7 @@ listing.rowHTML = function(rowModel) {
 
     // The event's own number, the one the address bar carries, so a row points at the same
     // event tomorrow as it does now - where it happens to stand in the list does not.
-    html += '<td class="audit-log-cell-number">#' + rowModel.id + '</td>';
+    html += '<td class="audit-log-cell-number">' + rowModel.id + '</td>';
 
     // Which day it was and the time of day, with the whole stamp one hover away
     html += '<td class="audit-log-cell-time" title="' + listing.escapeHTML(rowModel.timeLocal) + '">' +
@@ -474,11 +481,14 @@ listing.rowHTML = function(rowModel) {
     html += '<td class="audit-log-cell-main">';
 
     // Saying an event is a request next to a tag already reading REQ is saying it twice.
-    // An event that is neither a request nor a reply has no tag to say what it was, so it
-    // says so itself - except a view record of the access log, whose chips already name
-    // the viewer and the viewed thing, so its row says nothing twice either. The words
-    // are read, not clicked - filtering by an event's kind is the pane's affair.
-    if (rowModel.role === 'none' && rowModel.eventType !== listing.config.viewEventType) {
+    // An event whose tag does not say what it was - a platform record or a log access
+    // record, whose tag names the log and not the kind - says so itself, except a view
+    // record, whose chips already name the viewer and the viewed thing, so its row says
+    // nothing twice either. The words are read, not clicked - filtering by an event's
+    // kind is the pane's affair.
+    var saysNothingOfKind = rowModel.role === 'none' || rowModel.role === 'access';
+
+    if (saysNothingOfKind && rowModel.eventType !== listing.config.viewEventType) {
         html += '<span class="audit-log-row-event">' + listing.escapeHTML(rowModel.eventLabel) + '</span>';
     }
 

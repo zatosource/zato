@@ -57,10 +57,10 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-# What the access log calls this application - the server name of every event it writes
+# What the log access source calls this application - the server name of every event it writes
 _dashboard_server_name = 'dashboard'
 
-# The screen the message bodies and attachments are read from, as the access log names it
+# The screen the message bodies and attachments are read from, as the log access source names it
 _screen_browser = 'audit-log-browser'
 
 # All the access events this module writes go through this one writer
@@ -74,7 +74,7 @@ def _record_content_view(req:'any_', event_id:'int', source:'str', object_name:'
     """
 
     # A view record holds no patient data, so reading one is not itself a recordable
-    # view - without this, browsing the access log writes views of views without end
+    # view - without this, browsing the log access records writes views of views without end
     if source == AuditSource.Config:
         return
 
@@ -117,11 +117,6 @@ def _get_filter_options() -> 'anylist':
 
         for source, object_name in result:
 
-            # Sources match by their lowercase form, the same way the poll queries match
-            # them - the log is written to by more components than this application
-            # and each cases its source names its own way.
-            source = source.lower()
-
             # A source the log holds that the catalog does not know is still shown,
             # under its raw name - the log may be ahead of this application.
             if source not in by_source:
@@ -130,9 +125,8 @@ def _get_filter_options() -> 'anylist':
                 by_source[source] = entry
                 out.append(entry)
 
-            # An event written down with no object at all adds nothing to filter by -
-            # and two casings of one source name may both name the same object.
-            if object_name and object_name not in by_source[source]['objects']:
+            # An event written down with no object at all adds nothing to filter by
+            if object_name:
                 by_source[source]['objects'].append(object_name)
 
     return out
@@ -658,7 +652,7 @@ def details(req:'any_') -> 'HttpResponse':
 
     # .. and the whole message additionally gets its parsed view, from the source's own renderer
     # with the EDI renderer as the shared default - an empty result means no parsed tab at all.
-    # A view record of the access log resolves against the database - who viewed what and when -
+    # A log access view record resolves against the database - who viewed what and when -
     # so it renders here, where the engine is at hand, rather than through _source_parse.
     # A scheduler run resolves against the database the same way - its outcome, attrs and
     # captured log lines all live in rows of their own.

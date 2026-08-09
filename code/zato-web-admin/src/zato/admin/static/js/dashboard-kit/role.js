@@ -17,19 +17,23 @@
         /* A record that is neither a request nor a reply is one the platform itself wrote
            down - an alert it raised, a message it expired - so it is marked as its own
            rather than left blank. A scheduler run is its own kind again - work the
-           platform was told to do at a given time, so it reads by the scheduler's name. */
+           platform was told to do at a given time, so it reads by the scheduler's name.
+           A log access record - a config change or someone reading a message body -
+           is named by the log it belongs to. */
         labels: {
             'request': 'REQ',
             'response': 'REPLY',
             'none': 'SYS',
-            'job': 'SCHEDULER'
+            'job': 'SCHEDULER',
+            'access': 'Log access'
         },
 
         css_classes: {
             'request': 'dashboard-role-request',
             'response': 'dashboard-role-response',
             'none': 'dashboard-role-none',
-            'job': 'dashboard-role-job'
+            'job': 'dashboard-role-job',
+            'access': 'dashboard-role-access'
         },
 
         dark_class: 'dashboard-role-dark'

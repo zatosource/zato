@@ -42,18 +42,6 @@ def _escape_like(query:'str') -> 'str':
 
 # ################################################################################################################################
 
-def _lower_all(values:'anylist') -> 'anylist':
-    """ Every value of a list in its lowercase form.
-    """
-    out:'anylist' = []
-
-    for value in values:
-        out.append(value.lower())
-
-    return out
-
-# ################################################################################################################################
-
 def _build_where(
     sources:'anylist',
     object_names:'anylist',
@@ -77,12 +65,9 @@ def _build_where(
     out:'anylist' = []
 
     # No sources is the whole log - every source, every object - and no
-    # object names reads the whole of whatever sources are given. Source names
-    # are matched by their lowercase form - the log is written to by more
-    # components than this application and each cases its source names its own way.
+    # object names reads the whole of whatever sources are given
     if sources:
-        sources = _lower_all(sources)
-        out.append(func.lower(event_table.c.source).in_(sources))
+        out.append(event_table.c.source.in_(sources))
 
     if object_names:
         out.append(event_table.c.object_name.in_(object_names))
@@ -90,8 +75,7 @@ def _build_where(
     # The excluded picks cut into whatever the included ones cover - all of it
     # when nothing is included - which is how "all except these" reads
     if sources_excluded:
-        sources_excluded = _lower_all(sources_excluded)
-        out.append(func.lower(event_table.c.source).notin_(sources_excluded))
+        out.append(event_table.c.source.notin_(sources_excluded))
 
     if object_names_excluded:
         out.append(event_table.c.object_name.notin_(object_names_excluded))
