@@ -1,11 +1,12 @@
 
 
 /* Dashboard kit - the activity strip.
-   A stacked sparkline of events over time - each series an outcome drawn as its own
-   line, with one shaded area under the whole stack whose hue reads the mix bucket
-   by bucket: a period of one outcome wears that outcome's colour and a mixed period
-   wears the mixed colour, so neither outcome darkens the other. A hover shows the
-   breakdown per time bucket.
+   A sparkline of events over time - one shaded area drawn under the total, its hue
+   reading the mix bucket by bucket, and each series an outcome drawn as a line of
+   its own at its own height. The lines are not stacked - a handful of errors rides
+   low over the baseline while a thousand successes stand at the top, so a line's
+   height says that series' own count and nothing more. A hover shows the breakdown
+   per time bucket.
    It grew out of the scheduler's run history and serves any screen that has events
    with a time and a kind - the caller either hands over raw records with callbacks
    naming each one's time and series, or buckets already counted elsewhere.
@@ -47,14 +48,40 @@
         fill_opacity: 0.45,
         fill_fade: 0.7,
 
-        /* What a bucket holding more than one outcome is filled with - a colour of
-           its own, lively rather than the murky one two translucent tints blend into */
-        mixed_color: '#9b59b6'
+        /* What a bucket holding more than one outcome blends its fill towards - a colour
+           of its own, lively rather than the murky one two translucent tints blend into.
+           How far it blends is the bucket's own affair - a contested bucket goes all the
+           way, one with a trace of a second outcome keeps mostly its dominant colour -
+           and the floor is the least a trace still shifts the hue by, so it never
+           disappears into the dominant colour entirely. */
+        mixed_color: '#9b59b6',
+        mixed_floor: 0.5
     };
 
     /* Gradient ids carry the series key, which may hold characters an id may not */
     kit.activity_strip._sanitize = function(key) {
         return String(key).replace(/[^A-Za-z0-9_]/g, '_');
+    };
+
+    /* Two hex colours mixed in RGB - the weight is how much of the second one goes in.
+       A three-digit hex is expanded first, so #aaa mixes the same as #aaaaaa. */
+    kit.activity_strip._mix = function(color_a, color_b, weight) {
+        var expand = function(color) {
+            if (color.length === 4) {
+                return '#' + color[1] + color[1] + color[2] + color[2] + color[3] + color[3];
+            }
+
+            return color;
+        };
+
+        var a = parseInt(expand(color_a).slice(1), 16);
+        var b = parseInt(expand(color_b).slice(1), 16);
+
+        var red = Math.round(((a >> 16) & 255) * (1 - weight) + ((b >> 16) & 255) * weight);
+        var green = Math.round(((a >> 8) & 255) * (1 - weight) + ((b >> 8) & 255) * weight);
+        var blue = Math.round((a & 255) * (1 - weight) + (b & 255) * weight);
+
+        return 'rgb(' + red + ',' + green + ',' + blue + ')';
     };
 
     /* The smoothing - a cubic through the bucket centres, each control point
@@ -219,14 +246,33 @@
         var seg_width = chart_width / bucket_count;
         var baseline = config.height - config.pad_bot;
 
-        /* Every series is a band - its floor is the ceiling of everything under it,
-           and anything non-zero shows at least min_thickness tall */
+        /* Anything non-zero shows at least min_thickness tall, so one event
+           among thousands is still a visible blip */
+        var height_of = function(value) {
+            if (value === 0) {
+                return 0;
+            }
+
+            var thickness = (value / max_stack) * draw_height;
+
+            if (thickness < config.min_thickness) {
+                thickness = config.min_thickness;
+            }
+
+            return thickness;
+        };
+
+        /* Each series' line at its own height, none stacked on any other, and the
+           total's own outline for the fill to draw under - a bucket's few errors
+           ride low while its many successes stand at the top, each line's height
+           reading as that series' own count */
         var series_top = {};
+        var total_top = [];
 
-        var band_floor = [];
+        for (var total_index = 0; total_index < bucket_count; total_index++) {
+            var total_x = total_index * seg_width + seg_width / 2;
 
-        for (var zero_index = 0; zero_index < bucket_count; zero_index++) {
-            band_floor.push(baseline);
+            total_top.push({x: total_x, y: baseline - height_of(buckets[total_index].total)});
         }
 
         for (var series_index = 0; series_index < strip.series_keys.length; series_index++) {
@@ -237,22 +283,7 @@
                 var x = col_index * seg_width + seg_width / 2;
                 var value = buckets[col_index][series_key];
 
-                var floor_y = band_floor[col_index];
-                var top_y = floor_y;
-
-                if (value > 0) {
-                    var thickness = (value / max_stack) * draw_height;
-
-                    if (thickness < config.min_thickness) {
-                        thickness = config.min_thickness;
-                    }
-
-                    top_y = floor_y - thickness;
-                }
-
-                tops.push({x: x, y: top_y});
-
-                band_floor[col_index] = top_y;
+                tops.push({x: x, y: baseline - height_of(value)});
             }
 
             series_top[series_key] = tops;
@@ -272,9 +303,12 @@
         /* The one fill under the whole stack - the topmost ceiling down to the
            baseline. Its hue follows the buckets, one gradient stop per bucket
            centre: a bucket of one outcome wears that outcome's colour, a bucket
-           holding several wears the mixed colour, and the gradient blends the
-           stretches into each other on its own. The ids carry the host, so two
-           strips on one page never read each other's colours. */
+           holding several blends its dominant colour towards the mixed one by how
+           contested it is - a handful of errors in a thousand successes tints the
+           blue rather than replacing it, so the hue never claims more than the
+           counts say. The gradient blends the stretches into each other on its
+           own. The ids carry the host, so two strips on one page never read each
+           other's colours. */
         if (visible_keys.length > 0) {
             var host_id = kit.activity_strip._sanitize(strip.host);
             var blend_id = 'stripBlend_' + host_id;
@@ -285,22 +319,36 @@
 
             for (var stop_index = 0; stop_index < bucket_count; stop_index++) {
                 var present_count = 0;
-                var present_key = visible_keys[0];
+                var bucket_total = 0;
+
+                var dominant_key = visible_keys[0];
+                var dominant_value = 0;
 
                 for (var present_index = 0; present_index < visible_keys.length; present_index++) {
-                    if (buckets[stop_index][visible_keys[present_index]] > 0) {
+                    var series_value = buckets[stop_index][visible_keys[present_index]];
+
+                    if (series_value > 0) {
                         present_count++;
-                        present_key = visible_keys[present_index];
+                        bucket_total += series_value;
+
+                        if (series_value > dominant_value) {
+                            dominant_value = series_value;
+                            dominant_key = visible_keys[present_index];
+                        }
                     }
                 }
 
                 /* An empty bucket keeps the colour of the one before it - its fill
                    has no height there, so the stop only steadies the blend in passing */
                 if (present_count === 1) {
-                    stop_color = strip.colors[present_key];
+                    stop_color = strip.colors[dominant_key];
                 }
                 else if (present_count > 1) {
-                    stop_color = config.mixed_color;
+                    var contested_share = 1 - (dominant_value / bucket_total);
+                    var mixed_weight = config.mixed_floor + (1 - config.mixed_floor) * contested_share;
+
+                    stop_color = kit.activity_strip._mix(
+                        strip.colors[dominant_key], config.mixed_color, mixed_weight);
                 }
 
                 var stop_offset = ((stop_index + 0.5) / bucket_count).toFixed(4);
@@ -318,12 +366,9 @@
                 '</linearGradient>';
             svg += '</defs>';
 
-            var stack_keys = strip.series_keys;
-            var stack_tops = series_top[stack_keys[stack_keys.length - 1]];
-
-            var stack_d = kit.activity_strip._bezier(stack_tops) +
-                ' L' + stack_tops[stack_tops.length - 1].x.toFixed(1) + ',' + baseline.toFixed(1) +
-                ' L' + stack_tops[0].x.toFixed(1) + ',' + baseline.toFixed(1) + ' Z';
+            var stack_d = kit.activity_strip._bezier(total_top) +
+                ' L' + total_top[total_top.length - 1].x.toFixed(1) + ',' + baseline.toFixed(1) +
+                ' L' + total_top[0].x.toFixed(1) + ',' + baseline.toFixed(1) + ' Z';
 
             svg += '<path d="' + stack_d + '" fill="url(#' + blend_id + ')" fill-opacity="' + config.fill_opacity + '" />';
             svg += '<path d="' + stack_d + '" fill="url(#' + fade_id + ')" />';
@@ -347,25 +392,14 @@
                 continue;
             }
 
-            /* An empty bucket pulls the line down to the baseline, so quiet time
+            /* An empty bucket sits on the baseline by construction, so quiet time
                reads as quiet rather than as a plateau between two spikes */
-            var stroke_points = [];
-
-            for (var stroke_index = 0; stroke_index < bucket_count; stroke_index++) {
-                if (buckets[stroke_index][draw_key] > 0) {
-                    stroke_points.push(top_points[stroke_index]);
-                }
-                else {
-                    stroke_points.push({x: top_points[stroke_index].x, y: baseline});
-                }
-            }
-
-            var spline_d = kit.activity_strip._bezier(stroke_points);
+            var spline_d = kit.activity_strip._bezier(top_points);
 
             svg += '<path d="' + spline_d + '" fill="none" stroke="' + color +
                 '" stroke-width="1.5" stroke-opacity="0.7" stroke-linecap="round" stroke-linejoin="round" />';
 
-            var last_point = stroke_points[stroke_points.length - 1];
+            var last_point = top_points[top_points.length - 1];
 
             svg += '<circle cx="' + last_point.x.toFixed(2) + '" cy="' + last_point.y.toFixed(2) +
                 '" r="5.5" fill="none" stroke="' + color + '" stroke-opacity="0.35" stroke-width="1"/>';
@@ -406,7 +440,7 @@
 
             var html = '<div class="dashboard-tooltip-header">' +
                 '<div class="dashboard-tooltip-title">' + from_label + '</div>' +
-                '<div class="dashboard-tooltip-subtitle">to ' + to_label + '</div>' +
+                '<div class="dashboard-tooltip-subtitle">' + to_label + '</div>' +
                 '</div>';
 
             html += '<div class="dashboard-tooltip-body">';
@@ -425,11 +459,21 @@
                 }
 
                 var percent = Math.round((row_value / bucket.total) * 100);
+                var percent_label = percent + '%';
+
+                /* The rounding gives way at both ends - a count that is there never
+                   reads as none of the bucket, nor a short count as all of it */
+                if (percent === 0) {
+                    percent_label = '&lt;1%';
+                }
+                else if (percent === 100 && row_value < bucket.total) {
+                    percent_label = '&gt;99%';
+                }
 
                 html += '<div class="dashboard-tooltip-row">' +
                     '<span class="dashboard-tooltip-dot" style="background:' + strip.colors[row_key] + '"></span>' +
                     strip.labels[row_key] + ': ' + kit.format_number_full(row_value) +
-                    ' <span class="dashboard-tooltip-muted">(' + percent + '%)</span>' +
+                    ' <span class="dashboard-tooltip-muted">(' + percent_label + ')</span>' +
                     '</div>';
             }
 
