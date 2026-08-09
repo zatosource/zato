@@ -1,8 +1,11 @@
 
 
 /* Dashboard kit - the activity strip.
-   A stacked area sparkline of events over time - each series an outcome in its own
-   colour, stacked, smoothed and shaded, with a hover breakdown per time bucket.
+   A stacked sparkline of events over time - each series an outcome drawn as its own
+   line, with one shaded area under the whole stack whose hue reads the mix bucket
+   by bucket: a period of one outcome wears that outcome's colour and a mixed period
+   wears the mixed colour, so neither outcome darkens the other. A hover shows the
+   breakdown per time bucket.
    It grew out of the scheduler's run history and serves any screen that has events
    with a time and a kind - the caller either hands over raw records with callbacks
    naming each one's time and series, or buckets already counted elsewhere.
@@ -36,7 +39,17 @@
 
         /* Records covering less than this stretch over it anyway, so two events
            a second apart do not draw as a whole screen of noise */
-        default_min_span_ms: 3600000
+        default_min_span_ms: 3600000,
+
+        /* How strongly the area under the line is tinted, and how much it pales
+           towards the baseline - the fade is a white veil so the hue underneath
+           stays what the buckets say it is */
+        fill_opacity: 0.45,
+        fill_fade: 0.7,
+
+        /* What a bucket holding more than one outcome is filled with - a colour of
+           its own, lively rather than the murky one two translucent tints blend into */
+        mixed_color: '#9b59b6'
     };
 
     /* Gradient ids carry the series key, which may hold characters an id may not */
@@ -206,13 +219,14 @@
         var seg_width = chart_width / bucket_count;
         var baseline = config.height - config.pad_bot;
 
-        /* Every series' outline, stacked - each one starts where the one under
-           it ended, and anything non-zero shows at least min_thickness tall */
+        /* Every series is a band - its floor is the ceiling of everything under it,
+           and anything non-zero shows at least min_thickness tall */
         var series_top = {};
-        var cumulative = [];
+
+        var band_floor = [];
 
         for (var zero_index = 0; zero_index < bucket_count; zero_index++) {
-            cumulative.push(0);
+            band_floor.push(baseline);
         }
 
         for (var series_index = 0; series_index < strip.series_keys.length; series_index++) {
@@ -223,15 +237,22 @@
                 var x = col_index * seg_width + seg_width / 2;
                 var value = buckets[col_index][series_key];
 
-                var bottom_y = baseline - (cumulative[col_index] / max_stack) * draw_height;
-                var top_y = baseline - ((cumulative[col_index] + value) / max_stack) * draw_height;
+                var floor_y = band_floor[col_index];
+                var top_y = floor_y;
 
-                if (value > 0 && (bottom_y - top_y) < config.min_thickness) {
-                    top_y = bottom_y - config.min_thickness;
+                if (value > 0) {
+                    var thickness = (value / max_stack) * draw_height;
+
+                    if (thickness < config.min_thickness) {
+                        thickness = config.min_thickness;
+                    }
+
+                    top_y = floor_y - thickness;
                 }
 
                 tops.push({x: x, y: top_y});
-                cumulative[col_index] += value;
+
+                band_floor[col_index] = top_y;
             }
 
             series_top[series_key] = tops;
@@ -248,19 +269,65 @@
         var svg = '<svg width="' + chart_width + '" height="' + config.height +
             '" style="overflow:visible" xmlns="http://www.w3.org/2000/svg">';
 
-        svg += '<defs>';
+        /* The one fill under the whole stack - the topmost ceiling down to the
+           baseline. Its hue follows the buckets, one gradient stop per bucket
+           centre: a bucket of one outcome wears that outcome's colour, a bucket
+           holding several wears the mixed colour, and the gradient blends the
+           stretches into each other on its own. The ids carry the host, so two
+           strips on one page never read each other's colours. */
+        if (visible_keys.length > 0) {
+            var host_id = kit.activity_strip._sanitize(strip.host);
+            var blend_id = 'stripBlend_' + host_id;
+            var fade_id = 'stripFade_' + host_id;
 
-        for (var grad_index = 0; grad_index < visible_keys.length; grad_index++) {
-            var grad_color = strip.colors[visible_keys[grad_index]];
+            var stop_color = strip.colors[visible_keys[0]];
+            var stops = '';
 
-            svg += '<linearGradient id="stripGrad_' + kit.activity_strip._sanitize(visible_keys[grad_index]) +
-                '" x1="0" y1="0" x2="0" y2="1">' +
-                '<stop offset="0" stop-color="' + grad_color + '" stop-opacity="0.25"/>' +
-                '<stop offset="1" stop-color="' + grad_color + '" stop-opacity="0.03"/>' +
+            for (var stop_index = 0; stop_index < bucket_count; stop_index++) {
+                var present_count = 0;
+                var present_key = visible_keys[0];
+
+                for (var present_index = 0; present_index < visible_keys.length; present_index++) {
+                    if (buckets[stop_index][visible_keys[present_index]] > 0) {
+                        present_count++;
+                        present_key = visible_keys[present_index];
+                    }
+                }
+
+                /* An empty bucket keeps the colour of the one before it - its fill
+                   has no height there, so the stop only steadies the blend in passing */
+                if (present_count === 1) {
+                    stop_color = strip.colors[present_key];
+                }
+                else if (present_count > 1) {
+                    stop_color = config.mixed_color;
+                }
+
+                var stop_offset = ((stop_index + 0.5) / bucket_count).toFixed(4);
+                stops += '<stop offset="' + stop_offset + '" stop-color="' + stop_color + '"/>';
+            }
+
+            svg += '<defs>';
+            svg += '<linearGradient id="' + blend_id + '" x1="0" y1="0" x2="1" y2="0">' + stops + '</linearGradient>';
+
+            /* The shading - the fill pales towards the baseline, drawn as a white
+               veil over the hue so the colour itself is never darkened */
+            svg += '<linearGradient id="' + fade_id + '" x1="0" y1="0" x2="0" y2="1">' +
+                '<stop offset="0" stop-color="#ffffff" stop-opacity="0"/>' +
+                '<stop offset="1" stop-color="#ffffff" stop-opacity="' + config.fill_fade + '"/>' +
                 '</linearGradient>';
-        }
+            svg += '</defs>';
 
-        svg += '</defs>';
+            var stack_keys = strip.series_keys;
+            var stack_tops = series_top[stack_keys[stack_keys.length - 1]];
+
+            var stack_d = kit.activity_strip._bezier(stack_tops) +
+                ' L' + stack_tops[stack_tops.length - 1].x.toFixed(1) + ',' + baseline.toFixed(1) +
+                ' L' + stack_tops[0].x.toFixed(1) + ',' + baseline.toFixed(1) + ' Z';
+
+            svg += '<path d="' + stack_d + '" fill="url(#' + blend_id + ')" fill-opacity="' + config.fill_opacity + '" />';
+            svg += '<path d="' + stack_d + '" fill="url(#' + fade_id + ')" />';
+        }
 
         for (var draw_index = 0; draw_index < visible_keys.length; draw_index++) {
             var draw_key = visible_keys[draw_index];
@@ -294,12 +361,7 @@
             }
 
             var spline_d = kit.activity_strip._bezier(stroke_points);
-            var area_d = spline_d +
-                ' L' + stroke_points[stroke_points.length - 1].x.toFixed(1) + ',' + baseline.toFixed(1) +
-                ' L' + stroke_points[0].x.toFixed(1) + ',' + baseline.toFixed(1) + ' Z';
 
-            svg += '<path d="' + area_d + '" fill="url(#stripGrad_' +
-                kit.activity_strip._sanitize(draw_key) + ')" />';
             svg += '<path d="' + spline_d + '" fill="none" stroke="' + color +
                 '" stroke-width="1.5" stroke-opacity="0.7" stroke-linecap="round" stroke-linejoin="round" />';
 
