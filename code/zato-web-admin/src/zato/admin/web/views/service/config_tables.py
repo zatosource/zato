@@ -20,6 +20,7 @@ from django.http.response import HttpResponseServerError
 from django.template.response import TemplateResponse
 
 # Zato
+from zato.admin.web.util import get_server_user_conf_directory
 from zato.admin.web.views import method_allowed
 from zato.common.api import EnvFile, HotDeploy
 from zato.common.user_config import ModuleCtx as UserConfigCtx
@@ -47,9 +48,6 @@ _template_name = 'zato/service/config-tables.html'
 # A file larger than this is edited outside the dashboard so its contents are not sent to the browser
 _max_editable_size = 256 * 1024
 
-# Where a server directory keeps user configuration
-_user_conf_path = os.path.join('config', 'repo', 'user-conf')
-
 # The environment variables that point to user configuration directories
 _user_conf_env_keys = ('Zato_User_Conf_Dir', 'ZATO_USER_CONF_DIR')
 
@@ -64,19 +62,17 @@ _project_user_conf_directory = HotDeploy.User_Conf_Directory
 # What separates one directory from another in the environment variables above
 _env_separator = ':'
 
-# The environment variable that points to the server directory
-_server_env_key = 'ZATO_SERVER_BASE_DIR'
-
-# The server of an environment that the dashboard reads user configuration of
-# when the environment does not say which server directory to use
-_default_server_name = 'server1'
-
 # A file with a section of this name lists the values that are accepted, a file without one
 # maps the codes of a single party, per section, to such values
 _codes_section = UserConfigCtx.Codes_Section
 
 _kind_codes = 'codes'
 _kind_mappings = 'mappings'
+
+# A yaml file is edited here as text and read by whatever component named it,
+# not through self.config, so what it holds is not counted the way an ini file is
+_kind_yaml = 'yaml'
+_yaml_suffixes = ('.yaml', '.yml')
 
 # What a file is of until it reads as user configuration at all
 _kind_error = 'error'
@@ -108,7 +104,7 @@ def _get_directory_list() -> 'strlist':
     """
     out:'strlist' = []
 
-    _add_directory(out, os.path.join(_get_server_directory(), _user_conf_path))
+    _add_directory(out, get_server_user_conf_directory())
 
     for path in _get_env_path_list(_user_conf_env_keys, ()):
         _add_directory(out, path)
@@ -176,29 +172,6 @@ def _get_project_directory_list(project_root:'str') -> 'strlist':
 
     out.sort()
 
-    return out
-
-# ################################################################################################################################
-
-def _get_server_directory() -> 'str':
-    """ The server directory whose user configuration the page works with. The environment
-    variable that Zato starts its own commands with is used if it is set, otherwise it is the
-    default server of the environment that the dashboard runs in, which is the directory next
-    to the dashboard's own one.
-    """
-    server_directory = os.environ.get(_server_env_key, '')
-
-    if server_directory:
-        return server_directory
-
-    # config_dir is a lowercase setting, which Django's settings proxy does not expose,
-    # so it is read from the settings module directly.
-    from zato.admin import settings as admin_settings
-
-    config_dir:'any_' = admin_settings.config_dir
-    env_directory = os.path.dirname(config_dir)
-
-    out = os.path.join(env_directory, _default_server_name)
     return out
 
 # ################################################################################################################################
@@ -330,7 +303,13 @@ def _build_file_item(directory:'str', file_name:'str', full_path:'str') -> 'anyd
         except UnicodeDecodeError:
             is_editable = False
 
-    info = _read_content_info(content)
+    # A yaml file is of its own kind by name alone, everything else says what it is by its contents
+    file_name_lower = file_name.lower()
+
+    if file_name_lower.endswith(_yaml_suffixes):
+        info = ContentInfo(_kind_yaml, 0, 0)
+    else:
+        info = _read_content_info(content)
 
     out = {
         'name': get_user_config_name(file_name),

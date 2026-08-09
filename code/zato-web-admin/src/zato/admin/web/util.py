@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from logging import getLogger
 
 # Django
@@ -34,11 +35,56 @@ windows_disabled = [
     'zxc456'
 ]
 
+# Where a server directory keeps user configuration
+user_conf_path = os.path.join('config', 'repo', 'user-conf')
+
+# The environment variable that points to the server directory
+_server_env_key = 'ZATO_SERVER_BASE_DIR'
+
+# The server of an environment that the dashboard reads user configuration of
+# when the environment does not say which server directory to use
+_default_server_name = 'server1'
+
 # Names of built-in security definitions that pub/sub pages never display
 PubSub_Excluded_Sec_Names = {
     'admin.invoke',
     'ide_publisher'
 }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_server_directory() -> 'str':
+    """ The server directory whose user configuration the dashboard works with. The environment
+    variable that Zato starts its own commands with is used if it is set, otherwise it is the
+    default server of the environment that the dashboard runs in, which is the directory next
+    to the dashboard's own one.
+    """
+    server_directory = os.environ.get(_server_env_key, '')
+
+    if server_directory:
+        return server_directory
+
+    # config_dir is a lowercase setting, which Django's settings proxy does not expose,
+    # so it is read from the settings module directly.
+    from zato.admin import settings as admin_settings
+
+    config_dir:'any_' = admin_settings.config_dir
+    env_directory = os.path.dirname(config_dir)
+
+    out = os.path.join(env_directory, _default_server_name)
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_server_user_conf_directory() -> 'str':
+    """ The user configuration directory of the server whose files the dashboard works with.
+    """
+    server_directory = get_server_directory()
+
+    out = os.path.join(server_directory, user_conf_path)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

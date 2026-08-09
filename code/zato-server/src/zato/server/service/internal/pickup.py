@@ -32,6 +32,13 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+# A yaml file in a user-conf directory is read from disk by whatever component named it,
+# e.g. default-models.yaml by LLM connections, so there is nothing to sync in RAM for it.
+_yaml_suffixes = ('.yaml', '.yml')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @dataclass
 class UpdateCtx:
     data: str
@@ -292,6 +299,9 @@ class OnUpdateUserConf(_OnUpdate):
     def _is_rules_file(self, file_path:'str') -> 'bool':
         return file_path.endswith('.zrules')
 
+    def _is_yaml_file(self, file_path:'str') -> 'bool':
+        return file_path.endswith(_yaml_suffixes)
+
 # ################################################################################################################################
 
     def sync_pickup_file_in_ram(self, ctx:'UpdateCtx') -> 'None':
@@ -303,6 +313,11 @@ class OnUpdateUserConf(_OnUpdate):
         # .. or a rules file ..
         elif self._is_rules_file(ctx.full_path):
             _ = self.server.rules.load_rules_from_file(ctx.full_path)
+
+        # .. or a yaml file, which lives on disk only and is never read through self.config,
+        # .. so the write above is all there was to do ..
+        elif self._is_yaml_file(ctx.full_path):
+            return
 
         # .. otherwise, this is a file with user configuration.
         else:

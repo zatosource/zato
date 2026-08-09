@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.api import GENERIC, LLM
-from zato.common.llm_models import model_list
+from zato.common.llm_models import default_model_list
 from zato.cli.enmasse.importers.generic import GenericConnectionImporter
 
 # ################################################################################################################################
@@ -17,6 +17,12 @@ from zato.cli.enmasse.importers.generic import GenericConnectionImporter
 if 0:
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.typing_ import any_, anydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The default model is the first entry of the default catalog
+_default_model = default_model_list[0]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,9 +43,9 @@ class LLMImporter(GenericConnectionImporter):
     }
 
     # Note that timeout is not here because it is a column on the ODB model,
-    # and the default model is the first entry of the generated catalog.
+    # and the default model is the first entry of the default catalog.
     connection_extra_field_defaults = {
-        'model': model_list[0]['id'],
+        'model': _default_model['id'],
         'max_tokens': LLM.DEFAULT.MAX_TOKENS,
         'max_history_turns': LLM.DEFAULT.MAX_HISTORY_TURNS,
         'chat_expiry': LLM.DEFAULT.CHAT_EXPIRY,

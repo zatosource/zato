@@ -15,6 +15,7 @@ from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, \
     common_scheduler_server_address_opts, sql_conf_contents, ZatoCommand
 from zato.common.api import CONTENT_TYPE, Default_Extra_Service_File_Data, Default_Service_File_Data, NotGiven, REDIS, SCHEDULER
 from zato.common.crypto.api import ServerCryptoManager
+from zato.common.llm_models import default_models_yaml, models_file_name
 from zato.common.rule_engine.demo_data import demo_zrules_contents, Demo_Ruleset_Name
 from zato.common.util.api import as_bool, get_demo_extra_py_fs_locations, get_demo_py_fs_locations
 from zato.common.util.config import get_scheduler_api_client_for_server_password, get_scheduler_api_client_for_server_username
@@ -596,6 +597,12 @@ class Create(ZatoCommand):
                 hl7_fhir_demo = open_w(hl7_fhir_demo_loc)
                 _ = hl7_fhir_demo.write(hl7_fhir_demo_contents)
                 hl7_fhir_demo.close()
+
+                # Add the default LLM model catalog, which the dashboard's config tables page edits
+                llm_models_loc = os.path.join(user_conf_dir, models_file_name)
+                llm_models_file = open_w(llm_models_loc)
+                _ = llm_models_file.write(default_models_yaml)
+                llm_models_file.close()
 
             fernet1 = Fernet(secret_key)
 

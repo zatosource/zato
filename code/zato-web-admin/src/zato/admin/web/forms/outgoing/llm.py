@@ -10,22 +10,25 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from django import forms
 
 # Zato
+from zato.admin.web.util import get_server_user_conf_directory
 from zato.common.api import LLM
-from zato.common.llm_models import model_list
+from zato.common.llm_models import get_model_list
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The form initially suggests the first catalog model's wire id and its provider's address
-_default_model = model_list[0]['id']
+if 0:
+    from zato.common.typing_ import any_
+    any_ = any_
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 _provider_address = {
     LLM.PROVIDER.CLAUDE.id: LLM.ADDRESS.CLAUDE,
     LLM.PROVIDER.OPENAI.id: LLM.ADDRESS.OPENAI,
     LLM.PROVIDER.GEMINI.id: LLM.ADDRESS.GEMINI,
 }
-
-_default_address = _provider_address[model_list[0]['provider']]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,9 +37,8 @@ class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
-    model = forms.CharField(initial=_default_model, widget=forms.TextInput(attrs={'class':'required', 'style':'width:50%'}))
-    address = forms.CharField(
-        initial=_default_address, widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
+    model = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:50%'}))
+    address = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
 
     # The initial address is a hosted provider's, so the key starts out required -
     # the JS drops the requirement when the address points at a self-hosted endpoint.
@@ -55,6 +57,18 @@ class CreateForm(forms.Form):
         widget=forms.TextInput(attrs={'class':'required validate-digits', 'style':'width:9%'}))
     chat_expiry = forms.CharField(
         initial=LLM.DEFAULT.CHAT_EXPIRY, widget=forms.TextInput(attrs={'class':'required validate-digits', 'style':'width:9%'}))
+
+    def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
+        super().__init__(*args, **kwargs)
+
+        # The form initially suggests the first catalog model's wire id and its provider's address,
+        # with the catalog read afresh so edits to default-models.yaml show up without a restart.
+        user_conf_directory = get_server_user_conf_directory()
+        model_list = get_model_list(user_conf_directory)
+        first_model = model_list[0]
+
+        self.fields['model'].initial = first_model['id']
+        self.fields['address'].initial = _provider_address[first_model['provider']]
 
 # ################################################################################################################################
 # ################################################################################################################################

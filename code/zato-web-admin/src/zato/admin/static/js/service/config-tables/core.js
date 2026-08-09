@@ -34,17 +34,26 @@ tables.config = {
 
     // What a file a service reads through self.config is written in, and where the browser keeps
     // the answer to whether the listing has a line for the other files in the directory too
-    configSuffixList: ['.ini', '.conf'],
+    configSuffixList: ['.ini', '.conf', '.yaml', '.yml'],
     showAllStorageKey: 'zato.config-tables.show-all',
+
+    // What a yaml file is called by, which is a kind of its own - it is edited here as text
+    // and read by whatever component named it, so it is never read as an ini file
+    yamlSuffixList: ['.yaml', '.yml'],
 
     // What a file of each kind is called on screen, what its badge in the listing
     // says and which of the shared badge colors it wears, and what one entry of it is.
     // A file that does not read as an ini file is of no kind at all until it does, and
     // says so where the others say what they are.
-    kindLabel: {codes: 'code list', mappings: 'mapping set', error: 'does not read as an ini file'},
-    kindBadge: {codes: 'codes', mappings: 'maps', error: 'Error'},
-    kindBadgeClass: {codes: 'zato-badge-green', mappings: 'zato-badge-amber', error: 'zato-badge-red'},
-    entryNoun: {codes: 'code', mappings: 'mapping', error: 'entry'},
+    kindLabel: {codes: 'code list', mappings: 'mapping set', yaml: 'a yaml file', error: 'does not read as an ini file'},
+    kindBadge: {codes: 'codes', mappings: 'maps', yaml: 'yaml', error: 'Error'},
+    kindBadgeClass: {
+        codes: 'zato-badge-green',
+        mappings: 'zato-badge-amber',
+        yaml: 'zato-badge-blue',
+        error: 'zato-badge-red'
+    },
+    entryNoun: {codes: 'code', mappings: 'mapping', yaml: 'entry', error: 'entry'},
 
     // What the status line says once something went through, and how long it says it for -
     // what went through is done with, while what did not stays until it is cleared
@@ -354,6 +363,17 @@ tables.isMappingSet = function(table) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// Whether the file is a yaml file, which its name alone says.
+tables.isYamlFile = function(table) {
+
+    var suffix = tables.files.getSuffix(table.file_name).toLowerCase();
+    var out = tables.config.yamlSuffixList.indexOf(suffix) !== -1;
+
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 // What the file turns out to be, read off the file itself - a file with a codes table is a code
 // list, whether the codes are in it yet or not, unless that table is there only to group other
 // tables under it, as a file of settings may well do. A file that does not read at all is neither
@@ -580,6 +600,12 @@ tables.renderEditor = function() {
 // in a word, and one that does not says which line stopped it.
 tables.check = function() {
 
+    // A yaml file is never read as an ini file, so there is no line to hold it against
+    if(tables.isYamlFile(tables.getCurrent())) {
+        tables.setChecked();
+        return;
+    }
+
     var content = tables.get('content').value;
     var parsed = parse.read(content);
 
@@ -600,6 +626,7 @@ tables.save = function() {
 
     var table = tables.getCurrent();
     var content = tables.get('content').value;
+    var isYaml = tables.isYamlFile(table);
     var parsed = parse.read(content);
 
     log.say('tables.save', {
@@ -626,8 +653,9 @@ tables.save = function() {
 
         // What is on disk is what is on screen either way, so what is left to say is whether a
         // service reading it now would get anything out of it. Which line stopped it is what
-        // Check is for, so it is not said twice.
-        if(parsed.errorText) {
+        // Check is for, so it is not said twice. A yaml file is never read as an ini file,
+        // so nothing about it is an error here.
+        if(parsed.errorText && !isYaml) {
             tables.setStatus(tables.config.savedErrorMessage, true);
             return;
         }
@@ -685,6 +713,16 @@ tables.applyContents = function(table, content, parsed) {
     table.content = content;
     table.size = content.length;
     table.is_editable = content.length <= tables.state.maxEditableSize;
+
+    // A yaml file is of its own kind by name alone and its contents are not counted
+    // the way an ini file's are
+    if(tables.isYamlFile(table)) {
+        table.kind = 'yaml';
+        table.section_count = 0;
+        table.entry_count = 0;
+        return;
+    }
+
     table.kind = tables.deriveKind(parsed);
     table.section_count = parsed.sectionList.length;
     table.entry_count = parsed.entryCount;

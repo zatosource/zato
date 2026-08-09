@@ -12,7 +12,7 @@ from traceback import format_exc
 
 # Zato
 from zato.common.api import LLM
-from zato.common.llm_models import model_list
+from zato.common.llm_models import default_model_list, get_model_list
 from zato.common.typing_ import cast_
 from zato.server.connection.llm.claude import ClaudeClient
 from zato.server.connection.llm.common import Role_Assistant, Role_User
@@ -39,10 +39,12 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Default values applied when a configuration key is missing or None -
-# the default model is the first entry of the generated catalog.
+# The default model is the first entry of the default catalog
+_default_model = default_model_list[0]
+
+# Default values applied when a configuration key is missing or None
 llm_config_defaults:'stranydict' = {
-    'model': model_list[0]['id'],
+    'model': _default_model['id'],
     'timeout': LLM.DEFAULT.TIMEOUT,
     'max_tokens': LLM.DEFAULT.MAX_TOKENS,
     'max_history_turns': LLM.DEFAULT.MAX_HISTORY_TURNS,
@@ -58,13 +60,6 @@ _provider_client_map = {
     LLM.PROVIDER.CLAUDE.id: ClaudeClient,
     LLM.PROVIDER.GEMINI.id: GeminiClient,
 }
-
-# Maps human-friendly catalog names to the provider and the id sent on the wire,
-# built from the generated catalog in zato.common.llm_models.
-_catalog_by_name:'stranydict' = {}
-
-for _model in model_list:
-    _catalog_by_name[_model['name']] = {'provider': _model['provider'], 'id': _model['id']}
 
 # Hand-typed model names select their protocol by these prefixes,
 # with OpenAI the protocol of everything else, self-hosted or proxied included.
@@ -97,10 +92,23 @@ class OutconnLLMWrapper(Wrapper):
         # The model name alone decides which protocol the connection speaks ..
         model = self.config['model']
 
+        # .. the catalog comes from default-models.yaml in the server's user-conf directory,
+        # .. read afresh here so edits made through the dashboard are picked up
+        # .. the next time a client is built, without a restart ..
+        user_conf_directory = self.server.user_conf_location[0]
+        model_list = get_model_list(user_conf_directory)
+
+        # .. and it maps human-friendly catalog names to the provider
+        # .. and to the id sent on the wire ..
+        catalog_by_name:'stranydict' = {}
+
+        for item in model_list:
+            catalog_by_name[item['name']] = {'provider': item['provider'], 'id': item['id']}
+
         # .. catalog names like "Fable 5" resolve to their provider
         # .. and to the id the provider's API expects ..
-        if model in _catalog_by_name:
-            entry = _catalog_by_name[model]
+        if model in catalog_by_name:
+            entry = catalog_by_name[model]
             provider = entry['provider']
             self.config['model'] = entry['id']
 

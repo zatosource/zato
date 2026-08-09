@@ -228,6 +228,13 @@ files.moveTable = function(table, name, fileName, onDone, onFail) {
         table.file_name = fileName;
         table.path = table.directory + fileName;
 
+        // The suffix is part of what the file is, so a rename into or out of .yaml is what
+        // changes the kind on the file's row. A file whose contents never reached the browser
+        // keeps what the server said about it.
+        if(table.is_editable) {
+            tables.applyContents(table, table.content, parse.read(table.content));
+        }
+
         tables.state.initialContent[name] = tables.state.initialContent[previousName];
 
         // Anything unsaved in the file is still unsaved, and what it held and where its caret

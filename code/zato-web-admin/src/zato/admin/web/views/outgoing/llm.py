@@ -13,10 +13,11 @@ from json import dumps
 # Zato
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.llm import CreateForm, EditForm
+from zato.admin.web.util import get_server_user_conf_directory
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
      method_allowed, ping_connection, SKIP_VALUE
 from zato.common.api import GENERIC, LLM
-from zato.common.llm_models import model_list
+from zato.common.llm_models import get_model_list
 
 # Bunch
 from zato.common.ext.bunch import Bunch
@@ -25,12 +26,6 @@ from zato.common.ext.bunch import Bunch
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
-
-# Catalog models in their published order for the dashboard's model select
-_catalog_models = []
-
-for _model in model_list:
-    _catalog_models.append({'name': _model['name'], 'id': _model['id'], 'provider': _model['provider']})
 
 # Maps each provider to its API's base URL so the address can follow the model select
 _provider_address = {
@@ -56,12 +51,18 @@ class Index(_Index):
     output_repeated = True
 
     def handle(self):
+
+        # The catalog is read afresh on each page load, so edits to default-models.yaml
+        # made through the config tables page show up without a restart.
+        user_conf_directory = get_server_user_conf_directory()
+        catalog_models = get_model_list(user_conf_directory)
+
         return {
             'show_search_form': True,
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
             'change_password_form': ChangePasswordForm(),
-            'llm_models_json': dumps(_catalog_models),
+            'llm_models_json': dumps(catalog_models),
             'llm_addresses_json': dumps(_provider_address),
         }
 
