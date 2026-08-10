@@ -617,6 +617,7 @@
     --vocabulary-card-shadow: 0 1px 2px var(--shadow-inset);
     --vocabulary-card-shadow-lifted: 0 2px 6px var(--shadow-soft);
 
+    position: relative;
     display: flex;
     align-items: center;
     gap: 7px;
@@ -650,6 +651,19 @@
 .rule-engine-ui .vocabulary-item[draggable="true"]:active {
     cursor: grabbing;
     box-shadow: var(--vocabulary-card-shadow);
+}
+
+/* A card whose path the rule already speaks of announces it with a small
+   circle standing in front of the card, out in the gutter */
+.rule-engine-ui .vocabulary-in-rule-dot {
+    position: absolute;
+    left: -15px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--blue-tint-35);
 }
 
 /* Hovering either side of the same fact lights both - the card and the

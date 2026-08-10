@@ -457,12 +457,25 @@ editorView.restoreSnapshot = function(snapshot) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// A quiet green nod to the right of the Save button, gone half a beat later
+editorView.showSavedNotice = function(button) {
+    var existing = this.element('.editor-saved-notice');
+    if (existing !== null) { existing.remove(); }
+
+    var notice = document.createElement('span');
+    notice.className = 'editor-saved-notice';
+    notice.textContent = editorModel.config.savedNoticeText;
+    button.insertAdjacentElement('afterend', notice);
+
+    setTimeout(function() { notice.remove(); }, editorModel.config.savedNoticeMilliseconds);
+};
+
 editorView.save = function(button) {
     var handlers = shared.inFlight(button, function(payload) {
-        shared.popover(button, 'Saved as version ' + payload.version + '.', 'green');
+        editorView.showSavedNotice(button);
 
         // The rule is clean now - the render lets the change tracking
-        // dim the Save button again and take the star off the name
+        // take the star off the name and drop the working copy
         if (editorModel.config.trackChanges) { editorView.render(); }
 
         if (editorModel.config.onSaved !== undefined) { editorModel.config.onSaved(payload); }
@@ -522,6 +535,15 @@ editorView.bindListeners = function() {
     });
 
     document.addEventListener('keydown', function(event) {
+
+        // Ctrl-S and Cmd-S save from anywhere, the document view's own
+        // textarea included, and the browser's save dialog never shows
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+            event.preventDefault();
+            if (editorModel.rule !== null) { editorView.save(editorView.element('[data-action="save"]')); }
+            return;
+        }
+
         var tagName = event.target.tagName;
         if (tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT') { return; }
 

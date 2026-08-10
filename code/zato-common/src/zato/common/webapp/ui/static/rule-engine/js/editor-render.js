@@ -350,8 +350,8 @@ var editorView = {
         }
     },
 
-    // The dirty state drives everything IDE-like - the Save button's dimming,
-    // the working copy in local storage and whatever star the host paints
+    // The dirty state drives everything IDE-like - the working copy in local
+    // storage and whatever star the host paints, the Save button stays live
     refreshChangeState: function() {
         if (!editorModel.config.trackChanges || editorModel.rule === null) { return; }
 
@@ -365,8 +365,6 @@ var editorView = {
         else {
             editorModel.clearDraft(editorModel.ruleKey);
         }
-
-        this.element('[data-action="save"]').disabled = !isDirty;
 
         if (editorModel.config.onDirtyChange !== null) {
             editorModel.config.onDirtyChange(isDirty, editorModel.rule.name);
@@ -425,25 +423,66 @@ var editorView = {
 
 // ////////////////////////////////////////////////////////////////////////
 
+    // The paths the rule already speaks of and how many places speak of each -
+    // their cards wear a quiet mark telling the count
+    usedPaths: function() {
+        var used = {};
+        if (editorModel.rule === null) { return used; }
+
+        var countPath = function(path) {
+            if (path === null) { return; }
+            used[path] = used[path] === undefined ? 1 : used[path] + 1;
+        };
+
+        editorModel.rule.conditions.forEach(function(condition) {
+            countPath(condition.subject);
+        });
+
+        editorModel.rule.thenActions.concat(editorModel.rule.elseActions).forEach(function(action) {
+            countPath(action.target);
+        });
+
+        return used;
+    },
+
     renderVocabulary: function() {
         var list = this.element('.vocabulary-list');
 
         // The host may not show the vocabulary pane at all
         if (list === null) { return; }
 
+        var used = this.usedPaths();
         var html = '';
 
         vocabulary.entities.forEach(function(entity) {
             html += '<div class="vocabulary-entity">' + shared.escape(entity.name) + '</div>';
             vocabulary.pickerAttributes(entity).forEach(function(attribute) {
                 var path = entity.name + '.' + attribute.name;
-                html += '<div class="vocabulary-item vocabulary-item-clickable" draggable="true" data-path="' + path + '" ' +
-                    'data-action="pick-vocabulary">' + shared.escape(attribute.name) +
+
+                // A circle out in the gutter says the rule already speaks of
+                // this attribute - hovering it tells so in as many words,
+                // count included
+                var dot = used[path] !== undefined
+                    ? '<span class="vocabulary-in-rule-dot" data-used-count="' + used[path] + '"></span>'
+                    : '';
+
+                html += '<div class="vocabulary-item vocabulary-item-clickable"' +
+                    ' draggable="true" data-path="' + path + '" ' +
+                    'data-action="pick-vocabulary">' + dot + shared.escape(attribute.name) +
                     '<span class="vocabulary-item-type">' + shared.escape(attribute.type) + '</span></div>';
             });
         });
 
         list.innerHTML = html;
+
+        // The circles' tooltips go through whatever the host itself uses,
+        // each saying its own count - "Used by this rule 2x"
+        if (editorModel.config.attachUsedTip !== null) {
+            list.querySelectorAll('.vocabulary-in-rule-dot').forEach(function(dotElement) {
+                var text = editorModel.config.usedTipText + ' ' + dotElement.getAttribute('data-used-count') + 'x';
+                editorModel.config.attachUsedTip(dotElement, text);
+            });
+        }
     },
 
 // ////////////////////////////////////////////////////////////////////////

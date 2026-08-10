@@ -7,6 +7,17 @@ var editorModel = {
     config: {
         checkDelayMilliseconds: 300,
 
+        // The quiet green nod after a save and how long it stays up
+        savedNoticeText: 'OK, saved',
+        savedNoticeMilliseconds: 600,
+
+        // What the circle in front of a vocabulary card already taking part
+        // in the rule says on hover, and the host's own way of wiring that
+        // tooltip - called with the circle's element and the text, so each
+        // host shows the tooltip through its own machinery
+        usedTipText: 'Used by this rule',
+        attachUsedTip: null,
+
         // The class the active view button carries - the host's markup decides the look,
         // the dashboard's yellow toggles use `toggled`, web-admin's tabs use `dashboard-tab-active`
         viewButtonActiveClass: 'toggled',

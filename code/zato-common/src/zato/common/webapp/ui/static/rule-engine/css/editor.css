@@ -123,6 +123,14 @@
     background: var(--blue-tint-07);
 }
 
+/* The quiet green nod after a save, to the right of the Save button */
+.rule-editor .editor-saved-notice {
+    margin-left: 8px;
+    color: var(--green);
+    font-size: 12px;
+    font-weight: 600;
+}
+
 .rule-editor .editor-and-group {
     display: inline-block;
     border: 1px solid var(--border);

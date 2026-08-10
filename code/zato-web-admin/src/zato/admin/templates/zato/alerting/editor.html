@@ -46,6 +46,31 @@ $(document).ready(function() {
     var editorRules = {{ rules_json|safe }};
     var ruleSelect = null;
 
+    // The circles in front of vocabulary cards already used by the rule show
+    // the app's own left tooltip from common.js - shown while the pointer is
+    // on the circle, put away when it leaves
+    var usedDotCount = 0;
+
+    var attachUsedTip = function(element, text) {
+        usedDotCount += 1;
+        element.id = 'vocabulary-used-dot-' + usedDotCount;
+
+        element.addEventListener('mouseenter', function() {
+            if (element._tippy) {
+                element._tippy.show();
+            }
+            else {
+                $.fn.zato.show_left_tooltip('#' + element.id, text, false);
+            }
+        });
+
+        element.addEventListener('mouseleave', function() {
+            if (element._tippy) {
+                element._tippy.hide();
+            }
+        });
+    };
+
     // A star in front of a name marks unsaved work - the open rule's own dirty
     // state and any other rule's working copy left behind in local storage
     var starredGroups = function() {
@@ -88,6 +113,7 @@ $(document).ready(function() {
         },
         documentTextHtml: function(text) { return $.fn.zato.highlight.rules_to_html(text); },
         documentEditable: true,
+        attachUsedTip: attachUsedTip,
         csrfToken: $.cookie('csrftoken'),
         navigateToRule: function(rulesetId, ruleKey) {
             window.location.href = '{% url "alert-rules-editor" %}?cluster={{ cluster_id }}&rule=' +
