@@ -206,10 +206,23 @@
     margin: 0 4px;
     line-height: 1.9;
     vertical-align: 1px;
+    transition:
+        color 0.15s,
+        border-color 0.15s,
+        background-color 0.15s;
 }
 .rule-editor .editor-add-chip:hover {
     color: var(--text);
     border-color: var(--blue);
+}
+
+/* A pointer resting on a vocabulary card the rule does not use yet wakes
+   these chips up as the spots it could be inserted at - dashed and washed,
+   potential rather than presence */
+.rule-editor .editor-add-chip.editor-drop-potential {
+    color: var(--blue);
+    border-color: var(--blue-tint-45);
+    background: var(--blue-tint-05);
 }
 
 /* ---------------------------------------------------------- */

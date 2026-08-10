@@ -66,7 +66,11 @@ editorView.attachVocabularyDrag = function() {
 // ////////////////////////////////////////////////////////////////////////
 
 // Hovering either side of the same fact lights both - a token in the canvas
-// and the vocabulary card it came from answer each other
+// and the vocabulary card it came from answer each other. A card the rule
+// does not use yet lights the add chips instead - the exact spots it could
+// be inserted at - but only once the pointer rests on the card, so a sweep
+// across the list paints nothing and gliding between unused cards never
+// makes the chips blink.
 editorView.attachPathHighlight = function() {
     var self = this;
 
@@ -76,11 +80,64 @@ editorView.attachPathHighlight = function() {
         });
     };
 
+    var setPotential = function(isOn) {
+        self.elements('.editor-add-chip').forEach(function(element) {
+            element.classList.toggle('editor-drop-potential', isOn);
+        });
+    };
+
+    var showTimer = null;
+    var hideTimer = null;
+
+    var askPotential = function() {
+
+        // Arriving from another unused card cancels its pending put-away,
+        // so the chips stay lit instead of blinking off and on
+        if (hideTimer !== null) { clearTimeout(hideTimer); hideTimer = null; }
+
+        if (showTimer === null) {
+            showTimer = setTimeout(function() {
+                showTimer = null;
+                setPotential(true);
+            }, editorModel.config.potentialDelayMilliseconds);
+        }
+    };
+
+    var dropPotential = function() {
+
+        // A pointer that only swept across never shows anything
+        if (showTimer !== null) { clearTimeout(showTimer); showTimer = null; }
+
+        // And the put-away itself waits the same beat, for the glide's sake
+        if (hideTimer === null) {
+            hideTimer = setTimeout(function() {
+                hideTimer = null;
+                setPotential(false);
+            }, editorModel.config.potentialDelayMilliseconds);
+        }
+    };
+
     this.elements('.editor-token[data-path], .vocabulary-item[data-path]').forEach(function(element) {
         var path = element.getAttribute('data-path');
+        var isCard = element.classList.contains('vocabulary-item');
 
-        element.addEventListener('mouseenter', function() { mark(path, true); });
-        element.addEventListener('mouseleave', function() { mark(path, false); });
+        element.addEventListener('mouseenter', function() {
+            var tokens = self.elements('.editor-token[data-path="' + path + '"]');
+
+            if (isCard && tokens.length === 0) {
+                askPotential();
+            }
+            else {
+                mark(path, true);
+            }
+        });
+
+        element.addEventListener('mouseleave', function() {
+            mark(path, false);
+
+            var tokens = self.elements('.editor-token[data-path="' + path + '"]');
+            if (isCard && tokens.length === 0) { dropPotential(); }
+        });
     });
 };
 

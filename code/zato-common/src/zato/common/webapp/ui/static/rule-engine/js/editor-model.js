@@ -18,6 +18,11 @@ var editorModel = {
         usedTipText: 'Used by this rule',
         attachUsedTip: null,
 
+        // How long the pointer rests on an unused vocabulary card before the
+        // add chips light up as its possible landing places - a sweep across
+        // the list stays quiet
+        potentialDelayMilliseconds: 200,
+
         // The class the active view button carries - the host's markup decides the look,
         // the dashboard's yellow toggles use `toggled`, web-admin's tabs use `dashboard-tab-active`
         viewButtonActiveClass: 'toggled',
