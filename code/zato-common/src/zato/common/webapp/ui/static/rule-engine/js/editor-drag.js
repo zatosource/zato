@@ -118,8 +118,8 @@ editorView.visibleEdge = function(element, box, side) {
 // middle of the rendered gap between the two words around it. A joiner
 // like "and" is a word of its own standing inside its slot, so that slot
 // offers one anchor on each side of the joiner. A gap across a row break
-// has no shared middle, so it offers two anchors instead - one just past
-// the upper row's last glyph and one just before the lower row's first.
+// has no shared middle, so its anchor stands at the start of the lower
+// row - never at the end of the upper one.
 editorView.slotAnchors = function(line) {
     var self = this;
     var anchors = [];
@@ -159,19 +159,9 @@ editorView.slotAnchors = function(line) {
             return;
         }
 
-        // A row break - the gap stands both at the end of the row above
-        // and at the start of the row below
-        if (leftBox !== null) {
-            anchors.push({
-                index: index,
-                position: position,
-                kind: 'row-end',
-                x: leftEdge + self.rowEdgeOffset,
-                rowTop: leftBox.top,
-                rowBottom: leftBox.bottom
-            });
-        }
-
+        // A row break - the gap's one anchor stands at the start of the
+        // lower row, before its first word. Nothing is ever droppable at
+        // the end of a row, so a drop always lands exactly at its caret.
         anchors.push({
             index: index,
             position: position,

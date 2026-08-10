@@ -203,6 +203,13 @@ var editorView = {
         return out;
     },
 
+    // A joiner and the clause it introduces are one wrapping unit - a row
+    // never ends with a dangling "and", the next row starts with it instead
+    joinedHtml: function(joinerHtml, clauseHtml) {
+        var out = '<span class="editor-joined">' + joinerHtml + ' ' + clauseHtml + '</span>';
+        return out;
+    },
+
     conditionsHtml: function() {
         var self = this;
         var groups = editorModel.conditionGroups();
@@ -212,8 +219,14 @@ var editorView = {
         groups.forEach(function(group) {
             var memberParts = [];
             group.forEach(function(conditionIndex, positionInGroup) {
-                if (positionInGroup > 0) { memberParts.push(self.joinerHtml(conditionIndex - 1)); }
-                memberParts.push(self.conditionHtml(editorModel.rule.conditions[conditionIndex], conditionIndex));
+                var conditionHtml = self.conditionHtml(editorModel.rule.conditions[conditionIndex], conditionIndex);
+
+                if (positionInGroup > 0) {
+                    memberParts.push(self.joinedHtml(self.joinerHtml(conditionIndex - 1), conditionHtml));
+                }
+                else {
+                    memberParts.push(conditionHtml);
+                }
             });
 
             var groupHtml = memberParts.join(' ');
@@ -229,9 +242,11 @@ var editorView = {
         groupParts.forEach(function(groupHtml, groupIndex) {
             if (groupIndex > 0) {
                 var firstCondition = groups[groupIndex][0];
-                out.push(self.joinerHtml(firstCondition - 1));
+                out.push(self.joinedHtml(self.joinerHtml(firstCondition - 1), groupHtml));
             }
-            out.push(groupHtml);
+            else {
+                out.push(groupHtml);
+            }
         });
 
         var html = out.join(' ');
@@ -291,9 +306,10 @@ var editorView = {
         var thenParts = [this.keywordHtml('then')];
         var thenActions = [];
         rule.thenActions.forEach(function(action, actionIndex) {
-            thenActions.push(self.actionHtml(action, 'thenActions', actionIndex));
+            var actionHtml = self.actionHtml(action, 'thenActions', actionIndex);
+            thenActions.push(actionIndex > 0 ? self.joinedHtml(self.keywordHtml('and'), actionHtml) : actionHtml);
         });
-        thenParts.push(thenActions.join(' ' + this.keywordHtml('and') + ' '));
+        thenParts.push(thenActions.join(' '));
         thenParts.push(this.addChipHtml(rule.thenActions.length === 0 ? 'action' : 'and',
             'data-action="add-action" data-list="thenActions"'));
         var thenLine = '<div class="editor-line" data-drop="thenActions">' + thenParts.join(' ') + '</div>';
@@ -305,9 +321,10 @@ var editorView = {
             elseParts.push(this.keywordHtml('else'));
             var elseActions = [];
             rule.elseActions.forEach(function(action, actionIndex) {
-                elseActions.push(self.actionHtml(action, 'elseActions', actionIndex));
+                var actionHtml = self.actionHtml(action, 'elseActions', actionIndex);
+                elseActions.push(actionIndex > 0 ? self.joinedHtml(self.keywordHtml('and'), actionHtml) : actionHtml);
             });
-            elseParts.push(elseActions.join(' ' + this.keywordHtml('and') + ' '));
+            elseParts.push(elseActions.join(' '));
             elseParts.push(this.addChipHtml('and', 'data-action="add-action" data-list="elseActions"'));
         }
         var elseLine = '<div class="editor-line" data-drop="elseActions">' + elseParts.join(' ') + '</div>';

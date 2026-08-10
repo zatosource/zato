@@ -145,12 +145,23 @@
     font-weight: 600;
 }
 
+/* A joiner travels with the clause it introduces - the two are one
+   wrapping unit, so a row never ends with a dangling "and" or "or", the
+   next row starts with it instead */
+.rule-editor .editor-joined {
+    white-space: nowrap;
+}
+
 .rule-editor .editor-and-group {
     display: inline-block;
     border: 1px solid var(--border);
     border-radius: var(--radius-3);
     padding: 1px 5px;
     background: var(--blue-tint-05);
+
+    /* An or-joiner glued to this group must not lock the whole group onto
+       one row - the nowrap it inherits stops at the group's border */
+    white-space: normal;
 }
 
 .rule-editor .editor-token-placeholder {
@@ -212,7 +223,12 @@
 }
 
 .rule-editor .editor-add-chip {
-    display: inline-flex;
+    /* The chip stands at the start of its own row, never dangling at the
+       end of one - a drop at the caret before it lands exactly where the
+       caret stood, with the whole row's width to land in */
+    display: flex;
+    width: fit-content;
+
     align-items: center;
     gap: 3px;
     color: var(--text5);
@@ -223,7 +239,6 @@
     cursor: pointer;
     margin: 0 4px;
     line-height: 1.9;
-    vertical-align: 1px;
     transition:
         color 0.15s,
         border-color 0.15s,
