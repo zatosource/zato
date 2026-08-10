@@ -119,6 +119,19 @@
     min-height: 0;
 }
 
+/* The heading's rule select shows the name alone - no label in front of it
+   and no badge wash on the value, just the name in the trigger's own ink */
+.section-page-heading .dashboard-select-label {
+    display: none;
+}
+.section-page-heading .dashboard-select-value {
+    min-width: 0;
+    padding: 0;
+    background: none;
+    color: inherit;
+    font-size: inherit;
+}
+
 /* One full-height card holds the editor, framed like every other
    monitoring screen - the card is the column the editor stretches in */
 .alerting-editor-card {
@@ -139,4 +152,24 @@
    tab strip's padding inside the editor container, so it is asserted again here */
 .alerting-editor-card .rule-editor .dashboard-tabs {
     padding: 3px;
+}
+
+/* The Save button is the same dark blue button the whole app acts with - the
+   audit log's Search among them - not the shared UI's own blue. The shadows go
+   the same way the app's action-button drops them, formalize paints them on
+   every button otherwise. */
+.alerting-editor-card .button-primary {
+    background: var(--primary-dark);
+    color: var(--white);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 0;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+.alerting-editor-card .button-primary:hover {
+    background: var(--primary-dark);
+    color: var(--white);
 }

@@ -192,6 +192,11 @@
 .rule-editor.editor-completion-menu {
     position: fixed;
     z-index: 1300;
+
+    /* The menu wears the editor's scope class itself, which is the editor's own
+       flex layout - without this the title and the items line up in one row */
+    display: block;
+
     background: var(--panel);
     border: 1px solid var(--blue);
     border-radius: var(--radius-3);

@@ -5,6 +5,8 @@
 {% block dashboard_extra_css %}
 <link rel="stylesheet" type="text/css" href="/static/css/shared/component-pill.css">
 <link rel="stylesheet" type="text/css" href="/static/css/shared/section-heading.css">
+<link rel="stylesheet" type="text/css" href="/static/css/shared/dropdown-menu.css">
+<link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/select.css">
 <link rel="stylesheet" type="text/css" href="/shared-ui/webapp/fonts.css">
 <link rel="stylesheet" type="text/css" href="/shared-ui/webapp/css/tokens.css">
 <link rel="stylesheet" type="text/css" href="/shared-ui/webapp/css/themes/zato-light.css">
@@ -17,6 +19,7 @@
 
 {% block dashboard_domain_js %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/shared/highlight.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/select.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/webapp/js/shared.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/webapp/js/shell.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/data.js"></script>
@@ -64,6 +67,24 @@ $(document).ready(function() {
         },
     });
 
+    // The heading's rule name is the kit's own select - picking another
+    // rule of the ruleset opens it in this same editor
+    var editorRules = {{ rules_json|safe }};
+
+    if (document.getElementById('rule-select-host') && editorRules.length) {
+        $.fn.zato.dashboard_kit.select.create({
+            host: '#rule-select-host',
+            trigger_cls: 'dashboard-select-face',
+            label: '',
+            groups: [{group: '', items: editorRules}],
+            value: '{{ rule_key|escapejs }}',
+            on_change: function(value) {
+                window.location.href = '{% url "alert-rules-editor" %}?cluster={{ cluster_id }}&rule=' +
+                    encodeURIComponent(value);
+            }
+        });
+    }
+
     $.fn.zato.dashboard_kit.reveal();
 });
 </script>
@@ -80,7 +101,7 @@ $(document).ready(function() {
         <div class="alerting-editor-column">
         <h3 class="section-page-heading">
             <a href="{% url "alert-rules" %}?cluster={{ cluster_id }}" class="detail-component-pill menu-link">Rules</a>
-            {% if new_rule_name %}{{ new_rule_name }}{% else %}{{ rule_name }}{% endif %}
+            {% if new_rule_name %}{{ new_rule_name }}{% else %}<span id="rule-select-host"></span>{% endif %}
         </h3>
         <div class="dashboard-card alerting-editor-card">
 
@@ -92,7 +113,6 @@ $(document).ready(function() {
                             <button type="button" class="dashboard-tab" data-action="set-view" data-view="expression" role="tab" aria-selected="false">Expression</button>
                             <button type="button" class="dashboard-tab" data-action="set-view" data-view="document" role="tab" aria-selected="false">Document</button>
                         </div>
-                        <button class="button-ghost" data-action="open-rule-menu">Rules</button>
                         <span class="toolbar-separator"></span>
                         <button class="button-primary" data-action="save">Save</button>
                     </div>

@@ -98,21 +98,29 @@ def editor(req:'any_') -> 'TemplateResponse':
     definition_id = definition.id if definition else 0
     rule_key = req.GET.get('rule', '')
 
-    # The header names the rule being edited, read from the stored document.
+    # The header names the rule being edited, read from the stored document,
+    # and the select next to it offers every rule of the ruleset.
     rule_name = ''
+    rules = []
 
-    if definition and rule_key:
+    if definition:
         document = deserialize_document(definition.document)
         documents = document[Documents_Key]
 
         if rule_key in documents:
             rule_name = documents[rule_key]['name']
 
+        for key, item in documents.items():
+            rules.append({'value': key, 'label': item['name']})
+
+        rules.sort(key=lambda entry: entry['label'].lower())
+
     return TemplateResponse(req, 'zato/alerting/editor.html', {
         'cluster_id': default_cluster_id,
         'definition_id': definition_id,
         'rule_key': rule_key,
         'rule_name': rule_name,
+        'rules_json': json.dumps(rules),
         'new_rule_name': req.GET.get('new', ''),
         'new_rule_docs': req.GET.get('docs', ''),
         'new_rule_active': req.GET.get('active', '1') == '1',
