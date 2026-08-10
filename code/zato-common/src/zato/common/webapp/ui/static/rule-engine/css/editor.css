@@ -311,15 +311,16 @@
 /* Editor - the palette rehearsal                             */
 /* ---------------------------------------------------------- */
 
-/* A rule not yet touched teaches itself, in the three beats of a real
-   drag - a ghost of the first card's phrase lifts off the card, condenses
-   into the bead at its front and flies as a comet along a runtime-computed
-   arc to the if line, where a caret already stands ready and the phrase
-   springs back into being with the same ring a real drop plays. Every
-   actor runs on the one shared timeline, so nothing ever falls out of
-   step. All of it is out of flow and pointer-transparent. */
+/* A rule not yet touched teaches itself, in the four beats of a real
+   edit - a ghost of the first card's phrase lifts off the card, rides a
+   runtime-computed arc to the if line with a comet tail streaming behind
+   it, slides into a waiting caret with the same ring a real drop plays,
+   and then the demo finishes the condition the way a person would - the
+   comparator and value type themselves out behind a blinking caret.
+   Every actor runs on the one shared timeline, so nothing ever falls out
+   of step. All of it is out of flow and pointer-transparent. */
 .rule-editor .editor-nudge {
-    --editor-nudge-loop: 5s;
+    --editor-nudge-loop: 10s;
 
     /* The bead's face - lit above, falling into shade below, the way the
        flow drawing's cards catch the light */
@@ -380,21 +381,21 @@
 }
 @keyframes editor-nudge-lift {
     0%,
-    2% {
+    1% {
         opacity: 0;
         transform: translate(-50%, -50%) scale(0.98);
         box-shadow: 0 1px 2px var(--shadow-soft);
     }
 
     /* Fading in on the card - the moment of taking hold */
-    5% {
+    2.5% {
         opacity: 1;
         transform: translate(-50%, -50%) scale(1);
     }
 
     /* The lift - up off the card, tilted, the shadow deepening */
-    9%,
-    15.9% {
+    4.5%,
+    7.9% {
         opacity: 1;
         transform: translate(-50%, -50%) translateY(-5px) rotate(-2.5deg) scale(1.05);
         box-shadow: 0 9px 18px var(--shadow-soft);
@@ -403,7 +404,7 @@
     /* The crossfade - the flight ghost takes over at this very spot in
        this very pose, so the swap happens standing still and the eye
        never loses the thing */
-    17%,
+    8.5%,
     100% {
         opacity: 0;
         transform: translate(-50%, -50%) translateY(-5px) rotate(-2.5deg) scale(1.05);
@@ -428,27 +429,43 @@
     offset-rotate: 0deg;
     opacity: 0;
     transform: translateY(-5px) rotate(-2.5deg) scale(1.05);
-    animation: editor-nudge-ghost var(--editor-nudge-loop) infinite;
+    animation:
+        editor-nudge-ghost var(--editor-nudge-loop) infinite,
+        editor-nudge-ghost-posture var(--editor-nudge-loop) infinite;
 }
 @keyframes editor-nudge-ghost {
     0%,
-    15.9% {
+    7.9% {
         offset-distance: 0%;
         opacity: 0;
     }
-    16% {
+    8% {
         offset-distance: 0%;
         opacity: 0.65;
         animation-timing-function: cubic-bezier(0.35, 0, 0.25, 1);
     }
-    48% {
+    24% {
         offset-distance: 100%;
         opacity: 0.65;
     }
-    52%,
+    26%,
     100% {
         offset-distance: 100%;
         opacity: 0;
+    }
+}
+
+/* The posture - held tilted through the flight, then straightened on the
+   final approach, so the ghost slides into the slot already sitting the
+   way the landed chip will sit */
+@keyframes editor-nudge-ghost-posture {
+    0%,
+    19% {
+        transform: translateY(-5px) rotate(-2.5deg) scale(1.05);
+    }
+    23%,
+    100% {
+        transform: translateY(0) rotate(0deg) scale(1);
     }
 }
 
@@ -458,20 +475,20 @@
    ceiling */
 @keyframes editor-nudge-flight {
     0%,
-    15.9% {
+    7.9% {
         offset-distance: 0%;
         opacity: 0;
     }
-    16% {
+    8% {
         offset-distance: 0%;
         opacity: 1;
         animation-timing-function: cubic-bezier(0.35, 0, 0.25, 1);
     }
-    48% {
+    24% {
         offset-distance: 100%;
         opacity: 1;
     }
-    50%,
+    25%,
     100% {
         offset-distance: 100%;
         opacity: 0;
@@ -479,118 +496,95 @@
 }
 @keyframes editor-nudge-flight-spark {
     0%,
-    15.9% {
+    7.9% {
         offset-distance: 0%;
         opacity: 0;
     }
-    16% {
+    8% {
         offset-distance: 0%;
         opacity: var(--editor-nudge-spark-opacity);
         animation-timing-function: cubic-bezier(0.35, 0, 0.25, 1);
     }
-    48% {
+    24% {
         offset-distance: 100%;
         opacity: var(--editor-nudge-spark-opacity);
     }
-    50%,
+    25%,
     100% {
         offset-distance: 100%;
         opacity: 0;
     }
 }
 
-/* The departure bead - the journey's starting point, a small polished node
-   drawn the way the flow drawing draws its cards: a gradient face lit from
-   above, a hairline of light along the top rim, a soft shadow underneath.
-   Around it a thin ring breathes rather than pings. */
-.rule-editor .editor-nudge-dot {
-    position: absolute;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 32% 28%,
-        var(--editor-nudge-bead-light),
-        var(--editor-hint-green) 55%,
-        var(--editor-nudge-bead-deep));
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.5),
-        0 1px 3px var(--shadow-soft);
-    opacity: 0;
-    animation: editor-nudge-dot var(--editor-nudge-loop) infinite;
-}
-.rule-editor .editor-nudge-dot::after {
+/* The halo - green from the very first frame of the grab. It hugs the
+   lifted chip the whole time the chip is held, rides into the flight on
+   the ghost and quietly fades away in place while the flight goes on. */
+.rule-editor .editor-nudge-lift::after {
     content: "";
     position: absolute;
-    inset: -4px;
-    border-radius: 50%;
+    inset: -3px;
     border: 1.5px solid var(--editor-hint-green);
+    border-radius: calc(var(--radius-2) + 3px);
     opacity: 0;
-    animation: editor-nudge-halo var(--editor-nudge-loop) infinite;
+    animation: editor-nudge-lift-halo var(--editor-nudge-loop) infinite;
 }
-@keyframes editor-nudge-dot {
+@keyframes editor-nudge-lift-halo {
     0% {
         opacity: 0;
-        transform: scale(0.4);
+        transform: scale(0.9);
     }
-    5%,
-    16% {
-        opacity: 1;
+    1%,
+    7.9% {
+        opacity: 0.55;
         transform: scale(1);
     }
-
-    /* The recoil - the bead kicks as the comet leaves it */
-    18% {
-        opacity: 1;
-        transform: scale(1.3);
-    }
-    21%,
-    64% {
-        opacity: 1;
-        transform: scale(1);
-    }
-    76%,
+    8%,
     100% {
         opacity: 0;
-        transform: scale(0.4);
+        transform: scale(1);
     }
 }
-
-/* Two quiet swells while the bead stands - a breath, not an alarm */
-@keyframes editor-nudge-halo {
+.rule-editor .editor-nudge-ghost::after {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    border: 1.5px solid var(--editor-hint-green);
+    border-radius: calc(var(--radius-2) + 3px);
+    opacity: 0;
+    animation: editor-nudge-ghost-pulse var(--editor-nudge-loop) infinite;
+}
+@keyframes editor-nudge-ghost-pulse {
     0%,
-    12% {
+    7.9% {
         opacity: 0;
-        transform: scale(0.7);
-    }
-    18% {
-        opacity: 0.5;
         transform: scale(1);
     }
-    26% {
-        opacity: 0;
-        transform: scale(1.55);
-    }
-    34% {
-        opacity: 0;
-        transform: scale(0.7);
-    }
-    40% {
-        opacity: 0.35;
+
+    /* Snug at takeoff, exactly where the lift's own halo left it, then
+       simply fading away in place - no swell, no puff */
+    8% {
+        opacity: 0.55;
         transform: scale(1);
     }
-    48%,
+    14%,
     100% {
         opacity: 0;
-        transform: scale(1.55);
+        transform: scale(1);
     }
 }
 
 /* The chip - a real palette phrase in the same dress the live drag ghost
-   wears. It does not travel - the comet does - it materialises where the
-   comet lands, springing up past its size and settling, the way a set-down
-   thing takes its place. */
+   wears. It does not travel - the ghost does - it materialises where the
+   ghost lands and then finishes the job the way a person would: the rest
+   of the condition types itself out, keystroke by keystroke, behind a
+   blinking caret. The typing is the chip's width stepping from the
+   phrase's width to the full condition's, the text clipped by overflow,
+   so glyphs appear one beat at a time. */
 .rule-editor .editor-nudge-chip {
     position: absolute;
+    box-sizing: border-box;
+    overflow: hidden;
+    width: var(--editor-nudge-chip-width-from);
     padding: 2px 9px;
     border: 1px solid var(--border);
     border-radius: var(--radius-2);
@@ -600,33 +594,87 @@
     white-space: nowrap;
     box-shadow: 0 3px 8px var(--shadow-soft);
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.55);
+    transform: translate(0, -50%);
     animation: editor-nudge-chip var(--editor-nudge-loop) infinite;
 }
 @keyframes editor-nudge-chip {
     0%,
-    48% {
+    23.5% {
         opacity: 0;
-        transform: translate(-50%, -50%) scale(0.55);
+        width: var(--editor-nudge-chip-width-from);
+        transform: translate(0, -50%) scale(1);
     }
 
-    /* The spring - up past its size, a dip back, then rest */
-    53% {
+    /* The takeover - level and in place, fading in under the ghost */
+    25.5% {
         opacity: 1;
-        transform: translate(-50%, -50%) scale(1.07);
+        transform: translate(0, -50%) scale(1);
     }
-    56% {
-        transform: translate(-50%, -50%) scale(0.97);
+
+    /* The press - the set-down thing seats itself */
+    27% {
+        transform: translate(0, -50%) scale(0.97);
     }
-    59%,
-    76% {
+    28.5% {
+        transform: translate(0, -50%) scale(1);
+    }
+
+    /* The typing - the width walks to the full condition in keystrokes */
+    30% {
+        width: var(--editor-nudge-chip-width-from);
+        animation-timing-function: steps(14, end);
+    }
+    48%,
+    70% {
         opacity: 1;
-        transform: translate(-50%, -50%) scale(1);
+        width: var(--editor-nudge-chip-width-to);
+        transform: translate(0, -50%) scale(1);
     }
-    86%,
+    76%,
     100% {
         opacity: 0;
-        transform: translate(-50%, -50%) scale(0.97);
+        width: var(--editor-nudge-chip-width-to);
+        transform: translate(0, -50%) scale(1);
+    }
+}
+
+/* The typing caret - a thin bar riding the chip's clipped edge, blinking
+   the way a text caret blinks, on show only while the typing runs */
+.rule-editor .editor-nudge-chip::after {
+    content: "";
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    right: 3px;
+    width: 1.5px;
+    background: var(--text);
+    visibility: hidden;
+    animation:
+        editor-nudge-type-blink 0.9s steps(1) infinite,
+        editor-nudge-type-window var(--editor-nudge-loop) infinite;
+}
+@keyframes editor-nudge-type-blink {
+    0%,
+    49.9% {
+        opacity: 1;
+    }
+    50%,
+    100% {
+        opacity: 0;
+    }
+}
+@keyframes editor-nudge-type-window {
+    0%,
+    28% {
+        visibility: hidden;
+    }
+    28.5%,
+    50% {
+        visibility: visible;
+    }
+    50.5%,
+    100% {
+        visibility: hidden;
     }
 }
 
@@ -656,17 +704,18 @@
     bottom: -2px;
 }
 /* The caret shows before the comet lands - the way a real drag's caret
-   stands ready while the thing is still in the air over its slot */
+   stands ready while the thing is still in the air over its slot - and
+   stays through the whole edit */
 @keyframes editor-nudge-caret {
     0%,
-    40% {
+    20% {
         opacity: 0;
     }
-    44%,
-    80% {
+    22%,
+    70% {
         opacity: 1;
     }
-    90%,
+    76%,
     100% {
         opacity: 0;
     }
@@ -685,14 +734,14 @@
 }
 @keyframes editor-nudge-ring {
     0%,
-    48% {
+    24% {
         transform: scale(0.3);
         opacity: 0;
     }
-    51% {
+    25.5% {
         opacity: 0.9;
     }
-    64%,
+    32%,
     100% {
         transform: scale(1.15);
         opacity: 0;

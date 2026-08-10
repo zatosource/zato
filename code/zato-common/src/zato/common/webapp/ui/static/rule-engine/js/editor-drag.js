@@ -539,13 +539,14 @@ editorView.playArrival = function(dropName, position) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// A rule just opened and not yet touched teaches itself in the three
-// beats of a real drag - a ghost of the first card's phrase lifts off the
-// card, condenses into the bead at its front and flies as a comet along a
-// motion path to the if line, where a caret already stands ready and the
-// phrase springs back into being with the same ring a real drop plays.
-// The rehearsal loops until the first edit or click, then stays away for
-// as long as this rule is open.
+// A rule just opened and not yet touched teaches itself in the four
+// beats of a real edit - a ghost of the first card's phrase lifts off
+// the card, rides a motion path to the if line with a comet tail
+// streaming behind it, slides into a waiting caret with the same ring a
+// real drop plays, and then the demo finishes the condition the way a
+// person would - the comparator and value type themselves out behind a
+// blinking caret. The rehearsal loops until the first edit or click,
+// then stays away for as long as this rule is open.
 editorView.nudgeDismissedKey = null;
 editorView.nudgeListenerAttached = false;
 
@@ -583,12 +584,8 @@ editorView.showNudge = function() {
     var cardBox = card.getBoundingClientRect();
     var chipBox = chip.getBoundingClientRect();
 
-    // The journey begins exactly where the in-rule dot stands at the card's
-    // front - the dot sits at -15px, 7px wide, so its centre is 11.5px left
-    // of the card - and ends where a real drop lands, just before the if
-    // line's add chip. The bead covers that dot exactly.
-    var startX = cardBox.left - 11.5;
-    var startY = (cardBox.top + cardBox.bottom) / 2;
+    // The journey ends where a real drop lands - just before the if
+    // line's add chip
     var endX = chipBox.left - 16;
     var endY = (chipBox.top + chipBox.bottom) / 2;
 
@@ -596,20 +593,6 @@ editorView.showNudge = function() {
     // is picked off
     var liftX = (cardBox.left + cardBox.right) / 2;
     var liftY = (cardBox.top + cardBox.bottom) / 2;
-
-    // One smooth curve for the whole journey - it leaves the card already
-    // on a gentle climb, sweeps just over the bead at the card's front,
-    // crests early and glides down long and shallow into the landing. A
-    // single cubic has no joins, so there is no point anywhere on the way
-    // where the trajectory can visibly change character.
-    var distanceX = liftX - endX;
-    var lift = Math.min(Math.max(distanceX * 0.18, 40), 90);
-    var c1X = liftX - (distanceX * 0.28);
-    var c1Y = liftY - (lift * 0.8);
-    var c2X = endX + (distanceX * 0.3);
-    var c2Y = endY - (lift * 0.35);
-    var path = 'M ' + liftX + ' ' + liftY +
-        ' C ' + c1X + ' ' + c1Y + ', ' + c2X + ' ' + c2Y + ', ' + endX + ' ' + endY;
 
     var overlay = document.createElement('div');
     overlay.className = 'editor-nudge';
@@ -629,12 +612,96 @@ editorView.showNudge = function() {
     overlay.innerHTML =
         sparksHtml +
         '<span class="editor-nudge-head"></span>' +
-        '<span class="editor-nudge-dot"></span>' +
         '<span class="editor-nudge-lift"></span>' +
         '<span class="editor-nudge-ghost"></span>' +
         '<span class="editor-nudge-chip"></span>' +
         '<span class="editor-nudge-caret"></span>' +
         '<span class="editor-nudge-ring"></span>';
+
+    var attribute = vocabulary.attribute(card.getAttribute('data-path'));
+    var phrase = attribute.phrase;
+
+    // What the demo types once the phrase has landed - a finished
+    // condition in the editor's own words, shaped by what the attribute
+    // really is: a yes/no needs no value, a number compares against one,
+    // a choice picks one of its own known values
+    var typedComparator;
+    var typedValue;
+
+    if (attribute.type === 'yes/no') {
+        typedComparator = 'is true';
+        typedValue = '';
+    } else if (attribute.type === 'number' || attribute.type === 'number range') {
+        typedComparator = 'is at least';
+        typedValue = '10';
+    } else if (attribute.values !== undefined && attribute.values.length > 0) {
+        typedComparator = 'is';
+        typedValue = attribute.values[0];
+    } else {
+        typedComparator = 'is';
+        typedValue = 'invoices';
+    }
+
+    var typedSuffix = ' ' + typedComparator;
+    if (typedValue !== '') { typedSuffix += ' ' + typedValue; }
+
+    // The pick-up - a copy of the phrase over the card itself. It only
+    // plays the stationary grab - fade in, lift up - and crossfades into
+    // the flight ghost at this very spot, so nothing ever swaps while in
+    // motion.
+    var liftElement = overlay.querySelector('.editor-nudge-lift');
+
+    liftElement.textContent = phrase;
+    liftElement.style.left = liftX + 'px';
+    liftElement.style.top = liftY + 'px';
+
+    var ghostElement = overlay.querySelector('.editor-nudge-ghost');
+    ghostElement.textContent = phrase;
+
+    var chipElement = overlay.querySelector('.editor-nudge-chip');
+
+    var caretElement = overlay.querySelector('.editor-nudge-caret');
+    caretElement.style.left = (endX - 1) + 'px';
+    caretElement.style.top = (chipBox.top - 1) + 'px';
+    caretElement.style.height = (chipBox.height + 2) + 'px';
+
+    // The overlay goes live before the paths are drawn - the chip's two
+    // widths, before and after the typing, can only be measured in the
+    // live layout
+    this.container.appendChild(overlay);
+
+    chipElement.textContent = phrase;
+    var chipPhraseWidth = Math.ceil(chipElement.getBoundingClientRect().width);
+
+    chipElement.textContent = phrase + typedSuffix;
+    var chipTypedWidth = Math.ceil(chipElement.getBoundingClientRect().width);
+
+    // The chip grows rightward from the caret while the demo types, so it
+    // anchors by its left edge and its width does the typing
+    chipElement.style.left = (endX + 2) + 'px';
+    chipElement.style.top = endY + 'px';
+    chipElement.style.setProperty('--editor-nudge-chip-width-from', chipPhraseWidth + 'px');
+    chipElement.style.setProperty('--editor-nudge-chip-width-to', chipTypedWidth + 'px');
+
+    // The ghost lands centred on where the phrase-only chip will sit, so
+    // the takeover is seamless before the typing extends the chip
+    var pathEndX = endX + 2 + chipPhraseWidth / 2;
+
+    // One smooth curve for the whole journey - it leaves the card already
+    // on a gentle climb, crests early and glides down long and shallow
+    // into the landing. A single cubic has no joins, so there is no point
+    // anywhere on the way where the trajectory can visibly change
+    // character.
+    var distanceX = liftX - pathEndX;
+    var lift = Math.min(Math.max(distanceX * 0.18, 40), 90);
+    var c1X = liftX - (distanceX * 0.28);
+    var c1Y = liftY - (lift * 0.8);
+    var c2X = pathEndX + (distanceX * 0.3);
+    var c2Y = endY - (lift * 0.35);
+    var path = 'M ' + liftX + ' ' + liftY +
+        ' C ' + c1X + ' ' + c1Y + ', ' + c2X + ' ' + c2Y + ', ' + pathEndX + ' ' + endY;
+
+    ghostElement.style.offsetPath = 'path("' + path + '")';
 
     var headElement = overlay.querySelector('.editor-nudge-head');
     headElement.style.offsetPath = 'path("' + path + '")';
@@ -662,55 +729,17 @@ editorView.showNudge = function() {
         spark.style.setProperty('--editor-nudge-spark-opacity', (0.75 * (1 - depth) + 0.1).toFixed(2));
     }
 
-    var phrase = vocabulary.attribute(card.getAttribute('data-path')).phrase;
-
-    // The pick-up - a copy of the phrase over the card itself. It only
-    // plays the stationary grab - fade in, lift up - and crossfades into
-    // the flight ghost at this very spot, so nothing ever swaps while in
-    // motion.
-    var liftElement = overlay.querySelector('.editor-nudge-lift');
-
-    liftElement.textContent = phrase;
-    liftElement.style.left = liftX + 'px';
-    liftElement.style.top = liftY + 'px';
-
-    // The flight ghost - the dragged thing itself, translucent the way a
-    // real drag ghost is, riding the same arc the comet streams under
-    var ghostElement = overlay.querySelector('.editor-nudge-ghost');
-    ghostElement.textContent = phrase;
-    ghostElement.style.offsetPath = 'path("' + path + '")';
-
-    // The chip carries the card's own phrase and materialises at the
-    // landing point once the comet has arrived there
-    var chipElement = overlay.querySelector('.editor-nudge-chip');
-    chipElement.textContent = phrase;
-    chipElement.style.left = endX + 'px';
-    chipElement.style.top = endY + 'px';
-
-    var caretElement = overlay.querySelector('.editor-nudge-caret');
-    caretElement.style.left = (endX - 1) + 'px';
-    caretElement.style.top = (chipBox.top - 1) + 'px';
-    caretElement.style.height = (chipBox.height + 2) + 'px';
-
     var ringElement = overlay.querySelector('.editor-nudge-ring');
-    ringElement.style.left = (endX - 14) + 'px';
+    ringElement.style.left = (pathEndX - 14) + 'px';
     ringElement.style.top = (endY - 14) + 'px';
-
-    // The departure bead marks where the journey begins
-    var dotElement = overlay.querySelector('.editor-nudge-dot');
-    dotElement.style.left = (startX - 5) + 'px';
-    dotElement.style.top = (startY - 5) + 'px';
-
-    this.container.appendChild(overlay);
 
     caretLog('showNudge', 'rehearsal shown', {
         path: path,
         liftX: Math.round(liftX),
         liftY: Math.round(liftY),
-        startX: Math.round(startX),
-        startY: Math.round(startY),
         endX: Math.round(endX),
-        endY: Math.round(endY)
+        endY: Math.round(endY),
+        typedSuffix: typedSuffix
     });
 
     // Samples the actors' real on-screen positions across the first loop,
@@ -723,7 +752,7 @@ editorView.showNudge = function() {
         var elapsed = performance.now() - samplerStart;
 
         // One full loop is enough to read the choreography
-        if (elapsed > 5100) { return; }
+        if (elapsed > 10100) { return; }
         if (overlay.parentNode === null) { return; }
 
         var liftBox = liftElement.getBoundingClientRect();
