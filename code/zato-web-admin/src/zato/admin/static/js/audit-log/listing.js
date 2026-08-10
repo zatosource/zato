@@ -167,6 +167,9 @@ listing.config = {
     // What the moment the event happened at is called, on the pane's own last line
     timeLabel: 'Time',
 
+    // What a scheduled job's run number is called on a page whose own columns do not name it
+    runLabel: 'Run',
+
     // The log access view record - the one event whose row says nothing about its kind,
     // because its chips already name the viewer and the viewed thing
     viewEventType: 'content-viewed',
@@ -568,6 +571,18 @@ listing.paneAttrs = function(rowModel) {
             }
 
             out.push({key: column.key, label: column.label, value: columnValue, search: columnSearch});
+        }
+    }
+
+    // A scheduler row carries its run number even on a page whose columns do not name it -
+    // the all-sources listing - so the pane says it here, after the page's own columns
+    if (!seen['current_run']) {
+        var currentRun = rowModel.raw.current_run;
+
+        if (currentRun !== undefined) {
+            if (currentRun !== '') {
+                out.push({key: 'current_run', label: config.runLabel, value: currentRun, search: currentRun});
+            }
         }
     }
 
