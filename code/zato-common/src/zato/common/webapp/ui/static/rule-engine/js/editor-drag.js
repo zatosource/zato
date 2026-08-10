@@ -537,4 +537,253 @@ editorView.playArrival = function(dropName, position) {
     caretLog('playArrival', 'arrival effect', {drop_name: dropName, position: position});
 };
 
+// ////////////////////////////////////////////////////////////////////////
+
+// A rule just opened and not yet touched teaches itself in the three
+// beats of a real drag - a ghost of the first card's phrase lifts off the
+// card, condenses into the bead at its front and flies as a comet along a
+// motion path to the if line, where a caret already stands ready and the
+// phrase springs back into being with the same ring a real drop plays.
+// The rehearsal loops until the first edit or click, then stays away for
+// as long as this rule is open.
+editorView.nudgeDismissedKey = null;
+editorView.nudgeListenerAttached = false;
+
+// Which open rule the rehearsal belongs to
+editorView.nudgeKey = function() {
+    return editorModel.definitionId + ':' + editorModel.ruleKey;
+};
+
+editorView.removeNudge = function() {
+    var overlay = this.container.querySelector('.editor-nudge');
+    if (overlay !== null) { overlay.remove(); }
+};
+
+editorView.dismissNudge = function() {
+    this.nudgeDismissedKey = this.nudgeKey();
+    this.removeNudge();
+};
+
+editorView.showNudge = function() {
+    var self = this;
+    this.removeNudge();
+
+    // Only an untouched, just-opened rule rehearses - dirty rules and
+    // rules the user already engaged with stay quiet
+    if (editorModel.rule === null) { return; }
+    if (!editorModel.config.trackChanges) { return; }
+    if (editorModel.isDirty()) { return; }
+    if (this.nudgeDismissedKey === this.nudgeKey()) { return; }
+
+    // The host may not show the palette at all
+    var card = this.container.querySelector('.vocabulary-item[draggable="true"]');
+    var chip = this.container.querySelector('.editor-line[data-drop="conditions"] .editor-add-chip');
+    if (card === null || chip === null) { return; }
+
+    var cardBox = card.getBoundingClientRect();
+    var chipBox = chip.getBoundingClientRect();
+
+    // The journey begins exactly where the in-rule dot stands at the card's
+    // front - the dot sits at -15px, 7px wide, so its centre is 11.5px left
+    // of the card - and ends where a real drop lands, just before the if
+    // line's add chip. The bead covers that dot exactly.
+    var startX = cardBox.left - 11.5;
+    var startY = (cardBox.top + cardBox.bottom) / 2;
+    var endX = chipBox.left - 16;
+    var endY = (chipBox.top + chipBox.bottom) / 2;
+
+    // Where the grab itself happens - the centre of the card the phrase
+    // is picked off
+    var liftX = (cardBox.left + cardBox.right) / 2;
+    var liftY = (cardBox.top + cardBox.bottom) / 2;
+
+    // One smooth curve for the whole journey - it leaves the card already
+    // on a gentle climb, sweeps just over the bead at the card's front,
+    // crests early and glides down long and shallow into the landing. A
+    // single cubic has no joins, so there is no point anywhere on the way
+    // where the trajectory can visibly change character.
+    var distanceX = liftX - endX;
+    var lift = Math.min(Math.max(distanceX * 0.18, 40), 90);
+    var c1X = liftX - (distanceX * 0.28);
+    var c1Y = liftY - (lift * 0.8);
+    var c2X = endX + (distanceX * 0.3);
+    var c2Y = endY - (lift * 0.35);
+    var path = 'M ' + liftX + ' ' + liftY +
+        ' C ' + c1X + ' ' + c1Y + ', ' + c2X + ' ' + c2Y + ', ' + endX + ' ' + endY;
+
+    var overlay = document.createElement('div');
+    overlay.className = 'editor-nudge';
+
+    // The comet is particles, not a stroke - a lit head and a tail of
+    // sparks, every spark flying the identical arc a fixed beat behind
+    // the one before it, smaller and dimmer with every place down the
+    // tail, so the tail tapers, bunches where the flight is slow and
+    // stretches where it is fast
+    var sparkCount = 10;
+    var sparksHtml = '';
+
+    for (var sparkIndex = 0; sparkIndex < sparkCount; sparkIndex++) {
+        sparksHtml += '<span class="editor-nudge-spark"></span>';
+    }
+
+    overlay.innerHTML =
+        sparksHtml +
+        '<span class="editor-nudge-head"></span>' +
+        '<span class="editor-nudge-dot"></span>' +
+        '<span class="editor-nudge-lift"></span>' +
+        '<span class="editor-nudge-ghost"></span>' +
+        '<span class="editor-nudge-chip"></span>' +
+        '<span class="editor-nudge-caret"></span>' +
+        '<span class="editor-nudge-ring"></span>';
+
+    var headElement = overlay.querySelector('.editor-nudge-head');
+    headElement.style.offsetPath = 'path("' + path + '")';
+
+    var sparkElements = overlay.querySelectorAll('.editor-nudge-spark');
+
+    for (var trailIndex = 0; trailIndex < sparkElements.length; trailIndex++) {
+        var spark = sparkElements[trailIndex];
+
+        // How deep into the tail this spark rides - 0 right behind the
+        // head, 1 at the very end of the tail
+        var depth = (trailIndex + 1) / sparkCount;
+
+        var sparkSize = 7 - (depth * 4.5);
+
+        spark.style.offsetPath = 'path("' + path + '")';
+        spark.style.width = sparkSize + 'px';
+        spark.style.height = sparkSize + 'px';
+
+        // The beat this spark lags behind the head - the whole timeline
+        // shifted, so the spark repeats the head's exact flight later
+        spark.style.animationDelay = ((trailIndex + 1) * 28) + 'ms';
+
+        // Dimmer with every place down the tail
+        spark.style.setProperty('--editor-nudge-spark-opacity', (0.75 * (1 - depth) + 0.1).toFixed(2));
+    }
+
+    var phrase = vocabulary.attribute(card.getAttribute('data-path')).phrase;
+
+    // The pick-up - a copy of the phrase over the card itself. It only
+    // plays the stationary grab - fade in, lift up - and crossfades into
+    // the flight ghost at this very spot, so nothing ever swaps while in
+    // motion.
+    var liftElement = overlay.querySelector('.editor-nudge-lift');
+
+    liftElement.textContent = phrase;
+    liftElement.style.left = liftX + 'px';
+    liftElement.style.top = liftY + 'px';
+
+    // The flight ghost - the dragged thing itself, translucent the way a
+    // real drag ghost is, riding the same arc the comet streams under
+    var ghostElement = overlay.querySelector('.editor-nudge-ghost');
+    ghostElement.textContent = phrase;
+    ghostElement.style.offsetPath = 'path("' + path + '")';
+
+    // The chip carries the card's own phrase and materialises at the
+    // landing point once the comet has arrived there
+    var chipElement = overlay.querySelector('.editor-nudge-chip');
+    chipElement.textContent = phrase;
+    chipElement.style.left = endX + 'px';
+    chipElement.style.top = endY + 'px';
+
+    var caretElement = overlay.querySelector('.editor-nudge-caret');
+    caretElement.style.left = (endX - 1) + 'px';
+    caretElement.style.top = (chipBox.top - 1) + 'px';
+    caretElement.style.height = (chipBox.height + 2) + 'px';
+
+    var ringElement = overlay.querySelector('.editor-nudge-ring');
+    ringElement.style.left = (endX - 14) + 'px';
+    ringElement.style.top = (endY - 14) + 'px';
+
+    // The departure bead marks where the journey begins
+    var dotElement = overlay.querySelector('.editor-nudge-dot');
+    dotElement.style.left = (startX - 5) + 'px';
+    dotElement.style.top = (startY - 5) + 'px';
+
+    this.container.appendChild(overlay);
+
+    caretLog('showNudge', 'rehearsal shown', {
+        path: path,
+        liftX: Math.round(liftX),
+        liftY: Math.round(liftY),
+        startX: Math.round(startX),
+        startY: Math.round(startY),
+        endX: Math.round(endX),
+        endY: Math.round(endY)
+    });
+
+    // Samples the actors' real on-screen positions across the first loop,
+    // so the motion can be read from the console - where each one is,
+    // how visible it is and how fast it moves between samples
+    var samplerStart = performance.now();
+    var samplerPrevious = null;
+
+    var sampleFrame = function() {
+        var elapsed = performance.now() - samplerStart;
+
+        // One full loop is enough to read the choreography
+        if (elapsed > 5100) { return; }
+        if (overlay.parentNode === null) { return; }
+
+        var liftBox = liftElement.getBoundingClientRect();
+        var ghostBox = ghostElement.getBoundingClientRect();
+        var headBox = headElement.getBoundingClientRect();
+
+        var sample = {
+            tMs: Math.round(elapsed),
+            loopPct: Math.round(elapsed / 50) / 100 * 100,
+            lift: {
+                x: Math.round(liftBox.left + liftBox.width / 2),
+                y: Math.round(liftBox.top + liftBox.height / 2),
+                opacity: getComputedStyle(liftElement).opacity
+            },
+            ghost: {
+                x: Math.round(ghostBox.left + ghostBox.width / 2),
+                y: Math.round(ghostBox.top + ghostBox.height / 2),
+                opacity: getComputedStyle(ghostElement).opacity
+            },
+            head: {
+                x: Math.round(headBox.left + headBox.width / 2),
+                y: Math.round(headBox.top + headBox.height / 2),
+                opacity: getComputedStyle(headElement).opacity
+            }
+        };
+
+        // How far the visible carrier moved since the last sample - the
+        // stall will show as speed collapsing to zero while still visible
+        if (samplerPrevious !== null) {
+            var dx = sample.ghost.x - samplerPrevious.ghost.x;
+            var dy = sample.ghost.y - samplerPrevious.ghost.y;
+            sample.ghostStepPx = Math.round(Math.sqrt(dx * dx + dy * dy));
+
+            var liftDx = sample.lift.x - samplerPrevious.lift.x;
+            var liftDy = sample.lift.y - samplerPrevious.lift.y;
+            sample.liftStepPx = Math.round(Math.sqrt(liftDx * liftDx + liftDy * liftDy));
+        }
+
+        samplerPrevious = sample;
+        caretLog('nudge-sample', 't=' + sample.tMs + 'ms', sample);
+
+        setTimeout(function() { requestAnimationFrame(sampleFrame); }, 80);
+    };
+
+    requestAnimationFrame(sampleFrame);
+
+    // The first click anywhere means the user is at work - the rehearsal
+    // steps aside for this rule
+    if (!this.nudgeListenerAttached) {
+        this.nudgeListenerAttached = true;
+        this.container.addEventListener('pointerdown', function() {
+            self.dismissNudge();
+        });
+    }
+
+    // The path is measured against the current layout - a resize outdates
+    // it, so the overlay goes and the next render rebuilds it
+    window.addEventListener('resize', function() {
+        self.removeNudge();
+    }, {once: true});
+};
+
 })();

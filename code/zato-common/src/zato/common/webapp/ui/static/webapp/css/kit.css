@@ -602,6 +602,17 @@
     text-transform: uppercase;
     letter-spacing: 0.08em;
 }
+
+/* The six-dot grip in front of the palette's name - the universal sign of
+   a thing that can be picked up and moved */
+.rule-engine-ui .vocabulary-head-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.rule-engine-ui .vocabulary-head-grip {
+    fill: currentColor;
+}
 .rule-engine-ui .vocabulary-entity {
     padding: 7px 16px 3px;
     font-size: 12px;

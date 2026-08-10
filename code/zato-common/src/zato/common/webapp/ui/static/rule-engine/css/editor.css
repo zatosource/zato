@@ -308,6 +308,407 @@
 }
 
 /* ---------------------------------------------------------- */
+/* Editor - the palette rehearsal                             */
+/* ---------------------------------------------------------- */
+
+/* A rule not yet touched teaches itself, in the three beats of a real
+   drag - a ghost of the first card's phrase lifts off the card, condenses
+   into the bead at its front and flies as a comet along a runtime-computed
+   arc to the if line, where a caret already stands ready and the phrase
+   springs back into being with the same ring a real drop plays. Every
+   actor runs on the one shared timeline, so nothing ever falls out of
+   step. All of it is out of flow and pointer-transparent. */
+.rule-editor .editor-nudge {
+    --editor-nudge-loop: 5s;
+
+    /* The bead's face - lit above, falling into shade below, the way the
+       flow drawing's cards catch the light */
+    --editor-nudge-bead-light: #4fd24f;
+    --editor-nudge-bead-deep: #007a00;
+
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    pointer-events: none;
+}
+
+/* The comet - a lit head and a tail of sparks. The head is a polished
+   bead with a soft glow, the sparks are plain discs that repeat its exact
+   flight a fixed beat later each, sized and dimmed by JS by their place
+   down the tail. All of them ride the same offset-path arc. */
+.rule-editor .editor-nudge-head {
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 32% 28%,
+        var(--editor-nudge-bead-light),
+        var(--editor-hint-green) 55%,
+        var(--editor-nudge-bead-deep));
+    box-shadow: 0 0 12px 2px color-mix(in srgb, var(--editor-hint-green) 55%, transparent);
+    offset-rotate: 0deg;
+    opacity: 0;
+    animation: editor-nudge-flight var(--editor-nudge-loop) infinite;
+}
+.rule-editor .editor-nudge-spark {
+    position: absolute;
+    border-radius: 50%;
+    background: var(--editor-hint-green);
+    offset-rotate: 0deg;
+    opacity: 0;
+    animation: editor-nudge-flight-spark var(--editor-nudge-loop) infinite;
+}
+
+/* The pick-up - a ghost of the card's phrase fades in over the card
+   itself, lifts the way a grabbed thing lifts - up a touch, tilted, its
+   shadow deepening - then flies to the bead and condenses into it, and
+   the comet departs from there. The condense run rides two custom
+   properties the JS measured from the live layout. */
+.rule-editor .editor-nudge-lift {
+    position: absolute;
+    padding: 2px 9px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-2);
+    background: var(--input-background);
+    color: var(--text);
+    font-size: 13px;
+    white-space: nowrap;
+    box-shadow: 0 1px 2px var(--shadow-soft);
+    opacity: 0;
+    transform: translate(-50%, -50%);
+    animation: editor-nudge-lift var(--editor-nudge-loop) infinite;
+}
+@keyframes editor-nudge-lift {
+    0%,
+    2% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.98);
+        box-shadow: 0 1px 2px var(--shadow-soft);
+    }
+
+    /* Fading in on the card - the moment of taking hold */
+    5% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    /* The lift - up off the card, tilted, the shadow deepening */
+    9%,
+    15.9% {
+        opacity: 1;
+        transform: translate(-50%, -50%) translateY(-5px) rotate(-2.5deg) scale(1.05);
+        box-shadow: 0 9px 18px var(--shadow-soft);
+    }
+
+    /* The crossfade - the flight ghost takes over at this very spot in
+       this very pose, so the swap happens standing still and the eye
+       never loses the thing */
+    17%,
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) translateY(-5px) rotate(-2.5deg) scale(1.05);
+        box-shadow: 0 9px 18px var(--shadow-soft);
+    }
+}
+
+/* The flight ghost - the dragged thing itself in the air, translucent
+   the way a real drag ghost is, wearing the lifted pose it took over in
+   and flying the whole way card - bead - landing in one motion, the
+   comet streaming under it as its wake */
+.rule-editor .editor-nudge-ghost {
+    position: absolute;
+    padding: 2px 9px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-2);
+    background: var(--input-background);
+    color: var(--text);
+    font-size: 13px;
+    white-space: nowrap;
+    box-shadow: 0 9px 18px var(--shadow-soft);
+    offset-rotate: 0deg;
+    opacity: 0;
+    transform: translateY(-5px) rotate(-2.5deg) scale(1.05);
+    animation: editor-nudge-ghost var(--editor-nudge-loop) infinite;
+}
+@keyframes editor-nudge-ghost {
+    0%,
+    15.9% {
+        offset-distance: 0%;
+        opacity: 0;
+    }
+    16% {
+        offset-distance: 0%;
+        opacity: 0.65;
+        animation-timing-function: cubic-bezier(0.35, 0, 0.25, 1);
+    }
+    48% {
+        offset-distance: 100%;
+        opacity: 0.65;
+    }
+    52%,
+    100% {
+        offset-distance: 100%;
+        opacity: 0;
+    }
+}
+
+/* The flight - the head appears at the bead the instant the condense
+   completes, flies the arc on one eased run and winks out into the
+   landing; the sparks fly the same keyframes, each at its own dimmer
+   ceiling */
+@keyframes editor-nudge-flight {
+    0%,
+    15.9% {
+        offset-distance: 0%;
+        opacity: 0;
+    }
+    16% {
+        offset-distance: 0%;
+        opacity: 1;
+        animation-timing-function: cubic-bezier(0.35, 0, 0.25, 1);
+    }
+    48% {
+        offset-distance: 100%;
+        opacity: 1;
+    }
+    50%,
+    100% {
+        offset-distance: 100%;
+        opacity: 0;
+    }
+}
+@keyframes editor-nudge-flight-spark {
+    0%,
+    15.9% {
+        offset-distance: 0%;
+        opacity: 0;
+    }
+    16% {
+        offset-distance: 0%;
+        opacity: var(--editor-nudge-spark-opacity);
+        animation-timing-function: cubic-bezier(0.35, 0, 0.25, 1);
+    }
+    48% {
+        offset-distance: 100%;
+        opacity: var(--editor-nudge-spark-opacity);
+    }
+    50%,
+    100% {
+        offset-distance: 100%;
+        opacity: 0;
+    }
+}
+
+/* The departure bead - the journey's starting point, a small polished node
+   drawn the way the flow drawing draws its cards: a gradient face lit from
+   above, a hairline of light along the top rim, a soft shadow underneath.
+   Around it a thin ring breathes rather than pings. */
+.rule-editor .editor-nudge-dot {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 32% 28%,
+        var(--editor-nudge-bead-light),
+        var(--editor-hint-green) 55%,
+        var(--editor-nudge-bead-deep));
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.5),
+        0 1px 3px var(--shadow-soft);
+    opacity: 0;
+    animation: editor-nudge-dot var(--editor-nudge-loop) infinite;
+}
+.rule-editor .editor-nudge-dot::after {
+    content: "";
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 1.5px solid var(--editor-hint-green);
+    opacity: 0;
+    animation: editor-nudge-halo var(--editor-nudge-loop) infinite;
+}
+@keyframes editor-nudge-dot {
+    0% {
+        opacity: 0;
+        transform: scale(0.4);
+    }
+    5%,
+    16% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    /* The recoil - the bead kicks as the comet leaves it */
+    18% {
+        opacity: 1;
+        transform: scale(1.3);
+    }
+    21%,
+    64% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    76%,
+    100% {
+        opacity: 0;
+        transform: scale(0.4);
+    }
+}
+
+/* Two quiet swells while the bead stands - a breath, not an alarm */
+@keyframes editor-nudge-halo {
+    0%,
+    12% {
+        opacity: 0;
+        transform: scale(0.7);
+    }
+    18% {
+        opacity: 0.5;
+        transform: scale(1);
+    }
+    26% {
+        opacity: 0;
+        transform: scale(1.55);
+    }
+    34% {
+        opacity: 0;
+        transform: scale(0.7);
+    }
+    40% {
+        opacity: 0.35;
+        transform: scale(1);
+    }
+    48%,
+    100% {
+        opacity: 0;
+        transform: scale(1.55);
+    }
+}
+
+/* The chip - a real palette phrase in the same dress the live drag ghost
+   wears. It does not travel - the comet does - it materialises where the
+   comet lands, springing up past its size and settling, the way a set-down
+   thing takes its place. */
+.rule-editor .editor-nudge-chip {
+    position: absolute;
+    padding: 2px 9px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-2);
+    background: var(--input-background);
+    color: var(--text);
+    font-size: 13px;
+    white-space: nowrap;
+    box-shadow: 0 3px 8px var(--shadow-soft);
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.55);
+    animation: editor-nudge-chip var(--editor-nudge-loop) infinite;
+}
+@keyframes editor-nudge-chip {
+    0%,
+    48% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.55);
+    }
+
+    /* The spring - up past its size, a dip back, then rest */
+    53% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.07);
+    }
+    56% {
+        transform: translate(-50%, -50%) scale(0.97);
+    }
+    59%,
+    76% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    86%,
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.97);
+    }
+}
+
+/* The caret - the same I-beam a real drag shows, appearing at the landing
+   slot as the chip arrives */
+.rule-editor .editor-nudge-caret {
+    position: absolute;
+    width: 2px;
+    background: var(--text);
+    opacity: 0;
+    animation: editor-nudge-caret var(--editor-nudge-loop) infinite;
+}
+.rule-editor .editor-nudge-caret::before,
+.rule-editor .editor-nudge-caret::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 7px;
+    height: 2px;
+    background: var(--text);
+}
+.rule-editor .editor-nudge-caret::before {
+    top: -2px;
+}
+.rule-editor .editor-nudge-caret::after {
+    bottom: -2px;
+}
+/* The caret shows before the comet lands - the way a real drag's caret
+   stands ready while the thing is still in the air over its slot */
+@keyframes editor-nudge-caret {
+    0%,
+    40% {
+        opacity: 0;
+    }
+    44%,
+    80% {
+        opacity: 1;
+    }
+    90%,
+    100% {
+        opacity: 0;
+    }
+}
+
+/* The ring - the same landing ping a real drop plays */
+.rule-editor .editor-nudge-ring {
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    border: 2px solid var(--blue);
+    border-radius: 50%;
+    opacity: 0;
+    transform: scale(0.3);
+    animation: editor-nudge-ring var(--editor-nudge-loop) infinite;
+}
+@keyframes editor-nudge-ring {
+    0%,
+    48% {
+        transform: scale(0.3);
+        opacity: 0;
+    }
+    51% {
+        opacity: 0.9;
+    }
+    64%,
+    100% {
+        transform: scale(1.15);
+        opacity: 0;
+    }
+}
+
+/* Motion is an explanation here, not decoration - but a reader who asked
+   for calm gets calm, the grip glyph in the palette's head still says
+   what these cards do */
+@media (prefers-reduced-motion: reduce) {
+    .rule-editor .editor-nudge {
+        display: none;
+    }
+}
+
+/* ---------------------------------------------------------- */
 /* Editor - completion menu                                   */
 /* ---------------------------------------------------------- */
 

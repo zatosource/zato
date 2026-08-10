@@ -348,6 +348,7 @@ var editorView = {
         this.openPendingChip();
         this.recordHistory();
         this.refreshChangeState();
+        this.showNudge();
     },
 
 // ////////////////////////////////////////////////////////////////////////
