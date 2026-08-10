@@ -260,6 +260,39 @@
 }
 
 /* ---------------------------------------------------------- */
+/* Editor - arrival treatment                                 */
+/* ---------------------------------------------------------- */
+
+/* How a new clause announces itself after a drop - it pops in with a small
+   overshoot, the back-eased curve providing the spring, while a ring pings
+   outwards and dissolves as the clause settles. Transform and shadow only,
+   so nothing else on the line ever moves. */
+.rule-editor .editor-arrive {
+    border-radius: var(--radius-2);
+    animation:
+        editor-arrive-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+        editor-arrive-ring 0.7s ease-out;
+}
+@keyframes editor-arrive-pop {
+    from {
+        transform: scale(0.85);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+@keyframes editor-arrive-ring {
+    from {
+        box-shadow: 0 0 0 1px var(--blue);
+    }
+    to {
+        box-shadow: 0 0 0 9px rgba(0, 0, 0, 0);
+    }
+}
+
+/* ---------------------------------------------------------- */
 /* Editor - completion menu                                   */
 /* ---------------------------------------------------------- */
 

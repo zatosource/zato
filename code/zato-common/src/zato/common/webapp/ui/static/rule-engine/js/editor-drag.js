@@ -491,7 +491,7 @@ editorView.attachDropLines = function() {
             var anchors = self.slotAnchors(line);
             var anchor = self.nearestAnchor(anchors, event.clientX, event.clientY);
             self.clearInsertionMarkers();
-            self.dropAt(dropName, self.dragState.path, anchor.index);
+            self.dropAt(dropName, self.dragState.path, anchor);
             self.dragState = null;
         });
     });
@@ -499,16 +499,31 @@ editorView.attachDropLines = function() {
 
 // ////////////////////////////////////////////////////////////////////////
 
-editorView.dropAt = function(dropName, path, position) {
+// A drop changes exactly one thing - the new clause appears at the caret
+// with its gaps rendered as placeholders, no menu jumps at the user, and
+// no existing clause changes its words
+editorView.dropAt = function(dropName, path, anchor) {
+    var position = anchor.index;
+
     if (dropName === 'conditions') {
         editorModel.rule.conditions.splice(position, 0, {subject: path, comparator: null, values: []});
 
         if (editorModel.rule.conditions.length > 1) {
-            var joinerIndex = position === 0 ? 0 : position - 1;
+
+            // The caret's side of the slot's joiner decides where the new
+            // "and" goes - left of the joiner binds the new clause to the
+            // clause before it, right of the joiner binds it to the clause
+            // after it, so an existing "or" never jumps across the new
+            // clause and no existing pairing changes
+            var joinerIndex;
+            if (position === 0) { joinerIndex = 0; }
+            else if (anchor.position === 0) { joinerIndex = position - 1; }
+            else { joinerIndex = position; }
+
             editorModel.rule.joiners.splice(joinerIndex, 0, 'and');
         }
-        this.autoOpen = 'comparator-' + position;
         this.render();
+        this.playArrival(dropName, position);
         return;
     }
 
@@ -516,10 +531,20 @@ editorView.dropAt = function(dropName, path, position) {
     var values = attribute.type === 'yes/no' ? ['true'] : [''];
     editorModel.rule[dropName].splice(position, 0, {target: path, values: values});
 
-    if (attribute.type !== 'yes/no') {
-        this.autoOpen = 'value-' + dropName + '-' + position + '-0';
-    }
     this.render();
+    this.playArrival(dropName, position);
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
+// How the new clause announces itself after the drop - it pops in with a
+// small overshoot while a ring pings outwards as it settles, transform and
+// shadow only, so nothing else on the line ever moves
+editorView.playArrival = function(dropName, position) {
+    var group = this.container.querySelector('[data-group="' + dropName + '-' + position + '"]');
+    group.classList.add('editor-arrive');
+
+    caretLog('playArrival', 'arrival effect', {drop_name: dropName, position: position});
 };
 
 })();
