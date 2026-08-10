@@ -340,10 +340,6 @@ rulesetsView.dispatch = function(event, target) {
     if (action === 'new') { this.config.onNew(); }
 
     if (action === 'rule-action') {
-
-        // The action sits inside the rule's own link to the editor, which must not follow
-        event.preventDefault();
-        event.stopPropagation();
         this.runRuleAction(parseInt(target.getAttribute('data-index')), target.getAttribute('data-rule'), target);
     }
 };

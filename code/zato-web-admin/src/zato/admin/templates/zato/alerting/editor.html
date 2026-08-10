@@ -52,6 +52,7 @@ $(document).ready(function() {
         rule: {% if rule_key %}'{{ rule_key|escapejs }}'{% else %}null{% endif %},
         newRuleName: '{{ new_rule_name|escapejs }}',
         newRuleDocs: '{{ new_rule_docs|escapejs }}',
+        newRuleActive: {{ new_rule_active|yesno:'true,false' }},
         showLivePanel: false,
         viewButtonActiveClass: 'dashboard-tab-active',
         viewURLKey: 'view',

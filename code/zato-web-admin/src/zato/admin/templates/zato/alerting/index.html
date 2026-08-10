@@ -83,12 +83,12 @@ $(document).ready(function() {
         showRulesetInRulesHead: false,
         ruleActionClass: 'zato-link-face',
         ruleActions: [
-            {label: 'Edit',
-                onRun: function(key) { alerting.openEdit(key); }},
             {label: 'Activate', isShown: function(rule) { return !rule.isActive; },
                 onRun: function(key) { alerting.runAction('activate', key); }},
             {label: 'Deactivate', isShown: function(rule) { return rule.isActive; },
                 onRun: function(key) { alerting.runAction('deactivate', key); }},
+            {label: 'Edit',
+                onRun: function(key) { alerting.openEdit(key); }},
             {label: 'Delete',
                 onRun: function(key) { alerting.deleteRule(key); }},
         ],
@@ -142,10 +142,18 @@ $(document).ready(function() {
                         </tr>
                         <tr>
                             <td style="vertical-align:middle; width:1%; white-space:nowrap">
+                                <label for="id_is_active" data-help-placement="left">Active</label>
+                            </td>
+                            <td>
+                                <input type="checkbox" id="id_is_active" name="is_active" checked />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:top; width:1%; white-space:nowrap">
                                 <label for="id_docs">Description</label>
                             </td>
                             <td>
-                                <input type="text" id="id_docs" name="docs" style="width:100%" />
+                                <textarea id="id_docs" name="docs" rows="4" style="width:100%"></textarea>
                             </td>
                         </tr>
                         <tr>
@@ -176,10 +184,18 @@ $(document).ready(function() {
                         </tr>
                         <tr>
                             <td style="vertical-align:middle; width:1%; white-space:nowrap">
+                                <label for="id_edit-is_active" data-help-placement="left">Active</label>
+                            </td>
+                            <td>
+                                <input type="checkbox" id="id_edit-is_active" name="edit-is_active" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:top; width:1%; white-space:nowrap">
                                 <label for="id_edit-docs">Description</label>
                             </td>
                             <td>
-                                <input type="text" id="id_edit-docs" name="edit-docs" style="width:100%" />
+                                <textarea id="id_edit-docs" name="edit-docs" rows="4" style="width:100%"></textarea>
                             </td>
                         </tr>
                         <tr>

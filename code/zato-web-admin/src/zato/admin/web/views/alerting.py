@@ -115,6 +115,7 @@ def editor(req:'any_') -> 'TemplateResponse':
         'rule_name': rule_name,
         'new_rule_name': req.GET.get('new', ''),
         'new_rule_docs': req.GET.get('docs', ''),
+        'new_rule_active': req.GET.get('active', '1') == '1',
         'zato_clusters': True,
         'zato_template_name': 'zato/alerting/editor.html',
     })
@@ -168,6 +169,7 @@ def action(req:'any_') -> 'HttpResponse':
 
             new_name = req.POST['name'].strip()
             documents[rule_key]['docs'] = req.POST['docs'].strip()
+            documents[rule_key]['is_active'] = req.POST['active'] == '1'
             comment = f'Updated rule {rule_name}'
 
             # A changed name moves the document under a new key, since a key

@@ -25,9 +25,11 @@ var editorModel = {
         rule: null,
         newRuleName: '',
 
-        // The description a fresh rule starts with - the create popup asks for it
-        // before the editor ever opens, so the editor carries it into the document
+        // The description and the active state a fresh rule starts with - the create
+        // popup asks for both before the editor ever opens, so the editor carries
+        // them into the document
         newRuleDocs: '',
+        newRuleActive: true,
         showLivePanel: false,
         navigateToRule: null,
         rulesetsUrl: '',
@@ -362,6 +364,12 @@ var editorModel = {
             // so an editor save never silently reactivates a deactivated rule
             if (self.documents[key] !== undefined && self.documents[key].is_active !== undefined) {
                 out[key].is_active = self.documents[key].is_active;
+            }
+
+            // A rule stored for the first time starts with the active state
+            // its create popup chose
+            else if (self.documents[key] === undefined) {
+                out[key].is_active = self.config.newRuleActive;
             }
         });
         return out;

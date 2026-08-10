@@ -345,7 +345,11 @@ var rulesetsView = {
                 action.label + '</span>';
         });
 
-        return html;
+        if (html === '') { return ''; }
+
+        // The links sit in a strip of their own, layered above the name's stretched
+        // link, so a click landing between them reaches neither link and opens nothing
+        return '<span class="rulesets-rule-actions">' + html + '</span>';
     },
 
     // The rules of one set narrowed to the query - a rule stays when the query is in its
@@ -403,15 +407,18 @@ var rulesetsView = {
         }
 
         rules.slice(0, this.config.maxRulesInPanel).forEach(function(rule) {
-            html += '<a class="rulesets-rule' + self.ruleStateClass(rule) + '" href="' +
-                self.config.openUrls.editor + '?ruleset=' + ruleset.id +
-                '&amp;rule=' + encodeURIComponent(rule.key) + '">' +
+            var href = self.config.openUrls.editor + '?ruleset=' + ruleset.id +
+                '&amp;rule=' + encodeURIComponent(rule.key);
+
+            // The name is the row's one real link - its stretched overlay makes the
+            // whole row lead to the editor without wrapping everything in an anchor
+            html += '<div class="rulesets-rule' + self.ruleStateClass(rule) + '">' +
                 '<span class="rulesets-rule-number">' + ordinals[rule.key] + '</span>' +
-                '<span class="rulesets-rule-name">' + self.markHtml(rule.name) + '</span>' +
+                '<a class="rulesets-rule-name" href="' + href + '">' + self.markHtml(rule.name) + '</a>' +
                 '<span class="rulesets-rule-docs">' + self.markHtml(rule.docs) + '</span>' +
                 self.ruleShapeHtml(rule) +
                 self.ruleActionsHtml(rule) +
-                '</a>';
+                '</div>';
         });
 
         if (rules.length > this.config.maxRulesInPanel) {

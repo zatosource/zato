@@ -170,14 +170,14 @@
 }
 
 /* A grid with named columns keeps every rule's parts vertically aligned - the
-   state pill and the host's action links flow into implicit columns after the
-   explicit ones, one fixed track each, so they line up between rows too */
+   host's action strip flows into an implicit column after the explicit ones,
+   as wide as its links ask for */
 .ruleset-browser .rulesets-rule {
     position: relative;
     display: grid;
     grid-template-columns: minmax(180px, 230px) minmax(0, 1fr) 100px 80px;
     grid-auto-flow: column;
-    grid-auto-columns: 90px;
+    grid-auto-columns: max-content;
     align-items: center;
     gap: 14px;
     margin-bottom: 4px;
@@ -234,6 +234,18 @@
     background-color: var(--action-face);
     color: var(--action-ink);
 }
+
+/* The name is the row's one link - its overlay stretches over the whole row,
+   so a click anywhere on the row opens the rule in the editor */
+.ruleset-browser a.rulesets-rule-name {
+    text-decoration: none;
+}
+.ruleset-browser a.rulesets-rule-name::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+}
+
 /* The rule's ordinal, to the left of its node on the spine - absolute, so it
    takes no grid track of its own */
 .ruleset-browser .rulesets-rule-number {
@@ -267,21 +279,34 @@
 }
 
 /* The rule's active state, shown when the host asks for it, is worn by the row
-   itself - a green wash on an active rule's name, its ordinal and its node on the
-   spine in the deeper green - while an inactive rule keeps the neutral look */
-.ruleset-browser .rulesets-rule-on .rulesets-rule-name {
-    background: var(--green-tint-13);
+   itself - an inactive rule's name and description are dimmed, while its ordinal
+   stays as readable as every other rule's */
+.ruleset-browser .rulesets-rule-off .rulesets-rule-name {
+    color: var(--text5);
+
+    /* The chip fades as a whole - its wash together with the word on it -
+       so the name reads a step dimmer than the description below it */
+    opacity: 0.6;
 }
-.ruleset-browser .rulesets-rule-on .rulesets-rule-number {
-    color: var(--green);
-    font-weight: 700;
-}
-.ruleset-browser .rulesets-rule-on::after {
-    background: var(--green);
+.ruleset-browser .rulesets-rule-off .rulesets-rule-docs {
+    color: var(--text5);
 }
 
-/* The host's own per-rule actions at the end of the row - each in its own grid
-   column, looking like every other link through the host's link face class */
+/* The host's own per-rule actions at the end of the row, in one strip layered
+   above the name's stretched overlay, so its links get their clicks and a miss
+   between them lands on the strip itself, opening nothing - the strip keeps
+   the same fixed tracks the links had as grid columns of the row itself */
+.ruleset-browser .rulesets-rule-actions {
+    position: relative;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 90px;
+    align-items: center;
+    gap: 14px;
+    justify-self: start;
+}
+
+/* Each action looks like every other link through the host's link face class */
 .ruleset-browser .rulesets-rule-action {
     justify-self: start;
     font-size: 12px;

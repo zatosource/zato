@@ -96,6 +96,18 @@
     padding-bottom: 2px;
 }
 
+/* Each action link turns blue for its own hover alone - the app's blue only
+   reaches anchors, and these are plain spans inside a plain row */
+.alerting-card .rulesets-rule-action:hover {
+    color: var(--zato-link-hover);
+}
+
+/* The app paints every hovered anchor blue with its own important - the name
+   keeps the shared theme's amber flip instead */
+.alerting-card a.rulesets-rule-name:hover {
+    color: var(--action-ink) !important;
+}
+
 /* ------------------------------------------------------------ */
 /* Alert rules - the editor screen                                */
 /* ------------------------------------------------------------ */
